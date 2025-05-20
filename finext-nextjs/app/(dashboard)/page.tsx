@@ -1,21 +1,17 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { File, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ProductsTable } from './products-table';
-import { getProducts } from '@/lib/db';
+import { ProductsTable } from './_components/products-table';
 
 export default async function ProductsPage(
   props: {
     searchParams: Promise<{ q: string; offset: string }>;
   }
 ) {
-  const searchParams = await props.searchParams;
-  const search = searchParams.q ?? '';
-  const offset = searchParams.offset ?? 0;
-  const { products, newOffset, totalProducts } = await getProducts(
-    search,
-    Number(offset)
-  );
+  // Placeholder data after removing database logic
+  const products: any[] = [];
+  const newOffset = null;
+  const totalProducts = 0;
 
   return (
     <Tabs defaultValue="all">
@@ -45,7 +41,7 @@ export default async function ProductsPage(
       </div>
       <TabsContent value="all">
         <ProductsTable
-          products={products}
+          products={products} // Pass empty or mock data
           offset={newOffset ?? 0}
           totalProducts={totalProducts}
         />

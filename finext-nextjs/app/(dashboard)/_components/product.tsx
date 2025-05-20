@@ -10,10 +10,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { SelectProduct } from '@/lib/db';
-import { deleteProduct } from './actions';
+import { deleteProduct } from '../_actions/actions';
 
-export function Product({ product }: { product: SelectProduct }) {
+export function Product({ product }: { product: any }) {
   return (
     <TableRow>
       <TableCell className="hidden sm:table-cell">
