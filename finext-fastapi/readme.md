@@ -14,6 +14,7 @@
 - [Truy cập API](#truy-cập-api)
 - [Dừng Ứng dụng](#dừng-ứng-dụng)
 - [Thoát Môi trường Ảo](#thoát-môi-trường-ảo)
+- [Cấu hình Biến Môi trường](#cấu-hình-biến-môi-trường)
 
 
 ## Yêu cầu
@@ -23,6 +24,8 @@ Trước khi bắt đầu, hãy đảm bảo bạn đã cài đặt:
 - Python 3.7+
 - `pip` (thường đi kèm với Python)
 - `venv` (thường đi kèm với Python)
+- `python-dotenv` (để quản lý biến môi trường)
+- `pymongo[srv]` (driver MongoDB)
 
 ## Hướng dẫn Bắt đầu
 
@@ -51,7 +54,7 @@ Sau khi kích hoạt thành công, bạn sẽ thấy tên môi trường ảo (v
 Khi môi trường ảo đã được kích hoạt, hãy cài đặt các gói cần thiết (nếu cần):
 
 ```bash
-pip install example lib
+pip install fastapi uvicorn[standard] python-dotenv pymongo[srv]
 ```
 
 Sau đó tạo/cập nhật tệp `requirements.txt`:
@@ -73,6 +76,10 @@ finext-fastapi/
 ├── app/
 │   ├── __init__.py
 │   ├── main.py           # Điểm khởi tạo ứng dụng FastAPI chính
+│   ├── core/             # Các module cốt lõi (cấu hình, db, v.v.)
+│   │   ├── __init__.py
+│   │   ├── config.py     # Tải và quản lý cấu hình/biến môi trường
+│   │   └── database.py   # Logic kết nối và tương tác với MongoDB
 │   ├── routers/          # Chứa các modules router cho các nhóm API
 │   │   ├── __init__.py
 │   │   ├── items.py      # Ví dụ: router cho các API liên quan đến 'items'
@@ -81,6 +88,9 @@ finext-fastapi/
 │       ├── __init__.py
 │       └── auth.py       # Schemas liên quan đến xác thực
 ├── venv/                 # Thư mục môi trường ảo (được gitignore)
+├── .env                  # File chứa biến môi trường (được gitignore)
+├── .env.example          # File ví dụ cho .env
+├── .gitignore            # Chỉ định các file/thư mục bỏ qua bởi Git
 ├── requirements.txt      # Danh sách các gói phụ thuộc
 └── readme.md             # Tài liệu hướng dẫn này
 ```
@@ -104,6 +114,7 @@ uvicorn app.main:app --reload
   - `--reload`: Tự động tải lại máy chủ khi có thay đổi trong mã nguồn (rất hữu ích trong quá trình phát triển).
 
 Máy chủ sẽ khởi động, thường là trên `http://127.0.0.1:8000`.
+Khi khởi động, ứng dụng sẽ cố gắng kết nối tới MongoDB dựa trên cấu hình trong tệp `.env`.
 
 ## Truy cập API
 
@@ -149,3 +160,27 @@ Khi bạn làm việc xong với dự án, bạn có thể thoát khỏi môi tr
 ```bash
 deactivate
 ```
+
+## Cấu hình Biến Môi trường
+
+Dự án này sử dụng tệp `.env` để quản lý các biến môi trường. Điều này giúp giữ cho các thông tin nhạy cảm (như chuỗi kết nối cơ sở dữ liệu) không bị đưa vào mã nguồn.
+
+1.  **Tạo tệp `.env`**:
+    Sao chép tệp `.env.example` và đổi tên thành `.env` trong thư mục gốc của dự án.
+    ```bash
+    cp .env.example .env
+    ```
+    (Hoặc tạo thủ công tệp `.env`)
+
+2.  **Cấu hình `MONGODB_CONNECTION_STRING`**:
+    Mở tệp `.env` và cập nhật giá trị của `MONGODB_CONNECTION_STRING` bằng chuỗi kết nối MongoDB của bạn.
+    Ví dụ:
+    ```
+    MONGODB_CONNECTION_STRING="mongodb://localhost:27017/mydatabase"
+    ```
+    Hoặc nếu sử dụng MongoDB Atlas:
+    ```
+    MONGODB_CONNECTION_STRING="mongodb+srv://<username>:<password>@<cluster-url>/<database_name>?retryWrites=true&w=majority"
+    ```
+
+Tệp `.env` đã được thêm vào `.gitignore` để đảm bảo nó không được commit lên repository.

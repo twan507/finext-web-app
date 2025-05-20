@@ -132,3 +132,15 @@ dmypy.json
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Environment variables
+.env
+
+# Virtual environment
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
