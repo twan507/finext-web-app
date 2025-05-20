@@ -91,24 +91,38 @@ finext-fastapi/
 ├── .env                  # File chứa biến môi trường (được gitignore)
 ├── .env.example          # File ví dụ cho .env
 ├── .gitignore            # Chỉ định các file/thư mục bỏ qua bởi Git
+├── readme.md             # Tài liệu hướng dẫn này
 ├── requirements.txt      # Danh sách các gói phụ thuộc
-└── readme.md             # Tài liệu hướng dẫn này
+└── run_dev.md            # Code để chạy ựng dụng dưới dạng development
 ```
 
 ## Chạy Ứng dụng
 
-Đầu tiên cần kích hoạt môi trường ảo
+Để chạy ứng dụng một cách nhanh chóng, bạn có thể sử dụng script `run_dev.bat` (trên Windows) đã được tạo sẵn trong thư mục gốc của dự án. Script này sẽ tự động kích hoạt môi trường ảo và khởi động server Uvicorn.
+
+Chỉ cần mở Command Prompt hoặc PowerShell, điều hướng đến thư mục gốc của dự án `finext-fastapi` và chạy:
 
 ```bash
-.\venv\Scripts\activate
+.\run_dev.bat
 ```
 
-Sau đó reload ứng dụng
+**Cách thủ công (nếu không sử dụng script):**
 
-```bash
-uvicorn app.main:app --reload
-```
+Nếu bạn muốn chạy từng bước một hoặc không sử dụng script `run_dev.bat`:
 
+1.  **Kích hoạt môi trường ảo:**
+    Mở Command Prompt hoặc PowerShell, điều hướng đến thư mục gốc của dự án và chạy:
+    ```bash
+    .\venv\Scripts\activate
+    ```
+
+2.  **Khởi động server Uvicorn:**
+    Sau khi môi trường ảo được kích hoạt, chạy lệnh sau:
+    ```bash
+    uvicorn app.main:app --reload
+    ```
+
+**Giải thích lệnh Uvicorn:**
   - `app.main`: Chỉ đến tệp `main.py` trong thư mục `app`.
   - `app`: Tên của đối tượng FastAPI instance trong tệp `main.py`.
   - `--reload`: Tự động tải lại máy chủ khi có thay đổi trong mã nguồn (rất hữu ích trong quá trình phát triển).
