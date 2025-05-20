@@ -6,9 +6,10 @@
 
 - [Yêu cầu](#yêu-cầu)
 - [Hướng dẫn Bắt đầu](#hướng-dẫn-bắt-đầu)
-  - [1. Thiết lập Môi trường Ảo](#2-thiết-lập-môi-trường-ảo)
-  - [2. Kích hoạt Môi trường Ảo](#3-kích-hoạt-môi-trường-ảo)
-  - [3. Cài đặt các Gói Phụ thuộc](#4-cài-đặt-các-gói-phụ-thuộc)
+  - [1. Thiết lập Môi trường Ảo](#1-thiết-lập-môi-trường-ảo)
+  - [2. Kích hoạt Môi trường Ảo](#2-kích-hoạt-môi-trường-ảo)
+  - [3. Cài đặt các Gói Phụ thuộc](#3-cài-đặt-các-gói-phụ-thuộc)
+- [Cấu trúc Dự án](#cấu-trúc-dự-án)
 - [Chạy Ứng dụng](#chạy-ứng-dụng)
 - [Truy cập API](#truy-cập-api)
 - [Dừng Ứng dụng](#dừng-ứng-dụng)
@@ -47,15 +48,41 @@ Sau khi kích hoạt thành công, bạn sẽ thấy tên môi trường ảo (v
 
 ### 3\. Cài đặt các Gói Phụ thuộc
 
-Khi môi trường ảo đã được kích hoạt, cài đặt tất cả các gói cần thiết:
+Khi môi trường ảo đã được kích hoạt, hãy cài đặt các gói cần thiết (nếu cần):
 
 ```bash
-pip install fastapi "uvicorn[standard]"
+pip install example lib
 ```
 
 Sau đó tạo/cập nhật tệp `requirements.txt`:
 ```bash
 pip freeze > requirements.txt
+```
+
+Nếu bạn clone dự án đã có sẵn tệp `requirements.txt`, bạn chỉ cần chạy lệnh sau để cài đặt tất cả các gói phụ thuộc:
+```bash
+pip install -r requirements.txt
+```
+
+## Cấu trúc Dự án
+
+Dự án được cấu trúc như sau để dễ dàng quản lý và mở rộng:
+
+```
+finext-fastapi/
+├── app/
+│   ├── __init__.py
+│   ├── main.py           # Điểm khởi tạo ứng dụng FastAPI chính
+│   ├── routers/          # Chứa các modules router cho các nhóm API
+│   │   ├── __init__.py
+│   │   ├── items.py      # Ví dụ: router cho các API liên quan đến 'items'
+│   │   └── auth.py       # Router cho các API liên quan đến xác thực
+│   └── schemas/          # Chứa các Pydantic models (data shapes)
+│       ├── __init__.py
+│       └── auth.py       # Schemas liên quan đến xác thực
+├── venv/                 # Thư mục môi trường ảo (được gitignore)
+├── requirements.txt      # Danh sách các gói phụ thuộc
+└── readme.md             # Tài liệu hướng dẫn này
 ```
 
 ## Chạy Ứng dụng
@@ -83,6 +110,29 @@ Máy chủ sẽ khởi động, thường là trên `http://127.0.0.1:8000`.
 Khi máy chủ đang chạy, bạn có thể truy cập các điểm cuối sau qua trình duyệt web hoặc công cụ API (như Postman, Insomnia):
 
   - **Ứng dụng gốc:** [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+  - **API Items (ví dụ):** [http://127.0.0.1:8000/items/1](http://127.0.0.1:8000/items/1)
+  - **API Xác thực (NextAuth Callback):** `POST` [http://127.0.0.1:8000/auth/login/nextauth-callback](http://127.0.0.1:8000/auth/login/nextauth-callback)
+    - Endpoint này được thiết kế để NextAuth gọi sau khi xác thực người dùng thành công qua `CredentialsProvider`.
+    - Body yêu cầu (JSON):
+      ```json
+      {
+        "userId": "string",
+        "email": "user@example.com (optional)",
+        "name": "string (optional)"
+      }
+      ```
+    - Phản hồi thành công (JSON):
+      ```json
+      {
+        "access_token": "string (FastAPI JWT)",
+        "token_type": "bearer",
+        "user_info": {
+          "userId": "string",
+          "email": "user@example.com (optional)",
+          "name": "string (optional)"
+        }
+      }
+      ```
   - **Tài liệu API tương tác (Swagger UI):** [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
   - **Tài liệu API thay thế (ReDoc):** [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
 
