@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from .routers import items, auth  # Import the auth router
+from .routers import items, auth, users  # Import the auth router
 from .core.database import connect_to_mongo, close_mongo_connection, get_database
 import logging
 from contextlib import asynccontextmanager
@@ -28,6 +28,7 @@ app = FastAPI(
 
 app.include_router(items.router, prefix="/items", tags=["items"])
 app.include_router(auth.router, prefix="/auth", tags=["authentication"])  # Add the auth router
+app.include_router(users.router, prefix="/users", tags=["users"]) # Dòng này rất quan trọng!
 
 # Định nghĩa một route cơ bản
 @app.get("/")
