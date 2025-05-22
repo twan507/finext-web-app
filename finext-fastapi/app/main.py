@@ -1,7 +1,10 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+import json # Đảm bảo đã import json
 
 from .core.database import connect_to_mongo, close_mongo_connection, get_database, mongodb
 from .core.seeding import seed_initial_data
@@ -41,6 +44,32 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+# SỬA ĐỔI EXCEPTION HANDLER Ở ĐÂY:
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    error_details_for_log = exc.errors()
+    
+    # In ra terminal bằng print() để đảm bảo nó xuất hiện
+    print("-----------------------------------------------------------------------")
+    print(f"!!! LỖI VALIDATION (422) CHO REQUEST: {request.method} {request.url}")
+    print("!!! CHI TIẾT LỖI VALIDATION TỪ PYDANTIC (exc.errors()):")
+    try:
+        # Cố gắng pretty print JSON nếu được
+        print(json.dumps(error_details_for_log, indent=2, ensure_ascii=False))
+    except TypeError: # Nếu có gì đó không thể serialize sang JSON (ít khả năng với exc.errors())
+        print(str(error_details_for_log))
+    print("-----------------------------------------------------------------------")
+    
+    # Log bằng logger như cũ (để phòng trường hợp print không hoạt động vì lý do nào đó)
+    logger.error(f"Lỗi RequestValidationError cho request: {request.method} {request.url}")
+    logger.error(f"Chi tiết lỗi Pydantic: {json.dumps(error_details_for_log, indent=2)}")
+    
+    # Trả về response lỗi 422 chuẩn của FastAPI
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"detail": error_details_for_log}, # Sử dụng error_details_for_log
+    )
 
 # Include routers
 app.include_router(auth.router, prefix="/auth", tags=["authentication"])
