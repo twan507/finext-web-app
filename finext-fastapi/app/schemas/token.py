@@ -6,8 +6,9 @@ class JWTTokenResponse(BaseModel):
     """
     Schema cho response trả về khi đăng nhập thành công, chứa access token.
     """
-    access_token: str
     token_type: str
+    access_token: str
+    refresh_token: str
 
 class TokenData(BaseModel):
     """
@@ -18,3 +19,5 @@ class TokenData(BaseModel):
     user_id: Optional[str] = None
     jti: Optional[str] = None # JWT ID, dùng để theo dõi session
 
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str

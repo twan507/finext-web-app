@@ -46,7 +46,6 @@ app = FastAPI(
 app.include_router(auth.router, prefix="/auth", tags=["authentication"])
 app.include_router(users.router, prefix="/users", tags=["users"])
 
-
 @app.get("/")
 async def read_root():
     # Sử dụng get_database để lấy instance một cách an toàn
