@@ -6,7 +6,6 @@ class NextAuthUser(BaseModel):
     Represents the user data sent by NextAuth after successful
     authentication via its CredentialsProvider.
     """
-    userId: str  # Unique identifier for the user from NextAuth's perspective
     email: Optional[EmailStr] = None
     name: Optional[str] = None
     # You can add other fields that NextAuth might send

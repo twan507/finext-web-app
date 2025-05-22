@@ -1,9 +1,7 @@
-from pydantic import BaseModel, Field, BeforeValidator
-from typing import Optional, List, Annotated
+from pydantic import BaseModel, Field
+from typing import Optional, List
 from datetime import datetime
-from bson import ObjectId
-
-PyObjectId = Annotated[str, BeforeValidator(str)]
+from app.utils.types import PyObjectId
 
 class RoleBase(BaseModel):
     name: str = Field(..., min_length=3, max_length=50, description="Ví dụ: admin, user, broker")

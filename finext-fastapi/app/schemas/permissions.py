@@ -1,8 +1,7 @@
-from pydantic import BaseModel, Field, BeforeValidator
-from typing import Optional, Annotated
+from pydantic import BaseModel, Field
+from typing import Optional
 from datetime import datetime
-
-PyObjectId = Annotated[str, BeforeValidator(str)]
+from app.utils.types import PyObjectId
 
 class PermissionBase(BaseModel):
     name: str = Field(..., min_length=3, max_length=100, description="Ví dụ: listing:create, user:manage_roles")

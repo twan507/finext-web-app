@@ -1,7 +1,7 @@
-from pydantic import BaseModel, EmailStr, Field, BeforeValidator
-from typing import Optional, Annotated, List
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from typing import Optional, List
+from app.utils.types import PyObjectId
 from datetime import datetime
-PyObjectId = Annotated[str, BeforeValidator(str)]
 
 class UserCreate(BaseModel):
     """Schema for creating a new user (input)."""
@@ -30,8 +30,10 @@ class UserPublic(BaseModel):
     email: EmailStr
     phone_number: str
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(
+        populate_by_name=True,      # Cho phép dùng alias "_id"
+        from_attributes=True          # CHO PHÉP TẠO MODEL TỪ THUỘC TÍNH CỦA OBJECT KHÁC
+    )
 
 class UserInDB(BaseModel):
     """Schema for storing user data in the database."""
@@ -39,8 +41,14 @@ class UserInDB(BaseModel):
     role_ids: List[PyObjectId] = Field(default_factory=list)
     full_name: str
     email: EmailStr
+    phone_number: str
     hashed_password: str
     latest_subscription_id: Optional[str]
     created_at: datetime
     updated_at: datetime
     is_active: bool
+
+    model_config = ConfigDict(
+        populate_by_name=True,      # Cho phép dùng alias "_id"
+        from_attributes=True          # CHO PHÉP TẠO MODEL TỪ THUỘC TÍNH CỦA OBJECT KHÁC
+    )
