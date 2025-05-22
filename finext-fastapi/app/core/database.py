@@ -19,27 +19,42 @@ async def connect_to_mongo():
         return
     try:
         logger.info("Đang kết nối tới MongoDB (Async)...")
-        # Initialize the main async client
         mongodb.client = AsyncIOMotorClient(MONGODB_CONNECTION_STRING, serverSelectionTimeoutMS=5000)
-        
-        # Kiểm tra kết nối client (sử dụng await cho hoạt động bất đồng bộ)
         await mongodb.client.admin.command('ping')
         logger.info("Đã kết nối thành công tới MongoDB client (Async)!")
 
-        # Kết nối tới các databases cụ thể
-        db_names_to_connect = ["user_db", "stock_db"] # Các database bạn muốn kết nối
-        mongodb.dbs = {} # Reset dbs dictionary
+        db_names_to_connect = ["user_db", "stock_db"] # Giả sử user_db là nơi chứa các collection mới
+        mongodb.dbs = {}
 
         for db_name in db_names_to_connect:
             mongodb.dbs[db_name] = mongodb.client[db_name]
             logger.info(f"Đã thiết lập kết nối tới database (Async): {db_name}")
-        
+
+        # ---- TẠO INDEXES ----
+        if "user_db" in mongodb.dbs and mongodb.dbs["user_db"] is not None:
+            db = mongodb.dbs["user_db"] # Lấy database instance
+
+            # users collection indexes
+            await db.users.create_index("email", unique=True)
+
+            # roles collection indexes
+            await db.roles.create_index("name", unique=True)
+
+            # permissions collection indexes
+            await db.permissions.create_index("name", unique=True)
+
+            # active_sessions collection indexes
+            await db.active_sessions.create_index("jti", unique=True)
+
+            logger.info("Đã tạo/đảm bảo các indexes cần thiết cho user_db.")
+        # --------------------
+
         logger.info(f"Sử dụng các databases (Async): {', '.join(mongodb.dbs.keys())}")
 
     except ConnectionFailure as e:
         logger.error(f"Không thể kết nối tới MongoDB (ConnectionFailure): {e}")
         if mongodb.client:
-            mongodb.client.close() # Motor client cũng có phương thức close
+            mongodb.client.close()
         mongodb.client = None
         mongodb.dbs = {}
     except ConfigurationError as e:
