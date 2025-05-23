@@ -8,9 +8,6 @@ This is a Next.js frontend application using the following stack:
 
 - Framework - [Next.js 15 (App Router)](https://nextjs.org)
 - Language - [TypeScript](https://www.typescriptlang.org)
-- Styling - [Tailwind CSS](https://tailwindcss.com)
-- Components - [Radix UI](https://www.radix-ui.com/)
-- Analytics - [Vercel Analytics](https://vercel.com/analytics)
 - Formatting - [Prettier](https://prettier.io)
 
 This application serves as the frontend client for the Finext FastAPI backend, handling user authentication through direct API calls and managing session state with localStorage.
