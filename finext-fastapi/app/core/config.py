@@ -12,6 +12,7 @@ ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 BROKER_EMAIL= os.getenv("BROKER_EMAIL")
 USER_EMAIL= os.getenv("USER_EMAIL")
 ADMIN_PWD = os.getenv("ADMIN_PWD")
+MAX_SESSIONS_PER_USER = int(os.getenv("MAX_SESSIONS_PER_USER", 3)) # Mặc định là 3 session
 
 # Cấu hình JWT
 SECRET_KEY = os.getenv("SECRET_KEY")  # Rất quan trọng: Thay đổi key này và giữ bí mật trong production!

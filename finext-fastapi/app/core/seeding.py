@@ -32,12 +32,11 @@ DEFAULT_PERMISSIONS_DATA = [
     {"name": "role:update_any", "description": "Quyền cập nhật vai trò."},
     {"name": "role:delete_any", "description": "Quyền xóa vai trò."},
 
-    # Active Session Management
-    # {"name": "session:list_own", "description": "Quyền xem các session đang hoạt động của chính mình."},
-    # {"name": "session:list_any", "description": "Quyền xem các session đang hoạt động của người dùng bất kỳ (admin)."},
-    # {"name": "session:delete_own", "description": "Quyền chấm dứt session của chính mình."},
-    # {"name": "session:delete_any", "description": "Quyền chấm dứt session của người dùng bất kỳ (admin)."},
-    # Tạm thời comment out session permissions nếu chưa có endpoint sử dụng
+    # Session Management (MỚI)
+    {"name": "session:list_self", "description": "Quyền xem danh sách các session đang hoạt động của chính mình."},
+    {"name": "session:list_any", "description": "Quyền xem danh sách tất cả các session đang hoạt động của mọi người dùng (admin)."},
+    {"name": "session:delete_self", "description": "Quyền tự xóa một session đang hoạt động của mình."},
+    {"name": "session:delete_any", "description": "Quyền xóa bất kỳ session nào đang hoạt động (admin)."},
 ]
 
 ALL_DEFAULT_PERMISSION_NAMES: Set[str] = {p["name"] for p in DEFAULT_PERMISSIONS_DATA}
@@ -70,7 +69,6 @@ async def seed_permissions(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
     else:
         logger.info("Không có permissions mới nào cần seed. Tất cả permissions trong DEFAULT_PERMISSIONS_DATA đã tồn tại.")
 
-    # Luôn tải tất cả các ID của permission mặc định (kể cả đã tồn tại hoặc mới tạo) vào map
     async for perm_doc in permissions_collection.find({"name": {"$in": list(ALL_DEFAULT_PERMISSION_NAMES)}}):
         if perm_doc["name"] in ALL_DEFAULT_PERMISSION_NAMES:
             created_permission_ids[perm_doc["name"]] = str(perm_doc["_id"])
@@ -88,22 +86,32 @@ async def seed_roles(db: AsyncIOMotorDatabase, permission_ids_map: Dict[str, PyO
             "name": "admin",
             "description": "Quản trị viên hệ thống, có tất cả quyền.",
             "permission_names": [
-                p_name for p_name in ALL_DEFAULT_PERMISSION_NAMES if p_name.startswith("user:") or p_name.startswith("role:")
+                p_name for p_name in ALL_DEFAULT_PERMISSION_NAMES 
+                if p_name.startswith("user:") or \
+                   p_name.startswith("role:") or \
+                   p_name.startswith("session:")
             ]
         },
         {
             "name": "user",
             "description": "Người dùng thông thường.",
-            "permission_names": ["user:update_self"] # Ví dụ: chỉ có quyền tự cập nhật
+            "permission_names": [
+                "user:update_self", 
+                "session:list_own", # THÊM QUYỀN XEM SESSION CỦA MÌNH
+                "session:delete_own"  # THÊM QUYỀN TỰ XÓA SESSION CỦA MÌNH
+            ]
         },
         {
-            "name": "broker",
+            "name": "broker", # Broker có thể có quyền tương tự user hoặc nhiều hơn tùy yêu cầu
             "description": "Nhà môi giới.",
-            "permission_names": ["user:update_self"] # Ví dụ
+            "permission_names": [
+                "user:update_self",
+                "session:list_own", 
+                "session:delete_own"
+            ]
         },
     ]
 
-    # Kiểm tra xem tất cả permissions cần thiết cho các role mặc định có trong permission_ids_map không
     required_permission_names_for_default_roles: Set[str] = set()
     for role_template in default_roles_data_template:
         for perm_name in role_template.get("permission_names", []):
@@ -118,11 +126,8 @@ async def seed_roles(db: AsyncIOMotorDatabase, permission_ids_map: Dict[str, PyO
             f"Không thể seeding roles do thiếu các permissions cần thiết trong map: {missing_permissions_for_roles}. "
             f"Hãy đảm bảo các permissions này được định nghĩa trong DEFAULT_PERMISSIONS_DATA và đã được seed/tải thành công."
         )
-        # Optionally, you might want to proceed with roles that CAN be created
-        # For now, let's return None to indicate a problem
-        # return None # Potentially problematic if admin role cannot be created
+        # Không return ở đây, sẽ cố gắng seed các role có đủ permission
 
-    # Seed roles if they don't exist
     existing_roles_names: Set[str] = set()
     async for role_doc in roles_collection.find({}, {"name": 1}):
         existing_roles_names.add(role_doc["name"])
@@ -136,10 +141,7 @@ async def seed_roles(db: AsyncIOMotorDatabase, permission_ids_map: Dict[str, PyO
         logger.info(f"Bắt đầu seeding {len(roles_to_seed_data)} roles mới...")
         for role_data_template in roles_to_seed_data:
             current_role_permission_ids_str: List[PyObjectId] = []
-            all_perms_for_this_role_found = True
             
-            # Check if all permissions for *this specific role* are available in the map
-            # This is a more granular check than the one above.
             role_specific_missing_perms = {
                 p_name for p_name in role_data_template.get("permission_names", []) if p_name not in permission_ids_map
             }
@@ -149,18 +151,9 @@ async def seed_roles(db: AsyncIOMotorDatabase, permission_ids_map: Dict[str, PyO
 
             for perm_name in role_data_template.get("permission_names", []):
                 perm_id_str = permission_ids_map.get(perm_name)
-                if perm_id_str:
-                    current_role_permission_ids_str.append(perm_id_str)
-                else:
-                    # This case should be caught by role_specific_missing_perms check already
-                    logger.error(f"Lỗi logic: Permission '{perm_name}' không tìm thấy trong map khi tạo role '{role_data_template['name']}'.")
-                    all_perms_for_this_role_found = False
-                    break
+                # perm_id_str chắc chắn tồn tại do đã check ở trên
+                current_role_permission_ids_str.append(perm_id_str) # type: ignore
             
-            if not all_perms_for_this_role_found:
-                logger.error(f"Hủy bỏ việc tạo role '{role_data_template['name']}' do thiếu permission ID.")
-                continue
-
             role_to_create = RoleCreate(
                 name=role_data_template["name"],
                 description=role_data_template.get("description"),
@@ -178,121 +171,88 @@ async def seed_roles(db: AsyncIOMotorDatabase, permission_ids_map: Dict[str, PyO
     else:
         logger.info("Không có roles mới nào cần seed dựa trên template.")
 
-    # Luôn tải các ID của role mặc định (theo template) vào map
     async for role_doc in roles_collection.find({"name": {"$in": [r["name"] for r in default_roles_data_template]}}):
         created_role_ids[role_doc["name"]] = str(role_doc["_id"])
         
     logger.info(f"Đã tải {len(created_role_ids)} roles mặc định (từ template) vào map.")
     
-    if "admin" not in created_role_ids and not missing_permissions_for_roles: # If admin role was supposed to be created but failed for other reasons
+    if "admin" not in created_role_ids and not missing_permissions_for_roles:
         logger.error("Role 'admin' không được tạo hoặc không tải được vào map. Việc tạo admin user có thể thất bại.")
-        # Consider returning None or raising an error if admin role is critical and missing
         
     return created_role_ids
 
 
 async def seed_users(db: AsyncIOMotorDatabase, role_ids_map: Optional[Dict[str, PyObjectId]]):
     if not role_ids_map:
-        logger.warning("role_ids_map không tồn tại (có thể do lỗi khi seed roles). Bỏ qua việc tạo sample users.")
+        logger.warning("role_ids_map không tồn tại. Bỏ qua việc tạo sample users.")
         return
 
     users_collection = db.get_collection("users")
     
-    # Kiểm tra xem các role cần thiết có tồn tại không
     admin_role_id_str = role_ids_map.get("admin")
     broker_role_id_str = role_ids_map.get("broker")
     user_role_id_str = role_ids_map.get("user")
 
-    if not admin_role_id_str:
-        logger.error("Không tìm thấy ID của role 'admin' trong map. Không thể tạo admin user.")
-        return
-    if not broker_role_id_str:
-        logger.error("Không tìm thấy ID của role 'broker' trong map. Không thể tạo broker user.")
-        return
-    if not user_role_id_str:
-        logger.error("Không tìm thấy ID của role 'user' trong map. Không thể tạo sample user.")
-        return
+    if not all([admin_role_id_str, broker_role_id_str, user_role_id_str]):
+        logger.error("Một hoặc nhiều role ID ('admin', 'broker', 'user') không tìm thấy trong map. Việc tạo user mẫu có thể không đầy đủ.")
+        # Quyết định có return hay không tùy thuộc vào mức độ nghiêm trọng
+        # return 
 
-    # Định nghĩa 3 tài khoản mẫu
-    sample_users = [
-        {
-            "email": ADMIN_EMAIL,
-            "password": ADMIN_PWD,
-            "full_name": "Administrator",
-            "phone_number": "0000000000",
-            "role_ids": [admin_role_id_str, broker_role_id_str, user_role_id_str],
+    sample_users_data = []
+    if ADMIN_EMAIL and ADMIN_PWD and admin_role_id_str:
+        sample_users_data.append({
+            "email": ADMIN_EMAIL, "password": ADMIN_PWD, "full_name": "Administrator",
+            "phone_number": "0000000000", 
+            "role_ids": [admin_role_id_str] + ([broker_role_id_str] if broker_role_id_str else []) + ([user_role_id_str] if user_role_id_str else []), # Gán tất cả role cho admin
             "is_active": True
-        },
-        {
-            "email": BROKER_EMAIL,
-            "password": ADMIN_PWD,
-            "full_name": "Sample Broker",
-            "phone_number": "0123456789",
-            "role_ids": [broker_role_id_str, user_role_id_str],
-            "is_active": True
-        },
-        {
-            "email": USER_EMAIL,
-            "password": ADMIN_PWD,
-            "full_name": "Sample User",
-            "phone_number": "0987654321",
-            "role_ids": [user_role_id_str],
-            "is_active": True
-        }
-    ]
+        })
+    if BROKER_EMAIL and ADMIN_PWD and broker_role_id_str and user_role_id_str: # Giả sử broker cũng là user
+         sample_users_data.append({
+            "email": BROKER_EMAIL, "password": ADMIN_PWD, "full_name": "Sample Broker",
+            "phone_number": "0123456789", "role_ids": [broker_role_id_str, user_role_id_str], "is_active": True
+        })
+    if USER_EMAIL and ADMIN_PWD and user_role_id_str:
+        sample_users_data.append({
+            "email": USER_EMAIL, "password": ADMIN_PWD, "full_name": "Sample User",
+            "phone_number": "0987654321", "role_ids": [user_role_id_str], "is_active": True
+        })
 
-    for user_data in sample_users:
-        # Kiểm tra xem user đã tồn tại chưa
-        existing_user = await users_collection.find_one({"email": user_data["email"]})
+
+    for user_data_dict in sample_users_data:
+        existing_user = await users_collection.find_one({"email": user_data_dict["email"]})
         
         if existing_user is None:
-            logger.info(f"User '{user_data['email']}' chưa tồn tại. Bắt đầu tạo user...")
+            logger.info(f"User '{user_data_dict['email']}' chưa tồn tại. Bắt đầu tạo user...")
             
-            # Hash password
-            hashed_password = get_password_hash(user_data["password"])
-            
-            # Tạo UserCreate object
+            # Loại bỏ các role_id None nếu có
+            valid_role_ids = [r_id for r_id in user_data_dict["role_ids"] if r_id is not None]
+
             user_create = UserCreate(
-                email=user_data["email"],
-                full_name=user_data["full_name"],
-                phone_number=user_data["phone_number"],
-                password=user_data["password"],
-                is_active=user_data["is_active"],
-                role_ids=user_data["role_ids"],
+                email=user_data_dict["email"], # type: ignore
+                full_name=user_data_dict["full_name"], # type: ignore
+                phone_number=user_data_dict["phone_number"], # type: ignore
+                password=user_data_dict["password"], # type: ignore
+                is_active=user_data_dict["is_active"], # type: ignore
+                role_ids=valid_role_ids, # Sử dụng list đã lọc
             )
             
-            # Chuẩn bị document để insert
             user_document = user_create.model_dump(exclude={"password"})
-            user_document["hashed_password"] = hashed_password
+            user_document["hashed_password"] = get_password_hash(user_create.password)
             user_document["created_at"] = user_create.created_at
             user_document["updated_at"] = user_create.updated_at
 
             result = await users_collection.insert_one(user_document)
-            logger.info(f"Đã tạo user: {user_data['email']} với ID: {result.inserted_id}")
+            logger.info(f"Đã tạo user: {user_data_dict['email']} với ID: {result.inserted_id}")
         else:
-            logger.info(f"User '{user_data['email']}' đã tồn tại trong collection 'users'.")
+            logger.info(f"User '{user_data_dict['email']}' đã tồn tại trong collection 'users'.")
 
 
 async def seed_initial_data(db: AsyncIOMotorDatabase):
     logger.info("Bắt đầu quá trình kiểm tra và khởi tạo dữ liệu ban đầu...")
     try:
         permission_ids_map = await seed_permissions(db)
-        
-        # (Logic kiểm tra missing_perms_for_roles_check đã bị xóa để đơn giản hóa,
-        #  vì seed_roles giờ đây xử lý việc bỏ qua role nếu thiếu perm cụ thể cho role đó)
-
         role_ids_map = await seed_roles(db, permission_ids_map)
-
-        if role_ids_map is None: # Điều này xảy_ra nếu có lỗi nghiêm trọng trong seed_roles
-            logger.error("Quá trình seeding roles đã bị hủy hoặc thất bại. Seeding users cũng sẽ bị hủy.")
-            return
-        elif "admin" not in role_ids_map:
-            logger.error("Role 'admin' không được seed hoặc không tìm thấy sau khi seed roles. Không thể tạo admin user.")
-            # Không return ở đây để cho phép ứng dụng vẫn chạy, nhưng admin có thể không hoạt động đúng.
-            # Nếu admin là tối quan trọng, có thể return hoặc raise Exception.
-            
         await seed_users(db, role_ids_map)
-
         logger.info("Hoàn tất quá trình kiểm tra và khởi tạo dữ liệu ban đầu.")
     except Exception as e:
         logger.error(f"Lỗi nghiêm trọng trong quá trình khởi tạo dữ liệu: {e}", exc_info=True)

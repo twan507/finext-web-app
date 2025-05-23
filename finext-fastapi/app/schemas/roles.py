@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 from app.utils.types import PyObjectId
@@ -21,9 +21,10 @@ class RoleInDB(BaseModel):
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
 
-    class Config:
-        populate_by_name = True
-        from_attributes = True
+    model_config = ConfigDict(
+        populate_by_name=True,      # Cho phép dùng alias "_id"
+        from_attributes=True          # CHO PHÉP TẠO MODEL TỪ THUỘC TÍNH CỦA OBJECT KHÁC
+    )
 
 class RolePublic(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
@@ -33,6 +34,7 @@ class RolePublic(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        populate_by_name = True
-        from_attributes = True 
+    model_config = ConfigDict(
+        populate_by_name=True,      # Cho phép dùng alias "_id"
+        from_attributes=True          # CHO PHÉP TẠO MODEL TỪ THUỘC TÍNH CỦA OBJECT KHÁC
+    )

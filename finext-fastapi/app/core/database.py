@@ -43,8 +43,11 @@ async def connect_to_mongo():
             # permissions collection indexes
             await db.permissions.create_index("name", unique=True)
 
-            # active_sessions collection indexes
-            await db.active_sessions.create_index("jti", unique=True)
+            # sessions collection indexes
+            await db.sessions.create_index("user_id")
+            await db.sessions.create_index("jti", unique=True)
+            await db.sessions.create_index("created_at")
+            await db.sessions.create_index("last_active_at") # Thêm index này
 
             logger.info("Đã tạo/đảm bảo các indexes cần thiết cho user_db.")
         # --------------------

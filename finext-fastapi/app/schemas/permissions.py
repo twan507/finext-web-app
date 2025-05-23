@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 from datetime import datetime
 from app.utils.types import PyObjectId
@@ -15,8 +15,10 @@ class PermissionInDB(PermissionBase):
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(
+        populate_by_name=True,      # Cho phép dùng alias "_id"
+        from_attributes=True          # CHO PHÉP TẠO MODEL TỪ THUỘC TÍNH CỦA OBJECT KHÁC
+    )
 
 class PermissionPublic(PermissionBase):
     pass
