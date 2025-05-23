@@ -3,7 +3,7 @@ import logging
 from app.auth.jwt_handler import verify_token_and_get_payload
 from app.core.database import get_database
 from app.crud.users import get_user_by_id_db
-from app.schemas.token import TokenData
+from app.schemas.auth import TokenData
 from app.schemas.users import UserInDB
 from fastapi import Depends, HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorDatabase

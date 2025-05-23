@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordRequestForm  # Dùng cho endpoint /to
 from typing import Annotated
 
 # Schemas
-from app.schemas.token import (
+from app.schemas.auth import (
     JWTTokenResponse,
     RefreshTokenRequest,
 )  # Cho JWT response và payload

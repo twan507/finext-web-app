@@ -8,7 +8,7 @@ from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 
 from app.core.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_MINUTES
-from app.schemas.token import TokenData
+from app.schemas.auth import TokenData
 
 # OAuth2PasswordBearer là một class dependency giúp xử lý việc lấy token từ header Authorization
 # tokenUrl trỏ đến endpoint mà client sẽ dùng để lấy token (endpoint đăng nhập của bạn)
