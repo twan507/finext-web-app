@@ -4,7 +4,8 @@
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/apiClient';
-import { saveSession } from '@/lib/session';
+// import { saveSession } from '@/lib/session'; // <--- BỎ IMPORT NÀY
+import { useAuth } from '@/components/AuthProvider'; // <--- THÊM IMPORT NÀY
 
 // MUI Components
 import Avatar from '@mui/material/Avatar';
@@ -29,10 +30,8 @@ interface UserInfo {
   id: string;
   email: string;
   full_name: string;
-  // role_ids: string[]; // Giữ lại nếu bạn cần
 }
 
-// Create a default theme instance.
 const defaultTheme = createTheme();
 
 export default function SignInPage() {
@@ -42,6 +41,7 @@ export default function SignInPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { login } = useAuth(); // <--- LẤY HÀM LOGIN TỪ CONTEXT
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -74,7 +74,8 @@ export default function SignInPage() {
         });
 
         if (userResponse.status === 200 && userResponse.data) {
-          saveSession({
+          // Tạo đối tượng SessionData
+          const sessionData = {
             user: {
               id: userResponse.data.id,
               email: userResponse.data.email,
@@ -82,14 +83,16 @@ export default function SignInPage() {
             },
             accessToken: access_token,
             refreshToken: refresh_token,
-          });
+          };
+          
+          login(sessionData); // <--- SỬ DỤNG HÀM LOGIN TỪ CONTEXT
           
           const welcomeMessage = `Chào mừng trở lại, ${userResponse.data.full_name || userResponse.data.email}! Đăng nhập thành công. Đang chuyển hướng...`;
           setSuccessMessage(welcomeMessage);
           
           setTimeout(() => {
-            router.push('/');
-          }, 2500); // Increased timeout to allow user to read message
+            router.push('/'); // Chuyển hướng về trang gốc
+          }, 2500);
 
         } else {
           setError(userResponse.message || 'Không thể lấy thông tin người dùng sau khi đăng nhập.');
@@ -159,11 +162,6 @@ export default function SignInPage() {
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading || !!successMessage}
             />
-            {/* Future: Add Remember me checkbox if needed */}
-            {/* <FormControlLabel
-              control={<Checkbox value="remember" color="primary" />}
-              label="Remember me"
-            /> */}
             <Button
               type="submit"
               fullWidth
@@ -173,30 +171,8 @@ export default function SignInPage() {
             >
               {loading ? <CircularProgress size={24} color="inherit" /> : 'Đăng nhập'}
             </Button>
-            {/* Future: Add Links for "Forgot password?" or "Sign Up" if needed */}
-            {/* <Grid container>
-              <Grid item xs>
-                <Link href="#" variant="body2">
-                  Forgot password?
-                </Link>
-              </Grid>
-              <Grid item>
-                <Link href="#" variant="body2">
-                  {"Don't have an account? Sign Up"}
-                </Link>
-              </Grid>
-            </Grid> */}
           </Box>
         </Box>
-        {/* Copyright or Footer can be added here */}
-        {/* <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 8, mb: 4 }}>
-          {'Copyright © '}
-          <Link color="inherit" href="https://yourwebsite.com/">
-            Your Website
-          </Link>{' '}
-          {new Date().getFullYear()}
-          {'.'}
-        </Typography> */}
       </Container>
     </ThemeProvider>
   );
