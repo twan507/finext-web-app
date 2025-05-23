@@ -1,11 +1,10 @@
 // finext-nextjs/app/login/page.tsx
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react'; // Thêm useEffect
 import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/apiClient';
-// import { saveSession } from '@/lib/session'; // <--- BỎ IMPORT NÀY
-import { useAuth } from '@/components/AuthProvider'; // <--- THÊM IMPORT NÀY
+import { useAuth } from '@/components/AuthProvider';
 
 // MUI Components
 import Avatar from '@mui/material/Avatar';
@@ -18,7 +17,9 @@ import Container from '@mui/material/Container';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
+import ThemeToggleButton from '@/components/ThemeToggleButton';
+// Bỏ createTheme và ThemeProvider từ @mui/material/styles vì sẽ dùng theme global
+// import { createTheme, ThemeProvider } from '@mui/material/styles';
 
 interface LoginResponse {
   access_token: string;
@@ -32,7 +33,7 @@ interface UserInfo {
   full_name: string;
 }
 
-const defaultTheme = createTheme();
+// const defaultTheme = createTheme(); // <<--- BỎ DÒNG NÀY
 
 export default function SignInPage() {
   const [email, setEmail] = useState('');
@@ -41,7 +42,17 @@ export default function SignInPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { login } = useAuth(); // <--- LẤY HÀM LOGIN TỪ CONTEXT
+  const { login, session } = useAuth(); // Lấy thêm session để kiểm tra
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    // Nếu đã đăng nhập, chuyển hướng về trang chủ
+    if (session) {
+      router.push('/');
+    }
+  }, [session, router]);
+
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -74,7 +85,6 @@ export default function SignInPage() {
         });
 
         if (userResponse.status === 200 && userResponse.data) {
-          // Tạo đối tượng SessionData
           const sessionData = {
             user: {
               id: userResponse.data.id,
@@ -84,14 +94,14 @@ export default function SignInPage() {
             accessToken: access_token,
             refreshToken: refresh_token,
           };
-          
-          login(sessionData); // <--- SỬ DỤNG HÀM LOGIN TỪ CONTEXT
-          
+
+          login(sessionData);
+
           const welcomeMessage = `Chào mừng trở lại, ${userResponse.data.full_name || userResponse.data.email}! Đăng nhập thành công. Đang chuyển hướng...`;
           setSuccessMessage(welcomeMessage);
-          
+
           setTimeout(() => {
-            router.push('/'); // Chuyển hướng về trang gốc
+            router.push('/');
           }, 2500);
 
         } else {
@@ -107,73 +117,91 @@ export default function SignInPage() {
     }
   };
 
-  return (
-    <ThemeProvider theme={defaultTheme}>
-      <Container component="main" maxWidth="xs">
-        <CssBaseline />
-        <Box
-          sx={{
-            marginTop: 8,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-          }}
-        >
-          <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
-            <LockOutlinedIcon />
-          </Avatar>
-          <Typography component="h1" variant="h5">
-            Đăng nhập vào tài khoản
-          </Typography>
-          <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
-            {error && (
-              <Alert severity="error" sx={{ width: '100%', mt: 2, mb: 1 }}>
-                {error}
-              </Alert>
-            )}
-            {successMessage && (
-              <Alert severity="success" sx={{ width: '100%', mt: 2, mb: 1 }}>
-                {successMessage}
-              </Alert>
-            )}
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Địa chỉ Email"
-              name="email"
-              autoComplete="email"
-              autoFocus
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={loading || !!successMessage}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Mật khẩu"
-              type="password"
-              id="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading || !!successMessage}
-            />
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading || !!successMessage}
-            >
-              {loading ? <CircularProgress size={24} color="inherit" /> : 'Đăng nhập'}
-            </Button>
-          </Box>
+  // Nếu chưa mounted hoặc đã đăng nhập thì không hiển thị form
+  if (!mounted || session) {
+    return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: 'background.default' }}>
+            <CircularProgress />
         </Box>
-      </Container>
-    </ThemeProvider>
+    );
+  }
+
+  return (
+    // <ThemeProvider theme={defaultTheme}> // <<--- BỎ ThemeProvider Ở ĐÂY
+    // Trang này sẽ tự động nhận theme từ MuiProvider trong layout.tsx
+    <Container component="main" maxWidth="xs" sx={{display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+      <CssBaseline />
+      {/* Thêm nút đổi theme ở góc trên bên phải */}
+      <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
+        <ThemeToggleButton />
+      </Box>
+      <Box
+        sx={{
+          marginTop: 0, // Giảm marginTop để form nằm giữa hơn
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          p: 3, // Thêm padding cho Box
+          borderRadius: 2, // Thêm bo góc
+          bgcolor: 'background.paper', // Sử dụng màu nền của Paper từ theme
+          boxShadow: (theme) => theme.shadows[3], // Thêm chút bóng đổ
+        }}
+      >
+        <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
+          <LockOutlinedIcon />
+        </Avatar>
+        <Typography component="h1" variant="h5">
+          Đăng nhập vào tài khoản
+        </Typography>
+        <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 2, width: '100%' }}>
+          {error && (
+            <Alert severity="error" sx={{ width: '100%', mt: 0, mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+          {successMessage && (
+            <Alert severity="success" sx={{ width: '100%', mt: 0, mb: 2 }}>
+              {successMessage}
+            </Alert>
+          )}
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            id="email"
+            label="Địa chỉ Email"
+            name="email"
+            autoComplete="email"
+            autoFocus
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={loading || !!successMessage}
+          />
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            name="password"
+            label="Mật khẩu"
+            type="password"
+            id="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={loading || !!successMessage}
+          />
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            sx={{ mt: 3, mb: 2 }}
+            disabled={loading || !!successMessage}
+          >
+            {loading ? <CircularProgress size={24} color="inherit" /> : 'Đăng nhập'}
+          </Button>
+        </Box>
+      </Box>
+    </Container>
+    // </ThemeProvider> // <<--- BỎ ThemeProvider Ở ĐÂY
   );
 }

@@ -1,6 +1,8 @@
 // finext-nextjs/app/layout.tsx
 import { AuthProvider } from '@/components/AuthProvider';
-import './globals.css'; // Đảm bảo globals.css được import
+import { MuiProvider } from '@/components/MuiProvider';
+import { NextThemesProvider } from '@/components/NextThemesProvider';
+import './globals.css';
 
 // Import Roboto font
 import '@fontsource/roboto/300.css';
@@ -14,18 +16,27 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    // QUAN TRỌNG: Đảm bảo không có bất kỳ khoảng trắng, comment,
+    // hay biểu thức JSX nào (như {" "}) giữa thẻ <html> mở và thẻ <head>.
+    <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Add Material Icons link */}
+        {/* Các thẻ meta, title, và link nên được đặt ở đây */}
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/icon?family=Material+Icons"
         />
+        {/* Ví dụ: <title>Finext App</title> */}
       </head>
       <body>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <NextThemesProvider>
+          <AuthProvider>
+            <MuiProvider>
+              {children}
+            </MuiProvider>
+          </AuthProvider>
+        </NextThemesProvider>
       </body>
     </html>
   );

@@ -1,0 +1,50 @@
+/* finext-nextjs/app/globals.css */
+
+/* Bỏ hoàn toàn 3 dòng Tailwind đi */
+
+:root {
+  /* Light Mode (Mặc định) */
+  --background: #ffffff;
+  --foreground: #000000;
+  --primary: #1976d2;
+  --secondary: #dc004e;
+  --paper-bg: #ffffff;
+  --text-primary: rgba(0, 0, 0, 0.87);
+  --text-secondary: rgba(0, 0, 0, 0.6);
+  --appbar-bg: #fff;
+  --appbar-text: #000;
+  --drawer-bg: #fff;
+  --drawer-border: #f0f0f0;
+  --table-head-bg: #fafafa;
+  --main-bg: #f5f5f5;
+  /* ... các biến màu khác nếu cần ... */
+}
+
+html[data-theme='dark'] {
+  /* Dark Mode */
+  --background: #121212;
+  --foreground: #ffffff;
+  --primary: #90caf9;
+  --secondary: #f48fb1;
+  --paper-bg: #1e1e1e;
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --appbar-bg: #1e1e1e;
+  --appbar-text: #fff;
+  --drawer-bg: #1e1e1e;
+  --drawer-border: #303030;
+  --table-head-bg: #2a2a2a;
+  --main-bg: #121212; /* Có thể dùng #0a0a0a hoặc #121212 tùy sở thích */
+  /* ... các biến màu khác nếu cần ... */
+}
+
+body {
+  /* Các style global cho body nếu có */
+  /* Lưu ý: Màu nền và màu chữ sẽ được MUI quản lý qua CssBaseline */
+  margin: 0;
+  font-family: "Roboto", "Helvetica", "Arial", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Các style global khác bạn muốn thêm */

@@ -1,19 +1,12 @@
-// finext-nextjs/@/components/UserMenu.tsx
+// finext-nextjs/app/(dashboard)/_components/UserMenu.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/components/AuthProvider';
+// ThemeToggleButton đã được di chuyển, không cần import ở đây nữa
 
-// MUI Components
 import {
-  Avatar,
-  IconButton,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  Typography,
-  Divider,
-  Box
+  Avatar, IconButton, Menu, MenuItem, ListItemIcon, Typography, Divider, Box, Skeleton
 } from '@mui/material';
 import {
   PersonOutline as PersonOutlineIcon,
@@ -24,6 +17,11 @@ const UserMenu: React.FC = () => {
   const { session, logout } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -34,19 +32,29 @@ const UserMenu: React.FC = () => {
   };
 
   const handleLogout = () => {
-    handleClose(); // Đóng menu trước khi logout
+    handleClose();
     logout();
   };
 
   const handleViewProfile = () => {
       handleClose();
-      // Hiện tại chưa có chức năng, có thể thêm sau:
-      // router.push('/profile'); 
       console.log("Xem thông tin người dùng (chưa triển khai)");
   };
 
+  // Placeholder khi component chưa mount hoặc session chưa có
+  const renderPlaceholder = () => (
+    <Box sx={{ display: 'flex', alignItems: 'center', height: 48 }}>
+      {/* Chỉ còn placeholder cho avatar vì nút theme đã chuyển đi */}
+      <Skeleton variant="circular" width={32} height={32} sx={{ ml: 1 }}/>
+    </Box>
+  );
+
+  if (!mounted) {
+    return renderPlaceholder();
+  }
+
   if (!session) {
-    return null; // Không hiển thị gì nếu chưa có session
+    return renderPlaceholder();
   }
 
   const userInitial = session.user?.full_name
@@ -54,11 +62,12 @@ const UserMenu: React.FC = () => {
     : (session.user?.email ? session.user.email.charAt(0).toUpperCase() : 'U');
 
   return (
+    // Box display:flex đã bị loại bỏ vì ThemeToggleButton không còn ở đây
     <>
       <IconButton
         onClick={handleClick}
         size="small"
-        sx={{ ml: 2 }}
+        sx={{ ml: 2 }} // Có thể điều chỉnh lại margin nếu cần
         aria-controls={open ? 'account-menu' : undefined}
         aria-haspopup="true"
         aria-expanded={open ? 'true' : undefined}
@@ -70,7 +79,6 @@ const UserMenu: React.FC = () => {
         id="account-menu"
         open={open}
         onClose={handleClose}
-        onClick={handleClose}
         PaperProps={{
           elevation: 0,
           sx: {
@@ -78,13 +86,14 @@ const UserMenu: React.FC = () => {
             filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.15))',
             mt: 1.5,
             minWidth: 200,
+            bgcolor: 'background.paper',
             '& .MuiAvatar-root': {
               width: 32,
               height: 32,
               ml: -0.5,
               mr: 1,
             },
-            '&::before': { // Tạo mũi tên nhỏ phía trên
+            '&::before': {
               content: '""',
               display: 'block',
               position: 'absolute',
@@ -110,7 +119,7 @@ const UserMenu: React.FC = () => {
             </Typography>
         </Box>
         <Divider />
-        <MenuItem onClick={handleViewProfile} disabled> {/* Tạm thời disable */}
+        <MenuItem onClick={handleViewProfile} disabled>
           <ListItemIcon>
             <PersonOutlineIcon fontSize="small" />
           </ListItemIcon>

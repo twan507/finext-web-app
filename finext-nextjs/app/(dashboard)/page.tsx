@@ -1,4 +1,4 @@
-// finext-nextjs/app/page.tsx
+// finext-nextjs/app/(dashboard)/page.tsx
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -10,19 +10,20 @@ import { apiClient } from '@/lib/apiClient';
 import {
   AppBar, Box, CssBaseline, Drawer, Toolbar, List, ListItem, ListItemButton,
   ListItemIcon, ListItemText, Typography, Container, Paper, TableContainer,
-  Table, TableHead, TableRow, TableCell, TableBody, /* Avatar, */ Chip, IconButton, // <--- BỎ Avatar
+  Table, TableHead, TableRow, TableCell, TableBody, Chip, IconButton,
   CircularProgress, Alert, TextField, Button, InputAdornment, Breadcrumbs, Link as MuiLink,
   TablePagination,
   Avatar
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon, People as PeopleIcon, BarChart as BarChartIcon,
-  Layers as LayersIcon, /* Logout as LogoutIcon, */ Search as SearchIcon, Add as AddIcon, // <--- BỎ LogoutIcon nếu không dùng nữa
+  Layers as LayersIcon, Search as SearchIcon, Add as AddIcon,
   MoreVert as MoreVertIcon, Home as HomeIcon
 } from '@mui/icons-material';
 import UserMenu from './_components/UserMenu';
+import ThemeToggleButton from '@/components/ThemeToggleButton';
 
-// Kiểu dữ liệu cho User (dựa trên UserPublic schema)
+// Kiểu dữ liệu cho User
 interface UserPublic {
   id: string;
   role_ids: string[];
@@ -36,8 +37,7 @@ interface UserPublic {
 const drawerWidth = 240;
 
 const DashboardPage: React.FC = () => {
-  // Bỏ logout khỏi destructuring nếu không dùng trực tiếp ở đây nữa
-  const { session, loading: authLoading, logout } = useAuth(); // Vẫn giữ logout để truyền cho Drawer (hoặc để Drawer dùng useAuth)
+  const { session, loading: authLoading } = useAuth();
   const router = useRouter();
   const [users, setUsers] = useState<UserPublic[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,11 +75,6 @@ const DashboardPage: React.FC = () => {
     fetchUsers();
   }, [session, router, authLoading]);
 
-  // Bỏ hàm handleLogout nếu không dùng ở đây nữa
-  // const handleLogout = () => {
-  //   logout();
-  // };
-
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
   };
@@ -107,10 +102,6 @@ const DashboardPage: React.FC = () => {
         sx={{
           width: `calc(100% - ${drawerWidth}px)`,
           ml: `${drawerWidth}px`,
-          backgroundColor: '#fff',
-          color: '#000',
-          boxShadow: '0 1px 4px rgba(0, 21, 41, 0.08)',
-          borderBottom: '1px solid #f0f0f0'
         }}
         elevation={0}
       >
@@ -129,13 +120,14 @@ const DashboardPage: React.FC = () => {
               }}
               sx={{ width: '300px' }}
             />
-            {/* <<--- THAY THẾ AVATAR BẰNG USERMENU --- >> */}
-            <UserMenu /> 
-            {/* <<------------------------------------ >> */}
+            {/* Nhóm các nút ở bên phải AppBar */}
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <ThemeToggleButton /> {/* <<--- THÊM ThemeToggleButton vào đây */}
+              <UserMenu />
+            </Box>
         </Toolbar>
       </AppBar>
 
-      {/* Drawer */}
       <Drawer
         sx={{
           width: drawerWidth,
@@ -143,7 +135,6 @@ const DashboardPage: React.FC = () => {
           '& .MuiDrawer-paper': {
             width: drawerWidth,
             boxSizing: 'border-box',
-            borderRight: '1px solid #f0f0f0',
           },
         }}
         variant="permanent"
@@ -169,34 +160,20 @@ const DashboardPage: React.FC = () => {
             </ListItem>
           ))}
         </List>
-        {/* <<--- NÚT LOGOUT TRONG DRAWER ĐÃ ĐƯỢC CHUYỂN VÀO USERMENU, CÓ THỂ BỎ ĐI --- >> */}
-        {/* <Box sx={{ flexGrow: 1 }} /> 
-         <List>
-            <ListItem disablePadding sx={{ px: 2, mb: 1 }}>
-              <ListItemButton onClick={logout} sx={{ borderRadius: '8px' }}> // Nếu muốn giữ thì gọi logout
-                <ListItemIcon>
-                  <LogoutIcon />
-                </ListItemIcon>
-                <ListItemText primary="Logout" />
-              </ListItemButton>
-            </ListItem>
-        </List> */}
-        <Box sx={{ flexGrow: 1 }} /> 
+        <Box sx={{ flexGrow: 1 }} />
       </Drawer>
 
-      {/* Main Content */}
       <Box
         component="main"
         sx={{
             flexGrow: 1,
-            bgcolor: '#f5f5f5', 
+            bgcolor: 'background.default',
             p: 3,
             minHeight: '100vh'
         }}
       >
-        <Toolbar /> 
+        <Toolbar />
         <Container maxWidth={false} sx={{ p: '0 !important' }}>
-            {/* Breadcrumbs & Title */}
              <Box sx={{ mb: 3 }}>
                 <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 1 }}>
                     <MuiLink underline="hover" color="inherit" href="/" sx={{ display: 'flex', alignItems: 'center' }}>
@@ -222,12 +199,11 @@ const DashboardPage: React.FC = () => {
                 </Box>
             </Box>
 
-            {/* Users Table */}
-            <Paper sx={{ width: '100%', mb: 2, borderRadius: '12px', overflow: 'hidden', boxShadow: 'none' }}>
+            <Paper sx={{ width: '100%', mb: 2, borderRadius: '12px', overflow: 'hidden' }}>
               <TableContainer>
                  {error && <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>}
                 <Table sx={{ minWidth: 750 }} aria-labelledby="tableTitle">
-                  <TableHead sx={{ backgroundColor: '#fafafa' }}>
+                  <TableHead>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Name</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>Phone Number</TableCell>
@@ -265,11 +241,10 @@ const DashboardPage: React.FC = () => {
                           </TableCell>
                           <TableCell>{user.phone_number}</TableCell>
                           <TableCell>
-                            <Chip
+                             <Chip
                                 label={user.is_active !== false ? 'Active' : 'Inactive'}
                                 color={user.is_active !== false ? 'success' : 'default'}
                                 size="small"
-                                sx={{ backgroundColor: user.is_active !== false ? '#e6f7ff' : '#f5f5f5', color: user.is_active !== false ? '#1890ff' : '#595959' }}
                             />
                           </TableCell>
                            <TableCell>
@@ -278,7 +253,7 @@ const DashboardPage: React.FC = () => {
                               </Typography>
                            </TableCell>
                            <TableCell align="right">
-                              <IconButton>
+                              <IconButton aria-label="actions">
                                   <MoreVertIcon />
                               </IconButton>
                            </TableCell>
@@ -295,7 +270,6 @@ const DashboardPage: React.FC = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
-              {/* Pagination */}
               <TablePagination
                     rowsPerPageOptions={[5, 10, 25]}
                     component="div"
