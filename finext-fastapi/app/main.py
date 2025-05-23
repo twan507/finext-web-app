@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .core.database import connect_to_mongo, close_mongo_connection, get_database, mongodb
 from .core.seeding import seed_initial_data
-from .routers import auth, users, roles, permissions, sessions
+from .routers import auth, users, roles, permissions, sessions, sse
 
 from app.utils.response_wrapper import StandardApiResponse 
 
@@ -115,6 +115,7 @@ app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(roles.router, prefix="/roles", tags=["roles"]) # Router mới cho Roles
 app.include_router(permissions.router, prefix="/permissions", tags=["permissions"]) # Router mới cho Permissions
 app.include_router(sessions.router, prefix="/sessions", tags=["sessions"]) 
+app.include_router(sse.router, prefix="/sse", tags=["sse"])
 
 @app.get("/")
 async def read_root():
