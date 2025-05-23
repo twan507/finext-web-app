@@ -1,43 +1,49 @@
-<div align="center"><strong>Next.js 15 Admin Dashboard Template</strong></div>
-<div align="center">Built with the Next.js App Router</div>
+<div align="center"><strong>Finext Next.js Web App</strong></div>
+<div align="center">Built with Next.js 15 App Router</div>
 <br />
-<div align="center">
-<a href="https://next-admin-dash.vercel.app/">Demo</a>
-<span> · </span>
-<a href="https://vercel.com/templates/next.js/admin-dashboard-tailwind-postgres-react-nextjs">Clone & Deploy</a>
-<span>
-</div>
 
 ## Overview
 
-This is a starter template using the following stack:
+This is a Next.js frontend application using the following stack:
 
-- Framework - [Next.js (App Router)](https://nextjs.org)
+- Framework - [Next.js 15 (App Router)](https://nextjs.org)
 - Language - [TypeScript](https://www.typescriptlang.org)
-- Auth - [Auth.js](https://authjs.dev)
-- Deployment - [Vercel](https://vercel.com/docs/concepts/next.js/overview)
 - Styling - [Tailwind CSS](https://tailwindcss.com)
-- Components - [Shadcn UI](https://ui.shadcn.com/)
+- Components - [Radix UI](https://www.radix-ui.com/)
 - Analytics - [Vercel Analytics](https://vercel.com/analytics)
 - Formatting - [Prettier](https://prettier.io)
 
-This template uses the new Next.js App Router. This includes support for enhanced layouts, colocation of components, tests, and styles, component-level data fetching, and more.
+This application serves as the frontend client for the Finext FastAPI backend, handling user authentication through direct API calls and managing session state with localStorage.
 
 ## Getting Started
 
-Next, copy the `.env.example` file to `.env` and update the values. Follow the instructions in the `.env.example` file to set up your GitHub OAuth application.
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-```bash
-npm i -g vercel
-vercel link
-vercel env pull
-```
+2. **Environment setup:**
+   Create a `.env` file in the root directory:
+   ```bash
+   NEXT_PUBLIC_FASTAPI_BASE_URL=http://127.0.0.1:8000
+   ```
 
-Finally, run the following commands to start the development server:
+3. **Start development server:**
+   ```bash
+   npm run dev
+   ```
 
-```
-pnpm install
-pnpm dev
-```
+4. **Access the application:**
+   Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You should now be able to access the application at http://localhost:3000.
+## Backend Integration
+
+This frontend is designed to work with the Finext FastAPI backend. Make sure the FastAPI server is running on `http://127.0.0.1:8000` before using the application.
+
+## Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
+- `npm run format` - Format code with Prettier

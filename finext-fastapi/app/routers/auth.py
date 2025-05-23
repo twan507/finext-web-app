@@ -4,7 +4,6 @@ from fastapi.security import OAuth2PasswordRequestForm  # Dùng cho endpoint /to
 from typing import Annotated
 
 # Schemas
-from app.schemas.auth import NextAuthUser  # Cho callback từ NextAuth
 from app.schemas.token import (
     JWTTokenResponse,
     RefreshTokenRequest,
@@ -124,7 +123,7 @@ async def refresh_access_token(
     try:
         payload = decode_refresh_token(token_request.refresh_token)
         user_id: str = payload["user_id"]
-        email: str = payload["sub"]
+        # email: str = payload["sub"]
 
     except HTTPException as e:
         # Bắt các lỗi HTTPException được ném ra từ decode_refresh_token (ví dụ: token không hợp lệ, hết hạn).
