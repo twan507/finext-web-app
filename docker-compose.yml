@@ -2,10 +2,10 @@ version: "3.7" # Bạn có thể xóa dòng này nếu dùng Docker Compose V2
 
 services:
   traefik:
-    image: "traefik:v3.0" # Nên dùng phiên bản cụ thể, ví dụ v3.0
+    image: "traefik:v3.0"
     restart: always
     command:
-      - "--api.dashboard=true" # API Dashboard vẫn bật, truy cập qua cổng 8080 (nếu map)
+      - "--api.dashboard=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
@@ -13,45 +13,42 @@ services:
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
       - "--entrypoints.websecure.address=:443"
       - "--certificatesresolvers.mytlschallenge.acme.tlschallenge=true"
-      - "--certificatesresolvers.mytlschallenge.acme.email=${SSL_EMAIL}" # Lấy từ .env
+      - "--certificatesresolvers.mytlschallenge.acme.email=${SSL_EMAIL}"
       - "--certificatesresolvers.mytlschallenge.acme.storage=/letsencrypt/acme.json"
-      - "--entrypoints.websecure.http.tls.certresolver=mytlschallenge" # Áp dụng resolver cho entrypoint websecure
+      - "--entrypoints.websecure.http.tls.certresolver=mytlschallenge"
       - "--log.level=INFO"
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080" # Bạn có thể xóa dòng này nếu không muốn expose cổng dashboard
+      - "8080:8080"
     volumes:
       - traefik_data:/letsencrypt
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - web-proxy
     labels:
-      # Label này quan trọng để Traefik có thể áp dụng các middleware chung (nếu có)
-      # Hoặc nếu bạn muốn Traefik tự quản lý chính nó qua Docker provider (không bắt buộc nếu không có rule nào cho nó)
-      - "traefik.enable=true" # Xem xét bỏ nếu không có rule nào cho chính service traefik
-
-      # --- Middleware bảo mật chung (vẫn giữ lại để áp dụng cho các service khác) ---
+      # --- XÓA LABEL "traefik.enable=true" KHỎI SERVICE TRAEFIK ---
+      # Các middleware vẫn được định nghĩa ở đây để các service khác dùng
       - "traefik.http.middlewares.secure-headers.headers.SSLRedirect=true"
       - "traefik.http.middlewares.secure-headers.headers.STSSeconds=315360000"
       - "traefik.http.middlewares.secure-headers.headers.browserXSSFilter=true"
       - "traefik.http.middlewares.secure-headers.headers.contentTypeNosniff=true"
       - "traefik.http.middlewares.secure-headers.headers.forceSTSHeader=true"
-      - "traefik.http.middlewares.secure-headers.headers.SSLHost=${DOMAIN_NAME}" # SSLHost này nên cho từng router cụ thể
+      - "traefik.http.middlewares.secure-headers.headers.SSLHost=${DOMAIN_NAME}"
       - "traefik.http.middlewares.secure-headers.headers.STSIncludeSubdomains=true"
       - "traefik.http.middlewares.secure-headers.headers.STSPreload=true"
 
   fastapi-app:
     build:
       context: ./finext-fastapi
-      dockerfile: dockerfile # Đảm bảo tên file là dockerfile (viết thường)
+      dockerfile: dockerfile
     restart: always
     networks:
       - web-proxy
     depends_on:
       - traefik
     labels:
-      - "traefik.enable=true"
+      - "traefik.enable=true" # FastAPI app CẦN label này
       - "traefik.http.routers.fastapi.rule=Host(`${DOMAIN_NAME}`) && (PathPrefix(`/auth`) || PathPrefix(`/users`) || PathPrefix(`/roles`) || PathPrefix(`/permissions`) || PathPrefix(`/sessions`) || PathPrefix(`/sse`))"
       - "traefik.http.routers.fastapi.priority=10"
       - "traefik.http.routers.fastapi.entrypoints=websecure"
@@ -62,7 +59,7 @@ services:
   nextjs-app:
     build:
       context: ./finext-nextjs
-      dockerfile: dockerfile # Đảm bảo tên file là dockerfile (viết thường)
+      dockerfile: dockerfile
       args:
         - NEXT_PUBLIC_FASTAPI_BASE_URL_ARG=https://${DOMAIN_NAME}
     restart: always
@@ -72,7 +69,7 @@ services:
       - fastapi-app
       - traefik
     labels:
-      - "traefik.enable=true"
+      - "traefik.enable=true" # Next.js app CẦN label này
       - "traefik.http.routers.nextjs.rule=Host(`${DOMAIN_NAME}`)"
       - "traefik.http.routers.nextjs.priority=1"
       - "traefik.http.routers.nextjs.entrypoints=websecure"
@@ -81,7 +78,7 @@ services:
       - "traefik.http.routers.nextjs.middlewares=secure-headers@docker"
 
 volumes:
-  traefik_data: {} # Để Docker tự tạo nếu không có external: true
+  traefik_data: {}
 
 networks:
-  web-proxy: {}    # Để Docker tự tạo nếu không có external: true
+  web-proxy: {}
