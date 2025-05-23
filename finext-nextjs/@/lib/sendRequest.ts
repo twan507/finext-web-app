@@ -1,8 +1,10 @@
+// finext-nextjs/lib/sendRequest.ts
 import queryString from 'query-string';
-import { getAccessToken } from './session';
+import { getAccessToken } from './session'; // Chỉ cần getAccessToken
 
 const BASE_URL = process.env.NEXT_PUBLIC_FASTAPI_BASE_URL;
 
+// Giữ nguyên các interface IRequest, StandardApiResponse, ApiErrorResponse
 export interface IRequest {
   url: string;
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
@@ -28,7 +30,7 @@ export interface ApiErrorResponse {
   errorDetails?: any;
 }
 
-export const apiClient = async <TResponseData = any>(
+export const sendRequest = async <TResponseData = any>(
   props: IRequest
 ): Promise<StandardApiResponse<TResponseData>> => {
   let {
@@ -48,7 +50,6 @@ export const apiClient = async <TResponseData = any>(
 
   const requestHeaders = new Headers(headers);
 
-  // Xử lý body
   let processedBody: BodyInit | null = null;
   if (body) {
     if (isFormData && body instanceof FormData) {
@@ -65,11 +66,17 @@ export const apiClient = async <TResponseData = any>(
     }
   }
 
-  // Thêm token vào header nếu cần
+  // Chỉ thêm token, không xử lý 401 ở đây
   if (requireAuth && !requestHeaders.has('Authorization')) {
     const token = getAccessToken();
     if (token) {
       requestHeaders.set('Authorization', `Bearer ${token}`);
+    } else {
+      // Nếu yêu cầu auth mà không có token, ném lỗi 401 để interceptor bắt
+      throw {
+        statusCode: 401,
+        message: "Authorization required, but no token found.",
+      } as ApiErrorResponse;
     }
   }
 
@@ -84,17 +91,10 @@ export const apiClient = async <TResponseData = any>(
     const res = await fetch(finalUrl, options);
 
     if (res.ok) {
-      if (responseType === 'json') {
-        const jsonResponse = await res.json();
-        return jsonResponse as StandardApiResponse<TResponseData>;
-      } else if (responseType === 'blob') {
-        const blobData = await res.blob();
-        return { status: res.status, data: blobData as any } as StandardApiResponse<TResponseData>;
-      } else if (responseType === 'text') {
-        const textData = await res.text();
-        return { status: res.status, data: textData as any } as StandardApiResponse<TResponseData>;
-      }
-      return await res.json() as StandardApiResponse<TResponseData>;
+        if (responseType === 'json') return await res.json() as StandardApiResponse<TResponseData>;
+        if (responseType === 'blob') return { status: res.status, data: await res.blob() as any };
+        if (responseType === 'text') return { status: res.status, data: await res.text() as any };
+        return await res.json() as StandardApiResponse<TResponseData>;
     } else {
       let errorJson: any = {};
       try {
@@ -108,7 +108,7 @@ export const apiClient = async <TResponseData = any>(
         message: errorJson?.message || res.statusText || "Lỗi không xác định từ server",
         errorDetails: errorJson?.data || errorJson?.detail || errorJson,
       };
-      throw errorToThrow;
+      throw errorToThrow; // Ném lỗi để interceptor bắt
     }
   } catch (error: any) {
     if (error && typeof error.statusCode === 'number') {

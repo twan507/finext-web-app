@@ -1,6 +1,9 @@
-import { Button } from '@/components/ui/button';
-import { auth, signOut } from '@/lib/auth';
+// finext-nextjs/app/(dashboard)/_components/user.tsx
+'use client';
+
 import Image from 'next/image';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,11 +12,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import Link from 'next/link';
+import { useAuth } from '@/components/AuthProvider';
 
-export async function User() {
-  let session = await auth();
-  let user = session?.user;
+export function User() {
+  const { session, logout, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="h-9 w-9 rounded-full bg-muted animate-pulse" />
+    );
+  }
+
+  const currentUser = session?.user;
 
   return (
     <DropdownMenu>
@@ -24,7 +34,7 @@ export async function User() {
           className="overflow-hidden rounded-full"
         >
           <Image
-            src={user?.image ?? '/placeholder-user.jpg'}
+            src={'/placeholder-user.jpg'} // Luôn dùng ảnh placeholder
             width={36}
             height={36}
             alt="Avatar"
@@ -33,26 +43,27 @@ export async function User() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>My Account</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem>Settings</DropdownMenuItem>
-        <DropdownMenuItem>Support</DropdownMenuItem>
-        <DropdownMenuSeparator />
-        {user ? (
-          <DropdownMenuItem>
-            <form
-              action={async () => {
-                'use server';
-                await signOut();
-              }}
-            >
-              <button type="submit">Sign Out</button>
-            </form>
-          </DropdownMenuItem>
+        {currentUser ? (
+          <>
+            <DropdownMenuLabel>{currentUser.full_name || currentUser.email}</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>
+              Cài đặt
+            </DropdownMenuItem>
+            <DropdownMenuItem>Hỗ trợ</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={logout} className="cursor-pointer">
+              Đăng xuất
+            </DropdownMenuItem>
+          </>
         ) : (
-          <DropdownMenuItem>
-            <Link href="/login">Sign In</Link>
-          </DropdownMenuItem>
+          <>
+            <DropdownMenuLabel>Khách</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link href="/login">Đăng nhập</Link>
+            </DropdownMenuItem>
+          </>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

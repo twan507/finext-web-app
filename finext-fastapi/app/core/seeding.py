@@ -97,8 +97,8 @@ async def seed_roles(db: AsyncIOMotorDatabase, permission_ids_map: Dict[str, PyO
             "description": "Người dùng thông thường.",
             "permission_names": [
                 "user:update_self", 
-                "session:list_own", # THÊM QUYỀN XEM SESSION CỦA MÌNH
-                "session:delete_own"  # THÊM QUYỀN TỰ XÓA SESSION CỦA MÌNH
+                "session:list_self", # THÊM QUYỀN XEM SESSION CỦA MÌNH
+                "session:delete_self"  # THÊM QUYỀN TỰ XÓA SESSION CỦA MÌNH
             ]
         },
         {
@@ -106,8 +106,8 @@ async def seed_roles(db: AsyncIOMotorDatabase, permission_ids_map: Dict[str, PyO
             "description": "Nhà môi giới.",
             "permission_names": [
                 "user:update_self",
-                "session:list_own", 
-                "session:delete_own"
+                "session:list_self", 
+                "session:delete_self"
             ]
         },
     ]

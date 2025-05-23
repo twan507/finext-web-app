@@ -17,7 +17,7 @@ MAX_SESSIONS_PER_USER = int(os.getenv("MAX_SESSIONS_PER_USER", 3)) # Mặc đị
 # Cấu hình JWT
 SECRET_KEY = os.getenv("SECRET_KEY")  # Rất quan trọng: Thay đổi key này và giữ bí mật trong production!
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30)) # Mặc định token hết hạn sau 30 phút
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 5)) # Mặc định token hết hạn sau 30 phút
 REFRESH_TOKEN_EXPIRE_MINUTES = int(os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES", 10080)) # Mặc định refresh token hết hạn sau 7 ngày (10080 phút)
 
 if not MONGODB_CONNECTION_STRING:
