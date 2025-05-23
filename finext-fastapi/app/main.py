@@ -4,7 +4,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-import json # Đảm bảo đã import json
+import json
+from fastapi.middleware.cors import CORSMiddleware
 
 from .core.database import connect_to_mongo, close_mongo_connection, get_database, mongodb
 from .core.seeding import seed_initial_data
@@ -45,7 +46,20 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# SỬA ĐỔI EXCEPTION HANDLER Ở ĐÂY:
+# THÊM CORS MIDDLEWARE
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",  # Next.js development server
+        "http://127.0.0.1:3000",  # Alternative localhost
+        "https://finext.vn",  # Thêm domain production nếu có
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["*"],
+)
+
+#EXCEPTION HANDLER:
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     error_details_for_log = exc.errors()

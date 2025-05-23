@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("/login/credentials", response_model=StandardApiResponse[JWTTokenResponse])
+@router.post("/login", response_model=StandardApiResponse[JWTTokenResponse])
 @api_response_wrapper(
     default_success_message="Đăng nhập thành công.",
     success_status_code=status.HTTP_200_OK,
@@ -88,71 +88,6 @@ async def login_for_access_token(
     return JWTTokenResponse(
         token_type="bearer", access_token=access_token, refresh_token=refresh_token
     )
-
-
-@router.post("/login/OAuth", response_model=StandardApiResponse[JWTTokenResponse])
-@api_response_wrapper(
-    default_success_message="Đăng nhập thành công qua Authjs.",
-    success_status_code=status.HTTP_200_OK,
-)
-async def login_via_nextauth_callback(
-    user_data_from_nextauth: NextAuthUser,  # Schema cho dữ liệu từ NextAuth
-    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
-):
-    """
-    Xử lý callback từ NextAuth sau khi người dùng được xác thực bởi NextAuth (ví dụ: qua Google).
-    Endpoint này sẽ:
-    1. Nhận thông tin người dùng từ NextAuth.
-    2. Kiểm tra xem người dùng này (dựa trên email) đã tồn tại trong DB của FastAPI chưa.
-    3. Nếu chưa, có thể tạo mới (tùy theo logic ứng dụng, hiện tại sẽ báo lỗi nếu chưa có).
-    4. Nếu có, tạo và trả về một JWT của FastAPI cho người dùng đó.
-    """
-    logger.info(
-        f"Received user data from NextAuth callback: {user_data_from_nextauth.model_dump_json(indent=2)}"
-    )
-
-    if (
-        not user_data_from_nextauth.email
-    ):  # NextAuth có thể không trả về userId nếu là provider như Google
-        logger.warning("NextAuth callback received without an email.")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email is required from NextAuth callback for processing.",
-        )
-
-    # Kiểm tra xem user đã tồn tại trong DB của FastAPI chưa, dựa trên email
-    user_in_fastapi_db = await get_user_by_email_db(
-        db, email=user_data_from_nextauth.email
-    )
-
-    if not user_in_fastapi_db:
-        # Logic xử lý nếu user chưa tồn tại trong DB FastAPI:
-        # - Có thể tự động tạo user mới nếu đây là luồng đăng ký/đăng nhập kết hợp.
-        # - Hoặc yêu cầu người dùng đăng ký qua hệ thống FastAPI trước.
-        # Hiện tại: Báo lỗi nếu user không tồn tại.
-        logger.warning(
-            f"User from NextAuth callback (email: {user_data_from_nextauth.email}) not found in FastAPI DB."
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User with email {user_data_from_nextauth.email} not found in our system. Please register or ensure emails match.",
-        )
-
-    # User đã tồn tại trong DB FastAPI, tạo token cho họ
-    token_data_payload = {
-        "sub": user_in_fastapi_db.email,
-        "user_id": str(user_in_fastapi_db.id),
-    }
-    access_token = create_access_token(data=token_data_payload)
-    refresh_token = create_refresh_token(data=token_data_payload)
-
-    logger.info(
-        f"Generated FastAPI token for NextAuth user: {user_in_fastapi_db.email} (ID: {user_in_fastapi_db.id})"
-    )
-    return JWTTokenResponse(
-        token_type="bearer", access_token=access_token, refresh_token=refresh_token
-    )
-
 
 @router.get("/me", response_model=StandardApiResponse[UserPublic])
 @api_response_wrapper(
