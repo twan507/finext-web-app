@@ -10,10 +10,6 @@ class PermissionBase(BaseModel):
 class PermissionCreate(PermissionBase):
     pass
 
-class PermissionUpdate(BaseModel):
-    name: Optional[str] = Field(default=None, min_length=3, max_length=100)
-    description: Optional[str] = None
-
 class PermissionInDB(PermissionBase):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     created_at: datetime = Field(default_factory=datetime.now)
@@ -21,4 +17,7 @@ class PermissionInDB(PermissionBase):
 
     class Config:
         populate_by_name = True
+
+class PermissionPublic(PermissionBase):
+    pass
         

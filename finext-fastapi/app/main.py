@@ -1,7 +1,8 @@
 import logging
 from contextlib import asynccontextmanager
+from typing import Any # Thêm Any từ typing
 
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, status, HTTPException 
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 import json
@@ -9,7 +10,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .core.database import connect_to_mongo, close_mongo_connection, get_database, mongodb
 from .core.seeding import seed_initial_data
-from .routers import auth, users
+from .routers import auth, users, roles, permissions
+
+from app.utils.response_wrapper import StandardApiResponse 
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -59,6 +62,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# THÊM CUSTOM HTTP EXCEPTION HANDLER
+@app.exception_handler(HTTPException)
+async def custom_http_exception_handler(request: Request, exc: HTTPException):
+    """
+    Bắt tất cả các HTTPException và định dạng lại response theo StandardApiResponse.
+    """
+    logger.info(
+        f"Custom handler bắt HTTPException: {exc.status_code} - {exc.detail} cho request: {request.method} {request.url}"
+    )
+    # Tạo response theo cấu trúc StandardApiResponse
+    error_response_payload = StandardApiResponse[Any]( # Sử dụng Any cho DataT trong trường hợp lỗi
+        status=exc.status_code,
+        message=str(exc.detail), # Lấy message từ detail của HTTPException
+        data=None,               # Data là None cho lỗi
+    )
+    return JSONResponse(
+        status_code=exc.status_code,
+        # Sử dụng exclude_none=False để đảm bảo trường "data": null luôn xuất hiện
+        content=error_response_payload.model_dump(mode="json", exclude_none=False), 
+    )
+
 #EXCEPTION HANDLER:
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -88,6 +112,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 # Include routers
 app.include_router(auth.router, prefix="/auth", tags=["authentication"])
 app.include_router(users.router, prefix="/users", tags=["users"])
+app.include_router(roles.router, prefix="/roles", tags=["roles"]) # Router mới cho Roles
+app.include_router(permissions.router, prefix="/permissions", tags=["permissions"]) # Router mới cho Permissions
 
 @app.get("/")
 async def read_root():

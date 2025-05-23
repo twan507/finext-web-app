@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from typing import Optional, List
 from app.utils.types import PyObjectId
-from datetime import datetime
+from datetime import datetime, timezone
 
 class UserCreate(BaseModel):
     """Schema for creating a new user (input)."""
@@ -11,8 +11,8 @@ class UserCreate(BaseModel):
     phone_number: str
     password: str = Field(..., min_length=8)
     latest_subscription_id: Optional[str] = Field(default=None)
-    created_at: datetime = Field(default_factory=lambda: datetime.now())
-    updated_at: datetime = Field(default_factory=lambda: datetime.now())
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     is_active: bool = Field(default=True)
 
 class UserUpdate(BaseModel):
@@ -20,7 +20,7 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = Field(default=None)
     email: Optional[EmailStr] = Field(default=None)
     phone_number: Optional[str] = Field(default=None)
-    updated_at: datetime = Field(default_factory=lambda: datetime.now())
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class UserPublic(BaseModel):
     """Schema for returning user data to the client (output)."""
@@ -52,3 +52,6 @@ class UserInDB(BaseModel):
         populate_by_name=True,      # Cho phép dùng alias "_id"
         from_attributes=True          # CHO PHÉP TẠO MODEL TỪ THUỘC TÍNH CỦA OBJECT KHÁC
     )
+
+class UserRoleModificationRequest(BaseModel):
+    role_ids: List[PyObjectId] = Field(..., description="Danh sách ID của các vai trò cần gán/thu hồi.")

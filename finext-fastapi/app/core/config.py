@@ -7,7 +7,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 MONGODB_CONNECTION_STRING = os.getenv("MONGODB_CONNECTION_STRING")
+
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
+BROKER_EMAIL= os.getenv("BROKER_EMAIL")
+USER_EMAIL= os.getenv("USER_EMAIL")
 ADMIN_PWD = os.getenv("ADMIN_PWD")
 
 # Cấu hình JWT
