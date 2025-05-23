@@ -1,4 +1,4 @@
-version: "3.7" # Bạn có thể xóa dòng này nếu dùng Docker Compose V2
+version: "3.7"
 
 services:
   traefik:
@@ -27,8 +27,19 @@ services:
     networks:
       - web-proxy
     labels:
-      # --- XÓA LABEL "traefik.enable=true" KHỎI SERVICE TRAEFIK ---
-      # Các middleware vẫn được định nghĩa ở đây để các service khác dùng
+      # KHÔI PHỤC LẠI enable=true
+      - "traefik.enable=true"
+
+      # THÊM MỘT ROUTER "DUMMY" CHO SERVICE TRAEFIK ĐỂ NÓ KHÔNG CỐ GẮNG LẤY SSL CHO TÊN SERVICE
+      # Rule này sẽ không bao giờ khớp với một request thực tế từ internet nếu bạn không trỏ DNS
+      # và chúng ta sẽ không bật TLS cho nó.
+      - "traefik.http.routers.traefik-self-dummy.rule=Host(`traefik-internal-do-not-resolve`)"
+      - "traefik.http.routers.traefik-self-dummy.entrypoints=web" # Chỉ dùng entrypoint http
+      - "traefik.http.routers.traefik-self-dummy.service=api@internal" # Trỏ đến API nội bộ nếu cần debug
+      # KHÔNG CÓ "traefik.http.routers.traefik-self-dummy.tls=true"
+      # KHÔNG CÓ "traefik.http.routers.traefik-self-dummy.tls.certresolver=mytlschallenge"
+
+      # --- Middleware bảo mật chung VẪN ĐƯỢC ĐỊNH NGHĨA Ở ĐÂY ---
       - "traefik.http.middlewares.secure-headers.headers.SSLRedirect=true"
       - "traefik.http.middlewares.secure-headers.headers.STSSeconds=315360000"
       - "traefik.http.middlewares.secure-headers.headers.browserXSSFilter=true"
@@ -48,13 +59,13 @@ services:
     depends_on:
       - traefik
     labels:
-      - "traefik.enable=true" # FastAPI app CẦN label này
+      - "traefik.enable=true"
       - "traefik.http.routers.fastapi.rule=Host(`${DOMAIN_NAME}`) && (PathPrefix(`/auth`) || PathPrefix(`/users`) || PathPrefix(`/roles`) || PathPrefix(`/permissions`) || PathPrefix(`/sessions`) || PathPrefix(`/sse`))"
       - "traefik.http.routers.fastapi.priority=10"
       - "traefik.http.routers.fastapi.entrypoints=websecure"
       - "traefik.http.routers.fastapi.tls.certresolver=mytlschallenge"
       - "traefik.http.services.fastapi-service.loadbalancer.server.port=8000"
-      - "traefik.http.routers.fastapi.middlewares=secure-headers@docker"
+      - "traefik.http.routers.fastapi.middlewares=secure-headers@docker" # Sử dụng middleware đã định nghĩa
 
   nextjs-app:
     build:
@@ -69,13 +80,13 @@ services:
       - fastapi-app
       - traefik
     labels:
-      - "traefik.enable=true" # Next.js app CẦN label này
+      - "traefik.enable=true"
       - "traefik.http.routers.nextjs.rule=Host(`${DOMAIN_NAME}`)"
       - "traefik.http.routers.nextjs.priority=1"
       - "traefik.http.routers.nextjs.entrypoints=websecure"
       - "traefik.http.routers.nextjs.tls.certresolver=mytlschallenge"
       - "traefik.http.services.nextjs-service.loadbalancer.server.port=3000"
-      - "traefik.http.routers.nextjs.middlewares=secure-headers@docker"
+      - "traefik.http.routers.nextjs.middlewares=secure-headers@docker" # Sử dụng middleware đã định nghĩa
 
 volumes:
   traefik_data: {}
