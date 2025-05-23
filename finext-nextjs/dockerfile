@@ -1,7 +1,4 @@
-# syntax=docker.io/docker/dockerfile:1
-
-# Stage 1: Base image với Node.js 18 Alpine
-FROM node:20-alpine AS base
+FROM node:23-alpine AS base
 
 # Stage 2: Cài đặt dependencies
 FROM base AS deps

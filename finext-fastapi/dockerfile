@@ -1,5 +1,4 @@
-# Sử dụng image Python 3.11-slim làm base. Nó nhỏ gọn hơn image full.
-FROM python:3.11-slim-bullseye
+FROM python:3.13-alpine
 
 # Đặt các biến môi trường để Python chạy hiệu quả hơn trong Docker
 ENV PYTHONUNBUFFERED=1
