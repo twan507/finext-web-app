@@ -56,6 +56,7 @@ app.add_middleware(
         "http://localhost:3000",  # Next.js development server
         "http://127.0.0.1:3000",  # Alternative localhost
         "https://finext.vn",  # Thêm domain production nếu có
+        "https://twan.io.vn/",  # Thêm domain production nếu có
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],

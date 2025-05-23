@@ -1,0 +1,94 @@
+version: "3.7"
+
+services:
+  traefik:
+    image: "traefik:v3.0"
+    restart: always
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.mytlschallenge.acme.tlschallenge=true"
+      - "--certificatesresolvers.mytlschallenge.acme.email=${SSL_EMAIL}"
+      - "--certificatesresolvers.mytlschallenge.acme.storage=/letsencrypt/acme.json"
+      - "--entrypoints.websecure.http.tls.certresolver=mytlschallenge"
+      - "--log.level=INFO"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080" # Mở cổng 8080 để xem Dashboard (chỉ để debug)
+    volumes:
+      - traefik_data:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - web-proxy
+    labels:
+      - "traefik.enable=true"
+      # --- Cấu hình Dashboard Traefik (An toàn hơn) ---
+      - "traefik.http.routers.traefik_dashboard.rule=Host(`${TRAEFIK_DASHBOARD_HOST}`)"
+      - "traefik.http.routers.traefik_dashboard.service=api@internal"
+      - "traefik.http.routers.traefik_dashboard.entrypoints=websecure"
+      - "traefik.http.routers.traefik_dashboard.tls.certresolver=mytlschallenge"
+      # --- Middleware bảo mật chung ---
+      - "traefik.http.middlewares.secure-headers.headers.SSLRedirect=true"
+      - "traefik.http.middlewares.secure-headers.headers.STSSeconds=315360000"
+      - "traefik.http.middlewares.secure-headers.headers.browserXSSFilter=true"
+      - "traefik.http.middlewares.secure-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.secure-headers.headers.forceSTSHeader=true"
+      - "traefik.http.middlewares.secure-headers.headers.SSLHost=${DOMAIN_NAME}"
+      - "traefik.http.middlewares.secure-headers.headers.STSIncludeSubdomains=true"
+      - "traefik.http.middlewares.secure-headers.headers.STSPreload=true"
+
+  fastapi-app:
+    build:
+      context: ./finext-fastapi # Đường dẫn tới thư mục FastAPI
+      dockerfile: dockerfile # Tên file là 'dockerfile' (viết thường)
+    restart: always
+    # --- BỎ HOÀN TOÀN PHẦN 'environment' ---
+    # Vì Dockerfile đã copy .env, nó sẽ tự đọc từ đó.
+    # Đảm bảo file .env trong ./finext-fastapi là chính xác!
+    networks:
+      - web-proxy
+    depends_on:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.fastapi.rule=Host(`${DOMAIN_NAME}`) && (PathPrefix(`/auth`) || PathPrefix(`/users`) || PathPrefix(`/roles`) || PathPrefix(`/permissions`) || PathPrefix(`/sessions`) || PathPrefix(`/sse`))"
+      - "traefik.http.routers.fastapi.priority=10"
+      - "traefik.http.routers.fastapi.entrypoints=websecure"
+      - "traefik.http.routers.fastapi.tls.certresolver=mytlschallenge"
+      - "traefik.http.services.fastapi-service.loadbalancer.server.port=8000"
+      - "traefik.http.routers.fastapi.middlewares=secure-headers@docker"
+
+  nextjs-app:
+    build:
+      context: ./finext-nextjs # Đường dẫn tới thư mục Next.js
+      dockerfile: dockerfile # Tên file là 'dockerfile' (viết thường)
+      args:
+        # --- THÊM PHẦN 'args' ĐỂ TRUYỀN VÀO DOCKERFILE ---
+        - NEXT_PUBLIC_FASTAPI_BASE_URL_ARG=https://${DOMAIN_NAME}
+    restart: always
+    # --- BỎ HOÀN TOÀN PHẦN 'environment' ---
+    networks:
+      - web-proxy
+    depends_on:
+      - fastapi-app
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nextjs.rule=Host(`${DOMAIN_NAME}`)"
+      - "traefik.http.routers.nextjs.priority=1"
+      - "traefik.http.routers.nextjs.entrypoints=websecure"
+      - "traefik.http.routers.nextjs.tls.certresolver=mytlschallenge"
+      - "traefik.http.services.nextjs-service.loadbalancer.server.port=3000"
+      - "traefik.http.routers.nextjs.middlewares=secure-headers@docker"
+
+volumes:
+  traefik_data: {} # Để Docker tự tạo nếu không có external: true
+
+networks:
+  web-proxy: {} # Để Docker tự tạo nếu không có external: true

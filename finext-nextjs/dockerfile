@@ -13,14 +13,14 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# --- HARDCODE BIẾN MÔI TRƯỜNG TẠI ĐÂY ---
-# Thay "http://your-actual-fastapi-url:8000" bằng URL thực tế của FastAPI backend
-# Ví dụ: "http://finext-api:8000" nếu chạy qua Docker Compose và service FastAPI tên là 'finext-api'
-# Hoặc địa chỉ IP public/domain nếu FastAPI chạy ở nơi khác
-ENV NEXT_PUBLIC_FASTAPI_BASE_URL="http://127.0.0.1:8000"
-# -----------------------------------------
+# --- SỬA ĐỔI Ở ĐÂY ---
+# Nhận giá trị từ build argument
+ARG NEXT_PUBLIC_FASTAPI_BASE_URL_ARG=http://127.0.0.1:8000
+# Đặt biến môi trường build-time bằng giá trị từ ARG
+ENV NEXT_PUBLIC_FASTAPI_BASE_URL=${NEXT_PUBLIC_FASTAPI_BASE_URL_ARG}
+# ---------------------
 
-# ENV NEXT_TELEMETRY_DISABLED=1
+RUN echo "Building Next.js with NEXT_PUBLIC_FASTAPI_BASE_URL=${NEXT_PUBLIC_FASTAPI_BASE_URL}"
 RUN npm run build
 
 # Stage 4: Production image
