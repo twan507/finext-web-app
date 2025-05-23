@@ -3,8 +3,8 @@
 
 import { useState, FormEvent, useEffect } from 'react'; // Thêm useEffect
 import { useRouter } from 'next/navigation';
-import { apiClient } from '@/lib/apiClient';
-import { useAuth } from '@/components/AuthProvider';
+import { apiClient } from 'lib/apiClient';
+import { useAuth } from 'components/AuthProvider';
 
 // MUI Components
 import Avatar from '@mui/material/Avatar';
@@ -17,7 +17,7 @@ import Container from '@mui/material/Container';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import ThemeToggleButton from '@/components/ThemeToggleButton';
+import ThemeToggleButton from 'components/ThemeToggleButton';
 // Bỏ createTheme và ThemeProvider từ @mui/material/styles vì sẽ dùng theme global
 // import { createTheme, ThemeProvider } from '@mui/material/styles';
 
@@ -120,16 +120,16 @@ export default function SignInPage() {
   // Nếu chưa mounted hoặc đã đăng nhập thì không hiển thị form
   if (!mounted || session) {
     return (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: 'background.default' }}>
-            <CircularProgress />
-        </Box>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: 'background.default' }}>
+        <CircularProgress />
+      </Box>
     );
   }
 
   return (
     // <ThemeProvider theme={defaultTheme}> // <<--- BỎ ThemeProvider Ở ĐÂY
     // Trang này sẽ tự động nhận theme từ MuiProvider trong layout.tsx
-    <Container component="main" maxWidth="xs" sx={{display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+    <Container component="main" maxWidth="xs" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
       <CssBaseline />
       {/* Thêm nút đổi theme ở góc trên bên phải */}
       <Box sx={{ position: 'absolute', top: 16, right: 16 }}>

@@ -3,8 +3,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/AuthProvider';
-import { apiClient } from '@/lib/apiClient';
+import { useAuth } from 'components/AuthProvider';
+import { apiClient } from 'lib/apiClient';
 
 // MUI Components
 import {
@@ -21,7 +21,7 @@ import {
   MoreVert as MoreVertIcon, Home as HomeIcon
 } from '@mui/icons-material';
 import UserMenu from './_components/UserMenu';
-import ThemeToggleButton from '@/components/ThemeToggleButton';
+import ThemeToggleButton from 'components/ThemeToggleButton';
 
 // Kiểu dữ liệu cho User
 interface UserPublic {
@@ -106,25 +106,25 @@ const DashboardPage: React.FC = () => {
         elevation={0}
       >
         <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
-           <TextField
-              variant="outlined"
-              size="small"
-              placeholder="Search..."
-              InputProps={{
-                  startAdornment: (
-                  <InputAdornment position="start">
-                      <SearchIcon />
-                  </InputAdornment>
-                  ),
-                  sx: { borderRadius: '8px' }
-              }}
-              sx={{ width: '300px' }}
-            />
-            {/* Nhóm các nút ở bên phải AppBar */}
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <ThemeToggleButton /> {/* <<--- THÊM ThemeToggleButton vào đây */}
-              <UserMenu />
-            </Box>
+          <TextField
+            variant="outlined"
+            size="small"
+            placeholder="Search..."
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+              sx: { borderRadius: '8px' }
+            }}
+            sx={{ width: '300px' }}
+          />
+          {/* Nhóm các nút ở bên phải AppBar */}
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <ThemeToggleButton /> {/* <<--- THÊM ThemeToggleButton vào đây */}
+            <UserMenu />
+          </Box>
         </Toolbar>
       </AppBar>
 
@@ -166,120 +166,120 @@ const DashboardPage: React.FC = () => {
       <Box
         component="main"
         sx={{
-            flexGrow: 1,
-            bgcolor: 'background.default',
-            p: 3,
-            minHeight: '100vh'
+          flexGrow: 1,
+          bgcolor: 'background.default',
+          p: 3,
+          minHeight: '100vh'
         }}
       >
         <Toolbar />
         <Container maxWidth={false} sx={{ p: '0 !important' }}>
-             <Box sx={{ mb: 3 }}>
-                <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 1 }}>
-                    <MuiLink underline="hover" color="inherit" href="/" sx={{ display: 'flex', alignItems: 'center' }}>
-                         <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
-                         Dashboard
-                    </MuiLink>
-                    <Typography color="text.primary">All Users</Typography>
-                </Breadcrumbs>
-                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Box>
-                        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Users</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Manage your users and view their details.
-                        </Typography>
-                    </Box>
-                    <Button
-                        variant="contained"
-                        startIcon={<AddIcon />}
-                        sx={{ textTransform: 'none', borderRadius: '8px' }}
-                    >
-                        Add User
-                    </Button>
-                </Box>
+          <Box sx={{ mb: 3 }}>
+            <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 1 }}>
+              <MuiLink underline="hover" color="inherit" href="/" sx={{ display: 'flex', alignItems: 'center' }}>
+                <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
+                Dashboard
+              </MuiLink>
+              <Typography color="text.primary">All Users</Typography>
+            </Breadcrumbs>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box>
+                <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Users</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Manage your users and view their details.
+                </Typography>
+              </Box>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                sx={{ textTransform: 'none', borderRadius: '8px' }}
+              >
+                Add User
+              </Button>
             </Box>
+          </Box>
 
-            <Paper sx={{ width: '100%', mb: 2, borderRadius: '12px', overflow: 'hidden' }}>
-              <TableContainer>
-                 {error && <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>}
-                <Table sx={{ minWidth: 750 }} aria-labelledby="tableTitle">
-                  <TableHead>
+          <Paper sx={{ width: '100%', mb: 2, borderRadius: '12px', overflow: 'hidden' }}>
+            <TableContainer>
+              {error && <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>}
+              <Table sx={{ minWidth: 750 }} aria-labelledby="tableTitle">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Name</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Phone Number</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>ID</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }} align="right">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {loading ? (
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Name</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Phone Number</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>ID</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }} align="right">Actions</TableCell>
+                      <TableCell colSpan={5} align="center">
+                        <CircularProgress />
+                      </TableCell>
                     </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {loading ? (
-                      <TableRow>
-                        <TableCell colSpan={5} align="center">
-                          <CircularProgress />
+                  ) : (
+                    paginatedUsers.map((user) => (
+                      <TableRow
+                        hover
+                        key={user.id}
+                        sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                      >
+                        <TableCell component="th" scope="row">
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Avatar sx={{ mr: 2, width: 40, height: 40, bgcolor: 'primary.light' }}>
+                              {user.full_name ? user.full_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                            </Avatar>
+                            <Box>
+                              <Typography variant="body1">{user.full_name}</Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {user.email}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </TableCell>
+                        <TableCell>{user.phone_number}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={user.is_active !== false ? 'Active' : 'Inactive'}
+                            color={user.is_active !== false ? 'success' : 'default'}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" color="text.secondary">
+                            ...{user.id.slice(-6)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <IconButton aria-label="actions">
+                            <MoreVertIcon />
+                          </IconButton>
                         </TableCell>
                       </TableRow>
-                    ) : (
-                      paginatedUsers.map((user) => (
-                        <TableRow
-                          hover
-                          key={user.id}
-                          sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                        >
-                          <TableCell component="th" scope="row">
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <Avatar sx={{ mr: 2, width: 40, height: 40, bgcolor: 'primary.light' }}>
-                                 {user.full_name ? user.full_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
-                              </Avatar>
-                              <Box>
-                                <Typography variant="body1">{user.full_name}</Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  {user.email}
-                                </Typography>
-                              </Box>
-                            </Box>
-                          </TableCell>
-                          <TableCell>{user.phone_number}</TableCell>
-                          <TableCell>
-                             <Chip
-                                label={user.is_active !== false ? 'Active' : 'Inactive'}
-                                color={user.is_active !== false ? 'success' : 'default'}
-                                size="small"
-                            />
-                          </TableCell>
-                           <TableCell>
-                              <Typography variant="body2" color="text.secondary">
-                                  ...{user.id.slice(-6)}
-                              </Typography>
-                           </TableCell>
-                           <TableCell align="right">
-                              <IconButton aria-label="actions">
-                                  <MoreVertIcon />
-                              </IconButton>
-                           </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                     {!loading && paginatedUsers.length === 0 && (
-                        <TableRow>
-                            <TableCell colSpan={5} align="center">
-                                No users found.
-                            </TableCell>
-                        </TableRow>
-                     )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              <TablePagination
-                    rowsPerPageOptions={[5, 10, 25]}
-                    component="div"
-                    count={users.length}
-                    rowsPerPage={rowsPerPage}
-                    page={page}
-                    onPageChange={handleChangePage}
-                    onRowsPerPageChange={handleChangeRowsPerPage}
-              />
-            </Paper>
+                    ))
+                  )}
+                  {!loading && paginatedUsers.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center">
+                        No users found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25]}
+              component="div"
+              count={users.length}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+            />
+          </Paper>
         </Container>
       </Box>
     </Box>

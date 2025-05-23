@@ -56,7 +56,7 @@ async def named_filter_event_generator(
         existing_collections = await db.list_collection_names()
         if collection_name not in existing_collections:
             logger.warning(f"Client yêu cầu collection không tồn tại trong stock_db: {collection_name}")
-            yield f"data: {json.dumps({'error': f'Collection \"{collection_name}\" không tồn tại.'})}\n\n"
+            yield f"data: {json.dumps({'error': f'Collection {collection_name} không tồn tại.'})}\n\n"
             return
 
         collection = db.get_collection(collection_name)

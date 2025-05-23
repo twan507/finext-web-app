@@ -1,7 +1,7 @@
 // finext-nextjs/app/layout.tsx
-import { AuthProvider } from '@/components/AuthProvider';
-import { MuiProvider } from '@/components/MuiProvider';
-import { NextThemesProvider } from '@/components/NextThemesProvider';
+import { AuthProvider } from 'components/AuthProvider';
+import { MuiProvider } from 'components/MuiProvider';
+import { NextThemesProvider } from 'components/NextThemesProvider';
 import './globals.css';
 
 // Import Roboto font

@@ -1,0 +1,56 @@
+# syntax=docker.io/docker/dockerfile:1
+
+# Stage 1: Base image với Node.js 18 Alpine
+FROM node:20-alpine AS base
+
+# Stage 2: Cài đặt dependencies
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+COPY package.json package-lock.json* .npmrc* ./
+RUN npm ci
+
+# Stage 3: Build ứng dụng Next.js
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# --- HARDCODE BIẾN MÔI TRƯỜNG TẠI ĐÂY ---
+# Thay "http://your-actual-fastapi-url:8000" bằng URL thực tế của FastAPI backend
+# Ví dụ: "http://finext-api:8000" nếu chạy qua Docker Compose và service FastAPI tên là 'finext-api'
+# Hoặc địa chỉ IP public/domain nếu FastAPI chạy ở nơi khác
+ENV NEXT_PUBLIC_FASTAPI_BASE_URL="http://127.0.0.1:8000"
+# -----------------------------------------
+
+# ENV NEXT_TELEMETRY_DISABLED=1
+RUN npm run build
+
+# Stage 4: Production image
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+# ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Dòng này có thể cần nếu bạn có thư mục public, nếu không thì bỏ đi
+# COPY --from=builder /app/public ./public
+
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
+EXPOSE 3000
+
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+CMD ["node", "server.js"]
+
+
+# docker build -t finext-nextjs-app .
+# docker run -p 3000:3000 --name finext-nestjs finext-nextjs-app

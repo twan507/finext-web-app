@@ -4,8 +4,8 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'; // Thêm useCallback
 import { useRouter } from 'next/navigation';
 // Đổi tên saveSession thành saveSessionToStorage để tránh nhầm lẫn
-import { getSession, clearSession, SessionData, saveSession as saveSessionToStorage } from '@/lib/session';
-import { apiClient } from '@/lib/apiClient';
+import { getSession, clearSession, SessionData, saveSession as saveSessionToStorage } from 'lib/session';
+import { apiClient } from 'lib/apiClient';
 
 interface AuthContextType {
   session: SessionData | null;
@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const checkSession = async () => {
       setLoading(true);
       const savedSession = getSession();
-      
+
       if (savedSession) {
         try {
           // Chỉ cần gọi /auth/me để xác thực token
