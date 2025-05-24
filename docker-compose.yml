@@ -7,11 +7,11 @@ services:
     restart: always
     ports:
       - "80:80"
-      - "443:443"  # Mở cổng 443 cho HTTPS
+      - "443:443" # Mở cổng 443 cho HTTPS
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
-      - ./certbot/conf:/etc/letsencrypt       # Volume chứa chứng chỉ
-      - ./certbot/www:/var/www/certbot         # Volume cho thử thách ACME
+      - ./certbot/conf:/etc/letsencrypt # Volume chứa chứng chỉ
+      - ./certbot/www:/var/www/certbot # Volume cho thử thách ACME
     networks:
       - web-proxy
     depends_on:
@@ -34,7 +34,7 @@ services:
       dockerfile: Dockerfile
       args:
         # !!! THAY ĐỔI: Sử dụng tên miền thật và giao thức HTTPS !!!
-        - NEXT_PUBLIC_API_URL_ARG=https://twan.io.vn
+        - NEXT_PUBLIC_API_URL_ARG=https://t2m.io.vn
     restart: always
     networks:
       - web-proxy
