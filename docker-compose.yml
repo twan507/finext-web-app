@@ -1,3 +1,4 @@
+# ./docker-compose.yml
 version: "3.7"
 
 services:
@@ -6,13 +7,18 @@ services:
     restart: always
     ports:
       - "80:80"
+      - "443:443"  # Mở cổng 443 cho HTTPS
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./certbot/conf:/etc/letsencrypt       # Volume chứa chứng chỉ
+      - ./certbot/www:/var/www/certbot         # Volume cho thử thách ACME
     networks:
       - web-proxy
     depends_on:
       - fastapi
       - nextjs
+    # Lệnh này giúp Nginx tự động tải lại cấu hình sau khi Certbot gia hạn chứng chỉ
+    command: '/bin/sh -c ''while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g "daemon off;"'''
 
   fastapi:
     build:
@@ -27,12 +33,22 @@ services:
       context: ./finext-nextjs
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_API_URL_ARG=http://localhost
+        # !!! THAY ĐỔI: Sử dụng tên miền thật và giao thức HTTPS !!!
+        - NEXT_PUBLIC_API_URL_ARG=https://twan.io.vn
     restart: always
     networks:
       - web-proxy
     depends_on:
       - fastapi
+
+  certbot:
+    image: certbot/certbot
+    restart: unless-stopped
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    # Lệnh này tự động chạy gia hạn chứng chỉ mỗi 12 giờ
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
 networks:
   web-proxy: {}
