@@ -66,7 +66,7 @@ export default function SignInPage() {
       loginParams.append('password', password);
 
       const loginResponse = await apiClient<LoginResponse>({
-        url: '/auth/login',
+        url: '/api/v1/auth/login',
         method: 'POST',
         body: loginParams,
         isUrlEncoded: true,
@@ -77,7 +77,7 @@ export default function SignInPage() {
         const { access_token, refresh_token } = loginResponse.data;
 
         const userResponse = await apiClient<UserInfo>({
-          url: '/auth/me',
+          url: '/api/v1/auth/me',
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${access_token}`,

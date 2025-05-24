@@ -12,7 +12,7 @@ from app.schemas.auth import TokenData
 
 # OAuth2PasswordBearer là một class dependency giúp xử lý việc lấy token từ header Authorization
 # tokenUrl trỏ đến endpoint mà client sẽ dùng để lấy token (endpoint đăng nhập của bạn)
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token") # Đảm bảo URL này khớp với router của bạn
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login") # Đảm bảo URL này khớp với router của bạn
 
 def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
     """

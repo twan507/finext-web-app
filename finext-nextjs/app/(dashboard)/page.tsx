@@ -57,7 +57,7 @@ const DashboardPage: React.FC = () => {
       setError(null);
       try {
         const response = await apiClient<UserPublic[]>({
-          url: '/users/',
+          url: '/api/v1/users/',
           method: 'GET',
         });
         if (response.status === 200 && response.data) {

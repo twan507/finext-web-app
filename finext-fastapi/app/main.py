@@ -1,21 +1,26 @@
 import logging
 from contextlib import asynccontextmanager
-from typing import Any # Thêm Any từ typing
+from typing import Any
 
-from fastapi import FastAPI, Request, status, HTTPException 
+from fastapi import FastAPI, Request, status, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 import json
 from fastapi.middleware.cors import CORSMiddleware
 
-from .core.database import connect_to_mongo, close_mongo_connection, get_database, mongodb
+from .core.database import (
+    connect_to_mongo,
+    close_mongo_connection,
+    mongodb,
+)
 from .core.seeding import seed_initial_data
 from .routers import auth, users, roles, permissions, sessions, sse
 
-from app.utils.response_wrapper import StandardApiResponse 
+from app.utils.response_wrapper import StandardApiResponse
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -23,14 +28,14 @@ async def lifespan(app: FastAPI):
     logger.info("Ứng dụng FastAPI đang khởi động...")
     await connect_to_mongo()
 
-    # Khởi tạo dữ liệu ban đầu sau khi kết nối DB thành công
+    # Khởi tạo dữ liệu ban đầu
     if (
         mongodb.client
         and "user_db" in mongodb.dbs
         and mongodb.dbs["user_db"] is not None
     ):
         db_instance = mongodb.dbs["user_db"]
-        await seed_initial_data(db_instance)  # GỌI HÀM SEEDING
+        await seed_initial_data(db_instance)
     else:
         logger.error(
             "Không thể khởi tạo dữ liệu ban đầu do kết nối DB thất bại hoặc user_db không khả dụng."
@@ -47,85 +52,74 @@ app = FastAPI(
     description="API cho ứng dụng Finext, tích hợp MongoDB.",
     version="0.1.0",
     lifespan=lifespan,
+    # THAY ĐỔI: Thêm /v1 vào openapi_url
+    openapi_url="/api/v1/openapi.json",
+    # THAY ĐỔI: Cập nhật docs_url và redoc_url để chúng cũng nằm dưới /api/v1
+    docs_url="/api/v1/docs",
+    redoc_url="/api/v1/redoc",
 )
 
 # THÊM CORS MIDDLEWARE
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",  # Next.js development server
-        "http://127.0.0.1:3000",  # Alternative localhost
-        "https://finext.vn",  # Thêm domain production nếu có
-        "https://twan.io.vn/",  # Thêm domain production nếu có
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://finext.vn",
+        "https://twan.io.vn/",
+        "https://t2m.io.vn/",
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["*"],
 )
 
+
 # THÊM CUSTOM HTTP EXCEPTION HANDLER
 @app.exception_handler(HTTPException)
 async def custom_http_exception_handler(request: Request, exc: HTTPException):
-    """
-    Bắt tất cả các HTTPException và định dạng lại response theo StandardApiResponse.
-    """
     logger.info(
         f"Custom handler bắt HTTPException: {exc.status_code} - {exc.detail} cho request: {request.method} {request.url}"
     )
-    # Tạo response theo cấu trúc StandardApiResponse
-    error_response_payload = StandardApiResponse[Any]( # Sử dụng Any cho DataT trong trường hợp lỗi
+    error_response_payload = StandardApiResponse[Any](
         status=exc.status_code,
-        message=str(exc.detail), # Lấy message từ detail của HTTPException
-        data=None,               # Data là None cho lỗi
+        message=str(exc.detail),
+        data=None,
     )
     return JSONResponse(
         status_code=exc.status_code,
-        # Sử dụng exclude_none=False để đảm bảo trường "data": null luôn xuất hiện
-        content=error_response_payload.model_dump(mode="json", exclude_none=False), 
+        content=error_response_payload.model_dump(mode="json", exclude_none=False),
     )
 
-#EXCEPTION HANDLER:
+
+# EXCEPTION HANDLER
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     error_details_for_log = exc.errors()
-    
-    # In ra terminal bằng print() để đảm bảo nó xuất hiện
-    print("-----------------------------------------------------------------------")
-    print(f"!!! LỖI VALIDATION (422) CHO REQUEST: {request.method} {request.url}")
-    print("!!! CHI TIẾT LỖI VALIDATION TỪ PYDANTIC (exc.errors()):")
-    try:
-        # Cố gắng pretty print JSON nếu được
-        print(json.dumps(error_details_for_log, indent=2, ensure_ascii=False))
-    except TypeError: # Nếu có gì đó không thể serialize sang JSON (ít khả năng với exc.errors())
-        print(str(error_details_for_log))
-    print("-----------------------------------------------------------------------")
-    
-    # Log bằng logger như cũ (để phòng trường hợp print không hoạt động vì lý do nào đó)
-    logger.error(f"Lỗi RequestValidationError cho request: {request.method} {request.url}")
-    logger.error(f"Chi tiết lỗi Pydantic: {json.dumps(error_details_for_log, indent=2)}")
-    
-    # Trả về response lỗi 422 chuẩn của FastAPI
+    logger.error(
+        f"Lỗi RequestValidationError: {json.dumps(error_details_for_log, indent=2)}"
+    )
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content={"detail": error_details_for_log}, # Sử dụng error_details_for_log
+        content={"detail": error_details_for_log},
     )
 
-# Include routers
-app.include_router(auth.router, prefix="/auth", tags=["authentication"])
-app.include_router(users.router, prefix="/users", tags=["users"])
-app.include_router(roles.router, prefix="/roles", tags=["roles"]) # Router mới cho Roles
-app.include_router(permissions.router, prefix="/permissions", tags=["permissions"]) # Router mới cho Permissions
-app.include_router(sessions.router, prefix="/sessions", tags=["sessions"]) 
-app.include_router(sse.router, prefix="/sse", tags=["sse"])
+
+# Include routers - THÊM /v1 VÀO TRƯỚC MỖI PREFIX CŨ
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["authentication"])
+app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
+app.include_router(roles.router, prefix="/api/v1/roles", tags=["roles"])
+app.include_router(permissions.router, prefix="/api/v1/permissions", tags=["permissions"])
+app.include_router(sessions.router, prefix="/api/v1/sessions", tags=["sessions"])
+app.include_router(sse.router, prefix="/api/v1/sse", tags=["sse"])
+
+@app.get("/api/v1")  # THAY ĐỔI: Endpoint gốc của API
+async def read_api_v1_root():
+    return {"message": "Đây là gốc API v1 của Finext FastAPI!"}
+
 
 @app.get("/")
 async def read_root():
-    # Sử dụng get_database để lấy instance một cách an toàn
-    db = get_database("user_db")  # Sử dụng tên DB bạn đã định nghĩa khi kết nối
-    if db is not None:
-        return {
-            "message": f"Xin chào, đây là dự án FastAPI đầu tiên của tôi! Kết nối tới DB: {db.name}"
-        }
     return {
-        "message": "Xin chào, đây là dự án FastAPI đầu tiên của tôi! Không thể kết nối DB."
+        "message": "Chào mừng đến với Finext! Truy cập /api/v1/docs để xem tài liệu API."
     }

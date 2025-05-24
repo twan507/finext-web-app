@@ -10,33 +10,35 @@ import '@fontsource/roboto/400.css';
 import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
 
+// THÊM IMPORT NÀY
+import { AppRouterCacheProvider } from '@mui/material-nextjs/v13-appRouter'; // Hoặc v14/v15 nếu có, nhưng v13 thường dùng cho App Router
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    // QUAN TRỌNG: Đảm bảo không có bất kỳ khoảng trắng, comment,
-    // hay biểu thức JSX nào (như {" "}) giữa thẻ <html> mở và thẻ <head>.
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Các thẻ meta, title, và link nên được đặt ở đây */}
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/icon?family=Material+Icons"
         />
-        {/* Ví dụ: <title>Finext App</title> */}
       </head>
       <body>
-        <NextThemesProvider>
-          <AuthProvider>
-            <MuiProvider>
-              {children}
-            </MuiProvider>
-          </AuthProvider>
-        </NextThemesProvider>
+        {/* BỌC BÊN NGOÀI MuiProvider */}
+        <AppRouterCacheProvider options={{ key: 'css' }}> 
+          <NextThemesProvider>
+            <AuthProvider>
+              <MuiProvider>
+                {children}
+              </MuiProvider>
+            </AuthProvider>
+          </NextThemesProvider>
+        </AppRouterCacheProvider>
       </body>
     </html>
   );

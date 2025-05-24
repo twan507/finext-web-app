@@ -1,95 +1,38 @@
 version: "3.7"
 
 services:
-  traefik:
-    image: "traefik:v3.0"
+  nginx:
+    image: "nginx:latest"
     restart: always
-    command:
-      - "--api.dashboard=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.mytlschallenge.acme.tlschallenge=true"
-      - "--certificatesresolvers.mytlschallenge.acme.email=${SSL_EMAIL}"
-      - "--certificatesresolvers.mytlschallenge.acme.storage=/letsencrypt/acme.json"
-      - "--entrypoints.websecure.http.tls.certresolver=mytlschallenge"
-      - "--log.level=INFO"
     ports:
       - "80:80"
-      - "443:443"
-      - "8080:8080"
     volumes:
-      - traefik_data:/letsencrypt
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
     networks:
       - web-proxy
-    labels:
-      # KHÔI PHỤC LẠI enable=true
-      - "traefik.enable=true"
+    depends_on:
+      - fastapi
+      - nextjs
 
-      # THÊM MỘT ROUTER "DUMMY" CHO SERVICE TRAEFIK ĐỂ NÓ KHÔNG CỐ GẮNG LẤY SSL CHO TÊN SERVICE
-      # Rule này sẽ không bao giờ khớp với một request thực tế từ internet nếu bạn không trỏ DNS
-      # và chúng ta sẽ không bật TLS cho nó.
-      - "traefik.http.routers.traefik-self-dummy.rule=Host(`traefik-internal-do-not-resolve`)"
-      - "traefik.http.routers.traefik-self-dummy.entrypoints=web" # Chỉ dùng entrypoint http
-      - "traefik.http.routers.traefik-self-dummy.service=api@internal" # Trỏ đến API nội bộ nếu cần debug
-      # KHÔNG CÓ "traefik.http.routers.traefik-self-dummy.tls=true"
-      # KHÔNG CÓ "traefik.http.routers.traefik-self-dummy.tls.certresolver=mytlschallenge"
-
-      # --- Middleware bảo mật chung VẪN ĐƯỢC ĐỊNH NGHĨA Ở ĐÂY ---
-      - "traefik.http.middlewares.secure-headers.headers.SSLRedirect=true"
-      - "traefik.http.middlewares.secure-headers.headers.STSSeconds=315360000"
-      - "traefik.http.middlewares.secure-headers.headers.browserXSSFilter=true"
-      - "traefik.http.middlewares.secure-headers.headers.contentTypeNosniff=true"
-      - "traefik.http.middlewares.secure-headers.headers.forceSTSHeader=true"
-      - "traefik.http.middlewares.secure-headers.headers.SSLHost=${DOMAIN_NAME}"
-      - "traefik.http.middlewares.secure-headers.headers.STSIncludeSubdomains=true"
-      - "traefik.http.middlewares.secure-headers.headers.STSPreload=true"
-
-  fastapi-app:
+  fastapi:
     build:
       context: ./finext-fastapi
-      dockerfile: dockerfile
+      dockerfile: Dockerfile
     restart: always
     networks:
       - web-proxy
-    depends_on:
-      - traefik
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.fastapi.rule=Host(`${DOMAIN_NAME}`) && (PathPrefix(`/auth`) || PathPrefix(`/users`) || PathPrefix(`/roles`) || PathPrefix(`/permissions`) || PathPrefix(`/sessions`) || PathPrefix(`/sse`))"
-      - "traefik.http.routers.fastapi.priority=10"
-      - "traefik.http.routers.fastapi.entrypoints=websecure"
-      - "traefik.http.routers.fastapi.tls.certresolver=mytlschallenge"
-      - "traefik.http.services.fastapi-service.loadbalancer.server.port=8000"
-      - "traefik.http.routers.fastapi.middlewares=secure-headers@docker" # Sử dụng middleware đã định nghĩa
 
-  nextjs-app:
+  nextjs:
     build:
       context: ./finext-nextjs
-      dockerfile: dockerfile
+      dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_FASTAPI_BASE_URL_ARG=https://${DOMAIN_NAME}
+        - NEXT_PUBLIC_API_URL_ARG=http://localhost
     restart: always
     networks:
       - web-proxy
     depends_on:
-      - fastapi-app
-      - traefik
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.nextjs.rule=Host(`${DOMAIN_NAME}`)"
-      - "traefik.http.routers.nextjs.priority=1"
-      - "traefik.http.routers.nextjs.entrypoints=websecure"
-      - "traefik.http.routers.nextjs.tls.certresolver=mytlschallenge"
-      - "traefik.http.services.nextjs-service.loadbalancer.server.port=3000"
-      - "traefik.http.routers.nextjs.middlewares=secure-headers@docker" # Sử dụng middleware đã định nghĩa
-
-volumes:
-  traefik_data: {}
+      - fastapi
 
 networks:
   web-proxy: {}

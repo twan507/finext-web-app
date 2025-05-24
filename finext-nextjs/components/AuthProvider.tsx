@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           // Chỉ cần gọi /auth/me để xác thực token
           await apiClient({
-            url: '/auth/me',
+            url: '/api/v1/auth/me',
             method: 'GET',
           });
           setSession(savedSession); // Nếu thành công, set session

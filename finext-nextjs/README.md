@@ -22,7 +22,7 @@ This application serves as the frontend client for the Finext FastAPI backend, h
 2. **Environment setup:**
    Create a `.env` file in the root directory:
    ```bash
-   NEXT_PUBLIC_FASTAPI_BASE_URL=http://127.0.0.1:8000
+   NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
    ```
 
 3. **Start development server:**

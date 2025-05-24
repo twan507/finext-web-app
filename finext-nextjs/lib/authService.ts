@@ -2,7 +2,7 @@
 import { StandardApiResponse } from './sendRequest';
 import { getSession, saveSession, clearSession, SessionData } from './session';
 
-const BASE_URL = process.env.NEXT_PUBLIC_FASTAPI_BASE_URL;
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 interface RefreshTokenResponse {
     token_type: string;

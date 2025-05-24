@@ -2,7 +2,7 @@
 import queryString from 'query-string';
 import { getAccessToken } from './session'; // Chỉ cần getAccessToken
 
-const BASE_URL = process.env.NEXT_PUBLIC_FASTAPI_BASE_URL;
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 // Giữ nguyên các interface IRequest, StandardApiResponse, ApiErrorResponse
 export interface IRequest {
@@ -91,10 +91,10 @@ export const sendRequest = async <TResponseData = any>(
     const res = await fetch(finalUrl, options);
 
     if (res.ok) {
-        if (responseType === 'json') return await res.json() as StandardApiResponse<TResponseData>;
-        if (responseType === 'blob') return { status: res.status, data: await res.blob() as any };
-        if (responseType === 'text') return { status: res.status, data: await res.text() as any };
-        return await res.json() as StandardApiResponse<TResponseData>;
+      if (responseType === 'json') return await res.json() as StandardApiResponse<TResponseData>;
+      if (responseType === 'blob') return { status: res.status, data: await res.blob() as any };
+      if (responseType === 'text') return { status: res.status, data: await res.text() as any };
+      return await res.json() as StandardApiResponse<TResponseData>;
     } else {
       let errorJson: any = {};
       try {
