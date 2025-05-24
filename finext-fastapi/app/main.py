@@ -67,7 +67,6 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "https://finext.vn",
         "https://twan.io.vn/",
-        "https://t2m.io.vn/",
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],

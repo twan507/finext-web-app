@@ -34,7 +34,7 @@ services:
       dockerfile: Dockerfile
       args:
         # !!! THAY ĐỔI: Sử dụng tên miền thật và giao thức HTTPS !!!
-        - NEXT_PUBLIC_API_URL_ARG=https://t2m.io.vn
+        - NEXT_PUBLIC_API_URL_ARG=https://twan.io.vn
     restart: always
     networks:
       - web-proxy
