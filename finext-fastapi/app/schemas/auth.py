@@ -1,23 +1,21 @@
-# app/schemas/token.py
+# finext-fastapi/app/schemas/auth.py
 from pydantic import BaseModel
 from typing import Optional
 
 class JWTTokenResponse(BaseModel):
     """
-    Schema cho response trả về khi đăng nhập thành công, chứa access token.
+    Schema cho response trả về khi đăng nhập/refresh thành công.
+    Chỉ chứa access token. Refresh token được gửi qua cookie.
     """
-    token_type: str
+    token_type: str = "bearer"
     access_token: str
-    refresh_token: str
 
 class TokenData(BaseModel):
     """
     Schema cho dữ liệu được mã hóa bên trong JWT (payload).
-    Chứa thông tin định danh người dùng.
     """
-    email: Optional[str] = None # Hoặc username, tùy thuộc vào cách bạn định danh người dùng
+    email: Optional[str] = None
     user_id: Optional[str] = None
-    jti: Optional[str] = None # JWT ID, dùng để theo dõi session
+    jti: Optional[str] = None
 
-class RefreshTokenRequest(BaseModel):
-    refresh_token: str
+# RefreshTokenRequest không còn cần thiết vì token được đọc từ cookie.

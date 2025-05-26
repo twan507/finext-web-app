@@ -1,14 +1,15 @@
-// finext-nextjs/@/components/AuthProvider.tsx
+// finext-nextjs/components/AuthProvider.tsx
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'; // Thêm useCallback
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSession, clearSession, SessionData, saveSession as saveSessionToStorage } from 'app/services/core/session';
 import { apiClient } from 'app/services/apiClient';
+import { logoutApi } from 'app/services/authService'; // Import logoutApi
 
 interface AuthContextType {
   session: SessionData | null;
-  login: (sessionData: SessionData) => void; // <--- THÊM HÀM LOGIN
+  login: (sessionData: SessionData) => void;
   logout: () => void;
   loading: boolean;
 }
@@ -18,9 +19,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<SessionData | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const router = useRouter(); // Giữ router ở đây
 
-  // Load session lần đầu
   useEffect(() => {
     const checkSession = async () => {
       setLoading(true);
@@ -28,38 +28,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (savedSession) {
         try {
-          // Chỉ cần gọi /auth/me để xác thực token
-          await apiClient({
-            url: '/api/v1/auth/me',
-            method: 'GET',
-          });
-          setSession(savedSession); // Nếu thành công, set session
-        } catch (error) {
-          console.error("Xác thực session ban đầu thất bại:", error);
-          clearSession(); // Nếu thất bại, xóa session
-          setSession(null);
+          await apiClient({ url: '/api/v1/auth/me', method: 'GET' });
+          setSession(savedSession);
+        } catch (error: any) {
+            console.error("Initial session check failed:", error);
+            // Chỉ xóa session nếu lỗi là 401 (Unauthorized)
+            if (error?.statusCode === 401) {
+                clearSession();
+                setSession(null);
+                // Không cần router.push ở đây, để các component tự xử lý
+            } else {
+                // Nếu lỗi khác (VD: mạng), có thể giữ session và thử lại sau
+                setSession(savedSession); // Hoặc set null tùy chiến lược
+            }
         }
       }
       setLoading(false);
     };
-
     checkSession();
-  }, []); // Chỉ chạy 1 lần khi mount
+  }, []);
 
-  const logout = useCallback(() => {
-    clearSession();
-    setSession(null); // Cập nhật state
-    router.push('/login');
-  }, [router]);
+  // Logout sẽ gọi API và sau đó xóa session + chuyển hướng
+  const logout = useCallback(async () => {
+      await logoutApi(); // Gọi API để xóa cookie, hàm này sẽ tự xóa localStorage và redirect
+      setSession(null); // Cập nhật state nội bộ
+  }, []);
 
-  // Hàm login mới để cập nhật state
   const login = useCallback((sessionData: SessionData) => {
-    saveSessionToStorage(sessionData); // Lưu vào localStorage
-    setSession(sessionData); // Cập nhật state
+    // Chỉ lưu user và accessToken
+    const dataToSave = {
+        user: sessionData.user,
+        accessToken: sessionData.accessToken,
+    };
+    saveSessionToStorage(dataToSave);
+    setSession(dataToSave);
   }, []);
 
   return (
-    // Cung cấp hàm login qua context
     <AuthContext.Provider value={{ session, login, logout, loading }}>
       {children}
     </AuthContext.Provider>

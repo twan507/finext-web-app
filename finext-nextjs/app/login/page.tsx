@@ -1,7 +1,7 @@
 // finext-nextjs/app/login/page.tsx
 'use client';
 
-import { useState, FormEvent, useEffect } from 'react'; // Thêm useEffect
+import { useState, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient } from 'app/services/apiClient';
 import { useAuth } from 'components/AuthProvider';
@@ -18,22 +18,10 @@ import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import ThemeToggleButton from 'components/ThemeToggleButton';
-// Bỏ createTheme và ThemeProvider từ @mui/material/styles vì sẽ dùng theme global
-// import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { LoginResponse } from 'app/services/core/types';
+import { User } from 'app/services/core/session'; // Import User type
 
-interface LoginResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-}
-
-interface UserInfo {
-  id: string;
-  email: string;
-  full_name: string;
-}
-
-// const defaultTheme = createTheme(); // <<--- BỎ DÒNG NÀY
+interface UserInfo extends User {} // Đảm bảo UserInfo tương thích
 
 export default function SignInPage() {
   const [email, setEmail] = useState('');
@@ -42,16 +30,17 @@ export default function SignInPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { login, session } = useAuth(); // Lấy thêm session để kiểm tra
+  const { login, session, loading: authLoading } = useAuth(); // Lấy thêm authLoading
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    // Nếu đã đăng nhập, chuyển hướng về trang chủ
-    if (session) {
+    // Chỉ chuyển hướng *sau khi* authProvider đã load xong và có session
+    if (!authLoading && session) {
+      console.log("Login Page: Session found, redirecting to /");
       router.push('/');
     }
-  }, [session, router]);
+  }, [session, authLoading, router]);
 
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -71,17 +60,16 @@ export default function SignInPage() {
         body: loginParams,
         isUrlEncoded: true,
         requireAuth: false,
+        withCredentials: true, // Đảm bảo gửi/nhận cookie
       });
 
       if (loginResponse.status === 200 && loginResponse.data?.access_token) {
-        const { access_token, refresh_token } = loginResponse.data;
+        const { access_token } = loginResponse.data;
 
         const userResponse = await apiClient<UserInfo>({
           url: '/api/v1/auth/me',
           method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${access_token}`,
-          },
+          headers: { 'Authorization': `Bearer ${access_token}` },
         });
 
         if (userResponse.status === 200 && userResponse.data) {
@@ -92,33 +80,28 @@ export default function SignInPage() {
               full_name: userResponse.data.full_name,
             },
             accessToken: access_token,
-            refreshToken: refresh_token,
           };
 
-          login(sessionData);
+          login(sessionData); // <-- Hàm này sẽ set session và kích hoạt useEffect ở trên
 
-          const welcomeMessage = `Chào mừng trở lại, ${userResponse.data.full_name || userResponse.data.email}! Đăng nhập thành công. Đang chuyển hướng...`;
-          setSuccessMessage(welcomeMessage);
-
-          setTimeout(() => {
-            router.push('/');
-          }, 2500);
+          setSuccessMessage(`Đăng nhập thành công! Đang chuyển hướng...`);
+          // Không cần setTimeout nữa, useEffect sẽ xử lý redirect
 
         } else {
-          setError(userResponse.message || 'Không thể lấy thông tin người dùng sau khi đăng nhập.');
+          setError(userResponse.message || 'Không thể lấy thông tin người dùng.');
         }
       } else {
-        setError(loginResponse.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
+        setError(loginResponse.message || 'Đăng nhập thất bại.');
       }
     } catch (err: any) {
-      setError(err.message || 'Lỗi kết nối đến server hoặc có lỗi xảy ra.');
+      setError(err.message || 'Lỗi kết nối hoặc có lỗi xảy ra.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Nếu chưa mounted hoặc đã đăng nhập thì không hiển thị form
-  if (!mounted || session) {
+  // Hiển thị loading cho đến khi authProvider load xong *và* xác định không có session
+  if (!mounted || authLoading || (!authLoading && session)) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: 'background.default' }}>
         <CircularProgress />
@@ -126,32 +109,31 @@ export default function SignInPage() {
     );
   }
 
+  // Chỉ hiển thị form khi đã mount, authProvider load xong và *không* có session
   return (
-    // <ThemeProvider theme={defaultTheme}> // <<--- BỎ ThemeProvider Ở ĐÂY
-    // Trang này sẽ tự động nhận theme từ MuiProvider trong layout.tsx
     <Container component="main" maxWidth="xs" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
       <CssBaseline />
-      {/* Thêm nút đổi theme ở góc trên bên phải */}
       <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
         <ThemeToggleButton />
       </Box>
       <Box
         sx={{
-          marginTop: 0, // Giảm marginTop để form nằm giữa hơn
+          marginTop: 0,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          p: 3, // Thêm padding cho Box
-          borderRadius: 2, // Thêm bo góc
-          bgcolor: 'background.paper', // Sử dụng màu nền của Paper từ theme
-          boxShadow: (theme) => theme.shadows[3], // Thêm chút bóng đổ
+          p: 4,
+          borderRadius: 3,
+          bgcolor: 'background.paper',
+          boxShadow: 3,
+          width: '100%',
         }}
       >
         <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
           <LockOutlinedIcon />
         </Avatar>
         <Typography component="h1" variant="h5">
-          Đăng nhập vào tài khoản
+          Đăng nhập
         </Typography>
         <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 2, width: '100%' }}>
           {error && (
@@ -202,6 +184,5 @@ export default function SignInPage() {
         </Box>
       </Box>
     </Container>
-    // </ThemeProvider> // <<--- BỎ ThemeProvider Ở ĐÂY
   );
 }

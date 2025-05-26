@@ -1,4 +1,4 @@
-// finext-nextjs/@/components/MuiProvider.tsx
+// finext-nextjs/components/MuiProvider.tsx
 'use client';
 
 import * as React from 'react';
@@ -6,7 +6,7 @@ import { useTheme } from 'next-themes';
 import { ThemeProvider as MuiThemeProvider, createTheme, PaletteMode } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 
-// Định nghĩa màu sắc (giống như trước)
+// Định nghĩa màu sắc (giữ nguyên)
 const lightPalette = {
   primary: { main: '#1976d2' },
   secondary: { main: '#dc004e' },
@@ -20,23 +20,24 @@ const darkPalette = {
 };
 
 export function MuiProvider({ children }: { children: React.ReactNode }) {
-  const { resolvedTheme } = useTheme(); // Lấy theme đã giải quyết (light/dark)
+  const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
 
-  // Đảm bảo chỉ render khi đã ở client side để lấy resolvedTheme chính xác
   React.useEffect(() => {
     setMounted(true);
   }, []);
 
+  // Tạo theme chỉ khi đã mounted và resolvedTheme có giá trị
   const muiTheme = React.useMemo(() => {
-    // Chỉ tạo theme khi đã mount và có resolvedTheme
-    const mode = (mounted ? resolvedTheme : 'light') as PaletteMode;
+    // Nếu chưa mounted hoặc resolvedTheme chưa có (trường hợp hiếm),
+    // có thể trả về một theme tạm thời hoặc theme sáng mặc định.
+    // Tuy nhiên, logic render bên dưới sẽ không hiển thị children cho đến khi cả hai đều sẵn sàng.
+    const mode = (mounted && resolvedTheme ? resolvedTheme : 'light') as PaletteMode;
     return createTheme({
       palette: {
         mode: mode,
         ...(mode === 'light' ? lightPalette : darkPalette),
       },
-      // Thêm các overrides component MUI ở đây nếu cần (giống như trước)
       components: {
           MuiAppBar: {
               styleOverrides: {
@@ -45,7 +46,7 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
                       color: theme.palette.text.primary,
                       boxShadow: '0 1px 4px rgba(0, 21, 41, 0.08)',
                       borderBottom: `1px solid ${theme.palette.divider}`,
-                      elevation: 0,
+                      // elevation: 0, // Bỏ đi nếu đã set ở AppBar component
                   }),
               },
           },
@@ -81,7 +82,7 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
            MuiPaper: {
                 styleOverrides: {
                     root: {
-                        boxShadow: 'none',
+                        // boxShadow: 'none', // Có thể bạn muốn giữ lại shadow mặc định của Paper
                     }
                 }
             }
@@ -89,9 +90,20 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
     });
   }, [resolvedTheme, mounted]);
 
-  // Trong lần render đầu tiên phía client hoặc server, có thể render 1 loading state
-  // hoặc theme mặc định để tránh FOUC, nhưng next-themes đã xử lý phần lớn
-  // Ở đây chúng ta chỉ cần đảm bảo MuiThemeProvider nhận đúng theme khi client mount
+  // Chỉ render children khi đã mounted và resolvedTheme có giá trị.
+  // Điều này giúp đảm bảo MuiThemeProvider được khởi tạo với theme đúng ngay từ đầu.
+  if (!mounted || !resolvedTheme) {
+    // Trong thời gian này, RootLayout hoặc DashboardLayout có thể đang hiển thị CircularProgress
+    // Hoặc bạn có thể trả về một spinner ở đây nếu MuiProvider là lớp ngoài cùng hiển thị UI
+    // return (
+    //   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+    //     <CircularProgress />
+    //   </Box>
+    // );
+    // Tạm thời trả về null để layout cấp cao hơn xử lý loading
+    return null;
+  }
+
   return (
     <MuiThemeProvider theme={muiTheme}>
       <CssBaseline />
