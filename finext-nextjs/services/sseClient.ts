@@ -28,8 +28,8 @@ export function sseClient<DataType = any>(
   if (requireAuth) {
     console.warn(
       "[SSE Client] Cảnh báo Xác thực SSE: EventSource không hỗ trợ trực tiếp header 'Authorization'. " +
-        "Nếu yêu cầu xác thực, cần xử lý qua query parameters hoặc phương thức khác (hiện chưa triển khai). " +
-        'Hãy đảm bảo endpoint SSE của bạn được bảo vệ phù hợp.'
+      "Nếu yêu cầu xác thực, cần xử lý qua query parameters hoặc phương thức khác (hiện chưa triển khai). " +
+      'Hãy đảm bảo endpoint SSE của bạn được bảo vệ phù hợp.'
     );
     // Ví dụ nếu cần xác thực qua query (không khuyến khích nếu không cần thiết):
     // const token = getAccessToken();
@@ -42,11 +42,10 @@ export function sseClient<DataType = any>(
   }
 
   // Xây dựng URL cuối cùng
-  const finalUrl = `${API_BASE_URL}${url}${
-    Object.keys(queryParams).length
-      ? `?${queryString.stringify(queryParams)}`
-      : ''
-  }`;
+  const finalUrl = `${API_BASE_URL}${url}${Object.keys(queryParams).length
+    ? `?${queryString.stringify(queryParams)}`
+    : ''
+    }`;
 
   try {
     console.log(`[SSE Client] Đang cố gắng kết nối đến: ${finalUrl}`);
@@ -120,7 +119,7 @@ export function sseClient<DataType = any>(
       message: `Không thể khởi tạo EventSource: ${e.message}`,
     });
     // Trả về một đối tượng "rỗng" nếu không thể tạo EventSource
-    return { close: () => {}, getEventSource: () => null };
+    return { close: () => { }, getEventSource: () => null };
   }
 
   // Hàm để đóng kết nối

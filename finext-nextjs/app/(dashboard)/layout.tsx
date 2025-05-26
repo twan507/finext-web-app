@@ -17,7 +17,8 @@ import {
   Layers as LayersIcon, // Giả sử Integrations dùng LayersIcon
   VpnKey as VpnKeyIcon, // Icon cho Roles
   Security as SecurityIcon, // Icon cho Permissions
-  Search as SearchIcon
+  Search as SearchIcon,
+  VpnLockOutlined as SessionsIcon, // Thêm icon cho Sessions
 } from '@mui/icons-material';
 import UserMenu from './_components/UserMenu';
 import ThemeToggleButton from 'components/ThemeToggleButton';
@@ -35,6 +36,7 @@ const navItems: NavItem[] = [
   { text: 'Users', href: '/users', icon: <PeopleIcon /> },
   { text: 'Roles', href: '/roles', icon: <VpnKeyIcon /> },
   { text: 'Permissions', href: '/permissions', icon: <SecurityIcon /> },
+  { text: 'Sessions', href: '/sessions', icon: <SessionsIcon /> },
   // { text: 'Reports', href: '/reports', icon: <BarChartIcon /> },
   // { text: 'Integrations', href: '/integrations', icon: <LayersIcon /> },
 ];

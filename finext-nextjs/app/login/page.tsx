@@ -3,7 +3,7 @@
 
 import { useState, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiClient } from 'app/services/apiClient';
+import { apiClient } from 'services/apiClient';
 import { useAuth } from 'components/AuthProvider';
 
 // MUI Components
@@ -18,10 +18,10 @@ import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import ThemeToggleButton from 'components/ThemeToggleButton';
-import { LoginResponse } from 'app/services/core/types';
-import { User } from 'app/services/core/session'; // Import User type
+import { LoginResponse } from 'services/core/types';
+import { User } from 'services/core/session'; // Import User type
 
-interface UserInfo extends User {} // Đảm bảo UserInfo tương thích
+interface UserInfo extends User { } // Đảm bảo UserInfo tương thích
 
 export default function SignInPage() {
   const [email, setEmail] = useState('');

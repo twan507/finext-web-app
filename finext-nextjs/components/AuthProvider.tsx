@@ -3,9 +3,9 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSession, clearSession, SessionData, saveSession as saveSessionToStorage } from 'app/services/core/session';
-import { apiClient } from 'app/services/apiClient';
-import { logoutApi } from 'app/services/authService'; // Import logoutApi
+import { getSession, clearSession, SessionData, saveSession as saveSessionToStorage } from 'services/core/session';
+import { apiClient } from 'services/apiClient';
+import { logoutApi } from 'services/authService'; // Import logoutApi
 
 interface AuthContextType {
   session: SessionData | null;
@@ -31,16 +31,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await apiClient({ url: '/api/v1/auth/me', method: 'GET' });
           setSession(savedSession);
         } catch (error: any) {
-            console.error("Initial session check failed:", error);
-            // Chỉ xóa session nếu lỗi là 401 (Unauthorized)
-            if (error?.statusCode === 401) {
-                clearSession();
-                setSession(null);
-                // Không cần router.push ở đây, để các component tự xử lý
-            } else {
-                // Nếu lỗi khác (VD: mạng), có thể giữ session và thử lại sau
-                setSession(savedSession); // Hoặc set null tùy chiến lược
-            }
+          console.error("Initial session check failed:", error);
+          // Chỉ xóa session nếu lỗi là 401 (Unauthorized)
+          if (error?.statusCode === 401) {
+            clearSession();
+            setSession(null);
+            // Không cần router.push ở đây, để các component tự xử lý
+          } else {
+            // Nếu lỗi khác (VD: mạng), có thể giữ session và thử lại sau
+            setSession(savedSession); // Hoặc set null tùy chiến lược
+          }
         }
       }
       setLoading(false);
@@ -50,15 +50,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Logout sẽ gọi API và sau đó xóa session + chuyển hướng
   const logout = useCallback(async () => {
-      await logoutApi(); // Gọi API để xóa cookie, hàm này sẽ tự xóa localStorage và redirect
-      setSession(null); // Cập nhật state nội bộ
+    await logoutApi(); // Gọi API để xóa cookie, hàm này sẽ tự xóa localStorage và redirect
+    setSession(null); // Cập nhật state nội bộ
   }, []);
 
   const login = useCallback((sessionData: SessionData) => {
     // Chỉ lưu user và accessToken
     const dataToSave = {
-        user: sessionData.user,
-        accessToken: sessionData.accessToken,
+      user: sessionData.user,
+      accessToken: sessionData.accessToken,
     };
     saveSessionToStorage(dataToSave);
     setSession(dataToSave);

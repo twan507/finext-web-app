@@ -1,7 +1,7 @@
 # finext-fastapi/app/utils/response_wrapper.py
 import functools
 import logging
-from typing import TypeVar, Generic, Optional, Any, Callable, Awaitable, Tuple, List, Dict
+from typing import TypeVar, Generic, Optional, Any, Callable, Awaitable, List, Dict
 
 from fastapi import HTTPException, Request  # Thêm Request
 from fastapi import status as http_status
