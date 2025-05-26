@@ -33,11 +33,8 @@ const StockStreamPage: React.FC = () => {
         setData([]);
         setError(null);
 
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-        if (!baseUrl) {
-            setError("Chưa cấu hình NEXT_PUBLIC_API_URL trong .env");
-            return;
-        }
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://localhost";
+        
         if (!collectionName.trim()) {
             setError("Vui lòng nhập tên Collection.");
             return;

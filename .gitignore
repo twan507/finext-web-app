@@ -1,2 +1,2 @@
-certbot/
 ssl/
+.env.production

@@ -1,3 +1,6 @@
+# ./finext-fastapi/Dockerfile
+
+# Sử dụng image Python 3.13-alpine (nhỏ gọn)
 FROM python:3.13-alpine
 
 # Đặt các biến môi trường để Python chạy hiệu quả hơn trong Docker
@@ -7,26 +10,20 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # Đặt thư mục làm việc bên trong container
 WORKDIR /code
 
-# Sao chép tệp requirements.txt vào trước
+# Sao chép tệp requirements.txt vào trước để tận dụng Docker cache
 COPY requirements.txt /code/
 
 # Nâng cấp pip và cài đặt các dependencies từ requirements.txt
-RUN pip install --no-cache-dir --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
+# Sử dụng --no-cache-dir để giảm kích thước image
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Sao chép toàn bộ thư mục 'app' (chứa code FastAPI) vào container
 COPY ./app /code/app
-
-# --- THÊM DÒNG NÀY ---
-# Sao chép tệp .env vào thư mục làm việc trong container
-COPY .env /code/.env
-# --------------------
 
 # Mở cổng 8000 để container có thể nhận kết nối từ bên ngoài
 EXPOSE 8000
 
 # Lệnh để chạy ứng dụng FastAPI bằng Uvicorn khi container khởi động
+# --host 0.0.0.0 cho phép truy cập từ bên ngoài container
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-
-# docker build -t finext-fastapi-app .
-# docker run -d -p 8000:8000 --name finext-nextjs finext-fastapi-app

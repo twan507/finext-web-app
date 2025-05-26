@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from 'components/AuthProvider';
-import { apiClient } from 'lib/apiClient';
+import { apiClient } from 'app/services/apiClient';
 
 // MUI Components
 import {

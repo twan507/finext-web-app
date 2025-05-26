@@ -1,4 +1,4 @@
-# ./docker-compose.yml
+# ./docker-compose.yml (Sửa đổi service Nginx)
 version: "3.7"
 
 services:
@@ -7,18 +7,22 @@ services:
     restart: always
     ports:
       - "80:80"
-      - "443:443" # Mở cổng 443 cho HTTPS
+      - "443:443"
     volumes:
-      # Map file cấu hình Nginx đã sửa đổi
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
-      # Map thư mục chứa chứng chỉ SSL của bạn
+      # SỬA ĐỔI: Map tệp template vào một thư mục tạm
+      - ./nginx/nginx.conf:/etc/nginx/templates/default.conf.template
+      # Map thư mục SSL
       - ./ssl:/etc/nginx/ssl
     networks:
       - web-proxy
     depends_on:
       - fastapi
       - nextjs
-    # Bỏ command cũ liên quan đến Certbot, sử dụng command mặc định của Nginx
+    # THÊM: env_file để Nginx có thể đọc được DOMAIN_NAME
+    env_file:
+      - ./.env.production
+    # THÊM: Command để chạy envsubst và khởi động Nginx
+    command: /bin/sh -c "envsubst '$$DOMAIN_NAME' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
 
   fastapi:
     build:
@@ -27,19 +31,20 @@ services:
     restart: always
     networks:
       - web-proxy
-    # Bạn có thể thêm expose: - "8000" để rõ ràng hơn,
-    # nhưng không bắt buộc vì Nginx truy cập qua network.
+    env_file:
+      - ./.env.production
 
   nextjs:
     build:
       context: ./finext-nextjs
       dockerfile: Dockerfile
       args:
-        # Giữ nguyên vì NextJS có thể cần gọi API từ client-side
-        - NEXT_PUBLIC_API_URL_ARG=https://twan.io.vn
+        - NEXT_PUBLIC_API_URL_ARG=${NEXT_PUBLIC_API_URL}
     restart: always
     networks:
       - web-proxy
+    env_file:
+      - ./.env.production
     depends_on:
       - fastapi
 

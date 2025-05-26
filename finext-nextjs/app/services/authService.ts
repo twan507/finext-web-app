@@ -1,21 +1,9 @@
 // finext-nextjs/lib/authService.ts
-import { StandardApiResponse } from './sendRequest';
-import { getSession, saveSession, clearSession, SessionData } from './session';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+import { LoginResponse, StandardApiResponse } from "app/services/core/types";
+import { clearSession, getSession, saveSession, SessionData } from "./core/session";
+import { API_BASE_URL } from "./core/config";
 
-interface RefreshTokenResponse {
-    token_type: string;
-    access_token: string;
-    refresh_token: string;
-}
-
-// Định nghĩa LoginResponse (nếu chưa có) để dùng cho type casting
-interface LoginResponse {
-    access_token: string;
-    refresh_token: string;
-    token_type: string;
-}
 
 let isRefreshing = false; // Cờ để tránh nhiều lần refresh cùng lúc
 let refreshPromise: Promise<string | null> | null = null; // Promise để các request khác chờ
@@ -30,7 +18,7 @@ const refreshTokenApi = async (): Promise<string | null> => {
     }
 
     try {
-        const res = await fetch(`${BASE_URL}/auth/refresh-token`, {
+        const res = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ refresh_token: session.refreshToken }),

@@ -1,3 +1,6 @@
+# ./finext-nextjs/Dockerfile
+
+# Stage 1: Base image
 FROM node:23-alpine AS base
 
 # Stage 2: Cài đặt dependencies
@@ -5,6 +8,7 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package.json package-lock.json* .npmrc* ./
+# Sử dụng npm ci để cài đặt dependencies chính xác từ package-lock.json
 RUN npm ci
 
 # Stage 3: Build ứng dụng Next.js
@@ -13,38 +17,42 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Nhận giá trị từ build argument
+# Nhận giá trị từ build argument (sẽ được truyền từ docker-compose)
 ARG NEXT_PUBLIC_API_URL_ARG=http://localhost:8000
+# Đặt biến môi trường ENV để Next.js sử dụng trong quá trình build
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL_ARG}
 
-# RUN echo "NEXT_PUBLIC_API_URL=" > .env
+# In ra biến môi trường để kiểm tra (tùy chọn, có thể bỏ đi trong production)
+RUN echo "Building Next.js with NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}"
+# Build ứng dụng
 RUN npm run build
 
-# Stage 4: Production image
+# Stage 4: Production image (Sử dụng standalone output)
 FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-# ENV NEXT_TELEMETRY_DISABLED=1
+# Tắt telemetry của Next.js (khuyến nghị cho production)
+ENV NEXT_TELEMETRY_DISABLED=1
 
+# Tạo user và group không phải root để chạy ứng dụng (bảo mật hơn)
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Dòng này có thể cần nếu bạn có thư mục public, nếu không thì bỏ đi
-# COPY --from=builder /app/public ./public
-
+# Sao chép output standalone đã build từ stage builder
+# Sử dụng --chown để đặt quyền sở hữu cho user nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Chuyển sang user không phải root
 USER nextjs
 
+# Mở cổng 3000
 EXPOSE 3000
 
+# Đặt biến môi trường PORT và HOSTNAME cho server Next.js
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+# Lệnh chạy server Next.js (sử dụng server.js từ standalone output)
 CMD ["node", "server.js"]
-
-
-# docker build -t finext-nextjs-app .
-# docker run -p 3000:3000 --name finext-nestjs finext-nextjs-app
