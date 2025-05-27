@@ -8,10 +8,30 @@ class RoleCreate(BaseModel):
     description: Optional[str] = None
     permission_ids: List[PyObjectId] = Field(default_factory=list)
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "name": "editor",
+                "description": "Người dùng có quyền chỉnh sửa nội dung.",
+                "permission_ids": ["60d5ec49f7b4e6a0e7d5c2a3", "60d5ec49f7b4e6a0e7d5c2a4"]
+            }
+        }
+    )
+
 class RoleUpdate(BaseModel):
     name: Optional[str] = Field(default=None, min_length=3, max_length=50)
     description: Optional[str] = None
     permission_ids: List[PyObjectId] = Field(default_factory=list)
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "name": "content_moderator",
+                "description": "Người dùng có quyền kiểm duyệt và chỉnh sửa nội dung.",
+                "permission_ids": ["60d5ec49f7b4e6a0e7d5c2a3", "60d5ec49f7b4e6a0e7d5c2a6", "60d5ec49f7b4e6a0e7d5c2a7"]
+            }
+        }
+    )
 
 class RoleInDB(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)

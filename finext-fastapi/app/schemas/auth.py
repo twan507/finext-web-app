@@ -17,5 +17,3 @@ class TokenData(BaseModel):
     email: Optional[str] = None
     user_id: Optional[str] = None
     jti: Optional[str] = None
-
-# RefreshTokenRequest không còn cần thiết vì token được đọc từ cookie.

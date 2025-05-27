@@ -79,7 +79,7 @@ async def read_role_by_id(
     role_id: PyObjectId,
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
-    role = await crud_roles.get_role_by_id(db, role_id=role_id)
+    role = await crud_roles.get_role_by_id(db, role_id_str=role_id)
     if role is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -103,7 +103,7 @@ async def update_existing_role(
 ):
     try:
         updated_role = await crud_roles.update_role(
-            db, role_id=role_id, role_update_data=role_data
+            db, role_id_str=role_id, role_update_data=role_data
         )
     except ValueError as ve:  # Bắt lỗi tên trùng từ CRUD
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
@@ -161,7 +161,7 @@ async def delete_existing_role(
             detail=f"Vai trò '{role_to_delete.name}' đang được sử dụng bởi {users_using_role_count} người dùng và không thể xóa. Vui lòng thu hồi vai trò này khỏi tất cả người dùng trước.",
         )
 
-    deleted = await crud_roles.delete_role(db, role_id=role_id)
+    deleted = await crud_roles.delete_role(db, role_id_str=role_id)
     if not deleted:
         # Trường hợp này ít xảy ra nếu role_to_delete đã được tìm thấy ở trên
         # và không có lỗi nào khác trong crud_roles.delete_role

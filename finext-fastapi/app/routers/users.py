@@ -191,7 +191,7 @@ async def read_all_users_endpoint(
     response_model=StandardApiResponse[UserPublic],
     summary="Gán một hoặc nhiều vai trò cho người dùng",
     dependencies=[Depends(require_permission("user", "manage_roles"))],
-    tags=["users", "user_roles"],
+    tags=["users"],
 )
 @api_response_wrapper(default_success_message="Gán vai trò cho người dùng thành công.")
 async def assign_roles_to_user_endpoint(
@@ -212,7 +212,7 @@ async def assign_roles_to_user_endpoint(
     response_model=StandardApiResponse[UserPublic],
     summary="Thu hồi một hoặc nhiều vai trò từ người dùng",
     dependencies=[Depends(require_permission("user", "manage_roles"))],
-    tags=["users", "user_roles"],
+    tags=["users"],
 )
 @api_response_wrapper(
     default_success_message="Thu hồi vai trò từ người dùng thành công."

@@ -136,7 +136,6 @@ Khi máy chủ đang chạy, bạn có thể truy cập các điểm cuối sau 
 
   - **Ứng dụng gốc:** [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
   - **API Items (ví dụ):** [http://127.0.0.1:8000/items/1](http://127.0.0.1:8000/items/1)
-  - **API Xác thực (NextAuth Callback):** `POST` [http://127.0.0.1:8000/auth/login/nextauth-callback](http://127.0.0.1:8000/auth/login/nextauth-callback)
     - Endpoint này được thiết kế để NextAuth gọi sau khi xác thực người dùng thành công qua `CredentialsProvider`.
     - Body yêu cầu (JSON):
       ```json
@@ -158,7 +157,7 @@ Khi máy chủ đang chạy, bạn có thể truy cập các điểm cuối sau 
         }
       }
       ```
-  - **Tài liệu API tương tác (Swagger UI):** [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+  - **Tài liệu API tương tác (Swagger UI):** [http://127.0.0.1:8000/api/v1/docs](http://127.0.0.1:8000/api/v1/docs)
   - **Tài liệu API thay thế (ReDoc):** [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
 
 ## Dừng Ứng dụng

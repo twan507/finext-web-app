@@ -13,30 +13,50 @@ class UserCreate(BaseModel):
     email: EmailStr
     phone_number: str
     password: str = Field(..., min_length=8)
-    # THAY ĐỔI: Bỏ license_info, thêm subscription_id (optional, default=None)
     subscription_id: Optional[PyObjectId] = Field(default=None)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     is_active: bool = Field(default=True)
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "full_name": "Nguyen Van Test",
+                "email": "testuser@example.com",
+                "phone_number": "0912345678",
+                "password": "SecurePassword123!",
+                "role_ids": ["60d5ec49f7b4e6a0e7d5c2b1"], # Ví dụ một role_id (string)
+                "subscription_id": None, # User mới có thể chưa có subscription
+                "is_active": True
+            }
+        }
+    )
 
 class UserUpdate(BaseModel):
     """Schema for updateting user data."""
     full_name: Optional[str] = Field(default=None)
     email: Optional[EmailStr] = Field(default=None)
     phone_number: Optional[str] = Field(default=None)
-    # THAY ĐỔI: Bỏ license_info, thêm subscription_id (optional, default=None)
-    subscription_id: Optional[PyObjectId] = Field(default=None)
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "email": "updateduser@example.com",
+                "full_name": "Tran Thi Updated",
+                "phone_number": "0987654322",
+            }
+        }
+    )
 
 class UserPublic(BaseModel):
     """Schema for returning user data to the client (output)."""
-    id: PyObjectId = Field(alias="_id") # Nên để là bắt buộc
+    id: PyObjectId = Field(alias="_id")
     role_ids: List[PyObjectId]
     full_name: str
     email: EmailStr
     phone_number: str
-    # THAY ĐỔI: Bỏ license_info, thêm subscription_id
     subscription_id: Optional[PyObjectId] = None
+    is_active: Optional[bool] = None # Thêm is_active vào response nếu backend trả về
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -45,13 +65,12 @@ class UserPublic(BaseModel):
 
 class UserInDB(BaseModel):
     """Schema for storing user data in the database."""
-    id: PyObjectId = Field(alias="_id") # Nên để là bắt buộc
+    id: PyObjectId = Field(alias="_id")
     role_ids: List[PyObjectId] = Field(default_factory=list)
     full_name: str
     email: EmailStr
     phone_number: str
     hashed_password: str
-    # THAY ĐỔI: Bỏ license_info, thêm subscription_id
     subscription_id: Optional[PyObjectId] = None
     created_at: datetime
     updated_at: datetime
@@ -64,5 +83,13 @@ class UserInDB(BaseModel):
 
 class UserRoleModificationRequest(BaseModel):
     role_ids: List[PyObjectId] = Field(..., description="Danh sách ID của các vai trò cần gán/thu hồi.")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "role_ids": ["60d5ec49f7b4e6a0e7d5c2b3", "60d5ec49f7b4e6a0e7d5c2b4"]
+            }
+        }
+    )
 
 # Bỏ UserLicenseAssignRequest
