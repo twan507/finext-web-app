@@ -1,5 +1,5 @@
 # finext-fastapi/app/core/database.py
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase # Thay đổi import
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from pymongo.errors import ConnectionFailure, ConfigurationError
 from .config import MONGODB_CONNECTION_STRING
 import logging
@@ -7,8 +7,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 class MongoDB:
-    client: AsyncIOMotorClient | None = None # Thay đổi kiểu dữ liệu
-    dbs: dict[str, AsyncIOMotorDatabase | None] = {} # Thay đổi kiểu dữ liệu
+    client: AsyncIOMotorClient | None = None
+    dbs: dict[str, AsyncIOMotorDatabase | None] = {}
 
 mongodb = MongoDB()
 
@@ -24,20 +24,20 @@ async def connect_to_mongo():
         await mongodb.client.admin.command('ping')
         logger.info("Đã kết nối thành công tới MongoDB client (Async)!")
 
-        db_names_to_connect = ["user_db", "stock_db"] # Giả sử user_db là nơi chứa các collection mới
+        db_names_to_connect = ["user_db", "stock_db"]
         mongodb.dbs = {}
 
         for db_name in db_names_to_connect:
             mongodb.dbs[db_name] = mongodb.client[db_name]
             logger.info(f"Đã thiết lập kết nối tới database (Async): {db_name}")
 
-        # ---- TẠO INDEXES ----
         if "user_db" in mongodb.dbs and mongodb.dbs["user_db"] is not None:
-            db = mongodb.dbs["user_db"] # Lấy database instance
+            db = mongodb.dbs["user_db"]
 
             # users collection indexes
             await db.users.create_index("email", unique=True)
-            await db.users.create_index("license_info.active_license_id")
+            # THAY ĐỔI: Index cho subscription_id
+            await db.users.create_index("subscription_id")
 
             # roles collection indexes
             await db.roles.create_index("name", unique=True)
@@ -51,31 +51,25 @@ async def connect_to_mongo():
             await db.sessions.create_index("created_at")
             await db.sessions.create_index("last_active_at")
 
-            # features collection indexes (MỚI)
+            # features collection indexes
             await db.features.create_index("key", unique=True)
 
-            # licenses collection indexes (MỚI)
+            # licenses collection indexes
             await db.licenses.create_index("key", unique=True)
 
+            # subscriptions collection indexes (MỚI)
+            await db.subscriptions.create_index("user_id")
+            await db.subscriptions.create_index("license_id")
+            await db.subscriptions.create_index([("user_id", 1), ("is_active", 1), ("expiry_date", 1)])
+            await db.subscriptions.create_index("expiry_date")
+
+
             logger.info("Đã tạo/đảm bảo các indexes cần thiết cho user_db.")
-        # --------------------
 
         logger.info(f"Sử dụng các databases (Async): {', '.join(mongodb.dbs.keys())}")
 
-    except ConnectionFailure as e:
-        logger.error(f"Không thể kết nối tới MongoDB (ConnectionFailure): {e}")
-        if mongodb.client:
-            mongodb.client.close()
-        mongodb.client = None
-        mongodb.dbs = {}
-    except ConfigurationError as e:
-        logger.error(f"Lỗi cấu hình MongoDB: {e}")
-        if mongodb.client:
-            mongodb.client.close()
-        mongodb.client = None
-        mongodb.dbs = {}
-    except Exception as e:
-        logger.error(f"Không thể kết nối tới MongoDB (Lỗi không xác định): {e}")
+    except (ConnectionFailure, ConfigurationError, Exception) as e:
+        logger.error(f"Không thể kết nối tới MongoDB: {e}")
         if mongodb.client:
             mongodb.client.close()
         mongodb.client = None
@@ -85,21 +79,17 @@ async def close_mongo_connection():
     if mongodb.client:
         logger.info("Đang đóng kết nối MongoDB (Async)...")
         mongodb.client.close()
-        mongodb.client = None # Quan trọng: đặt lại client thành None
-        mongodb.dbs = {} # Xóa các tham chiếu db
+        mongodb.client = None
+        mongodb.dbs = {}
         logger.info("Đã đóng kết nối MongoDB (Async).")
 
-def get_database(db_name: str) -> AsyncIOMotorDatabase | None: # Thay đổi kiểu trả về
+def get_database(db_name: str) -> AsyncIOMotorDatabase | None:
     if mongodb.client and db_name in mongodb.dbs:
         return mongodb.dbs.get(db_name)
-    elif mongodb.client: # Nếu client tồn tại nhưng db chưa được khởi tạo trước
+    elif mongodb.client:
         logger.warning(f"Database '{db_name}' chưa được khởi tạo trước. Đang thử truy cập trực tiếp.")
-        # Cẩn thận: điều này có thể không phải lúc nào cũng mong muốn nếu bạn muốn kiểm soát chặt chẽ các db được sử dụng
         db_instance = mongodb.client[db_name]
-        mongodb.dbs[db_name] = db_instance # Cache lại để sử dụng sau
+        mongodb.dbs[db_name] = db_instance
         return db_instance
     logger.warning(f"Database '{db_name}' không khả dụng hoặc MongoDB client (Async) chưa được kết nối.")
     return None
-
-# Tạo thư mục app/core/ nếu chưa có và file __init__.py
-# d:\twan-projects\finext-web-app\finext-fastapi\app\core\__init__.py (empty file)

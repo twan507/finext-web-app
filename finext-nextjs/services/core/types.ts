@@ -11,7 +11,7 @@ export interface IRequest {
   isFormData?: boolean;
   isUrlEncoded?: boolean;
   requireAuth?: boolean;
-  withCredentials?: boolean; // THÊM FLAG NÀY
+  withCredentials?: boolean;
 }
 
 export interface StandardApiResponse<DataType = any> {
@@ -26,15 +26,26 @@ export interface ApiErrorResponse {
   errorDetails?: any;
 }
 
-// Chỉ chứa access_token
 export interface LoginResponse {
     access_token: string;
     token_type: string;
 }
 
-// Bỏ RefreshTokenResponse vì không còn dùng
+// Định nghĩa User type để dùng chung
+// Phản ánh UserPublic từ backend FastAPI (với subscription_id)
+export interface UserSchema {
+  id: string; // Trước là PyObjectId, ở frontend là string
+  role_ids: string[]; // List[PyObjectId] -> List[string]
+  full_name: string;
+  email: string;
+  phone_number: string;
+  subscription_id?: string | null; // THAY ĐỔI: từ license_info sang subscription_id
+  is_active?: boolean; // Thêm nếu backend trả về
+  created_at?: string; // Thêm nếu backend trả về
+}
 
-// --- Giữ nguyên các type SSE ---
+
+// --- SSE Types (Giữ nguyên) ---
 export interface ISseRequest {
   url: string;
   queryParams?: Record<string, any>;
@@ -58,4 +69,18 @@ export interface ISseCallbacks<DataType = any> {
 export interface ISseConnection {
   close: () => void;
   getEventSource: () => EventSource | null;
+}
+
+// THÊM TYPES CHO SUBSCRIPTION (phản ánh SubscriptionPublic từ backend)
+export interface SubscriptionSchema {
+  id: string; // PyObjectId -> string
+  user_id: string; // PyObjectId -> string
+  user_email: string;
+  license_id: string; // PyObjectId -> string
+  license_key: string;
+  is_active: boolean;
+  start_date: string; // datetime -> string (ISO format)
+  expiry_date: string; // datetime -> string (ISO format)
+  created_at: string; // datetime -> string (ISO format)
+  updated_at: string; // datetime -> string (ISO format)
 }

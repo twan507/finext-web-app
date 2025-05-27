@@ -1,26 +1,22 @@
 // finext-nextjs/app/services/core/session.ts
 'use client';
 
-export interface User {
-  id: string;
-  email: string;
-  full_name: string;
-  phone_number: string;
-  role_ids: string[];
-  // THÊM license_info vào User nếu cần hiển thị, nhưng thường không cần
-}
+// Import UserSchema từ types.ts
+import { UserSchema } from './types';
+
+// Sử dụng UserSchema đã được cập nhật
+export interface User extends UserSchema {}
 
 export interface SessionData {
   accessToken: string;
-  user: User;
-  features: string[]; // THÊM DÒNG NÀY
+  user: User; // User ở đây sẽ có subscription_id
+  features: string[];
 }
 
 const SESSION_KEY = 'finext-session';
 
 export function saveSession(sessionData: SessionData): void {
   if (typeof window !== 'undefined') {
-    // Lưu cả user, accessToken và features
     localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
   }
 }
@@ -30,9 +26,11 @@ export function getSession(): SessionData | null {
     const sessionStr = localStorage.getItem(SESSION_KEY);
     if (sessionStr) {
       try {
-        // Đảm bảo parse đúng cấu trúc SessionData mới
         const parsed = JSON.parse(sessionStr) as SessionData;
-        // Đảm bảo features là một mảng, nếu không thì trả về mảng rỗng
+        // Đảm bảo user object tồn tại và có cấu trúc cơ bản
+        if (!parsed.user) {
+            parsed.user = {} as User; // Khởi tạo rỗng nếu thiếu
+        }
         parsed.features = Array.isArray(parsed.features) ? parsed.features : [];
         return parsed;
       } catch {
@@ -55,12 +53,11 @@ export function getAccessToken(): string | null {
   return session?.accessToken || null;
 }
 
-export function getFeatures(): string[] { // THÊM HÀM NÀY
+export function getFeatures(): string[] {
   const session = getSession();
   return session?.features || [];
 }
 
-// Hàm cập nhật chỉ accessToken (hữu ích khi refresh)
 export function updateAccessToken(accessToken: string): void {
     const session = getSession();
     if (session && typeof window !== 'undefined') {
@@ -69,11 +66,26 @@ export function updateAccessToken(accessToken: string): void {
     }
 }
 
-// THÊM HÀM CẬP NHẬT FEATURES (NẾU CẦN REFETCH)
 export function updateFeatures(features: string[]): void {
     const session = getSession();
     if (session && typeof window !== 'undefined') {
         const newSession = { ...session, features };
+        localStorage.setItem(SESSION_KEY, JSON.stringify(newSession));
+    }
+}
+
+// THÊM: Hàm cập nhật thông tin user trong session (ví dụ sau khi user cập nhật profile)
+// Hoặc khi subscription_id thay đổi và bạn muốn cập nhật user object trong localStorage
+export function updateUserInSession(updatedUser: Partial<User>): void {
+    const session = getSession();
+    if (session && typeof window !== 'undefined') {
+        const newSession = {
+            ...session,
+            user: {
+                ...session.user,
+                ...updatedUser,
+            },
+        };
         localStorage.setItem(SESSION_KEY, JSON.stringify(newSession));
     }
 }

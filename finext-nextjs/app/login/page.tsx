@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { apiClient } from 'services/apiClient';
 import { useAuth } from 'components/AuthProvider';
 
-// MUI Components
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -18,10 +17,12 @@ import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import ThemeToggleButton from 'components/ThemeToggleButton';
-import { LoginResponse } from 'services/core/types';
-import { User } from 'services/core/session'; // Import User type
 
-interface UserInfo extends User { } // Đảm bảo UserInfo tương thích
+import { LoginResponse, UserSchema } from 'services/core/types'; // Import UserSchema
+// Bỏ import User từ session.ts vì UserSchema đã đủ
+
+// Sử dụng UserSchema trực tiếp
+interface UserInfo extends UserSchema {}
 
 export default function SignInPage() {
   const [email, setEmail] = useState('');
@@ -64,18 +65,14 @@ export default function SignInPage() {
 
       if (loginResponse.status === 200 && loginResponse.data?.access_token) {
         const { access_token } = loginResponse.data;
-
-        // Tạm thời gán token để gọi các API tiếp theo
         const tempHeaders = { 'Authorization': `Bearer ${access_token}` };
 
-        // Lấy thông tin người dùng
-        const userResponse = await apiClient<UserInfo>({
+        const userResponse = await apiClient<UserInfo>({ // UserInfo giờ là UserSchema
           url: '/api/v1/auth/me',
           method: 'GET',
           headers: tempHeaders,
         });
 
-        // Lấy danh sách features
         const featuresResponse = await apiClient<string[]>({
             url: '/api/v1/auth/me/features',
             method: 'GET',
@@ -84,26 +81,19 @@ export default function SignInPage() {
 
         if (userResponse.status === 200 && userResponse.data && featuresResponse.status === 200) {
           const sessionData = {
-            user: {
-              id: userResponse.data.id,
-              email: userResponse.data.email,
-              full_name: userResponse.data.full_name,
-              phone_number: userResponse.data.phone_number,
-              role_ids: userResponse.data.role_ids,
-            },
+            // userResponse.data giờ sẽ có subscription_id (nếu có) và không có license_info
+            user: userResponse.data,
             accessToken: access_token,
-            features: featuresResponse.data || [], // Lấy features từ response
+            features: featuresResponse.data || [],
           };
 
-          login(sessionData); // Gọi login với đầy đủ thông tin
-
+          login(sessionData);
           setSuccessMessage(`Đăng nhập thành công! Đang chuyển hướng...`);
           // useEffect sẽ xử lý redirect
-
         } else {
-            const userError = userResponse.message || 'Không thể lấy thông tin người dùng.';
-            const featureError = featuresResponse.message ? ` ${featuresResponse.message}` : '';
-            setError(`${userError}${featureError}`);
+            const userErrorMsg = userResponse.message || 'Không thể lấy thông tin người dùng.';
+            const featureErrorMsg = featuresResponse.message ? ` ${featuresResponse.message}` : ' Không thể lấy danh sách features.';
+            setError(`${userErrorMsg}${featureErrorMsg}`);
         }
       } else {
         setError(loginResponse.message || 'Đăng nhập thất bại.');
@@ -115,6 +105,7 @@ export default function SignInPage() {
     }
   };
 
+  // ... (Phần JSX giữ nguyên)
   if (!mounted || authLoading || (!authLoading && session)) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: 'background.default' }}>
