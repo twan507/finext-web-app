@@ -6,7 +6,6 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 # THÊM LicenseInfo VÀ LicenseInDB
 from app.schemas.users import UserCreate, UserInDB, LicenseInfo
-from app.schemas.licenses import LicenseInDB # THÊM
 from app.utils.security import get_password_hash
 from datetime import datetime, timezone, timedelta # THÊM timedelta
 from app.utils.types import PyObjectId

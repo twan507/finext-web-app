@@ -292,15 +292,9 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
     if licenses_to_add:
         logger.info(f"Tìm thấy {len(licenses_to_add)} licenses mới cần seed...")
         for lic_data in licenses_to_add:
-            all_keys_exist = True
             for f_key in lic_data["feature_keys"]:
                 if not await db.features.find_one({"key": f_key}):
                     logger.warning(f"Feature key '{f_key}' cho license '{lic_data['key']}' không tồn tại trong DB. License này có thể không được tạo hoặc thiếu feature.")
-                    all_keys_exist = False # Quyết định: có thể bỏ qua feature này hoặc không tạo license
-                                            # Hiện tại: vẫn tạo license với các feature key có sẵn
-            
-            # Lọc lại feature_keys chỉ bao gồm những key thực sự tồn tại trong DEFAULT_FEATURES_DATA
-            # Điều này đảm bảo tính nhất quán, mặc dù ở trên đã check với DB
             valid_feature_keys_for_license = [fk for fk in lic_data["feature_keys"] if fk in ALL_DEFAULT_FEATURE_KEYS]
             if len(valid_feature_keys_for_license) != len(lic_data["feature_keys"]):
                 logger.warning(f"Một số feature_keys cho license '{lic_data['key']}' không có trong DEFAULT_FEATURES_DATA và sẽ bị bỏ qua.")
@@ -325,7 +319,7 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
     else:
         logger.info("Không có licenses mới nào cần seed.")
 
-    async for lic_doc in licenses_collection.find({"key": {"$in": [l["key"] for l in default_licenses_data]}}):
+    async for lic_doc in licenses_collection.find({"key": {"$in": [license_data["key"] for license_data in default_licenses_data]}}):
         created_license_ids[lic_doc["key"]] = str(lic_doc["_id"])
 
     logger.info(f"Đã tải {len(created_license_ids)} licenses mặc định (ID theo key) vào map.")
