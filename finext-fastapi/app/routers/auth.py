@@ -26,7 +26,6 @@ from app.crud.sessions import (
     create_session,
     delete_session_by_jti
 )
-# THAY ĐỔI: Import crud.licenses và crud.subscriptions
 import app.crud.licenses as crud_licenses
 import app.crud.subscriptions as crud_subscriptions
 from app.schemas.sessions import SessionCreate
@@ -50,8 +49,8 @@ if SECRET_KEY is None:
 
 CookieList = Optional[List[Dict[str, Any]]]
 LogoutResponse = Tuple[None, CookieList, Optional[List[str]]]
-LoginResponse = Tuple[JWTTokenResponse, CookieList, Optional[List[str]]]
-RefreshResponse = Tuple[JWTTokenResponse, CookieList, Optional[List[str]]]
+# LoginResponse và RefreshResponse không cần định nghĩa dạng Tuple ở đây nữa
+# vì các hàm login/refresh sẽ trả về JSONResponse trực tiếp.
 
 @router.get("/me", response_model=StandardApiResponse[UserPublic])
 @api_response_wrapper(default_success_message="Lấy thông tin người dùng thành công.")
@@ -71,9 +70,6 @@ async def read_my_features(
     current_user: UserInDB = Depends(get_current_active_user),
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
-    """
-    Lấy danh sách các feature_keys mà người dùng hiện tại sở hữu dựa trên subscription_id.
-    """
     subscription_id = current_user.subscription_id
 
     if not subscription_id:
@@ -84,25 +80,19 @@ async def read_my_features(
 
     if not subscription:
         logger.warning(f"User {current_user.email}'s subscription ID ({subscription_id}) not found. Clearing from user doc.")
-        # Tùy chọn: Tự động xóa subscription_id không hợp lệ khỏi user
         await db.users.update_one({"_id": ObjectId(current_user.id)}, {"$set": {"subscription_id": None}})
         return []
 
     now = datetime.now(timezone.utc)
     
-    # Handle timezone comparison safely
     expiry_date = subscription.expiry_date
     if expiry_date.tzinfo is None:
-        # If expiry_date is timezone-naive, assume it's UTC
         expiry_date = expiry_date.replace(tzinfo=timezone.utc)
     
     if not subscription.is_active or expiry_date < now:
         logger.info(f"User {current_user.email}'s subscription ({subscription_id}) is not active or has expired.")
-        # Tùy chọn: Có thể tự động set is_active = False nếu hết hạn
-        # Tùy chọn: Có thể set user.subscription_id = None
         return []
 
-    # Lấy thông tin license từ DB dựa trên license_id của subscription
     license_data = await crud_licenses.get_license_by_id(db, license_id=subscription.license_id)
 
     if not license_data:
@@ -114,62 +104,6 @@ async def read_my_features(
     logger.info(f"User {current_user.email} has access to features: {feature_keys} via sub {subscription_id}")
     return feature_keys
 
-# END POINT GỐc ---------------------------------------------------------------------------------------------------------------------------------------------
-
-# @router.post("/login", response_model=StandardApiResponse[JWTTokenResponse])
-# @api_response_wrapper(
-#     default_success_message="Đăng nhập thành công.",
-#     success_status_code=status.HTTP_200_OK,
-# )
-# async def login_for_access_token(
-#     request: Request,
-#     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-#     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
-# ) -> LoginResponse:
-#     user = await get_user_by_email_db(db, email=form_data.username)
-
-#     if not user or not verify_password(form_data.password, user.hashed_password):
-#         raise HTTPException(
-#             status_code=status.HTTP_401_UNAUTHORIZED,
-#             detail="Incorrect email or password",
-#             headers={"WWW-Authenticate": "Bearer"},
-#         )
-
-#     user_id_str = str(user.id)
-#     current_session_count = await count_sessions_by_user_id(db, user_id_str)
-#     if current_session_count >= MAX_SESSIONS_PER_USER:
-#         await find_and_delete_oldest_session(db, user_id_str)
-
-#     token_data_payload = {"sub": user.email, "user_id": user_id_str}
-#     access_token = create_access_token(data=token_data_payload)
-#     refresh_token_str, refresh_expires_delta = create_refresh_token(data=token_data_payload)
-
-#     access_payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
-#     jti = access_payload.get("jti")
-#     if not jti:
-#         raise HTTPException(status_code=500, detail="Lỗi tạo session (JTI).")
-
-#     user_agent = request.headers.get("user-agent", "Unknown")
-#     client_host = request.client.host if request.client else "Unknown"
-#     device_info = f"{user_agent} ({client_host})"
-
-#     await create_session(db, SessionCreate(user_id=user_id_str, jti=jti, device_info=device_info))
-
-#     cookie_params = {
-#         "key": REFRESH_TOKEN_COOKIE_NAME,
-#         "value": refresh_token_str,
-#         "httponly": True,
-#         "secure": COOKIE_SECURE,
-#         "samesite": COOKIE_SAMESITE,
-#         "domain": COOKIE_DOMAIN,
-#         "max_age": int(refresh_expires_delta.total_seconds()),
-#         "path": "/",
-#     }
-
-#     logger.info(f"Login successful for user: {user.email}")
-#     return JWTTokenResponse(access_token=access_token), [cookie_params], None
-
-
 @router.post("/logout", response_model=StandardApiResponse[None])
 @api_response_wrapper(
     default_success_message="Đăng xuất thành công.",
@@ -178,7 +112,7 @@ async def read_my_features(
 async def logout(
     payload: TokenData = Depends(verify_token_and_get_payload),
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
-) -> LogoutResponse:
+) -> LogoutResponse: 
     jti_to_delete = payload.jti
 
     if not jti_to_delete:
@@ -194,23 +128,27 @@ async def logout(
         logger.info(f"User {payload.email} logged out successfully (JTI: {jti_to_delete}).")
     else:
         logger.warning(f"Logout attempt for JTI {jti_to_delete}, but session not found.")
-
+    # Wrapper sẽ xử lý việc xóa cookie từ [REFRESH_TOKEN_COOKIE_NAME]
     return None, None, [REFRESH_TOKEN_COOKIE_NAME]
 
-@router.post("/refresh-token", response_model=StandardApiResponse[JWTTokenResponse])
-@api_response_wrapper(default_success_message="Làm mới token thành công.")
+
+@router.post("/refresh-token", response_model=JWTTokenResponse) # Swagger hiển thị JWTTokenResponse thuần túy
 async def refresh_access_token(
     request: Request,
     refresh_token_str: str = Depends(get_refresh_token_from_cookie),
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
-) -> RefreshResponse:
+) -> JSONResponse: # Trả về JSONResponse để set cookie
     try:
         payload = decode_refresh_token(refresh_token_str)
         user_id: str = payload["user_id"]
     except Exception as e:
         logger.error(f"Lỗi khi xử lý refresh token: {e}", exc_info=True)
-        response = JWTTokenResponse(access_token="")
-        return response, None, [REFRESH_TOKEN_COOKIE_NAME]
+        # custom_http_exception_handler sẽ bắt và trả về StandardApiResponse lỗi cho Next.js
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate refresh token. Please log in again.",
+            headers={"WWW-Authenticate": "Bearer error=\"invalid_token\""},
+        )
 
     user = await get_user_by_id_db(db, user_id=user_id)
     if user is None or not user.is_active:
@@ -231,16 +169,21 @@ async def refresh_access_token(
         new_access_payload = jwt.decode(new_access_token, SECRET_KEY, algorithms=[ALGORITHM])
         new_jti = new_access_payload.get("jti")
         if not new_jti:
-             raise Exception("JTI not found in new access token after refresh")
-    except Exception as e:
-        logger.error(f"Lỗi khi giải mã token mới (refresh) để lấy JTI: {e}")
-        raise HTTPException(status_code=500, detail="Lỗi tạo session khi refresh.")
+             logger.error("JTI not found in new access token after refresh.")
+             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error creating session identifier (JTI) on refresh.")
+    except JWTError as e:
+        logger.error(f"Lỗi khi giải mã token mới (refresh) để lấy JTI: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error processing new token on refresh.")
 
     user_agent = request.headers.get("user-agent", "Unknown (Refresh)")
     client_host = request.client.host if request.client else "Unknown (Refresh)"
     device_info = f"{user_agent} ({client_host})"
 
     await create_session(db, SessionCreate(user_id=user_id, jti=new_jti, device_info=device_info))
+
+    response_content_data = JWTTokenResponse(access_token=new_access_token)
+    
+    actual_response = JSONResponse(content=response_content_data.model_dump())
 
     new_cookie_params = {
         "key": REFRESH_TOKEN_COOKIE_NAME,
@@ -252,35 +195,34 @@ async def refresh_access_token(
         "max_age": int(new_refresh_expires.total_seconds()),
         "path": "/",
     }
-
+    actual_response.set_cookie(**new_cookie_params)
     logger.info(f"Tokens refreshed successfully for user: {user.email}")
-    return JWTTokenResponse(access_token=new_access_token), [new_cookie_params], None
+    return actual_response
 
-# END POINT TEST SWAGGER ---------------------------------------------------------------------------------------------------------------------------------------------
 
-@router.post("/login", response_model=JWTTokenResponse) # response_model để Swagger UI hiểu cấu trúc body
+@router.post("/login", response_model=JWTTokenResponse) # Swagger hiển thị JWTTokenResponse thuần túy
 async def login_for_access_token(
-    request: Request, # Cần Request để lấy user_agent, client_host
+    request: Request, 
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
-) -> JSONResponse: # Kiểu trả về thực tế là JSONResponse để set cookie
+) -> JSONResponse: # Trả về JSONResponse để set cookie
     user = await get_user_by_email_db(db, email=form_data.username)
 
     if not user or not verify_password(form_data.password, user.hashed_password):
-        # Khi không dùng wrapper, bạn cần tự raise HTTPException
+        # custom_http_exception_handler sẽ bắt và trả về StandardApiResponse lỗi cho Next.js
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    if not user.is_active: # Thêm kiểm tra user có active không
+    if not user.is_active: 
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, # Hoặc 403 Forbidden
+            status_code=status.HTTP_400_BAD_REQUEST, 
             detail="User is inactive",
         )
 
-    user_id_str = str(user.id) # user.id là PyObjectId (str)
+    user_id_str = str(user.id) 
     current_session_count = await count_sessions_by_user_id(db, user_id_str)
     if current_session_count >= MAX_SESSIONS_PER_USER:
         await find_and_delete_oldest_session(db, user_id_str)
@@ -294,36 +236,31 @@ async def login_for_access_token(
         jti = access_payload.get("jti")
         if not jti:
             logger.error("JTI not found in new access token during login.")
+            # Lỗi server
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error creating session identifier (JTI).")
     except JWTError as e:
         logger.error(f"Error decoding access token to get JTI: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error processing token.")
 
-
     user_agent = request.headers.get("user-agent", "Unknown")
     client_host = request.client.host if request.client else "Unknown"
     device_info = f"{user_agent} ({client_host})"
 
-    # user_id_str (PyObjectId) cần được truyền vào SessionCreate
     await create_session(db, SessionCreate(user_id=user_id_str, jti=jti, device_info=device_info))
+    
+    # Chuẩn bị nội dung là JWTTokenResponse thuần túy
+    response_content_data = JWTTokenResponse(access_token=access_token_str)
+    
+    # Tạo JSONResponse với nội dung thuần túy này
+    actual_response = JSONResponse(content=response_content_data.model_dump())
 
-    # 1. Chuẩn bị nội dung cho JSON response body (phải khớp với JWTTokenResponse)
-    response_content = {
-        "access_token": access_token_str,
-        "token_type": "bearer" # Schema JWTTokenResponse có default là "bearer"
-    }
-
-    # 2. Tạo một đối tượng JSONResponse với nội dung trên
-    actual_response = JSONResponse(content=response_content)
-
-    # 3. Set HttpOnly cookie cho refresh token trên đối tượng JSONResponse này
     cookie_params = {
         "key": REFRESH_TOKEN_COOKIE_NAME,
         "value": refresh_token_str,
         "httponly": True,
         "secure": COOKIE_SECURE,
         "samesite": COOKIE_SAMESITE,
-        "domain": COOKIE_DOMAIN, # Có thể là None nếu chưa cấu hình cho localhost
+        "domain": COOKIE_DOMAIN, 
         "max_age": int(refresh_expires_delta.total_seconds()),
         "path": "/",
     }
@@ -331,5 +268,4 @@ async def login_for_access_token(
 
     logger.info(f"Login successful for user: {user.email}")
     
-    # 4. Trả về đối tượng JSONResponse
     return actual_response
