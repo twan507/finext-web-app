@@ -48,7 +48,9 @@ export default function DashboardLayout({
 }) {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
-  const pathname = usePathname(); // Lấy đường dẫn hiện tại
+  const pathname = usePathname();
+
+  console.log("DashboardLayout: session", session);
 
   useEffect(() => {
     if (!authLoading && !session) {

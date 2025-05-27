@@ -4,23 +4,23 @@
 export interface User {
   id: string;
   email: string;
-  full_name?: string;
+  full_name: string;
+  phone_number: string;
+  role_ids: string[];
 }
 
 export interface SessionData {
-  user: User;
   accessToken: string;
-  // refreshToken không còn được lưu ở đây
+  user: User;
 }
 
 const SESSION_KEY = 'finext-session';
 
 export function saveSession(sessionData: SessionData): void {
   if (typeof window !== 'undefined') {
-    // Chỉ lưu user và accessToken
     const dataToSave = {
         user: sessionData.user,
-        accessToken: sessionData.accessToken,
+        // accessToken: sessionData.accessToken,
     };
     localStorage.setItem(SESSION_KEY, JSON.stringify(dataToSave));
   }
@@ -31,10 +31,9 @@ export function getSession(): SessionData | null {
     const sessionStr = localStorage.getItem(SESSION_KEY);
     if (sessionStr) {
       try {
-        // Chỉ đọc user và accessToken
         return JSON.parse(sessionStr) as SessionData;
       } catch {
-        clearSession(); // Xóa nếu parse lỗi
+        clearSession();
         return null;
       }
     }

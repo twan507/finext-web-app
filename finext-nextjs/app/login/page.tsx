@@ -78,6 +78,8 @@ export default function SignInPage() {
               id: userResponse.data.id,
               email: userResponse.data.email,
               full_name: userResponse.data.full_name,
+              phone_number: userResponse.data.phone_number,
+              role_ids: userResponse.data.role_ids,
             },
             accessToken: access_token,
           };
