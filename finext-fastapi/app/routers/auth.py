@@ -1,11 +1,13 @@
 # finext-fastapi/app/routers/auth.py
 import logging
 from typing import Annotated, Tuple, Any, Optional, List, Dict
+from datetime import datetime, timezone # THÊM DATETIME, TIMEZONE
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from jose import jwt
+from bson import ObjectId # THÊM OBJECTID
 
 from app.auth.dependencies import get_current_active_user
 from app.auth.jwt_handler import (
@@ -23,6 +25,7 @@ from app.crud.sessions import (
     create_session,
     delete_session_by_jti
 )
+from app.crud.licenses import get_license_by_id # THÊM
 from app.schemas.sessions import SessionCreate
 from app.schemas.auth import (
     JWTTokenResponse,
@@ -113,6 +116,15 @@ async def logout(
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ) -> LogoutResponse:
     jti_to_delete = payload.jti
+
+    if not jti_to_delete:
+        logger.warning("Logout attempt with no JTI in token payload.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token: missing session identifier",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     deleted = await delete_session_by_jti(db, jti_to_delete)
     if deleted:
         logger.info(f"User {payload.email} logged out successfully (JTI: {jti_to_delete}).")
@@ -130,6 +142,49 @@ async def read_users_me(
 ):
     return UserPublic.model_validate(current_user)
 
+# --- THÊM ENDPOINT MỚI ---
+@router.get(
+    "/me/features",
+    response_model=StandardApiResponse[List[str]],
+    summary="Lấy danh sách các feature key mà người dùng hiện tại có quyền truy cập",
+    description="Trả về một danh sách các 'key' của features dựa trên license hiện tại và còn hạn của người dùng."
+)
+@api_response_wrapper(default_success_message="Lấy danh sách features thành công.")
+async def read_my_features(
+    current_user: UserInDB = Depends(get_current_active_user),
+    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
+):
+    """
+    Lấy danh sách các feature_keys mà người dùng hiện tại sở hữu.
+    """
+    if not current_user.license_info or not current_user.license_info.active_license_id:
+        logger.info(f"User {current_user.email} has no active license ID.")
+        return []
+
+    license_id = current_user.license_info.active_license_id
+    expiry_date = current_user.license_info.license_expiry_date
+
+    # Kiểm tra license_id hợp lệ
+    if not ObjectId.is_valid(license_id):
+         logger.warning(f"User {current_user.email} has an invalid license ID format: {license_id}.")
+         return []
+
+    # Kiểm tra license có hết hạn không
+    if expiry_date and expiry_date < datetime.now(timezone.utc):
+        logger.info(f"User {current_user.email}'s license (ID: {license_id}) has expired on {expiry_date}.")
+        return []
+
+    # Lấy thông tin license từ DB
+    license_data = await get_license_by_id(db, license_id=license_id)
+
+    if not license_data:
+        logger.warning(f"User {current_user.email}'s license (ID: {license_id}) not found in DB.")
+        return []
+
+    feature_keys = license_data.feature_keys
+    logger.info(f"User {current_user.email} has access to features: {feature_keys}")
+    return feature_keys
+# --- KẾT THÚC ENDPOINT MỚI ---
 
 @router.post("/refresh-token", response_model=StandardApiResponse[JWTTokenResponse])
 @api_response_wrapper(default_success_message="Làm mới token thành công.")
@@ -156,17 +211,14 @@ async def refresh_access_token(
         )
 
     # --- TẠO SESSION MỚI KHI REFRESH ---
-    # Tương tự logic login, kiểm tra và đá session cũ nếu cần
     current_session_count = await count_sessions_by_user_id(db, user_id)
     if current_session_count >= MAX_SESSIONS_PER_USER:
         await find_and_delete_oldest_session(db, user_id)
 
-    # Tạo access token và refresh token mới
     new_token_data_payload = {"sub": user.email, "user_id": str(user.id)}
     new_access_token = create_access_token(data=new_token_data_payload)
     new_refresh_token_str, new_refresh_expires = create_refresh_token(data=new_token_data_payload)
 
-    # Trích xuất JTI mới
     try:
         new_access_payload = jwt.decode(new_access_token, SECRET_KEY, algorithms=[ALGORITHM])
         new_jti = new_access_payload.get("jti")
@@ -176,15 +228,12 @@ async def refresh_access_token(
         logger.error(f"Lỗi khi giải mã token mới (refresh) để lấy JTI: {e}")
         raise HTTPException(status_code=500, detail="Lỗi tạo session khi refresh.")
 
-    # Lấy thông tin thiết bị
     user_agent = request.headers.get("user-agent", "Unknown (Refresh)")
     client_host = request.client.host if request.client else "Unknown (Refresh)"
     device_info = f"{user_agent} ({client_host})"
 
-    # Tạo session mới
     await create_session(db, SessionCreate(user_id=user_id, jti=new_jti, device_info=device_info))
 
-    # Tạo cookie mới
     new_cookie_params = {
         "key": REFRESH_TOKEN_COOKIE_NAME,
         "value": new_refresh_token_str,

@@ -4,9 +4,10 @@
 import React from 'react';
 // Sử dụng import Grid cụ thể hơn để đảm bảo
 import Grid from '@mui/material/Grid';
-import { Box, Typography, Container, Paper, Link as MuiLink } from '@mui/material';
-import { Home as HomeIcon, ShowChart as ShowChartIcon, People as PeopleIcon, VpnKey as VpnKeyIcon, Security as SecurityIcon } from '@mui/icons-material';
+import { Box, Typography, Container, Paper, Link as MuiLink, Button } from '@mui/material'; // THÊM Button
+import { Home as HomeIcon, ShowChart as ShowChartIcon, People as PeopleIcon, VpnKey as VpnKeyIcon, Security as SecurityIcon, CloudUpload as CloudUploadIcon } from '@mui/icons-material'; // THÊM CloudUploadIcon
 import Breadcrumbs from '@mui/material/Breadcrumbs';
+import FeatureGuard from 'components/FeatureGuard'; // THÊM IMPORT
 
 const DashboardHomePage: React.FC = () => {
   return (
@@ -29,7 +30,6 @@ const DashboardHomePage: React.FC = () => {
 
       <Grid container spacing={3}> {/* Grid container */}
         {/* Dummy Card 1 */}
-        {/* Sử dụng prop 'size' với object cho responsive */}
         <Grid size={{ xs: 12, md: 6, lg: 3 }}>
           <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', height: 180, borderRadius: '12px' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -50,25 +50,28 @@ const DashboardHomePage: React.FC = () => {
           </Paper>
         </Grid>
 
-        {/* Dummy Card 2 */}
+        {/* Dummy Card 2 - BẢO VỆ BẰNG FEATURE GUARD */}
         <Grid size={{ xs: 12, md: 6, lg: 3 }}>
-          <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', height: 180, borderRadius: '12px' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <ShowChartIcon color="secondary" sx={{ mr: 1 }} />
-              <Typography variant="h6" component="h2">
-                Sales Today
-              </Typography>
-            </Box>
-            <Typography component="p" variant="h4">
-              $5,678
-            </Typography>
-            <Typography color="text.secondary" sx={{ flexGrow: 1 }}>
-              Revenue generated today.
-            </Typography>
-            <MuiLink href="#" color="secondary">
-              View Reports
-            </MuiLink>
-          </Paper>
+          <FeatureGuard requires="view_advanced_chart">
+            <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', height: 180, borderRadius: '12px' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <ShowChartIcon color="secondary" sx={{ mr: 1 }} />
+                  <Typography variant="h6" component="h2">
+                    Advanced Sales
+                  </Typography>
+                </Box>
+                <Typography component="p" variant="h4">
+                  $5,678
+                </Typography>
+                <Typography color="text.secondary" sx={{ flexGrow: 1 }}>
+                  Advanced revenue data.
+                </Typography>
+                <MuiLink href="#" color="secondary">
+                  View Advanced Reports
+                </MuiLink>
+            </Paper>
+          </FeatureGuard>
+           {/* Bạn có thể thêm dummyComponent hoặc để nó ẩn nếu không có quyền */}
         </Grid>
 
         {/* Dummy Card 3 */}
@@ -127,6 +130,23 @@ const DashboardHomePage: React.FC = () => {
         <Typography>
           - System maintenance scheduled for tomorrow.
         </Typography>
+         {/* THÊM NÚT ĐƯỢC BẢO VỆ */}
+        <Box sx={{ mt: 2 }}>
+            <FeatureGuard requires="export_data">
+                <Button variant="contained" startIcon={<CloudUploadIcon />}>
+                    Export All Data
+                </Button>
+            </FeatureGuard>
+            {/* Thêm một nút khác, nhưng hiển thị disabled nếu không có quyền */}
+             <FeatureGuard
+                requires="api_access"
+                tooltipMessage="Nâng cấp lên gói Premium để truy cập API"
+             >
+                <Button variant="outlined" sx={{ ml: 2 }}>
+                    Access API Docs
+                </Button>
+            </FeatureGuard>
+        </Box>
       </Paper>
     </Container>
   );

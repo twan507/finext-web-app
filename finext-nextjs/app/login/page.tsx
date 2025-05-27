@@ -30,12 +30,11 @@ export default function SignInPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { login, session, loading: authLoading } = useAuth(); // Lấy thêm authLoading
+  const { login, session, loading: authLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    // Chỉ chuyển hướng *sau khi* authProvider đã load xong và có session
     if (!authLoading && session) {
       console.log("Login Page: Session found, redirecting to /");
       router.push('/');
@@ -60,19 +59,30 @@ export default function SignInPage() {
         body: loginParams,
         isUrlEncoded: true,
         requireAuth: false,
-        withCredentials: true, // Đảm bảo gửi/nhận cookie
+        withCredentials: true,
       });
 
       if (loginResponse.status === 200 && loginResponse.data?.access_token) {
         const { access_token } = loginResponse.data;
 
+        // Tạm thời gán token để gọi các API tiếp theo
+        const tempHeaders = { 'Authorization': `Bearer ${access_token}` };
+
+        // Lấy thông tin người dùng
         const userResponse = await apiClient<UserInfo>({
           url: '/api/v1/auth/me',
           method: 'GET',
-          headers: { 'Authorization': `Bearer ${access_token}` },
+          headers: tempHeaders,
         });
 
-        if (userResponse.status === 200 && userResponse.data) {
+        // Lấy danh sách features
+        const featuresResponse = await apiClient<string[]>({
+            url: '/api/v1/auth/me/features',
+            method: 'GET',
+            headers: tempHeaders,
+        });
+
+        if (userResponse.status === 200 && userResponse.data && featuresResponse.status === 200) {
           const sessionData = {
             user: {
               id: userResponse.data.id,
@@ -82,15 +92,18 @@ export default function SignInPage() {
               role_ids: userResponse.data.role_ids,
             },
             accessToken: access_token,
+            features: featuresResponse.data || [], // Lấy features từ response
           };
 
-          login(sessionData); // <-- Hàm này sẽ set session và kích hoạt useEffect ở trên
+          login(sessionData); // Gọi login với đầy đủ thông tin
 
           setSuccessMessage(`Đăng nhập thành công! Đang chuyển hướng...`);
-          // Không cần setTimeout nữa, useEffect sẽ xử lý redirect
+          // useEffect sẽ xử lý redirect
 
         } else {
-          setError(userResponse.message || 'Không thể lấy thông tin người dùng.');
+            const userError = userResponse.message || 'Không thể lấy thông tin người dùng.';
+            const featureError = featuresResponse.message ? ` ${featuresResponse.message}` : '';
+            setError(`${userError}${featureError}`);
         }
       } else {
         setError(loginResponse.message || 'Đăng nhập thất bại.');
@@ -102,7 +115,6 @@ export default function SignInPage() {
     }
   };
 
-  // Hiển thị loading cho đến khi authProvider load xong *và* xác định không có session
   if (!mounted || authLoading || (!authLoading && session)) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: 'background.default' }}>
@@ -111,7 +123,6 @@ export default function SignInPage() {
     );
   }
 
-  // Chỉ hiển thị form khi đã mount, authProvider load xong và *không* có session
   return (
     <Container component="main" maxWidth="xs" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
       <CssBaseline />

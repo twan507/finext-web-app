@@ -1,3 +1,4 @@
+# finext-fastapi/app/core/database.py
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase # Thay đổi import
 from pymongo.errors import ConnectionFailure, ConfigurationError
 from .config import MONGODB_CONNECTION_STRING
@@ -36,6 +37,7 @@ async def connect_to_mongo():
 
             # users collection indexes
             await db.users.create_index("email", unique=True)
+            await db.users.create_index("license_info.active_license_id")
 
             # roles collection indexes
             await db.roles.create_index("name", unique=True)
@@ -47,7 +49,13 @@ async def connect_to_mongo():
             await db.sessions.create_index("user_id")
             await db.sessions.create_index("jti", unique=True)
             await db.sessions.create_index("created_at")
-            await db.sessions.create_index("last_active_at") # Thêm index này
+            await db.sessions.create_index("last_active_at")
+
+            # features collection indexes (MỚI)
+            await db.features.create_index("key", unique=True)
+
+            # licenses collection indexes (MỚI)
+            await db.licenses.create_index("key", unique=True)
 
             logger.info("Đã tạo/đảm bảo các indexes cần thiết cho user_db.")
         # --------------------

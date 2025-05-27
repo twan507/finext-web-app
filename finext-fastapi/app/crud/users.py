@@ -1,13 +1,16 @@
-# app/crud/user_crud.py
+# finext-fastapi/app/crud/users.py
 import logging
 from typing import Optional, List
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.schemas.users import UserCreate, UserInDB # PyObjectId đã có trong UserInDB và UserCreate
+# THÊM LicenseInfo VÀ LicenseInDB
+from app.schemas.users import UserCreate, UserInDB, LicenseInfo
+from app.schemas.licenses import LicenseInDB # THÊM
 from app.utils.security import get_password_hash
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta # THÊM timedelta
 from app.utils.types import PyObjectId
+import app.crud.licenses as crud_licenses # THÊM
 
 logger = logging.getLogger(__name__)
 
@@ -41,16 +44,33 @@ async def create_user_db(db: AsyncIOMotorDatabase, user_create_data: UserCreate)
         return None
 
     hashed_password = get_password_hash(user_create_data.password)
-    user_document_to_insert = user_create_data.model_dump(exclude={"password"})
+    user_document_to_insert = user_create_data.model_dump(exclude={"password", "license_info"}) # Bỏ license_info tạm thời
     user_document_to_insert["hashed_password"] = hashed_password
-    
+
     # Gán role_ids mặc định
     roles_collection = db.get_collection("roles")
     user_role = await roles_collection.find_one({"name": "user"})
     if user_role:
         user_document_to_insert["role_ids"] = [str(user_role["_id"])] # Đảm bảo là list các string ObjectId
     else:
-        user_document_to_insert["role_ids"] = [] # Hoặc để trống nếu UserCreate có default
+        user_document_to_insert["role_ids"] = []
+
+    # Xử lý license_info nếu có, nếu không thì gán default 'free'
+    if user_create_data.license_info:
+         user_document_to_insert["license_info"] = user_create_data.license_info.model_dump()
+    else:
+        free_license = await crud_licenses.get_license_by_key(db, "free")
+        if free_license:
+            now = datetime.now(timezone.utc)
+            expiry_date = now + timedelta(days=free_license.duration_days)
+            user_document_to_insert["license_info"] = LicenseInfo(
+                active_license_id=free_license.id,
+                license_start_date=now,
+                license_expiry_date=expiry_date
+            ).model_dump()
+        else:
+            user_document_to_insert["license_info"] = None # Hoặc xử lý lỗi
+
 
     try:
         insert_result = await db.users.insert_one(user_document_to_insert)
@@ -63,17 +83,16 @@ async def create_user_db(db: AsyncIOMotorDatabase, user_create_data: UserCreate)
     except Exception as e:
         logger.error(f"Lỗi khi tạo người dùng {user_create_data.email}: {e}", exc_info=True)
         return None
-    
+
 async def assign_roles_to_user(db: AsyncIOMotorDatabase, user_id: PyObjectId, role_ids_to_assign: List[PyObjectId]) -> Optional[UserInDB]:
-    if not ObjectId.is_valid(user_id): 
-        return None
-    
-    user_obj_id = ObjectId(user_id)
-    user = await db.users.find_one({"_id": user_obj_id})
-    if not user: 
+    if not ObjectId.is_valid(user_id):
         return None
 
-    # Validate role_ids_to_assign (chuyển thành ObjectId và kiểm tra tồn tại)
+    user_obj_id = ObjectId(user_id)
+    user = await db.users.find_one({"_id": user_obj_id})
+    if not user:
+        return None
+
     valid_role_obj_ids_to_add: List[ObjectId] = []
     for r_id_str in role_ids_to_assign:
         if ObjectId.is_valid(r_id_str):
@@ -85,34 +104,29 @@ async def assign_roles_to_user(db: AsyncIOMotorDatabase, user_id: PyObjectId, ro
                 logger.warning(f"Role ID '{r_id_str}' not found. Skipping for user assignment.")
         else:
             logger.warning(f"Invalid ObjectId format for role ID '{r_id_str}'. Skipping for user assignment.")
-    
-    if not valid_role_obj_ids_to_add: # Không có role nào hợp lệ để gán
-        # Nếu muốn trả về user hiện tại mà không thay đổi gì:
-        # return UserInDB(**user)
-        # Hoặc nếu coi đây là lỗi client:
+
+    if not valid_role_obj_ids_to_add:
         raise ValueError("No valid roles provided to assign.")
 
 
-    # Lấy các role_ids hiện tại của user (dưới dạng string)
     current_role_ids_str_set = set(user.get("role_ids", []))
-    
-    # Thêm các role_id mới (dưới dạng string) vào set để tránh trùng lặp
+
     for role_obj_id in valid_role_obj_ids_to_add:
         current_role_ids_str_set.add(str(role_obj_id))
-    
+
     updated_role_ids_str_list = list(current_role_ids_str_set)
 
     await db.users.update_one(
         {"_id": user_obj_id},
         {"$set": {"role_ids": updated_role_ids_str_list, "updated_at": datetime.now(timezone.utc)}}
     )
-    
+
     updated_user_doc = await db.users.find_one({"_id": user_obj_id})
     return UserInDB(**updated_user_doc) if updated_user_doc else None
 
 
 async def revoke_roles_from_user(db: AsyncIOMotorDatabase, user_id: PyObjectId, role_ids_to_revoke: List[PyObjectId]) -> Optional[UserInDB]:
-    if not ObjectId.is_valid(user_id): 
+    if not ObjectId.is_valid(user_id):
         return None
 
     user_obj_id = ObjectId(user_id)
@@ -121,13 +135,8 @@ async def revoke_roles_from_user(db: AsyncIOMotorDatabase, user_id: PyObjectId, 
         return None
 
     current_role_ids_str_set = set(user.get("role_ids", []))
-    
-    # Loại bỏ các role_ids cần thu hồi (chuyển role_ids_to_revoke sang string để so sánh)
-    role_ids_to_revoke_str_set = {r_id_str for r_id_str in role_ids_to_revoke if ObjectId.is_valid(r_id_str)}
 
-    # Không cho phép thu hồi vai trò 'admin' từ chính người dùng admin nếu họ chỉ còn vai trò đó
-    # (Logic này có thể phức tạp hơn, ví dụ: không cho thu hồi role admin cuối cùng của hệ thống)
-    # For simplicity, this check is not added here but could be a business rule.
+    role_ids_to_revoke_str_set = {r_id_str for r_id_str in role_ids_to_revoke if ObjectId.is_valid(r_id_str)}
 
     remaining_role_ids_str_list = list(current_role_ids_str_set - role_ids_to_revoke_str_set)
 
@@ -135,6 +144,45 @@ async def revoke_roles_from_user(db: AsyncIOMotorDatabase, user_id: PyObjectId, 
         {"_id": user_obj_id},
         {"$set": {"role_ids": remaining_role_ids_str_list, "updated_at": datetime.now(timezone.utc)}}
     )
-    
+
     updated_user_doc = await db.users.find_one({"_id": user_obj_id})
     return UserInDB(**updated_user_doc) if updated_user_doc else None
+
+# HÀM MỚI ĐỂ GÁN LICENSE
+async def assign_license_to_user_db(
+    db: AsyncIOMotorDatabase,
+    user_id: PyObjectId,
+    license_key: str,
+    duration_override_days: Optional[int] = None
+) -> Optional[UserInDB]:
+    """Gán một license cho người dùng và cập nhật ngày hết hạn."""
+    user = await get_user_by_id_db(db, str(user_id))
+    if not user:
+        logger.error(f"User with ID {user_id} not found for license assignment.")
+        return None
+
+    license_to_assign = await crud_licenses.get_license_by_key(db, license_key)
+    if not license_to_assign:
+        logger.error(f"License with key '{license_key}' not found.")
+        return None
+
+    now = datetime.now(timezone.utc)
+    duration = duration_override_days if duration_override_days is not None else license_to_assign.duration_days
+    expiry_date = now + timedelta(days=duration)
+
+    new_license_info = LicenseInfo(
+        active_license_id=license_to_assign.id,
+        license_start_date=now,
+        license_expiry_date=expiry_date
+    )
+
+    update_result = await db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"license_info": new_license_info.model_dump(), "updated_at": now}}
+    )
+
+    if update_result.matched_count > 0:
+        return await get_user_by_id_db(db, str(user_id))
+    else:
+        logger.error(f"Failed to update license for user {user_id}.")
+        return None
