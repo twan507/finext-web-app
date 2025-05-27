@@ -50,7 +50,7 @@ async def read_my_sessions(
     response_model=StandardApiResponse[List[SessionPublic]],
     summary="[Admin] Lấy danh sách tất cả các session đang hoạt động trong hệ thống",
     dependencies=[Depends(require_permission("session", "list_any"))], 
-    tags=["sessions", "admin"],
+    tags=["sessions"],
 )
 @api_response_wrapper(default_success_message="Lấy danh sách tất cả session thành công.")
 async def read_all_system_sessions(
@@ -107,7 +107,7 @@ async def delete_my_specific_session(
     response_model=StandardApiResponse[None],
     summary="[Admin] Xóa bất kỳ session nào trong hệ thống",
     dependencies=[Depends(require_permission("session", "delete_any"))], 
-    tags=["sessions", "admin"],
+    tags=["sessions"],
 )
 @api_response_wrapper(default_success_message="Session đã được xóa thành công bởi Admin.")
 async def admin_delete_any_session(

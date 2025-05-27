@@ -132,7 +132,7 @@ async def named_filter_event_generator(
     Sử dụng tham số `filter_name` để chọn một bộ lọc đã định nghĩa sẵn ở server.
     Ví dụ: `?filter_name=only_spot` cho collection `eod_index`.
     """,
-    tags=["sse", "public", "named_filter"],
+    tags=["sse"],
 )
 async def named_filter_sse_endpoint(
     request: Request,

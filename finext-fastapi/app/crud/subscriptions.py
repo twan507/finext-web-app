@@ -23,7 +23,6 @@ async def get_subscription_by_id_db(
         return None
     sub_doc = await db.subscriptions.find_one({"_id": ObjectId(subscription_id_str)})
     if sub_doc:
-        # Chuyển đổi các trường ObjectId sang str cho Pydantic model
         sub_doc["user_id"] = str(sub_doc["user_id"])
         sub_doc["license_id"] = str(sub_doc["license_id"])
         return SubscriptionInDB(**sub_doc)
@@ -74,7 +73,6 @@ async def get_subscriptions_for_user_db(
 async def deactivate_all_active_subscriptions_for_user(
     db: AsyncIOMotorDatabase, user_id_obj: ObjectId
 ) -> int:
-    # user_id_obj đã là ObjectId
     update_result = await db.subscriptions.update_many(
         {"user_id": user_id_obj, "is_active": True},
         {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc)}},
@@ -85,13 +83,13 @@ async def deactivate_all_active_subscriptions_for_user(
 async def create_subscription_db(
     db: AsyncIOMotorDatabase, sub_create_data: SubscriptionCreate
 ) -> Optional[SubscriptionInDB]:
-    user_id_str_from_req = str(sub_create_data.user_id)  # Đây là PyObjectId (str)
+    user_id_str_from_req = str(sub_create_data.user_id) 
     if not ObjectId.is_valid(user_id_str_from_req):
         logger.error(f"User ID không hợp lệ: {user_id_str_from_req}")
         return None
 
     user_obj_id = ObjectId(user_id_str_from_req)
-    user = await db.users.find_one({"_id": user_obj_id})  # Lấy trực tiếp từ DB users
+    user = await db.users.find_one({"_id": user_obj_id}) 
     if not user:
         logger.error(
             f"User {user_id_str_from_req} not found for subscription creation."
@@ -101,30 +99,27 @@ async def create_subscription_db(
     license_template = await crud_licenses.get_license_by_key(
         db, sub_create_data.license_key
     )
-    if not license_template:  # license_template là LicenseInDB, ID của nó là str
+    if not license_template: 
         logger.error(f"License key '{sub_create_data.license_key}' not found.")
         return None
 
     license_obj_id = ObjectId(
         license_template.id
-    )  # Chuyển ID của license thành ObjectId
+    ) 
 
     await deactivate_all_active_subscriptions_for_user(db, user_obj_id)
 
-    now = datetime.now(timezone.utc)
-    start_date = sub_create_data.start_date_override or now
-    duration = sub_create_data.duration_override_days or license_template.duration_days
-    expiry_date = start_date + timedelta(days=duration)
-
     dt_now = datetime.now(timezone.utc)
-    # Tạo payload cho SubscriptionBase, các ID ở đây là str (PyObjectId)
+    duration = sub_create_data.duration_override_days or license_template.duration_days
+    expiry_date = dt_now + timedelta(days=duration)
+
     sub_base_payload = SubscriptionBase(
-        user_id=user_id_str_from_req,  # PyObjectId (str)
-        user_email=user["email"],  # Lấy email từ user document
-        license_id=str(license_obj_id),  # PyObjectId (str)
+        user_id=user_id_str_from_req, 
+        user_email=user["email"], 
+        license_id=str(license_obj_id), 
         license_key=license_template.key,
         is_active=True,
-        start_date=start_date,
+        start_date=dt_now,
         expiry_date=expiry_date,
     )
 
@@ -133,7 +128,6 @@ async def create_subscription_db(
         "created_at": dt_now,
         "updated_at": dt_now,
     }
-    # Chuyển đổi ID sang ObjectId TRƯỚC KHI INSERT
     sub_doc_to_insert["user_id"] = user_obj_id
     sub_doc_to_insert["license_id"] = license_obj_id
 
@@ -149,7 +143,6 @@ async def create_subscription_db(
                     }
                 },
             )
-            # get_subscription_by_id_db sẽ xử lý chuyển đổi ID sang str cho Pydantic
             return await get_subscription_by_id_db(db, str(insert_result.inserted_id))
         logger.error(f"Failed to create subscription for user: {user['email']}")
         return None
@@ -169,7 +162,7 @@ async def deactivate_subscription_db(
     sub_obj_id = ObjectId(subscription_id_str)
     sub_before_update = await db.subscriptions.find_one(
         {"_id": sub_obj_id}
-    )  # Lấy sub trước khi update
+    ) 
     if not sub_before_update:
         return None
 
@@ -179,10 +172,10 @@ async def deactivate_subscription_db(
     )
 
     if update_result.modified_count > 0:
-        user_obj_id_of_sub = sub_before_update.get("user_id")  # Đây là ObjectId
+        user_obj_id_of_sub = sub_before_update.get("user_id") 
         if user_obj_id_of_sub:
             user = await db.users.find_one({"_id": user_obj_id_of_sub})
-            if user and user.get("subscription_id") == sub_obj_id:  # So sánh ObjectId
+            if user and user.get("subscription_id") == sub_obj_id: 
                 await db.users.update_one(
                     {"_id": user_obj_id_of_sub},
                     {
@@ -193,4 +186,4 @@ async def deactivate_subscription_db(
                     },
                 )
         return await get_subscription_by_id_db(db, subscription_id_str)
-    return None  # Trả về None nếu không có gì được cập nhật
+    return None

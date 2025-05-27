@@ -25,7 +25,7 @@ router = APIRouter()
     status_code=status.HTTP_201_CREATED,
     summary="[Admin] Tạo subscription mới cho user",
     dependencies=[Depends(require_permission("subscription", "create"))],
-    tags=["subscriptions", "admin"],
+    tags=["subscriptions"],
 )
 @api_response_wrapper(
     default_success_message="Subscription được tạo thành công.",
@@ -91,7 +91,7 @@ async def read_user_subscriptions(
     response_model=StandardApiResponse[SubscriptionPublic],
     summary="[Admin] Hủy kích hoạt một subscription",
     dependencies=[Depends(require_permission("subscription", "deactivate_any"))],
-    tags=["subscriptions", "admin"],
+    tags=["subscriptions"],
 )
 @api_response_wrapper(default_success_message="Hủy kích hoạt subscription thành công.")
 async def deactivate_subscription(
