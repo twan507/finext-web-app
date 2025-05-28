@@ -96,3 +96,6 @@ Khi backend FastAPI đang chạy, tài liệu API tự động có sẵn tại:
 
 * **Swagger UI**: `http://127.0.0.1:8000/api/v1/docs`
 * **ReDoc**: `http://127.0.0.1:8000/redoc`
+
+## DeepWiki
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/twan507/finext-web-app)
