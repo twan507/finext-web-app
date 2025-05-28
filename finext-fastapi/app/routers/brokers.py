@@ -200,7 +200,7 @@ async def update_broker_active_status(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(ve))
 
 
-@router.delete(
+@router.put(
     "/{broker_id_or_code}",
     response_model=StandardApiResponse[None],
     status_code=status.HTTP_200_OK,

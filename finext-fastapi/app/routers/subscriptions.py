@@ -138,7 +138,7 @@ async def read_my_current_subscription_endpoint(
         return None 
     return SubscriptionPublic.model_validate(active_sub)
 
-@router.delete(
+@router.put(
     "/{subscription_id}/deactivate",
     response_model=StandardApiResponse[SubscriptionPublic],
     summary="[Admin] Hủy kích hoạt một subscription",

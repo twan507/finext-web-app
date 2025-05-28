@@ -25,10 +25,11 @@ class LicenseBase(BaseModel):
         default_factory=list,
         description="Danh sách các 'key' của features có trong gói.",
     )
+    is_active: bool = Field(default=True, description="Trạng thái hoạt động của license.") # MỚI
 
 
 class LicenseCreate(LicenseBase):
-    # Kế thừa từ LicenseBase
+    # Kế thừa từ LicenseBase, is_active sẽ có giá trị mặc định là True
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -37,6 +38,7 @@ class LicenseCreate(LicenseBase):
                 "price": 49.99,
                 "duration_days": 30,
                 "feature_keys": ["view_advanced_chart", "api_access"],
+                "is_active": True, # MỚI
             }
         }
     )
@@ -47,6 +49,7 @@ class LicenseUpdate(BaseModel):
     price: Optional[float] = Field(None, ge=0)
     duration_days: Optional[int] = Field(None, gt=0)
     feature_keys: Optional[List[str]] = Field(None)
+    is_active: Optional[bool] = Field(None, description="Cập nhật trạng thái hoạt động của license.") # MỚI
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -61,12 +64,13 @@ class LicenseUpdate(BaseModel):
                     "api_access",
                     "sse_access",
                 ],
+                "is_active": False, # MỚI
             }
         }
     )
 
 
-class LicenseInDB(LicenseBase):
+class LicenseInDB(LicenseBase): # Kế thừa is_active
     id: PyObjectId = Field(alias="_id")
     created_at: datetime
     updated_at: datetime
@@ -74,7 +78,6 @@ class LicenseInDB(LicenseBase):
     model_config = ConfigDict(
         populate_by_name=True,
         from_attributes=True,
-        # Ví dụ này cho response/DB model, giữ lại để tham khảo cấu trúc hoặc xóa nếu bạn muốn.
         json_schema_extra={
             "example": {
                 "id": "60d5ec49f7b4e6a0e7d5c2b2",
@@ -87,6 +90,7 @@ class LicenseInDB(LicenseBase):
                     "export_data",
                     "enable_pro_indicator",
                 ],
+                "is_active": True, # MỚI
                 "created_at": "2023-10-27T10:00:00Z",
                 "updated_at": "2023-10-27T10:00:00Z",
             }
@@ -94,11 +98,10 @@ class LicenseInDB(LicenseBase):
     )
 
 
-class LicensePublic(LicenseBase):
+class LicensePublic(LicenseBase): # Kế thừa is_active
     id: PyObjectId = Field(alias="_id")
 
     model_config = ConfigDict(
         populate_by_name=True,
         from_attributes=True,
-        # Không thêm example cho response theo yêu cầu.
     )
