@@ -8,7 +8,11 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.schemas.users import UserCreate
 from app.utils.security import get_password_hash
 from app.utils.types import PyObjectId
-from app.core.config import ADMIN_EMAIL, ADMIN_PWD, BROKER_EMAIL, USER_EMAIL
+from app.core.config import (
+    ADMIN_EMAIL, ADMIN_PWD,
+    BROKER_EMAIL_1, BROKER_EMAIL_2,
+    USER_EMAIL_1, USER_EMAIL_2, USER_EMAIL_3
+)
 
 logger = logging.getLogger(__name__)
 
@@ -28,13 +32,15 @@ async def seed_users(
     user_role_id_str = role_ids_map.get("user")
 
     sample_users_data_dicts = []
+
+    # 1 Admin User
     if ADMIN_EMAIL and ADMIN_PWD and admin_role_id_str:
-        # Admin should also have user and broker roles for full testing capabilities if needed
         admin_roles = [admin_role_id_str]
-        if user_role_id_str:
+        if user_role_id_str: # Admin cũng nên có quyền user thường để test
             admin_roles.append(user_role_id_str)
-        if broker_role_id_str:
-            admin_roles.append(broker_role_id_str)
+        # Admin có thể có cả role broker nếu cần test tính năng broker
+        # if broker_role_id_str:
+        #     admin_roles.append(broker_role_id_str)
 
         sample_users_data_dicts.append(
             {
@@ -42,34 +48,46 @@ async def seed_users(
                 "password": ADMIN_PWD,
                 "full_name": "System Administrator",
                 "phone_number": "0000000000",
-                "role_ids_str": list(set(admin_roles)),  # Use set to avoid duplicates
-                "is_active": True,
-            }
-        )
-    if BROKER_EMAIL and ADMIN_PWD and broker_role_id_str and user_role_id_str:
-        sample_users_data_dicts.append(
-            {
-                "email": BROKER_EMAIL,
-                "password": ADMIN_PWD,
-                "full_name": "Default Broker",
-                "phone_number": "0111111111",
-                "role_ids_str": list(set([broker_role_id_str, user_role_id_str])),
-                "is_active": True,
-            }
-        )
-    if USER_EMAIL and ADMIN_PWD and user_role_id_str:
-        sample_users_data_dicts.append(
-            {
-                "email": USER_EMAIL,
-                "password": ADMIN_PWD,
-                "full_name": "Default User",
-                "phone_number": "0999999999",
-                "role_ids_str": [user_role_id_str],
+                "role_ids_str": list(set(admin_roles)),
                 "is_active": True,
             }
         )
 
+    # 2 Broker Users
+    broker_emails_to_seed = [BROKER_EMAIL_1, BROKER_EMAIL_2]
+    for i, broker_email_val in enumerate(broker_emails_to_seed):
+        if broker_email_val and ADMIN_PWD and broker_role_id_str and user_role_id_str:
+            sample_users_data_dicts.append(
+                {
+                    "email": broker_email_val,
+                    "password": ADMIN_PWD,
+                    "full_name": f"Default Broker {i+1}",
+                    "phone_number": f"011111111{i+1}",
+                    "role_ids_str": list(set([broker_role_id_str, user_role_id_str])), # Broker cũng là user
+                    "is_active": True,
+                }
+            )
+
+    # 3 Standard Users
+    user_emails_to_seed = [USER_EMAIL_1, USER_EMAIL_2, USER_EMAIL_3]
+    for i, user_email_val in enumerate(user_emails_to_seed):
+        if user_email_val and ADMIN_PWD and user_role_id_str:
+            sample_users_data_dicts.append(
+                {
+                    "email": user_email_val,
+                    "password": ADMIN_PWD,
+                    "full_name": f"Default User {i+1}",
+                    "phone_number": f"099999999{i+1}",
+                    "role_ids_str": [user_role_id_str],
+                    "is_active": True,
+                }
+            )
+
     for user_data_dict in sample_users_data_dicts:
+        if not user_data_dict.get("email"): # Bỏ qua nếu email không được cấu hình
+            logger.warning(f"Bỏ qua seeding user vì email không được cung cấp trong user_data_dict: {user_data_dict.get('full_name')}")
+            continue
+
         existing_user = await users_collection.find_one(
             {"email": user_data_dict["email"]}
         )
@@ -82,19 +100,14 @@ async def seed_users(
                 is_active=user_data_dict["is_active"],
                 role_ids=user_data_dict["role_ids_str"],
                 subscription_id=None,
-                # created_at and updated_at will be set by Pydantic default_factory
             )
 
             user_document_for_db = user_create_instance.model_dump(
-                exclude={
-                    "password",
-                    "role_ids",
-                }  # Exclude fields handled separately or not stored directly
+                exclude={"password", "role_ids"}
             )
             user_document_for_db["hashed_password"] = get_password_hash(
                 user_create_instance.password
             )
-            # Ensure created_at and updated_at are present
             user_document_for_db["created_at"] = user_create_instance.created_at
             user_document_for_db["updated_at"] = user_create_instance.updated_at
 

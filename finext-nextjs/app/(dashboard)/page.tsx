@@ -54,24 +54,24 @@ const DashboardHomePage: React.FC = () => {
         <Grid size={{ xs: 12, md: 6, lg: 3 }}>
           <FeatureGuard requires="view_advanced_chart">
             <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', height: 180, borderRadius: '12px' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <ShowChartIcon color="secondary" sx={{ mr: 1 }} />
-                  <Typography variant="h6" component="h2">
-                    Advanced Sales
-                  </Typography>
-                </Box>
-                <Typography component="p" variant="h4">
-                  $5,678
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <ShowChartIcon color="secondary" sx={{ mr: 1 }} />
+                <Typography variant="h6" component="h2">
+                  Advanced Sales
                 </Typography>
-                <Typography color="text.secondary" sx={{ flexGrow: 1 }}>
-                  Advanced revenue data.
-                </Typography>
-                <MuiLink href="#" color="secondary">
-                  View Advanced Reports
-                </MuiLink>
+              </Box>
+              <Typography component="p" variant="h4">
+                $5,678
+              </Typography>
+              <Typography color="text.secondary" sx={{ flexGrow: 1 }}>
+                Advanced revenue data.
+              </Typography>
+              <MuiLink href="#" color="secondary">
+                View Advanced Reports
+              </MuiLink>
             </Paper>
           </FeatureGuard>
-           {/* Bạn có thể thêm dummyComponent hoặc để nó ẩn nếu không có quyền */}
+          {/* Bạn có thể thêm dummyComponent hoặc để nó ẩn nếu không có quyền */}
         </Grid>
 
         {/* Dummy Card 3 */}
@@ -130,22 +130,22 @@ const DashboardHomePage: React.FC = () => {
         <Typography>
           - System maintenance scheduled for tomorrow.
         </Typography>
-         {/* THÊM NÚT ĐƯỢC BẢO VỆ */}
+        {/* THÊM NÚT ĐƯỢC BẢO VỆ */}
         <Box sx={{ mt: 2 }}>
-            <FeatureGuard requires="export_data">
-                <Button variant="contained" startIcon={<CloudUploadIcon />}>
-                    Export All Data
-                </Button>
-            </FeatureGuard>
-            {/* Thêm một nút khác, nhưng hiển thị disabled nếu không có quyền */}
-             <FeatureGuard
-                requires="api_access"
-                tooltipMessage="Nâng cấp lên gói Premium để truy cập API"
-             >
-                <Button variant="outlined" sx={{ ml: 2 }}>
-                    Access API Docs
-                </Button>
-            </FeatureGuard>
+          <FeatureGuard requires="export_data">
+            <Button variant="contained" startIcon={<CloudUploadIcon />}>
+              Export All Data
+            </Button>
+          </FeatureGuard>
+          {/* Thêm một nút khác, nhưng hiển thị disabled nếu không có quyền */}
+          <FeatureGuard
+            requires="api_access"
+            tooltipMessage="Nâng cấp lên gói EXAMPLE để truy cập API"
+          >
+            <Button variant="outlined" sx={{ ml: 2 }}>
+              Access API Docs
+            </Button>
+          </FeatureGuard>
         </Box>
       </Paper>
     </Container>

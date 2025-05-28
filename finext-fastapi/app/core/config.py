@@ -15,21 +15,28 @@ REFRESH_TOKEN_EXPIRE_DAYS = 7  # Đơn vị ngày
 
 # User Seeding
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
-BROKER_EMAIL = os.getenv("BROKER_EMAIL")
-USER_EMAIL = os.getenv("USER_EMAIL")
+BROKER_EMAIL_1 = os.getenv("BROKER_EMAIL_1")
+BROKER_EMAIL_2 = os.getenv("BROKER_EMAIL_2")
+USER_EMAIL_1 = os.getenv("USER_EMAIL_1")
+USER_EMAIL_2 = os.getenv("USER_EMAIL_2")
+USER_EMAIL_3 = os.getenv("USER_EMAIL_3")
 ADMIN_PWD = os.getenv("ADMIN_PWD")
+
+# Danh sách các email được bảo vệ 
+PROTECTED_USER_EMAILS = [
+    email for email in [ADMIN_EMAIL, BROKER_EMAIL_1, BROKER_EMAIL_2, USER_EMAIL_1, USER_EMAIL_2, USER_EMAIL_3] if email
+]
+PROTECTED_ROLE_NAMES = ["admin", "user", "broker"]
+PROTECTED_LICENSE_KEYS = ["ADMIN", "PARTNER"]
+
 
 # Session Management
 MAX_SESSIONS_PER_USER = 3
 
 # --- THÊM CẤU HÌNH COOKIE ---
 REFRESH_TOKEN_COOKIE_NAME = "finext_refresh_token"
-# Sử dụng 'lax' cho phép cookie được gửi khi điều hướng từ trang khác
-# Sử dụng 'strict' nếu bạn muốn bảo mật cao nhất (chỉ gửi khi từ cùng site)
 COOKIE_SAMESITE = os.getenv("COOKIE_SAMESITE", "lax")
-# Chỉ đặt True khi dùng HTTPS trong production
 COOKIE_SECURE = os.getenv("COOKIE_SECURE", "False").lower() == "true"
-# Đặt domain của bạn ở đây cho production, None cho localhost
 COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN")
 # -----------------------------
 

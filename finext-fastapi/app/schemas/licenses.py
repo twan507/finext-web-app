@@ -10,7 +10,7 @@ class LicenseBase(BaseModel):
         ...,
         min_length=3,
         max_length=50,
-        pattern=r'^[a-zA-Z_]+$',
+        pattern=r"^[a-zA-Z_]+$",
         description="Khóa định danh duy nhất",
     )
     name: str = Field(
@@ -78,7 +78,7 @@ class LicenseInDB(LicenseBase):
         json_schema_extra={
             "example": {
                 "id": "60d5ec49f7b4e6a0e7d5c2b2",
-                "key": "PRO",
+                "key": "EXAMPLE",
                 "name": "Gói Chuyên Nghiệp",
                 "price": 99.99,
                 "duration_days": 365,

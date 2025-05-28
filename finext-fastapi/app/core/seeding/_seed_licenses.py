@@ -6,28 +6,31 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.schemas.licenses import LicenseCreate
 from app.utils.types import PyObjectId
-from ._config import ALL_DEFAULT_FEATURE_KEYS 
+from ._config import ALL_DEFAULT_FEATURE_KEYS
 
 logger = logging.getLogger(__name__)
+
 
 async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
     licenses_collection = db.get_collection("licenses")
     created_license_ids: Dict[str, PyObjectId] = {}  # key -> str(ObjectId)
 
-    default_licenses_data: List[Dict[str, Any]] = [ # Đảm bảo type hint là List[Dict[str, Any]]
+    default_licenses_data: List[
+        Dict[str, Any]
+    ] = [  # Đảm bảo type hint là List[Dict[str, Any]]
         {
-            "key": "ADMIN", # ĐÃ SỬA
+            "key": "ADMIN",  # ĐÃ SỬA
             "name": "License Quản Trị Viên",
             "price": 0.0,
-            "duration_days": 99999, # Thời hạn rất dài
-            "feature_keys": list(ALL_DEFAULT_FEATURE_KEYS), # Admin có tất cả features
+            "duration_days": 99999,  # Thời hạn rất dài
+            "feature_keys": list(ALL_DEFAULT_FEATURE_KEYS),  # Admin có tất cả features
         },
         {
-            "key": "PARTNER", # ĐÃ SỬA
+            "key": "PARTNER",  # ĐÃ SỬA
             "name": "License Đối Tác",
-            "price": 0.0, # Hoặc giá tượng trưng nếu có
-            "duration_days": 99999, # Thời hạn rất dài
-            "feature_keys": [ # Danh sách features ví dụ cho Đối tác
+            "price": 0.0,  # Hoặc giá tượng trưng nếu có
+            "duration_days": 99999,  # Thời hạn rất dài
+            "feature_keys": [  # Danh sách features ví dụ cho Đối tác
                 "view_basic_chart",
                 "view_advanced_chart",
                 "export_data",
@@ -36,8 +39,8 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
             ],
         },
         {
-            "key": "PRO",
-            "name": "Gói Chuyên Nghiệp",
+            "key": "EXAMPLE",
+            "name": "Gói Ví Dụ",
             "price": 99.0,
             "duration_days": 30,
             "feature_keys": [
@@ -46,19 +49,6 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
                 "enable_pro_indicator",
                 "sse_access",
                 "api_access",
-            ],
-        },
-        {
-            "key": "PREMIUM",
-            "name": "Gói Cao Cấp",
-            "price": 199.0,
-            "duration_days": 30,
-            "feature_keys": [
-                "view_advanced_chart",
-                "export_data",
-                "enable_pro_indicator",
-                "api_access",
-                "sse_access",
             ],
         },
     ]
@@ -74,7 +64,7 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
         for lic_data in licenses_to_add:
             valid_feature_keys_for_license = []
             # Đảm bảo lic_data["feature_keys"] tồn tại và là list trước khi lặp
-            for f_key in lic_data.get("feature_keys", []): 
+            for f_key in lic_data.get("feature_keys", []):
                 feature_exists = await db.features.find_one({"key": f_key})
                 if feature_exists:
                     valid_feature_keys_for_license.append(f_key)
@@ -110,5 +100,5 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
         {"key": {"$in": list(all_default_license_keys)}}
     ):
         created_license_ids[lic_doc["key"]] = str(lic_doc["_id"])
-        
+
     return created_license_ids

@@ -12,6 +12,7 @@ from app.schemas.subscriptions import (
 )
 from app.utils.types import PyObjectId
 import app.crud.licenses as crud_licenses
+from app.core.config import PROTECTED_LICENSE_KEYS # Import
 
 logger = logging.getLogger(__name__)
 
@@ -51,10 +52,6 @@ async def get_active_subscription_for_user_db(
 async def find_inactive_partner_subscription_for_user(
     db: AsyncIOMotorDatabase, user_id_str: PyObjectId
 ) -> Optional[SubscriptionInDB]:
-    """
-    MỚI: Tìm một subscription "PARTNER" không active của user.
-    Ưu tiên sub gần đây nhất nếu có nhiều.
-    """
     if not ObjectId.is_valid(user_id_str):
         return None
     
@@ -66,10 +63,10 @@ async def find_inactive_partner_subscription_for_user(
     sub_doc = await db.subscriptions.find_one(
         {
             "user_id": ObjectId(user_id_str),
-            "license_key": "PARTNER", # Hoặc "license_id": ObjectId(partner_license.id)
+            "license_key": "PARTNER", 
             "is_active": False,
         },
-        sort=[("updated_at", -1)] # Lấy cái được cập nhật gần nhất (có thể là cái bị hủy gần nhất)
+        sort=[("updated_at", -1)] 
     )
     if sub_doc:
         sub_doc["user_id"] = str(sub_doc["user_id"])
@@ -102,7 +99,14 @@ async def get_subscriptions_for_user_db(
 async def deactivate_all_active_subscriptions_for_user(
     db: AsyncIOMotorDatabase, user_id_obj: ObjectId, exclude_sub_id: Optional[ObjectId] = None
 ) -> int:
-    query = {"user_id": user_id_obj, "is_active": True}
+    # Do not deactivate protected subscriptions (ADMIN, PARTNER) even when deactivating all for a user
+    # This function is usually called when assigning a new subscription.
+    # The protection for ADMIN/PARTNER subs should be handled when a *specific* sub is targeted for deactivation.
+    query = {
+        "user_id": user_id_obj, 
+        "is_active": True,
+        "license_key": {"$nin": PROTECTED_LICENSE_KEYS} # Do not deactivate protected ones here
+    }
     if exclude_sub_id:
         query["_id"] = {"$ne": exclude_sub_id}
         
@@ -132,12 +136,13 @@ async def create_subscription_db(
     license_template = await crud_licenses.get_license_by_key(
         db, sub_create_data.license_key
     )
-    if not license_template or not license_template.id:  # Kiểm tra cả license_template.id
+    if not license_template or not license_template.id:  
         logger.error(f"License key '{sub_create_data.license_key}' not found.")
         return None 
 
     license_obj_id = ObjectId(license_template.id) 
 
+    # Deactivate other non-protected active subscriptions before creating a new one
     await deactivate_all_active_subscriptions_for_user(db, user_obj_id)
 
     dt_now = datetime.now(timezone.utc)
@@ -190,12 +195,8 @@ async def activate_specific_subscription_for_user(
     db: AsyncIOMotorDatabase,
     user_id_str: PyObjectId,
     subscription_id_to_activate_str: PyObjectId,
-    new_expiry_date: Optional[datetime] = None # Tùy chọn: cập nhật ngày hết hạn mới
+    new_expiry_date: Optional[datetime] = None 
 ) -> Optional[SubscriptionInDB]:
-    """
-    MỚI: Kích hoạt một subscription cụ thể cho user, hủy các active sub khác.
-    Nếu new_expiry_date được cung cấp, sẽ cập nhật ngày hết hạn.
-    """
     if not ObjectId.is_valid(user_id_str) or not ObjectId.is_valid(subscription_id_to_activate_str):
         logger.error("User ID hoặc Subscription ID không hợp lệ để kích hoạt.")
         return None
@@ -203,7 +204,6 @@ async def activate_specific_subscription_for_user(
     user_obj_id = ObjectId(user_id_str)
     sub_to_activate_obj_id = ObjectId(subscription_id_to_activate_str)
 
-    # Kiểm tra subscription có tồn tại và thuộc user không
     sub_to_activate_doc = await db.subscriptions.find_one({
         "_id": sub_to_activate_obj_id,
         "user_id": user_obj_id
@@ -212,7 +212,7 @@ async def activate_specific_subscription_for_user(
         logger.warning(f"Subscription {subscription_id_to_activate_str} không tìm thấy hoặc không thuộc user {user_id_str}.")
         return None
 
-    # Hủy tất cả các active subscription khác của user này
+    # Deactivate other non-protected active subscriptions of this user
     await deactivate_all_active_subscriptions_for_user(db, user_obj_id, exclude_sub_id=sub_to_activate_obj_id)
 
     dt_now = datetime.now(timezone.utc)
@@ -221,19 +221,17 @@ async def activate_specific_subscription_for_user(
         "updated_at": dt_now
     }
     if new_expiry_date:
-        # Đảm bảo new_expiry_date có timezone là UTC
         if new_expiry_date.tzinfo is None:
             new_expiry_date = new_expiry_date.replace(tzinfo=timezone.utc)
         update_fields["expiry_date"] = new_expiry_date
-        update_fields["start_date"] = dt_now # Nếu gia hạn/active lại, coi start_date là ngày active lại
+        update_fields["start_date"] = dt_now 
 
     update_result = await db.subscriptions.update_one(
-        {"_id": sub_to_activate_obj_id, "user_id": user_obj_id}, # Đảm bảo chỉ update đúng sub của user
+        {"_id": sub_to_activate_obj_id, "user_id": user_obj_id}, 
         {"$set": update_fields}
     )
 
-    if update_result.modified_count > 0 or update_result.matched_count > 0 : # matched_count > 0 nếu sub đã active và không thay đổi expiry
-        # Cập nhật user.subscription_id
+    if update_result.modified_count > 0 or update_result.matched_count > 0 : 
         await db.users.update_one(
             {"_id": user_obj_id},
             {"$set": {"subscription_id": sub_to_activate_obj_id, "updated_at": dt_now}}
@@ -259,6 +257,12 @@ async def deactivate_subscription_db(
     if not sub_before_update:
         logger.warning(f"Không tìm thấy subscription với ID {subscription_id_str} để hủy kích hoạt.")
         return None
+        
+    # Prevent deactivation of protected subscriptions (ADMIN, PARTNER)
+    if sub_before_update.get("license_key") in PROTECTED_LICENSE_KEYS:
+        logger.warning(f"Attempt to deactivate protected subscription {subscription_id_str} (License: {sub_before_update.get('license_key')}). Denied.")
+        raise ValueError(f"Cannot deactivate protected subscription with license '{sub_before_update.get('license_key')}'.")
+
 
     if not sub_before_update.get("is_active", False):
         logger.info(f"Subscription {subscription_id_str} đã ở trạng thái inactive.")

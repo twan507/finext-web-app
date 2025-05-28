@@ -4,11 +4,11 @@ from datetime import datetime, timezone
 from typing import List
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, status, Query # Thêm Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.auth.access import require_permission
-from app.auth.dependencies import get_current_active_user # Thêm nếu cần cho logic quyền
+from app.auth.dependencies import get_current_active_user 
 from app.core.database import get_database
 
 from app.crud.users import (
@@ -18,22 +18,22 @@ from app.crud.users import (
     get_user_by_id_db,
     revoke_roles_from_user,
 )
-import app.crud.brokers as crud_brokers # Thêm để validate referral_code nếu cần ở router
-import app.crud.subscriptions as crud_subscriptions # Thêm để xử lý subscriptions khi xóa user
+import app.crud.brokers as crud_brokers 
+import app.crud.subscriptions as crud_subscriptions 
 
 from app.schemas.users import (
-    UserCreate, # Schema này đã có referral_code
+    UserCreate, 
     UserPublic,
     UserRoleModificationRequest,
-    UserUpdate, # Schema này đã có referral_code
+    UserUpdate, 
     UserInDB
 )
 from app.utils.response_wrapper import StandardApiResponse, api_response_wrapper
 from app.utils.types import PyObjectId
-from app.core.config import ADMIN_EMAIL, BROKER_EMAIL, USER_EMAIL
+from app.core.config import PROTECTED_USER_EMAILS, ADMIN_EMAIL, BROKER_EMAIL_1, BROKER_EMAIL_2
 
 logger = logging.getLogger(__name__)
-router = APIRouter() # Không cần prefix và tags ở đây nếu đã có ở main.py
+router = APIRouter() 
 
 @router.post(
     "/",
@@ -41,22 +41,19 @@ router = APIRouter() # Không cần prefix và tags ở đây nếu đã có ở
     status_code=status.HTTP_201_CREATED,
     summary="Tạo người dùng mới (yêu cầu quyền user:create)",
     dependencies=[Depends(require_permission("user", "create"))],
-    tags=["users"], # Giữ tags ở đây để Swagger UI phân nhóm
+    tags=["users"], 
 )
 @api_response_wrapper(
     default_success_message="Người dùng được tạo thành công.",
     success_status_code=status.HTTP_201_CREATED,
 )
 async def create_new_user_endpoint(
-    user_data: UserCreate, # user_data đã chứa referral_code
+    user_data: UserCreate, 
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
-    # Logic kiểm tra email tồn tại và tạo user (bao gồm xử lý referral_code) đã nằm trong create_user_db
     try:
         created_user = await create_user_db(db, user_create_data=user_data)
         if not created_user:
-            # create_user_db có thể trả về None nếu email đã tồn tại hoặc lỗi khác
-            # Kiểm tra lại email để đưa ra thông báo cụ thể
             if await get_user_by_email_db(db, user_data.email):
                  raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -67,7 +64,7 @@ async def create_new_user_endpoint(
                 detail="Không thể tạo người dùng do lỗi máy chủ hoặc referral_code không hợp lệ.",
             )
         return UserPublic.model_validate(created_user)
-    except ValueError as ve: # Bắt lỗi từ CRUD (ví dụ referral code không hợp lệ nếu CRUD raise)
+    except ValueError as ve: 
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
@@ -86,7 +83,7 @@ async def read_user_endpoint(
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
     user = await get_user_by_id_db(
-        db, user_id=str(user_id) # Đảm bảo truyền string
+        db, user_id=str(user_id) 
     )
     if user is None:
         raise HTTPException(
@@ -99,44 +96,59 @@ async def read_user_endpoint(
     "/{user_id}",
     response_model=StandardApiResponse[UserPublic],
     summary="Cập nhật thông tin người dùng (yêu cầu quyền user:update_self hoặc user:update_any)",
-    # Dependency require_permission("user", "update") sẽ kiểm tra quyền dựa trên path param user_id
     dependencies=[Depends(require_permission("user", "update"))],
     tags=["users"],
 )
 @api_response_wrapper(default_success_message="Cập nhật người dùng thành công.")
 async def update_user_info_endpoint(
     user_id: PyObjectId,
-    user_update_data: UserUpdate, # user_update_data đã chứa referral_code
+    user_update_data: UserUpdate, 
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
-    # current_user_from_token: UserInDB = Depends(get_current_active_user) # Lấy user hiện tại để check quyền self
+    current_user_from_token: UserInDB = Depends(get_current_active_user) 
 ):
     users_collection = db.get_collection("users")
     
-    # Logic cập nhật, bao gồm cả referral_code
-    update_data_dict = user_update_data.model_dump(exclude_unset=True) # Chỉ lấy các trường được cung cấp
+    target_user = await get_user_by_id_db(db, str(user_id))
+    if not target_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User with ID {user_id} not found.")
+
+    # Prevent email change for protected users by anyone other than themselves (if that's the logic)
+    # Or simply prevent email change for protected users at all
+    update_dict = user_update_data.model_dump(exclude_unset=True)
+
+    if target_user.email in PROTECTED_USER_EMAILS:
+        if "email" in update_dict and update_dict["email"] != target_user.email:
+            # If it's not a self-update, or even for self-update, prevent email change for protected accounts
+            if str(current_user_from_token.id) != str(target_user.id) or True: # True to always block for protected
+                 logger.warning(f"Attempt to change email for protected user {target_user.email} by {current_user_from_token.email}. Denied.")
+                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Cannot change email for protected user '{target_user.email}'.")
+        # Potentially prevent other field changes for protected users
+        # if "is_active" in update_dict and update_dict["is_active"] == False:
+        # raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Cannot deactivate protected user '{target_user.email}'.")
+
+
+    update_data_dict = user_update_data.model_dump(exclude_unset=True) 
 
     if not update_data_dict:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Không có dữ liệu nào được cung cấp để cập nhật."
         )
 
-    # Nếu referral_code được cung cấp để cập nhật (kể cả là None để xóa)
     if "referral_code" in update_data_dict:
         new_ref_code = update_data_dict["referral_code"]
-        if new_ref_code is not None and new_ref_code != "": # Nếu muốn cập nhật thành một mã mới
+        if new_ref_code is not None and new_ref_code != "": 
             is_valid_ref_code = await crud_brokers.is_broker_code_valid_and_active(db, new_ref_code)
             if not is_valid_ref_code:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Mã giới thiệu '{new_ref_code}' không hợp lệ hoặc không hoạt động.",
                 )
-            update_data_dict["referral_code"] = new_ref_code.upper() # Chuẩn hóa
-        elif new_ref_code == "" or new_ref_code is None: # Nếu muốn xóa mã
+            update_data_dict["referral_code"] = new_ref_code.upper() 
+        elif new_ref_code == "" or new_ref_code is None: 
              update_data_dict["referral_code"] = None
 
 
-    # Kiểm tra email nếu được cập nhật
-    if "email" in update_data_dict:
+    if "email" in update_data_dict and update_data_dict["email"] != target_user.email: # Check only if email is being changed
         existing_user_with_new_email = await users_collection.find_one(
             {"email": update_data_dict["email"], "_id": {"$ne": ObjectId(user_id)}}
         )
@@ -152,14 +164,14 @@ async def update_user_info_endpoint(
         {"_id": ObjectId(user_id)}, {"$set": update_data_dict}
     )
 
-    if updated_result.matched_count == 0:
+    if updated_result.matched_count == 0: # Should have been caught by target_user check
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User with ID {user_id} not found for update.",
         )
 
     updated_user_doc = await get_user_by_id_db(db, user_id=str(user_id))
-    if not updated_user_doc: # Nên luôn tìm thấy nếu matched_count > 0
+    if not updated_user_doc: 
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User with ID {user_id} not found after update attempt.",
@@ -181,7 +193,7 @@ async def update_user_info_endpoint(
 async def delete_user_by_id_endpoint(
     user_id: PyObjectId,
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
-    current_admin: UserInDB = Depends(get_current_active_user), # Để kiểm tra không xóa chính mình
+    current_admin: UserInDB = Depends(get_current_active_user), 
 ):
     user_to_delete = await get_user_by_id_db(db, user_id=str(user_id))
     if user_to_delete is None:
@@ -190,43 +202,31 @@ async def delete_user_by_id_endpoint(
     if str(user_to_delete.id) == str(current_admin.id):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin không thể tự xóa chính mình.")
 
-    protected_emails = [e for e in [ADMIN_EMAIL, BROKER_EMAIL, USER_EMAIL] if e]
-    if user_to_delete.email in protected_emails and user_to_delete.email != current_admin.email: # Cho phép admin xóa các user seed khác nếu cần
-        # Kiểm tra thêm nếu user là broker, cần xử lý logic xóa broker trước/sau
-        broker_info = await crud_brokers.get_broker_by_user_id(db, user_to_delete.id)
-        if broker_info:
-             # Cần phải gọi API DELETE /brokers/{broker_id_or_code} thay vì xóa trực tiếp ở đây
-             # Hoặc implement logic xóa broker (bao gồm thu hồi role, hủy sub PARTNER) ngay tại đây.
-             # Hiện tại, để đơn giản, sẽ báo lỗi.
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Người dùng '{user_to_delete.email}' hiện là một Đối tác. Vui lòng xóa tư cách Đối tác trước."
-            )
+    # Use PROTECTED_USER_EMAILS from config
+    if user_to_delete.email in PROTECTED_USER_EMAILS:
+        logger.warning(f"Attempt to delete protected user: {user_to_delete.email} by {current_admin.email}. Deletion denied.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Không thể xóa người dùng được bảo vệ: '{user_to_delete.email}'.",
+        )
     
-    # TODO: Khi xóa user, cần xử lý các dữ liệu liên quan:
-    # 1. Xóa/hủy các subscriptions của user này.
+    broker_info = await crud_brokers.get_broker_by_user_id(db, user_to_delete.id)
+    if broker_info:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Người dùng '{user_to_delete.email}' hiện là một Đối tác. Vui lòng hủy tư cách Đối tác trước khi xóa người dùng."
+        )
+    
     await crud_subscriptions.deactivate_all_active_subscriptions_for_user(db, ObjectId(user_to_delete.id))
-    await db.subscriptions.delete_many({"user_id": ObjectId(user_to_delete.id)}) # Xóa hẳn
+    await db.subscriptions.delete_many({"user_id": ObjectId(user_to_delete.id)}) 
     logger.info(f"Đã xóa tất cả subscriptions của user {user_to_delete.email} (ID: {user_id}).")
 
-    # 2. Xóa các sessions của user này.
     await db.sessions.delete_many({"user_id": ObjectId(user_to_delete.id)})
     logger.info(f"Đã xóa tất cả sessions của user {user_to_delete.email} (ID: {user_id}).")
-
-    # 3. Xóa các transactions của user này (Tùy chọn, có thể muốn giữ lại để lưu vết)
-    # await db.transactions.delete_many({"buyer_user_id": ObjectId(user_to_delete.id)})
-
-    # 4. Nếu user là một Broker, xóa bản ghi Broker của họ
-    # Điều này nên được xử lý bởi endpoint DELETE /brokers/{broker_id_or_code}
-    # Tuy nhiên, nếu admin xóa user trực tiếp, cần đảm bảo logic này cũng chạy.
-    # Hoặc cấm xóa user nếu họ đang là Broker.
-    # (Đã thêm check ở trên)
-
 
     users_collection = db.get_collection("users")
     delete_result = await users_collection.delete_one({"_id": ObjectId(user_id)})
     if delete_result.deleted_count == 0:
-        # Lỗi này không nên xảy ra nếu user_to_delete được tìm thấy
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Không thể xóa người dùng sau khi kiểm tra.")
     
     logger.info(f"Admin {current_admin.email} đã xóa user {user_to_delete.email} (ID: {user_id}).")
@@ -242,11 +242,11 @@ async def delete_user_by_id_endpoint(
 @api_response_wrapper(default_success_message="Lấy danh sách người dùng thành công.")
 async def read_all_users_endpoint(
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=200), # Tăng limit tối đa
+    limit: int = Query(100, ge=1, le=200), 
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
     users_collection = db.get_collection("users")
-    user_docs_cursor = users_collection.find().skip(skip).limit(limit).sort("_id", -1) # Sắp xếp theo _id giảm dần
+    user_docs_cursor = users_collection.find().skip(skip).limit(limit).sort("_id", -1) 
     user_docs = await user_docs_cursor.to_list(length=limit)
     return [UserPublic.model_validate(doc) for doc in user_docs]
 
@@ -267,7 +267,7 @@ async def assign_roles_to_user_endpoint(
         updated_user = await assign_roles_to_user(db, user_id, request_body.role_ids)
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
-    if not updated_user: # assign_roles_to_user có thể trả về None nếu user_id không hợp lệ
+    if not updated_user: 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Người dùng không tìm thấy hoặc vai trò không hợp lệ.")
     return UserPublic.model_validate(updated_user)
 
@@ -285,8 +285,35 @@ async def revoke_roles_from_user_endpoint(
     user_id: PyObjectId,
     request_body: UserRoleModificationRequest,
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
+    current_admin: UserInDB = Depends(get_current_active_user) # Để kiểm tra logic phức tạp hơn nếu cần
 ):
-    updated_user = await revoke_roles_from_user(db, user_id, request_body.role_ids)
-    if not updated_user: # revoke_roles_from_user có thể trả về None nếu user_id không hợp lệ
+    target_user = await get_user_by_id_db(db, str(user_id))
+    if not target_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Người dùng không tìm thấy.")
+
+    # Prevent revoking 'admin' or 'user' role from protected users if they only have that one role left
+    # Or prevent revoking 'admin' from the last admin etc. (More complex logic)
+    # For now, basic revocation:
+    
+    # If trying to revoke 'admin' role from one of the PROTECTED_USER_EMAILS (who should remain admin)
+    admin_role_doc = await db.roles.find_one({"name": "admin"})
+    if admin_role_doc and str(admin_role_doc["_id"]) in request_body.role_ids:
+        if target_user.email in PROTECTED_USER_EMAILS and target_user.email == ADMIN_EMAIL: # Cụ thể là ADMIN_EMAIL
+             raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Không thể thu hồi vai trò 'admin' từ người dùng quản trị viên mặc định '{target_user.email}'.")
+    
+    # Prevent revoking 'broker' role from seeded brokers
+    broker_role_doc = await db.roles.find_one({"name": "broker"})
+    if broker_role_doc and str(broker_role_doc["_id"]) in request_body.role_ids:
+        if target_user.email in [BROKER_EMAIL_1, BROKER_EMAIL_2] and target_user.email is not None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Không thể thu hồi vai trò 'broker' từ người dùng đối tác mặc định '{target_user.email}'. Hãy hủy tư cách đối tác trước."
+            )
+
+
+    updated_user = await revoke_roles_from_user(db, user_id, request_body.role_ids)
+    if not updated_user: 
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Người dùng không tìm thấy sau khi thu hồi.")
     return UserPublic.model_validate(updated_user)

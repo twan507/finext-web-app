@@ -1,13 +1,13 @@
 # finext-fastapi/app/core/seeding/_seed_subscriptions.py
 import logging
 from datetime import datetime, timezone, timedelta
-from typing import Dict
+from typing import Dict, List, Optional # Thêm List
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from bson import ObjectId
 
 from app.schemas.subscriptions import SubscriptionBase
 from app.utils.types import PyObjectId
-from app.core.config import ADMIN_EMAIL, BROKER_EMAIL
+from app.core.config import ADMIN_EMAIL, BROKER_EMAIL_1, BROKER_EMAIL_2 # Sử dụng broker emails mới
 
 logger = logging.getLogger(__name__)
 
@@ -21,16 +21,24 @@ async def seed_subscriptions(
     users_collection = db.get_collection("users")
     licenses_collection = db.get_collection("licenses")
 
-    subs_to_create_map = {}
+    subs_to_create_config: List[Dict[str, Optional[str]]] = [] # Sử dụng list các dict
+
     if ADMIN_EMAIL:
-        subs_to_create_map[ADMIN_EMAIL] = "ADMIN" # ĐÃ SỬA
-    if BROKER_EMAIL:
-        subs_to_create_map[BROKER_EMAIL] = "PARTNER" # ĐÃ SỬA
+        subs_to_create_config.append({"email": ADMIN_EMAIL, "license_key": "ADMIN"})
+    
+    broker_emails_for_sub = [BROKER_EMAIL_1, BROKER_EMAIL_2]
+    for broker_email_val in broker_emails_for_sub:
+        if broker_email_val:
+            subs_to_create_config.append({"email": broker_email_val, "license_key": "PARTNER"})
 
     now = datetime.now(timezone.utc)
     
-    for email, license_key in subs_to_create_map.items():
-        if not email: 
+    for sub_config_item in subs_to_create_config:
+        email = sub_config_item.get("email")
+        license_key = sub_config_item.get("license_key")
+
+        if not email or not license_key: 
+            logger.warning(f"Config seeding subscription thiếu email hoặc license_key: {sub_config_item}")
             continue
 
         user_id_str = user_ids_map.get(email)
@@ -78,19 +86,15 @@ async def seed_subscriptions(
                         "_id": current_sub_id_in_user,
                         "is_active": True,
                         "expiry_date": {"$gt": now},
-                        # Thêm kiểm tra license_key nếu muốn đảm bảo user đang giữ đúng license được seed
-                        # "license_key": license_key 
+                        "license_key": license_key 
                     }
                 )
-                if active_sub_check and active_sub_check.get("license_key") == license_key:
+                if active_sub_check: # Đã có sub active đúng loại -> không tạo mới
                     logger.info(
                         f"User {email} đã có active subscription ({str(current_sub_id_in_user)}) với license key '{license_key}'. Bỏ qua seeding."
                     )
                     create_new_sub = False
-                elif active_sub_check:
-                     logger.info(
-                        f"User {email} đã có active subscription ({str(current_sub_id_in_user)}) với license key '{active_sub_check.get('license_key')}', khác với '{license_key}' đang seed. Sẽ tạo sub mới."
-                    )
+                # Nếu có active sub nhưng khác loại, create_new_sub vẫn là True (sẽ deactivate sub cũ và tạo sub mới)
             elif (
                 current_sub_id_in_user
             ):  
@@ -107,7 +111,7 @@ async def seed_subscriptions(
                 user_id=user_id_str,
                 user_email=email,
                 license_id=license_id_str_from_map,
-                license_key=license_key, # Sử dụng license_key từ vòng lặp (đã được sửa)
+                license_key=license_key,
                 is_active=True,
                 start_date=now,
                 expiry_date=expiry_date,
@@ -121,7 +125,7 @@ async def seed_subscriptions(
             sub_doc_to_insert["license_id"] = license_obj_id_for_sub
 
             try:
-                # Trước khi tạo sub mới, hủy các sub active cũ của user
+                # Trước khi tạo sub mới, hủy các sub active cũ của user (nếu có)
                 await subscriptions_collection.update_many(
                     {"user_id": user_obj_id_for_sub, "is_active": True},
                     {"$set": {"is_active": False, "updated_at": now}}

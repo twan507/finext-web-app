@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 import app.crud.brokers as crud_brokers
-import app.crud.licenses as crud_licenses  # THÊM IMPORT NÀY
+import app.crud.licenses as crud_licenses  
 import app.crud.subscriptions as crud_subscriptions
 import app.crud.users as crud_users
 from app.auth.access import require_permission
@@ -15,17 +15,19 @@ from app.auth.dependencies import get_current_active_user
 from app.core.database import get_database
 from app.schemas.brokers import (
     BrokerCreate,
-    BrokerInDB,  # THÊM IMPORT NÀY
+    BrokerInDB, 
     BrokerPublic,
     BrokerUpdate,
     BrokerValidationResponse,
 )
 from app.schemas.subscriptions import (
-    SubscriptionCreate as AppSubscriptionCreateSchema,  # THÊM IMPORT NÀY
+    SubscriptionCreate as AppSubscriptionCreateSchema,  
     SubscriptionInDB,
 )
 from app.schemas.users import UserInDB
 from app.utils.response_wrapper import StandardApiResponse, api_response_wrapper
+from app.core.config import BROKER_EMAIL_1, BROKER_EMAIL_2
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/brokers", tags=["brokers"])
@@ -40,46 +42,40 @@ router = APIRouter(prefix="/api/v1/brokers", tags=["brokers"])
 )
 @api_response_wrapper(
     default_success_message="Đối tác được tạo/kích hoạt thành công và các quyền lợi đã được gán/cập nhật.",
-    success_status_code=status.HTTP_201_CREATED, # Hoặc HTTP_200_OK nếu là kích hoạt lại
+    success_status_code=status.HTTP_201_CREATED, 
 )
-async def create_or_reactivate_broker_endpoint( # Đổi tên hàm endpoint
+async def create_or_reactivate_broker_endpoint( 
     broker_create_data: BrokerCreate,
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
     current_admin: UserInDB = Depends(get_current_active_user), 
 ):
     logger.info(f"Admin {current_admin.email} yêu cầu tạo/kích hoạt Đối tác cho user ID: {broker_create_data.user_id}")
     
-    broker_record: Optional[BrokerInDB] = None # Khởi tạo broker_record
+    broker_record: Optional[BrokerInDB] = None 
     try:
-        # 1. Tạo hoặc kích hoạt lại bản ghi broker và gán referral_code cho user
-        # Hàm này đã bao gồm việc kiểm tra user tồn tại và gán referral_code cho user broker
         broker_record = await crud_brokers.create_or_reactivate_broker_for_user(db, user_id=broker_create_data.user_id) # type: ignore
         
         if not broker_record or not broker_record.id or not broker_record.broker_code:
-            # Lỗi này không nên xảy ra nếu create_or_reactivate_broker_for_user xử lý đúng
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Không thể tạo hoặc kích hoạt bản ghi Đối tác.",
             )
 
-        user_id_for_broker = broker_create_data.user_id # Đây là PyObjectId (str)
+        user_id_for_broker = broker_create_data.user_id 
 
-        # 2. Gán vai trò "broker" (nếu chưa có)
         broker_role = await db.roles.find_one({"name": "broker"})
         if not broker_role or not broker_role.get("_id"):
             logger.error("Vai trò 'broker' không được tìm thấy trong hệ thống.")
-            # Cân nhắc rollback: deactive broker record nếu nó vừa được tạo/active
-            await crud_brokers.update_broker_status(db, broker_record.id, is_active=False) # type: ignore
+            if broker_record and broker_record.id: # Check if broker_record exists before trying to access id
+                await crud_brokers.update_broker_status(db, str(broker_record.id), is_active=False) # type: ignore
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Lỗi cấu hình hệ thống: Vai trò 'broker' không tồn tại.",
             )
         
-        # assign_roles_to_user sẽ chỉ thêm role nếu user chưa có
         await crud_users.assign_roles_to_user(db, user_id_for_broker, [str(broker_role["_id"])])
         logger.info(f"Đã đảm bảo user ID: {user_id_for_broker} có vai trò 'broker'.")
 
-        # 3. Gán/Kích hoạt license "PARTNER"
         partner_sub: Optional[SubscriptionInDB] = None # type: ignore
         existing_inactive_partner_sub = await crud_subscriptions.find_inactive_partner_subscription_for_user(db, user_id_for_broker) # type: ignore
 
@@ -103,27 +99,26 @@ async def create_or_reactivate_broker_endpoint( # Đổi tên hàm endpoint
 
         if not partner_sub: 
             logger.error(f"Không thể gán hoặc kích hoạt license 'PARTNER' cho user ID: {user_id_for_broker}.")
-            await crud_users.revoke_roles_from_user(db, user_id_for_broker, [str(broker_role["_id"])]) # type: ignore
-            await crud_brokers.update_broker_status(db, broker_record.id, is_active=False) # type: ignore
+            if broker_record and broker_record.id: # Check again
+                 await crud_users.revoke_roles_from_user(db, user_id_for_broker, [str(broker_role["_id"])]) # type: ignore
+                 await crud_brokers.update_broker_status(db, str(broker_record.id), is_active=False) # type: ignore
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Không thể gán/kích hoạt license 'PARTNER'. Vui lòng kiểm tra cấu hình license 'PARTNER'.",
             )
         logger.info(f"Đã đảm bảo user ID: {user_id_for_broker} có license 'PARTNER' (Sub ID: {partner_sub.id}).")
         
-        # Lấy lại broker_record sau tất cả các thay đổi để đảm bảo trả về trạng thái mới nhất
-        final_broker_record = await crud_brokers.get_broker_by_id(db, broker_record.id) # type: ignore
+        final_broker_record = await crud_brokers.get_broker_by_id(db, str(broker_record.id)) # type: ignore
         if not final_broker_record:
              raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Không thể lấy thông tin broker sau khi cập nhật.")
 
         return BrokerPublic.model_validate(final_broker_record)
     except ValueError as ve: 
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve)) # Lỗi từ create_or_reactivate nếu user không tồn tại
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve)) 
     except Exception as e:
         logger.error(f"Lỗi không mong muốn khi tạo/kích hoạt Đối tác cho user {broker_create_data.user_id}: {e}", exc_info=True)
-        # Rollback cơ bản: nếu broker_record được tạo/active, thử deactive lại.
         if 'broker_record' in locals() and broker_record and hasattr(broker_record, 'id') and broker_record.id:
-            await crud_brokers.update_broker_status(db, broker_record.id, is_active=False) # type: ignore
+            await crud_brokers.update_broker_status(db, str(broker_record.id), is_active=False) # type: ignore
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Lỗi máy chủ nội bộ khi tạo/kích hoạt đối tác: {str(e)}")
 
 
@@ -154,7 +149,7 @@ async def get_broker_details(
     broker_id_or_code: str,
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
-    broker: Optional[BrokerInDB] = None  # Sử dụng BrokerInDB đã import
+    broker: Optional[BrokerInDB] = None  
     if ObjectId.is_valid(broker_id_or_code):
         broker = await crud_brokers.get_broker_by_id(db, broker_id_or_code)
 
@@ -190,29 +185,33 @@ async def update_broker_active_status(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Trường 'is_active' là bắt buộc để cập nhật.",
         )
-    updated_broker = await crud_brokers.update_broker_status(
-        db, broker_id_or_code, broker_update_data.is_active
-    )
-    if not updated_broker:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Không tìm thấy Đối tác với ID hoặc mã '{broker_id_or_code}' để cập nhật.",
+    
+    try:
+        updated_broker = await crud_brokers.update_broker_status(
+            db, broker_id_or_code, broker_update_data.is_active
         )
-    return BrokerPublic.model_validate(updated_broker)
+        if not updated_broker:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Không tìm thấy Đối tác với ID hoặc mã '{broker_id_or_code}' để cập nhật.",
+            )
+        return BrokerPublic.model_validate(updated_broker)
+    except ValueError as ve: # Catch protection error from CRUD
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(ve))
 
 
 @router.delete(
     "/{broker_id_or_code}",
     response_model=StandardApiResponse[None],
     status_code=status.HTTP_200_OK,
-    summary="[Admin] Hủy kích hoạt một Đối tác và thu hồi các quyền lợi liên quan", # Sửa summary
-    dependencies=[Depends(require_permission("broker", "delete_any"))], # Giữ perm "delete_any" nhưng logic là deactive
+    summary="[Admin] Hủy kích hoạt một Đối tác và thu hồi các quyền lợi liên quan", 
+    dependencies=[Depends(require_permission("broker", "delete_any"))], 
 )
 @api_response_wrapper(
     default_success_message="Đối tác đã được hủy kích hoạt và các quyền lợi đã bị thu hồi/hủy.",
     success_status_code=status.HTTP_200_OK
 )
-async def deactivate_specific_broker( # Đổi tên hàm endpoint
+async def deactivate_specific_broker( 
     broker_id_or_code: str,
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
     current_admin: UserInDB = Depends(get_current_active_user),
@@ -231,15 +230,23 @@ async def deactivate_specific_broker( # Đổi tên hàm endpoint
             detail=f"Không tìm thấy Đối tác với ID hoặc mã '{broker_id_or_code}' để hủy kích hoạt.",
         )
 
+    # Check if this broker is a protected one
+    user_of_broker = await crud_users.get_user_by_id_db(db, str(broker_to_deactivate.user_id))
+    if user_of_broker and user_of_broker.email in [BROKER_EMAIL_1, BROKER_EMAIL_2]:
+        logger.warning(f"Attempt to deactivate protected broker (via delete endpoint): {user_of_broker.email}. Denied.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Không thể hủy kích hoạt (xóa) đối tác mặc định '{user_of_broker.email}'.",
+        )
+
+
     if not broker_to_deactivate.is_active:
         logger.info(f"Broker {broker_id_or_code} đã ở trạng thái inactive.")
-        # Vẫn trả về thành công vì mục tiêu là inactive
         return None
 
 
     user_id_of_broker_str = str(broker_to_deactivate.user_id)
 
-    # 1. Thu hồi vai trò "broker"
     broker_role = await db.roles.find_one({"name": "broker"})
     if broker_role and broker_role.get("_id"):
         await crud_users.revoke_roles_from_user(db, user_id_of_broker_str, [str(broker_role["_id"])]) # type: ignore
@@ -247,31 +254,33 @@ async def deactivate_specific_broker( # Đổi tên hàm endpoint
     else:
         logger.warning("Không tìm thấy vai trò 'broker' để thu hồi.")
 
-    # 2. Hủy kích hoạt subscription "PARTNER" (không gán lại "free")
     partner_license = await crud_licenses.get_license_by_key(db, "PARTNER") 
     if partner_license and partner_license.id: 
         partner_subs_cursor = db.subscriptions.find({
             "user_id": ObjectId(user_id_of_broker_str), 
-            "license_id": ObjectId(partner_license.id), 
+            "license_id": ObjectId(str(partner_license.id)), # Ensure license_id is ObjectId 
             "is_active": True
         })
         async for sub_doc in partner_subs_cursor:
-            await crud_subscriptions.deactivate_subscription_db(db, str(sub_doc["_id"]), assign_free_if_none_active=False)
-            logger.info(f"Đã hủy kích hoạt subscription 'PARTNER' (ID: {str(sub_doc['_id'])}) cho user ID: {user_id_of_broker_str}.")
-    else:
-        logger.warning("Không tìm thấy license 'PARTNER' để kiểm tra và hủy subscription.")
-        
-    # 3. Deactivate bản ghi broker và xóa referral_code của user broker đó
-    # crud_brokers.update_broker_status với is_active=False đã bao gồm logic xóa referral_code của user đó
-    deactivated = await crud_brokers.update_broker_status(db, broker_id_or_code, is_active=False)
-    if not deactivated:
-        logger.error(f"Hủy kích hoạt bản ghi broker '{broker_id_or_code}' thất bại.")
-        # Lỗi này không nên xảy ra nếu broker_to_deactivate được tìm thấy ở trên
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Không thể hủy kích hoạt bản ghi Đối tác.",
-        )
-    logger.info(f"Đã hủy kích hoạt bản ghi broker: {broker_id_or_code} và xóa referral code của user liên quan.")
+            try:
+                await crud_subscriptions.deactivate_subscription_db(db, str(sub_doc["_id"]), assign_free_if_none_active=False)
+                logger.info(f"Đã hủy kích hoạt subscription 'PARTNER' (ID: {str(sub_doc['_id'])}) cho user ID: {user_id_of_broker_str}.")
+            except ValueError as e: # Catch error if deactivating protected sub
+                 logger.error(f"Error deactivating PARTNER sub {str(sub_doc['_id'])} for broker {broker_id_or_code}: {e}")
+
+
+    try:
+        # update_broker_status now contains the protection logic
+        deactivated = await crud_brokers.update_broker_status(db, broker_id_or_code, is_active=False)
+        if not deactivated: # Should be caught by ValueError if protected. This is a fallback.
+            logger.error(f"Hủy kích hoạt bản ghi broker '{broker_id_or_code}' thất bại.")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Không thể hủy kích hoạt bản ghi Đối tác.",
+            )
+        logger.info(f"Đã hủy kích hoạt bản ghi broker: {broker_id_or_code} và xóa referral code của user liên quan.")
+    except ValueError as ve: # Catch protection error from update_broker_status
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(ve))
     
     return None
 

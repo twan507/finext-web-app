@@ -9,8 +9,9 @@ from app.core.database import get_database
 from app.schemas.roles import RoleCreate, RolePublic, RoleUpdate
 from app.utils.types import PyObjectId
 from app.utils.response_wrapper import StandardApiResponse, api_response_wrapper
-from app.auth.access import require_permission  # Sử dụng dependency đã tạo
+from app.auth.access import require_permission 
 import app.crud.roles as crud_roles
+from app.core.config import PROTECTED_ROLE_NAMES # Import PROTECTED_ROLE_NAMES
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -41,8 +42,6 @@ async def create_new_role(
 
     created_role = await crud_roles.create_role(db, role_create_data=role_data)
     if not created_role:
-        # create_role có thể trả về None nếu có lỗi (ví dụ perm_id không hợp lệ)
-        # hoặc có thể raise Exception trực tiếp từ CRUD nếu muốn rõ ràng hơn
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Không thể tạo vai trò do lỗi máy chủ hoặc dữ liệu không hợp lệ (ví dụ: permission ID không tồn tại).",
@@ -105,12 +104,12 @@ async def update_existing_role(
         updated_role = await crud_roles.update_role(
             db, role_id_str=role_id, role_update_data=role_data
         )
-    except ValueError as ve:  # Bắt lỗi tên trùng từ CRUD
+    except ValueError as ve: 
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
     if updated_role is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,  # Hoặc 400 nếu lỗi do permission_ids không hợp lệ
+            status_code=status.HTTP_404_NOT_FOUND, 
             detail=f"Không thể cập nhật vai trò với ID {role_id}. Vai trò không tồn tại hoặc dữ liệu không hợp lệ.",
         )
     return RolePublic.model_validate(updated_role)
@@ -118,58 +117,45 @@ async def update_existing_role(
 
 @router.delete(
     "/{role_id}",
-    response_model=StandardApiResponse[None], # Response model cho biết data sẽ là null
-    status_code=status.HTTP_200_OK,          # Status code mong muốn khi thành công
+    response_model=StandardApiResponse[None], 
+    status_code=status.HTTP_200_OK,       
     summary="Xóa một vai trò",
     dependencies=[Depends(require_permission("role", "delete_any"))],
     tags=["roles"],
 )
 @api_response_wrapper(
-    default_success_message="Vai trò đã được xóa thành công.", # Message khi thành công
-    success_status_code=status.HTTP_200_OK # Đảm bảo wrapper dùng status code này
+    default_success_message="Vai trò đã được xóa thành công.", 
+    success_status_code=status.HTTP_200_OK 
 )
 async def delete_existing_role(
     role_id: PyObjectId,
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
-    # Kiểm tra xem role có phải là "admin" hoặc "user" không, nếu vậy thì không cho xóa
     role_to_delete = await crud_roles.get_role_by_id(db, role_id)
     
-    if role_to_delete is None: # Thêm kiểm tra nếu role không tồn tại ngay từ đầu
+    if role_to_delete is None: 
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Vai trò với ID {role_id} không được tìm thấy.",
         )
 
-    # Danh sách các tên role hệ thống không được phép xóa
-    protected_role_names = ["admin", "user"] # Bạn có thể mở rộng danh sách này nếu cần
-
-    if role_to_delete.name in protected_role_names:
+    # Sử dụng PROTECTED_ROLE_NAMES từ config
+    if role_to_delete.name in PROTECTED_ROLE_NAMES:
         logger.warning(f"Attempt to delete protected system role: {role_to_delete.name} (ID: {role_id})")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, # Hoặc 403 Forbidden
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Không thể xóa vai trò hệ thống mặc định: '{role_to_delete.name}'.",
         )
-
-    # Kiểm tra xem role có đang được sử dụng bởi user nào không
-    # (Đây là một bước tùy chọn nhưng rất nên có để đảm bảo tính toàn vẹn dữ liệu)
-    users_using_role_count = await db.users.count_documents({"role_ids": str(role_id)}) # role_id trong users là string
-    if users_using_role_count > 0:
-        logger.warning(f"Attempt to delete role '{role_to_delete.name}' (ID: {role_id}) which is currently in use by {users_using_role_count} user(s).")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Vai trò '{role_to_delete.name}' đang được sử dụng bởi {users_using_role_count} người dùng và không thể xóa. Vui lòng thu hồi vai trò này khỏi tất cả người dùng trước.",
-        )
-
-    deleted = await crud_roles.delete_role(db, role_id_str=role_id)
-    if not deleted:
-        # Trường hợp này ít xảy ra nếu role_to_delete đã được tìm thấy ở trên
-        # và không có lỗi nào khác trong crud_roles.delete_role
-        logger.error(f"Role {role_to_delete.name} (ID: {role_id}) found but delete_one in CRUD failed.")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, # Hoặc 404 nếu delete_role trả về False do không tìm thấy
-            detail=f"Không thể xóa vai trò với ID {role_id} sau khi kiểm tra.",
-        )
     
-    # Trả về None để @api_response_wrapper tạo ra response chuẩn với message thành công
+    try:
+        deleted = await crud_roles.delete_role(db, role_id_str=role_id)
+        if not deleted: # Should not happen if role was found and not protected, unless CRUD logic changes
+            logger.error(f"Role {role_to_delete.name} (ID: {role_id}) found but delete_one in CRUD failed after checks.")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                detail=f"Không thể xóa vai trò với ID {role_id} sau khi kiểm tra.",
+            )
+    except ValueError as ve: # Catch ValueError from CRUD (e.g., role in use or protected)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+        
     return None

@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 
 from app.schemas.licenses import LicenseCreate, LicenseUpdate, LicenseInDB
 from app.utils.types import PyObjectId
+from app.core.config import PROTECTED_LICENSE_KEYS # Import danh sách key license được bảo vệ
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,6 @@ async def create_license(db: AsyncIOMotorDatabase, license_create_data: LicenseC
         logger.warning(f"License with key '{license_create_data.key}' already exists.")
         return None
 
-    # Optional: Validate if all feature_keys exist in the features collection
     valid_feature_keys = []
     if license_create_data.feature_keys:
         for f_key in license_create_data.feature_keys:
@@ -66,10 +66,23 @@ async def create_license(db: AsyncIOMotorDatabase, license_create_data: LicenseC
 async def update_license(db: AsyncIOMotorDatabase, license_id: PyObjectId, license_update_data: LicenseUpdate) -> Optional[LicenseInDB]:
     if not ObjectId.is_valid(license_id):
         return None
+    
+    existing_license = await get_license_by_id(db, license_id)
+    if not existing_license:
+        return None
+
+    # Prevent updating key or other critical fields of protected licenses if needed
+    if existing_license.key in PROTECTED_LICENSE_KEYS:
+        # Example: Prevent changing duration or price of protected licenses
+        if 'duration_days' in license_update_data.model_dump(exclude_unset=True) or \
+           'price' in license_update_data.model_dump(exclude_unset=True):
+            logger.warning(f"Attempt to modify critical fields of protected license '{existing_license.key}'. Denied.")
+            # Depending on strictness, could raise ValueError or just ignore these fields for protected licenses
+            # For now, let's assume such updates are allowed but logged.
+            # If a strict "no change" policy is needed, raise ValueError here.
 
     update_data = license_update_data.model_dump(exclude_unset=True)
 
-    # Optional: Validate feature_keys if provided
     if "feature_keys" in update_data and update_data["feature_keys"] is not None:
         valid_feature_keys = []
         for f_key in update_data["feature_keys"]:
@@ -96,6 +109,23 @@ async def update_license(db: AsyncIOMotorDatabase, license_id: PyObjectId, licen
 async def delete_license(db: AsyncIOMotorDatabase, license_id: PyObjectId) -> bool:
     if not ObjectId.is_valid(license_id):
         return False
-    # TODO: Add check if license is used by any user before deleting
+
+    license_to_delete = await get_license_by_id(db, license_id)
+    if not license_to_delete:
+        logger.warning(f"License ID {license_id} not found for deletion.")
+        return False
+
+    if license_to_delete.key in PROTECTED_LICENSE_KEYS:
+        logger.warning(f"Attempt to delete protected license key: {license_to_delete.key}. Deletion denied.")
+        raise ValueError(f"Cannot delete protected license: '{license_to_delete.key}'.")
+
+    # Check if license is used by any active subscription
+    active_subscriptions_count = await db.subscriptions.count_documents(
+        {"license_id": ObjectId(license_id), "is_active": True}
+    )
+    if active_subscriptions_count > 0:
+        logger.warning(f"License ID {license_id} (key: {license_to_delete.key}) is in use by {active_subscriptions_count} active subscriptions. Cannot delete.")
+        raise ValueError(f"License '{license_to_delete.key}' is in use by active subscriptions and cannot be deleted.")
+
     delete_result = await db.licenses.delete_one({"_id": ObjectId(license_id)})
     return delete_result.deleted_count > 0
