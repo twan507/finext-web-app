@@ -6,8 +6,8 @@ from typing import Any
 from fastapi import FastAPI, Request, status, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from fastapi.encoders import jsonable_encoder # THÊM IMPORT NÀY
-import json 
+from fastapi.encoders import jsonable_encoder
+import json
 from fastapi.middleware.cors import CORSMiddleware
 
 from .core.database import (
@@ -15,11 +15,12 @@ from .core.database import (
     close_mongo_connection,
     get_database
 )
+# MODIFIED IMPORT:
 from .core.seeding import seed_initial_data
-# Đảm bảo tất cả các router đã được import
-from .routers import auth, users, roles, permissions, sessions, sse, subscriptions, transactions 
 
-from app.utils.response_wrapper import StandardApiResponse # Đảm bảo import này đúng
+from .routers import auth, users, roles, permissions, sessions, sse, subscriptions, transactions
+
+from app.utils.response_wrapper import StandardApiResponse
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -29,20 +30,18 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("Ứng dụng FastAPI đang khởi động...")
     await connect_to_mongo()
-    
+
     try:
-        # get_database yêu cầu db_name, ví dụ "user_db"
-        db_instance = get_database("user_db") 
-        if db_instance is not None: 
-            await seed_initial_data(db_instance)
+        db_instance = get_database("user_db")
+        if db_instance is not None:
+            await seed_initial_data(db_instance) # This call remains the same
         else:
-            # Trường hợp này ít xảy ra nếu get_database raise lỗi khi không thành công
             logger.error("Không thể lấy user_db instance để khởi tạo dữ liệu ban đầu (get_database trả về None).")
-    except RuntimeError as e: # Bắt lỗi nếu get_database raise RuntimeError
+    except RuntimeError as e:
          logger.error(f"Lỗi khi lấy database để seeding: {e}")
-    except Exception as e: # Bắt các lỗi khác có thể xảy ra khi seeding
+    except Exception as e:
         logger.error(f"Lỗi không xác định trong quá trình seeding: {e}", exc_info=True)
-        
+
     yield
     logger.info("Ứng dụng FastAPI đang tắt...")
     await close_mongo_connection()
@@ -60,12 +59,12 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[ 
+    allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "https://finext.vn", 
-        "https://twan.io.vn", 
-    ], 
+        "https://finext.vn",
+        "https://twan.io.vn",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -78,34 +77,30 @@ async def custom_http_exception_handler(request: Request, exc: HTTPException):
     )
     return JSONResponse(
         status_code=exc.status_code,
-        content=error_response_payload.model_dump(exclude_none=True), # exclude_none=True có thể hữu ích
-        headers=getattr(exc, "headers", None), 
+        content=error_response_payload.model_dump(exclude_none=True),
+        headers=getattr(exc, "headers", None),
     )
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    # Log chi tiết lỗi validation. 
-    # Để an toàn khi logging, có thể dùng jsonable_encoder nếu muốn log dưới dạng JSON string.
     try:
         loggable_error_details = json.dumps(jsonable_encoder(exc.errors()), ensure_ascii=False)
-    except Exception: # Fallback nếu có lỗi khi serialize lỗi để log
+    except Exception:
         loggable_error_details = str(exc.errors())
 
     logger.warning(
         f"RequestValidationError: Path: {request.url.path}, Details: {loggable_error_details}"
     )
-    
-    # Chuẩn bị chi tiết lỗi có thể serialize được cho response
+
     serializable_errors = jsonable_encoder(exc.errors())
-    
+
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content=StandardApiResponse[Any]( # Sử dụng cấu trúc StandardApiResponse của bạn
+        content=StandardApiResponse[Any](
             status=status.HTTP_422_UNPROCESSABLE_ENTITY,
             message="Lỗi xác thực dữ liệu đầu vào.",
-            # Đưa chi tiết lỗi đã được serialize vào trường data
-            data={"errors": serializable_errors} 
-        ).model_dump(exclude_none=True), # Đảm bảo model_dump hoạt động với data đã được serialize
+            data={"errors": serializable_errors}
+        ).model_dump(exclude_none=True),
     )
 
 # Include routers
@@ -116,7 +111,7 @@ app.include_router(permissions.router, prefix="/api/v1/permissions", tags=["perm
 app.include_router(sessions.router, prefix="/api/v1/sessions", tags=["sessions"])
 app.include_router(subscriptions.router, prefix="/api/v1/subscriptions", tags=["subscriptions"])
 app.include_router(sse.router, prefix="/api/v1/sse", tags=["sse"])
-app.include_router(transactions.router, prefix="/api/v1/transactions", tags=["transactions"]) 
+app.include_router(transactions.router, prefix="/api/v1/transactions", tags=["transactions"])
 
 
 @app.get("/api/v1")
@@ -127,4 +122,3 @@ async def read_api_v1_root():
 @app.get("/")
 async def read_root():
     return {"message": "Chào mừng đến với Finext!"}
-

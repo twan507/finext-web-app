@@ -1,0 +1,140 @@
+# finext-fastapi/app/core/seeding/_config.py
+from typing import List, Dict, Any, Set
+
+DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
+    # User Management
+    {
+        "name": "user:create",
+        "description": "Quyền tạo người dùng mới (ví dụ: bởi admin).",
+    },
+    {"name": "user:list", "description": "Quyền xem danh sách tất cả người dùng."},
+    {
+        "name": "user:read_any",
+        "description": "Quyền xem thông tin chi tiết của bất kỳ người dùng nào.",
+    },
+    {
+        "name": "user:update_self",
+        "description": "Quyền tự cập nhật thông tin cá nhân của mình.",
+    },
+    {
+        "name": "user:update_any",
+        "description": "Quyền cập nhật thông tin của bất kỳ người dùng nào (admin).",
+    },
+    {
+        "name": "user:delete_any",
+        "description": "Quyền xóa bất kỳ người dùng nào (admin).",
+    },
+    {
+        "name": "user:manage_roles",
+        "description": "Quyền gán/thu hồi vai trò cho người dùng.",
+    },
+    # Role Management
+    {"name": "role:create", "description": "Quyền tạo vai trò mới."},
+    {"name": "role:list", "description": "Quyền xem danh sách vai trò."},
+    {"name": "role:read_any", "description": "Quyền xem chi tiết vai trò."},
+    {"name": "role:update_any", "description": "Quyền cập nhật vai trò."},
+    {"name": "role:delete_any", "description": "Quyền xóa vai trò."},
+    # Session Management
+    {
+        "name": "session:list_self",
+        "description": "Quyền xem danh sách các session đang hoạt động của chính mình.",
+    },
+    {
+        "name": "session:list_any",
+        "description": "Quyền xem danh sách tất cả các session đang hoạt động của mọi người dùng (admin).",
+    },
+    {
+        "name": "session:delete_self",
+        "description": "Quyền tự xóa một session đang hoạt động của mình.",
+    },
+    {
+        "name": "session:delete_any",
+        "description": "Quyền xóa bất kỳ session nào đang hoạt động (admin).",
+    },
+    # Feature & License Management (Admin only)
+    {"name": "feature:manage", "description": "Quyền quản lý (CRUD) các features."},
+    {"name": "license:manage", "description": "Quyền quản lý (CRUD) các licenses."},
+    # Subscription Management
+    {"name": "subscription:create", "description": "Quyền tạo subscription mới."},
+    {
+        "name": "subscription:read_own",
+        "description": "Quyền xem subscription của chính mình.",
+    },
+    {
+        "name": "subscription:read_any",
+        "description": "Quyền xem subscription của bất kỳ ai.",
+    },
+    {
+        "name": "subscription:update_any",
+        "description": "Quyền cập nhật subscription của bất kỳ ai.",
+    },
+    {
+        "name": "subscription:deactivate_any",
+        "description": "Quyền hủy kích hoạt subscription của bất kỳ ai.",
+    },
+        # Transaction Management
+    {
+        "name": "transaction:create_any", # Admin tạo cho user bất kỳ
+        "description": "Quyền tạo giao dịch mới cho bất kỳ người dùng nào (admin).",
+    },
+    {
+        "name": "transaction:create_own", # User tự tạo cho mình
+        "description": "Quyền tự tạo đơn hàng/giao dịch mới cho chính mình.",
+    },
+    {
+        "name": "transaction:read_any",
+        "description": "Quyền xem tất cả giao dịch (admin).",
+    },
+    {
+        "name": "transaction:update_details_any",
+        "description": "Quyền cập nhật chi tiết giao dịch đang chờ xử lý của bất kỳ ai (admin).",
+    },
+    {
+        "name": "transaction:confirm_payment_any",
+        "description": "Quyền xác nhận thanh toán thành công cho giao dịch của bất kỳ ai (admin).",
+    },
+    {
+        "name": "transaction:cancel_any",
+        "description": "Quyền hủy giao dịch của bất kỳ ai (admin).",
+    },
+    {
+        "name": "transaction:read_own",
+        "description": "Quyền xem lịch sử giao dịch của chính mình.",
+    },
+]
+
+ALL_DEFAULT_PERMISSION_NAMES: Set[str] = {p["name"] for p in DEFAULT_PERMISSIONS_DATA}
+
+DEFAULT_FEATURES_DATA: List[Dict[str, Any]] = [
+    {
+        "key": "view_basic_chart",
+        "name": "Xem Biểu đồ Cơ bản",
+        "description": "Xem biểu đồ giá cơ bản.",
+    },
+    {
+        "key": "view_advanced_chart",
+        "name": "Xem Biểu đồ Nâng cao",
+        "description": "Xem biểu đồ với các chỉ báo nâng cao.",
+    },
+    {
+        "key": "export_data",
+        "name": "Xuất Dữ liệu",
+        "description": "Cho phép xuất dữ liệu ra file CSV/Excel.",
+    },
+    {
+        "key": "enable_pro_indicator",
+        "name": "Bật Chỉ báo Pro",
+        "description": "Sử dụng các chỉ báo độc quyền.",
+    },
+    {
+        "key": "api_access",
+        "name": "Truy cập API",
+        "description": "Sử dụng API để lấy dữ liệu.",
+    },
+    {
+        "key": "sse_access",
+        "name": "Truy cập SSE",
+        "description": "Sử dụng SSE để nhận dữ liệu real-time.",
+    },
+]
+ALL_DEFAULT_FEATURE_KEYS: Set[str] = {f["key"] for f in DEFAULT_FEATURES_DATA}
