@@ -19,36 +19,31 @@ async def _get_user_permissions(db: AsyncIOMotorDatabase, user_id_str: str) -> S
         return set()
 
     user_obj_id = ObjectId(user_id_str)
-    # Lấy trực tiếp từ DB, role_ids sẽ là List[ObjectId]
     user_doc = await db.users.find_one({"_id": user_obj_id}, {"role_ids": 1})
 
     if not user_doc or not user_doc.get("role_ids"):
         return set()
 
-    # user_doc.get("role_ids") ở đây là List[ObjectId] từ DB
     role_object_ids_from_user: List[ObjectId] = user_doc.get("role_ids", [])
     if not role_object_ids_from_user:
         return set()
 
-    # Truy vấn roles collection bằng List[ObjectId]
     roles_cursor = db.roles.find(
         {"_id": {"$in": role_object_ids_from_user}}, {"permission_ids": 1}
     )
 
     all_permission_object_ids: Set[ObjectId] = set()
     async for role in roles_cursor:
-        # role.get("permission_ids", []) ở đây là List[ObjectId] từ DB roles
         for perm_obj_id in role.get("permission_ids", []):
-            if isinstance(perm_obj_id, ObjectId):  # Đảm bảo là ObjectId
+            if isinstance(perm_obj_id, ObjectId): 
                 all_permission_object_ids.add(perm_obj_id)
-            elif ObjectId.is_valid(str(perm_obj_id)):  # Nếu lỡ là str
+            elif ObjectId.is_valid(str(perm_obj_id)): 
                 all_permission_object_ids.add(ObjectId(str(perm_obj_id)))
 
     if not all_permission_object_ids:
         return set()
 
     user_permissions_names: Set[str] = set()
-    # Truy vấn permissions collection bằng List[ObjectId]
     permissions_docs_cursor = db.permissions.find(
         {"_id": {"$in": list(all_permission_object_ids)}}, {"name": 1}
     )
@@ -59,60 +54,48 @@ async def _get_user_permissions(db: AsyncIOMotorDatabase, user_id_str: str) -> S
     return user_permissions_names
 
 
-# Hàm require_permission không thay đổi logic chính,
-# vì nó nhận current_user (UserInDB) có role_ids là List[str]
-# và _get_user_permissions đã được điều chỉnh để làm việc với user_id_str.
 def require_permission(resource: str, action: str):
-    # ... (Giữ nguyên logic của require_permission)
     async def dependency(
         request: Request,
         current_user: UserInDB = Depends(
             get_current_active_user
-        ),  # current_user.id là PyObjectId (str)
-        db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
+        ),
+        db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")), # Sửa lại get_database("user_db")
     ) -> UserInDB:
-        # current_user.id là str, _get_user_permissions nhận user_id_str
         user_permissions = await _get_user_permissions(db, str(current_user.id))
 
         allowed = False
-        required_permission_context = ""
+        required_permission_context = f"{resource}:{action}" # Mặc định
 
         if resource == "user":
             target_user_id_str: Optional[str] = (
                 request.path_params.get("user_id") if request.path_params else None
             )
             is_self_operation = target_user_id_str and (
-                str(current_user.id) == target_user_id_str  # So sánh str với str
+                str(current_user.id) == target_user_id_str
             )
-            # ... (phần còn lại của user resource)
-            if action == "create":
+            
+            if action == "create": # Admin tạo user
                 if "user:create" in user_permissions:
                     allowed = True
                 required_permission_context = "user:create"
-            elif action == "list":
+            elif action == "list": # Admin xem danh sách user
                 if "user:list" in user_permissions:
                     allowed = True
                 required_permission_context = "user:list"
-            elif action == "read_any":
-                if target_user_id_str:  # Chỉ cần có target_user_id
+            elif action == "read_any": # Admin đọc user bất kỳ
+                if target_user_id_str:  
                     if "user:read_any" in user_permissions:
                         allowed = True
                 required_permission_context = "user:read_any"
-            elif action == "update":
+            elif action == "update": # Cập nhật user
                 if not target_user_id_str:
-                    logger.error(
-                        "User permission check for 'user:update' called without target_user_id."
-                    )
-                elif is_self_operation:
-                    if (
-                        "user:update_self" in user_permissions
-                        or "user:update_any" in user_permissions
-                    ):
+                    logger.error("User permission check for 'user:update' called without target_user_id.")
+                elif is_self_operation: # Tự cập nhật
+                    if ("user:update_self" in user_permissions or "user:update_any" in user_permissions):
                         allowed = True
-                    required_permission_context = (
-                        "user:update_self or user:update_any (for self)"
-                    )
-                else:  # Cập nhật cho người khác
+                    required_permission_context = "user:update_self or user:update_any (for self)"
+                else:  # Admin cập nhật người khác
                     if "user:update_any" in user_permissions:
                         allowed = True
                     required_permission_context = "user:update_any (for others)"
@@ -122,7 +105,7 @@ def require_permission(resource: str, action: str):
                         allowed = True
                 required_permission_context = "user:delete_any (for others, not self)"
             elif action == "manage_roles":  # Admin gán role
-                if target_user_id_str:  # Cần có target user
+                if target_user_id_str: 
                     if "user:manage_roles" in user_permissions:
                         allowed = True
                 required_permission_context = "user:manage_roles"
@@ -130,89 +113,108 @@ def require_permission(resource: str, action: str):
                 logger.error(f"Unknown action '{action}' for resource 'user'")
 
         elif resource == "role":
+            # Các action: create, list, read_any, update_any, delete_any
             permission_to_check = f"role:{action}"
             if permission_to_check in user_permissions:
                 allowed = True
             required_permission_context = permission_to_check
 
-        elif (
-            resource == "permission"
-        ):  # Endpoint GET /permissions/ hiện tại không dùng require_permission này
-            if (
-                action == "list_all"
-            ):  # Ví dụ nếu có endpoint cho admin xem tất cả định nghĩa permission
-                if "permission:list_all" in user_permissions:
-                    allowed = True  # Cần định nghĩa perm này
-                required_permission_context = "permission:list_all"
+        elif resource == "permission": 
+            # Hiện tại chỉ có GET /permissions/ (lấy quyền của user hiện tại), không cần check perm cụ thể ở đây
+            # Nếu có endpoint admin xem tất cả định nghĩa permission thì cần:
+            if action == "list_all_definitions": # Ví dụ
+                 if "permission:list_all_definitions" in user_permissions: # Cần định nghĩa perm này
+                     allowed = True
+                 required_permission_context = "permission:list_all_definitions"
+            else: # Mặc định cho các actions khác của permission (nếu có)
+                permission_to_check = f"permission:{action}"
+                if permission_to_check in user_permissions:
+                    allowed = True
+                required_permission_context = permission_to_check
+
 
         elif resource == "session":
+            # Các action: list_self, list_any, delete_self, delete_any
             permission_to_check = f"session:{action}"
             required_permission_context = permission_to_check
             if permission_to_check in user_permissions:
-                if action == "delete_own":  # Kiểm tra session_id có thuộc về user không
+                if action == "delete_self": 
                     target_session_id_str = request.path_params.get("session_id")
-                    if target_session_id_str and ObjectId.is_valid(
-                        target_session_id_str
-                    ):
-                        session_doc = await db.sessions.find_one(
-                            {"_id": ObjectId(target_session_id_str)}
-                        )
-                        # So sánh user_id (ObjectId) từ session_doc với current_user.id (chuyển sang ObjectId)
-                        if session_doc and session_doc.get("user_id") == ObjectId(
-                            str(current_user.id)
-                        ):
+                    if target_session_id_str and ObjectId.is_valid(target_session_id_str):
+                        session_doc = await db.sessions.find_one({"_id": ObjectId(target_session_id_str)})
+                        if session_doc and session_doc.get("user_id") == ObjectId(str(current_user.id)):
                             allowed = True
                         else:
                             allowed = False
-                            required_permission_context = "session:delete_own (failed: session not found or not owned)"
+                            required_permission_context = "session:delete_self (failed: session not found or not owned)"
                     else:
                         allowed = False
-                        required_permission_context = (
-                            "session:delete_own (failed: invalid or missing session_id)"
-                        )
-                else:  # Các action khác của session (list_own, list_any, delete_any)
+                        required_permission_context = "session:delete_self (failed: invalid or missing session_id)"
+                else: 
                     allowed = True
-            else:  # User không có permission cơ bản
+            else: 
                 allowed = False
 
         elif resource == "subscription":
+            # Actions: create, read_own, read_any, update_any, deactivate_any
             permission_to_check = f"subscription:{action}"
             required_permission_context = permission_to_check
 
-            if permission_to_check in user_permissions:  # Kiểm tra quyền chung trước
+            if permission_to_check in user_permissions: 
                 if action == "read_own":
-                    # ID của user mà subscription thuộc về (từ path param hoặc body)
-                    target_user_id_for_sub_str: Optional[str] = request.path_params.get(
-                        "user_id"
-                    )
-                    # ID của subscription cụ thể (từ path param)
-                    target_sub_id_str: Optional[str] = request.path_params.get(
-                        "subscription_id"
-                    )
+                    target_user_id_for_sub_str: Optional[str] = request.path_params.get("user_id")
+                    target_sub_id_str: Optional[str] = request.path_params.get("subscription_id")
 
-                    if (
-                        target_user_id_for_sub_str
-                        and str(current_user.id) == target_user_id_for_sub_str
-                    ):
-                        allowed = True  # User đang xem subscription của chính mình (qua user_id)
+                    if (target_user_id_for_sub_str and str(current_user.id) == target_user_id_for_sub_str):
+                        allowed = True 
                     elif target_sub_id_str and ObjectId.is_valid(target_sub_id_str):
-                        sub_doc = await db.subscriptions.find_one(
-                            {"_id": ObjectId(target_sub_id_str)}
-                        )
-                        if sub_doc and sub_doc.get("user_id") == ObjectId(
-                            str(current_user.id)
-                        ):
-                            allowed = True  # User đang xem subscription của chính mình (qua sub_id)
-                        else:  # Sub không tồn tại hoặc không thuộc user
+                        sub_doc = await db.subscriptions.find_one({"_id": ObjectId(target_sub_id_str)})
+                        if sub_doc and sub_doc.get("user_id") == ObjectId(str(current_user.id)):
+                            allowed = True 
+                        else:  
                             allowed = False
                             required_permission_context = "subscription:read_own (failed: sub not found or not owned)"
-                    else:  # Không có ID hợp lệ để kiểm tra ownership
-                        allowed = False
-                        required_permission_context = "subscription:read_own (failed: no valid ID for ownership check)"
-                else:  # Các action khác như create, read_any, update_any, deactivate_any đã được check bằng perm chung
+                    else: 
+                        # Nếu API không yêu cầu user_id hay subscription_id trong path để xác định ownership
+                        # và chỉ dựa vào current_user, thì không cần logic if/else này
+                        # Ví dụ: GET /subscriptions/me (không cần check ownership qua path param)
+                        # Tuy nhiên, với cấu trúc hiện tại của bạn cho get_subscription_by_id và get_user_subscriptions
+                        # thì cần kiểm tra ownership nếu action là read_own.
+                        # Nếu đây là endpoint chung như /subscriptions/me, thì allowed=True là đủ.
+                        # Hiện tại, `read_subscription_by_id` và `read_user_subscriptions` dùng `read_any`,
+                        # nên logic `read_own` ở đây có thể chưa được dùng trực tiếp bởi router.
+                        allowed = False # Hoặc True tùy theo logic endpoint cụ thể
+                        required_permission_context = "subscription:read_own (failed: no valid ID for ownership check or endpoint logic mismatch)"
+                else: 
                     allowed = True
-            else:  # Không có quyền chung
+            else: 
                 allowed = False
+        
+        # --- THÊM LOGIC CHO TRANSACTION RESOURCE ---
+        elif resource == "transaction":
+            permission_to_check = f"transaction:{action}"
+            required_permission_context = permission_to_check
+            
+            if permission_to_check in user_permissions:
+                if action == "read_own":
+                    # Endpoint /me/history không có transaction_id trong path params
+                    # Quyền "transaction:read_own" là đủ để user xem lịch sử của chính họ
+                    allowed = True
+                elif action in ["create_any", "read_any", "update_details_any", "confirm_payment_any", "cancel_any"]:
+                    # Đây là các quyền của Admin, chỉ cần có permission là đủ
+                    allowed = True
+                elif action == "create_own":
+                    # User tự tạo đơn hàng, chỉ cần có permission "transaction:create_own"
+                    allowed = True
+                # Không cần kiểm tra ownership phức tạp ở đây vì
+                # API của user (/me/...) đã tự động lấy current_user.id
+                # API của Admin (/admin/...) được bảo vệ bởi các quyền "_any"
+                else: # Các action không xác định cho transaction
+                    allowed = False
+                    logger.warning(f"Unknown action '{action}' for transaction resource in permission check.")
+            else:
+                allowed = False
+        # --- KẾT THÚC LOGIC TRANSACTION ---
 
         if not allowed:
             log_message = (

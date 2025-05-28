@@ -93,6 +93,35 @@ DEFAULT_PERMISSIONS_DATA = [
         "name": "subscription:deactivate_any",
         "description": "Quyền hủy kích hoạt subscription của bất kỳ ai.",
     },
+        # Transaction Management
+    {
+        "name": "transaction:create_any", # Admin tạo cho user bất kỳ
+        "description": "Quyền tạo giao dịch mới cho bất kỳ người dùng nào (admin).",
+    },
+    {
+        "name": "transaction:create_own", # User tự tạo cho mình
+        "description": "Quyền tự tạo đơn hàng/giao dịch mới cho chính mình.",
+    },
+    {
+        "name": "transaction:read_any",
+        "description": "Quyền xem tất cả giao dịch (admin).",
+    },
+    {
+        "name": "transaction:update_details_any", 
+        "description": "Quyền cập nhật chi tiết giao dịch đang chờ xử lý của bất kỳ ai (admin).",
+    },
+    {
+        "name": "transaction:confirm_payment_any",
+        "description": "Quyền xác nhận thanh toán thành công cho giao dịch của bất kỳ ai (admin).",
+    },
+    {
+        "name": "transaction:cancel_any",
+        "description": "Quyền hủy giao dịch của bất kỳ ai (admin).",
+    },
+    {
+        "name": "transaction:read_own",
+        "description": "Quyền xem lịch sử giao dịch của chính mình.",
+    },
 ]
 
 ALL_DEFAULT_PERMISSION_NAMES: Set[str] = {p["name"] for p in DEFAULT_PERMISSIONS_DATA}

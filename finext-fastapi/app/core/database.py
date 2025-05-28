@@ -24,20 +24,20 @@ async def connect_to_mongo():
         await mongodb.client.admin.command('ping')
         logger.info("Đã kết nối thành công tới MongoDB client (Async)!")
 
-        db_names_to_connect = ["user_db", "stock_db"]
+        db_names_to_connect = ["user_db", "stock_db"] # stock_db if you use it elsewhere
         mongodb.dbs = {}
 
         for db_name in db_names_to_connect:
-            mongodb.dbs[db_name] = mongodb.client[db_name]
-            logger.info(f"Đã thiết lập kết nối tới database (Async): {db_name}")
+            if mongodb.client: # Check if client is not None
+                 mongodb.dbs[db_name] = mongodb.client[db_name]
+                 logger.info(f"Đã thiết lập kết nối tới database (Async): {db_name}")
 
         if "user_db" in mongodb.dbs and mongodb.dbs["user_db"] is not None:
             db = mongodb.dbs["user_db"]
 
             # users collection indexes
             await db.users.create_index("email", unique=True)
-            # THAY ĐỔI: Index cho subscription_id
-            await db.users.create_index("subscription_id")
+            await db.users.create_index("subscription_id") 
 
             # roles collection indexes
             await db.roles.create_index("name", unique=True)
@@ -57,19 +57,32 @@ async def connect_to_mongo():
             # licenses collection indexes
             await db.licenses.create_index("key", unique=True)
 
-            # subscriptions collection indexes (MỚI)
+            # subscriptions collection indexes
             await db.subscriptions.create_index("user_id")
             await db.subscriptions.create_index("license_id")
             await db.subscriptions.create_index([("user_id", 1), ("is_active", 1), ("expiry_date", 1)])
             await db.subscriptions.create_index("expiry_date")
 
+            # THÊM MỚI: transactions collection indexes
+            await db.transactions.create_index("buyer_user_id")
+            await db.transactions.create_index("license_id")
+            await db.transactions.create_index("payment_status")
+            await db.transactions.create_index("transaction_type")
+            await db.transactions.create_index("created_at")
+            await db.transactions.create_index([("buyer_user_id", 1), ("payment_status", 1)])
 
-            logger.info("Đã tạo/đảm bảo các indexes cần thiết cho user_db.")
 
-        logger.info(f"Sử dụng các databases (Async): {', '.join(mongodb.dbs.keys())}")
+            logger.info("Đã tạo/đảm bảo các indexes cần thiết cho user_db (bao gồm transactions).")
+        
+        active_dbs = [name for name, db_instance in mongodb.dbs.items() if db_instance is not None]
+        if active_dbs:
+            logger.info(f"Sử dụng các databases (Async): {', '.join(active_dbs)}")
+        else:
+            logger.warning("Không có database nào được kết nối thành công.")
+
 
     except (ConnectionFailure, ConfigurationError, Exception) as e:
-        logger.error(f"Không thể kết nối tới MongoDB: {e}")
+        logger.error(f"Không thể kết nối tới MongoDB: {e}", exc_info=True)
         if mongodb.client:
             mongodb.client.close()
         mongodb.client = None
@@ -83,13 +96,18 @@ async def close_mongo_connection():
         mongodb.dbs = {}
         logger.info("Đã đóng kết nối MongoDB (Async).")
 
-def get_database(db_name: str) -> AsyncIOMotorDatabase | None:
-    if mongodb.client and db_name in mongodb.dbs:
-        return mongodb.dbs.get(db_name)
+def get_database(db_name: str) -> AsyncIOMotorDatabase: # Changed return type for stricter check
+    if mongodb.client and db_name in mongodb.dbs and mongodb.dbs[db_name] is not None:
+        return mongodb.dbs[db_name] # type: ignore
     elif mongodb.client:
         logger.warning(f"Database '{db_name}' chưa được khởi tạo trước. Đang thử truy cập trực tiếp.")
+        # This path might be problematic if the client is None or db doesn't exist
+        # Ensure client is valid before this
         db_instance = mongodb.client[db_name]
         mongodb.dbs[db_name] = db_instance
         return db_instance
-    logger.warning(f"Database '{db_name}' không khả dụng hoặc MongoDB client (Async) chưa được kết nối.")
-    return None
+    
+    logger.error(f"Database '{db_name}' không khả dụng hoặc MongoDB client (Async) chưa được kết nối. Trả về lỗi.")
+    # Raise an exception or handle this critical failure appropriately
+    # For now, let's make it explicit that this is a problem
+    raise RuntimeError(f"Database '{db_name}' not available or MongoDB client not connected.")
