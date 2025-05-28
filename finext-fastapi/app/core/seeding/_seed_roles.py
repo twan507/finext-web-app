@@ -21,7 +21,7 @@ async def seed_roles(
         {
             "name": "admin",
             "description": "Quản trị viên hệ thống, có tất cả quyền.",
-            "permission_names": list(ALL_DEFAULT_PERMISSION_NAMES),
+            "permission_names": list(ALL_DEFAULT_PERMISSION_NAMES), # Admin có tất cả quyền
         },
         {
             "name": "user",
@@ -31,20 +31,24 @@ async def seed_roles(
                 "session:list_self",
                 "session:delete_self",
                 "subscription:read_own",
-                "transaction:create_own", # Added based on access.py
-                "transaction:read_own",   # Added based on access.py
+                "transaction:create_own", 
+                "transaction:read_own",
+                "broker:validate", # User có thể kiểm tra mã broker
             ],
         },
         {
-            "name": "broker",
-            "description": "Nhà môi giới.",
+            "name": "broker", # Vai trò mới cho Đối tác
+            "description": "Đối tác giới thiệu.",
             "permission_names": [
-                "user:update_self",
+                "user:update_self", # Quyền cơ bản của user
                 "session:list_self",
                 "session:delete_self",
                 "subscription:read_own",
-                "transaction:create_own", # Assuming broker can also create their own
-                "transaction:read_own",   # Assuming broker can also read their own
+                "transaction:create_own", 
+                "transaction:read_own",
+                "broker:read_self", # Đối tác tự xem thông tin của mình
+                "transaction:read_referred", # Đối tác xem giao dịch mình giới thiệu
+                "broker:validate", # Đối tác cũng có thể kiểm tra mã
             ],
         },
     ]
@@ -63,7 +67,7 @@ async def seed_roles(
         logger.error(
             f"Không thể seeding roles do thiếu các permissions ID trong map: {missing_permissions_for_roles}."
         )
-        # return None # Consider if this should halt further role seeding
+        # return None # Cân nhắc nếu điều này nên dừng việc seeding roles
 
     existing_roles_names: Set[str] = set()
     async for role_doc in roles_collection.find({}, {"name": 1}):
@@ -83,10 +87,11 @@ async def seed_roles(
                 perm_id_str = permission_ids_map.get(perm_name)
                 if perm_id_str and ObjectId.is_valid(perm_id_str):
                     current_role_permission_obj_ids.append(ObjectId(perm_id_str))
-                elif perm_id_str:
+                elif perm_id_str: # perm_id_str có trong map nhưng không valid ObjectId
                     logger.warning(
                         f"Permission ID '{perm_id_str}' (từ map cho '{perm_name}') không hợp lệ. Bỏ qua cho role '{role_data_template['name']}'."
                     )
+                # Không log gì nếu perm_name không có trong map, vì đã check ở missing_permissions_for_roles
 
             role_doc_to_insert = {
                 "name": role_data_template["name"],
@@ -102,8 +107,11 @@ async def seed_roles(
     else:
         logger.info("Không có roles mới nào cần seed dựa trên template.")
 
+    # Cập nhật created_role_ids để trả về map các ID đã được tạo/tồn tại
+    all_default_role_names = {r["name"] for r in default_roles_data_template}
     async for role_doc in roles_collection.find(
-        {"name": {"$in": [r["name"] for r in default_roles_data_template]}}
+        {"name": {"$in": list(all_default_role_names)}}
     ):
         created_role_ids[role_doc["name"]] = str(role_doc["_id"])
+        
     return created_role_ids

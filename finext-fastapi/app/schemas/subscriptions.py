@@ -15,14 +15,14 @@ class SubscriptionBase(BaseModel):
 
 class SubscriptionCreate(BaseModel):
     user_id: PyObjectId 
-    license_key: str = Field(..., description="Key của license cần gán (ví dụ: 'pro').")
+    license_key: str = Field(..., description="Key của license cần gán (ví dụ: 'PRO').")
     duration_override_days: Optional[int] = Field(None, gt=0, description="Ghi đè thời hạn mặc định (tùy chọn).")
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "user_id": "60d5ec49f7b4e6a0e7d5c2a1", 
-                "license_key": "premium",
+                "license_key": "PREMIUM",
                 "duration_override_days": 90
             }
         }
@@ -55,7 +55,7 @@ class SubscriptionInDB(SubscriptionBase):
                 "user_id": "60d5ec49f7b4e6a0e7d5c2a1",
                 "user_email": "user@example.com",
                 "license_id": "60d5ec49f7b4e6a0e7d5c2b2",
-                "license_key": "pro",
+                "license_key": "PRO",
                 "is_active": True,
                 "start_date": "2024-01-01T00:00:00Z",
                 "expiry_date": "2025-01-01T00:00:00Z",

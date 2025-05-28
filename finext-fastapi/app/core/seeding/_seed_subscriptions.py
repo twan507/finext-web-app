@@ -7,7 +7,7 @@ from bson import ObjectId
 
 from app.schemas.subscriptions import SubscriptionBase
 from app.utils.types import PyObjectId
-from app.core.config import ADMIN_EMAIL, BROKER_EMAIL, USER_EMAIL
+from app.core.config import ADMIN_EMAIL, BROKER_EMAIL
 
 logger = logging.getLogger(__name__)
 
@@ -23,16 +23,14 @@ async def seed_subscriptions(
 
     subs_to_create_map = {}
     if ADMIN_EMAIL:
-        subs_to_create_map[ADMIN_EMAIL] = "ADMIN"
+        subs_to_create_map[ADMIN_EMAIL] = "ADMIN" # ĐÃ SỬA
     if BROKER_EMAIL:
-        subs_to_create_map[BROKER_EMAIL] = "PARTNER"
-    if USER_EMAIL:
-        subs_to_create_map[USER_EMAIL] = "FREE"
+        subs_to_create_map[BROKER_EMAIL] = "PARTNER" # ĐÃ SỬA
 
     now = datetime.now(timezone.utc)
-
+    
     for email, license_key in subs_to_create_map.items():
-        if not email:  # Should not happen if keys are from config
+        if not email: 
             continue
 
         user_id_str = user_ids_map.get(email)
@@ -40,7 +38,7 @@ async def seed_subscriptions(
 
         if not user_id_str or not license_id_str_from_map:
             logger.warning(
-                f"Bỏ qua seeding subscription cho {email} do thiếu User ID (str: {user_id_str}) hoặc License ID (str: {license_id_str_from_map})."
+                f"Bỏ qua seeding subscription cho {email} do thiếu User ID (str: {user_id_str}) hoặc License ID (str: {license_id_str_from_map} cho key {license_key})."
             )
             continue
 
@@ -80,16 +78,22 @@ async def seed_subscriptions(
                         "_id": current_sub_id_in_user,
                         "is_active": True,
                         "expiry_date": {"$gt": now},
+                        # Thêm kiểm tra license_key nếu muốn đảm bảo user đang giữ đúng license được seed
+                        # "license_key": license_key 
                     }
                 )
-                if active_sub_check:
+                if active_sub_check and active_sub_check.get("license_key") == license_key:
                     logger.info(
-                        f"User {email} đã có active subscription ({str(current_sub_id_in_user)}). Bỏ qua seeding."
+                        f"User {email} đã có active subscription ({str(current_sub_id_in_user)}) với license key '{license_key}'. Bỏ qua seeding."
                     )
                     create_new_sub = False
+                elif active_sub_check:
+                     logger.info(
+                        f"User {email} đã có active subscription ({str(current_sub_id_in_user)}) với license key '{active_sub_check.get('license_key')}', khác với '{license_key}' đang seed. Sẽ tạo sub mới."
+                    )
             elif (
                 current_sub_id_in_user
-            ):  # Is present but not ObjectId (shouldn't happen with correct saving)
+            ):  
                 logger.warning(
                     f"User {email} has subscription_id {current_sub_id_in_user} but it is not an ObjectId. Will attempt to create new sub."
                 )
@@ -103,7 +107,7 @@ async def seed_subscriptions(
                 user_id=user_id_str,
                 user_email=email,
                 license_id=license_id_str_from_map,
-                license_key=license_key,
+                license_key=license_key, # Sử dụng license_key từ vòng lặp (đã được sửa)
                 is_active=True,
                 start_date=now,
                 expiry_date=expiry_date,
@@ -117,13 +121,20 @@ async def seed_subscriptions(
             sub_doc_to_insert["license_id"] = license_obj_id_for_sub
 
             try:
+                # Trước khi tạo sub mới, hủy các sub active cũ của user
+                await subscriptions_collection.update_many(
+                    {"user_id": user_obj_id_for_sub, "is_active": True},
+                    {"$set": {"is_active": False, "updated_at": now}}
+                )
+                logger.info(f"Đã hủy các active subscriptions cũ của user {email} (nếu có).")
+
                 result = await subscriptions_collection.insert_one(sub_doc_to_insert)
                 if result.inserted_id:
                     await users_collection.update_one(
                         {"_id": user_obj_id_for_sub},
                         {
                             "$set": {
-                                "subscription_id": result.inserted_id,  # This is an ObjectId
+                                "subscription_id": result.inserted_id,  
                                 "updated_at": now,
                             }
                         },

@@ -24,11 +24,11 @@ async def connect_to_mongo():
         await mongodb.client.admin.command('ping')
         logger.info("Đã kết nối thành công tới MongoDB client (Async)!")
 
-        db_names_to_connect = ["user_db", "stock_db"] # stock_db if you use it elsewhere
+        db_names_to_connect = ["user_db", "stock_db"] 
         mongodb.dbs = {}
 
         for db_name in db_names_to_connect:
-            if mongodb.client: # Check if client is not None
+            if mongodb.client: 
                  mongodb.dbs[db_name] = mongodb.client[db_name]
                  logger.info(f"Đã thiết lập kết nối tới database (Async): {db_name}")
 
@@ -38,6 +38,7 @@ async def connect_to_mongo():
             # users collection indexes
             await db.users.create_index("email", unique=True)
             await db.users.create_index("subscription_id") 
+            await db.users.create_index("referral_code") # MỚI
 
             # roles collection indexes
             await db.roles.create_index("name", unique=True)
@@ -63,16 +64,22 @@ async def connect_to_mongo():
             await db.subscriptions.create_index([("user_id", 1), ("is_active", 1), ("expiry_date", 1)])
             await db.subscriptions.create_index("expiry_date")
 
-            # THÊM MỚI: transactions collection indexes
+            # transactions collection indexes
             await db.transactions.create_index("buyer_user_id")
             await db.transactions.create_index("license_id")
             await db.transactions.create_index("payment_status")
             await db.transactions.create_index("transaction_type")
             await db.transactions.create_index("created_at")
             await db.transactions.create_index([("buyer_user_id", 1), ("payment_status", 1)])
+            await db.transactions.create_index("broker_code_applied") # MỚI
+
+            # brokers collection indexes (MỚI)
+            await db.brokers.create_index("user_id", unique=True)
+            await db.brokers.create_index("broker_code", unique=True)
+            await db.brokers.create_index("is_active")
 
 
-            logger.info("Đã tạo/đảm bảo các indexes cần thiết cho user_db (bao gồm transactions).")
+            logger.info("Đã tạo/đảm bảo các indexes cần thiết cho user_db (bao gồm transactions và brokers).")
         
         active_dbs = [name for name, db_instance in mongodb.dbs.items() if db_instance is not None]
         if active_dbs:
@@ -96,18 +103,14 @@ async def close_mongo_connection():
         mongodb.dbs = {}
         logger.info("Đã đóng kết nối MongoDB (Async).")
 
-def get_database(db_name: str) -> AsyncIOMotorDatabase: # Changed return type for stricter check
+def get_database(db_name: str) -> AsyncIOMotorDatabase: 
     if mongodb.client and db_name in mongodb.dbs and mongodb.dbs[db_name] is not None:
         return mongodb.dbs[db_name] # type: ignore
     elif mongodb.client:
         logger.warning(f"Database '{db_name}' chưa được khởi tạo trước. Đang thử truy cập trực tiếp.")
-        # This path might be problematic if the client is None or db doesn't exist
-        # Ensure client is valid before this
         db_instance = mongodb.client[db_name]
         mongodb.dbs[db_name] = db_instance
         return db_instance
     
     logger.error(f"Database '{db_name}' không khả dụng hoặc MongoDB client (Async) chưa được kết nối. Trả về lỗi.")
-    # Raise an exception or handle this critical failure appropriately
-    # For now, let's make it explicit that this is a problem
     raise RuntimeError(f"Database '{db_name}' not available or MongoDB client not connected.")

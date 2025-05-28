@@ -72,13 +72,13 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
         "name": "subscription:deactivate_any",
         "description": "Quyền hủy kích hoạt subscription của bất kỳ ai.",
     },
-        # Transaction Management
+    # Transaction Management
     {
-        "name": "transaction:create_any", # Admin tạo cho user bất kỳ
+        "name": "transaction:create_any", 
         "description": "Quyền tạo giao dịch mới cho bất kỳ người dùng nào (admin).",
     },
     {
-        "name": "transaction:create_own", # User tự tạo cho mình
+        "name": "transaction:create_own", 
         "description": "Quyền tự tạo đơn hàng/giao dịch mới cho chính mình.",
     },
     {
@@ -101,6 +101,40 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
         "name": "transaction:read_own",
         "description": "Quyền xem lịch sử giao dịch của chính mình.",
     },
+    # Broker Permissions (MỚI)
+    {
+        "name": "broker:create",
+        "description": "Quyền tạo Đối tác mới.",
+    },
+    {
+        "name": "broker:list",
+        "description": "Quyền xem danh sách Đối tác."
+    },
+    {
+        "name": "broker:read_any",
+        "description": "Quyền xem chi tiết Đối tác bất kỳ."
+    },
+    {
+        "name": "broker:read_self",
+        "description": "Quyền tự xem thông tin Đối tác của mình."
+    },
+    {
+        "name": "broker:update_any",
+        "description": "Quyền cập nhật Đối tác bất kỳ (ví dụ: is_active)."
+    },
+    {
+        "name": "broker:delete_any",
+        "description": "Quyền xóa Đối tác."
+    },
+    {
+        "name": "broker:validate",
+        "description": "Quyền kiểm tra tính hợp lệ của một broker_code."
+    },
+    # Transaction permissions for Broker (MỚI)
+    {
+        "name": "transaction:read_referred",
+        "description": "Quyền xem các giao dịch được giới thiệu bởi mình (Đối tác)."
+    }
 ]
 
 ALL_DEFAULT_PERMISSION_NAMES: Set[str] = {p["name"] for p in DEFAULT_PERMISSIONS_DATA}

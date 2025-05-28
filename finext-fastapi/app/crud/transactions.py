@@ -5,6 +5,7 @@ from typing import List, Optional, Tuple
 
 import app.crud.licenses as crud_licenses
 import app.crud.subscriptions as crud_subscriptions
+import app.crud.brokers as crud_brokers # MỚI
 from app.crud.users import get_user_by_id_db
 from app.schemas.licenses import LicenseInDB
 from app.schemas.subscriptions import (
@@ -15,15 +16,15 @@ from app.schemas.subscriptions import (
 )
 from app.schemas.transactions import (
     PaymentStatusEnum,
-    TransactionCreateByUser,  # Schema mới
-    TransactionCreateForAdmin,  # Đổi tên
+    TransactionCreateByUser,  
+    TransactionCreateForAdmin,  
     TransactionInDB,
     TransactionTypeEnum,
     TransactionUpdateByAdmin,
 )
 from app.schemas.users import (
     UserInDB as AppUserInDB,
-)  # Thêm để type hint cho current_user
+)  
 from app.utils.types import PyObjectId
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -40,7 +41,6 @@ async def get_transaction_by_id(
         {"_id": ObjectId(transaction_id_str)}
     )
     if transaction_doc:
-        # Cần đảm bảo các ObjectId con (nếu có) được chuyển đổi đúng khi khởi tạo TransactionInDB
         if transaction_doc.get("buyer_user_id"):
             transaction_doc["buyer_user_id"] = str(transaction_doc["buyer_user_id"])
         if transaction_doc.get("license_id"):
@@ -49,6 +49,7 @@ async def get_transaction_by_id(
             transaction_doc["target_subscription_id"] = str(
                 transaction_doc["target_subscription_id"]
             )
+        # broker_code_applied đã là string
         return TransactionInDB(**transaction_doc)
     return None
 
@@ -87,6 +88,7 @@ async def get_all_transactions(
     payment_status: Optional[PaymentStatusEnum] = None,
     transaction_type: Optional[TransactionTypeEnum] = None,
     buyer_user_id_str: Optional[PyObjectId] = None,
+    broker_code_applied_filter: Optional[str] = None, # MỚI: filter theo broker_code_applied
     skip: int = 0,
     limit: int = 100,
 ) -> Tuple[List[TransactionInDB], int]:
@@ -97,6 +99,9 @@ async def get_all_transactions(
         query_filter["transaction_type"] = transaction_type.value
     if buyer_user_id_str and ObjectId.is_valid(buyer_user_id_str):
         query_filter["buyer_user_id"] = ObjectId(buyer_user_id_str)
+    if broker_code_applied_filter: # MỚI
+        query_filter["broker_code_applied"] = broker_code_applied_filter.upper()
+
 
     total_count = await db.transactions.count_documents(query_filter)
 
@@ -124,7 +129,7 @@ async def get_all_transactions(
 
 async def create_transaction_for_admin_db(
     db: AsyncIOMotorDatabase, transaction_create_data: TransactionCreateForAdmin
-) -> Optional[TransactionInDB]:  # Đổi tên hàm
+) -> Optional[TransactionInDB]:
     buyer_user = await get_user_by_id_db(db, transaction_create_data.buyer_user_id)
     if not buyer_user:
         logger.error(
@@ -135,7 +140,7 @@ async def create_transaction_for_admin_db(
         )
 
     license_doc: Optional[LicenseInDB] = None
-    target_subscription_id_for_renewal: Optional[PyObjectId] = None  # Đây là string ID
+    target_subscription_id_for_renewal: Optional[PyObjectId] = None  
 
     if transaction_create_data.transaction_type == TransactionTypeEnum.new_purchase:
         if not transaction_create_data.license_id_for_new_purchase:
@@ -176,11 +181,11 @@ async def create_transaction_for_admin_db(
             )
             raise ValueError("Subscription to renew does not belong to the buyer.")
 
-        if not renewal_sub_doc.is_active:
-            logger.error(
+        if not renewal_sub_doc.is_active: # Có thể cho phép gia hạn gói đã hết hạn tùy logic
+            logger.warning( # Đổi thành warning vì có thể là trường hợp chấp nhận được
                 f"Admin creating transaction: Subscription {renewal_sub_doc.id} is not active."
             )
-            raise ValueError("Subscription to renew is not active.")
+            # raise ValueError("Subscription to renew is not active.") # Bỏ raise lỗi cứng
 
         license_doc = await crud_licenses.get_license_by_id(
             db, renewal_sub_doc.license_id
@@ -192,24 +197,40 @@ async def create_transaction_for_admin_db(
             raise ValueError(
                 "Internal error: License for existing subscription not found."
             )
-        target_subscription_id_for_renewal = renewal_sub_doc.id  # PyObjectId (str)
+        target_subscription_id_for_renewal = renewal_sub_doc.id 
 
     else:
         raise ValueError("Invalid transaction_type for admin creation.")
 
-    if not license_doc:
+    if not license_doc: # Nên được xử lý ở trên, nhưng check lại cho chắc
         raise ValueError(
             "License information could not be determined for the transaction by admin."
         )
+
+    # Xác định broker_code_applied cho admin (MỚI)
+    # Ưu tiên referral_code của buyer_user nếu có và hợp lệ
+    broker_code_to_apply: Optional[str] = None
+    if buyer_user.referral_code:
+        is_valid_ref_code = await crud_brokers.is_broker_code_valid_and_active(db, buyer_user.referral_code)
+        if is_valid_ref_code:
+            broker_code_to_apply = buyer_user.referral_code.upper()
+    # Admin có thể ghi đè nếu schema `TransactionCreateForAdmin` có trường `broker_code_applied`
+    # if hasattr(transaction_create_data, 'broker_code_applied') and transaction_create_data.broker_code_applied:
+    #     is_valid_override_code = await crud_brokers.is_broker_code_valid_and_active(db, transaction_create_data.broker_code_applied)
+    #     if is_valid_override_code:
+    #         broker_code_to_apply = transaction_create_data.broker_code_applied.upper()
+    #     else:
+    #         logger.warning(f"Admin provided invalid broker_code_applied '{transaction_create_data.broker_code_applied}'. Ignoring.")
+
 
     dt_now = datetime.now(timezone.utc)
     transaction_doc_to_insert = {
         "buyer_user_id": ObjectId(transaction_create_data.buyer_user_id),
         "license_id": ObjectId(license_doc.id),
         "license_key": license_doc.key,
-        "original_license_price": license_doc.price,  # Admin nhập transaction_amount riêng
-        "purchased_duration_days": transaction_create_data.purchased_duration_days,  # Admin nhập
-        "transaction_amount": transaction_create_data.transaction_amount,  # Admin nhập
+        "original_license_price": license_doc.price,  
+        "purchased_duration_days": transaction_create_data.purchased_duration_days,
+        "transaction_amount": transaction_create_data.transaction_amount,  
         "promotion_code": transaction_create_data.promotion_code,
         "payment_status": PaymentStatusEnum.pending.value,
         "transaction_type": transaction_create_data.transaction_type.value,
@@ -218,6 +239,7 @@ async def create_transaction_for_admin_db(
         if target_subscription_id_for_renewal
         and ObjectId.is_valid(target_subscription_id_for_renewal)
         else None,
+        "broker_code_applied": broker_code_to_apply, # MỚI
         "created_at": dt_now,
         "updated_at": dt_now,
     }
@@ -238,14 +260,13 @@ async def create_transaction_for_admin_db(
         return None
 
 
-# --- Hàm mới cho User tự tạo Transaction ---
 async def create_transaction_by_user_db(
     db: AsyncIOMotorDatabase,
     transaction_data: TransactionCreateByUser,
     current_user: AppUserInDB,
 ) -> Optional[TransactionInDB]:
     license_doc: Optional[LicenseInDB] = None
-    target_subscription_id_for_renewal: Optional[PyObjectId] = None  # PyObjectId (str)
+    target_subscription_id_for_renewal: Optional[PyObjectId] = None 
     purchased_duration_auto: int
     transaction_amount_auto: float
 
@@ -290,13 +311,11 @@ async def create_transaction_by_user_db(
             )
             raise ValueError("Subscription to renew does not belong to you.")
 
-        if (
-            not renewal_sub_doc.is_active
-        ):  # Hoặc có thể cho phép gia hạn gói đã hết hạn? Hiện tại là không.
-            logger.error(
+        if not renewal_sub_doc.is_active: 
+            logger.warning( # Đổi thành warning
                 f"User creating transaction: Subscription {renewal_sub_doc.id} is not active."
             )
-            raise ValueError("Subscription to renew is not currently active.")
+            # raise ValueError("Subscription to renew is not currently active.") # Bỏ raise lỗi cứng
 
         license_doc = await crud_licenses.get_license_by_id(
             db, renewal_sub_doc.license_id
@@ -308,21 +327,40 @@ async def create_transaction_by_user_db(
             raise ValueError(
                 "Internal error: License for your current subscription not found."
             )
-        target_subscription_id_for_renewal = renewal_sub_doc.id  # PyObjectId (str)
+        target_subscription_id_for_renewal = renewal_sub_doc.id  
         purchased_duration_auto = (
             license_doc.duration_days
-        )  # Gia hạn theo thời hạn gốc của license
+        )  
         transaction_amount_auto = (
             license_doc.price
-        )  # Giá gia hạn bằng giá gốc của license
+        )  
 
     else:
         raise ValueError("Invalid transaction_type for user creation.")
 
-    if not license_doc:
+    if not license_doc: # Nên được xử lý ở trên
         raise ValueError(
             "License information could not be determined for the transaction by user."
         )
+
+    # Xử lý broker_code_applied (MỚI)
+    broker_code_to_apply: Optional[str] = None
+    # Ưu tiên 1: User's linked referral_code
+    if current_user.referral_code:
+        is_valid_user_ref_code = await crud_brokers.is_broker_code_valid_and_active(db, current_user.referral_code)
+        if is_valid_user_ref_code:
+            broker_code_to_apply = current_user.referral_code.upper()
+            logger.info(f"Applying user's linked referral code '{broker_code_to_apply}' for transaction by {current_user.email}.")
+    
+    # Ưu tiên 2: broker_code từ input giao dịch (nếu không có mã hợp lệ từ profile)
+    if not broker_code_to_apply and transaction_data.broker_code:
+        is_valid_input_broker_code = await crud_brokers.is_broker_code_valid_and_active(db, transaction_data.broker_code)
+        if is_valid_input_broker_code:
+            broker_code_to_apply = transaction_data.broker_code.upper()
+            logger.info(f"Applying input broker code '{broker_code_to_apply}' for transaction by {current_user.email}.")
+        else:
+            logger.warning(f"Input broker code '{transaction_data.broker_code}' is invalid or inactive. Not applying for transaction by {current_user.email}.")
+
 
     # TODO: Logic xử lý promotion_code để điều chỉnh transaction_amount_auto nếu cần
     # if transaction_data.promotion_code:
@@ -332,20 +370,21 @@ async def create_transaction_by_user_db(
 
     dt_now = datetime.now(timezone.utc)
     transaction_doc_to_insert = {
-        "buyer_user_id": ObjectId(current_user.id),  # Lấy từ current_user
+        "buyer_user_id": ObjectId(current_user.id),  
         "license_id": ObjectId(license_doc.id),
         "license_key": license_doc.key,
         "original_license_price": license_doc.price,
-        "purchased_duration_days": purchased_duration_auto,  # Từ license
-        "transaction_amount": transaction_amount_auto,  # Từ license (sau này có thể có KM)
+        "purchased_duration_days": purchased_duration_auto,  
+        "transaction_amount": transaction_amount_auto,  
         "promotion_code": transaction_data.promotion_code,
         "payment_status": PaymentStatusEnum.pending.value,
         "transaction_type": transaction_data.transaction_type.value,
-        "notes": transaction_data.user_notes,  # Ghi chú của user
+        "notes": transaction_data.user_notes,  
         "target_subscription_id": ObjectId(target_subscription_id_for_renewal)
         if target_subscription_id_for_renewal
         and ObjectId.is_valid(target_subscription_id_for_renewal)
         else None,
+        "broker_code_applied": broker_code_to_apply, # MỚI
         "created_at": dt_now,
         "updated_at": dt_now,
     }
@@ -366,9 +405,6 @@ async def create_transaction_by_user_db(
         return None
 
 
-# --- Kết thúc hàm mới ---
-
-
 async def update_transaction_details_db(
     db: AsyncIOMotorDatabase,
     transaction_id_str: PyObjectId,
@@ -385,8 +421,25 @@ async def update_transaction_details_db(
         raise ValueError("Only pending transactions can have their details updated.")
 
     update_payload = update_data.model_dump(exclude_unset=True)
-    if not update_payload:
-        return transaction
+    if not update_payload: # Không có gì để cập nhật
+        return transaction # Trả về giao dịch hiện tại
+
+    # Nếu admin cập nhật broker_code_applied (MỚI)
+    if "broker_code_applied" in update_payload and update_payload["broker_code_applied"]:
+        is_valid_broker_code = await crud_brokers.is_broker_code_valid_and_active(db, update_payload["broker_code_applied"])
+        if not is_valid_broker_code:
+            logger.warning(f"Admin provided invalid broker_code_applied '{update_payload['broker_code_applied']}' during update. Will be set to null or original if not valid.")
+            # Quyết định: Cho phép set null, giữ nguyên, hay báo lỗi?
+            # Hiện tại: nếu code mới không hợp lệ, nó sẽ không được cập nhật hoặc bạn có thể set nó là None
+            # Để an toàn, nếu admin muốn xóa, họ nên truyền null hoặc "" và bạn xử lý nó
+            # Ở đây, nếu code không valid, không update trường này.
+            del update_payload["broker_code_applied"] # Không cập nhật nếu không hợp lệ
+        else:
+            update_payload["broker_code_applied"] = update_payload["broker_code_applied"].upper()
+    elif "broker_code_applied" in update_payload and update_payload["broker_code_applied"] is None:
+        # Cho phép admin xóa broker_code_applied
+        pass
+
 
     update_payload["updated_at"] = datetime.now(timezone.utc)
 
@@ -408,7 +461,7 @@ async def confirm_transaction_payment_db(
         logger.error(
             f"Transaction with ID {transaction_id_str} not found for confirmation."
         )
-        return None  # Hoặc raise HTTPException(status_code=404, detail="Transaction not found")
+        return None 
 
     if transaction.payment_status != PaymentStatusEnum.pending:
         logger.warning(
@@ -428,7 +481,7 @@ async def confirm_transaction_payment_db(
 
     if transaction.transaction_type == TransactionTypeEnum.new_purchase:
         sub_create_payload = AppSubscriptionCreateSchema(
-            user_id=str(transaction.buyer_user_id),
+            user_id=str(transaction.buyer_user_id), # Đảm bảo đây là string
             license_key=transaction.license_key,
             duration_override_days=transaction.purchased_duration_days,
         )
@@ -439,16 +492,16 @@ async def confirm_transaction_payment_db(
             logger.error(
                 f"Failed to create new subscription for transaction {transaction.id}."
             )
-            raise Exception(
+            raise Exception( # Có thể nên là một exception cụ thể hơn
                 f"Failed to create new subscription for transaction {transaction.id}."
             )
-        newly_created_or_updated_sub_id = ObjectId(created_sub.id)
+        newly_created_or_updated_sub_id = ObjectId(created_sub.id) # Đây là ObjectId
         update_fields_for_transaction["target_subscription_id"] = (
             newly_created_or_updated_sub_id
         )
 
     elif transaction.transaction_type == TransactionTypeEnum.renewal:
-        if not transaction.target_subscription_id:
+        if not transaction.target_subscription_id: # Đây là PyObjectId (string)
             logger.error(
                 f"Renewal transaction {transaction.id} is missing target_subscription_id."
             )
@@ -457,18 +510,22 @@ async def confirm_transaction_payment_db(
             )
 
         renewal_target_sub_id_str = str(transaction.target_subscription_id)
+        if not ObjectId.is_valid(renewal_target_sub_id_str):
+            logger.error(f"Invalid ObjectId for target_subscription_id: {renewal_target_sub_id_str}")
+            raise Exception("Invalid target subscription ID for renewal.")
+
         target_sub: Optional[
             AppSubscriptionInDB
         ] = await crud_subscriptions.get_subscription_by_id_db(
             db, renewal_target_sub_id_str
         )
 
-        if not target_sub or not target_sub.is_active:
+        if not target_sub : # Không cần check is_active ở đây nữa, cho phép gia hạn gói hết hạn
             logger.error(
-                f"Target subscription {renewal_target_sub_id_str} for renewal (Transaction: {transaction.id}) not found or not active."
+                f"Target subscription {renewal_target_sub_id_str} for renewal (Transaction: {transaction.id}) not found."
             )
             raise Exception(
-                f"Target subscription {renewal_target_sub_id_str} for renewal not found or not active."
+                f"Target subscription {renewal_target_sub_id_str} for renewal not found."
             )
 
         new_expiry_date = target_sub.expiry_date + timedelta(
@@ -481,18 +538,26 @@ async def confirm_transaction_payment_db(
                 "$set": {
                     "expiry_date": new_expiry_date,
                     "updated_at": dt_now,
-                    "is_active": True,
+                    "is_active": True, # Kích hoạt lại nếu nó đã hết hạn và được gia hạn
                 }
             },
         )
-        if updated_sub_result.modified_count == 0:
+        if updated_sub_result.modified_count == 0 and updated_sub_result.matched_count == 0 : # Nếu không match hoặc không modify
             logger.error(
                 f"Failed to update expiry date for subscription {renewal_target_sub_id_str} (Transaction: {transaction.id})."
             )
+            # Có thể subscription đã bị xóa trong lúc xử lý?
             raise Exception(
                 f"Failed to update subscription {renewal_target_sub_id_str} for renewal."
             )
         newly_created_or_updated_sub_id = ObjectId(renewal_target_sub_id_str)
+
+    # Cập nhật user.subscription_id nếu có sub mới được tạo/gia hạn thành công
+    if newly_created_or_updated_sub_id:
+        await db.users.update_one(
+            {"_id": ObjectId(transaction.buyer_user_id)},
+            {"$set": {"subscription_id": newly_created_or_updated_sub_id, "updated_at": dt_now}}
+        )
 
     updated_result = await db.transactions.update_one(
         {"_id": ObjectId(transaction_id_str)}, {"$set": update_fields_for_transaction}

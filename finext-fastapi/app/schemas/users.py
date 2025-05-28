@@ -17,6 +17,7 @@ class UserCreate(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     is_active: bool = Field(default=True)
+    referral_code: Optional[str] = Field(default=None, description="Mã giới thiệu của Đối tác (nếu có).") # MỚI
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -25,9 +26,10 @@ class UserCreate(BaseModel):
                 "email": "testuser@example.com",
                 "phone_number": "0912345678",
                 "password": "SecurePassword123!",
-                "role_ids": ["60d5ec49f7b4e6a0e7d5c2b1"], # Ví dụ một role_id (string)
-                "subscription_id": None, # User mới có thể chưa có subscription
-                "is_active": True
+                "role_ids": ["60d5ec49f7b4e6a0e7d5c2b1"], 
+                "subscription_id": None, 
+                "is_active": True,
+                "referral_code": "ABCD" # MỚI
             }
         }
     )
@@ -37,6 +39,7 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = Field(default=None)
     email: Optional[EmailStr] = Field(default=None)
     phone_number: Optional[str] = Field(default=None)
+    referral_code: Optional[str] = Field(default=None, description="Cập nhật mã giới thiệu cho người dùng.") # MỚI
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -44,6 +47,7 @@ class UserUpdate(BaseModel):
                 "email": "updateduser@example.com",
                 "full_name": "Tran Thi Updated",
                 "phone_number": "0987654322",
+                "referral_code": "XYZ1" # MỚI
             }
         }
     )
@@ -56,7 +60,8 @@ class UserPublic(BaseModel):
     email: EmailStr
     phone_number: str
     subscription_id: Optional[PyObjectId] = None
-    is_active: Optional[bool] = None # Thêm is_active vào response nếu backend trả về
+    is_active: Optional[bool] = None 
+    referral_code: Optional[str] = None # MỚI
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -75,6 +80,7 @@ class UserInDB(BaseModel):
     created_at: datetime
     updated_at: datetime
     is_active: bool
+    referral_code: Optional[str] = None # MỚI
 
     model_config = ConfigDict(
         populate_by_name=True,

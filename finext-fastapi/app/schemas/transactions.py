@@ -22,12 +22,13 @@ class TransactionBase(BaseModel):
     license_key: str = Field(..., description="Khóa của gói license.")
     original_license_price: float = Field(..., ge=0, description="Giá gốc của license tại thời điểm giao dịch.")
     purchased_duration_days: int = Field(..., gt=0, description="Số ngày thời hạn của gói được mua/gia hạn.")
-    transaction_amount: float = Field(..., ge=0, description="Số tiền thực tế của giao dịch.") # Sẽ được set tự động cho user
+    transaction_amount: float = Field(..., ge=0, description="Số tiền thực tế của giao dịch.") 
     promotion_code: Optional[str] = Field(default=None, description="Mã khuyến mãi được áp dụng.")
     payment_status: PaymentStatusEnum = Field(default=PaymentStatusEnum.pending, description="Trạng thái thanh toán của giao dịch.")
     transaction_type: TransactionTypeEnum = Field(..., description="Loại giao dịch (mua mới hoặc gia hạn).")
     notes: Optional[str] = Field(default=None, description="Ghi chú của người dùng hoặc admin về giao dịch.")
     target_subscription_id: Optional[PyObjectId] = Field(default=None, description="ID của subscription được tạo/gia hạn (nếu có).")
+    broker_code_applied: Optional[str] = Field(default=None, description="Mã đối tác đã được áp dụng cho giao dịch này.") # MỚI
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -35,14 +36,14 @@ class TransactionBase(BaseModel):
         use_enum_values=True,
     )
 
-# Schema cho Admin tạo transaction (đã có)
-class TransactionCreateForAdmin(BaseModel): # Đổi tên để phân biệt
+class TransactionCreateForAdmin(BaseModel): 
     buyer_user_id: PyObjectId
     transaction_type: TransactionTypeEnum
     purchased_duration_days: int = Field(..., gt=0)
-    transaction_amount: float = Field(..., ge=0) # Admin có thể nhập giá tùy chỉnh
+    transaction_amount: float = Field(..., ge=0) 
     promotion_code: Optional[str] = None
     notes: Optional[str] = None
+    # broker_code_applied: Optional[str] = None # Admin có thể set trực tiếp nếu cần, hoặc logic sẽ lấy từ user
 
     license_id_for_new_purchase: Optional[PyObjectId] = None
     subscription_id_to_renew: Optional[PyObjectId] = None
@@ -65,7 +66,7 @@ class TransactionCreateForAdmin(BaseModel): # Đổi tên để phân biệt
     
     model_config = ConfigDict(
         json_schema_extra={
-            "example": { # for new purchase
+            "example": { 
                 "buyer_user_id": "60d5ec49f7b4e6a0e7d5c2a1",
                 "transaction_type": "new_purchase",
                 "license_id_for_new_purchase": "60d5ec49f7b4e6a0e7d5c2b2",
@@ -73,15 +74,8 @@ class TransactionCreateForAdmin(BaseModel): # Đổi tên để phân biệt
                 "transaction_amount": 99.99,
                 "promotion_code": "NEWUSER20",
                 "notes": "Khách hàng mới, áp dụng KM."
-            },
-            # "example": { # for renewal
-            #     "buyer_user_id": "60d5ec49f7b4e6a0e7d5c2a1",
-            #     "transaction_type": "renewal",
-            #     "subscription_id_to_renew": "60d5ec49f7b4e6a0e7d5c2c3",
-            #     "purchased_duration_days": 365,
-            #     "transaction_amount": 899.00,
-            #     "notes": "Gia hạn gói Pro."
-            # }
+                # "broker_code_applied": "PARTNER1" # Ví dụ admin set
+            }
         }
     )
 
@@ -91,6 +85,7 @@ class TransactionCreateByUser(BaseModel):
     subscription_id_to_renew: Optional[PyObjectId] = Field(default=None, description="ID của subscription hiện tại người dùng muốn gia hạn (bắt buộc nếu gia hạn).")
     promotion_code: Optional[str] = Field(default=None, max_length=50, description="Mã khuyến mãi (nếu có).")
     user_notes: Optional[str] = Field(default=None, max_length=500, description="Ghi chú từ người dùng (nếu có).")
+    broker_code: Optional[str] = Field(default=None, description="Mã đối tác tùy chọn nhập tại thời điểm giao dịch.") # MỚI
 
 
     @field_validator('license_id_for_new_purchase')
@@ -111,17 +106,13 @@ class TransactionCreateByUser(BaseModel):
 
     model_config = ConfigDict(
         json_schema_extra={
-            "example": { # for new purchase
+            "example": { 
                 "transaction_type": "new_purchase",
-                "license_id_for_new_purchase": "60d5ec49f7b4e6a0e7d5c2b2", # User chọn license
+                "license_id_for_new_purchase": "60d5ec49f7b4e6a0e7d5c2b2", 
                 "promotion_code": "WELCOME10",
-                "user_notes": "Tôi muốn mua gói này."
-            },
-            # "example": { # for renewal
-            #     "transaction_type": "renewal",
-            #     "subscription_id_to_renew": "60d5ec49f7b4e6a0e7d5c2c3", # User chọn sub để gia hạn
-            #     "user_notes": "Xin vui lòng gia hạn giúp tôi."
-            # }
+                "user_notes": "Tôi muốn mua gói này.",
+                "broker_code": "XYZ1" # MỚI
+            }
         }
     )
 
@@ -130,6 +121,7 @@ class TransactionUpdateByAdmin(BaseModel):
     purchased_duration_days: Optional[int] = Field(default=None, gt=0)
     promotion_code: Optional[str] = Field(default=None) 
     notes: Optional[str] = Field(default=None)
+    # broker_code_applied: Optional[str] = Field(default=None) # Admin có thể cập nhật nếu cần
     
     model_config = ConfigDict(
         json_schema_extra={
@@ -138,6 +130,7 @@ class TransactionUpdateByAdmin(BaseModel):
                 "purchased_duration_days": 35,
                 "promotion_code": "LOYALTY5",
                 "notes": "Cập nhật giá và thêm ghi chú."
+                # "broker_code_applied": "PARTNER2"
             }
         }
     )
