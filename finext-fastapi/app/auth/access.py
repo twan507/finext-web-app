@@ -7,7 +7,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from bson import ObjectId
 
 from app.auth.dependencies import get_current_active_user
-from app.schemas.users import UserInDB 
+from app.schemas.users import UserInDB
 from app.core.database import get_database
 import app.crud.brokers as crud_brokers # Thêm import này
 
@@ -38,7 +38,7 @@ async def _get_user_permissions(db: AsyncIOMotorDatabase, user_id_str: str) -> S
     all_permission_object_ids: Set[ObjectId] = set()
     async for role in roles_cursor:
         for perm_obj_id in role.get("permission_ids", []):
-            if isinstance(perm_obj_id, ObjectId): 
+            if isinstance(perm_obj_id, ObjectId):
                 all_permission_object_ids.add(perm_obj_id)
             elif ObjectId.is_valid(str(perm_obj_id)): # Chuyển đổi nếu nó là string
                 all_permission_object_ids.add(ObjectId(str(perm_obj_id)))
@@ -77,40 +77,40 @@ def require_permission(resource: str, action: str):
             is_self_operation = target_user_id_str and (
                 str(current_user.id) == target_user_id_str
             )
-            
-            if action == "create": 
+
+            if action == "create":
                 if "user:create" in user_permissions:
                     allowed = True
                 required_permission_context = "user:create"
-            elif action == "list": 
+            elif action == "list":
                 if "user:list" in user_permissions:
                     allowed = True
                 required_permission_context = "user:list"
-            elif action == "read_any": 
-                if target_user_id_str:  
+            elif action == "read_any":
+                if target_user_id_str:
                     if "user:read_any" in user_permissions:
                         allowed = True
                 required_permission_context = "user:read_any"
-            elif action == "update": 
+            elif action == "update":
                 if not target_user_id_str:
                     logger.error("User permission check for 'user:update' called without target_user_id.")
                     # allowed vẫn là False
-                elif is_self_operation: 
+                elif is_self_operation:
                     if ("user:update_self" in user_permissions or "user:update_any" in user_permissions):
                         allowed = True
                     required_permission_context = "user:update_self or user:update_any (for self)"
-                else:  
+                else:
                     if "user:update_any" in user_permissions:
                         allowed = True
                     required_permission_context = "user:update_any (for others)"
-            elif action == "delete_any":  
+            elif action == "delete_any":
                 if target_user_id_str and not is_self_operation:
                     if "user:delete_any" in user_permissions:
                         allowed = True
                 # Không cho phép tự xóa qua endpoint này, logic xóa self thường ở chỗ khác (vd: user settings)
                 required_permission_context = "user:delete_any (for others, not self)"
-            elif action == "manage_roles":  
-                if target_user_id_str: 
+            elif action == "manage_roles":
+                if target_user_id_str:
                     if "user:manage_roles" in user_permissions:
                         allowed = True
                 required_permission_context = "user:manage_roles"
@@ -123,19 +123,19 @@ def require_permission(resource: str, action: str):
             if permission_to_check in user_permissions:
                 allowed = True
             required_permission_context = permission_to_check
-        
+
         # ---- PERMISSION RESOURCE ----
-        elif resource == "permission": 
+        elif resource == "permission":
             # Endpoint GET /permissions/ (lấy quyền của user hiện tại) không yêu cầu perm cụ thể, chỉ cần đăng nhập.
             # Nếu có endpoint admin xem tất cả định nghĩa permission thì cần:
             if action == "list_all_definitions": # Ví dụ
-                 if "permission:list_all_definitions" in user_permissions: 
+                 if "permission:list_all_definitions" in user_permissions:
                      allowed = True
                  required_permission_context = "permission:list_all_definitions"
             elif action == "read_self": # Đây là trường hợp cho GET /permissions/
                 allowed = True # Chỉ cần user đăng nhập là được, get_current_active_user đã xử lý
                 required_permission_context = "authenticated_user (for listing own permissions)"
-            else: 
+            else:
                 permission_to_check = f"permission:{action}"
                 if permission_to_check in user_permissions:
                     allowed = True
@@ -146,7 +146,7 @@ def require_permission(resource: str, action: str):
             permission_to_check = f"session:{action}"
             required_permission_context = permission_to_check
             if permission_to_check in user_permissions:
-                if action == "delete_self": 
+                if action == "delete_self":
                     target_session_id_str = request.path_params.get("session_id")
                     if target_session_id_str and ObjectId.is_valid(target_session_id_str):
                         session_doc = await db.sessions.find_one({"_id": ObjectId(target_session_id_str)})
@@ -158,9 +158,9 @@ def require_permission(resource: str, action: str):
                     else: # session_id không hợp lệ hoặc không có
                         allowed = False
                         required_permission_context = "session:delete_self (failed: invalid or missing session_id in path)"
-                else: 
+                else:
                     allowed = True # Cho list_self, list_any, delete_any (nếu user có quyền)
-            else: 
+            else:
                 allowed = False
 
         # ---- SUBSCRIPTION RESOURCE ----
@@ -168,7 +168,7 @@ def require_permission(resource: str, action: str):
             permission_to_check = f"subscription:{action}"
             required_permission_context = permission_to_check
 
-            if permission_to_check in user_permissions: 
+            if permission_to_check in user_permissions:
                 if action == "read_own":
                     # Endpoint GET /subscriptions/user/{user_id} hoặc GET /subscriptions/{subscription_id}
                     # cần kiểm tra ownership nếu user chỉ có quyền "read_own"
@@ -176,30 +176,30 @@ def require_permission(resource: str, action: str):
                     target_sub_id_str: Optional[str] = request.path_params.get("subscription_id")
 
                     if (target_user_id_for_sub_str and str(current_user.id) == target_user_id_for_sub_str):
-                        allowed = True 
+                        allowed = True
                     elif target_sub_id_str and ObjectId.is_valid(target_sub_id_str):
                         sub_doc = await db.subscriptions.find_one({"_id": ObjectId(target_sub_id_str)})
                         if sub_doc and sub_doc.get("user_id") == ObjectId(str(current_user.id)):
-                            allowed = True 
-                        else:  
+                            allowed = True
+                        else:
                             allowed = False
                             required_permission_context = "subscription:read_own (failed: sub not found or not owned by current user)"
                     # Nếu không có user_id hay sub_id trong path, và action là read_own, giả định là cho endpoint /me/...
                     elif not target_user_id_for_sub_str and not target_sub_id_str:
                         allowed = True # User đang xem subscription của chính mình qua một endpoint /me/...
-                    else: 
-                        allowed = False 
+                    else:
+                        allowed = False
                         required_permission_context = "subscription:read_own (failed: no valid ID for ownership check or endpoint logic mismatch)"
                 else: # Cho các action *_any hoặc create
                     allowed = True
-            else: 
+            else:
                 allowed = False
-        
+
         # ---- TRANSACTION RESOURCE ----
         elif resource == "transaction":
             permission_to_check = f"transaction:{action}"
             required_permission_context = permission_to_check
-            
+
             if permission_to_check in user_permissions:
                 if action == "read_own" or action == "create_own":
                     # User xem lịch sử của mình hoặc tạo đơn hàng cho mình
@@ -216,13 +216,13 @@ def require_permission(resource: str, action: str):
                 elif action in ["create_any", "read_any", "update_details_any", "confirm_payment_any", "cancel_any"]:
                     # Các quyền của Admin
                     allowed = True
-                else: 
+                else:
                     allowed = False
                     logger.warning(f"Unknown action '{action}' for transaction resource in permission check.")
             else:
                 allowed = False
-        
-        # ---- BROKER RESOURCE (MỚI) ----
+
+        # ---- BROKER RESOURCE ----
         elif resource == "broker":
             permission_to_check = f"broker:{action}"
             required_permission_context = permission_to_check
@@ -244,6 +244,24 @@ def require_permission(resource: str, action: str):
                     allowed = True
             else:
                 allowed = False
+
+        # ---- LICENSE RESOURCE ----
+        elif resource == "license":
+            # Tất cả các hành động CRUD cho license sẽ dùng chung quyền "license:manage"
+            # theo định nghĩa trong _seed_permissions.py và _config.py
+            # Tham số `action` được truyền vào đây từ router licenses là "manage".
+            permission_to_check = f"license:{action}" # Sẽ là "license:manage"
+            if permission_to_check == "license:manage" and "license:manage" in user_permissions:
+                allowed = True
+            required_permission_context = "license:manage"
+
+        # ---- FEATURE RESOURCE ----
+        elif resource == "feature":
+             # Tương tự như license, giả định action "manage" cho tất cả CRUD features
+            permission_to_check = f"feature:{action}" # Sẽ là "feature:manage"
+            if permission_to_check == "feature:manage" and "feature:manage" in user_permissions:
+                allowed = True
+            required_permission_context = "feature:manage"
 
 
         # --- FINAL CHECK ---

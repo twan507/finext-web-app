@@ -17,8 +17,11 @@ from .core.database import (
 )
 from .core.seeding import seed_initial_data
 
+# routers cũ
 from .routers import auth, users, roles, permissions, sessions, sse, subscriptions, transactions
-from .routers import brokers as brokers_router # MỚI: Import broker router
+from .routers import brokers as brokers_router
+# THÊM IMPORT ROUTER MỚI
+from .routers import licenses as licenses_router # <--- THÊM DÒNG NÀY
 
 from app.utils.response_wrapper import StandardApiResponse
 
@@ -34,7 +37,7 @@ async def lifespan(app: FastAPI):
     try:
         db_instance = get_database("user_db")
         if db_instance is not None:
-            await seed_initial_data(db_instance) 
+            await seed_initial_data(db_instance)
         else:
             logger.error("Không thể lấy user_db instance để khởi tạo dữ liệu ban đầu (get_database trả về None).")
     except RuntimeError as e:
@@ -112,7 +115,8 @@ app.include_router(sessions.router, prefix="/api/v1/sessions", tags=["sessions"]
 app.include_router(subscriptions.router, prefix="/api/v1/subscriptions", tags=["subscriptions"])
 app.include_router(sse.router, prefix="/api/v1/sse", tags=["sse"])
 app.include_router(transactions.router, prefix="/api/v1/transactions", tags=["transactions"])
-app.include_router(brokers_router.router, prefix="/api/v1/brokers", tags=["brokers"]) # MỚI
+app.include_router(brokers_router.router, prefix="/api/v1/brokers", tags=["brokers"])
+app.include_router(licenses_router.router, prefix="/api/v1/licenses", tags=["licenses"])
 
 
 @app.get("/api/v1")
