@@ -6,9 +6,10 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.schemas.licenses import LicenseCreate
 from app.utils.types import PyObjectId
-from ._config import ALL_DEFAULT_FEATURE_KEYS # Import from new config
+from ._config import ALL_DEFAULT_FEATURE_KEYS  # Import from new config
 
 logger = logging.getLogger(__name__)
+
 
 async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
     licenses_collection = db.get_collection("licenses")
@@ -16,21 +17,21 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
 
     default_licenses_data = [
         {
-            "key": "free",
+            "key": "FREE",
             "name": "Gói Miễn Phí",
             "price": 0.0,
             "duration_days": 99999,
             "feature_keys": ["view_basic_chart", "sse_access"],
         },
         {
-            "key": "admin_license",
+            "key": "ADMIN",
             "name": "License Quản Trị Viên",
             "price": 0.0,
             "duration_days": 99999,
             "feature_keys": list(ALL_DEFAULT_FEATURE_KEYS),
         },
         {
-            "key": "broker_license",
+            "key": "PARTNER",
             "name": "License Nhà Môi Giới",
             "price": 0.0,
             "duration_days": 99999,

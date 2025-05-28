@@ -5,7 +5,7 @@ from datetime import datetime
 from app.utils.types import PyObjectId
 
 class FeatureBase(BaseModel):
-    key: str = Field(..., min_length=3, max_length=100, pattern=r"^[a-z_]+$",
+    key: str = Field(..., min_length=3, max_length=100, pattern=r'^[a-zA-Z_]+$',
                      description="Khóa định danh duy nhất (chỉ chữ thường và _). Ví dụ: 'view_advanced_chart'")
     name: str = Field(..., min_length=3, max_length=100, description="Tên dễ hiểu. Ví dụ: 'Xem biểu đồ nâng cao'")
     description: Optional[str] = Field(None, max_length=500, description="Mô tả chi tiết về tính năng.")

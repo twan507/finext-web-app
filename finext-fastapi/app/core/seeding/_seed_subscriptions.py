@@ -23,11 +23,11 @@ async def seed_subscriptions(
 
     subs_to_create_map = {}
     if ADMIN_EMAIL:
-        subs_to_create_map[ADMIN_EMAIL] = "admin_license"
+        subs_to_create_map[ADMIN_EMAIL] = "ADMIN"
     if BROKER_EMAIL:
-        subs_to_create_map[BROKER_EMAIL] = "broker_license"
+        subs_to_create_map[BROKER_EMAIL] = "PARTNER"
     if USER_EMAIL:
-        subs_to_create_map[USER_EMAIL] = "free"
+        subs_to_create_map[USER_EMAIL] = "FREE"
 
     now = datetime.now(timezone.utc)
 
