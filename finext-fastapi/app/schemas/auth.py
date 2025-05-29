@@ -19,7 +19,6 @@ class TokenData(BaseModel):
     user_id: Optional[str] = None
     jti: Optional[str] = None
 
-# SCHEMA MỚI CHO QUÊN MẬT KHẨU
 class ResetPasswordWithOtpRequest(BaseModel):
     email: EmailStr
     otp_code: str = Field(..., min_length=OTP_LENGTH, max_length=OTP_LENGTH, description=f"Mã OTP gồm {OTP_LENGTH} chữ số.")
@@ -38,6 +37,19 @@ class ResetPasswordWithOtpRequest(BaseModel):
                 "email": "user@example.com",
                 "otp_code": "123456",
                 "new_password": "NewStrongPassword123!"
+            }
+        }
+    }
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(..., description="Mật khẩu hiện tại của người dùng.")
+    new_password: str = Field(..., min_length=8, description="Mật khẩu mới, tối thiểu 8 ký tự.")
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "current_password": "OldSecurePassword123!",
+                "new_password": "BrandNewSecurePassword456!"
             }
         }
     }

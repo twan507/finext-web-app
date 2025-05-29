@@ -1,6 +1,6 @@
 # finext-fastapi/app/crud/sessions.py
 import logging
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from datetime import datetime, timezone
@@ -112,3 +112,19 @@ async def delete_session_by_id(db: AsyncIOMotorDatabase, session_id_str: PyObjec
     
     delete_result = await db["sessions" ].delete_one({"_id": ObjectId(session_id_str)})
     return delete_result.deleted_count > 0
+
+async def delete_sessions_for_user_except_jti(db: AsyncIOMotorDatabase, user_id_str: str, current_jti_to_keep: Optional[str]) -> int:
+    """Xóa tất cả các session của một user, ngoại trừ session có JTI được cung cấp."""
+    if not ObjectId.is_valid(user_id_str):
+        logger.warning(f"User ID không hợp lệ khi xóa sessions: {user_id_str}")
+        return 0
+
+    query: Dict[str, Any] = {"user_id": ObjectId(user_id_str)}
+    if current_jti_to_keep:
+        query["jti"] = {"$ne": current_jti_to_keep}
+    # Nếu current_jti_to_keep là None, tất cả sessions của user sẽ bị xóa.
+
+    delete_result = await db["sessions"].delete_many(query)
+    if delete_result.deleted_count > 0:
+        logger.info(f"Đã xóa {delete_result.deleted_count} session(s) cho user ID {user_id_str} (giữ lại JTI: {current_jti_to_keep if current_jti_to_keep else 'TOÀN BỘ'}).")
+    return delete_result.deleted_count

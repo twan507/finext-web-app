@@ -10,15 +10,14 @@ from app.core.config import OTP_LENGTH
 
 class OtpTypeEnum(str, Enum):
     EMAIL_VERIFICATION = "email_verification"
-    PASSWORD_RESET = "password_reset"
-    TWO_FACTOR_LOGIN = "2fa_login"  # Sẽ dùng cho Passwordless Login
-    CHANGE_PASSWORD_CONFIRMATION = "change_password_confirmation" # MỚI: Cho đổi mật khẩu khi đã login
+    RESET_PASSWORD = "reset_password"
+    PWDLESS_LOGIN = "pwdless_login"  # Sẽ dùng cho Passwordless Login
 
 
 class OtpBase(BaseModel):
     user_id: PyObjectId
     otp_type: OtpTypeEnum
-    expires_at: datetime # Thời gian hết hạn sẽ được tính toán lại trong CRUD
+    expires_at: datetime  # Thời gian hết hạn sẽ được tính toán lại trong CRUD
 
 
 class OtpCreateInternal(OtpBase):  # Used internally for creating OTP, includes the raw code
@@ -31,7 +30,7 @@ class OtpInDBBase(OtpBase):
     hashed_otp_code: str  # OTP is stored hashed in DB
     verified_at: Optional[datetime] = None
     created_at: datetime
-    attempts: int = Field(default=0) # MỚI: Số lần thử sai
+    attempts: int = Field(default=0)  # MỚI: Số lần thử sai
 
     model_config = ConfigDict(populate_by_name=True, from_attributes=True, use_enum_values=True)
 
@@ -41,7 +40,7 @@ class OtpInDB(OtpInDBBase):
 
 
 class OtpPublic(BaseModel):  # What might be returned (e.g., just expiry and type, no code)
-    id: PyObjectId # Giữ lại ID để client có thể tham chiếu nếu cần
+    id: PyObjectId  # Giữ lại ID để client có thể tham chiếu nếu cần
     user_id: PyObjectId
     otp_type: OtpTypeEnum
     expires_at: datetime
@@ -59,7 +58,7 @@ class OtpGenerationRequest(BaseModel):
         json_schema_extra={
             "example": {
                 "email": "user@example.com",
-                "otp_type": OtpTypeEnum.EMAIL_VERIFICATION.value # Sử dụng .value
+                "otp_type": OtpTypeEnum.EMAIL_VERIFICATION.value,  # Sử dụng .value
             }
         }
     )
@@ -80,8 +79,8 @@ class OtpVerificationRequest(BaseModel):
         json_schema_extra={
             "example": {
                 "email": "user@example.com",
-                "otp_type": OtpTypeEnum.EMAIL_VERIFICATION.value, # Sử dụng .value
-                "otp_code": "123456"
+                "otp_type": OtpTypeEnum.EMAIL_VERIFICATION.value,  # Sử dụng .value
+                "otp_code": "123456",
             }
         }
     )

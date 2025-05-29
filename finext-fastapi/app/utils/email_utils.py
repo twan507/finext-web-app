@@ -119,21 +119,18 @@ async def send_otp_email(
 
     if otp_type == OtpTypeEnum.EMAIL_VERIFICATION:
         subject = "Mã OTP Xác Thực Email Finext"
-        template_name = "otp_email_verification_template.html"
+        template_name = "email_verification.html"
         action_description = "xác thực địa chỉ email của bạn"
-    elif otp_type == OtpTypeEnum.PASSWORD_RESET:
+    elif otp_type == OtpTypeEnum.RESET_PASSWORD:
         subject = "Mã OTP Đặt Lại Mật Khẩu Finext"
-        template_name = "otp_password_reset_template.html"
+        template_name = "reset_pasword.html"
         action_description = "đặt lại mật khẩu của bạn"
-    elif otp_type == OtpTypeEnum.TWO_FACTOR_LOGIN:
+    elif otp_type == OtpTypeEnum.PWDLESS_LOGIN:
         subject = "Mã OTP Đăng Nhập Finext"
-        template_name = "otp_2fa_template.html"
+        template_name = "pwdless_login.html"
         action_description = "đăng nhập vào tài khoản của bạn"
-    elif otp_type == OtpTypeEnum.CHANGE_PASSWORD_CONFIRMATION:
-        subject = "Mã OTP Xác Nhận Đổi Mật Khẩu Finext"
-        template_name = "otp_change_password_confirmation_template.html"
-        action_description = "xác nhận thay đổi mật khẩu của bạn"
-    # Bỏ OtpTypeEnum.PASSWORDLESS_LOGIN nếu bạn quyết định dùng chung TWO_FACTOR_LOGIN
+
+    # Bỏ OtpTypeEnum.PASSWORDLESS_LOGIN nếu bạn quyết định dùng chung PWDLESS_LOGIN
     # elif otp_type == OtpTypeEnum.PASSWORDLESS_LOGIN:
     #     subject = "Mã OTP Đăng Nhập Finext (Không Mật Khẩu)"
     #     template_name = "otp_passwordless_login_template.html" # Cần tạo template này
@@ -158,12 +155,12 @@ async def send_otp_email(
 
     logger.info(f"Attempting to send OTP email for {otp_type.value} to {email_to}")
     email_sent = await send_email_async(subject=subject, recipients=[email_to], template_name=template_name, template_body=template_body)
-    
+
     if not email_sent:
         error_msg = f"Failed to send OTP email for {otp_type.value} to {email_to}"
         logger.error(error_msg)
         raise RuntimeError(error_msg)
-    
+
     logger.info(f"OTP email for {otp_type.value} sent successfully to {email_to}")
     return email_sent
 
@@ -183,7 +180,7 @@ async def send_verification_email(email_to: EmailStr, full_name: str, verificati
     return await send_email_async(subject=subject, recipients=[email_to], template_name="verify_email.html", template_body=template_body)
 
 
-async def send_password_reset_email(email_to: EmailStr, full_name: str, reset_token: str, token_expiry_minutes: int = 30):
+async def send_reset_password_email(email_to: EmailStr, full_name: str, reset_token: str, token_expiry_minutes: int = 30):
     # ... (giữ nguyên)
     subject = "Yêu cầu đặt lại mật khẩu tài khoản Finext"
     reset_link = f"{FRONTEND_URL}/auth/reset-password?token={reset_token}"
