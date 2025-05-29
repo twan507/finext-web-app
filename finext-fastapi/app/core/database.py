@@ -83,6 +83,11 @@ async def connect_to_mongo():
             await db.promotions.create_index("is_active")
             await db.promotions.create_index("end_date") # Hữu ích cho việc query các mã sắp hết hạn
 
+            # watchlists collection indexes (NEW)
+            await db.watchlists.create_index("user_id")
+            await db.watchlists.create_index([("user_id", 1), ("name", 1)], unique=True) # User cannot have two watchlists with the same name
+            await db.watchlists.create_index("stock_symbols") # If you plan to query by stocks often
+            await db.watchlists.create_index("created_at")
 
             logger.info("Đã tạo/đảm bảo các indexes cần thiết cho user_db")
         

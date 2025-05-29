@@ -5,7 +5,7 @@ from typing import Dict, Optional
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.schemas.users import UserCreate
+from app.schemas.users import UserSeed
 from app.utils.security import get_password_hash
 from app.utils.types import PyObjectId
 from app.core.config import (
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 async def seed_users(
     db: AsyncIOMotorDatabase, role_ids_map: Optional[Dict[str, PyObjectId]]
 ) -> Dict[str, PyObjectId]:
-    created_user_ids: Dict[str, PyObjectId] = {}  # email -> str(ObjectId)
+    created_user_ids: Dict[str, PyObjectId] = {}
     if not role_ids_map:
         logger.warning("role_ids_map không tồn tại. Bỏ qua việc tạo sample users.")
         return created_user_ids
@@ -35,20 +35,13 @@ async def seed_users(
 
     # 1 Admin User
     if ADMIN_EMAIL and ADMIN_PWD and admin_role_id_str:
-        admin_roles = [admin_role_id_str]
-        if user_role_id_str: # Admin cũng nên có quyền user thường để test
-            admin_roles.append(user_role_id_str)
-        # Admin có thể có cả role broker nếu cần test tính năng broker
-        # if broker_role_id_str:
-        #     admin_roles.append(broker_role_id_str)
-
         sample_users_data_dicts.append(
             {
                 "email": ADMIN_EMAIL,
                 "password": ADMIN_PWD,
                 "full_name": "System Administrator",
                 "phone_number": "0000000000",
-                "role_ids_str": list(set(admin_roles)),
+                "role_ids_str": list([admin_role_id_str, broker_role_id_str, user_role_id_str]),
                 "is_active": True,
             }
         )
@@ -92,7 +85,7 @@ async def seed_users(
             {"email": user_data_dict["email"]}
         )
         if existing_user is None:
-            user_create_instance = UserCreate(
+            user_create_instance = UserSeed(
                 email=user_data_dict["email"],
                 full_name=user_data_dict["full_name"],
                 phone_number=user_data_dict["phone_number"],

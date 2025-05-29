@@ -2,7 +2,7 @@
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from typing import Optional, List
 from app.utils.types import PyObjectId
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Bỏ class LicenseInfo và AwareUtcDatetime nếu không dùng ở đâu khác
 
@@ -25,6 +25,19 @@ class UserCreate(BaseModel):
             }
         }
     )
+
+class UserSeed(BaseModel):
+    """Schema for creating a new user (input)."""
+    role_ids: List[PyObjectId] = Field(default_factory=list)
+    full_name: str
+    email: EmailStr
+    phone_number: str
+    password: str = Field(..., min_length=8)
+    subscription_id: Optional[PyObjectId] = Field(default=None)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    is_active: bool = Field(default=True)
+    referral_code: Optional[str] = Field(default=None, description="Mã giới thiệu của Đối tác (nếu có).") # MỚI
 
 class UserUpdate(BaseModel):
     """Schema for updateting user data."""

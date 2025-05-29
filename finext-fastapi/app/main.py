@@ -27,7 +27,8 @@ from .routers import (
     transactions,
     users,
     emails,
-    otps
+    otps,
+    watchlists
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -125,6 +126,7 @@ app.include_router(licenses.router, prefix="/api/v1/licenses", tags=["licenses"]
 app.include_router(promotions.router, prefix="/api/v1/promotions", tags=["promotions"])
 app.include_router(emails.router, prefix="/api/v1/emails", tags=["emails"])
 app.include_router(otps.router, prefix="/api/v1/otps", tags=["otps"])
+app.include_router(watchlists.router, prefix="/api/v1/watchlists", tags=["watchlists"])
 
 
 @app.get("/api/v1")

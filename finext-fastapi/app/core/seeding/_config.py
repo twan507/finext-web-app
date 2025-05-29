@@ -13,7 +13,7 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
         "description": "Quyền xem thông tin chi tiết của bất kỳ người dùng nào.",
     },
     {
-        "name": "user:update_self",
+        "name": "user:update_own",
         "description": "Quyền tự cập nhật thông tin cá nhân của mình.",
     },
     {
@@ -36,7 +36,7 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
     {"name": "role:delete_any", "description": "Quyền xóa vai trò."},
     # Session Management
     {
-        "name": "session:list_self",
+        "name": "session:list_own",
         "description": "Quyền xem danh sách các session đang hoạt động của chính mình.",
     },
     {
@@ -44,7 +44,7 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
         "description": "Quyền xem danh sách tất cả các session đang hoạt động của mọi người dùng (admin).",
     },
     {
-        "name": "session:delete_self",
+        "name": "session:delete_own",
         "description": "Quyền tự xóa một session đang hoạt động của mình.",
     },
     {
@@ -109,7 +109,7 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
     {"name": "broker:list", "description": "Quyền xem danh sách Đối tác."},
     {"name": "broker:read_any", "description": "Quyền xem chi tiết Đối tác bất kỳ."},
     {
-        "name": "broker:read_self",
+        "name": "broker:read_own",
         "description": "Quyền tự xem thông tin Đối tác của mình.",
     },
     {
@@ -134,6 +134,22 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
     {
         "name": "promotion:validate",
         "description": "Quyền kiểm tra tính hợp lệ của một mã khuyến mãi (user/public).",
+    },
+    {
+        "name": "watchlist:create_own",
+        "description": "Quyền tự tạo danh sách theo dõi cổ phiếu mới.",
+    },
+    {
+        "name": "watchlist:read_own",
+        "description": "Quyền xem các danh sách theo dõi cổ phiếu của chính mình.",
+    },
+    {
+        "name": "watchlist:update_own",
+        "description": "Quyền tự cập nhật (thêm/xóa cổ phiếu, đổi tên) danh sách theo dõi của mình.",
+    },
+    {
+        "name": "watchlist:delete_own",
+        "description": "Quyền tự xóa danh sách theo dõi của mình.",
     },
 ]
 
