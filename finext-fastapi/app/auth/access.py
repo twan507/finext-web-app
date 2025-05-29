@@ -240,6 +240,12 @@ def require_permission(resource: str, action: str):
             else:
                 allowed = False
 
+        # ---- PROMOTION RESOURCE ----
+        elif resource == "promotion":
+            permission_to_check = f"promotion:{action}"
+            required_permission_context = permission_to_check
+            allowed = permission_to_check in user_permissions
+
         # ---- LICENSE RESOURCE ----
         elif resource == "license":
             # Tất cả các hành động CRUD cho license sẽ dùng chung quyền "license:manage"

@@ -193,3 +193,44 @@ async def send_reset_password_email(email_to: EmailStr, full_name: str, reset_to
         "current_year": current_year,
     }
     return await send_email_async(subject=subject, recipients=[email_to], template_name="reset_password.html", template_body=template_body)
+
+async def send_subscription_expiry_reminder_email(
+    email_to: EmailStr,
+    full_name: str,
+    license_name: str,
+    license_key: str,
+    expiry_date: datetime,
+    days_left: int
+) -> bool:
+    if not EMAIL_CONFIG_SUCCESSFUL or fm_instance is None:
+        logger.error(f"Email service not configured. Cannot send subscription expiry reminder to {email_to}.")
+        return False # Hoặc raise Exception nếu muốn job dừng khi không gửi được email
+
+    subject = f"Nhắc nhở: Subscription {license_name} của bạn sắp hết hạn"
+    # TODO: Cập nhật link gia hạn chính xác
+    renewal_link = f"{FRONTEND_URL}/dashboard/billing" # Hoặc trang gia hạn cụ thể
+
+    template_body = {
+        "full_name": full_name,
+        "license_name": license_name,
+        "license_key": license_key,
+        "expiry_date_str": expiry_date.strftime("%d/%m/%Y"),
+        "days_left": days_left,
+        "renewal_link": renewal_link,
+        "current_year": datetime.now(timezone.utc).year,
+    }
+
+    logger.info(f"Attempting to send subscription expiry reminder email to {email_to} for license {license_key}.")
+    email_sent = await send_email_async(
+        subject=subject,
+        recipients=[email_to],
+        template_name="subscription_expiry_reminder.html", # Tên template mới
+        template_body=template_body
+    )
+
+    if not email_sent:
+        logger.error(f"Failed to send subscription expiry reminder email to {email_to} for license {license_key}.")
+        return False # Hoặc raise
+
+    logger.info(f"Subscription expiry reminder email sent successfully to {email_to} for license {license_key}.")
+    return email_sent

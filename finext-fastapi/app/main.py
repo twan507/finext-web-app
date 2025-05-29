@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.utils.response_wrapper import StandardApiResponse
+from .core.scheduler import start_scheduler, shutdown_scheduler
 
 from .core.database import close_mongo_connection, connect_to_mongo, get_database
 from .core.seeding import seed_initial_data
@@ -51,8 +52,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Lỗi không xác định trong quá trình seeding: {e}", exc_info=True)
 
+    # KHỞI ĐỘNG SCHEDULER
+    await start_scheduler() #
+
     yield
     logger.info("Ứng dụng FastAPI đang tắt...")
+    # TẮT SCHEDULER
+    await shutdown_scheduler() #
     await close_mongo_connection()
 
 

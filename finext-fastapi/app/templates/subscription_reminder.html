@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Thông Báo Gia Hạn Subscription Finext</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .header { text-align: center; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+        .header h1 { color: #1976d2; }
+        .content { padding: 20px 0; }
+        .footer { text-align: center; font-size: 0.9em; color: #777; padding-top: 20px; border-top: 1px solid #eee; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Thông Báo Gia Hạn Subscription</h1>
+        </div>
+        <div class="content">
+            <p>Xin chào {{ full_name }},</p>
+            <p>Subscription <strong>{{ license_name }}</strong> (Gói {{ license_key }}) của bạn sẽ hết hạn vào ngày <strong>{{ expiry_date_str }}</strong> (còn {{ days_left }} ngày).</p>
+            <p>Để tiếp tục sử dụng các tính năng ưu việt của Finext mà không bị gián đoạn, vui lòng gia hạn subscription của bạn trước ngày hết hạn.</p>
+            <p>Bạn có thể gia hạn tại: <a href="{{ renewal_link }}">Gia Hạn Ngay</a></p>
+            <p>Nếu bạn có bất kỳ câu hỏi nào, đừng ngần ngại liên hệ với bộ phận hỗ trợ của chúng tôi.</p>
+            <p>Trân trọng,<br>Đội ngũ Finext</p>
+        </div>
+        <div class="footer">
+            <p>&copy; {{ current_year }} Finext. Bảo lưu mọi quyền.</p>
+        </div>
+    </div>
+</body>
+</html>

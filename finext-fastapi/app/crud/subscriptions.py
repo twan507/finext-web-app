@@ -4,6 +4,7 @@ from typing import List, Optional
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from datetime import datetime, timezone, timedelta
+from app.utils.email_utils import send_subscription_expiry_reminder_email # IMPORT MỚI
 
 from app.schemas.subscriptions import (
     SubscriptionCreate,
@@ -344,3 +345,130 @@ async def deactivate_subscription_db(
         f"Không thể hủy kích hoạt subscription {subscription_id_str} (có thể do lỗi hoặc không tìm thấy)."
     )
     return None
+
+async def send_expiry_reminders_task(db: AsyncIOMotorDatabase, days_before_expiry: int = 7) -> int:
+    """
+    Tìm các subscriptions sắp hết hạn (trong vòng `days_before_expiry` ngày tới)
+    và gửi email nhắc nhở.
+    """
+    now = datetime.now(timezone.utc)
+    reminder_threshold_date = now + timedelta(days=days_before_expiry)
+    
+    query = {
+        "is_active": True,
+        "expiry_date": {
+            "$gt": now,  # Vẫn còn hạn
+            "$lte": reminder_threshold_date # Sắp hết hạn trong khoảng thời gian đặt trước
+        },
+        "license_key": {"$nin": PROTECTED_LICENSE_KEYS} # Không gửi nhắc nhở cho các gói bảo vệ
+    }
+    
+    subs_to_remind_cursor = db.subscriptions.find(query)
+    email_sent_count = 0
+    
+    async for sub_doc in subs_to_remind_cursor:
+        try:
+            user_id = sub_doc.get("user_id")
+            user_doc = await db.users.find_one({"_id": user_id})
+            license_doc = await db.licenses.find_one({"_id": sub_doc.get("license_id")})
+
+            if not user_doc or not license_doc:
+                logger.warning(f"Skipping reminder for sub {sub_doc['_id']}: User or License info missing.")
+                continue
+
+            user_email = user_doc.get("email")
+            user_full_name = user_doc.get("full_name", "Quý khách")
+            license_name = license_doc.get("name", sub_doc.get("license_key"))
+            license_key = sub_doc.get("license_key")
+            expiry_date_dt = sub_doc.get("expiry_date")
+
+            if not all([user_email, license_key, expiry_date_dt]):
+                logger.warning(f"Skipping reminder for sub {sub_doc['_id']}: Missing critical data (email, license_key, expiry_date).")
+                continue
+            
+            # Tính số ngày còn lại một cách chính xác hơn
+            # (expiry_date_dt - now).days có thể làm tròn xuống nếu chưa đủ 24h
+            time_left = expiry_date_dt - now
+            days_left_exact = time_left.days
+            if time_left.total_seconds() > 0 and days_left_exact == 0: # Nếu còn vài tiếng trong ngày cuối
+                 days_left_exact = 1 # Coi như còn 1 ngày
+            elif time_left.total_seconds() <= 0: # Đã hết hạn (không nên xảy ra do query)
+                 days_left_exact = 0
+            
+            if days_left_exact <= 0 : # Kiểm tra lại để chắc chắn không gửi email cho sub đã hết hạn
+                logger.info(f"Subscription {sub_doc['_id']} for user {user_email} seems already expired or expiring today. Days left: {days_left_exact}. Skipping reminder.")
+                continue
+
+            # Gửi email
+            # Cân nhắc thêm một trường trong `subscriptions` để đánh dấu đã gửi email nhắc nhở cho ngày đó/tuần đó
+            # để tránh gửi nhiều lần nếu job chạy lại do lỗi.
+            # Ví dụ: last_reminder_sent_at: datetime
+
+            email_successful = await send_subscription_expiry_reminder_email(
+                email_to=user_email,
+                full_name=user_full_name,
+                license_name=license_name,
+                license_key=license_key,
+                expiry_date=expiry_date_dt,
+                days_left=days_left_exact
+            )
+            if email_successful:
+                email_sent_count += 1
+                # (Tùy chọn) Cập nhật sub_doc.last_reminder_sent_at = now
+        except Exception as e:
+            logger.error(f"Error processing reminder for subscription {sub_doc.get('_id')}: {e}", exc_info=True)
+            
+    if email_sent_count > 0:
+        logger.info(f"Cron Task: Successfully sent {email_sent_count} subscription expiry reminders.")
+    else:
+        logger.info("Cron Task: No subscriptions found needing an expiry reminder today.")
+    return email_sent_count
+
+async def run_deactivate_expired_subscriptions_task(db: AsyncIOMotorDatabase) -> int:
+    """
+    Tìm và gọi hàm deactivate_subscription_db cho tất cả các subscription
+    đã hết hạn và vẫn đang active (trừ các license được bảo vệ).
+    """
+    now = datetime.now(timezone.utc)
+    query = {
+        "is_active": True,
+        "expiry_date": {"$lt": now},
+        "license_key": {"$nin": PROTECTED_LICENSE_KEYS} # Loại trừ các license được bảo vệ
+    }
+    
+    expired_subs_cursor = db.subscriptions.find(query)
+    deactivated_count = 0
+    
+    async for sub_doc in expired_subs_cursor:
+        sub_id_str = str(sub_doc["_id"])
+        try:
+            # Gọi hàm deactivate_subscription_db hiện có của bạn
+            # assign_free_if_none_active có thể là False hoặc True tùy theo logic bạn muốn khi cron job chạy
+            updated_sub = await deactivate_subscription_db(db, sub_id_str, assign_free_if_none_active=False)
+            if updated_sub and not updated_sub.is_active:
+                logger.info(f"Cron Task: Deactivated expired subscription ID: {sub_id_str} for user ID: {sub_doc.get('user_id')}")
+                deactivated_count += 1
+                
+                # Logic cập nhật user.subscription_id nếu cần (tương tự như trong hàm cũ bạn đã có)
+                user_id_of_sub = sub_doc.get("user_id")
+                if user_id_of_sub and isinstance(user_id_of_sub, ObjectId):
+                    user_doc_check = await db.users.find_one({"_id": user_id_of_sub, "subscription_id": sub_doc["_id"]})
+                    if user_doc_check:
+                        await db.users.update_one(
+                            {"_id": user_id_of_sub},
+                            {"$set": {"subscription_id": None, "updated_at": now}}
+                        )
+                        logger.info(f"Cron Task: Cleared subscription_id for user {user_id_of_sub} as their active sub {sub_id_str} expired.")
+            elif updated_sub and updated_sub.is_active:
+                # Trường hợp này không nên xảy ra nếu logic của deactivate_subscription_db là đúng
+                logger.warning(f"Cron Task: Attempted to deactivate {sub_id_str}, but it remained active.")
+        except ValueError as ve: # Bắt lỗi từ deactivate_subscription_db (ví dụ: cố gắng hủy sub được bảo vệ)
+            logger.warning(f"Cron Task: Skipped deactivating subscription {sub_id_str} due to: {ve}")
+        except Exception as e:
+            logger.error(f"Cron Task: Error deactivating subscription {sub_id_str}: {e}", exc_info=True)
+            
+    if deactivated_count > 0:
+        logger.info(f"Cron Task: Finished deactivating {deactivated_count} expired subscriptions.")
+    else:
+        logger.info("Cron Task: No active and expired subscriptions found to deactivate (excluding protected ones).")
+    return deactivated_count

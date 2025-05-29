@@ -214,3 +214,38 @@ def calculate_discounted_amount(original_amount: float, promo: PromotionInDB) ->
         discount_applied = original_amount
 
     return round(discount_applied, 2), round(final_amount, 2)
+
+async def run_deactivate_expired_promotions_task(db: AsyncIOMotorDatabase) -> int:
+    """
+    Tìm và gọi hàm deactivate_promotion cho tất cả các promotions
+    đã qua end_date và vẫn đang is_active.
+    """
+    now = datetime.now(timezone.utc)
+    query = {
+        "is_active": True,
+        "end_date": {"$lt": now}
+    }
+    
+    promos_to_deactivate_cursor = db.promotions.find(query)
+    deactivated_count = 0
+    
+    async for promo_doc in promos_to_deactivate_cursor:
+        promo_id_str = str(promo_doc["_id"])
+        try:
+            # Gọi hàm deactivate_promotion hiện có của bạn
+            updated_promo = await deactivate_promotion(db, promo_id_str) # type: ignore
+            if updated_promo and not updated_promo.is_active:
+                logger.info(f"Cron Task: Deactivated expired promotion ID: {promo_id_str}, Code: {promo_doc.get('promotion_code')}")
+                deactivated_count += 1
+            elif updated_promo and updated_promo.is_active:
+                logger.warning(f"Cron Task: Attempted to deactivate promo {promo_id_str}, but it remained active.")
+        except ValueError as ve: # Bắt lỗi từ deactivate_promotion (ví dụ: promo không tồn tại)
+            logger.warning(f"Cron Task: Skipped deactivating promotion {promo_id_str} due to: {ve}")
+        except Exception as e:
+            logger.error(f"Cron Task: Error deactivating promotion {promo_id_str}: {e}", exc_info=True)
+            
+    if deactivated_count > 0:
+        logger.info(f"Cron Task: Finished deactivating {deactivated_count} expired promotions.")
+    else:
+        logger.info("Cron Task: No active and expired promotions found to deactivate.")
+    return deactivated_count
