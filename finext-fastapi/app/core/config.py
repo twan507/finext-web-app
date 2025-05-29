@@ -43,7 +43,6 @@ COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN")
 # -----------------------------
 
 # --- THÊM CẤU HÌNH EMAIL ---
-# --- THÊM CẤU HÌNH EMAIL ---
 MAIL_USERNAME = os.getenv("MAIL_USERNAME", "")
 MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")
 MAIL_FROM = os.getenv("MAIL_FROM", "") # Sẽ được validate thành EmailStr sau
@@ -55,6 +54,11 @@ MAIL_FROM_NAME = os.getenv("MAIL_FROM_NAME") # Optional, có thể là None
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 # -----------------------------
 
+# --- OTP Configuration ---
+OTP_LENGTH = 6  # Length of the OTP code
+OTP_EXPIRE_MINUTES = 5  # OTP validity period in minutes
+MAX_OTP_ATTEMPTS = 10 # Maximum verification attempts for an OTP (handle this in logic if needed)
+# -------------------------
 
 if not MONGODB_CONNECTION_STRING:
     print("CẢNH BÁO: Biến môi trường MONGODB_CONNECTION_STRING chưa được thiết lập.")

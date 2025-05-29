@@ -5,7 +5,7 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException
 
 # Import các thành phần cần thiết
-from app.utils.emails import send_email_async
+from app.utils.email_utils import send_email_async
 from app.utils.response_wrapper import StandardApiResponse, api_response_wrapper
 # THAY ĐỔI: Import schema từ file mới
 from app.schemas.emails import TestEmailRequest, MessageResponse
