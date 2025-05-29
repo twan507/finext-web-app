@@ -317,3 +317,4 @@ async def revoke_roles_from_user_endpoint(
     if not updated_user: 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Người dùng không tìm thấy sau khi thu hồi.")
     return UserPublic.model_validate(updated_user)
+

@@ -2,22 +2,17 @@
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from typing import Optional, List
 from app.utils.types import PyObjectId
-from datetime import datetime, timezone
+from datetime import datetime
 
 # Bỏ class LicenseInfo và AwareUtcDatetime nếu không dùng ở đâu khác
 
 class UserCreate(BaseModel):
     """Schema for creating a new user (input)."""
-    role_ids: List[PyObjectId] = Field(default_factory=list)
     full_name: str
     email: EmailStr
     phone_number: str
     password: str = Field(..., min_length=8)
-    subscription_id: Optional[PyObjectId] = Field(default=None)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    is_active: bool = Field(default=True)
-    referral_code: Optional[str] = Field(default=None, description="Mã giới thiệu của Đối tác (nếu có).") # MỚI
+    referral_code: Optional[str] = Field(default=None, description="Mã giới thiệu của Đối tác (nếu có).")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -26,10 +21,7 @@ class UserCreate(BaseModel):
                 "email": "testuser@example.com",
                 "phone_number": "0912345678",
                 "password": "SecurePassword123!",
-                "role_ids": ["60d5ec49f7b4e6a0e7d5c2b1"], 
-                "subscription_id": None, 
-                "is_active": True,
-                "referral_code": "ABCD" # MỚI
+                "referral_code": "ABCD"
             }
         }
     )

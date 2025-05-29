@@ -1,16 +1,15 @@
 # finext-fastapi/app/routers/auth.py
 import logging
 from typing import Annotated, Tuple, Any, Optional, List, Dict
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta # THÊM timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, BackgroundTasks # THÊM BackgroundTasks
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from jose import jwt, JWTError
-from bson import ObjectId
-
-from app.auth.dependencies import get_current_active_user
+from app.crud.otps import verify_and_use_otp as crud_verify_otp
+from app.auth.dependencies import get_current_active_user # Và các dependencies khác
 from app.auth.jwt_handler import (
     create_access_token,
     create_refresh_token,
@@ -19,38 +18,120 @@ from app.auth.jwt_handler import (
     verify_token_and_get_payload,
 )
 from app.core.database import get_database
-from app.crud.users import get_user_by_email_db, get_user_by_id_db
+from app.crud.users import get_user_by_email_db, get_user_by_id_db, create_user_db, update_user_password  # THÊM create_user_db
 from app.crud.sessions import (
     count_sessions_by_user_id,
     find_and_delete_oldest_session,
     create_session,
     delete_session_by_jti
 )
-import app.crud.licenses as crud_licenses
-import app.crud.subscriptions as crud_subscriptions
+import app.crud.licenses as crud_licenses # giữ lại
+import app.crud.subscriptions as crud_subscriptions # giữ lại
 from app.schemas.sessions import SessionCreate
 from app.schemas.auth import (
     JWTTokenResponse,
-    TokenData,
+    TokenData, ResetPasswordWithOtpRequest 
 )
-from app.schemas.users import UserPublic, UserInDB
+# THÊM/SỬA CÁC IMPORT SAU
+from app.schemas.users import UserPublic, UserInDB, UserCreate
+from app.schemas.otps import OtpVerificationRequest, OtpTypeEnum, OtpCreateInternal
+from app.schemas.emails import MessageResponse # Để trả về thông báo đơn giản
+from bson import ObjectId # Để làm việc với ObjectId trong MongoDB
+# ---
 from app.utils.response_wrapper import api_response_wrapper, StandardApiResponse
 from app.utils.security import verify_password
 from app.core.config import (
     SECRET_KEY, ALGORITHM, MAX_SESSIONS_PER_USER,
-    REFRESH_TOKEN_COOKIE_NAME, COOKIE_SAMESITE, COOKIE_SECURE, COOKIE_DOMAIN
+    REFRESH_TOKEN_COOKIE_NAME, COOKIE_SAMESITE, COOKIE_SECURE, COOKIE_DOMAIN,
+    OTP_EXPIRE_MINUTES # THÊM
 )
+# THÊM CÁC IMPORT CHO LOGIC GỬI OTP
+from app.utils.otp_utils import generate_otp_code
+from app.crud.otps import create_otp_record as crud_create_otp_record # Đặt alias
+from app.utils.email_utils import send_otp_email # THÊM DÒNG NÀY
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-if SECRET_KEY is None:
+if SECRET_KEY is None: # Giữ lại kiểm tra này
     raise ValueError("SECRET_KEY không được thiết lập.")
 
 CookieList = Optional[List[Dict[str, Any]]]
 LogoutResponse = Tuple[None, CookieList, Optional[List[str]]]
 # LoginResponse và RefreshResponse không cần định nghĩa dạng Tuple ở đây nữa
 # vì các hàm login/refresh sẽ trả về JSONResponse trực tiếp.
+
+@router.post(
+    "/register",
+    response_model=StandardApiResponse[MessageResponse], # Chỉ trả về thông báo
+    status_code=status.HTTP_201_CREATED,
+    summary="Đăng ký người dùng mới và gửi OTP xác thực email",
+    tags=["authentication"] # Thêm tag để gom nhóm API
+)
+@api_response_wrapper(default_success_message="Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.")
+async def register_user(
+    user_data: UserCreate,
+    background_tasks: BackgroundTasks,
+    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
+):
+    try:
+        # Tạo user với is_active=False
+        # crud_users.create_user_db đã được cập nhật để xử lý is_active dựa trên tham số
+        created_user = await create_user_db(db, user_create_data=user_data, set_active_on_create=False)
+    except ValueError as ve: # Bắt lỗi từ CRUD (ví dụ email tồn tại và active)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(ve),
+        )
+    
+    if not created_user:
+        # Lỗi không mong muốn khác từ create_user_db
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Không thể tạo người dùng. Vui lòng thử lại sau.",
+        )
+
+    # Gửi OTP xác thực email
+    raw_otp = generate_otp_code()
+    now = datetime.now(timezone.utc)
+    
+    # Tạo payload cho việc lưu OTP vào DB
+    internal_otp_payload = OtpCreateInternal(
+        user_id=str(created_user.id), # created_user là UserInDB nên có id
+        otp_type=OtpTypeEnum.EMAIL_VERIFICATION,
+        otp_code=raw_otp, # Mã OTP thuần
+        expires_at=now + timedelta(minutes=OTP_EXPIRE_MINUTES), # Sẽ được ghi đè trong crud_create_otp_record
+        created_at=now
+    )
+    # Lưu OTP đã hash vào DB
+    otp_record = await crud_create_otp_record(db, internal_otp_payload)
+    if not otp_record:
+        # Nếu không tạo được OTP record, đây là lỗi nghiêm trọng.
+        # Có thể cân nhắc xóa user vừa tạo hoặc đánh dấu để xử lý sau.
+        logger.error(f"Không thể tạo OTP record cho user {created_user.email} sau khi đăng ký.")
+        # Không raise HTTP Exception ở đây để không lộ thông tin user đã được tạo.
+        # User sẽ không nhận được OTP và không thể kích hoạt.
+        # Tuy nhiên, để đảm bảo, ta nên raise lỗi để client biết.
+        await db.users.delete_one({"_id": ObjectId(created_user.id)}) # Xóa user nếu không gửi được OTP
+        logger.info(f"Đã xóa user {created_user.email} do không thể tạo OTP record.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Lỗi khi tạo mã xác thực. Vui lòng thử đăng ký lại."
+        )
+
+    # Gửi email OTP trong background
+    background_tasks.add_task(
+        send_otp_email , # Hàm này đã được import từ routers.otps
+        email_to=created_user.email,
+        full_name=created_user.full_name,
+        otp_code=raw_otp, # Gửi mã OTP thuần cho user
+        otp_type=OtpTypeEnum.EMAIL_VERIFICATION,
+        expiry_minutes=OTP_EXPIRE_MINUTES
+    )
+    
+    # Wrapper sẽ trả về default_success_message, không cần trả về UserPublic ở đây
+    return MessageResponse(message="Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.")
 
 @router.get("/me", response_model=StandardApiResponse[UserPublic])
 @api_response_wrapper(default_success_message="Lấy thông tin người dùng thành công.")
@@ -269,3 +350,173 @@ async def login_for_access_token(
     logger.info(f"Login successful for user: {user.email}")
     
     return actual_response
+
+@router.post(
+    "/login-otp",
+    response_model=JWTTokenResponse, # Trả về access token trong body, refresh token trong cookie
+    summary="Đăng nhập bằng email và OTP (Passwordless)",
+    tags=["authentication"]
+)
+async def login_with_otp(
+    request: Request, # Để lấy user-agent, client_host cho session
+    otp_login_data: OtpVerificationRequest, # Sử dụng lại schema này
+    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
+):
+    # Quan trọng: Xác định otp_type cho passwordless login
+    # Hiện tại chúng ta dùng TWO_FACTOR_LOGIN, nếu bạn tạo PASSWORDLESS_LOGIN thì dùng type đó
+    if otp_login_data.otp_type != OtpTypeEnum.TWO_FACTOR_LOGIN:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Loại OTP không hợp lệ cho chức năng đăng nhập không mật khẩu. Cần: {OtpTypeEnum.TWO_FACTOR_LOGIN.value}"
+        )
+
+    user = await get_user_by_email_db(db, email=otp_login_data.email)
+    if not user:
+        # Thông báo chung để tránh dò email, hoặc nếu OTP sai, user cũng không nên biết email có tồn tại không
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, # Unauthorized vì thông tin đăng nhập sai
+            detail="Email hoặc mã OTP không chính xác.",
+        )
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, # Bad request vì user không đủ điều kiện đăng nhập
+            detail="Tài khoản người dùng chưa được kích hoạt hoặc đã bị khóa.",
+        )
+
+    # Xác thực OTP
+    is_otp_valid = await crud_verify_otp(
+        db,
+        user_id=str(user.id),
+        otp_type=otp_login_data.otp_type, # Sử dụng type từ request (TWO_FACTOR_LOGIN)
+        plain_otp_code=otp_login_data.otp_code
+    )
+
+    if not is_otp_valid:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Email hoặc mã OTP không chính xác.", # Thông báo chung
+        )
+
+    # ---- Logic tạo token và session (tương tự như /login truyền thống) ----
+    user_id_str = str(user.id)
+    current_session_count = await count_sessions_by_user_id(db, user_id_str)
+    if current_session_count >= MAX_SESSIONS_PER_USER:
+        await find_and_delete_oldest_session(db, user_id_str)
+        logger.info(f"Đã xóa session cũ nhất cho user {user.email} do đạt giới hạn {MAX_SESSIONS_PER_USER} sessions.")
+
+    token_data_payload = {"sub": user.email, "user_id": user_id_str}
+    access_token_str = create_access_token(data=token_data_payload)
+    refresh_token_str, refresh_expires_delta = create_refresh_token(data=token_data_payload)
+
+    try:
+        access_payload = jwt.decode(access_token_str, SECRET_KEY, algorithms=[ALGORITHM])
+        jti = access_payload.get("jti")
+        if not jti:
+            logger.error("JTI not found in new access token during OTP login.")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi tạo định danh session (JTI).")
+    except JWTError as e:
+        logger.error(f"Lỗi giải mã access token để lấy JTI khi login OTP: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi xử lý token.")
+
+    user_agent = request.headers.get("user-agent", "Unknown")
+    client_host = request.client.host if request.client else "Unknown"
+    device_info = f"{user_agent} ({client_host})"
+
+    # Tạo session mới
+    await create_session(db, SessionCreate(user_id=user_id_str, jti=jti, device_info=device_info))
+    
+    # Chuẩn bị nội dung là JWTTokenResponse thuần túy
+    response_content_data = JWTTokenResponse(access_token=access_token_str)
+    
+    # Tạo JSONResponse với nội dung thuần túy này để có thể set cookie
+    actual_response = JSONResponse(content=response_content_data.model_dump())
+
+    # Set HttpOnly refresh token cookie
+    cookie_params = {
+        "key": REFRESH_TOKEN_COOKIE_NAME,
+        "value": refresh_token_str,
+        "httponly": True,
+        "secure": COOKIE_SECURE,
+        "samesite": COOKIE_SAMESITE,
+        "domain": COOKIE_DOMAIN, 
+        "max_age": int(refresh_expires_delta.total_seconds()),
+        "path": "/",
+    }
+    actual_response.set_cookie(**cookie_params)
+
+    logger.info(f"Đăng nhập bằng OTP thành công cho user: {user.email}")
+    
+    # FastAPI sẽ tự động bọc response này bằng StandardApiResponse nếu bạn không dùng decorator @api_response_wrapper
+    # Tuy nhiên, vì chúng ta cần set cookie, chúng ta trả về JSONResponse trực tiếp.
+    # Để nhất quán, bạn có thể muốn /login truyền thống cũng trả về JSONResponse trực tiếp thay vì dựa vào wrapper để set cookie.
+    # Hoặc, @api_response_wrapper cần được điều chỉnh để xử lý việc set cookie nếu hàm được decorate trả về một tuple chứa cookie.
+    # Trong trường hợp này, vì Swagger cần thấy JWTTokenResponse thuần túy, nên trả JSONResponse trực tiếp là phù hợp.
+    return actual_response
+    # Yêu cầu OTP: Gọi POST /api/v1/otps/request với email của user đã active và otp_type: "2fa_login". Kiểm tra email để nhận OTP.
+    # Đăng nhập OTP: Gọi POST /api/v1/auth/login-otp với email, OTP vừa nhận, và otp_type: "2fa_login".
+
+@router.post(
+    "/reset-password-otp",
+    response_model=StandardApiResponse[MessageResponse],
+    summary="Đặt lại mật khẩu bằng email, OTP và mật khẩu mới",
+    tags=["authentication"]
+)
+@api_response_wrapper(default_success_message="Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.")
+async def reset_password_with_otp(
+    reset_data: ResetPasswordWithOtpRequest,
+    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
+):
+    user = await get_user_by_email_db(db, email=reset_data.email)
+    if not user:
+        # Thông báo chung để tránh dò email.
+        # Ngay cả khi OTP có thể đúng cho email này (nếu OTP không gắn chặt với user ID mà chỉ với email và type),
+        # việc không tìm thấy user ở bước này là đủ để từ chối.
+        logger.warning(f"Yêu cầu đặt lại mật khẩu cho email không tồn tại: {reset_data.email}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, # Hoặc 404 nhưng 400 chung chung hơn
+            detail="Thông tin không hợp lệ hoặc yêu cầu không thể được xử lý.",
+        )
+    
+    if not user.is_active:
+        # Nếu user không active, không cho phép reset password qua luồng này
+        # Trừ khi bạn có logic đặc biệt cho phép kích hoạt lại qua quên mật khẩu.
+        logger.warning(f"Yêu cầu đặt lại mật khẩu cho tài khoản không hoạt động: {reset_data.email}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Tài khoản này không hoạt động. Vui lòng liên hệ hỗ trợ.",
+        )
+
+    # Xác thực OTP loại PASSWORD_RESET
+    is_otp_valid = await crud_verify_otp(
+        db,
+        user_id=str(user.id), # OTP phải thuộc về user này
+        otp_type=OtpTypeEnum.PASSWORD_RESET,
+        plain_otp_code=reset_data.otp_code
+    )
+
+    if not is_otp_valid:
+        logger.warning(f"Mã OTP không hợp lệ hoặc đã hết hạn cho yêu cầu đặt lại mật khẩu của {reset_data.email}.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mã OTP không hợp lệ hoặc đã hết hạn.",
+        )
+
+    # Cập nhật mật khẩu mới cho user
+    password_updated = await update_user_password(
+        db, user_id=str(user.id), new_password=reset_data.new_password
+    )
+
+    if not password_updated:
+        # Điều này không nên xảy ra nếu OTP hợp lệ và user tồn tại
+        logger.error(f"Không thể cập nhật mật khẩu cho user {user.email} (quên mật khẩu) dù OTP hợp lệ.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Lỗi không xác định khi đặt lại mật khẩu. Vui lòng thử lại sau.",
+        )
+    
+    # (Tùy chọn nâng cao) Hủy tất cả các session đang hoạt động của user này
+    # from app.crud.sessions import delete_sessions_for_user_except_current
+    # await delete_sessions_for_user_except_current(db, str(user.id), None) # Xóa tất cả
+    # logger.info(f"Đã đăng xuất tất cả các session của user {user.email} sau khi đặt lại mật khẩu.")
+        
+    return MessageResponse(message="Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.")
