@@ -35,7 +35,7 @@ Dự án Finext là một ứng dụng web full-stack với backend được xâ
     ```
     - Kích hoạt môi trường ảo
     ```bash
-    .\venv\Scripts\activate  # Windows
+    .\venv\Scripts\activate
     ```
     - Cài đặt các thư viện cần thiết
     ```bash
@@ -44,7 +44,7 @@ Dự án Finext là một ứng dụng web full-stack với backend được xâ
 
     - Chạy ứng dụng
     ```bash
-    uvicorn app.main:app --reload
+    uvicorn app.main:app --reload --env-file .\.env.development
     ```
 
     - Thoát môi trường ảo
