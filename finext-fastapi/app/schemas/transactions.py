@@ -1,20 +1,23 @@
 # finext-fastapi/app/schemas/transactions.py
 from enum import Enum
-from typing import Optional, Literal
+from typing import Optional
 
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from datetime import datetime, timezone
 
 from app.utils.types import PyObjectId
 
+
 class PaymentStatusEnum(str, Enum):
-    pending = "pending"
-    succeeded = "succeeded"
-    canceled = "canceled"
+    PENDING = "pending"
+    SUCCEEDED = "succeeded"
+    CANCELED = "canceled"
+
 
 class TransactionTypeEnum(str, Enum):
-    new_purchase = "new_purchase"
-    renewal = "renewal"
+    NEW_PURCHASE = "new_purchase"
+    RENEWAL = "renewal"
+
 
 class TransactionBase(BaseModel):
     buyer_user_id: PyObjectId = Field(..., description="ID của người dùng mua hàng.")
@@ -22,13 +25,36 @@ class TransactionBase(BaseModel):
     license_key: str = Field(..., description="Khóa của gói license.")
     original_license_price: float = Field(..., ge=0, description="Giá gốc của license tại thời điểm giao dịch.")
     purchased_duration_days: int = Field(..., gt=0, description="Số ngày thời hạn của gói được mua/gia hạn.")
-    transaction_amount: float = Field(..., ge=0, description="Số tiền thực tế của giao dịch.") 
-    promotion_code: Optional[str] = Field(default=None, description="Mã khuyến mãi được áp dụng.")
-    payment_status: PaymentStatusEnum = Field(default=PaymentStatusEnum.pending, description="Trạng thái thanh toán của giao dịch.")
+
+    # Mã và số tiền giảm giá từ khuyến mãi
+    promotion_code_applied: Optional[str] = Field(default=None, description="Mã khuyến mãi đã được áp dụng cho giao dịch này.")
+    promotion_discount_amount: Optional[float] = Field(default=None, ge=0, description="Số tiền đã được giảm nhờ mã khuyến mãi.")
+
+    # Mã và số tiền giảm giá từ broker
+    broker_code_applied: Optional[str] = Field(default=None, description="Mã đối tác đã được áp dụng cho giao dịch này.")
+    broker_discount_amount: Optional[float] = Field(
+        default=None,
+        ge=0,
+        description="Số tiền đã được giảm nhờ mã giới thiệu của đối tác.",
+    )
+
+    # Tổng số tiền giảm giá (tính tổng từ promotion và broker nếu có)
+    total_discount_amount: Optional[float] = Field(default=None, ge=0, description="Tổng số tiền giảm giá từ tất cả các nguồn.")
+
+    transaction_amount: float = Field(
+        ...,
+        ge=0,
+        description="Số tiền thực tế của giao dịch (SAU KHI đã áp dụng tất cả các loại giảm giá).",
+    )
+
+    payment_status: PaymentStatusEnum = Field(
+        default=PaymentStatusEnum.PENDING,
+        description="Trạng thái thanh toán của giao dịch.",
+    )
     transaction_type: TransactionTypeEnum = Field(..., description="Loại giao dịch (mua mới hoặc gia hạn).")
     notes: Optional[str] = Field(default=None, description="Ghi chú của người dùng hoặc admin về giao dịch.")
     target_subscription_id: Optional[PyObjectId] = Field(default=None, description="ID của subscription được tạo/gia hạn (nếu có).")
-    broker_code_applied: Optional[str] = Field(default=None, description="Mã đối tác đã được áp dụng cho giao dịch này.") # MỚI
+    # broker_code_applied đã được chuyển lên trên
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -36,115 +62,145 @@ class TransactionBase(BaseModel):
         use_enum_values=True,
     )
 
-class TransactionCreateForAdmin(BaseModel): 
+
+class TransactionCreateForAdmin(BaseModel):
     buyer_user_id: PyObjectId
     transaction_type: TransactionTypeEnum
     purchased_duration_days: int = Field(..., gt=0)
-    transaction_amount: float = Field(..., ge=0) 
-    promotion_code: Optional[str] = None
+    promotion_code: Optional[str] = Field(default=None, description="Mã khuyến mãi admin muốn áp dụng.")
     notes: Optional[str] = None
-    # broker_code_applied: Optional[str] = None # Admin có thể set trực tiếp nếu cần, hoặc logic sẽ lấy từ user
+    # Admin không cần nhập broker_code ở đây, sẽ tự lấy từ user nếu có
 
     license_id_for_new_purchase: Optional[PyObjectId] = None
     subscription_id_to_renew: Optional[PyObjectId] = None
 
-    @field_validator('license_id_for_new_purchase')
+    @field_validator("license_id_for_new_purchase")
     def check_admin_new_purchase_fields(cls, v, values):
-        if 'transaction_type' in values.data and values.data['transaction_type'] == TransactionTypeEnum.new_purchase and v is None:
-            raise ValueError('license_id_for_new_purchase is required for new_purchase transactions by admin')
-        if 'transaction_type' in values.data and values.data['transaction_type'] == TransactionTypeEnum.renewal and v is not None:
-            raise ValueError('license_id_for_new_purchase must be null for renewal transactions by admin')
+        transaction_type_val = values.data.get("transaction_type")
+        if transaction_type_val == TransactionTypeEnum.NEW_PURCHASE and v is None:
+            raise ValueError("license_id_for_new_purchase is required for new_purchase transactions by admin")
+        if transaction_type_val == TransactionTypeEnum.RENEWAL and v is not None:
+            raise ValueError("license_id_for_new_purchase must be null for renewal transactions by admin")
         return v
 
-    @field_validator('subscription_id_to_renew')
+    @field_validator("subscription_id_to_renew")
     def check_admin_renewal_fields(cls, v, values):
-        if 'transaction_type' in values.data and values.data['transaction_type'] == TransactionTypeEnum.renewal and v is None:
-            raise ValueError('subscription_id_to_renew is required for renewal transactions by admin')
-        if 'transaction_type' in values.data and values.data['transaction_type'] == TransactionTypeEnum.new_purchase and v is not None:
-            raise ValueError('subscription_id_to_renew must be null for new_purchase transactions by admin')
+        transaction_type_val = values.data.get("transaction_type")
+        if transaction_type_val == TransactionTypeEnum.RENEWAL and v is None:
+            raise ValueError("subscription_id_to_renew is required for renewal transactions by admin")
+        if transaction_type_val == TransactionTypeEnum.NEW_PURCHASE and v is not None:
+            raise ValueError("subscription_id_to_renew must be null for new_purchase transactions by admin")
         return v
-    
+
     model_config = ConfigDict(
         json_schema_extra={
-            "example": { 
+            "example": {
                 "buyer_user_id": "60d5ec49f7b4e6a0e7d5c2a1",
                 "transaction_type": "new_purchase",
                 "license_id_for_new_purchase": "60d5ec49f7b4e6a0e7d5c2b2",
                 "purchased_duration_days": 30,
-                "transaction_amount": 99.99,
-                "promotion_code": "NEWUSER20",
-                "notes": "Khách hàng mới, áp dụng KM."
-                # "broker_code_applied": "PARTNER1" # Ví dụ admin set
+                "promotion_code": "ADMINSPECIAL",
+                "notes": "Admin tạo giao dịch, áp dụng KM đặc biệt.",
             }
         }
     )
+
 
 class TransactionCreateByUser(BaseModel):
     transaction_type: TransactionTypeEnum = Field(..., description="Loại giao dịch: mua mới hoặc gia hạn.")
-    license_id_for_new_purchase: Optional[PyObjectId] = Field(default=None, description="ID của license người dùng muốn mua (bắt buộc nếu mua mới).")
-    subscription_id_to_renew: Optional[PyObjectId] = Field(default=None, description="ID của subscription hiện tại người dùng muốn gia hạn (bắt buộc nếu gia hạn).")
+    license_id_for_new_purchase: Optional[PyObjectId] = Field(
+        default=None,
+        description="ID của license người dùng muốn mua (bắt buộc nếu mua mới).",
+    )
+    subscription_id_to_renew: Optional[PyObjectId] = Field(
+        default=None,
+        description="ID của subscription hiện tại người dùng muốn gia hạn (bắt buộc nếu gia hạn).",
+    )
     promotion_code: Optional[str] = Field(default=None, max_length=50, description="Mã khuyến mãi (nếu có).")
     user_notes: Optional[str] = Field(default=None, max_length=500, description="Ghi chú từ người dùng (nếu có).")
-    broker_code: Optional[str] = Field(default=None, description="Mã đối tác tùy chọn nhập tại thời điểm giao dịch.") # MỚI
-
-
-    @field_validator('license_id_for_new_purchase')
-    def check_user_new_purchase_fields(cls, v, values):
-        if 'transaction_type' in values.data and values.data['transaction_type'] == TransactionTypeEnum.new_purchase and v is None:
-            raise ValueError('license_id_for_new_purchase is required for new_purchase transactions by user')
-        if 'transaction_type' in values.data and values.data['transaction_type'] == TransactionTypeEnum.renewal and v is not None:
-            raise ValueError('license_id_for_new_purchase must be null for renewal transactions by user')
-        return v
-
-    @field_validator('subscription_id_to_renew')
-    def check_user_renewal_fields(cls, v, values):
-        if 'transaction_type' in values.data and values.data['transaction_type'] == TransactionTypeEnum.renewal and v is None:
-            raise ValueError('subscription_id_to_renew is required for renewal transactions by user')
-        if 'transaction_type' in values.data and values.data['transaction_type'] == TransactionTypeEnum.new_purchase and v is not None:
-            raise ValueError('subscription_id_to_renew must be null for new_purchase transactions by user')
-        return v
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": { 
-                "transaction_type": "new_purchase",
-                "license_id_for_new_purchase": "60d5ec49f7b4e6a0e7d5c2b2", 
-                "promotion_code": "WELCOME10",
-                "user_notes": "Tôi muốn mua gói này.",
-                "broker_code": "XYZ1" # MỚI
-            }
-        }
+    broker_code: Optional[str] = Field(
+        default=None,
+        description="Mã đối tác tùy chọn nhập tại thời điểm giao dịch (nếu user chưa có mã GT mặc định hoặc muốn ghi đè).",
     )
 
-class TransactionUpdateByAdmin(BaseModel):
-    transaction_amount: Optional[float] = Field(default=None, ge=0)
-    purchased_duration_days: Optional[int] = Field(default=None, gt=0)
-    promotion_code: Optional[str] = Field(default=None) 
-    notes: Optional[str] = Field(default=None)
-    # broker_code_applied: Optional[str] = Field(default=None) # Admin có thể cập nhật nếu cần
-    
+    @field_validator("license_id_for_new_purchase")
+    def check_user_new_purchase_fields(cls, v, values):
+        transaction_type_val = values.data.get("transaction_type")
+        if transaction_type_val == TransactionTypeEnum.NEW_PURCHASE and v is None:
+            raise ValueError("license_id_for_new_purchase is required for new_purchase transactions by user")
+        if transaction_type_val == TransactionTypeEnum.RENEWAL and v is not None:
+            raise ValueError("license_id_for_new_purchase must be null for renewal transactions by user")
+        return v
+
+    @field_validator("subscription_id_to_renew")
+    def check_user_renewal_fields(cls, v, values):
+        transaction_type_val = values.data.get("transaction_type")
+        if transaction_type_val == TransactionTypeEnum.RENEWAL and v is None:
+            raise ValueError("subscription_id_to_renew is required for renewal transactions by user")
+        if transaction_type_val == TransactionTypeEnum.NEW_PURCHASE and v is not None:
+            raise ValueError("subscription_id_to_renew must be null for new_purchase transactions by user")
+        return v
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "transaction_amount": 95.00,
-                "purchased_duration_days": 35,
-                "promotion_code": "LOYALTY5",
-                "notes": "Cập nhật giá và thêm ghi chú."
-                # "broker_code_applied": "PARTNER2"
+                "transaction_type": "new_purchase",
+                "license_id_for_new_purchase": "60d5ec49f7b4e6a0e7d5c2b2",
+                "promotion_code": "WELCOME10",
+                "user_notes": "Tôi muốn mua gói này.",
+                "broker_code": "XYZ1",
             }
         }
     )
 
+
+class TransactionUpdateByAdmin(BaseModel):
+    purchased_duration_days: Optional[int] = Field(default=None, gt=0)
+    promotion_code: Optional[str] = Field(
+        default=None,
+        description="Cập nhật mã khuyến mãi. Gửi chuỗi rỗng hoặc null để xóa.",
+    )
+    notes: Optional[str] = Field(default=None)
+    # Admin có thể muốn ghi đè broker code trong một số trường hợp đặc biệt cho giao dịch PENDING
+    broker_code_applied_override: Optional[str] = Field(default=None, description="Ghi đè mã đối tác. Gửi chuỗi rỗng hoặc null để xóa.")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "purchased_duration_days": 35,
+                "promotion_code": "LOYALTY5",
+                "notes": "Cập nhật giá và thêm ghi chú.",
+                "broker_code_applied_override": "NEWBROKER",
+            }
+        }
+    )
+
+
 class TransactionInDB(TransactionBase):
-    id: PyObjectId = Field(alias="_id") 
+    id: PyObjectId = Field(alias="_id")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+
 class TransactionPublic(TransactionBase):
-    id: PyObjectId = Field(alias="_id") 
+    id: PyObjectId = Field(alias="_id")
     created_at: datetime
     updated_at: datetime
 
-class TransactionStatusUpdate(BaseModel):
-    status: Literal[PaymentStatusEnum.succeeded, PaymentStatusEnum.canceled]
-    admin_notes: Optional[str] = Field(default=None, description="Ghi chú thêm của admin khi xác nhận hoặc hủy.")
+
+class TransactionPaymentConfirmationRequest(BaseModel):  # Schema mới cho body của endpoint confirm
+    admin_notes: Optional[str] = Field(default=None, description="Ghi chú của admin khi xác nhận thanh toán.")
+    final_transaction_amount_override: Optional[float] = Field(
+        default=None,
+        ge=0,
+        description="Số tiền giao dịch cuối cùng do admin ghi đè (nếu cần thiết).",
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "admin_notes": "Khách hàng đã chuyển khoản đủ.",
+                "final_transaction_amount_override": 150000.00,  # Ví dụ admin sửa lại giá cuối
+            }
+        }
+    )

@@ -78,8 +78,13 @@ async def connect_to_mongo():
             await db.brokers.create_index("broker_code", unique=True)
             await db.brokers.create_index("is_active")
 
+            # promotions collection indexes (MỚI)
+            await db.promotions.create_index("promotion_code", unique=True)
+            await db.promotions.create_index("is_active")
+            await db.promotions.create_index("end_date") # Hữu ích cho việc query các mã sắp hết hạn
 
-            logger.info("Đã tạo/đảm bảo các indexes cần thiết cho user_db (bao gồm transactions và brokers).")
+
+            logger.info("Đã tạo/đảm bảo các indexes cần thiết cho user_db")
         
         active_dbs = [name for name, db_instance in mongodb.dbs.items() if db_instance is not None]
         if active_dbs:

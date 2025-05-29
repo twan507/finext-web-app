@@ -29,6 +29,8 @@ PROTECTED_USER_EMAILS = [
 PROTECTED_ROLE_NAMES = ["admin", "user", "broker"]
 PROTECTED_LICENSE_KEYS = ["ADMIN", "PARTNER", "EXAMPLE"]
 
+# Phần trăm giảm giá cho broker
+BROKER_DISCOUNT_PERCENTAGE = 10 
 
 # Session Management
 MAX_SESSIONS_PER_USER = 3

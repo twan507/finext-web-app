@@ -49,7 +49,6 @@ class LicenseUpdate(BaseModel):
     price: Optional[float] = Field(None, ge=0)
     duration_days: Optional[int] = Field(None, gt=0)
     feature_keys: Optional[List[str]] = Field(None)
-    is_active: Optional[bool] = Field(None, description="Cập nhật trạng thái hoạt động của license.") # MỚI
 
     model_config = ConfigDict(
         json_schema_extra={

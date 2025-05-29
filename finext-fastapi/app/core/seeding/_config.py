@@ -74,11 +74,11 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
     },
     # Transaction Management
     {
-        "name": "transaction:create_any", 
+        "name": "transaction:create_any",
         "description": "Quyền tạo giao dịch mới cho bất kỳ người dùng nào (admin).",
     },
     {
-        "name": "transaction:create_own", 
+        "name": "transaction:create_own",
         "description": "Quyền tự tạo đơn hàng/giao dịch mới cho chính mình.",
     },
     {
@@ -106,35 +106,35 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
         "name": "broker:create",
         "description": "Quyền tạo Đối tác mới.",
     },
-    {
-        "name": "broker:list",
-        "description": "Quyền xem danh sách Đối tác."
-    },
-    {
-        "name": "broker:read_any",
-        "description": "Quyền xem chi tiết Đối tác bất kỳ."
-    },
+    {"name": "broker:list", "description": "Quyền xem danh sách Đối tác."},
+    {"name": "broker:read_any", "description": "Quyền xem chi tiết Đối tác bất kỳ."},
     {
         "name": "broker:read_self",
-        "description": "Quyền tự xem thông tin Đối tác của mình."
+        "description": "Quyền tự xem thông tin Đối tác của mình.",
     },
     {
         "name": "broker:update_any",
-        "description": "Quyền cập nhật Đối tác bất kỳ (ví dụ: is_active)."
+        "description": "Quyền cập nhật Đối tác bất kỳ (ví dụ: is_active).",
     },
-    {
-        "name": "broker:delete_any",
-        "description": "Quyền xóa Đối tác."
-    },
+    {"name": "broker:delete_any", "description": "Quyền xóa Đối tác."},
     {
         "name": "broker:validate",
-        "description": "Quyền kiểm tra tính hợp lệ của một broker_code."
+        "description": "Quyền kiểm tra tính hợp lệ của một broker_code.",
     },
     # Transaction permissions for Broker (MỚI)
     {
         "name": "transaction:read_referred",
-        "description": "Quyền xem các giao dịch được giới thiệu bởi mình (Đối tác)."
-    }
+        "description": "Quyền xem các giao dịch được giới thiệu bởi mình (Đối tác).",
+    },
+    # Promotion Management (MỚI)
+    {
+        "name": "promotion:manage",
+        "description": "Quyền quản lý (CRUD) các mã khuyến mãi (admin).",
+    },
+    {
+        "name": "promotion:validate",
+        "description": "Quyền kiểm tra tính hợp lệ của một mã khuyến mãi (user/public).",
+    },
 ]
 
 ALL_DEFAULT_PERMISSION_NAMES: Set[str] = {p["name"] for p in DEFAULT_PERMISSIONS_DATA}

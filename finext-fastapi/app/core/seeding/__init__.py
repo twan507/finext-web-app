@@ -9,6 +9,7 @@ from ._seed_licenses import seed_licenses
 from ._seed_users import seed_users
 from ._seed_brokers import seed_brokers 
 from ._seed_subscriptions import seed_subscriptions
+from ._seed_promotions import seed_promotions
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,8 @@ async def seed_initial_data(db: AsyncIOMotorDatabase):
         permission_ids_map = await seed_permissions(db)
         await seed_features(db) 
         license_ids_map = await seed_licenses(db) 
-
+        await seed_promotions(db)
+        
         # Bước 2: Seeding Roles (phụ thuộc permissions)
         role_ids_map = await seed_roles(db, permission_ids_map)
         if role_ids_map is None: # Sửa: Kiểm tra role_ids_map is None

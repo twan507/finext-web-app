@@ -1,29 +1,32 @@
 # finext-fastapi/app/main.py
+import json
 import logging
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, Request, status, HTTPException
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.encoders import jsonable_encoder
-import json
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-
-from .core.database import (
-    connect_to_mongo,
-    close_mongo_connection,
-    get_database
-)
-from .core.seeding import seed_initial_data
-
-# routers cũ
-from .routers import auth, users, roles, permissions, sessions, sse, subscriptions, transactions
-from .routers import brokers as brokers_router
-# THÊM IMPORT ROUTER MỚI
-from .routers import licenses as licenses_router # <--- THÊM DÒNG NÀY
+from fastapi.responses import JSONResponse
 
 from app.utils.response_wrapper import StandardApiResponse
+
+from .core.database import close_mongo_connection, connect_to_mongo, get_database
+from .core.seeding import seed_initial_data
+from .routers import (
+    auth,
+    brokers,
+    licenses,
+    permissions,
+    promotions,
+    roles,
+    sessions,
+    sse,
+    subscriptions,
+    transactions,
+    users,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -115,8 +118,9 @@ app.include_router(sessions.router, prefix="/api/v1/sessions", tags=["sessions"]
 app.include_router(subscriptions.router, prefix="/api/v1/subscriptions", tags=["subscriptions"])
 app.include_router(sse.router, prefix="/api/v1/sse", tags=["sse"])
 app.include_router(transactions.router, prefix="/api/v1/transactions", tags=["transactions"])
-app.include_router(brokers_router.router, prefix="/api/v1/brokers", tags=["brokers"])
-app.include_router(licenses_router.router, prefix="/api/v1/licenses", tags=["licenses"])
+app.include_router(brokers.router, prefix="/api/v1/brokers", tags=["brokers"])
+app.include_router(licenses.router, prefix="/api/v1/licenses", tags=["licenses"])
+app.include_router(promotions.router, prefix="/api/v1/promotions", tags=["promotions"])
 
 
 @app.get("/api/v1")

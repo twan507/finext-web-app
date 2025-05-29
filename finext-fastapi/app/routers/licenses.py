@@ -88,7 +88,7 @@ async def read_license_by_id_endpoint(
 @router.put(
     "/{license_id}",
     response_model=StandardApiResponse[LicensePublic],
-    summary="[Admin] Cập nhật thông tin một license (bao gồm cả trạng thái active/inactive)",
+    summary="[Admin] Cập nhật thông tin một license",
     dependencies=[Depends(require_permission("license", "manage"))],
     tags=["licenses"],
 )
