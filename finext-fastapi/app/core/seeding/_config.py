@@ -151,6 +151,10 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
         "name": "watchlist:delete_own",
         "description": "Quyền tự xóa danh sách theo dõi của mình.",
     },
+        {
+        "name": "upload:create",
+        "description": "Quyền upload file/image cho chính mình.",
+    },
 ]
 
 ALL_DEFAULT_PERMISSION_NAMES: Set[str] = {p["name"] for p in DEFAULT_PERMISSIONS_DATA}

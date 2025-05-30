@@ -89,6 +89,11 @@ async def connect_to_mongo():
             await db.watchlists.create_index("stock_symbols") # If you plan to query by stocks often
             await db.watchlists.create_index("created_at")
 
+            # uploads collection indexes (NEW)
+            await db.uploads.create_index("user_id")
+            await db.uploads.create_index("upload_key")
+            await db.uploads.create_index("object_name", unique=True)
+
             logger.info("Đã tạo/đảm bảo các indexes cần thiết cho user_db")
         
         active_dbs = [name for name, db_instance in mongodb.dbs.items() if db_instance is not None]

@@ -29,7 +29,8 @@ from .routers import (
     users,
     emails,
     otps,
-    watchlists
+    watchlists,
+    uploads
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -133,6 +134,7 @@ app.include_router(promotions.router, prefix="/api/v1/promotions", tags=["promot
 app.include_router(emails.router, prefix="/api/v1/emails", tags=["emails"])
 app.include_router(otps.router, prefix="/api/v1/otps", tags=["otps"])
 app.include_router(watchlists.router, prefix="/api/v1/watchlists", tags=["watchlists"])
+app.include_router(uploads.router, prefix="/api/v1/uploads", tags=["uploads"])
 
 
 @app.get("/api/v1")

@@ -264,6 +264,14 @@ def require_permission(resource: str, action: str):
                 allowed = True
             required_permission_context = "feature:manage"
 
+        # ---- FEATURE RESOURCE ----
+        elif resource == "upload":
+            # Tương tự như license, giả định action "manage" cho tất cả CRUD features
+            permission_to_check = f"upload:{action}"  # Sẽ là "feature:manage"
+            if permission_to_check == "upload:create" and "upload:create" in user_permissions:
+                allowed = True
+            required_permission_context = "upload:manage"
+
         # ---- WATCHLIST RESOURCE ----
         elif resource == "watchlist":
             permission_to_check = f"watchlist:{action}" # Ví dụ: "watchlist:create_own"

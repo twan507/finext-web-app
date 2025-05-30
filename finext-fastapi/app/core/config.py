@@ -60,6 +60,15 @@ OTP_EXPIRE_MINUTES = 5  # OTP validity period in minutes
 MAX_OTP_ATTEMPTS = 10 # Maximum verification attempts for an OTP (handle this in logic if needed)
 # -------------------------
 
+# --- Cloudflare R2 Configuration ---
+R2_ENDPOINT_URL = os.getenv("R2_ENDPOINT_URL")
+R2_ACCESS_KEY_ID = os.getenv("R2_ACCESS_KEY_ID")
+R2_SECRET_ACCESS_KEY = os.getenv("R2_SECRET_ACCESS_KEY")
+R2_BUCKET_NAME = os.getenv("R2_BUCKET_NAME")
+R2_PUBLIC_URL_BASE = os.getenv("R2_PUBLIC_URL_BASE")
+# ---------------------------------
+
+
 if not MONGODB_CONNECTION_STRING:
     print("CẢNH BÁO: Biến môi trường MONGODB_CONNECTION_STRING chưa được thiết lập.")
 
@@ -75,3 +84,15 @@ if not MAIL_FROM:
     print("CẢNH BÁO: Biến môi trường MAIL_FROM chưa được thiết lập cho việc gửi email.")
 if not MAIL_SERVER:
     print("CẢNH BÁO: Biến môi trường MAIL_SERVER chưa được thiết lập cho việc gửi email.")
+
+# Kiểm tra các biến R2 quan trọng
+if not R2_ENDPOINT_URL:
+    print("CẢNH BÁO: Biến môi trường R2_ENDPOINT_URL chưa được thiết lập.")
+if not R2_ACCESS_KEY_ID:
+    print("CẢNH BÁO: Biến môi trường R2_ACCESS_KEY_ID chưa được thiết lập.")
+if not R2_SECRET_ACCESS_KEY:
+    print("CẢNH BÁO: Biến môi trường R2_SECRET_ACCESS_KEY chưa được thiết lập.")
+if not R2_BUCKET_NAME:
+    print("CẢNH BÁO: Biến môi trường R2_BUCKET_NAME chưa được thiết lập.")
+if not R2_PUBLIC_URL_BASE:
+    print("CẢNH BÁO: Biến môi trường R2_PUBLIC_URL_BASE chưa được thiết lập.")

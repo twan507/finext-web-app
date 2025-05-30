@@ -37,6 +37,7 @@ async def seed_roles(db: AsyncIOMotorDatabase, permission_ids_map: Dict[str, PyO
                 "watchlist:read_own",
                 "watchlist:update_own",
                 "watchlist:delete_own",
+                "upload:create",
             ],
         },
         {
@@ -56,6 +57,7 @@ async def seed_roles(db: AsyncIOMotorDatabase, permission_ids_map: Dict[str, PyO
                 "watchlist:read_own",
                 "watchlist:update_own",
                 "watchlist:delete_own",
+                "upload:create",
             ],
         },
     ]
