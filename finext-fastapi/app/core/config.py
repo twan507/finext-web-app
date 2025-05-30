@@ -60,13 +60,6 @@ OTP_EXPIRE_MINUTES = 5  # OTP validity period in minutes
 MAX_OTP_ATTEMPTS = 10 # Maximum verification attempts for an OTP (handle this in logic if needed)
 # -------------------------
 
-# --- GOOGLE OAUTH Configuration ---
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-GOOGLE_FRONTEND_REDIRECT_URI = os.getenv("GOOGLE_FRONTEND_REDIRECT_URI")
-# --- END GOOGLE OAUTH ---
-
-
 if not MONGODB_CONNECTION_STRING:
     print("CẢNH BÁO: Biến môi trường MONGODB_CONNECTION_STRING chưa được thiết lập.")
 
@@ -82,7 +75,3 @@ if not MAIL_FROM:
     print("CẢNH BÁO: Biến môi trường MAIL_FROM chưa được thiết lập cho việc gửi email.")
 if not MAIL_SERVER:
     print("CẢNH BÁO: Biến môi trường MAIL_SERVER chưa được thiết lập cho việc gửi email.")
-if not GOOGLE_CLIENT_ID:
-    print("CẢNH BÁO: Biến môi trường GOOGLE_CLIENT_ID chưa được thiết lập.")
-if not GOOGLE_CLIENT_SECRET:
-    print("CẢNH BÁO: Biến môi trường GOOGLE_CLIENT_SECRET chưa được thiết lập.")
