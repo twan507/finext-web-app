@@ -1,3 +1,2 @@
 ssl/
 .env.production
-.env.production.old

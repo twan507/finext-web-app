@@ -96,7 +96,7 @@ async def read_user_endpoint(
 @api_response_wrapper(default_success_message="Cập nhật người dùng thành công.")
 async def update_user_info_endpoint(
     user_id: PyObjectId,
-    user_update_data: UserUpdate,
+    user_update_data: UserUpdate, # UserUpdate now includes avatar_url
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
     current_user_from_token: UserInDB = Depends(get_current_active_user),
 ):
@@ -106,29 +106,35 @@ async def update_user_info_endpoint(
     if not target_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User with ID {user_id} not found.")
 
-    # Prevent email change for protected users by anyone other than themselves (if that's the logic)
-    # Or simply prevent email change for protected users at all
     update_dict = user_update_data.model_dump(exclude_unset=True)
 
-    if target_user.email in PROTECTED_USER_EMAILS:
+    if target_user.email in PROTECTED_USER_EMAILS: #
         if "email" in update_dict and update_dict["email"] != target_user.email:
-            # If it's not a self-update, or even for self-update, prevent email change for protected accounts
-            if str(current_user_from_token.id) != str(target_user.id) or True:  # True to always block for protected
+            if str(current_user_from_token.id) != str(target_user.id) or True:
                 logger.warning(
                     f"Attempt to change email for protected user {target_user.email} by {current_user_from_token.email}. Denied."
                 )
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN, detail=f"Cannot change email for protected user '{target_user.email}'."
                 )
-        # Potentially prevent other field changes for protected users
-        # if "is_active" in update_dict and update_dict["is_active"] == False:
-        # raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Cannot deactivate protected user '{target_user.email}'.")
+        # NEW: Prevent changing avatar_url of protected users directly via this endpoint
+        # Avatar for protected users should ideally be managed via a specific internal process or seeding.
+        # Or, if they are allowed to change their own avatar, it should be through the /uploads/image endpoint.
+        if "avatar_url" in update_dict and str(current_user_from_token.id) != str(target_user.id) :
+             logger.warning(
+                f"Attempt to change avatar_url for protected user {target_user.email} by admin {current_user_from_token.email} via user update endpoint. Denied."
+            )
+             raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail=f"Avatar for protected user '{target_user.email}' cannot be changed directly here. Use the upload feature."
+            )
+
 
     update_data_dict = user_update_data.model_dump(exclude_unset=True)
 
     if not update_data_dict:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Không có dữ liệu nào được cung cấp để cập nhật.")
 
+    # Handle referral_code as before
     if "referral_code" in update_data_dict:
         new_ref_code = update_data_dict["referral_code"]
         if new_ref_code is not None and new_ref_code != "":
@@ -142,7 +148,8 @@ async def update_user_info_endpoint(
         elif new_ref_code == "" or new_ref_code is None:
             update_data_dict["referral_code"] = None
 
-    if "email" in update_data_dict and update_data_dict["email"] != target_user.email:  # Check only if email is being changed
+    # Handle email change check as before
+    if "email" in update_data_dict and update_data_dict["email"] != target_user.email:
         existing_user_with_new_email = await users_collection.find_one(
             {"email": update_data_dict["email"], "_id": {"$ne": ObjectId(user_id)}}
         )
@@ -151,12 +158,17 @@ async def update_user_info_endpoint(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Email '{update_data_dict['email']}' đã được sử dụng bởi người dùng khác.",
             )
+    
+    # Handle avatar_url: if explicitly set to null or empty string, it means remove avatar.
+    # The upload endpoint is the primary way to SET an avatar. This endpoint can be used to CLEAR it.
+    if "avatar_url" in update_data_dict and (update_data_dict["avatar_url"] == "" or update_data_dict["avatar_url"] is None):
+        update_data_dict["avatar_url"] = None # Ensure it's stored as null if cleared
 
     update_data_dict["updated_at"] = datetime.now(timezone.utc)
 
     updated_result = await users_collection.update_one({"_id": ObjectId(user_id)}, {"$set": update_data_dict})
 
-    if updated_result.matched_count == 0:  # Should have been caught by target_user check
+    if updated_result.matched_count == 0:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User with ID {user_id} not found for update.",

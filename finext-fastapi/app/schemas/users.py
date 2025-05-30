@@ -4,8 +4,6 @@ from typing import Optional, List
 from app.utils.types import PyObjectId
 from datetime import datetime, timezone
 
-# Bỏ class LicenseInfo và AwareUtcDatetime nếu không dùng ở đâu khác
-
 class UserCreate(BaseModel):
     """Schema for creating a new user (input)."""
     full_name: str
@@ -13,6 +11,7 @@ class UserCreate(BaseModel):
     phone_number: str
     password: str = Field(..., min_length=8)
     referral_code: Optional[str] = Field(default=None, description="Mã giới thiệu của Đối tác (nếu có).")
+    avatar_url: Optional[str] = Field(default=None, description="URL to the user's avatar image.") # NEW
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -21,7 +20,8 @@ class UserCreate(BaseModel):
                 "email": "testuser@example.com",
                 "phone_number": "0912345678",
                 "password": "SecurePassword123!",
-                "referral_code": "ABCD"
+                "referral_code": "ABCD",
+                "avatar_url": "https://r2.yourdomain.com/avatars/user_id/image.jpg" # NEW
             }
         }
     )
@@ -38,6 +38,8 @@ class UserSeed(BaseModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     is_active: bool = Field(default=True)
     referral_code: Optional[str] = Field(default=None, description="Mã giới thiệu của Đối tác (nếu có).") # MỚI
+    avatar_url: Optional[str] = Field(default=None, description="URL to the user's avatar image.") # NEW
+
 
 class UserUpdate(BaseModel):
     """Schema for updateting user data."""
@@ -45,6 +47,7 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = Field(default=None)
     phone_number: Optional[str] = Field(default=None)
     referral_code: Optional[str] = Field(default=None, description="Cập nhật mã giới thiệu cho người dùng.") # MỚI
+    avatar_url: Optional[str] = Field(default=None, description="URL to the user's avatar image. Send null or empty string to remove.") # NEW
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -52,7 +55,8 @@ class UserUpdate(BaseModel):
                 "email": "updateduser@example.com",
                 "full_name": "Tran Thi Updated",
                 "phone_number": "0987654322",
-                "referral_code": "XYZ1" # MỚI
+                "referral_code": "XYZ1", # MỚI
+                "avatar_url": "https://r2.yourdomain.com/avatars/user_id/new_image.jpg" # NEW
             }
         }
     )
@@ -65,8 +69,9 @@ class UserPublic(BaseModel):
     email: EmailStr
     phone_number: str
     subscription_id: Optional[PyObjectId] = None
-    is_active: Optional[bool] = None 
+    is_active: Optional[bool] = None
     referral_code: Optional[str] = None # MỚI
+    avatar_url: Optional[str] = Field(default=None, description="URL to the user's avatar image.") # NEW
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -86,6 +91,7 @@ class UserInDB(BaseModel):
     updated_at: datetime
     is_active: bool
     referral_code: Optional[str] = None # MỚI
+    avatar_url: Optional[str] = Field(default=None, description="URL to the user's avatar image.") # NEW
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -102,5 +108,3 @@ class UserRoleModificationRequest(BaseModel):
             }
         }
     )
-
-# Bỏ UserLicenseAssignRequest
