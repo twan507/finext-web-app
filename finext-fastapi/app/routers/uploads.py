@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from PIL import Image
-
+from bson import ObjectId 
 from app.core.database import get_database
 from app.auth.dependencies import get_current_active_user
 from app.schemas.users import UserPublic
@@ -182,7 +182,6 @@ async def upload_image(
         public_url = await upload_file_to_r2(
             file_object=compressed_file_obj,
             object_name=object_name,
-            content_type=final_content_type,
             acl="public-read"
         )
 
@@ -190,15 +189,18 @@ async def upload_image(
         upload_data = UploadCreate(
             user_id=current_user.id,
             upload_key=upload_key,
-            filename=file.filename,
             file_url=public_url,
-            content_type=final_content_type,
-            size=compressed_size,  # Lưu kích thước sau khi nén
+            size=compressed_size,
             object_name=object_name
         )
 
         upload_in_db = UploadInDB(**upload_data.model_dump())
-        result = await db.uploads.insert_one(upload_in_db.model_dump(by_alias=True, exclude={"id"}))
+        
+        # Chuyển đổi user_id thành ObjectId khi insert vào MongoDB
+        upload_dict = upload_in_db.model_dump(by_alias=True, exclude={"id"})
+        upload_dict["user_id"] = ObjectId(current_user.id)  # Chuyển đổi ở đây
+        
+        result = await db.uploads.insert_one(upload_dict)  # Sử dụng upload_dict thay vì upload_in_db.model_dump()
         
         # Lấy document vừa tạo
         created_upload = await db.uploads.find_one({"_id": result.inserted_id})

@@ -70,7 +70,6 @@ def get_s3_client() -> BaseClient:
 async def upload_file_to_r2(
     file_object: IO[bytes],
     object_name: str,
-    content_type: Optional[str] = None,
     acl: str = "public-read"
 ) -> str:
     """
@@ -86,8 +85,6 @@ async def upload_file_to_r2(
     s3 = get_s3_client() # Lấy client
 
     extra_args: dict[str, Any] = {}
-    if content_type:
-        extra_args['ContentType'] = content_type
     
     if acl:
         extra_args['ACL'] = acl

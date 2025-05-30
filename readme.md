@@ -62,7 +62,10 @@ Dự án Finext là một ứng dụng web full-stack với backend được xâ
 
 4.  **Chạy server (Từ lần thứ 2 trở đi):**
     ```bash
-    .\run_dev.bat  # Windows
+    python main.py              # Chạy server
+    python main.py run          # Chạy server
+    python main.py venv         # Tạo môi trường ảo
+    python main.py install      # Cài đặt dependencies
     ```
 
     Server chạy tại `http://127.0.0.1:8000`.
