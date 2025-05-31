@@ -14,36 +14,45 @@ async def seed_promotions(db: AsyncIOMotorDatabase) -> None:
 
     default_promotions_data: List[Dict[str, Any]] = [
         {
-            "promotion_code": "WELCOME20",
-            "description": "Giảm 20% cho người dùng mới đăng ký gói bất kỳ lần đầu.",
+            "promotion_code": "DEMO_NEWUSER",
+            "description": "🎉 Demo: Giảm 15% cho người dùng mới",
             "discount_type": DiscountTypeEnum.PERCENTAGE,
-            "discount_value": 20,
+            "discount_value": 15,
             "is_active": True,
-            "start_date": datetime.now(timezone.utc) - timedelta(days=1), # Đã bắt đầu
-            "end_date": datetime.now(timezone.utc) + timedelta(days=365), # Hết hạn sau 1 năm
-            "usage_limit": 1, # Mỗi user chỉ dùng 1 lần (logic này cần xử lý ở tầng cao hơn, hiện tại là tổng lượt)
-                             # Hoặc để None nếu không giới hạn tổng lượt, chỉ giới hạn theo logic nghiệp vụ
-            "applicable_license_keys": None, # Áp dụng cho tất cả
+            "start_date": datetime.now(timezone.utc) - timedelta(days=1), 
+            "end_date": datetime.now(timezone.utc) + timedelta(days=30),
+            "usage_limit": 100,
+            "applicable_license_keys": None,
         },
         {
-            "promotion_code": "SAVE50K",
-            "description": "Giảm trực tiếp 50.000 VNĐ cho đơn hàng trên 200.000 VNĐ.",
+            "promotion_code": "DEMO_FLASH30K",
+            "description": "⚡ Demo: Flash Sale - Giảm 30.000 VNĐ cho tất cả sản phẩm",
             "discount_type": DiscountTypeEnum.FIXED_AMOUNT,
-            "discount_value": 50000,
+            "discount_value": 30000,
             "is_active": True,
-            "start_date": None, # Không có ngày bắt đầu cụ thể (luôn active nếu is_active=True)
-            "end_date": None,   # Không có ngày kết thúc cụ thể
-            "usage_limit": 1000,
-            # "min_purchase_amount": 200000, # Đã bỏ
+            "start_date": datetime.now(timezone.utc), 
+            "end_date": datetime.now(timezone.utc) + timedelta(days=7), # Demo 7 ngày
+            "usage_limit": 2,
             "applicable_license_keys": None,
         },
     ]
 
+    existing_codes = []
     for promo_data in default_promotions_data:
         existing_promo = await promotions_collection.find_one({"promotion_code": promo_data["promotion_code"].upper()})
-        if not existing_promo:
+        if existing_promo:
+            existing_codes.append(promo_data["promotion_code"])
+
+    # Nếu tất cả mã đã tồn tại, báo và bỏ qua
+    if len(existing_codes) == len(default_promotions_data):
+        logger.info("Không có promotions mới nào cần seed.")
+        return
+
+    # Chỉ seed những mã chưa tồn tại
+    for promo_data in default_promotions_data:
+        if promo_data["promotion_code"] not in existing_codes:
             try:
-                promo_to_create = PromotionCreate(**promo_data) # type: ignore
+                promo_to_create = PromotionCreate(**promo_data)
 
                 now = datetime.now(timezone.utc)
                 doc_to_insert = promo_to_create.model_dump()
@@ -56,5 +65,3 @@ async def seed_promotions(db: AsyncIOMotorDatabase) -> None:
                 logger.info(f"Đã seed mã khuyến mãi: {promo_to_create.promotion_code}")
             except Exception as e:
                 logger.error(f"Lỗi khi seed mã khuyến mãi {promo_data.get('promotion_code')}: {e}", exc_info=True)
-        else:
-            logger.info(f"Mã khuyến mãi '{promo_data['promotion_code']}' đã tồn tại. Bỏ qua seeding.")

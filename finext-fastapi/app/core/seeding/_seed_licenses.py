@@ -15,40 +15,42 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
     licenses_collection = db.get_collection("licenses")
     created_license_ids: Dict[str, PyObjectId] = {}  # key -> str(ObjectId)
 
-    default_licenses_data: List[
-        Dict[str, Any]
-    ] = [  # Đảm bảo type hint là List[Dict[str, Any]]
+    default_licenses_data: List[Dict[str, Any]] = [
         {
-            "key": "ADMIN",  # ĐÃ SỬA
+            "key": "ADMIN",
             "name": "License Quản Trị Viên",
-            "price": 0.0,
-            "duration_days": 99999,  # Thời hạn rất dài
-            "feature_keys": list(ALL_DEFAULT_FEATURE_KEYS),  # Admin có tất cả features
+            "price": 0,
+            "duration_days": 99999,
+            "feature_keys": list(ALL_DEFAULT_FEATURE_KEYS),
         },
         {
-            "key": "PARTNER",  # ĐÃ SỬA
+            "key": "PARTNER",
             "name": "License Đối Tác",
-            "price": 0.0,  # Hoặc giá tượng trưng nếu có
-            "duration_days": 99999,  # Thời hạn rất dài
-            "feature_keys": [  # Danh sách features ví dụ cho Đối tác
-                "view_basic_chart",
-                "view_advanced_chart",
-                "export_data",
-                "sse_access",
-                "api_access",
+            "price": 0,
+            "duration_days": 99999,
+            "feature_keys": [
+                "basic_feature",
+                "broker_feature",
+                "advanced_feature",
             ],
         },
         {
+            "key": "BASIC",
+            "name": "License Cơ bản",
+            "price": 0,
+            "duration_days": 99999,
+            "feature_keys": [
+                "basic_feature",
+                "advanced_feature",
+            ],
+        },
+                {
             "key": "EXAMPLE",
-            "name": "Gói Ví Dụ",
-            "price": 99.0,
+            "name": "License Ví Dụ",
+            "price": 1000000,
             "duration_days": 30,
             "feature_keys": [
-                "view_advanced_chart",
-                "export_data",
-                "enable_pro_indicator",
-                "sse_access",
-                "api_access",
+                "basic_feature",
             ],
         },
     ]
@@ -56,9 +58,7 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
     async for lic_doc in licenses_collection.find({}, {"key": 1}):
         existing_license_keys.add(lic_doc["key"])
 
-    licenses_to_add = [
-        lic for lic in default_licenses_data if lic["key"] not in existing_license_keys
-    ]
+    licenses_to_add = [lic for lic in default_licenses_data if lic["key"] not in existing_license_keys]
     if licenses_to_add:
         logger.info(f"Tìm thấy {len(licenses_to_add)} licenses mới cần seed...")
         for lic_data in licenses_to_add:
@@ -69,9 +69,7 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
                 if feature_exists:
                     valid_feature_keys_for_license.append(f_key)
                 else:
-                    logger.warning(
-                        f"Feature key '{f_key}' cho license '{lic_data['key']}' không tồn tại trong DB. Bỏ qua."
-                    )
+                    logger.warning(f"Feature key '{f_key}' cho license '{lic_data['key']}' không tồn tại trong DB. Bỏ qua.")
 
             license_to_create = LicenseCreate(
                 key=lic_data["key"],
@@ -88,17 +86,13 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
                     "updated_at": dt_now,
                 }
             )
-            logger.info(
-                f"Đã tạo license: {lic_data['key']} với ID: {result.inserted_id}"
-            )
+            logger.info(f"Đã tạo license: {lic_data['key']} với ID: {result.inserted_id}")
     else:
         logger.info("Không có licenses mới nào cần seed.")
 
     # Cập nhật created_license_ids để trả về map các ID đã được tạo/tồn tại
     all_default_license_keys = {d["key"] for d in default_licenses_data}
-    async for lic_doc in licenses_collection.find(
-        {"key": {"$in": list(all_default_license_keys)}}
-    ):
+    async for lic_doc in licenses_collection.find({"key": {"$in": list(all_default_license_keys)}}):
         created_license_ids[lic_doc["key"]] = str(lic_doc["_id"])
 
     return created_license_ids

@@ -43,11 +43,10 @@ def add_jobs_to_scheduler():
             run_daily_maintenance_tasks,
             trigger=CronTrigger(hour="0", minute="0", second="0"),
             id="daily_maintenance_tasks_job",
-            name="Daily system maintenance (expirations, reminders) at 00:00 AM",
+            name="Daily system maintenance",
             replace_existing=True,
             misfire_grace_time=600 # 10 phút
         )
-        logger.info("Added job: 'daily_maintenance_tasks_job' to run daily at 00:00 AM.")
         
     except Exception as e:
         logger.error(f"Error adding jobs to scheduler: {e}", exc_info=True)
@@ -56,7 +55,6 @@ async def start_scheduler():
     if not scheduler.running:
         add_jobs_to_scheduler()
         scheduler.start()
-        logger.info("Scheduler started successfully with configured jobs.")
     else:
         logger.info("Scheduler is already running.")
 

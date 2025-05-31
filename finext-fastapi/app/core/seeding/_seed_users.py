@@ -41,7 +41,7 @@ async def seed_users(
                 "password": ADMIN_PWD,
                 "full_name": "System Administrator",
                 "phone_number": "0000000000",
-                "role_ids_str": list([admin_role_id_str, broker_role_id_str, user_role_id_str]),
+                "role_ids_str": list([admin_role_id_str, user_role_id_str]),
                 "is_active": True,
             }
         )
@@ -56,7 +56,7 @@ async def seed_users(
                     "password": ADMIN_PWD,
                     "full_name": f"Default Broker {i+1}",
                     "phone_number": f"011111111{i+1}",
-                    "role_ids_str": list(set([broker_role_id_str, user_role_id_str])), # Broker cũng là user
+                    "role_ids_str": list(set([broker_role_id_str, user_role_id_str])),
                     "is_active": True,
                 }
             )
@@ -76,15 +76,30 @@ async def seed_users(
                 }
             )
 
+    # Kiểm tra users đã tồn tại
+    existing_emails = []
     for user_data_dict in sample_users_data_dicts:
-        if not user_data_dict.get("email"): # Bỏ qua nếu email không được cấu hình
+        if not user_data_dict.get("email"):
             logger.warning(f"Bỏ qua seeding user vì email không được cung cấp trong user_data_dict: {user_data_dict.get('full_name')}")
             continue
+        
+        existing_user = await users_collection.find_one({"email": user_data_dict["email"]})
+        if existing_user:
+            existing_emails.append(user_data_dict["email"])
+            created_user_ids[user_data_dict["email"]] = str(existing_user["_id"])
 
-        existing_user = await users_collection.find_one(
-            {"email": user_data_dict["email"]}
-        )
-        if existing_user is None:
+    # Nếu tất cả users đã tồn tại, báo và bỏ qua
+    valid_users = [u for u in sample_users_data_dicts if u.get("email")]
+    if len(existing_emails) == len(valid_users):
+        logger.info("Không có users mới nào cần seed.")
+        return created_user_ids
+
+    # Chỉ seed những users chưa tồn tại
+    for user_data_dict in sample_users_data_dicts:
+        if not user_data_dict.get("email"):
+            continue
+            
+        if user_data_dict["email"] not in existing_emails:
             user_create_instance = UserSeed(
                 email=user_data_dict["email"],
                 full_name=user_data_dict["full_name"],
@@ -116,7 +131,5 @@ async def seed_users(
                 f"Đã tạo user: {user_data_dict['email']} với ID: {result.inserted_id}"
             )
             created_user_ids[user_data_dict["email"]] = str(result.inserted_id)
-        else:
-            logger.info(f"User '{user_data_dict['email']}' đã tồn tại.")
-            created_user_ids[user_data_dict["email"]] = str(existing_user["_id"])
+            
     return created_user_ids

@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 async def seed_roles(db: AsyncIOMotorDatabase, permission_ids_map: Dict[str, PyObjectId]) -> Optional[Dict[str, PyObjectId]]:
     roles_collection = db.get_collection("roles")
-    created_role_ids: Dict[str, PyObjectId] = {}  # name -> str(ObjectId)
+    created_role_ids: Dict[str, PyObjectId] = {}
 
     default_roles_data_template = [
         {
@@ -23,41 +23,41 @@ async def seed_roles(db: AsyncIOMotorDatabase, permission_ids_map: Dict[str, PyO
             "permission_names": list(ALL_DEFAULT_PERMISSION_NAMES),  # Admin có tất cả quyền
         },
         {
-            "name": "user",
+            "name": "user", # Vai trò người dùng thông thường
             "description": "Người dùng thông thường.",
             "permission_names": [
-                "user:update_own",
-                "session:list_own",
-                "session:delete_own",
-                "subscription:read_own",
-                "transaction:create_own",
-                "transaction:read_own",
-                "broker:validate",  # User có thể kiểm tra mã broker
-                "watchlist:create_own",
-                "watchlist:read_own",
-                "watchlist:update_own",
-                "watchlist:delete_own",
-                "upload:create",
+                "user:update_own", # Người dùng có thể tự cập nhật thông tin của chính mình
+                "session:list_own", # Người dùng có thể xem session của chính mình
+                "session:delete_own", # Người dùng có thể xóa session của chính mình
+                "subscription:read_own", # Người dùng có thể xem subscription của chính mình
+                "transaction:create_own", # Người dùng có thể tạo giao dịch của chính mình
+                "transaction:read_own", # Người dùng có thể xem giao dịch của chính mình
+                "broker:validate",  # Người dùng có thể kiểm tra mã giới thiệu
+                "watchlist:create_own", # Người dùng có thể tạo watchlist của chính mình
+                "watchlist:read_own", # Người dùng có thể xem watchlist của chính mình
+                "watchlist:update_own", # Người dùng có thể cập nhật watchlist của chính mình
+                "watchlist:delete_own", # Người dùng có thể xóa watchlist của chính mình
+                "upload:create", # Người dùng có thể upload file
             ],
         },
         {
             "name": "broker",  # Vai trò mới cho Đối tác
             "description": "Đối tác giới thiệu.",
             "permission_names": [
-                "user:update_own",  # Quyền cơ bản của user
-                "session:list_own",
-                "session:delete_own",
-                "subscription:read_own",
-                "transaction:create_own",
-                "transaction:read_own",
-                "broker:read_own",  # Đối tác tự xem thông tin của mình
-                "transaction:read_referred",  # Đối tác xem giao dịch mình giới thiệu
-                "broker:validate",  # Đối tác cũng có thể kiểm tra mã
-                "watchlist:create_own",
-                "watchlist:read_own",
-                "watchlist:update_own",
-                "watchlist:delete_own",
-                "upload:create",
+                "user:update_own", # Đối tác có thể tự cập nhật thông tin của chính mình
+                "session:list_own", # Đối tác có thể xem session của chính mình
+                "session:delete_own", # Đối tác có thể xóa session của chính mình
+                "subscription:read_own", # Đối tác có thể xem subscription của chính mình
+                "transaction:create_own", # Đối tác có thể tạo giao dịch của chính mình
+                "transaction:read_own", # Đối tác có thể xem giao dịch của chính mình
+                "broker:read_own", # Đối tác có thể xem thông tin Đối tác của chính mình
+                "transaction:read_referred", # Đối tác có thể xem các giao dịch được giới thiệu bởi mình
+                "broker:validate", # Đối tác có thể kiểm tra mã giới thiệu
+                "watchlist:create_own", # Đối tác có thể tạo watchlist của chính mình
+                "watchlist:read_own", # Đối tác có thể xem watchlist của chính mình
+                "watchlist:update_own", # Đối tác có thể cập nhật watchlist của chính mình
+                "watchlist:delete_own", # Đối tác có thể xóa watchlist của chính mình
+                "upload:create", # Đối tác có thể upload file
             ],
         },
     ]
@@ -104,7 +104,7 @@ async def seed_roles(db: AsyncIOMotorDatabase, permission_ids_map: Dict[str, PyO
             result = await roles_collection.insert_one(role_doc_to_insert)
             logger.info(f"Đã tạo role: {role_data_template['name']} với ID: {result.inserted_id}")
     else:
-        logger.info("Không có roles mới nào cần seed dựa trên template.")
+        logger.info("Không có roles mới nào cần seed.")
 
     # Cập nhật created_role_ids để trả về map các ID đã được tạo/tồn tại
     all_default_role_names = {r["name"] for r in default_roles_data_template}

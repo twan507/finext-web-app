@@ -29,10 +29,9 @@ USER_EMAIL_3 = os.getenv("USER_EMAIL_3")
 ADMIN_PWD = os.getenv("ADMIN_PWD")
 
 # Danh sách các email được bảo vệ
-PROTECTED_USER_EMAILS = [
-    email for email in [ADMIN_EMAIL, BROKER_EMAIL_1, BROKER_EMAIL_2, USER_EMAIL_1, USER_EMAIL_2, USER_EMAIL_3] if email
-]
+PROTECTED_USER_EMAILS = list(filter(None, [ADMIN_EMAIL, BROKER_EMAIL_1, BROKER_EMAIL_2, USER_EMAIL_1, USER_EMAIL_2, USER_EMAIL_3]))
 PROTECTED_ROLE_NAMES = ["admin", "user", "broker"]
+BASIC_LICENSE_KEY = "BASIC"
 PROTECTED_LICENSE_KEYS = ["ADMIN", "PARTNER", "EXAMPLE"]
 
 # Phần trăm giảm giá cho broker
@@ -51,19 +50,19 @@ COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN")
 # --- THÊM CẤU HÌNH EMAIL ---
 MAIL_USERNAME = os.getenv("MAIL_USERNAME", "")
 MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")
-MAIL_FROM = os.getenv("MAIL_FROM", "") # Sẽ được validate thành EmailStr sau
+MAIL_FROM = os.getenv("MAIL_FROM", "")  # Sẽ được validate thành EmailStr sau
 MAIL_PORT = int(os.getenv("MAIL_PORT", 587))
 MAIL_SERVER = os.getenv("MAIL_SERVER", "")
 MAIL_STARTTLS = os.getenv("MAIL_STARTTLS", "True").lower() == "true"
 MAIL_SSL_TLS = os.getenv("MAIL_SSL_TLS", "False").lower() == "true"
-MAIL_FROM_NAME = os.getenv("MAIL_FROM_NAME") # Optional, có thể là None
+MAIL_FROM_NAME = os.getenv("MAIL_FROM_NAME")  # Optional, có thể là None
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 # -----------------------------
 
 # --- OTP Configuration ---
 OTP_LENGTH = 6  # Length of the OTP code
 OTP_EXPIRE_MINUTES = 5  # OTP validity period in minutes
-MAX_OTP_ATTEMPTS = 10 # Maximum verification attempts for an OTP (handle this in logic if needed)
+MAX_OTP_ATTEMPTS = 10  # Maximum verification attempts for an OTP (handle this in logic if needed)
 # -------------------------
 
 # --- Cloudflare R2 Configuration ---

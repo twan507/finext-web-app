@@ -19,18 +19,16 @@ async def connect_to_mongo():
         mongodb.dbs = {}
         return
     try:
-        logger.info("Đang kết nối tới MongoDB (Async)...")
         mongodb.client = AsyncIOMotorClient(MONGODB_CONNECTION_STRING, serverSelectionTimeoutMS=5000)
         await mongodb.client.admin.command('ping')
-        logger.info("Đã kết nối thành công tới MongoDB client (Async)!")
-
         db_names_to_connect = ["user_db", "stock_db"] 
         mongodb.dbs = {}
 
         for db_name in db_names_to_connect:
             if mongodb.client: 
                  mongodb.dbs[db_name] = mongodb.client[db_name]
-                 logger.info(f"Đã thiết lập kết nối tới database (Async): {db_name}")
+
+        logger.info("Đã kết nối thành công tới MongoDB và các Databases.")
 
         if "user_db" in mongodb.dbs and mongodb.dbs["user_db"] is not None:
             db = mongodb.dbs["user_db"]
@@ -94,11 +92,11 @@ async def connect_to_mongo():
             await db.uploads.create_index("upload_key")
             await db.uploads.create_index("object_name", unique=True)
 
-            logger.info("Đã tạo/đảm bảo các indexes cần thiết cho user_db")
+            logger.info("Đã đảm bảo các indexes cần thiết cho các Collections")
         
         active_dbs = [name for name, db_instance in mongodb.dbs.items() if db_instance is not None]
         if active_dbs:
-            logger.info(f"Sử dụng các databases (Async): {', '.join(active_dbs)}")
+            logger.info(f"Kết nối các Databases: {', '.join(active_dbs)}")
         else:
             logger.warning("Không có database nào được kết nối thành công.")
 
