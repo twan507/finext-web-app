@@ -24,9 +24,11 @@ import Divider from '@mui/material/Divider';
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 
 import ThemeToggleButton from 'components/ThemeToggleButton';
-import { LoginResponse, UserSchema } from 'services/core/types';
+// SỬA: Đảm bảo UserSchema và LoginResponse được import đúng từ types.ts
+import { LoginResponse, UserSchema } from 'services/core/types'; //
 
-interface UserInfo extends UserSchema {}
+// Đổi tên interface để tránh xung đột nếu UserSchema được dùng trực tiếp ở nơi khác
+interface UserInfoFromAuth extends UserSchema {}
 
 function SignInForm() {
   const [email, setEmail] = useState('');
@@ -56,101 +58,59 @@ function SignInForm() {
       const loginParams = new URLSearchParams();
       loginParams.append('username', email);
       loginParams.append('password', password);
-      const loginStandardResponse = await apiClient<LoginResponse>({
+      const loginStandardResponse = await apiClient<LoginResponse>({ //
         url: '/api/v1/auth/login',
         method: 'POST',
         body: loginParams,
         isUrlEncoded: true,
-        requireAuth: false,
-        withCredentials: true,
+        requireAuth: false, // Không yêu cầu auth cho login
+        withCredentials: true, // Để gửi HttpOnly cookie (nếu backend có set)
       });
       if (loginStandardResponse.status === 200 && loginStandardResponse.data?.access_token) {
         const { access_token } = loginStandardResponse.data;
         const tempHeaders = { 'Authorization': `Bearer ${access_token}` };
-        const userResponse = await apiClient<UserInfo>({ url: '/api/v1/auth/me', method: 'GET', headers: tempHeaders });
-        const featuresResponse = await apiClient<string[]>({ url: '/api/v1/auth/me/features', method: 'GET', headers: tempHeaders });
+        // Lấy thông tin user và features
+        const userResponse = await apiClient<UserInfoFromAuth>({ url: '/api/v1/auth/me', method: 'GET', headers: tempHeaders }); //
+        const featuresResponse = await apiClient<string[]>({ url: '/api/v1/auth/me/features', method: 'GET', headers: tempHeaders }); //
+
         if (userResponse.status === 200 && userResponse.data && featuresResponse.status === 200) {
-          const sessionData = { user: userResponse.data, accessToken: access_token, features: featuresResponse.data || [] };
-          login(sessionData);
+          const sessionData = {
+            user: userResponse.data, // UserInfoFromAuth (UserSchema)
+            accessToken: access_token,
+            features: featuresResponse.data || [],
+          };
+          login(sessionData); // Gọi hàm login từ AuthProvider
           setSuccessMessage(`Đăng nhập thành công! Đang chuyển hướng...`);
+          // router.push('/'); // AuthProvider sẽ tự động redirect
         } else {
           setError((userResponse.message || 'Lỗi lấy thông tin user.') + (featuresResponse.message || ' Lỗi lấy features.'));
         }
       } else {
-        setError(loginStandardResponse.message || 'Đăng nhập thất bại.');
+        setError(loginStandardResponse.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
       }
     } catch (err: any) {
-      setError(err.message || 'Lỗi kết nối hoặc có lỗi xảy ra.');
+      setError(err.message || 'Lỗi kết nối hoặc có lỗi xảy ra trong quá trình đăng nhập.');
     } finally {
       setLoading(false);
     }
   };
 
-  // ĐỊNH NGHĨA URI CHO FRONTEND NHẬN CODE TỪ GOOGLE
   // URI này PHẢI được đăng ký trong "Authorized redirect URIs" trên Google Cloud Console
-  const frontendGoogleRedirectUri = typeof window !== 'undefined' 
-                                    ? window.location.origin + "/auth/google/callback" 
-                                    : "http://localhost:3000/auth/google/callback";
-  
-  // Hàm handleGoogleLoginSuccess không còn được dùng trong useGoogleLogin nếu dùng flow redirect
-  // Nó sẽ được gọi bởi trang /auth/google/callback/page.tsx
-  // Tuy nhiên, chúng ta vẫn giữ nó ở đây để bạn có thể dễ dàng chuyển đổi lại nếu cần test flow onSuccess trực tiếp
-  // (nhưng với flow onSuccess trực tiếp, bạn có thể gặp lại vấn đề redirect_uri_mismatch với `storagerelay`)
-  /*
-  const handleGoogleLoginSuccess = async (codeResponse: any) => {
-    setGoogleLoading(true);
-    setError(null);
-    setSuccessMessage(null);
-    console.log('Google Login Success, code received by frontend:', codeResponse.code);
-    console.log('Frontend redirect URI used to get this code (expected):', frontendGoogleRedirectUri);
+  // và cũng là URI mà backend sẽ sử dụng khi trao đổi code.
+  const frontendGoogleRedirectUri = typeof window !== 'undefined'
+                                    ? window.location.origin + "/auth/google/callback"
+                                    : "http://localhost:3000/auth/google/callback"; // Fallback cho SSR hoặc môi trường không có window
 
-    try {
-      const googleLoginResponse = await apiClient<LoginResponse>({
-        url: '/api/v1/auth/google/callback', // Backend endpoint
-        method: 'POST',
-        body: {
-          code: codeResponse.code,
-          redirect_uri: frontendGoogleRedirectUri, // Gửi URI mà frontend đã dùng để lấy code
-        },
-        requireAuth: false,
-        withCredentials: true,
-      });
-      
-      if (googleLoginResponse.status === 200 && googleLoginResponse.data?.access_token) {
-        const { access_token } = googleLoginResponse.data;
-        const tempHeaders = { 'Authorization': `Bearer ${access_token}` };
-        const userResponse = await apiClient<UserInfo>({ url: '/api/v1/auth/me', method: 'GET', headers: tempHeaders });
-        const featuresResponse = await apiClient<string[]>({ url: '/api/v1/auth/me/features', method: 'GET', headers: tempHeaders });
-        if (userResponse.status === 200 && userResponse.data && featuresResponse.status === 200) {
-          const sessionData = { user: userResponse.data, accessToken: access_token, features: featuresResponse.data || [] };
-          login(sessionData);
-          setSuccessMessage('Đăng nhập bằng Google thành công! Đang chuyển hướng...');
-        } else {
-           setError((userResponse.message || 'Lỗi lấy thông tin user.') + (featuresResponse.message || ' Lỗi lấy features.'));
-        }
-      } else {
-        setError(googleLoginResponse.message || 'Đăng nhập bằng Google thất bại từ phía server.');
-      }
-    } catch (err: any) {
-      console.error('Google login API call error:', err);
-      setError(err.message || 'Lỗi khi đăng nhập bằng Google.');
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
-  */
-
-  const googleLogin = useGoogleLogin({
-    // Bỏ onSuccess và onError ở đây để kích hoạt luồng redirect đầy đủ
-    flow: 'auth-code',
-    redirect_uri: frontendGoogleRedirectUri, // Google sẽ redirect về đây với code trong URL params
-    ux_mode: 'redirect', // Đảm bảo UX là redirect, không phải popup
-                            // Nếu không set, có thể mặc định là 'popup' dẫn đến vấn đề `storagerelay`
-                            // Tuy nhiên, với `redirect_uri` được set, `flow: 'auth-code'` thường sẽ ưu tiên redirect.
-                            // Nếu vẫn gặp popup `storagerelay`, hãy thử thêm `ux_mode: 'redirect'`
+  const initiateGoogleLogin = useGoogleLogin({
+    flow: 'auth-code', // Sử dụng luồng authorization code
+    redirect_uri: frontendGoogleRedirectUri, // Google sẽ redirect về đây với code
+    // Không cần onSuccess hay onError ở đây nữa vì chúng ta dùng flow 'redirect'
+    ux_mode: 'redirect', // Thêm nếu bạn vẫn gặp vấn đề với popup `storagerelay`
+                          // Mặc định của flow: 'auth-code' là redirect.
   });
 
   if (!mounted || authLoading || (!authLoading && session)) {
+    // Hiển thị loading nếu chưa mounted, auth đang load, hoặc đã có session (sẽ được redirect)
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: 'background.default' }}>
         <CircularProgress />
@@ -162,19 +122,19 @@ function SignInForm() {
     <Container component="main" maxWidth="xs" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
       <CssBaseline />
       <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
-        <ThemeToggleButton />
+        <ThemeToggleButton /> {/* */}
       </Box>
       <Box
         sx={{
-          marginTop: 0,
+          marginTop: 0, // Điều chỉnh nếu cần
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          p: { xs: 2, sm: 3, md: 4 },
-          borderRadius: 3,
-          bgcolor: 'background.paper',
-          boxShadow: { xs: 1, sm: 2, md: 3 },
-          width: '100%',
+          p: { xs: 2, sm: 3, md: 4 }, // Responsive padding
+          borderRadius: 3, // Bo góc mềm mại hơn
+          bgcolor: 'background.paper', // Sử dụng màu nền của Paper từ theme
+          boxShadow: { xs: 1, sm: 2, md: 3 }, // Responsive shadow
+          width: '100%', // Đảm bảo form chiếm đủ không gian
         }}
       >
         <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
@@ -235,16 +195,18 @@ function SignInForm() {
             variant="outlined"
             startIcon={<GoogleIcon />}
             onClick={() => {
-                setGoogleLoading(true); 
+                setGoogleLoading(true); // Bắt đầu loading cho Google
+                setError(null); // Xóa lỗi cũ
                 try {
-                    googleLogin(); 
-                } catch (e) {
-                    console.error("Error initiating Google login redirect", e);
-                    setError("Không thể bắt đầu đăng nhập Google. Vui lòng thử lại.");
-                    setGoogleLoading(false);
+                    initiateGoogleLogin(); // Gọi hàm để redirect đến Google
+                    // Sau khi gọi, người dùng sẽ bị redirect, googleLoading sẽ không cần set lại false ở đây
+                } catch (e: any) {
+                    console.error("Lỗi khi khởi tạo đăng nhập Google:", e);
+                    setError(e.message || "Không thể bắt đầu đăng nhập Google. Vui lòng thử lại.");
+                    setGoogleLoading(false); // Set false nếu có lỗi ngay khi gọi
                 }
             }}
-            disabled={loading || googleLoading || !!successMessage}
+            disabled={loading || googleLoading || !!successMessage} // Vẫn disable nếu các loading khác đang chạy
             sx={{ mb: 2 }}
           >
             {googleLoading ? <CircularProgress size={24} /> : 'Đăng nhập với Google'}
@@ -256,15 +218,28 @@ function SignInForm() {
 }
 
 export default function SignInPage() {
+  // Lấy Google Client ID từ biến môi trường public
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+
   if (!googleClientId) {
-    console.error("Google Client ID is not configured (NEXT_PUBLIC_GOOGLE_CLIENT_ID).");
+    // Log lỗi này ở client-side console, hoặc có thể hiển thị một thông báo cho người dùng.
+    // Việc return null hoặc một component báo lỗi ở đây sẽ tốt hơn là để app crash.
+    console.error("LỖI CẤU HÌNH: NEXT_PUBLIC_GOOGLE_CLIENT_ID chưa được thiết lập.");
+    // return <SomeErrorComponent message="Tính năng đăng nhập Google hiện không khả dụng do lỗi cấu hình." />;
   }
+
+  // Chỉ render GoogleOAuthProvider nếu googleClientId tồn tại
   return googleClientId ? (
     <GoogleOAuthProvider clientId={googleClientId}>
       <SignInForm />
     </GoogleOAuthProvider>
   ) : (
+    // Nếu không có client ID, vẫn render form nhưng nút Google sẽ không hoạt động đúng
+    // hoặc bạn có thể chọn không hiển thị nút Google luôn.
+    // Hiện tại, logic trong SignInForm khi bấm nút Google sẽ không làm gì nếu googleLogin là null.
+    // Tuy nhiên, để an toàn, có thể không render nút Google nếu !googleClientId.
+    // Hoặc, SignInForm có thể nhận prop để biết có nên hiển thị nút Google không.
+    // Trong trường hợp này, cứ để SignInForm tự xử lý.
     <SignInForm />
   );
 }
