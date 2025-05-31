@@ -35,7 +35,7 @@ Dự án Finext là một ứng dụng web full-stack với backend được xâ
     ```
     - Kích hoạt môi trường ảo
     ```bash
-    .\venv\Scripts\activate
+    .\\venv\\Scripts\\activate
     ```
     - Cài đặt các thư viện cần thiết
     ```bash

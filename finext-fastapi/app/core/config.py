@@ -13,6 +13,12 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 10  # Đơn vị phút
 REFRESH_TOKEN_EXPIRE_DAYS = 7  # Đơn vị ngày
 
+# --- GOOGLE OAUTH ---
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")
+# --- END GOOGLE OAUTH ---
+
 # User Seeding
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 BROKER_EMAIL_1 = os.getenv("BROKER_EMAIL_1")
@@ -96,3 +102,11 @@ if not R2_BUCKET_NAME:
     print("CẢNH BÁO: Biến môi trường R2_BUCKET_NAME chưa được thiết lập.")
 if not R2_PUBLIC_URL_BASE:
     print("CẢNH BÁO: Biến môi trường R2_PUBLIC_URL_BASE chưa được thiết lập.")
+
+# THÊM: Kiểm tra biến Google OAuth
+if not GOOGLE_CLIENT_ID:
+    print("CẢNH BÁO: Biến môi trường GOOGLE_CLIENT_ID chưa được thiết lập cho Google OAuth.")
+if not GOOGLE_CLIENT_SECRET:
+    print("CẢNH BÁO: Biến môi trường GOOGLE_CLIENT_SECRET chưa được thiết lập cho Google OAuth.")
+if not GOOGLE_REDIRECT_URI:
+    print("CẢNH BÁO: Biến môi trường GOOGLE_REDIRECT_URI chưa được thiết lập cho Google OAuth.")
