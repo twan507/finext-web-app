@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finext - Market Insights & Predictive Analytics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        deepPurple: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            200: '#ddd6fe',
+                            300: '#c4b5fd',
+                            400: '#a78bfa',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            700: '#6d28d9',
+                            800: '#5b21b6',
+                            900: '#4c1d95',
+                        },
+                        royalPurple: {
+                            50: '#f6f0ff',
+                            100: '#eddbfe',
+                            200: '#d6bef9',
+                            300: '#bd93f5',
+                            400: '#a368f1',
+                            500: '#8a3ee8',
+                            600: '#7928d4',
+                            700: '#6721b7',
+                            800: '#551c96',
+                            900: '#46157a',
+                        },
+                        violetBerry: '#7E22CE',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-12px); }
+        }
+        .floating {
+            animation: float 5s ease-in-out infinite;
+        }
+        .fade-in {
+            opacity: 0;
+            transition: opacity 0.6s ease-in;
+        }
+        .fade-in.visible {
+            opacity: 1;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #a78bfa 100%);
+        }
+        .purple-glow {
+            box-shadow: 0 0 25px rgba(167, 139, 250, 0.5);
+        }
+        .card-hover {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(123, 97, 255, 0.3);
+        }
+        .btn-glow {
+            box-shadow: 0 0 15px rgba(167, 139, 250, 0.7);
+        }
+        .btn-glow:hover {
+            box-shadow: 0 0 20px rgba(167, 139, 250, 0.9);
+        }
+        .data-cell {
+            background: linear-gradient(145deg, rgba(123, 97, 255, 0.1), rgba(156, 85, 247, 0.05));
+            backdrop-filter: blur(10px);
+        }
+        .pulse {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #10B981;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulse-green 1.5s infinite;
+        }
+        @keyframes pulse-green {
+            0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+        }
+        .ticker-tape {
+            white-space: nowrap;
+            animation: ticker-scroll 40s linear infinite;
+            font-family: monospace;
+        }
+        @keyframes ticker-scroll {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        .stock-up {
+            color: #10B981;
+            position: relative;
+        }
+        .stock-down {
+            color: #EF4444;
+            position: relative;
+        }
+        .tooltip {
+            position: absolute;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border-radius: 4px;
+            font-size: 14px;
+            pointer-events: none;
+            transform: translate(-50%, -100%);
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 100;
+            min-width: 120px;
+        }
+    </style>
+</head>
+<body class="font-sans antialiased text-gray-100 bg-gray-900">
+    <!-- Navigation -->
+    <nav class="bg-gray-800 shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center">
+                        <svg class="h-8 w-8 text-deepPurple-400" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2L3 7L12 12L21 7L12 2Z" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M3 12L12 17L21 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M3 17L12 22L21 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span class="ml-2 text-xl font-bold text-deepPurple-300">Finext</span>
+                    </div>
+                </div>
+                <div class="hidden md:ml-6 md:flex md:items-center md:space-x-8">
+                    <a href="#features" class="text-gray-300 hover:text-deepPurple-300 px-3 py-2 text-sm font-medium">Features</a>
+                    <a href="#dashboard" class="text-gray-300 hover:text-deepPurple-300 px-3 py-2 text-sm font-medium">Dashboard</a>
+                    <a href="#mission" class="text-gray-300 hover:text-deepPurple-300 px-3 py-2 text-sm font-medium">Mission</a>
+                    <a href="#reviews" class="text-gray-300 hover:text-deepPurple-300 px-3 py-2 text-sm font-medium">Reviews</a>
+                    <a href="#contact" class="text-gray-300 hover:text-deepPurple-300 px-3 py-2 text-sm font-medium">Contact</a>
+                </div>
+                <div class="flex items-center">
+                    <button class="bg-gradient-to-r from-deepPurple-600 to-deepPurple-800 hover:from-deepPurple-700 hover:to-deepPurple-900 text-white px-4 py-2 rounded-md text-sm font-medium transition duration-300 btn-glow">
+                        Get Started
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Market Ticker -->
+    <div class="bg-gray-800 py-2 overflow-hidden">
+        <div class="ticker-tape">
+            <span class="px-4 text-gray-400">MARKET UPDATE:</span>
+            <span class="px-4">SPY <span class="stock-up">+1.24%</span></span>
+            <span class="px-4">AAPL <span class="stock-up">+2.15%</span></span>
+            <span class="px-4">MSFT <span class="stock-up">+0.87%</span></span>
+            <span class="px-4">TSLA <span class="stock-down">-0.63%</span></span>
+            <span class="px-4">BTC <span class="stock-up">+3.56%</span></span>
+            <span class="px-4">ETH <span class="stock-up">+2.44%</span></span>
+            <span class="px-4">OIL <span class="stock-down">-1.21%</span></span>
+            <span class="px-4">GOLD <span class="stock-down">-0.33%</span></span>
+            <span class="px-4">VIX <span class="stock-down">-5.13%</span></span>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="gradient-bg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">
+            <div class="md:flex items-center">
+                <div class="md:w-1/2 mb-10 md:mb-0">
+                    <h1 class="text-4xl md:text-5xl font-bold leading-tight mb-6">
+                        <span class="block">Finext:</span>
+                        <span class="block bg-gradient-to-r from-white to-deepPurple-100 text-transparent bg-clip-text">Market Intelligence Redefined</span>
+                    </h1>
+                    <p class="text-xl text-deepPurple-100 mb-4">
+                        AI-driven insights and predictive analytics to transform your trading strategy and maximize returns.
+                    </p>
+                    <p class="text-lg text-deepPurple-100 mb-8">
+                        Finext combines cutting-edge artificial intelligence with comprehensive market data to give you an edge in today's volatile markets. Our proprietary algorithms analyze patterns across global markets, enabling smarter investment decisions.
+                    </p>
+                    <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                        <button class="bg-white text-deepPurple-700 hover:bg-gray-100 px-6 py-3 rounded-lg font-semibold transition duration-300 transform hover:scale-105 btn-glow">
+                            <i class="fas fa-chart-line mr-2"></i> Explore Platform
+                        </button>
+                        <button class="bg-transparent border-2 border-white text-white hover:bg-white hover:text-deepPurple-700 px-6 py-3 rounded-lg font-semibold transition duration-300 transform hover:scale-105">
+                            <i class="fas fa-play-circle mr-2"></i> Watch Demo
+                        </button>
+                    </div>
+                </div>
+                <div class="md:w-1/2 relative">
+                    <div class="floating purple-glow bg-gradient-to-br from-deepPurple-700 to-deepPurple-900 rounded-2xl p-6">
+                        <div class="chart-container">
+                            <canvas id="heroChart" height="280"></canvas>
+                        </div>
+                        <div class="flex justify-between mt-4 text-sm text-deepPurple-200">
+                            <span>Prev Close: $168.24</span>
+                            <span>Last Price: $170.42 <span class="stock-up">+1.29%</span></span>
+                        </div>
+                    </div>
+                    <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-deepPurple-500 rounded-full opacity-20 blur-xl"></div>
+                    <div class="absolute -top-10 -left-10 w-24 h-24 bg-purple-500 rounded-full opacity-20 blur-xl"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- AI Dashboard Section -->
+    <section id="dashboard" class="py-20 bg-gray-900">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16 fade-in">
+                <h2 class="text-3xl font-bold text-white mb-4">AI Predictive Dashboard</h2>
+                <div class="w-20 h-1 bg-deepPurple-500 mx-auto mb-6"></div>
+                <p class="max-w-3xl mx-auto text-xl text-gray-400">
+                    Real-time market intelligence with predictive analytics to maximize your returns. Our comprehensive dashboard provides an overview of your entire portfolio while predicting future market movements with industry-leading accuracy.
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+                <!-- Portfolio Summary Card -->
+                <div class="bg-gray-800 rounded-2xl p-6 card-hover">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold text-white">Portfolio Summary</h3>
+                        <div class="bg-deepPurple-600 rounded-full px-3 py-1 text-xs font-medium">Live</div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="data-cell rounded-xl p-4">
+                            <div class="text-gray-400 text-sm">Total Value</div>
+                            <div class="text-xl font-bold text-white">$124,563.82</div>
+                            <div class="text-green-400 text-sm flex items-center">
+                                <span>+3.2%</span>
+                                <i class="fas fa-arrow-up ml-1"></i>
+                            </div>
+                        </div>
+                        <div class="data-cell rounded-xl p-4">
+                            <div class="text-gray-400 text-sm">Today's Gain</div>
+                            <div class="text-xl font-bold text-white">$1,824.16</div>
+                            <div class="text-green-400 text-sm flex items-center">
+                                <span>+1.45%</span>
+                                <i class="fas fa-arrow-up ml-1"></i>
+                            </div>
+                        </div>
+                        <div class="data-cell rounded-xl p-4">
+                            <div class="text-gray-400 text-sm">Risk Level</div>
+                            <div class="text-xl font-bold text-white">Medium</div>
+                            <div class="flex items-center">
+                                <div class="pulse mr-2"></div>
+                                <span class="text-green-400 text-sm">Optimal</span>
+                            </div>
+                        </div>
+                        <div class="data-cell rounded-xl p-4">
+                            <div class="text-gray-400 text-sm">AI Confidence</div>
+                            <div class="text-xl font-bold text-white">87%</div>
+                            <div class="w-full bg-gray-700 rounded-full h-2 mt-2">
+                                <div class="bg-gradient-to-r from-green-400 to-blue-500 h-2 rounded-full" style="width: 87%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-gray-400 text-sm mt-4">
+                        <i class="fas fa-info-circle text-deepPurple-400 mr-1"></i> 
+                        Portfolio optimized based on current market conditions and AI predictions
+                    </div>
+                </div>
+                
+                <!-- Asset Allocation Card -->
+                <div class="bg-gray-800 rounded-2xl p-6 card-hover">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold text-white">Asset Allocation</h3>
+                        <div class="text-deepPurple-300">
+                            <i class="fas fa-sync-alt cursor-pointer"></i>
+                        </div>
+                    </div>
+                    <div class="chart-container" style="height: 200px;">
+                        <canvas id="allocationChart"></canvas>
+                    </div>
+                    <div class="grid grid-cols-4 gap-2 mt-4 text-center text-xs">
+                        <div class="p-1">
+                            <div class="w-3 h-3 bg-[#8b5cf6] rounded-full mx-auto mb-1"></div>
+                            <div class="text-gray-400">Tech</div>
+                        </div>
+                        <div class="p-1">
+                            <div class="w-3 h-3 bg-[#c084fc] rounded-full mx-auto mb-1"></div>
+                            <div class="text-gray-400">Finance</div>
+                        </div>
+                        <div class="p-1">
+                            <div class="w-3 h-3 bg-[#a78bfa] rounded-full mx-auto mb-1"></div>
+                            <div class="text-gray-400">Crypto</div>
+                        </div>
+                        <div class="p-1">
+                            <div class="w-3 h-3 bg-[#ddd6fe] rounded-full mx-auto mb-1"></div>
+                            <div class="text-gray-400">Other</div>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-gray-400 text-sm">
+                        <i class="fas fa-lightbulb text-deepPurple-400 mr-1"></i> 
+                        AI recommendation: Increase tech allocation by 5% for higher growth potential
+                    </div>
+                </div>
+                
+                <!-- Performance vs Benchmark Card -->
+                <div class="bg-gray-800 rounded-2xl p-6 card-hover">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold text-white">Performance</h3>
+                        <div>
+                            <select class="bg-gray-700 text-gray-200 rounded-md px-2 py-1 text-sm">
+                                <option>1M</option>
+                                <option>3M</option>
+                                <option>6M</option>
+                                <option selected>YTD</option>
+                                <option>1Y</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="chart-container" style="height: 200px;">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                    <div class="flex justify-between mt-4 text-sm">
+                        <div>
+                            <div class="text-deepPurple-300 flex items-center">
+                                <i class="fas fa-circle text-xs mr-1"></i>
+                                <span>Your Portfolio</span>
+                            </div>
+                            <div class="text-green-400">+24.6%</div>
+                        </div>
+                        <div>
+                            <div class="text-purple-300 flex items-center">
+                                <i class="fas fa-circle text-xs mr-1"></i>
+                                <span>S&P 500</span>
+                            </div>
+                            <div class="text-gray-400">+18.2%</div>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-gray-400 text-sm">
+                        <i class="fas fa-trophy text-deepPurple-400 mr-1"></i> 
+                        Your portfolio has outperformed the benchmark by 6.4% YTD
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Top Assets Table -->
+            <div class="bg-gray-800 rounded-2xl p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-white">AI Recommended Assets</h3>
+                    <button class="text-deepPurple-300 hover:text-white">
+                        <i class="fas fa-sync-alt mr-1"></i> Refresh Predictions
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="text-left text-gray-400 text-sm border-b border-gray-700">
+                                <th class="py-3">Asset</th>
+                                <th>Current Price</th>
+                                <th>Predicted Change</th>
+                                <th>AI Confidence</th>
+                                <th>Predicted Price</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="text-gray-200 border-b border-gray-800 hover:bg-gray-750">
+                                <td class="py-3">
+                                    <div class="flex items-center">
+                                        <div class="bg-gray-700 p-2 rounded-lg mr-3">
+                                            <i class="fab fa-apple text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium">Apple Inc.</div>
+                                            <div class="text-gray-500 text-sm">AAPL</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>$189.25</td>
+                                <td class="text-green-400 font-medium">+7.2%</td>
+                                <td>
+                                    <div class="w-full bg-gray-700 rounded-full h-2">
+                                        <div class="bg-green-500 h-2 rounded-full" style="width: 92%"></div>
+                                    </div>
+                                    <div class="text-green-400 text-xs mt-1">92%</div>
+                                </td>
+                                <td class="font-medium">$202.92</td>
+                                <td>
+                                    <button class="bg-gradient-to-r from-green-500 to-teal-500 text-white px-3 py-1 rounded-md text-xs font-medium">
+                                        Buy
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr class="text-gray-200 border-b border-gray-800 hover:bg-gray-750">
+                                <td class="py-3">
+                                    <div class="flex items-center">
+                                        <div class="bg-gray-700 p-2 rounded-lg mr-3">
+                                            <i class="fab fa-google text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium">Alphabet Inc.</div>
+                                            <div class="text-gray-500 text-sm">GOOGL</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>$138.42</td>
+                                <td class="text-green-400 font-medium">+5.8%</td>
+                                <td>
+                                    <div class="w-full bg-gray-700 rounded-full h-2">
+                                        <div class="bg-green-500 h-2 rounded-full" style="width: 85%"></div>
+                                    </div>
+                                    <div class="text-green-400 text-xs mt-1">85%</div>
+                                </td>
+                                <td class="font-medium">$146.37</td>
+                                <td>
+                                    <button class="bg-gradient-to-r from-green-500 to-teal-500 text-white px-3 py-1 rounded-md text-xs font-medium">
+                                        Buy
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr class="text-gray-200 border-b border-gray-800 hover:bg-gray-750">
+                                <td class="py-3">
+                                    <div class="flex items-center">
+                                        <div class="bg-gray-700 p-2 rounded-lg mr-3">
+                                            <i class="fab fa-microsoft text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium">Microsoft</div>
+                                            <div class="text-gray-500 text-sm">MSFT</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>$338.11</td>
+                                <td class="text-red-400 font-medium">-2.3%</td>
+                                <td>
+                                    <div class="w-full bg-gray-700 rounded-full h-2">
+                                        <div class="bg-yellow-500 h-2 rounded-full" style="width: 78%"></div>
+                                    </div>
+                                    <div class="text-yellow-400 text-xs mt-1">78%</div>
+                                </td>
+                                <td class="font-medium">$330.24</td>
+                                <td>
+                                    <button class="bg-gradient-to-r from-red-500 to-pink-500 text-white px-3 py-1 rounded-md text-xs font-medium">
+                                        Sell
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr class="text-gray-200 hover:bg-gray-750">
+                                <td class="py-3">
+                                    <div class="flex items-center">
+                                        <div class="bg-gray-700 p-2 rounded-lg mr-3">
+                                            <i class="fab fa-bitcoin text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium">Bitcoin</div>
+                                            <div class="text-gray-500 text-sm">BTC</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>$42,876</td>
+                                <td class="text-green-400 font-medium">+12.5%</td>
+                                <td>
+                                    <div class="w-full bg-gray-700 rounded-full h-2">
+                                        <div class="bg-green-500 h-2 rounded-full" style="width: 88%"></div>
+                                    </div>
+                                    <div class="text-green-400 text-xs mt-1">88%</div>
+                                </td>
+                                <td class="font-medium">$48,235</td>
+                                <td>
+                                    <button class="bg-gradient-to-r from-green-500 to-teal-500 text-white px-3 py-1 rounded-md text-xs font-medium">
+                                        Buy
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-6 text-gray-400 text-sm">
+                    <i class="fas fa-exclamation-triangle text-yellow-400 mr-1"></i> 
+                    Past performance is not indicative of future results. Asset recommendations are generated by AI algorithms based on historical data and current market conditions.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Mission Section -->
+    <section id="mission" class="py-20 bg-gradient-to-b from-gray-900 to-gray-950">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center fade-in">
+                <h2 class="text-3xl font-bold text-white mb-4">Our Mission</h2>
+                <div class="w-20 h-1 bg-deepPurple-500 mx-auto mb-6"></div>
+                <p class="max-w-3xl mx-auto text-xl text-gray-400 mb-8">
+                    We're on a mission to democratize access to institutional-grade financial tools and intelligence. 
+                    In a world where information advantage translates to financial advantage, Finext levels the playing 
+                    field for all investors.
+                </p>
+                <div class="flex flex-col md:flex-row justify-center gap-8">
+                    <div class="bg-gray-800 rounded-2xl p-6 max-w-sm card-hover">
+                        <div class="text-deepPurple-400 text-4xl mb-4">
+                            <i class="fas fa-unlock-alt"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Accessible Intelligence</h3>
+                        <p class="text-gray-400">
+                            We transform complex financial data into actionable insights accessible to investors at all levels, 
+                            without requiring financial expertise.
+                        </p>
+                    </div>
+                    <div class="bg-gray-800 rounded-2xl p-6 max-w-sm card-hover">
+                        <div class="text-deepPurple-400 text-4xl mb-4">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">AI Innovation</h3>
+                        <p class="text-gray-400">
+                            Our continuous research and development push the boundaries of what's possible in predictive market 
+                            analysis and portfolio optimization.
+                        </p>
+                    </div>
+                    <div class="bg-gray-800 rounded-2xl p-6 max-w-sm card-hover">
+                        <div class="text-deepPurple-400 text-4xl mb-4">
+                            <i class="fas fa-hand-holding-heart"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Ethical Approach</h3>
+                        <p class="text-gray-400">
+                            We maintain transparency in our algorithms and uphold the highest ethical standards in financial 
+                            technology development.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-20 bg-gradient-to-b from-gray-900 to-gray-950">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16 fade-in">
+                <h2 class="text-3xl font-bold text-white mb-4">Advanced Features</h2>
+                <div class="w-20 h-1 bg-deepPurple-500 mx-auto mb-6"></div>
+                <p class="max-w-3xl mx-auto text-xl text-gray-400">
+                    Empower your trading strategy with cutting-edge financial technology
+                </p>
+            </div>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="bg-gray-800 p-8 rounded-2xl hover:shadow-xl transition duration-300 fade-in card-hover">
+                    <div class="text-deepPurple-400 mb-6">
+                        <i class="fas fa-brain text-4xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3">AI Forecasting</h3>
+                    <p class="text-gray-400 mb-4">
+                        Proprietary machine learning models predict price movements with 87.4% accuracy. 
+                        Our multi-modal AI approach combines technical indicators, fundamental analysis, 
+                        sentiment scoring, and macroeconomic data to generate highly reliable forecasts.
+                    </p>
+                    <div class="mt-6">
+                        <div class="flex justify-between text-sm text-gray-500 mb-1">
+                            <span>Accuracy</span>
+                            <span>87.4%</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-2">
+                            <div class="bg-gradient-to-r from-deepPurple-500 to-purple-500 h-2 rounded-full" style="width: 87.4%"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-800 p-8 rounded-2xl hover:shadow-xl transition duration-300 fade-in card-hover">
+                    <div class="text-deepPurple-400 mb-6">
+                        <i class="fas fa-bolt text-4xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3">Real-Time Analytics</h3>
+                    <p class="text-gray-400 mb-4">
+                        Our ultra-low latency platform delivers market updates with sub-millisecond precision 
+                        across 64 global exchanges. Real-time portfolio stress testing alerts you to potential 
+                        risks before they impact your investments.
+                    </p>
+                    <div class="mt-6 flex items-center">
+                        <div class="bg-gray-900 rounded-lg p-3 mr-4">
+                            <div class="text-green-400 text-2xl font-mono">320ms</div>
+                            <div class="text-gray-500 text-xs">Avg. Latency</div>
+                        </div>
+                        <div class="bg-gray-900 rounded-lg p-3">
+                            <div class="text-green-400 text-2xl font-mono">99.99%</div>
+                            <div class="text-gray-500 text-xs">Uptime</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-800 p-8 rounded-2xl hover:shadow-xl transition duration-300 fade-in card-hover">
+                    <div class="text-deepPurple-400 mb-6">
+                        <i class="fas fa-chart-network text-4xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3">Market Correlation</h3>
+                    <p class="text-gray-400 mb-4">
+                        Our platform uncovers hidden relationships between assets to optimize your portfolio strategy. 
+                        Finext's correlation matrix tracks over 50,000 asset pairs across multiple asset classes, 
+                        detecting emerging relationships before they become mainstream knowledge.
+                    </p>
+                    <div class="mt-6 grid grid-cols-3 gap-2 text-center">
+                        <div class="bg-gray-900 py-2 rounded">
+                            <div class="text-green-400">0.87</div>
+                            <div class="text-gray-500 text-xs">AAPL/MSFT</div>
+                        </div>
+                        <div class="bg-gray-900 py-2 rounded">
+                            <div class="text-red-400">-0.63</div>
+                            <div class="text-gray-500 text-xs">GOLD/BTC</div>
+                        </div>
+                        <div class="bg-gray-900 py-2 rounded">
+                            <div class="text-yellow-400">0.42</div>
+                            <div class="text-gray-500 text-xs">TSLA/NVDA</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-800 p-8 rounded-2xl hover:shadow-xl transition duration-300 fade-in card-hover">
+                    <div class="text-deepPurple-400 mb-6">
+                        <i class="fas fa-shield-alt text-4xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3">Risk Management</h3>
+                    <p class="text-gray-400 mb-4">
+                        Advanced scenario modeling simulates market shocks to quantify potential portfolio impacts. 
+                        Our conditional stop-loss algorithm dynamically adjusts to market volatility to better protect 
+                        your assets during turbulent periods.
+                    </p>
+                    <div class="mt-6">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="text-gray-400">Portfolio Risk</div>
+                            <div class="text-green-400">Medium</div>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-2">
+                            <div class="bg-gradient-to-r from-yellow-500 to-yellow-400 h-2 rounded-full" style="width: 45%"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-800 p-8 rounded-2xl hover:shadow-xl transition duration-300 fade-in card-hover">
+                    <div class="text-deepPurple-400 mb-6">
+                        <i class="fas fa-robot text-4xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3">Automated Trading</h3>
+                    <p class="text-gray-400 mb-4">
+                        Finext's strategy builder requires no coding skills while offering the flexibility for 
+                        sophisticated algorithmic implementations. Our cloud-based backtesting engine can simulate 
+                        10 years of market history in under 30 seconds for accurate strategy validation.
+                    </p>
+                    <div class="mt-6 flex">
+                        <div class="mr-4 text-center">
+                            <div class="text-green-400 text-xl">+23.7%</div>
+                            <div class="text-gray-500 text-xs">Avg. Return</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-green-400 text-xl">76%</div>
+                            <div class="text-gray-500 text-xs">Win Rate</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-800 p-8 rounded-2xl hover:shadow-xl transition duration-300 fade-in card-hover">
+                    <div class="text-deepPurple-400 mb-6">
+                        <i class="fas fa-graduation-cap text-4xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3">Educational Resources</h3>
+                    <p class="text-gray-400 mb-4">
+                        Our comprehensive learning center features daily live webinars, interactive tutorials, 
+                        and real-time market analysis. Case studies deconstruct successful trades while 
+                        strategy guides translate complex market concepts into actionable insights.
+                    </p>
+                    <div class="mt-6 flex flex-wrap gap-2">
+                        <span class="bg-deepPurple-900 text-deepPurple-300 px-3 py-1 rounded-full text-xs">Webinars</span>
+                        <span class="bg-deepPurple-900 text-deepPurple-300 px-3 py-1 rounded-full text-xs">Tutorials</span>
+                        <span class="bg-deepPurple-900 text-deepPurple-300 px-3 py-1 rounded-full text-xs">Case Studies</span>
+                        <span class="bg-deepPurple-900 text-deepPurple-300 px-3 py-1 rounded-full text-xs">Strategy Guides</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Community Reviews Section -->
+    <section id="reviews" class="py-20 bg-gradient-to-b from-gray-950 to-gray-900">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16 fade-in">
+                <h2 class="text-3xl font-bold text-white mb-4">Trusted by the Trading Community</h2>
+                <div class="w-20 h-1 bg-deepPurple-500 mx-auto mb-6"></div>
+                <p class="max-w-3xl mx-auto text-xl text-gray-400">
+                    Join thousands of traders who have transformed their strategies with Finext
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+                <div class="bg-gray-800 rounded-2xl p-8 card-hover">
+                    <div class="flex mb-6">
+                        <div class="mr-4">
+                            <img class="w-16 h-16 rounded-full" src="https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80" alt="Sarah Johnson">
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-white">Sarah Johnson</h3>
+                            <div class="text-deepPurple-400">Professional Trader • 8 years experience</div>
+                            <div class="flex text-yellow-400 mt-2">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-gray-300 italic mb-6">
+                        "As a professional trader, I've tested every analytics platform on the market. Finext's predictive accuracy is unmatched. Their AI predicted the April market dip with 96% accuracy, allowing me to reposition my portfolio and actually profit during the downturn."
+                    </p>
+                    <div class="flex items-center text-sm text-gray-500">
+                        <i class="fas fa-clock mr-2"></i> Joined 14 months ago
+                    </div>
+                </div>
+                
+                <div class="bg-gray-800 rounded-2xl p-8 card-hover">
+                    <div class="flex mb-6">
+                        <div class="mr-4">
+                            <img class="w-16 h-16 rounded-full" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80" alt="Michael Chen">
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-white">Michael Chen</h3>
+                            <div class="text-deepPurple-400">Hedge Fund Manager</div>
+                            <div class="flex text-yellow-400 mt-2">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star-half-alt"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-gray-300 italic mb-6">
+                        "We've integrated Finext across our entire fund management team. The correlation analysis and risk management tools have reduced our portfolio volatility by 22% while increasing returns. The institutional-grade API was simple to integrate with our existing systems."
+                    </p>
+                    <div class="flex items-center text-sm text-gray-500">
+                        <i class="fas fa-clock mr-2"></i> Institutional user since 2022
+                    </div>
+                </div>
+                
+                <div class="bg-gray-800 rounded-2xl p-8 card-hover">
+                    <div class="flex mb-6">
+                        <div class="mr-4">
+                            <img class="w-16 h-16 rounded-full" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80" alt="Alex Rivera">
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-white">Alex Rivera</h3>
+                            <div class="text-deepPurple-400">Part-time Investor</div>
+                            <div class="flex text-yellow-400 mt-2">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-gray-300 italic mb-6">
+                        "I work full-time as an engineer and invest on the side. Before Finext, I was overwhelmed trying to analyze markets. Now the AI highlights the best opportunities for me. My portfolio is up 35% in 6 months with just 2-3 hours a week. The educational resources are phenomenal for continuous learning."
+                    </p>
+                    <div class="flex items-center text-sm text-gray-500">
+                        <i class="fas fa-clock mr-2"></i> Member for 9 months
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-16">
+                <div class="max-w-3xl mx-auto bg-gradient-to-r from-deepPurple-900 to-violetBerry rounded-2xl p-8 text-left">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h3 class="text-xl font-bold text-white mb-2">Community Statistics</h3>
+                            <div class="w-16 h-1 bg-deepPurple-300"></div>
+                        </div>
+                        <div class="bg-deepPurple-700 px-3 py-1 rounded-full text-sm font-medium">
+                            Live Data
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                        <div class="bg-deepPurple-800 rounded-lg p-4">
+                            <div class="text-3xl font-bold text-white">18,742</div>
+                            <div class="text-deepPurple-200 text-sm mt-1">Active Users</div>
+                        </div>
+                        <div class="bg-deepPurple-800 rounded-lg p-4">
+                            <div class="text-3xl font-bold text-green-400">+24.7%</div>
+                            <div class="text-deepPurple-200 text-sm mt-1">Avg. Annual Returns</div>
+                        </div>
+                        <div class="bg-deepPurple-800 rounded-lg p-4">
+                            <div class="text-3xl font-bold text-white">94%</div>
+                            <div class="text-deepPurple-200 text-sm mt-1">Recommend Rate</div>
+                        </div>
+                        <div class="bg-deepPurple-800 rounded-lg p-4">
+                            <div class="text-3xl font-bold text-white">4.8/5</div>
+                            <div class="text-deepPurple-200 text-sm mt-1">Avg. Rating</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="py-20 bg-gradient-to-b from-gray-950 to-gray-900">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="bg-gradient-to-br from-gray-800 to-deepPurple-900 rounded-3xl overflow-hidden shadow-2xl">
+                <div class="md:flex">
+                    <div class="md:w-1/2 relative p-12 bg-gradient-to-br from-deepPurple-900 to-violetBerry">
+                        <div class="absolute top-0 right-0 -mt-8 -mr-8 w-24 h-24 bg-deepPurple-600 rounded-full opacity-20"></div>
+                        <div class="absolute bottom-0 left-0 -mb-8 -ml-8 w-32 h-32 bg-purple-500 rounded-full opacity-10"></div>
+                        
+                        <h2 class="text-3xl font-bold text-white mb-4">Ready to Transform Your Trading?</h2>
+                        <p class="text-deepPurple-200 mb-8">
+                            Join thousands of traders who have enhanced their strategies with Finext. 
+                            Start with our free 7-day trial and experience the future of financial 
+                            analysis.
+                        </p>
+                        
+                        <div class="space-y-6">
+                            <div class="flex">
+                                <div class="mr-4">
+                                    <div class="bg-deepPurple-700 rounded-full w-12 h-12 flex items-center justify-center">
+                                        <i class="fas fa-users text-lg text-white"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-bold">35K+ Active Traders</h4>
+                                    <p class="text-deepPurple-200 text-sm">Join a growing community of successful investors</p>
+                                </div>
+                            </div>
+                            <div class="flex">
+                                <div class="mr-4">
+                                    <div class="bg-deepPurple-700 rounded-full w-12 h-12 flex items-center justify-center">
+                                        <i class="fas fa-chart-line text-lg text-white"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-bold">24.7% Avg. ROI</h4>
+                                    <p class="text-deepPurple-200 text-sm">Based on verified user results in the past year</p>
+                                </div>
+                            </div>
+                            <div class="flex">
+                                <div class="mr-4">
+                                    <div class="bg-deepPurple-700 rounded-full w-12 h-12 flex items-center justify-center">
+                                        <i class="fas fa-shield-alt text-lg text-white"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-bold">Secure & Private</h4>
+                                    <p class="text-deepPurple-200 text-sm">Bank-level encryption and data privacy standards</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="md:w-1/2 p-12">
+                        <form id="contactForm" class="space-y-6">
+                            <div>
+                                <label for="name" class="block text-sm font-medium text-gray-300 mb-1">Full Name</label>
+                                <input type="text" id="name" name="name" class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-deepPurple-500 focus:border-transparent text-white" placeholder="Enter your full name">
+                            </div>
+                            <div>
+                                <label for="email" class="block text-sm font-medium text-gray-300 mb-1">Email Address</label>
+                                <input type="email" id="email" name="email" class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-deepPurple-500 focus:border-transparent text-white" placeholder="your.email@example.com">
+                            </div>
+                            <div>
+                                <label for="experience" class="block text-sm font-medium text-gray-300 mb-1">Trading Experience</label>
+                                <select id="experience" name="experience" class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-deepPurple-500 focus:border-transparent text-white">
+                                    <option value="" disabled selected>Select your experience level</option>
+                                    <option>Beginner</option>
+                                    <option>Intermediate</option>
+                                    <option>Advanced</option>
+                                    <option>Professional</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-3">Markets You're Interested In</label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <label class="inline-flex items-center bg-gray-800 rounded-lg p-3 border border-gray-700 cursor-pointer">
+                                        <input type="checkbox" class="form-checkbox h-5 w-5 text-deepPurple-500" name="interest" value="stocks">
+                                        <span class="ml-2 text-gray-300">Stocks</span>
+                                    </label>
+                                    <label class="inline-flex items-center bg-gray-800 rounded-lg p-3 border border-gray-700 cursor-pointer">
+                                        <input type="checkbox" class="form-checkbox h-5 w-5 text-deepPurple-500" name="interest" value="crypto">
+                                        <span class="ml-2 text-gray-300">Crypto</span>
+                                    </label>
+                                    <label class="inline-flex items-center bg-gray-800 rounded-lg p-3 border border-gray-700 cursor-pointer">
+                                        <input type="checkbox" class="form-checkbox h-5 w-5 text-deepPurple-500" name="interest" value="forex">
+                                        <span class="ml-2 text-gray-300">Forex</span>
+                                    </label>
+                                    <label class="inline-flex items-center bg-gray-800 rounded-lg p-3 border border-gray-700 cursor-pointer">
+                                        <input type="checkbox" class="form-checkbox h-5 w-5 text-deepPurple-500" name="interest" value="commodities">
+                                        <span class="ml-2 text-gray-300">Commodities</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <button type="submit" class="w-full py-3 px-6 bg-gradient-to-r from-deepPurple-600 to-deepPurple-800 hover:from-deepPurple-700 hover:to-deepPurple-900 text-white rounded-lg font-medium transition duration-300 btn-glow transform hover:scale-105">
+                                Unlock Premium Access
+                            </button>
+                            <p class="text-center text-gray-500 text-sm">
+                                Start your 7-day free trial. No credit card required.
+                            </p>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 border-t border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div class="col-span-1 md:col-span-2">
+                    <div class="flex items-center">
+                        <svg class="h-8 w-8 text-deepPurple-400" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2L3 7L12 12L21 7L12 2Z" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M3 12L12 17L21 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M3 17L12 22L21 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span class="ml-2 text-xl font-bold text-deepPurple-300">Finext</span>
+                    </div>
+                    <p class="mt-4 text-gray-500">
+                        Advanced market intelligence and predictive analytics for the modern investor. 
+                        Finext is transforming how investors of all levels approach financial markets 
+                        with AI-powered insights.
+                    </p>
+                    <div class="mt-6 flex space-x-6">
+                        <a href="#" class="text-gray-500 hover:text-deepPurple-300">
+                            <i class="fab fa-twitter text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-500 hover:text-deepPurple-300">
+                            <i class="fab fa-linkedin text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-500 hover:text-deepPurple-300">
+                            <i class="fab fa-github text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-500 hover:text-deepPurple-300">
+                            <i class="fab fa-discord text-xl"></i>
+                        </a>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Solutions</h3>
+                    <div class="mt-4 space-y-4">
+                        <a href="#" class="text-base text-gray-500 hover:text-white block">Forex Trading</a>
+                        <a href="#" class="text-base text-gray-500 hover:text-white block">Stock Analysis</a>
+                        <a href="#" class="text-base text-gray-500 hover:text-white block">Crypto Insights</a>
+                        <a href="#" class="text-base text-gray-500 hover:text-white block">Portfolio Management</a>
+                        <a href="#" class="text-base text-gray-500 hover:text-white block">Algorithmic Trading</a>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Company</h3>
+                    <div class="mt-4 space-y-4">
+                        <a href="#" class="text-base text-gray-500 hover:text-white block">About Us</a>
+                        <a href="#" class="text-base text-gray-500 hover:text-white block">Careers</a>
+                        <a href="#" class="text-base text-gray-500 hover:text-white block">Blog</a>
+                        <a href="#" class="text-base text-gray-500 hover:text-white block">Partners</a>
+                        <a href="#" class="text-base text-gray-500 hover:text-white block">Research</a>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-12 border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between">
+                <p class="text-gray-500 text-sm">
+                    &copy; 2023 Finext, Inc. All rights reserved.
+                </p>
+                <div class="mt-4 md:mt-0 flex space-x-6">
+                    <a href="#" class="text-gray-500 hover:text-white text-sm">Privacy</a>
+                    <a href="#" class="text-gray-500 hover:text-white text-sm">Terms</a>
+                    <a href="#" class="text-gray-500 hover:text-white text-sm">Security</a>
+                    <a href="#" class="text-gray-500 hover:text-white text-sm">Disclosures</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Charts initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            // Hero chart
+            const heroCtx = document.getElementById('heroChart').getContext('2d');
+            let heroData = Array.from({length: 30}, () => Math.random() * 5 + 165);
+            
+            const heroChart = new Chart(heroCtx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: 30}, (_, i) => i + 1),
+                    datasets: [{
+                        label: 'AAPL',
+                        data: heroData,
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 2000
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            enabled: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: false
+                        },
+                        y: {
+                            display: false
+                        }
+                    }
+                }
+            });
+            
+            // Simulate real-time data updates
+            setInterval(() => {
+                heroData.shift();
+                const lastValue = heroData[heroData.length - 1];
+                const change = (Math.random() - 0.5) * 1.5;
+                heroData.push(Math.max(160, Math.min(175, lastValue + change)));
+                heroChart.update();
+            }, 1500);
+            
+            // Allocation chart
+            const allocCtx = document.getElementById('allocationChart').getContext('2d');
+            const allocChart = new Chart(allocCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Technology', 'Finance', 'Crypto', 'Other'],
+                    datasets: [{
+                        data: [45, 25, 20, 10],
+                        backgroundColor: [
+                            '#8b5cf6',
+                            '#c084fc',
+                            '#a78bfa',
+                            '#ddd6fe'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+            
+            // Performance chart
+            const perfCtx = document.getElementById('performanceChart').getContext('2d');
+            const perfChart = new Chart(perfCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    datasets: [{
+                        label: 'Your Portfolio',
+                        data: [100, 115, 135, 150, 170, 199],
+                        borderColor: '#8b5cf6',
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        tension: 0.4
+                    }, {
+                        label: 'S&P 500',
+                        data: [100, 110, 118, 126, 137, 155],
+                        borderColor: '#c084fc',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#9ca3af'
+                            }
+                        },
+                        y: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        });
+        
+        // Scroll animation for fade-in elements
+        const fadeElements = document.querySelectorAll('.fade-in');
+        
+        const fadeInOnScroll = () => {
+            fadeElements.forEach(element => {
+                const elementTop = element.getBoundingClientRect().top;
+                const windowHeight = window.innerHeight;
+                
+                if (elementTop < windowHeight - 100) {
+                    element.classList.add('visible');
+                }
+            });
+        };
+        
+        // Check on initial load
+        window.addEventListener('load', fadeInOnScroll);
+        
+        // Check on scroll
+        window.addEventListener('scroll', fadeInOnScroll);
+        
+        // Form submission handler
+        document.getElementById('contactForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            // Create a sweet alert effect
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Processing...';
+            submitBtn.disabled = true;
+            
+            setTimeout(() => {
+                submitBtn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Success!';
+                submitBtn.classList.remove('from-deepPurple-600', 'to-deepPurple-800');
+                submitBtn.classList.add('bg-gradient-to-r', 'from-green-500', 'to-teal-500');
+                
+                setTimeout(() => {
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('from-green-500', 'to-teal-500');
+                    submitBtn.classList.add('from-deepPurple-600', 'to-deepPurple-800');
+                }, 2000);
+            }, 1500);
+        });
+        
+        // Simulate market ticker movement
+        const tickerTape = document.querySelector('.ticker-tape');
+        const tickerWidth = tickerTape.offsetWidth;
+        const containerWidth = tickerTape.parentElement.offsetWidth;
+        
+        // Set animation duration based on width difference
+        if (tickerWidth > containerWidth) {
+            const duration = tickerWidth / 30; // pixels per second
+            tickerTape.style.animationDuration = `${duration}s`;
+        }
+    </script>
+</body>
+</html>
