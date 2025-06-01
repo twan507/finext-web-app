@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luxury Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        .sidebar-icon {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            color: #9CA3AF;
+        }
+        
+        .sidebar-icon:hover {
+            transform: scale(1.1);
+            background-color: #F3F4F6;
+            color: #6B7280;
+        }
+        
+        .sidebar-icon.active {
+            color: #374151;
+            background-color: #E5E7EB;
+        }
+        
+        .sidebar-icon.active:hover {
+            transform: none;
+            background-color: #E5E7EB;
+        }
+        
+        .chart-container {
+            height: 250px;
+        }
+        
+        .breadcrumb-item:not(:last-child)::after {
+            content: ">";
+            margin: 0 8px;
+            color: #9CA3AF;
+        }
+        
+        .kpi-card {
+            transition: all 0.2s ease;
+        }
+        
+        .kpi-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .search-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar-divider {
+            width: 1px;
+            background-color: #E5E7EB;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                position: fixed;
+                z-index: 50;
+                height: 100vh;
+            }
+            
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .mobile-menu-btn {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+    <div class="flex h-screen overflow-hidden">
+        <!-- Refined White Sidebar Navigation -->
+        <div class="sidebar bg-white w-16 flex-shrink-0 flex flex-col items-center relative">
+            <!-- Vertical divider -->
+            <div class="sidebar-divider absolute right-0 top-0 bottom-0"></div>
+            
+            <!-- Logo -->
+            <div class="p-4 flex items-center justify-center">
+                <i class="fas fa-gem text-xl text-gray-400"></i>
+            </div>
+            
+            <!-- Navigation Icons - Compact spacing -->
+            <nav class="flex-1 flex flex-col items-center py-4 space-y-3 w-full">
+                <a href="#" class="sidebar-icon active p-3 rounded-lg w-10 h-10 flex items-center justify-center">
+                    <i class="fas fa-tachometer-alt text-lg"></i>
+                </a>
+                
+                <a href="#" class="sidebar-icon p-3 rounded-lg w-10 h-10 flex items-center justify-center">
+                    <i class="fas fa-users text-lg"></i>
+                </a>
+                
+                <a href="#" class="sidebar-icon p-3 rounded-lg w-10 h-10 flex items-center justify-center">
+                    <i class="fas fa-box-open text-lg"></i>
+                </a>
+                
+                <a href="#" class="sidebar-icon p-3 rounded-lg w-10 h-10 flex items-center justify-center">
+                    <i class="fas fa-chart-line text-lg"></i>
+                </a>
+                
+                <a href="#" class="sidebar-icon p-3 rounded-lg w-10 h-10 flex items-center justify-center">
+                    <i class="fas fa-envelope text-lg"></i>
+                </a>
+                
+                <a href="#" class="sidebar-icon p-3 rounded-lg w-10 h-10 flex items-center justify-center">
+                    <i class="fas fa-file-invoice text-lg"></i>
+                </a>
+            </nav>
+            
+            <!-- Bottom Section - Compact spacing -->
+            <div class="pb-4 flex flex-col items-center space-y-3 w-full">
+                <a href="#" class="sidebar-icon p-3 rounded-lg w-10 h-10 flex items-center justify-center">
+                    <i class="fas fa-cog text-lg"></i>
+                </a>
+                
+                <a href="#" class="sidebar-icon p-3 rounded-lg w-10 h-10 flex items-center justify-center">
+                    <i class="fas fa-sign-out-alt text-lg"></i>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Top Bar -->
+            <header class="bg-white border-b border-gray-200 py-4 px-6 flex items-center justify-between">
+                <!-- Mobile Menu Button (hidden on desktop) -->
+                <button class="mobile-menu-btn md:hidden text-gray-700" onclick="toggleSidebar()">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                
+                <!-- Breadcrumbs -->
+                <div class="hidden md:flex items-center text-sm">
+                    <span class="breadcrumb-item font-medium">Dashboard</span>
+                    <span class="breadcrumb-item font-medium">Analytics</span>
+                    <span class="breadcrumb-item text-gray-500">Overview</span>
+                </div>
+                
+                <!-- Right Side Controls -->
+                <div class="flex items-center space-x-4">
+                    <div class="relative hidden md:block">
+                        <input type="text" placeholder="Search..." class="search-input bg-gray-100 rounded-full py-2 px-4 pl-10 text-sm focus:bg-white focus:border-gray-300 w-64">
+                        <i class="fas fa-search absolute left-3 top-2.5 text-gray-500"></i>
+                    </div>
+                    
+                    <button class="text-gray-700 hover:text-gray-900 relative">
+                        <i class="fas fa-bell text-xl"></i>
+                        <span class="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500"></span>
+                    </button>
+                    
+                    <div class="flex items-center space-x-2">
+                        <div class="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
+                            <i class="fas fa-user text-gray-700"></i>
+                        </div>
+                        <span class="hidden md:inline text-sm font-medium">Admin</span>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Main Content Area -->
+            <main class="flex-1 overflow-y-auto p-6 bg-gray-50">
+                <!-- Page Title -->
+                <div class="mb-6">
+                    <h1 class="text-2xl font-semibold text-gray-900">Dashboard Overview</h1>
+                    <p class="text-gray-500 mt-1">Welcome back, Admin. Here's what's happening with your business today.</p>
+                </div>
+                
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="kpi-card bg-white rounded-lg shadow-sm p-6 border border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm font-medium">Total Revenue</p>
+                                <h3 class="text-2xl font-bold mt-1">$24,780</h3>
+                            </div>
+                            <div class="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
+                                <i class="fas fa-dollar-sign text-gray-700"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <span class="text-green-500 text-sm font-medium">+12.5%</span>
+                            <span class="text-gray-500 text-sm ml-2">vs last month</span>
+                        </div>
+                    </div>
+                    
+                    <div class="kpi-card bg-white rounded-lg shadow-sm p-6 border border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm font-medium">Total Accounts</p>
+                                <h3 class="text-2xl font-bold mt-1">1,842</h3>
+                            </div>
+                            <div class="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
+                                <i class="fas fa-users text-gray-700"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <span class="text-green-500 text-sm font-medium">+8.2%</span>
+                            <span class="text-gray-500 text-sm ml-2">vs last month</span>
+                        </div>
+                    </div>
+                    
+                    <div class="kpi-card bg-white rounded-lg shadow-sm p-6 border border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm font-medium">New Orders</p>
+                                <h3 class="text-2xl font-bold mt-1">327</h3>
+                            </div>
+                            <div class="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
+                                <i class="fas fa-shopping-cart text-gray-700"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <span class="text-green-500 text-sm font-medium">+3.1%</span>
+                            <span class="text-gray-500 text-sm ml-2">vs last month</span>
+                        </div>
+                    </div>
+                    
+                    <div class="kpi-card bg-white rounded-lg shadow-sm p-6 border border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm font-medium">Conversion Rate</p>
+                                <h3 class="text-2xl font-bold mt-1">3.6%</h3>
+                            </div>
+                            <div class="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
+                                <i class="fas fa-percentage text-gray-700"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <span class="text-red-500 text-sm font-medium">-0.8%</span>
+                            <span class="text-gray-500 text-sm ml-2">vs last month</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Charts Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <!-- Revenue Chart -->
+                    <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-semibold">Revenue Overview</h3>
+                            <div class="flex space-x-2">
+                                <button class="text-xs px-3 py-1 bg-gray-100 rounded-full">Monthly</button>
+                                <button class="text-xs px-3 py-1 text-gray-500 hover:bg-gray-100 rounded-full">Quarterly</button>
+                                <button class="text-xs px-3 py-1 text-gray-500 hover:bg-gray-100 rounded-full">Yearly</button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <!-- Chart placeholder - in a real app, you would use Chart.js or similar -->
+                            <div class="w-full h-full flex items-center justify-center bg-gray-50 rounded">
+                                <p class="text-gray-400">Revenue chart would appear here</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- User Growth Chart -->
+                    <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-semibold">User Growth</h3>
+                            <div class="flex space-x-2">
+                                <button class="text-xs px-3 py-1 bg-gray-100 rounded-full">Monthly</button>
+                                <button class="text-xs px-3 py-1 text-gray-500 hover:bg-gray-100 rounded-full">Quarterly</button>
+                                <button class="text-xs px-3 py-1 text-gray-500 hover:bg-gray-100 rounded-full">Yearly</button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <!-- Chart placeholder -->
+                            <div class="w-full h-full flex items-center justify-center bg-gray-50 rounded">
+                                <p class="text-gray-400">User growth chart would appear here</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent Activity Section -->
+                <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-semibold">Recent Activity</h3>
+                        <button class="text-sm text-gray-500 hover:text-gray-700">View All</button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div class="flex items-start space-x-4">
+                            <div class="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center mt-1">
+                                <i class="fas fa-user-plus text-gray-700 text-sm"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm"><span class="font-medium">John Smith</span> created a new account</p>
+                                <p class="text-xs text-gray-500 mt-1">2 hours ago</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start space-x-4">
+                            <div class="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center mt-1">
+                                <i class="fas fa-shopping-cart text-gray-700 text-sm"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm">New order <span class="font-medium">#ORD-4829</span> was placed</p>
+                                <p class="text-xs text-gray-500 mt-1">4 hours ago</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start space-x-4">
+                            <div class="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center mt-1">
+                                <i class="fas fa-envelope text-gray-700 text-sm"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm"><span class="font-medium">Sarah Johnson</span> sent a support ticket</p>
+                                <p class="text-xs text-gray-500 mt-1">1 day ago</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start space-x-4">
+                            <div class="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center mt-1">
+                                <i class="fas fa-file-invoice-dollar text-gray-700 text-sm"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm">Invoice <span class="font-medium">#INV-2948</span> was paid</p>
+                                <p class="text-xs text-gray-500 mt-1">2 days ago</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // Toggle sidebar on mobile
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            sidebar.classList.toggle('open');
+        }
+        
+        // Set active navigation item
+        document.addEventListener('DOMContentLoaded', function() {
+            const navItems = document.querySelectorAll('.sidebar-icon');
+            
+            navItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    navItems.forEach(nav => nav.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+            
+            // Simulate chart loading (in a real app, you would initialize actual charts here)
+            setTimeout(() => {
+                const chartPlaceholders = document.querySelectorAll('.chart-container > div');
+                chartPlaceholders.forEach(chart => {
+                    chart.innerHTML = '<p class="text-gray-400">Chart data loaded</p>';
+                });
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
