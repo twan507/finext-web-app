@@ -1,16 +1,15 @@
 # finext-fastapi/app/crud/sessions.py
 import logging
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple # Thêm Tuple
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from datetime import datetime, timezone
 
-# Đảm bảo tên schema khớp với file app/schemas/active_sessions .py
-# Nếu bạn đổi tên file schema thành sessions.py, hãy cập nhật import này.
 from app.schemas.sessions import SessionCreate, SessionInDB 
 from app.utils.types import PyObjectId
 
 logger = logging.getLogger(__name__)
+SESSIONS_COLLECTION = "sessions" # Định nghĩa tên collection
 
 async def create_session(db: AsyncIOMotorDatabase, session_data: SessionCreate) -> Optional[SessionInDB]:
     """Tạo một bản ghi session mới trong database."""
@@ -20,16 +19,18 @@ async def create_session(db: AsyncIOMotorDatabase, session_data: SessionCreate) 
     session_doc_to_insert["last_active_at"] = dt_now
     
     try:
-        # Chuyển đổi user_id (là string từ PyObjectId) sang ObjectId trước khi insert
         if not ObjectId.is_valid(session_data.user_id):
             logger.error(f"Định dạng user_id không hợp lệ: {session_data.user_id}")
             return None
         session_doc_to_insert["user_id"] = ObjectId(session_data.user_id)
         
-        insert_result = await db["sessions" ].insert_one(session_doc_to_insert)
+        insert_result = await db[SESSIONS_COLLECTION].insert_one(session_doc_to_insert)
         if insert_result.inserted_id:
-            created_session_doc = await db["sessions" ].find_one({"_id": insert_result.inserted_id})
+            created_session_doc = await db[SESSIONS_COLLECTION].find_one({"_id": insert_result.inserted_id})
             if created_session_doc:
+                 # Chuyển đổi ObjectId user_id sang str cho Pydantic model
+                if "user_id" in created_session_doc and isinstance(created_session_doc["user_id"], ObjectId):
+                    created_session_doc["user_id"] = str(created_session_doc["user_id"])
                 return SessionInDB(**created_session_doc)
         logger.error(f"Không thể tạo session cho user ID: {session_data.user_id}")
         return None
@@ -43,9 +44,16 @@ async def get_sessions_by_user_id(db: AsyncIOMotorDatabase, user_id: str) -> Lis
         logger.warning(f"Định dạng user_id không hợp lệ khi lấy sessions: {user_id}")
         return []
         
-    sessions_cursor = db["sessions" ].find({"user_id": ObjectId(user_id)})
-    sessions = await sessions_cursor.to_list(length=None) # Lấy tất cả
-    return [SessionInDB(**session) for session in sessions]
+    sessions_cursor = db[SESSIONS_COLLECTION].find({"user_id": ObjectId(user_id)})
+    sessions_docs = await sessions_cursor.to_list(length=None) 
+    
+    results: List[SessionInDB] = []
+    for session_doc in sessions_docs:
+        if "user_id" in session_doc and isinstance(session_doc["user_id"], ObjectId):
+            session_doc["user_id"] = str(session_doc["user_id"])
+        results.append(SessionInDB(**session_doc))
+    return results
+
 
 async def count_sessions_by_user_id(db: AsyncIOMotorDatabase, user_id: str) -> int:
     """Đếm số lượng session đang hoạt động của một user."""
@@ -53,19 +61,21 @@ async def count_sessions_by_user_id(db: AsyncIOMotorDatabase, user_id: str) -> i
         logger.warning(f"Định dạng user_id không hợp lệ khi đếm sessions: {user_id}")
         return 0
         
-    count = await db["sessions" ].count_documents({"user_id": ObjectId(user_id)})
+    count = await db[SESSIONS_COLLECTION].count_documents({"user_id": ObjectId(user_id)})
     return count
 
 async def get_session_by_jti(db: AsyncIOMotorDatabase, jti: str) -> Optional[SessionInDB]:
     """Tìm một session dựa trên JTI (JWT ID)."""
-    session_doc = await db["sessions" ].find_one({"jti": jti})
+    session_doc = await db[SESSIONS_COLLECTION].find_one({"jti": jti})
     if session_doc:
+        if "user_id" in session_doc and isinstance(session_doc["user_id"], ObjectId):
+            session_doc["user_id"] = str(session_doc["user_id"])
         return SessionInDB(**session_doc)
     return None
 
 async def delete_session_by_jti(db: AsyncIOMotorDatabase, jti: str) -> bool:
     """Xóa một session dựa trên JTI."""
-    delete_result = await db["sessions" ].delete_one({"jti": jti})
+    delete_result = await db[SESSIONS_COLLECTION].delete_one({"jti": jti})
     return delete_result.deleted_count > 0
 
 async def find_and_delete_oldest_session(db: AsyncIOMotorDatabase, user_id: str) -> bool:
@@ -74,13 +84,13 @@ async def find_and_delete_oldest_session(db: AsyncIOMotorDatabase, user_id: str)
         logger.warning(f"Định dạng user_id không hợp lệ khi xóa session cũ nhất: {user_id}")
         return False
 
-    oldest_session = await db["sessions" ].find_one(
+    oldest_session = await db[SESSIONS_COLLECTION].find_one(
         {"user_id": ObjectId(user_id)},
-        sort=[("created_at", 1)] # Sắp xếp theo created_at tăng dần để lấy cái cũ nhất
+        sort=[("created_at", 1)] 
     )
 
     if oldest_session:
-        delete_result = await db["sessions" ].delete_one({"_id": oldest_session["_id"]})
+        delete_result = await db[SESSIONS_COLLECTION].delete_one({"_id": oldest_session["_id"]})
         if delete_result.deleted_count > 0:
             logger.info(f"Đã xóa session cũ nhất (ID: {oldest_session['_id']}, JTI: {oldest_session.get('jti')}) của user {user_id}.")
             return True
@@ -92,25 +102,54 @@ async def find_and_delete_oldest_session(db: AsyncIOMotorDatabase, user_id: str)
 
 async def update_last_active(db: AsyncIOMotorDatabase, jti: str) -> bool:
     """Cập nhật trường last_active_at cho một session."""
-    result = await db["sessions" ].update_one(
+    result = await db[SESSIONS_COLLECTION].update_one(
         {"jti": jti},
         {"$set": {"last_active_at": datetime.now(timezone.utc)}}
     )
     return result.modified_count > 0
 
-async def get_all_sessions(db: AsyncIOMotorDatabase, skip: int = 0, limit: int = 100) -> List[SessionInDB]:
-    """Lấy danh sách tất cả các session trong hệ thống, có phân trang (cho admin)."""
-    sessions_cursor = db["sessions" ].find().skip(skip).limit(limit)
-    sessions = await sessions_cursor.to_list(length=limit)
-    return [SessionInDB(**session) for session in sessions]
+# <<<< PHẦN CẬP NHẬT >>>>
+async def get_all_sessions(
+    db: AsyncIOMotorDatabase, 
+    skip: int = 0, 
+    limit: int = 100,
+    # Thêm các filter nếu admin cần, ví dụ:
+    # user_id_filter: Optional[PyObjectId] = None,
+    # device_info_filter: Optional[str] = None, # Tìm kiếm device info (chứa)
+) -> Tuple[List[SessionInDB], int]: # Trả về Tuple
+    """
+    Lấy danh sách tất cả các session trong hệ thống, có phân trang (cho admin).
+    """
+    query = {}
+    # if user_id_filter and ObjectId.is_valid(user_id_filter):
+    #     query["user_id"] = ObjectId(user_id_filter)
+    # if device_info_filter:
+    #     query["device_info"] = {"$regex": device_info_filter, "$options": "i"}
+    
+    total_count = await db[SESSIONS_COLLECTION].count_documents(query)
+    sessions_cursor = (
+        db[SESSIONS_COLLECTION].find(query)
+        .sort("last_active_at", -1) # Sắp xếp theo last_active_at mới nhất
+        .skip(skip)
+        .limit(limit)
+    )
+    sessions_docs = await sessions_cursor.to_list(length=limit)
+    
+    results: List[SessionInDB] = []
+    for session_doc in sessions_docs:
+        if "user_id" in session_doc and isinstance(session_doc["user_id"], ObjectId):
+            session_doc["user_id"] = str(session_doc["user_id"])
+        results.append(SessionInDB(**session_doc))
+    return results, total_count
+# <<<< KẾT THÚC PHẦN CẬP NHẬT >>>>
 
 async def delete_session_by_id(db: AsyncIOMotorDatabase, session_id_str: PyObjectId) -> bool:
     """Xóa session theo _id (dạng string đã được PyObjectId validate)."""
-    if not ObjectId.is_valid(session_id_str): # PyObjectId đã đảm bảo valid, nhưng check lại cho an toàn
+    if not ObjectId.is_valid(session_id_str): 
         logger.warning(f"Định dạng session_id không hợp lệ khi xóa: {session_id_str}")
         return False
     
-    delete_result = await db["sessions" ].delete_one({"_id": ObjectId(session_id_str)})
+    delete_result = await db[SESSIONS_COLLECTION].delete_one({"_id": ObjectId(session_id_str)})
     return delete_result.deleted_count > 0
 
 async def delete_sessions_for_user_except_jti(db: AsyncIOMotorDatabase, user_id_str: str, current_jti_to_keep: Optional[str]) -> int:
@@ -122,9 +161,8 @@ async def delete_sessions_for_user_except_jti(db: AsyncIOMotorDatabase, user_id_
     query: Dict[str, Any] = {"user_id": ObjectId(user_id_str)}
     if current_jti_to_keep:
         query["jti"] = {"$ne": current_jti_to_keep}
-    # Nếu current_jti_to_keep là None, tất cả sessions của user sẽ bị xóa.
-
-    delete_result = await db["sessions"].delete_many(query)
+    
+    delete_result = await db[SESSIONS_COLLECTION].delete_many(query)
     if delete_result.deleted_count > 0:
         logger.info(f"Đã xóa {delete_result.deleted_count} session(s) cho user ID {user_id_str} (giữ lại JTI: {current_jti_to_keep if current_jti_to_keep else 'TOÀN BỘ'}).")
     return delete_result.deleted_count

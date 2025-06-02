@@ -20,6 +20,11 @@ interface BrokerPublic {
     updated_at: string;
 }
 
+interface PaginatedBrokersResponse {
+    items: BrokerPublic[];
+    total: number;
+}
+
 export default function BrokersPage() {
     const [brokers, setBrokers] = useState<BrokerPublic[]>([]);
     const [loading, setLoading] = useState(true);
@@ -30,37 +35,28 @@ export default function BrokersPage() {
 
     const [openActionDialog, setOpenActionDialog] = useState(false);
     const [brokerToAction, setBrokerToAction] = useState<BrokerPublic | null>(null);
-    const [actionType, setActionType] = useState<'deactivate' | 'delete' | ''>('');
+    const [actionType, setActionType] = useState<'deactivate' | 'delete' | ''>(''); // 'delete' now implies deactivation
 
     const fetchBrokers = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await apiClient<BrokerPublic[]>({
+            const response = await apiClient<PaginatedBrokersResponse>({
                 url: `/api/v1/brokers/?skip=${page * rowsPerPage}&limit=${rowsPerPage}`,
                 method: 'GET',
             });
-
-            if (response.status === 200 && Array.isArray(response.data)) {
-                setBrokers(response.data);
-                const currentDataLength = response.data.length;
-                // This estimation is a fallback if backend doesn't provide total.
-                // For accurate pagination, backend should return total count.
-                if (page === 0) {
-                    setTotalCount(currentDataLength < rowsPerPage ? currentDataLength : currentDataLength + (currentDataLength === rowsPerPage ? rowsPerPage : 0));
-                } else if (currentDataLength < rowsPerPage) {
-                    setTotalCount(page * rowsPerPage + currentDataLength);
-                } else {
-                    setTotalCount(page * rowsPerPage + currentDataLength + rowsPerPage); // Estimate more pages exist
-                }
+            if (response.status === 200 && response.data &&
+                Array.isArray(response.data.items) && typeof response.data.total === 'number') {
+                setBrokers(response.data.items);
+                setTotalCount(response.data.total);
             } else {
-                setError(response.message || 'Failed to load brokers or unexpected data format.');
-                setBrokers([]); // Ensure it's an array
+                setError(response.message || 'Failed to load brokers or unexpected data structure.');
+                setBrokers([]);
                 setTotalCount(0);
             }
         } catch (err: any) {
             setError(err.message || 'Connection error or unauthorized access.');
-            setBrokers([]); // Ensure it's an array
+            setBrokers([]);
             setTotalCount(0);
         } finally {
             setLoading(false);
@@ -83,24 +79,27 @@ export default function BrokersPage() {
     const handleToggleBrokerStatus = async (broker: BrokerPublic) => {
         const newStatus = !broker.is_active;
         const originalStatus = broker.is_active;
+    
+        // Optimistic UI update
         setBrokers(prev => prev.map(b => b.id === broker.id ? { ...b, is_active: newStatus, updated_at: new Date().toISOString() } : b));
+    
         try {
             await apiClient<BrokerPublic>({
-                url: `/api/v1/brokers/${broker.id}`,
+                url: `/api/v1/brokers/${broker.id}`, 
                 method: 'PUT',
                 body: { is_active: newStatus }
             });
-            // Optionally re-fetch or rely on optimistic update if API returns updated object
-            // fetchBrokers();
+            // fetchBrokers(); // Or rely on optimistic update
         } catch (err: any) {
             setError(err.message || `Failed to update broker ${broker.broker_code} status.`);
             setBrokers(prev => prev.map(b => b.id === broker.id ? { ...b, is_active: originalStatus, updated_at: broker.updated_at } : b));
         }
     };
     
-    const handleOpenActionDialog = (broker: BrokerPublic, type: 'deactivate' | 'delete') => {
+    const handleOpenActionDialog = (broker: BrokerPublic) => {
+        // For brokers, "Delete" means deactivating them and revoking privileges as per backend logic
         setBrokerToAction(broker);
-        setActionType(type);
+        setActionType('deactivate'); // Unified action type for the dialog
         setOpenActionDialog(true);
     };
 
@@ -110,27 +109,29 @@ export default function BrokersPage() {
         setActionType('');
     };
 
-    const handleConfirmAction = async () => {
-        if (!brokerToAction || !actionType) return;
-        setLoading(true); 
+    const handleConfirmDeactivateAction = async () => {
+        if (!brokerToAction) return;
+        // setLoading(true); // Specific loading for this action
         try {
+            // The backend DELETE /api/v1/brokers/{broker_id_or_code} actually deactivates and revokes.
+            // Or use PUT /api/v1/brokers/{broker_id_or_code} with {is_active: false}
+            // Based on router, the DELETE endpoint is for "Hủy tư cách Đối tác (set is_active=False và thu hồi quyền lợi)"
             await apiClient({
                 url: `/api/v1/brokers/${brokerToAction.id}`,
-                method: 'PUT', 
-                body: { is_active: false } 
+                method: 'DELETE', 
             });
             fetchBrokers(); 
             handleCloseActionDialog();
         } catch (delError: any) {
-            setError(delError.message || `Failed to ${actionType} broker.`);
+            setError(delError.message || `Failed to deactivate broker.`);
             handleCloseActionDialog();
         } finally {
-            setLoading(false);
+            // setLoading(false);
         }
     };
 
-    const handleAddBroker = () => console.log("Add broker action triggered (not implemented)");
-    const handleEditBroker = (brokerId: string) => console.log("Edit broker action triggered for:", brokerId, " (not implemented)");
+    const handleAddBroker = () => console.log("Add broker action (not implemented)");
+    const handleEditBroker = (brokerId: string) => console.log("Edit broker action for:", brokerId, " (not implemented)");
 
     return (
         <Box>
@@ -201,8 +202,16 @@ export default function BrokersPage() {
                                                 <Tooltip title="Edit Broker (Not Implemented)">
                                                     <IconButton size="small" onClick={() => handleEditBroker(broker.id)} disabled><EditIcon fontSize="small" /></IconButton>
                                                 </Tooltip>
-                                                <Tooltip title={broker.is_active ? "Deactivate Broker" : "Delete (Deactivates)"}>
-                                                    <IconButton size="small" onClick={() => handleOpenActionDialog(broker, broker.is_active ? 'deactivate' : 'delete')}><DeleteIcon fontSize="small" /></IconButton>
+                                                <Tooltip title={broker.is_active ? "Deactivate Broker (Revoke Privileges)" : "Broker is Inactive"}>
+                                                    <span> {/* Span for Tooltip when IconButton is disabled */}
+                                                        <IconButton 
+                                                            size="small" 
+                                                            onClick={() => handleOpenActionDialog(broker)} 
+                                                            disabled={!broker.is_active} // Can only "delete" (deactivate) an active broker
+                                                        >
+                                                            <DeleteIcon fontSize="small" />
+                                                        </IconButton>
+                                                    </span>
                                                 </Tooltip>
                                             </TableCell>
                                         </TableRow>
@@ -228,18 +237,18 @@ export default function BrokersPage() {
                 )}
             </Paper>
              <Dialog open={openActionDialog} onClose={handleCloseActionDialog}>
-                <DialogTitle>Confirm {actionType === 'deactivate' ? 'Deactivation' : (actionType === 'delete' ? 'Deletion (Deactivation)' : 'Action')}</DialogTitle>
+                <DialogTitle>Confirm Broker Deactivation</DialogTitle>
                 <DialogContent>
                     <DialogContentText>
-                        Are you sure you want to proceed with this action for broker <strong>{brokerToAction?.broker_code}</strong> (User ID: {brokerToAction?.user_id})?
-                        {actionType === 'deactivate' && " This will set the broker to inactive."}
-                        {actionType === 'delete' && " This will mark the broker as inactive and revoke associated privileges."}
+                        Are you sure you want to deactivate broker <strong>{brokerToAction?.broker_code}</strong> (User ID: {brokerToAction?.user_id})?
+                        This will mark the broker as inactive and revoke associated privileges.
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleCloseActionDialog}>Cancel</Button>
-                    <Button onClick={handleConfirmAction} color="error" disabled={loading}>
-                         {loading ? <CircularProgress size={20} /> : (actionType === 'deactivate' ? "Deactivate" : "Confirm Delete (Deactivate)")}
+                    <Button onClick={handleConfirmDeactivateAction} color="error" /* disabled={specificActionLoading} */ >
+                         {/* {specificActionLoading ? <CircularProgress size={20} /> : "Confirm Deactivate"} */}
+                         Confirm Deactivate
                     </Button>
                 </DialogActions>
             </Dialog>

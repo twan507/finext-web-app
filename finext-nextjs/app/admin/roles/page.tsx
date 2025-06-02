@@ -9,7 +9,7 @@ import {
     IconButton, Alert, CircularProgress, TablePagination, Chip, Tooltip,
     Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle
 } from '@mui/material';
-import { Security as RolesIcon, Add as AddIcon, Edit as EditIcon, DeleteOutline as DeleteIcon, Refresh as RefreshIcon } from '@mui/icons-material'; // RolesIcon, AddIcon, EditIcon, DeleteIcon
+import { Security as RolesIcon, Add as AddIcon, Edit as EditIcon, DeleteOutline as DeleteIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 
 interface RolePublic {
@@ -21,8 +21,10 @@ interface RolePublic {
     updated_at: string;
 }
 
-// Assuming backend returns StandardApiResponse<RolePublic[]>
-// For proper pagination, backend should return total count.
+interface PaginatedRolesResponse {
+    items: RolePublic[];
+    total: number;
+}
 
 const RolesPage: React.FC = () => {
     const [roles, setRoles] = useState<RolePublic[]>([]);
@@ -39,23 +41,16 @@ const RolesPage: React.FC = () => {
         setLoading(true);
         setError(null);
         try {
-            // API returns StandardApiResponse<RolePublic[]>
-            const response = await apiClient<RolePublic[]>({
+            const response = await apiClient<PaginatedRolesResponse>({
                 url: `/api/v1/roles/?skip=${page * rowsPerPage}&limit=${rowsPerPage}`,
                 method: 'GET',
             });
-            if (response.status === 200 && Array.isArray(response.data)) {
-                setRoles(response.data);
-                const currentDataLength = response.data.length;
-                if (page === 0) {
-                    setTotalCount(currentDataLength < rowsPerPage ? currentDataLength : currentDataLength + (currentDataLength === rowsPerPage ? rowsPerPage : 0));
-                } else if (currentDataLength < rowsPerPage) {
-                    setTotalCount(page * rowsPerPage + currentDataLength);
-                } else {
-                    setTotalCount(page * rowsPerPage + currentDataLength + rowsPerPage);
-                }
+            if (response.status === 200 && response.data &&
+                Array.isArray(response.data.items) && typeof response.data.total === 'number') {
+                setRoles(response.data.items);
+                setTotalCount(response.data.total);
             } else {
-                setError(response.message || 'Failed to load roles.');
+                setError(response.message || 'Failed to load roles or unexpected data structure.');
                 setRoles([]);
                 setTotalCount(0);
             }
@@ -93,13 +88,13 @@ const RolesPage: React.FC = () => {
 
     const handleDeleteRole = async () => {
         if (!roleToDelete) return;
-        // setLoading(true); // Consider more specific loading
+        // setLoading(true); // Specific loading
         try {
             await apiClient({
                 url: `/api/v1/roles/${roleToDelete.id}`,
                 method: 'DELETE',
             });
-            fetchRoles(); // Refresh list
+            fetchRoles(); 
             handleCloseDeleteDialog();
         } catch (delError: any) {
             setError(delError.message || 'Failed to delete role. It might be protected or in use.');
@@ -209,8 +204,9 @@ const RolesPage: React.FC = () => {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleCloseDeleteDialog}>Cancel</Button>
-                    <Button onClick={handleDeleteRole} color="error" disabled={loading}>
-                        {loading ? <CircularProgress size={20} /> : "Delete"}
+                    <Button onClick={handleDeleteRole} color="error" /* disabled={specificDeleteLoading} */ >
+                        {/* {specificDeleteLoading ? <CircularProgress size={20} /> : "Delete"} */}
+                        Delete
                     </Button>
                 </DialogActions>
             </Dialog>

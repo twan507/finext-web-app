@@ -1,20 +1,21 @@
 # finext-fastapi/app/routers/roles.py
 import logging
-from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query # Thêm Query
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.database import get_database
-from app.schemas.roles import RoleCreate, RolePublic, RoleUpdate
+from app.schemas.roles import RoleCreate, RolePublic, RoleUpdate # Thêm RoleInDB
+# <<<< PHẦN CẬP NHẬT IMPORT >>>>
+from app.schemas.common import PaginatedResponse # Import schema phân trang
+# <<<< KẾT THÚC PHẦN CẬP NHẬT IMPORT >>>>
 from app.utils.types import PyObjectId
 from app.utils.response_wrapper import StandardApiResponse, api_response_wrapper
 from app.auth.access import require_permission 
 import app.crud.roles as crud_roles
-from app.core.config import PROTECTED_ROLE_NAMES # Import PROTECTED_ROLE_NAMES
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+router = APIRouter() # Prefix và tags sẽ được đặt ở main.py
 
 
 @router.post(
@@ -23,7 +24,7 @@ router = APIRouter()
     status_code=status.HTTP_201_CREATED,
     summary="Tạo một vai trò mới",
     dependencies=[Depends(require_permission("role", "create"))],
-    tags=["roles"],
+    tags=["roles"], # Thêm tags ở đây
 )
 @api_response_wrapper(
     default_success_message="Vai trò được tạo thành công.",
@@ -33,38 +34,45 @@ async def create_new_role(
     role_data: RoleCreate,
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
-    existing_role = await crud_roles.get_role_by_name(db, role_data.name)
-    if existing_role:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Vai trò với tên '{role_data.name}' đã tồn tại.",
-        )
+    try:
+        created_role = await crud_roles.create_role(db, role_create_data=role_data)
+        # crud_roles.create_role đã raise ValueError nếu có lỗi logic
+        if not created_role:
+            # Lỗi này có thể là lỗi DB không mong muốn
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Không thể tạo vai trò do lỗi máy chủ.",
+            )
+        return RolePublic.model_validate(created_role)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
-    created_role = await crud_roles.create_role(db, role_create_data=role_data)
-    if not created_role:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Không thể tạo vai trò do lỗi máy chủ hoặc dữ liệu không hợp lệ (ví dụ: permission ID không tồn tại).",
-        )
-    return RolePublic.model_validate(created_role)
-
-
+# <<<< PHẦN CẬP NHẬT ENDPOINT LIST ALL ROLES >>>>
 @router.get(
     "/",
-    response_model=StandardApiResponse[List[RolePublic]],
+    response_model=StandardApiResponse[PaginatedResponse[RolePublic]], # SỬA RESPONSE MODEL
     summary="Lấy danh sách các vai trò",
     dependencies=[Depends(require_permission("role", "list"))],
     tags=["roles"],
 )
 @api_response_wrapper(default_success_message="Lấy danh sách vai trò thành công.")
 async def read_all_roles(
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(0, ge=0, description="Số lượng bản ghi bỏ qua"),
+    limit: int = Query(100, ge=1, le=200, description="Số lượng bản ghi tối đa trả về"),
+    # Thêm filter nếu cần, ví dụ:
+    # name_filter: Optional[str] = Query(None, description="Lọc theo tên vai trò (chứa)"),
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
-    roles_in_db = await crud_roles.get_roles(db, skip=skip, limit=limit)
-    return [RolePublic.model_validate(role) for role in roles_in_db]
-
+    roles_docs, total_count = await crud_roles.get_roles(
+        db, 
+        skip=skip, 
+        limit=limit,
+        # name_filter=name_filter # Truyền filter nếu có
+    )
+    
+    items = [RolePublic.model_validate(role) for role in roles_docs]
+    return PaginatedResponse[RolePublic](items=items, total=total_count)
+# <<<< KẾT THÚC PHẦN CẬP NHẬT >>>>
 
 @router.get(
     "/{role_id}",
@@ -74,7 +82,7 @@ async def read_all_roles(
     tags=["roles"],
 )
 @api_response_wrapper(default_success_message="Lấy thông tin vai trò thành công.")
-async def read_role_by_id(
+async def read_role_by_id_endpoint( # Đổi tên hàm
     role_id: PyObjectId,
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
@@ -95,7 +103,7 @@ async def read_role_by_id(
     tags=["roles"],
 )
 @api_response_wrapper(default_success_message="Cập nhật vai trò thành công.")
-async def update_existing_role(
+async def update_existing_role( # Đổi tên hàm
     role_id: PyObjectId,
     role_data: RoleUpdate,
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
@@ -104,15 +112,15 @@ async def update_existing_role(
         updated_role = await crud_roles.update_role(
             db, role_id_str=role_id, role_update_data=role_data
         )
+        # crud_roles.update_role đã raise ValueError nếu có lỗi logic
+        if updated_role is None: # Nếu không tìm thấy role để update
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, 
+                detail=f"Không thể cập nhật vai trò với ID {role_id}. Vai trò không tồn tại.",
+            )
+        return RolePublic.model_validate(updated_role)
     except ValueError as ve: 
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
-
-    if updated_role is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail=f"Không thể cập nhật vai trò với ID {role_id}. Vai trò không tồn tại hoặc dữ liệu không hợp lệ.",
-        )
-    return RolePublic.model_validate(updated_role)
 
 
 @router.delete(
@@ -127,35 +135,20 @@ async def update_existing_role(
     default_success_message="Vai trò đã được xóa thành công.", 
     success_status_code=status.HTTP_200_OK 
 )
-async def delete_existing_role(
+async def delete_existing_role( # Đổi tên hàm
     role_id: PyObjectId,
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
-    role_to_delete = await crud_roles.get_role_by_id(db, role_id)
-    
-    if role_to_delete is None: 
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Vai trò với ID {role_id} không được tìm thấy.",
-        )
-
-    # Sử dụng PROTECTED_ROLE_NAMES từ config
-    if role_to_delete.name in PROTECTED_ROLE_NAMES:
-        logger.warning(f"Attempt to delete protected system role: {role_to_delete.name} (ID: {role_id})")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Không thể xóa vai trò hệ thống mặc định: '{role_to_delete.name}'.",
-        )
-    
     try:
         deleted = await crud_roles.delete_role(db, role_id_str=role_id)
-        if not deleted: # Should not happen if role was found and not protected, unless CRUD logic changes
-            logger.error(f"Role {role_to_delete.name} (ID: {role_id}) found but delete_one in CRUD failed after checks.")
+        if not deleted: 
+            # crud_roles.delete_role sẽ raise ValueError nếu là role được bảo vệ hoặc đang được sử dụng.
+            # Trường hợp này có thể là role_id không tìm thấy.
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-                detail=f"Không thể xóa vai trò với ID {role_id} sau khi kiểm tra.",
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Vai trò với ID {role_id} không tìm thấy để xóa.",
             )
-    except ValueError as ve: # Catch ValueError from CRUD (e.g., role in use or protected)
+    except ValueError as ve: # Bắt lỗi từ CRUD (ví dụ: role được bảo vệ, role đang sử dụng)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
         
     return None
