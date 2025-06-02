@@ -84,11 +84,11 @@ export const colorTokens = {
   },
   darkComponentColors: {
     appBar: {
-      background: '#1e1e1e',
+      background: '#1a1a1a',
       text: '#ffffff',
     },
     drawer: {
-      background: '#1e1e1e',
+      background: '#1a1a1a',
       border: '#303030',
     },
     tableHead: {

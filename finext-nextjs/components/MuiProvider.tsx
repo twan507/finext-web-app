@@ -40,7 +40,6 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
             root: ({ theme }) => ({ // theme here is the partially built theme
               backgroundColor: currentComponentColors.appBar.background,
               color: currentComponentColors.appBar.text,
-              boxShadow: '0 1px 4px rgba(0, 21, 41, 0.08)',
               borderBottom: `1px solid ${theme.palette.divider}`,
             }),
           },

@@ -73,16 +73,6 @@ const UsersPage: React.FC = () => {
     return (
         <Container maxWidth={false} sx={{ p: '0 !important' }}>
             <Box sx={{ mb: 3 }}>
-                <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 1 }}>
-                    <MuiLink underline="hover" color="inherit" href="/" sx={{ display: 'flex', alignItems: 'center' }}>
-                        <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
-                        Dashboard
-                    </MuiLink>
-                    <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center' }}>
-                        <PeopleIcon sx={{ mr: 0.5 }} fontSize="inherit" />
-                        Users
-                    </Typography>
-                </Breadcrumbs>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Box>
                         <Typography variant="h5" sx={{ fontWeight: 'bold' }}>User Management</Typography>

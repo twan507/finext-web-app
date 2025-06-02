@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useTheme as useNextTheme } from 'next-themes';
 import { IconButton, Tooltip, Skeleton } from '@mui/material';
 import {
-  Brightness4 as Brightness4Icon, // Dark mode icon
-  Brightness7 as Brightness7Icon, // Light mode icon
+  DarkMode as DarkModeIcon, // Dark mode icon
+  LightMode as LightModeIcon, // Light mode icon
 } from '@mui/icons-material';
 
 const ThemeToggleButton: React.FC = () => {
@@ -36,13 +36,13 @@ const ThemeToggleButton: React.FC = () => {
   const isCurrentlyDark = resolvedTheme === 'dark';
 
   const getThemeTooltip = () => {
-    return isCurrentlyDark ? "Chuyển sang Chế độ sáng" : "Chuyển sang Chế độ tối";
+    return "Chế độ sáng tôi";
   };
 
   return (
     <Tooltip title={getThemeTooltip()}>
       <IconButton sx={{ mr: 1 }} onClick={handleThemeChange} color="inherit">
-        {isCurrentlyDark ? <Brightness7Icon /> : <Brightness4Icon />}
+        {isCurrentlyDark ? <DarkModeIcon fontSize="small"/> : <LightModeIcon fontSize="small"/>}
       </IconButton>
     </Tooltip>
   );

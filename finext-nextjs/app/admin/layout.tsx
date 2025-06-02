@@ -1,9 +1,9 @@
 // finext-nextjs/app/(dashboard)/layout.tsx
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react'; // Added useRef
 import { useRouter, usePathname } from 'next/navigation';
-import Link from 'next/link'; // Using Next.js Link
+import Link from 'next/link';
 import { useAuth } from 'components/AuthProvider';
 
 // MUI Components
@@ -15,43 +15,120 @@ import {
   useMediaQuery,
   Badge,
   Breadcrumbs,
-  alpha, // Thêm alpha để điều chỉnh độ trong suốt của màu
+  alpha,
+  Popover,
+  Paper,
 } from '@mui/material';
 import MuiLink from '@mui/material/Link';
+import { SvgIconProps } from '@mui/material/SvgIcon'; // Import SvgIconProps
 
 // Icons
 import {
   Dashboard as DashboardIcon,
-  PeopleOutline as PeopleIcon,
+  People as PeopleIcon,
   Inventory2Outlined as ProductsIcon,
   BarChartOutlined as AnalyticsIcon,
   MailOutline as MessagesIcon,
   DescriptionOutlined as InvoicesIcon,
-  SettingsOutlined as SettingsIcon,
   Logout as LogoutIcon,
   NotificationsNoneOutlined as NotificationsIcon,
   Search as SearchIcon,
   Menu as MenuIcon,
   ChevronRight as ChevronRightIcon,
   DiamondOutlined as LogoIcon,
+  AccountBalanceWalletOutlined, // Added import
+  AdminPanelSettingsOutlined as AdminToolsIcon,
+  ListAltOutlined,         // Added import
+  SecurityOutlined as SecurityIcon,
+  CategoryOutlined as CategoryIcon,
+  AccountBalanceWalletOutlined as FinanceIcon, // Used AccountBalanceWalletOutlined again, ensure correct usage or pick another for Finance
+  // If FinanceIcon was meant to be different, pick one e.g. MonetizationOnOutlined
+  MonetizationOnOutlined as FinanceGroupIcon, // Example if FinanceIcon should be distinct
+  DynamicFeedOutlined as DataManagementIcon,
+  AdminPanelSettings,
+  FolderShared,
+  Security,
+  Gavel,
+  VerifiedUser,
+  Category,
+  Campaign,
+  Subscriptions,
+  ReceiptLong,
+  MonetizationOn,
+  Policy,
+  AccountBalanceWallet,
+  ListAlt,
+  Devices,
+  Key,
+  AccountCircle,
+  VpnKey,
+  LockOpen
 } from '@mui/icons-material';
 
 import UserMenu from './components/UserMenu';
 import ThemeToggleButton from 'components/ThemeToggleButton';
 
 import { layoutTokens } from '../../theme/tokens';
+import Image from 'next/image';
 
-const mainNavItems = [
+// Define types for navigation items
+interface NavItem {
+  text: string;
+  href: string;
+  icon: React.ReactElement<SvgIconProps>; // Use SvgIconProps for type safety with sx prop
+}
+
+interface NavGroup {
+  groupText: string;
+  groupIcon: React.ReactElement<SvgIconProps>; // Use SvgIconProps
+  subItems: NavItem[];
+}
+
+// Restructured navigation items
+const navigationStructure: (NavItem | NavGroup)[] = [
   { text: 'Dashboard', href: '/admin/dashboard', icon: <DashboardIcon /> },
-  { text: 'Users', href: '/admin/users', icon: <PeopleIcon /> },
-  { text: 'Products', href: '/admin/products', icon: <ProductsIcon /> },
-  { text: 'Analytics', href: '/admin/analytics', icon: <AnalyticsIcon /> },
-  { text: 'Messages', href: '/admin/messages', icon: <MessagesIcon /> },
-  { text: 'Invoices', href: '/admin/invoices', icon: <InvoicesIcon /> },
-];
-
-const bottomNavItems = [
-  { text: 'Settings', href: '/settings', icon: <SettingsIcon /> },
+  {
+    groupText: 'Accounts',
+    groupIcon: <PeopleIcon />,
+    subItems: [
+      { text: 'Users', href: '/admin/users', icon: <AccountCircle /> },
+      { text: 'Brokers', href: '/admin/brokers', icon: <AccountBalanceWallet /> },
+    ],
+  },
+  {
+    groupText: 'Billing',
+    groupIcon: <MonetizationOn />,
+    subItems: [
+      { text: 'Transactions', href: '/admin/transactions', icon: <ReceiptLong /> },
+      { text: 'Subscriptions', href: '/admin/subscriptions', icon: <LockOpen /> },
+      { text: 'Promotions', href: '/admin/promotions', icon: <Campaign /> },
+    ],
+  },
+  {
+    groupText: 'Licenses & Features',
+    groupIcon: <Policy />,
+    subItems: [
+      { text: 'Licenses', href: '/admin/licenses', icon: <VerifiedUser /> },
+      { text: 'Features', href: '/admin/features', icon: <Category /> },
+    ],
+  },
+  {
+    groupText: 'Roles & Permissions',
+    groupIcon: <AdminPanelSettings />,
+    subItems: [
+      { text: 'Roles', href: '/admin/roles', icon: <Security /> },
+      { text: 'Permissions', href: '/admin/permissions', icon: <Gavel /> },
+    ],
+  },
+  {
+    groupText: "User Data",
+    groupIcon: <FolderShared />,
+    subItems: [
+      { text: 'Watchlists', href: '/admin/watchlists', icon: <ListAlt /> },
+      { text: 'Sessions', href: '/admin/sessions', icon: <Devices /> },
+      { text: 'Otps', href: '/admin/otps', icon: <VpnKey /> },
+    ],
+  },
 ];
 
 export default function DashboardLayout({
@@ -66,6 +143,12 @@ export default function DashboardLayout({
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const [popoverAnchorEl, setPopoverAnchorEl] = useState<null | HTMLElement>(null);
+  const [openPopoverGroupId, setOpenPopoverGroupId] = useState<null | string>(null);
+  const [isTooltipDisabled, setIsTooltipDisabled] = useState(false); // State to disable tooltip
+
+  const popoverTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Ref for popover close timeout
+
   const drawerWidth = layoutTokens.compactDrawerWidth;
 
   useEffect(() => {
@@ -78,6 +161,45 @@ export default function DashboardLayout({
     setMobileOpen(!mobileOpen);
   };
 
+  const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>, groupId: string) => {
+    if (popoverTimeoutRef.current) {
+      clearTimeout(popoverTimeoutRef.current);
+      popoverTimeoutRef.current = null;
+    }
+    setPopoverAnchorEl(event.currentTarget);
+    setOpenPopoverGroupId(groupId);
+    setIsTooltipDisabled(true); // Disable tooltip when popover is to be opened
+  };
+
+  const handlePopoverClose = () => {
+    // Clear any existing timeout before setting a new one.
+    // This prevents orphaned timeouts if handlePopoverClose is called multiple times rapidly.
+    if (popoverTimeoutRef.current) {
+      clearTimeout(popoverTimeoutRef.current);
+      // popoverTimeoutRef.current is not set to null here because
+      // it will be immediately reassigned by the new setTimeout.
+    }
+
+    // Delay closing to allow mouse to move into popover
+    popoverTimeoutRef.current = setTimeout(() => {
+      setPopoverAnchorEl(null);
+      setOpenPopoverGroupId(null);
+      setIsTooltipDisabled(false); // Re-enable tooltip
+    }, 100); // Adjust delay as needed
+  };
+
+  const handlePopoverMouseEnter = () => {
+    if (popoverTimeoutRef.current) {
+      clearTimeout(popoverTimeoutRef.current);
+      popoverTimeoutRef.current = null;
+    }
+  };
+
+  const handlePopoverMouseLeave = () => {
+    handlePopoverClose();
+  };
+
+
   if (authLoading || !session) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: 'background.default' }}>
@@ -86,40 +208,35 @@ export default function DashboardLayout({
     );
   }
 
-  const drawerLinkStyles = (isActive: boolean) => ({
-    p: theme.spacing(1.5),
+  const drawerLinkStyles = (isActive: boolean, isSubItem: boolean = false) => ({
+    p: theme.spacing(isSubItem ? 1.25 : 1.5),
     borderRadius: '8px',
-    width: 40,
-    height: 40,
+    width: isSubItem ? '100%' : 40,
+    height: isSubItem ? 'auto' : 40,
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    // Màu chữ mặc định và khi active
+    justifyContent: isSubItem ? 'flex-start' : 'center',
     color: isActive
-      ? (theme.palette.mode === 'light' ? theme.palette.grey[800] : theme.palette.primary.light) // Chữ active
-      : theme.palette.text.secondary, // Chữ inactive
-    // Màu nền khi active
+      ? (theme.palette.mode === 'light' ? theme.palette.primary.main : theme.palette.primary.light)
+      : theme.palette.text.secondary,
     backgroundColor: isActive
-      ? (theme.palette.mode === 'light' ? theme.palette.grey[200] : alpha(theme.palette.primary.light, 0.12)) // Nền active
+      ? (theme.palette.mode === 'light' ? alpha(theme.palette.primary.main, 0.08) : alpha(theme.palette.primary.light, 0.12))
       : 'transparent',
     '&:hover': {
-      transform: 'scale(1.1)',
-      // Màu nền khi hover (dù active hay inactive)
+      transform: isSubItem ? 'none' : 'scale(1.1)',
       backgroundColor: isActive
-        ? (theme.palette.mode === 'light' ? theme.palette.grey[300] : alpha(theme.palette.primary.light, 0.20)) // Hover trên active
-        : (theme.palette.mode === 'light' ? theme.palette.grey[100] : alpha(theme.palette.common.white, 0.08)), // Hover trên inactive
-      // Màu chữ khi hover (dù active hay inactive)
+        ? (theme.palette.mode === 'light' ? alpha(theme.palette.primary.main, 0.12) : alpha(theme.palette.primary.light, 0.20))
+        : (theme.palette.mode === 'light' ? theme.palette.grey[100] : alpha(theme.palette.common.white, 0.08)),
       color: isActive
-        ? (theme.palette.mode === 'light' ? theme.palette.grey[900] : theme.palette.primary.main) // Chữ hover trên active
-        : (theme.palette.mode === 'light' ? theme.palette.grey[700] : theme.palette.grey[300]), // Chữ hover trên inactive
+        ? (theme.palette.mode === 'light' ? theme.palette.primary.dark : theme.palette.primary.main)
+        : (theme.palette.mode === 'light' ? theme.palette.grey[700] : theme.palette.grey[300]),
     },
-    // Đảm bảo .Mui-selected cũng có style tương tự như active
     '&.Mui-selected': {
-      color: theme.palette.mode === 'light' ? theme.palette.grey[800] : theme.palette.primary.light,
-      backgroundColor: theme.palette.mode === 'light' ? theme.palette.grey[200] : alpha(theme.palette.primary.light, 0.12),
+      color: theme.palette.mode === 'light' ? theme.palette.primary.main : theme.palette.primary.light,
+      backgroundColor: theme.palette.mode === 'light' ? alpha(theme.palette.primary.main, 0.08) : alpha(theme.palette.primary.light, 0.12),
       '&:hover': {
-        backgroundColor: theme.palette.mode === 'light' ? theme.palette.grey[300] : alpha(theme.palette.primary.light, 0.20),
-        color: theme.palette.mode === 'light' ? theme.palette.grey[900] : theme.palette.primary.main,
+        backgroundColor: theme.palette.mode === 'light' ? alpha(theme.palette.primary.main, 0.12) : alpha(theme.palette.primary.light, 0.20),
+        color: theme.palette.mode === 'light' ? theme.palette.primary.dark : theme.palette.primary.main,
       }
     },
     transition: theme.transitions.create(['transform', 'background-color', 'color'], {
@@ -130,42 +247,111 @@ export default function DashboardLayout({
   const drawerContent = (
     <>
       <Box sx={{ p: theme.spacing(2), display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <LogoIcon sx={{ fontSize: '20px', color: 'text.secondary' }} />
+        <Link href="/admin/dashboard">
+          <Image
+            src="/finext-icon-trans.png"
+            alt="Finext Logo"
+            width={20}
+            height={20}
+            style={{ height: '30px', width: 'auto', marginTop: theme.spacing(1) }}
+          />
+        </Link>
       </Box>
-      <List sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', py: theme.spacing(2), width: '100%'}}>
-        {mainNavItems.map((item) => {
-          const isActive = item.href === '/' ? currentPathname === '/' : currentPathname.startsWith(item.href);
-          return (
-            <ListItem key={item.text} disablePadding sx={{ width: 'auto', my: theme.spacing(0.75) }}>
-              <Tooltip title={item.text} placement="right">
-                <Link href={item.href} passHref style={{ textDecoration: 'none' }}>
-                  <ListItemButton selected={isActive} sx={drawerLinkStyles(isActive)}>
+      <List sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', py: theme.spacing(1), width: '100%' }}>
+        {navigationStructure.map((item) => {
+          if ('href' in item) {
+            const isActive = item.href === '/' ? currentPathname === '/' : currentPathname.startsWith(item.href);
+            return (
+              <ListItem key={item.text} disablePadding sx={{ width: 'auto', my: theme.spacing(0.75) }}>
+                <Tooltip title={item.text} placement="right" disableHoverListener={isTooltipDisabled && openPopoverGroupId !== null}>
+                  <Link href={item.href} passHref style={{ textDecoration: 'none' }}>
+                    <ListItemButton selected={isActive} sx={drawerLinkStyles(isActive)}>
+                      <ListItemIcon sx={{ minWidth: 'auto', color: 'inherit' }}>
+                        {React.cloneElement(item.icon, { sx: { ...item.icon.props.sx, fontSize: '18px' } })}
+                      </ListItemIcon>
+                    </ListItemButton>
+                  </Link>
+                </Tooltip>
+              </ListItem>
+            );
+          } else { // Group item
+            const isGroupActive = item.subItems.some(sub => currentPathname.startsWith(sub.href));
+            const isOpen = openPopoverGroupId === item.groupText;
+            return (
+              <ListItem
+                key={item.groupText}
+                disablePadding
+                sx={{ width: 'auto', my: theme.spacing(0.75) }}
+                onMouseEnter={(e) => handlePopoverOpen(e, item.groupText)}
+                onMouseLeave={handlePopoverClose}
+              >
+                <Tooltip title={item.groupText} placement="right" disableHoverListener={true}>
+                  <ListItemButton
+                    selected={isGroupActive && !isOpen} // Keep selection visual feedback if active and popover not matching current hover
+                    sx={drawerLinkStyles(isGroupActive || isOpen)}
+                  // onClick={(e) => handlePopoverOpen(e, item.groupText)} // Removed onClick for hover behavior
+                  >
                     <ListItemIcon sx={{ minWidth: 'auto', color: 'inherit' }}>
-                      {React.cloneElement(item.icon, { sx: { fontSize: '18px' }})}
+                      {React.cloneElement(item.groupIcon, { sx: { ...item.groupIcon.props.sx, fontSize: '18px' } })}
                     </ListItemIcon>
                   </ListItemButton>
-                </Link>
-              </Tooltip>
-            </ListItem>
-          );
+                </Tooltip>
+                <Popover
+                  open={isOpen}
+                  anchorEl={popoverAnchorEl}
+                  onClose={handlePopoverClose} // This will be triggered if mouse leaves popover area too
+                  anchorOrigin={{ vertical: 'center', horizontal: 'right' }}
+                  transformOrigin={{ vertical: 'center', horizontal: 'left' }}
+                  slotProps={{
+                    paper: {
+                      onMouseEnter: handlePopoverMouseEnter, // Keep popover open when mouse enters it
+                      onMouseLeave: handlePopoverMouseLeave, // Close popover when mouse leaves it
+                      sx: {
+                        ml: 1, p: 1, minWidth: 200, bgcolor: 'background.paper',
+                        backgroundImage: 'none', boxShadow: theme.shadows[6], borderRadius: '8px',
+                        pointerEvents: 'auto', // Ensure popover itself is interactive
+                      }
+                    }
+                  }}
+                  // To prevent Popover from stealing focus and closing immediately on mouse leave from ListItem
+                  disableRestoreFocus
+                  sx={{ pointerEvents: 'none' }} // Prevent popover from capturing mouse events initially that would close it
+                >
+                  <Typography variant="caption" sx={{ px: 2, py: 1, display: 'block', color: 'text.secondary', fontWeight: 'medium' }}>
+                    {item.groupText}
+                  </Typography>
+                  <List disablePadding>
+                    {item.subItems.map((subItem) => {
+                      const isSubActive = currentPathname.startsWith(subItem.href);
+                      return (
+                        <ListItem key={subItem.text} disablePadding sx={{ my: 0.5 }}>
+                          <Link href={subItem.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
+                            <ListItemButton
+                              selected={isSubActive}
+                              sx={drawerLinkStyles(isSubActive, true)}
+                              onClick={() => {
+                                handlePopoverClose(); // Close popover on subitem click
+                              }}
+                            >
+                              <ListItemIcon sx={{ minWidth: 32, color: 'inherit', mr: 1 }}>
+                                {React.cloneElement(subItem.icon, { sx: { ...subItem.icon.props.sx, fontSize: '16px' } })}
+                              </ListItemIcon>
+                              <ListItemText primary={subItem.text} primaryTypographyProps={{ variant: 'body2', fontWeight: isSubActive ? 'medium' : 'normal' }} />
+                            </ListItemButton>
+                          </Link>
+                        </ListItem>
+                      );
+                    })}
+                  </List>
+                </Popover>
+              </ListItem>
+            );
+          }
         })}
       </List>
       <Box sx={{ pb: theme.spacing(2), display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-        {bottomNavItems.map((item) => (
-          <ListItem key={item.text} disablePadding sx={{ width: 'auto', my: theme.spacing(0.75) }}>
-            <Tooltip title={item.text} placement="right">
-              <Link href={item.href} passHref style={{ textDecoration: 'none' }}>
-                <ListItemButton sx={drawerLinkStyles(currentPathname.startsWith(item.href))}>
-                  <ListItemIcon sx={{ minWidth: 'auto', color: 'inherit' }}>
-                    {React.cloneElement(item.icon, { sx: { fontSize: '18px' }})}
-                  </ListItemIcon>
-                </ListItemButton>
-              </Link>
-            </Tooltip>
-          </ListItem>
-        ))}
         <ListItem disablePadding sx={{ width: 'auto', my: theme.spacing(0.75) }}>
-          <Tooltip title="Logout" placement="right">
+          <Tooltip title="Logout" placement="right" disableHoverListener={isTooltipDisabled && openPopoverGroupId !== null}>
             <ListItemButton onClick={logout} sx={drawerLinkStyles(false)}>
               <ListItemIcon sx={{ minWidth: 'auto', color: 'inherit' }}>
                 <LogoutIcon sx={{ fontSize: '18px' }} />
@@ -177,75 +363,154 @@ export default function DashboardLayout({
     </>
   );
 
-  // ... (phần còn lại của component giữ nguyên)
+  const generateBreadcrumbs = () => {
+    const pathParts = currentPathname.split('/').filter(part => part);
+    let currentPageTitle = "Page";
+    let currentPageIconInstance: React.ReactElement<SvgIconProps> = <ChevronRightIcon sx={{ mr: 0.5, fontSize: "inherit" }} />; // Default icon
+
+    // Helper to find item in navigation structure
+    const findItem = (items: (NavItem | NavGroup)[], path: string): NavItem | undefined => {
+      for (const item of items) {
+        if ('href' in item && path.startsWith(item.href)) {
+          // Exact match or parent match for non-group items
+          if (path === item.href || (path.startsWith(item.href) && path[item.href.length] === '/')) {
+            return item;
+          }
+        } else if ('subItems' in item) {
+          const foundInSub = findItem(item.subItems, path);
+          if (foundInSub) return foundInSub;
+        }
+      }
+      return undefined;
+    };
+
+    // Attempt to find the deepest matching item for the current path
+    let bestMatch: NavItem | undefined = undefined;
+    let longestMatchLength = 0;
+
+    const findBestMatchRecursive = (items: (NavItem | NavGroup)[]) => {
+      for (const item of items) {
+        if ('href' in item) {
+          if (currentPathname.startsWith(item.href) && item.href.length > longestMatchLength) {
+            bestMatch = item;
+            longestMatchLength = item.href.length;
+          }
+        } else if ('subItems' in item) {
+          // Check if current path is within this group before recursing
+          if (item.subItems.some(sub => currentPathname.startsWith(sub.href))) {
+            findBestMatchRecursive(item.subItems);
+          }
+        }
+      }
+    };
+
+    findBestMatchRecursive(navigationStructure);
+
+    if (bestMatch) {
+      currentPageTitle = (bestMatch as NavItem).text;
+      currentPageIconInstance = React.cloneElement((bestMatch as NavItem).icon, { sx: { ...(bestMatch as NavItem).icon.props.sx, mr: 0.5, fontSize: "inherit" } });
+    } else if (currentPathname === '/admin/dashboard') {
+      // Special case for dashboard itself if not explicitly found by logic above (e.g. if base path doesn't match)
+      const dashboardItem = navigationStructure.find(item => 'href' in item && item.href === '/admin/dashboard') as NavItem | undefined;
+      if (dashboardItem) {
+        currentPageTitle = dashboardItem.text;
+        currentPageIconInstance = React.cloneElement(dashboardItem.icon, { sx: { ...dashboardItem.icon.props.sx, mr: 0.5, fontSize: "inherit" } });
+      }
+    }
+
+
+    return (
+      <Breadcrumbs aria-label="breadcrumb" sx={{ color: 'text.secondary' }}>
+        <MuiLink
+          component={Link}
+          underline="hover"
+          color="inherit"
+          href="/admin/dashboard"
+          sx={{ display: 'flex', alignItems: 'center' }}
+        >
+          <DashboardIcon sx={{ mr: 0.5, fontSize: "inherit" }} />
+          Dashboard
+        </MuiLink>
+        {(currentPathname !== '/admin/dashboard' && pathParts.length > 1 && (currentPageTitle !== "Page" || bestMatch)) && (
+          <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center' }}>
+            {currentPageIconInstance}
+            {currentPageTitle}
+          </Typography>
+        )}
+      </Breadcrumbs>
+    );
+  };
+
   return (
-    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[50] : theme.palette.background.default }}>
+    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: theme.palette.background.default }}>
       <CssBaseline />
       <AppBar
         position="fixed"
+        elevation={0}
         sx={{
           width: { md: `calc(100% - ${drawerWidth}px)` },
           ml: { md: `${drawerWidth}px` },
-          boxShadow: 'none',
-          bgcolor: 'background.paper',
-          borderBottom: `1px solid ${theme.palette.divider}`,
-          color: 'text.primary',
+          // bgcolor: 'background.paper', // Consider if needed
+          // borderBottom: `1px solid ${theme.palette.divider}`,
         }}
       >
         <Toolbar sx={{ justifyContent: 'space-between', px: theme.spacing(3), py: theme.spacing(0) }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             {isMobile && (
               <MuiIconButton
-                color="inherit"
+                color="inherit" // Will inherit color from parent, or set explicitly e.g. "default" or "primary"
                 aria-label="open drawer"
                 edge="start"
                 onClick={handleDrawerToggle}
-                sx={{ mr: 2 }}
+                sx={{ mr: 2, color: 'text.primary' /* More explicit for visibility */ }}
               >
                 <MenuIcon />
               </MuiIconButton>
             )}
-            {!isMobile && (
-              <Breadcrumbs separator={<ChevronRightIcon fontSize="small" />} aria-label="breadcrumb" sx={{ color: 'text.secondary', '& .MuiTypography-root': { fontWeight: 500 }}}>
-                <MuiLink component={Link} underline="hover" color="inherit" href="/">
-                  Dashboard
-                </MuiLink>
-                <MuiLink component={Link} underline="hover" color="inherit" href="/analytics">
-                  Analytics
-                </MuiLink>
-                <Typography color="text.disabled">Overview</Typography>
-              </Breadcrumbs>
-            )}
+            {!isMobile && generateBreadcrumbs()}
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: theme.spacing(2) }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: theme.spacing(isMobile ? 1 : 2) }}>
             {!isMobile && (
               <TextField
-                variant="standard" 
+                variant="standard"
                 size="small"
                 placeholder="Search..."
-                InputProps={{
-                  disableUnderline: true, 
+                InputProps={{ // Changed from slotProps.input to InputProps
+                  disableUnderline: true,
                   startAdornment: (
                     <InputAdornment position="start">
-                      <SearchIcon sx={{ color: theme.palette.grey[500] }} />
+                      <SearchIcon sx={{ color: theme.palette.text.secondary }} />
                     </InputAdornment>
                   ),
+                }}
+                inputProps={{ // sx for the input element itself goes here
                   sx: {
                     borderRadius: '20px',
-                    bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[100] : theme.palette.grey[800], // Điều chỉnh cho dark mode
+                    bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[100] : alpha(theme.palette.common.white, 0.1),
                     px: theme.spacing(2),
-                    py: theme.spacing(0.5),
+                    py: theme.spacing(0.75),
                     fontSize: '0.875rem',
-                    width: 256,
-                    color: 'text.primary', // Đảm bảo chữ search có màu phù hợp
-                    '&:focus-within': { 
-                        bgcolor: 'background.paper', 
-                        boxShadow: `0 0 0 1px ${theme.palette.divider}` 
+                    minWidth: 220,
+                    color: 'text.primary',
+                    transition: theme.transitions.create(['background-color', 'box-shadow']),
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[200] : alpha(theme.palette.common.white, 0.15),
+                    },
+                    '&.Mui-focused': {
+                      bgcolor: theme.palette.background.paper,
+                      boxShadow: `0 0 0 2px ${theme.palette.primary.main}`,
                     }
                   }
                 }}
               />
+            )}
+            {isMobile && (
+              <MuiIconButton sx={{ color: 'text.secondary', '&:hover': { color: 'text.primary' } }}>
+                <Tooltip title="Search">
+                  <SearchIcon />
+                </Tooltip>
+              </MuiIconButton>
             )}
             <MuiIconButton sx={{ color: 'text.secondary', '&:hover': { color: 'text.primary' } }}>
               <Tooltip title="Notifications">
@@ -265,69 +530,88 @@ export default function DashboardLayout({
         sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }}
         aria-label="sidebar"
       >
-        <Drawer 
+        {/* Mobile Drawer */}
+        <Drawer
           variant="temporary"
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{ keepMounted: true }}
+          elevation={0}
           sx={{
             display: { xs: 'block', md: 'none' },
             '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: layoutTokens.drawerWidth, 
-              bgcolor: 'background.paper',
-              borderRight: `1px solid ${theme.palette.divider}`,
+              width: layoutTokens.drawerWidth, // full drawer width for mobile
             },
           }}
         >
-          <Box sx={{ p: theme.spacing(2), display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-             <LogoIcon sx={{ fontSize: '20px', color: 'text.secondary' }} />
-             <Typography variant="h6" sx={{ml:1}}>Finext</Typography>
+          <Box sx={{ p: theme.spacing(2), display: 'flex', alignItems: 'center', borderBottom: `1px solid ${theme.palette.divider}` }}>
+            <LogoIcon sx={{ fontSize: '24px', color: 'primary.main', mr: 1 }} />
+            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Finext</Typography>
           </Box>
-          <List>
-            {mainNavItems.map((item) => (
-              <ListItem key={item.text} disablePadding>
-                <Link href={item.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
-                  <ListItemButton selected={currentPathname.startsWith(item.href)} onClick={handleDrawerToggle}>
-                    <ListItemIcon>{item.icon}</ListItemIcon>
-                    <ListItemText primary={item.text} />
-                  </ListItemButton>
-                </Link>
-              </ListItem>
-            ))}
+          <List sx={{ flexGrow: 1, overflowY: 'auto' }}> {/* Added flexGrow and overflowY for long lists */}
+            {navigationStructure.map((itemOrGroup) => {
+              if ('href' in itemOrGroup) {
+                return (
+                  <ListItem key={itemOrGroup.text} disablePadding>
+                    <Link href={itemOrGroup.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
+                      <ListItemButton selected={currentPathname.startsWith(itemOrGroup.href)} onClick={handleDrawerToggle}>
+                        <ListItemIcon sx={{ color: currentPathname.startsWith(itemOrGroup.href) ? 'primary.main' : 'text.secondary', minWidth: 40 }}>
+                          {itemOrGroup.icon}
+                        </ListItemIcon>
+                        <ListItemText primary={itemOrGroup.text} />
+                      </ListItemButton>
+                    </Link>
+                  </ListItem>
+                );
+              } else {
+                return (
+                  <React.Fragment key={itemOrGroup.groupText}>
+                    <ListItem sx={{ pt: 2, pb: 1, mt: 1 }}> {/* Added some margin top for group headers */}
+                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'medium', textTransform: 'uppercase', pl: 1 }}>
+                        {itemOrGroup.groupText}
+                      </Typography>
+                    </ListItem>
+                    {itemOrGroup.subItems.map(subItem => (
+                      <ListItem key={subItem.text} disablePadding sx={{ pl: 1.5 }}>
+                        <Link href={subItem.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
+                          <ListItemButton selected={currentPathname.startsWith(subItem.href)} onClick={handleDrawerToggle}>
+                            <ListItemIcon sx={{ color: currentPathname.startsWith(subItem.href) ? 'primary.main' : 'text.secondary', minWidth: 40 }}>
+                              {subItem.icon}
+                            </ListItemIcon>
+                            <ListItemText primary={subItem.text} />
+                          </ListItemButton>
+                        </Link>
+                      </ListItem>
+                    ))}
+                  </React.Fragment>
+                );
+              }
+            })}
           </List>
-           <Box sx={{ p: theme.spacing(1)}}>
-             {bottomNavItems.map((item) => (
-              <ListItem key={item.text} disablePadding>
-                <Link href={item.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
-                  <ListItemButton selected={currentPathname.startsWith(item.href)} onClick={handleDrawerToggle}>
-                    <ListItemIcon>{item.icon}</ListItemIcon>
-                    <ListItemText primary={item.text} />
-                  </ListItemButton>
-                </Link>
-              </ListItem>
-            ))}
+          <Box sx={{ p: theme.spacing(1), mt: 'auto', borderTop: `1px solid ${theme.palette.divider}` }}>
             <ListItem disablePadding>
-                <ListItemButton onClick={() => { logout(); handleDrawerToggle(); }}>
-                    <ListItemIcon><LogoutIcon/></ListItemIcon>
-                    <ListItemText primary="Logout" />
-                </ListItemButton>
+              <ListItemButton onClick={() => { logout(); handleDrawerToggle(); }}>
+                <ListItemIcon sx={{ color: 'text.secondary', minWidth: 40 }}><LogoutIcon /></ListItemIcon>
+                <ListItemText primary="Logout" />
+              </ListItemButton>
             </ListItem>
-           </Box>
+          </Box>
         </Drawer>
-        <Drawer 
+
+        {/* Desktop Drawer (Compact with Popovers on Hover) */}
+        <Drawer
           variant="permanent"
           sx={{
             display: { xs: 'none', md: 'flex' },
+            flexDirection: 'column',
             '& .MuiDrawer-paper': {
               boxSizing: 'border-box',
-              width: drawerWidth,
-              bgcolor: 'background.paper',
-              borderRight: `1px solid ${theme.palette.divider}`,
-              position: 'relative', 
-              height: '100vh', 
+              width: drawerWidth, // compact drawer width
+              height: '100vh',
               display: 'flex',
               flexDirection: 'column',
+              bgcolor: 'background.paper',
+              borderRight: `1px solid ${theme.palette.divider}`,
             },
           }}
           open
@@ -340,12 +624,13 @@ export default function DashboardLayout({
         component="main"
         sx={{
           flexGrow: 1,
-          p: theme.spacing(3), 
+          p: theme.spacing(3),
           width: { md: `calc(100% - ${drawerWidth}px)` },
-          height: 'calc(100vh - 64px)', 
-          mt: '64px', 
+          height: '100vh',
+          mt: `64px`, // Standard AppBar height
+          maxHeight: `calc(100vh - 64px)`,
           overflowY: 'auto',
-          bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[50] : theme.palette.background.default,
+          bgcolor: theme.palette.mode === 'light' ? alpha(theme.palette.grey[500], 0.04) : theme.palette.background.default,
         }}
       >
         {children}
