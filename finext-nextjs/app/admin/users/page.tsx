@@ -1,63 +1,98 @@
-// finext-nextjs/app/(dashboard)/users/page.tsx
+// finext-nextjs/app/admin/users/page.tsx
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { apiClient } from 'services/apiClient';
-
-// MUI Components
 import {
-    Box, Typography, Container, Paper, TableContainer,
+    Box, Typography, Paper, TableContainer,
     Table, TableHead, TableRow, TableCell, TableBody, Chip, IconButton,
-    Alert, Button, Breadcrumbs, Link as MuiLink,
-    TablePagination,
-    Avatar
+    Alert, Button, TablePagination, Avatar, Tooltip, CircularProgress,
+    Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle
 } from '@mui/material';
-import {
-    Add as AddIcon,
-    MoreVert as MoreVertIcon, Home as HomeIcon, People as PeopleIcon
-} from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+import { format, parseISO } from 'date-fns';
 
-// Kiểu dữ liệu cho User
+// Interface for User data (matching UserPublic from backend)
 interface UserPublic {
     id: string;
     role_ids: string[];
     full_name: string;
     email: string;
-    phone_number: string;
+    phone_number?: string | null;
     is_active?: boolean;
-    created_at?: string;
+    created_at: string; // Assuming ISO string from backend
+    avatar_url?: string | null;
+    referral_code?: string | null;
+    google_id?: string | null;
+    subscription_id?: string | null;
 }
+
+// API directly returns StandardApiResponse<UserPublic[]>
+// So, response.data will be UserPublic[]
 
 const UsersPage: React.FC = () => {
     const [users, setUsers] = useState<UserPublic[]>([]);
-    const [loadingUsers, setLoadingUsers] = useState(true);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(5);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [totalCount, setTotalCount] = useState(0); // This will be based on fetched data length for now
+
+    const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+    const [userToDelete, setUserToDelete] = useState<UserPublic | null>(null);
+
+    const fetchUsers = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            // Backend endpoint /api/v1/users/ returns StandardApiResponse<UserPublic[]>
+            // So, response.data is UserPublic[]
+            const response = await apiClient<UserPublic[]>({
+                url: `/api/v1/users/?skip=${page * rowsPerPage}&limit=${rowsPerPage}`,
+                method: 'GET',
+            });
+
+            if (response.status === 200 && Array.isArray(response.data)) {
+                setUsers(response.data);
+                // For client-side pagination count or if API doesn't send total:
+                // This is NOT the true total if API paginates without sending total.
+                // Ideally, backend should send total count for server-side pagination.
+                // If API sends total, e.g. in headers, update setTotalCount accordingly.
+                // For now, assuming we need to ask backend to return total for accurate pagination.
+                // Let's simulate for now, if API provided total, it'd be set here.
+                // As a fallback for current backend:
+                if (response.data.length < rowsPerPage && page === 0) {
+                    setTotalCount(response.data.length);
+                } else if (response.data.length === rowsPerPage) {
+                    // We can't be sure of total, might be more pages.
+                    // This makes TablePagination inaccurate for subsequent pages unless API sends total.
+                    // A better approach: API sends { items: [], total: number }
+                    // For now, we'll set totalCount to a higher number if more data might exist.
+                    // This part requires backend to return total for accurate pagination.
+                    // Fallback: if you want to show pagination controls even without knowing true total:
+                    setTotalCount(page * rowsPerPage + response.data.length + (response.data.length === rowsPerPage ? rowsPerPage : 0) );
+
+                } else {
+                     setTotalCount(page * rowsPerPage + response.data.length);
+                }
+
+            } else {
+                setError(response.message || 'Failed to load users.');
+                setUsers([]);
+                setTotalCount(0);
+            }
+        } catch (err: any) {
+            setError(err.message || 'Connection error or unauthorized access.');
+            setUsers([]);
+            setTotalCount(0);
+        } finally {
+            setLoading(false);
+        }
+    }, [page, rowsPerPage]);
 
     useEffect(() => {
-        const fetchUsers = async () => {
-            setLoadingUsers(true);
-            setError(null);
-            try {
-                const response = await apiClient<UserPublic[]>({
-                    url: '/api/v1/users/',
-                    method: 'GET',
-                });
-                if (response.status === 200 && response.data) {
-                    setUsers(response.data);
-                } else {
-                    setError(response.message || 'Không thể tải danh sách người dùng.');
-                }
-            } catch (err: any) {
-                setError(err.message || 'Lỗi kết nối hoặc không có quyền truy cập.');
-            } finally {
-                setLoadingUsers(false);
-            }
-        };
-
         fetchUsers();
-    }, []);
+    }, [fetchUsers]);
 
     const handleChangePage = (event: unknown, newPage: number) => {
         setPage(newPage);
@@ -68,106 +103,144 @@ const UsersPage: React.FC = () => {
         setPage(0);
     };
 
-    const paginatedUsers = users.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+    const handleOpenDeleteDialog = (user: UserPublic) => {
+        setUserToDelete(user);
+        setOpenDeleteDialog(true);
+    };
+
+    const handleCloseDeleteDialog = () => {
+        setUserToDelete(null);
+        setOpenDeleteDialog(false);
+    };
+
+    const handleDeleteUser = async () => {
+        if (!userToDelete) return;
+        setLoading(true); // Can use a more specific loading state for the delete action
+        try {
+            await apiClient({
+                url: `/api/v1/users/${userToDelete.id}`,
+                method: 'DELETE',
+            });
+            // Optimistically update or refetch
+            setUsers(prevUsers => prevUsers.filter(u => u.id !== userToDelete.id));
+            setTotalCount(prevTotal => prevTotal -1); // Adjust total count
+            handleCloseDeleteDialog();
+        } catch (delError: any) {
+            setError(delError.message || 'Failed to delete user.');
+            handleCloseDeleteDialog();
+        } finally {
+            setLoading(false); // Reset specific loading state
+        }
+    };
+    
+    const handleAddUser = () => console.log("Add user action triggered (not implemented)");
+    const handleEditUser = (userId: string) => console.log("Edit user action triggered for:", userId, " (not implemented)");
 
     return (
-        <Container maxWidth={false} sx={{ p: '0 !important' }}>
-            <Box sx={{ mb: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Box>
-                        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>User Management</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Manage your users and view their details.
-                        </Typography>
-                    </Box>
-                    <Button
-                        variant="contained"
-                        startIcon={<AddIcon />}
-                        sx={{ textTransform: 'none', borderRadius: '8px' }}
-                    // onClick={() => router.push('/users/create')} // Ví dụ
-                    >
+        <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                <Typography variant="h4" component="h1">Users Management</Typography>
+                <Box>
+                    <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchUsers} disabled={loading} sx={{ mr: 1 }}>
+                        Refresh
+                    </Button>
+                    <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddUser}>
                         Add User
                     </Button>
                 </Box>
             </Box>
 
-            {error && <Alert severity="error" sx={{ m: 2, borderRadius: '12px' }}>{error}</Alert>}
+            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-            {!error && !loadingUsers && (
-                <Paper sx={{ width: '100%', mb: 2, borderRadius: '12px', overflow: 'hidden' }}>
-                    <TableContainer>
-                        <Table sx={{ minWidth: 750 }} aria-labelledby="tableTitle">
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Name</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Phone Number</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>ID</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold' }} align="right">Actions</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {paginatedUsers.map((user) => (
-                                    <TableRow
-                                        hover
-                                        key={user.id}
-                                        sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                                    >
-                                        <TableCell component="th" scope="row">
-                                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                                <Avatar sx={{ mr: 2, width: 40, height: 40, bgcolor: 'primary.light' }}>
-                                                    {user.full_name ? user.full_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
-                                                </Avatar>
-                                                <Box>
-                                                    <Typography variant="body1">{user.full_name}</Typography>
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        {user.email}
-                                                    </Typography>
-                                                </Box>
-                                            </Box>
-                                        </TableCell>
-                                        <TableCell>{user.phone_number}</TableCell>
-                                        <TableCell>
-                                            <Chip
-                                                label={user.is_active !== false ? 'Active' : 'Inactive'}
-                                                color={user.is_active !== false ? 'success' : 'default'}
-                                                size="small"
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Typography variant="body2" color="text.secondary">
-                                                ...{user.id ? user.id.slice(-6) : 'N/A'}
-                                            </Typography>
-                                        </TableCell>
-                                        <TableCell align="right">
-                                            <IconButton aria-label="actions">
-                                                <MoreVertIcon />
-                                            </IconButton>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                                {paginatedUsers.length === 0 && (
+            <Paper sx={{ width: '100%', overflow: 'hidden', borderRadius: 2 }}>
+                {loading && users.length === 0 ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 3, minHeight: 300 }}>
+                        <CircularProgress />
+                    </Box>
+                ) : (
+                    <>
+                        <TableContainer sx={{ maxHeight: 600 }}>
+                            <Table stickyHeader>
+                                <TableHead>
                                     <TableRow>
-                                        <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
-                                            No users found.
-                                        </TableCell>
+                                        <TableCell>Name</TableCell>
+                                        <TableCell>Contact</TableCell>
+                                        <TableCell>Status</TableCell>
+                                        <TableCell>Roles</TableCell>
+                                        <TableCell>Joined</TableCell>
+                                        <TableCell align="right">Actions</TableCell>
                                     </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-                    <TablePagination
-                        rowsPerPageOptions={[5, 10, 25]}
-                        component="div"
-                        count={users.length}
-                        rowsPerPage={rowsPerPage}
-                        page={page}
-                        onPageChange={handleChangePage}
-                        onRowsPerPageChange={handleChangeRowsPerPage}
-                    />
-                </Paper>
-            )}
-        </Container>
+                                </TableHead>
+                                <TableBody>
+                                    {users.map((user) => (
+                                        <TableRow hover key={user.id}>
+                                            <TableCell>
+                                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                    <Avatar src={user.avatar_url || undefined} sx={{ mr: 2, width: 40, height: 40 }}>
+                                                        {user.full_name ? user.full_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                                                    </Avatar>
+                                                    <Box>
+                                                        <Typography variant="body1" fontWeight="medium">{user.full_name}</Typography>
+                                                        <Typography variant="body2" color="text.secondary">{user.email}</Typography>
+                                                    </Box>
+                                                </Box>
+                                            </TableCell>
+                                            <TableCell>{user.phone_number || 'N/A'}</TableCell>
+                                            <TableCell>
+                                                <Chip
+                                                    label={user.is_active ? 'Active' : 'Inactive'}
+                                                    color={user.is_active ? 'success' : 'default'}
+                                                    size="small"
+                                                />
+                                            </TableCell>
+                                            <TableCell>{user.role_ids?.join(', ') || 'N/A'}</TableCell>
+                                            <TableCell>{user.created_at ? format(parseISO(user.created_at), 'dd/MM/yyyy') : 'N/A'}</TableCell>
+                                            <TableCell align="right">
+                                                <Tooltip title="Edit User">
+                                                    <IconButton size="small" onClick={() => handleEditUser(user.id)}><EditIcon fontSize="small" /></IconButton>
+                                                </Tooltip>
+                                                <Tooltip title="Delete User">
+                                                    <IconButton size="small" onClick={() => handleOpenDeleteDialog(user)}><DeleteIcon fontSize="small" /></IconButton>
+                                                </Tooltip>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                    {users.length === 0 && !loading && (
+                                        <TableRow>
+                                            <TableCell colSpan={6} align="center">No users found.</TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                        <TablePagination
+                            rowsPerPageOptions={[5, 10, 25, 50]}
+                            component="div"
+                            count={totalCount}
+                            rowsPerPage={rowsPerPage}
+                            page={page}
+                            onPageChange={handleChangePage}
+                            onRowsPerPageChange={handleChangeRowsPerPage}
+                        />
+                    </>
+                )}
+            </Paper>
+
+            <Dialog open={openDeleteDialog} onClose={handleCloseDeleteDialog}>
+                <DialogTitle>Confirm Delete</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Are you sure you want to delete user {userToDelete?.full_name} ({userToDelete?.email})? This action cannot be undone.
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseDeleteDialog}>Cancel</Button>
+                    <Button onClick={handleDeleteUser} color="error" disabled={loading}>
+                        {loading ? <CircularProgress size={20} /> : "Delete"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </Box>
     );
 };
 

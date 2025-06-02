@@ -30,7 +30,8 @@ from app.core.config import BROKER_EMAIL_1, BROKER_EMAIL_2
 
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/v1/brokers", tags=["brokers"])
+router = APIRouter(tags=["brokers"])
+
 
 
 @router.post(
@@ -266,7 +267,7 @@ async def deactivate_specific_broker(
         )
         async for sub_doc in partner_subs_cursor:
             try:
-                await crud_subscriptions.deactivate_subscription_db(db, str(sub_doc["_id"]), assign_free_if_none_active=False)
+                await crud_subscriptions.deactivate_subscription_db(db, str(sub_doc["_id"]))
                 logger.info(f"Đã hủy kích hoạt subscription 'PARTNER' (ID: {str(sub_doc['_id'])}) cho user ID: {user_id_of_broker_str}.")
             except ValueError as e:  # Catch error if deactivating protected sub
                 logger.error(f"Error deactivating PARTNER sub {str(sub_doc['_id'])} for broker {broker_id_or_code}: {e}")

@@ -85,7 +85,7 @@ interface NavGroup {
 }
 
 const navigationStructure: (NavItem | NavGroup)[] = [
-  { text: 'Dashboard', href: '/admin/dashboard', icon: <DashboardIcon /> },
+  // { text: 'Dashboard', href: '/admin/dashboard', icon: <DashboardIcon /> },
   {
     groupText: 'Account Management',
     groupIcon: <ManageAccounts />,

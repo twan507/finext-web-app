@@ -222,6 +222,29 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
         "name": "upload:create",
         "description": "Quyền upload file/image cho chính mình.",
     },
+
+        # <<<< PHẦN BỔ SUNG MỚI CHO ADMIN >>>>
+    {
+        "name": "permission:list_all_definitions",
+        "description": "Quyền xem danh sách tất cả các permission được định nghĩa trong hệ thống (admin).",
+    },
+    {
+        "name": "watchlist:read_any",
+        "description": "Quyền xem tất cả watchlists của mọi người dùng (admin).",
+    },
+    {
+        "name": "watchlist:delete_any",
+        "description": "Quyền xóa watchlist của bất kỳ người dùng nào (admin).",
+    },
+    {
+        "name": "otp:read_any",
+        "description": "Quyền xem tất cả các bản ghi OTP của mọi người dùng (admin).",
+    },
+    {
+        "name": "otp:invalidate_any",
+        "description": "Quyền vô hiệu hóa OTP của bất kỳ người dùng nào (admin).",
+    },
+    # <<<< KẾT THÚC PHẦN BỔ SUNG MỚI CHO ADMIN >>>>
 ]
 
 # Set containing all default permission names for validation

@@ -24,9 +24,7 @@ from app.utils.response_wrapper import StandardApiResponse, api_response_wrapper
 from app.utils.types import PyObjectId
 
 logger = logging.getLogger(__name__)
-# router = APIRouter() # Giữ nguyên nếu đã khai báo ở cuối file hoặc ở main.py
-# Nếu khai báo ở đây:
-router = APIRouter(prefix="/api/v1/transactions", tags=["transactions"]) # Sửa lại prefix và tags
+router = APIRouter(tags=["transactions"])
 
 
 # --- API cho Admin ---

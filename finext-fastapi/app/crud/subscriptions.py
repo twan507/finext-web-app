@@ -1,6 +1,6 @@
 # finext-fastapi/app/crud/subscriptions.py
 import logging
-from typing import List, Optional
+from typing import List, Optional, Tuple # Thêm Tuple
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from datetime import datetime, timezone, timedelta
@@ -8,12 +8,12 @@ from app.utils.email_utils import send_subscription_expiry_reminder_email
 
 from app.schemas.subscriptions import (
     SubscriptionCreate,
-    SubscriptionInDB,
+    SubscriptionInDB, # Sử dụng SubscriptionInDB để lấy từ DB
     SubscriptionBase,
 )
 from app.utils.types import PyObjectId
 import app.crud.licenses as crud_licenses
-from app.core.config import PROTECTED_LICENSE_KEYS, BASIC_LICENSE_KEY  # MỚI
+from app.core.config import PROTECTED_LICENSE_KEYS, BASIC_LICENSE_KEY 
 
 logger = logging.getLogger(__name__)
 
@@ -61,8 +61,9 @@ async def assign_free_subscription_if_needed(db: AsyncIOMotorDatabase, user_id_o
     )
 
     free_sub_create_payload = SubscriptionCreate(
-        user_id=str(user_id_obj),  # type: ignore
+        user_id=str(user_id_obj), 
         license_key=BASIC_LICENSE_KEY,
+        duration_override_days=free_license.duration_days, 
     )
     try:
         # create_subscription_db will handle deactivation of other non-protected subs (though there shouldn't be any active at this point)
@@ -83,8 +84,11 @@ async def get_subscription_by_id_db(db: AsyncIOMotorDatabase, subscription_id_st
         return None
     sub_doc = await db.subscriptions.find_one({"_id": ObjectId(subscription_id_str)})
     if sub_doc:
-        sub_doc["user_id"] = str(sub_doc["user_id"])
-        sub_doc["license_id"] = str(sub_doc["license_id"])
+        # Convert ObjectId fields to str before Pydantic validation if necessary
+        if "user_id" in sub_doc and isinstance(sub_doc["user_id"], ObjectId):
+            sub_doc["user_id"] = str(sub_doc["user_id"])
+        if "license_id" in sub_doc and isinstance(sub_doc["license_id"], ObjectId):
+            sub_doc["license_id"] = str(sub_doc["license_id"])
         return SubscriptionInDB(**sub_doc)
     return None
 
@@ -101,8 +105,10 @@ async def get_active_subscription_for_user_db(db: AsyncIOMotorDatabase, user_id_
         }
     )
     if sub_doc:
-        sub_doc["user_id"] = str(sub_doc["user_id"])
-        sub_doc["license_id"] = str(sub_doc["license_id"])
+        if "user_id" in sub_doc and isinstance(sub_doc["user_id"], ObjectId):
+            sub_doc["user_id"] = str(sub_doc["user_id"])
+        if "license_id" in sub_doc and isinstance(sub_doc["license_id"], ObjectId):
+            sub_doc["license_id"] = str(sub_doc["license_id"])
         return SubscriptionInDB(**sub_doc)
     return None
 
@@ -125,8 +131,10 @@ async def find_inactive_partner_subscription_for_user(db: AsyncIOMotorDatabase, 
         sort=[("updated_at", -1)],
     )
     if sub_doc:
-        sub_doc["user_id"] = str(sub_doc["user_id"])
-        sub_doc["license_id"] = str(sub_doc["license_id"])
+        if "user_id" in sub_doc and isinstance(sub_doc["user_id"], ObjectId):
+            sub_doc["user_id"] = str(sub_doc["user_id"])
+        if "license_id" in sub_doc and isinstance(sub_doc["license_id"], ObjectId):
+            sub_doc["license_id"] = str(sub_doc["license_id"])
         return SubscriptionInDB(**sub_doc)
     return None
 
@@ -141,8 +149,10 @@ async def get_subscriptions_for_user_db(
 
     processed_subs = []
     for sub_doc in subs_from_db:
-        sub_doc["user_id"] = str(sub_doc["user_id"])
-        sub_doc["license_id"] = str(sub_doc["license_id"])
+        if "user_id" in sub_doc and isinstance(sub_doc["user_id"], ObjectId):
+            sub_doc["user_id"] = str(sub_doc["user_id"])
+        if "license_id" in sub_doc and isinstance(sub_doc["license_id"], ObjectId):
+            sub_doc["license_id"] = str(sub_doc["license_id"])
         processed_subs.append(SubscriptionInDB(**sub_doc))
     return processed_subs
 
@@ -155,7 +165,7 @@ async def deactivate_all_active_subscriptions_for_user(
     query = {
         "user_id": user_id_obj,
         "is_active": True,
-        "license_key": {"$nin": PROTECTED_LICENSE_KEYS},  # BASIC_LICENSE_KEY is not in PROTECTED_LICENSE_KEYS
+        "license_key": {"$nin": PROTECTED_LICENSE_KEYS + [BASIC_LICENSE_KEY]},
     }
     if exclude_sub_id:
         query["_id"] = {"$ne": exclude_sub_id}
@@ -194,14 +204,11 @@ async def create_subscription_db(db: AsyncIOMotorDatabase, sub_create_data: Subs
 
     license_obj_id = ObjectId(license_template.id)
 
-    # Deactivate other non-protected active subscriptions (this will include BASIC if license_key is not BASIC)
-    if sub_create_data.license_key != BASIC_LICENSE_KEY:
+    if sub_create_data.license_key != BASIC_LICENSE_KEY: # Chỉ hủy các sub khác nếu sub mới không phải BASIC
         await deactivate_all_active_subscriptions_for_user(db, user_obj_id)
-    else:  # If creating a BASIC sub, ensure no other sub (even protected) is active, unless it's another BASIC one being reactivated
-        # This case is mostly handled by assign_free_subscription_if_needed which calls this function.
-        # Direct creation of BASIC sub via API by admin should also deactivate others if it's intended to be the *only* active one.
-        # For simplicity, if admin directly creates BASIC, other non-protected will be deactivated.
-        await deactivate_all_active_subscriptions_for_user(db, user_obj_id)
+    # Không cần else ở đây vì assign_free_subscription_if_needed đã gọi hàm này và xử lý logic đó.
+    # Nếu admin cố tình tạo BASIC sub trực tiếp qua API này, hàm deactivate_all_active_subscriptions_for_user
+    # sẽ không chạy nếu license_key là BASIC, giữ nguyên các sub protected khác nếu có.
 
     dt_now = datetime.now(timezone.utc)
     duration = sub_create_data.duration_override_days or license_template.duration_days
@@ -210,9 +217,9 @@ async def create_subscription_db(db: AsyncIOMotorDatabase, sub_create_data: Subs
     expiry_date = start_date_for_new_sub + timedelta(days=duration)
 
     sub_base_payload = SubscriptionBase(
-        user_id=user_id_str_from_req,
+        user_id=user_id_str_from_req, # type: ignore
         user_email=user["email"],
-        license_id=str(license_obj_id),
+        license_id=str(license_obj_id), # type: ignore
         license_key=license_template.key,
         is_active=True,
         start_date=start_date_for_new_sub,
@@ -281,13 +288,12 @@ async def activate_specific_subscription_for_user(
         )
         raise ValueError(f"Không thể kích hoạt subscription vì gói license '{license_doc.key}' liên kết với nó hiện không hoạt động.")
 
-    # If activating a non-BASIC sub, deactivate other non-protected ones (including BASIC)
+    # Nếu sub đang kích hoạt không phải là BASIC, hủy các sub active khác (trừ sub được bảo vệ và chính nó)
     if sub_to_activate_doc.get("license_key") != BASIC_LICENSE_KEY:
         await deactivate_all_active_subscriptions_for_user(db, user_obj_id, exclude_sub_id=sub_to_activate_obj_id)
-    # If activating a BASIC sub, other non-protected subs should also be deactivated.
-    # The exclude_sub_id ensures the one being activated is not touched.
-    else:
+    else: # Nếu đang kích hoạt sub BASIC, hủy các sub active khác (trừ sub được bảo vệ và chính nó)
         await deactivate_all_active_subscriptions_for_user(db, user_obj_id, exclude_sub_id=sub_to_activate_obj_id)
+
 
     dt_now = datetime.now(timezone.utc)
     update_fields = {"is_active": True, "updated_at": dt_now}
@@ -295,7 +301,10 @@ async def activate_specific_subscription_for_user(
         if new_expiry_date.tzinfo is None:
             new_expiry_date = new_expiry_date.replace(tzinfo=timezone.utc)
         update_fields["expiry_date"] = new_expiry_date
-        update_fields["start_date"] = dt_now  # Reset start_date if expiry_date is being changed
+        # Khi admin set ngày hết hạn mới, start_date nên giữ nguyên hoặc set là now nếu sub đã hết hạn trước đó
+        if sub_to_activate_doc.get("expiry_date", dt_now) < dt_now:
+            update_fields["start_date"] = dt_now
+        # else giữ nguyên start_date gốc
 
     update_result = await db.subscriptions.update_one({"_id": sub_to_activate_obj_id, "user_id": user_obj_id}, {"$set": update_fields})
 
@@ -314,7 +323,6 @@ async def activate_specific_subscription_for_user(
 async def deactivate_subscription_db(
     db: AsyncIOMotorDatabase,
     subscription_id_str: PyObjectId,
-    # assign_free_if_none_active: bool = False, # This param is removed, logic is now inside
 ) -> Optional[SubscriptionInDB]:
     if not ObjectId.is_valid(subscription_id_str):
         logger.warning(f"Subscription ID không hợp lệ để hủy kích hoạt: {subscription_id_str}")
@@ -334,7 +342,6 @@ async def deactivate_subscription_db(
 
     if not sub_before_update.get("is_active", False):
         logger.info(f"Subscription {subscription_id_str} đã ở trạng thái inactive.")
-        # Even if it was already inactive, check if user needs BASIC sub
         user_id_of_sub_obj = sub_before_update.get("user_id")
         if user_id_of_sub_obj and isinstance(user_id_of_sub_obj, ObjectId):
             await assign_free_subscription_if_needed(db, user_id_of_sub_obj)
@@ -352,22 +359,23 @@ async def deactivate_subscription_db(
         deactivated_sub = await get_subscription_by_id_db(db, subscription_id_str)
         if user_id_of_sub_obj and isinstance(user_id_of_sub_obj, ObjectId):
             user = await db.users.find_one({"_id": user_id_of_sub_obj})
+            # Chỉ xóa user.subscription_id nếu sub đang hủy là sub chính của user
             if user and user.get("subscription_id") == sub_obj_id:
                 await db.users.update_one(
                     {"_id": user_id_of_sub_obj},
                     {
                         "$set": {
-                            "subscription_id": None,
+                            "subscription_id": None, # Đặt về None, assign_free_subscription_if_needed sẽ xử lý tiếp
                             "updated_at": datetime.now(timezone.utc),
                         }
                     },
                 )
                 logger.info(f"Đã xóa subscription_id khỏi user {str(user_id_of_sub_obj)} sau khi hủy sub {subscription_id_str}.")
-            # After deactivation, assign BASIC if needed
+            
             await assign_free_subscription_if_needed(db, user_id_of_sub_obj)
         return deactivated_sub
-    else:  # No modification, but sub was found
-        if user_id_of_sub_obj and isinstance(user_id_of_sub_obj, ObjectId):
+    else:
+        if user_id_of_sub_obj and isinstance(user_id_of_sub_obj, ObjectId): # Vẫn kiểm tra gán FREE nếu không có gì thay đổi
             await assign_free_subscription_if_needed(db, user_id_of_sub_obj)
 
     logger.warning(f"Không thể hủy kích hoạt subscription {subscription_id_str} (có thể do lỗi hoặc không tìm thấy).")
@@ -381,7 +389,7 @@ async def send_expiry_reminders_task(db: AsyncIOMotorDatabase, days_before_expir
     query = {
         "is_active": True,
         "expiry_date": {"$gt": now, "$lte": reminder_threshold_date},
-        "license_key": {"$nin": PROTECTED_LICENSE_KEYS + [BASIC_LICENSE_KEY]},  # Exclude BASIC from reminders
+        "license_key": {"$nin": PROTECTED_LICENSE_KEYS + [BASIC_LICENSE_KEY]},
     }
 
     subs_to_remind_cursor = db.subscriptions.find(query)
@@ -442,8 +450,6 @@ async def send_expiry_reminders_task(db: AsyncIOMotorDatabase, days_before_expir
 
 async def run_deactivate_expired_subscriptions_task(db: AsyncIOMotorDatabase) -> int:
     now = datetime.now(timezone.utc)
-    # We also exclude BASIC_LICENSE_KEY here, as its expiry is typically very far in the future
-    # and its deactivation/activation is handled by assign_free_subscription_if_needed
     query = {"is_active": True, "expiry_date": {"$lt": now}, "license_key": {"$nin": PROTECTED_LICENSE_KEYS + [BASIC_LICENSE_KEY]}}
 
     expired_subs_cursor = db.subscriptions.find(query)
@@ -453,11 +459,10 @@ async def run_deactivate_expired_subscriptions_task(db: AsyncIOMotorDatabase) ->
         sub_id_str = str(sub_doc["_id"])
         user_id_of_sub_obj = sub_doc.get("user_id")
         try:
-            updated_sub = await deactivate_subscription_db(db, sub_id_str)  # This will call assign_free_subscription_if_needed
+            updated_sub = await deactivate_subscription_db(db, sub_id_str) 
             if updated_sub and not updated_sub.is_active:
                 logger.info(f"Cron Task: Deactivated expired subscription ID: {sub_id_str} for user ID: {user_id_of_sub_obj}")
                 deactivated_count += 1
-                # User's subscription_id update and assignment of BASIC sub is handled within deactivate_subscription_db
             elif updated_sub and updated_sub.is_active:
                 logger.warning(f"Cron Task: Attempted to deactivate {sub_id_str}, but it remained active.")
         except ValueError as ve:
@@ -470,3 +475,44 @@ async def run_deactivate_expired_subscriptions_task(db: AsyncIOMotorDatabase) ->
     else:
         logger.info("Cron Task: No active and expired non-protected/non-free subscriptions found to deactivate.")
     return deactivated_count
+
+# <<<< PHẦN BỔ SUNG MỚI >>>>
+async def get_all_subscriptions_admin(
+    db: AsyncIOMotorDatabase,
+    skip: int = 0,
+    limit: int = 100,
+    user_id_filter: Optional[PyObjectId] = None,
+    license_key_filter: Optional[str] = None,
+    is_active_filter: Optional[bool] = None,
+) -> Tuple[List[SubscriptionInDB], int]:
+    """
+    Admin: Lấy danh sách tất cả subscriptions với filter và phân trang.
+    """
+    query = {}
+    if user_id_filter and ObjectId.is_valid(user_id_filter):
+        query["user_id"] = ObjectId(user_id_filter)
+    if license_key_filter:
+        query["license_key"] = license_key_filter.upper()
+    if is_active_filter is not None:
+        query["is_active"] = is_active_filter
+
+    total_count = await db.subscriptions.count_documents(query)
+    subs_cursor = (
+        db.subscriptions.find(query)
+        .sort("created_at", -1)
+        .skip(skip)
+        .limit(limit)
+    )
+    subscriptions_docs = await subs_cursor.to_list(length=limit)
+
+    results: List[SubscriptionInDB] = []
+    for sub_doc in subscriptions_docs:
+        # Chuyển đổi ObjectId sang str cho Pydantic model
+        if "user_id" in sub_doc and isinstance(sub_doc["user_id"], ObjectId):
+            sub_doc["user_id"] = str(sub_doc["user_id"])
+        if "license_id" in sub_doc and isinstance(sub_doc["license_id"], ObjectId):
+            sub_doc["license_id"] = str(sub_doc["license_id"])
+        results.append(SubscriptionInDB(**sub_doc))
+        
+    return results, total_count
+# <<<< KẾT THÚC PHẦN BỔ SUNG MỚI >>>>

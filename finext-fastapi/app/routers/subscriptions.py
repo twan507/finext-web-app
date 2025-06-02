@@ -2,24 +2,27 @@
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query # Thêm Query
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.database import get_database
 from app.schemas.subscriptions import (
     SubscriptionCreate, SubscriptionPublic
 )
-from app.schemas.users import UserInDB
+from app.schemas.users import UserInDB # Giữ UserInDB cho current_user
 from app.utils.types import PyObjectId
 from app.utils.response_wrapper import StandardApiResponse, api_response_wrapper
 from app.auth.dependencies import get_current_active_user
 from app.auth.access import require_permission
 import app.crud.subscriptions as crud_subscriptions
 from bson import ObjectId
-from app.core.config import PROTECTED_LICENSE_KEYS # Import
+
+# <<<< PHẦN BỔ SUNG MỚI HOẶC THAY THẾ >>>>
+from app.schemas.common import PaginatedResponse # Đảm bảo bạn đã tạo file này
+# <<<< KẾT THÚC PHẦN BỔ SUNG MỚI HOẶC THAY THẾ >>>>
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+router = APIRouter() # Prefix và tags sẽ được thêm ở main.py
 
 @router.post(
     "/",
@@ -41,13 +44,17 @@ async def create_new_subscription_endpoint(
     if not user_doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User với ID {sub_data.user_id} không tồn tại.")
 
-    created_sub = await crud_subscriptions.create_subscription_db(db, sub_create_data=sub_data)
-    if not created_sub:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Không thể tạo subscription. Vui lòng kiểm tra User ID và License Key ('{sub_data.license_key}') có hợp lệ không.",
-        )
-    return SubscriptionPublic.model_validate(created_sub)
+    try:
+        created_sub = await crud_subscriptions.create_subscription_db(db, sub_create_data=sub_data)
+        if not created_sub:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Không thể tạo subscription. Vui lòng kiểm tra User ID và License Key ('{sub_data.license_key}') có hợp lệ không, hoặc license có active không.",
+            )
+        return SubscriptionPublic.model_validate(created_sub)
+    except ValueError as ve: # Bắt lỗi từ CRUD (ví dụ license không active)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
 
 @router.post(
     "/{subscription_id}/activate",
@@ -70,17 +77,22 @@ async def activate_subscription_endpoint(
 
     user_id_of_sub = str(sub_to_activate.user_id)
 
-    activated_sub = await crud_subscriptions.activate_specific_subscription_for_user(
-        db, 
-        user_id_str=user_id_of_sub, 
-        subscription_id_to_activate_str=subscription_id,
-    )
-    if not activated_sub:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
-            detail=f"Không thể kích hoạt subscription {subscription_id}. Có thể nó không thuộc user hoặc lỗi khác.",
+    try:
+        activated_sub = await crud_subscriptions.activate_specific_subscription_for_user(
+            db, 
+            user_id_str=user_id_of_sub, 
+            subscription_id_to_activate_str=subscription_id,
         )
-    return SubscriptionPublic.model_validate(activated_sub)
+        if not activated_sub:
+            # Lỗi này có thể do logic bên trong activate_specific_subscription_for_user không tìm thấy sub hoặc user
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, 
+                detail=f"Không thể kích hoạt subscription {subscription_id}. Có thể nó không thuộc user hoặc lỗi khác.",
+            )
+        return SubscriptionPublic.model_validate(activated_sub)
+    except ValueError as ve: # Bắt lỗi từ CRUD (ví dụ license gốc không active)
+         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
 
 @router.get(
     "/{subscription_id}",
@@ -90,10 +102,10 @@ async def activate_subscription_endpoint(
     tags=["subscriptions"],
 )
 @api_response_wrapper(default_success_message="Lấy thông tin subscription thành công.")
-async def read_subscription_by_id(
+async def read_subscription_by_id( # Đổi tên hàm nếu bị trùng
     subscription_id: PyObjectId,
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
-    current_user: UserInDB = Depends(get_current_active_user), 
+    # current_user: UserInDB = Depends(get_current_active_user), # Bỏ nếu không dùng trực tiếp current_user
 ):
     sub = await crud_subscriptions.get_subscription_by_id_db(db, subscription_id)
     if sub is None:
@@ -111,12 +123,12 @@ async def read_subscription_by_id(
     tags=["subscriptions"],
 )
 @api_response_wrapper(default_success_message="Lấy lịch sử subscription thành công.")
-async def read_user_subscriptions(
+async def read_user_subscriptions( # Đổi tên hàm nếu bị trùng
     user_id: PyObjectId,
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(0, ge=0), # Thêm Query cho skip, limit
+    limit: int = Query(100, ge=1, le=100),
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
-    current_user: UserInDB = Depends(get_current_active_user),
+    # current_user: UserInDB = Depends(get_current_active_user), # Bỏ nếu không dùng
 ):
     subs = await crud_subscriptions.get_subscriptions_for_user_db(db, user_id, skip, limit)
     return [SubscriptionPublic.model_validate(s) for s in subs]
@@ -146,31 +158,51 @@ async def read_my_current_subscription_endpoint(
     tags=["subscriptions"],
 )
 @api_response_wrapper(default_success_message="Hủy kích hoạt subscription thành công.")
-async def deactivate_subscription(
+async def deactivate_subscription( # Đổi tên hàm nếu bị trùng
     subscription_id: PyObjectId,
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
-    subscription = await crud_subscriptions.get_subscription_by_id_db(db, subscription_id)
-    if not subscription:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Subscription với ID {subscription_id} không tìm thấy.",
-        )
-    
-    # Check PROTECTED_LICENSE_KEYS from config
-    if subscription.license_key in PROTECTED_LICENSE_KEYS:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Không thể hủy kích hoạt subscription với license key '{subscription.license_key}'. Đây là subscription hệ thống.",
-        )
-    
     try:
         deactivated_sub = await crud_subscriptions.deactivate_subscription_db(db, subscription_id)
-        if not deactivated_sub: # Should be caught by ValueError in CRUD if protected
+        if not deactivated_sub: 
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, # Or 404 if not found after initial check
-                detail=f"Subscription với ID {subscription_id} đã bị hủy kích hoạt trước đó hoặc không tìm thấy.",
+                status_code=status.HTTP_404_NOT_FOUND, 
+                detail=f"Subscription với ID {subscription_id} không tìm thấy hoặc đã bị hủy kích hoạt.",
             )
         return SubscriptionPublic.model_validate(deactivated_sub)
-    except ValueError as ve: # Catch protection error from CRUD
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(ve))
+    except ValueError as ve: 
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
+
+# <<<< PHẦN BỔ SUNG MỚI >>>>
+@router.get(
+    "/admin/all",
+    response_model=StandardApiResponse[PaginatedResponse[SubscriptionPublic]],
+    summary="[Admin] Lấy danh sách tất cả subscriptions (hỗ trợ filter và phân trang)",
+    dependencies=[Depends(require_permission("subscription", "read_any"))],
+    tags=["subscriptions"],
+)
+@api_response_wrapper(default_success_message="Lấy danh sách tất cả subscriptions thành công.")
+async def admin_read_all_subscriptions(
+    skip: int = Query(0, ge=0, description="Số bản ghi bỏ qua"),
+    limit: int = Query(100, ge=1, le=200, description="Số bản ghi tối đa mỗi trang"),
+    user_id: Optional[PyObjectId] = Query(None, description="Lọc theo User ID"),
+    license_key: Optional[str] = Query(None, description="Lọc theo License Key (ví dụ: 'EXAMPLE_PRO')"),
+    is_active: Optional[bool] = Query(None, description="Lọc theo trạng thái active (true/false)"),
+    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
+):
+    if not hasattr(crud_subscriptions, 'get_all_subscriptions_admin'):
+        logger.error("CRUD function 'get_all_subscriptions_admin' is not implemented in crud_subscriptions.py")
+        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Admin list subscriptions feature not fully implemented in CRUD.")
+
+    subscriptions_docs, total = await crud_subscriptions.get_all_subscriptions_admin(
+        db,
+        skip=skip,
+        limit=limit,
+        user_id_filter=user_id,
+        license_key_filter=license_key.upper() if license_key else None, # Chuẩn hóa license_key
+        is_active_filter=is_active
+    )
+    items = [SubscriptionPublic.model_validate(s) for s in subscriptions_docs]
+    return PaginatedResponse[SubscriptionPublic](items=items, total=total)
+# <<<< KẾT THÚC PHẦN BỔ SUNG MỚI >>>>

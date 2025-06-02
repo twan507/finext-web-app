@@ -2,6 +2,7 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from datetime import datetime, timezone
+from pydantic import EmailStr # Thêm EmailStr
 
 from app.utils.types import PyObjectId
 
@@ -59,6 +60,14 @@ class WatchlistPublic(WatchlistBase):
     user_id: PyObjectId # Keep user_id for potential admin use or if frontend needs it
     created_at: datetime
     updated_at: datetime
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True
+    )
+
+class WatchlistPublicAdmin(WatchlistPublic): # Kế thừa từ WatchlistPublic
+    user_email: Optional[EmailStr] = None # Thêm trường user_email
 
     model_config = ConfigDict(
         populate_by_name=True,
