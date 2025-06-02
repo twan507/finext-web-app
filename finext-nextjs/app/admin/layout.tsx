@@ -62,7 +62,10 @@ import {
   Key,
   AccountCircle,
   VpnKey,
-  LockOpen
+  LockOpen,
+  ShoppingCart,
+  ManageAccounts,
+  ContactPage
 } from '@mui/icons-material';
 
 import UserMenu from './components/UserMenu';
@@ -88,16 +91,16 @@ interface NavGroup {
 const navigationStructure: (NavItem | NavGroup)[] = [
   { text: 'Dashboard', href: '/admin/dashboard', icon: <DashboardIcon /> },
   {
-    groupText: 'Accounts',
-    groupIcon: <PeopleIcon />,
+    groupText: 'Account Management',
+    groupIcon: <ManageAccounts />,
     subItems: [
-      { text: 'Users', href: '/admin/users', icon: <AccountCircle /> },
+      { text: 'Users', href: '/admin/users', icon: <PeopleIcon /> },
       { text: 'Brokers', href: '/admin/brokers', icon: <AccountBalanceWallet /> },
     ],
   },
   {
-    groupText: 'Billing',
-    groupIcon: <MonetizationOn />,
+    groupText: 'Payment Management',
+    groupIcon: <ShoppingCart />,
     subItems: [
       { text: 'Transactions', href: '/admin/transactions', icon: <ReceiptLong /> },
       { text: 'Subscriptions', href: '/admin/subscriptions', icon: <LockOpen /> },
@@ -122,7 +125,7 @@ const navigationStructure: (NavItem | NavGroup)[] = [
   },
   {
     groupText: "User Data",
-    groupIcon: <FolderShared />,
+    groupIcon: <ContactPage />,
     subItems: [
       { text: 'Watchlists', href: '/admin/watchlists', icon: <ListAlt /> },
       { text: 'Sessions', href: '/admin/sessions', icon: <Devices /> },
@@ -289,7 +292,6 @@ export default function DashboardLayout({
                   <ListItemButton
                     selected={isGroupActive && !isOpen} // Keep selection visual feedback if active and popover not matching current hover
                     sx={drawerLinkStyles(isGroupActive || isOpen)}
-                  // onClick={(e) => handlePopoverOpen(e, item.groupText)} // Removed onClick for hover behavior
                   >
                     <ListItemIcon sx={{ minWidth: 'auto', color: 'inherit' }}>
                       {React.cloneElement(item.groupIcon, { sx: { ...item.groupIcon.props.sx, fontSize: '18px' } })}
@@ -317,7 +319,7 @@ export default function DashboardLayout({
                   disableRestoreFocus
                   sx={{ pointerEvents: 'none' }} // Prevent popover from capturing mouse events initially that would close it
                 >
-                  <Typography variant="caption" sx={{ px: 2, py: 1, display: 'block', color: 'text.secondary', fontWeight: 'medium' }}>
+                  <Typography color="text.primary" variant="caption" sx={{ px: 1, py: 1, display: 'block', fontWeight: 'bold' }}>
                     {item.groupText}
                   </Typography>
                   <List disablePadding>
@@ -366,39 +368,43 @@ export default function DashboardLayout({
   const generateBreadcrumbs = () => {
     const pathParts = currentPathname.split('/').filter(part => part);
     let currentPageTitle = "Page";
-    let currentPageIconInstance: React.ReactElement<SvgIconProps> = <ChevronRightIcon sx={{ mr: 0.5, fontSize: "inherit" }} />; // Default icon
+    let currentPageIconInstance: React.ReactElement<SvgIconProps> = <ChevronRightIcon sx={{ mr: 0.5, fontSize: "inherit" }} />;
+    let currentGroupText: string | null = null;
+    let currentGroupIcon: React.ReactElement<SvgIconProps> | null = null;
 
-    // Helper to find item in navigation structure
-    const findItem = (items: (NavItem | NavGroup)[], path: string): NavItem | undefined => {
+    // Helper to find item in navigation structure and return both item and group
+    const findItemWithGroup = (items: (NavItem | NavGroup)[], path: string): { item: NavItem | undefined, group: NavGroup | undefined } => {
       for (const item of items) {
         if ('href' in item && path.startsWith(item.href)) {
-          // Exact match or parent match for non-group items
           if (path === item.href || (path.startsWith(item.href) && path[item.href.length] === '/')) {
-            return item;
+            return { item, group: undefined };
           }
         } else if ('subItems' in item) {
-          const foundInSub = findItem(item.subItems, path);
-          if (foundInSub) return foundInSub;
+          const foundInSub = findItemWithGroup(item.subItems, path);
+          if (foundInSub.item) {
+            return { item: foundInSub.item, group: item };
+          }
         }
       }
-      return undefined;
+      return { item: undefined, group: undefined };
     };
 
-    // Attempt to find the deepest matching item for the current path
+    // Find the best matching item and its group
     let bestMatch: NavItem | undefined = undefined;
+    let bestMatchGroup: NavGroup | undefined = undefined;
     let longestMatchLength = 0;
 
-    const findBestMatchRecursive = (items: (NavItem | NavGroup)[]) => {
+    const findBestMatchRecursive = (items: (NavItem | NavGroup)[], parentGroup?: NavGroup) => {
       for (const item of items) {
         if ('href' in item) {
           if (currentPathname.startsWith(item.href) && item.href.length > longestMatchLength) {
             bestMatch = item;
+            bestMatchGroup = parentGroup;
             longestMatchLength = item.href.length;
           }
         } else if ('subItems' in item) {
-          // Check if current path is within this group before recursing
           if (item.subItems.some(sub => currentPathname.startsWith(sub.href))) {
-            findBestMatchRecursive(item.subItems);
+            findBestMatchRecursive(item.subItems, item);
           }
         }
       }
@@ -409,15 +415,19 @@ export default function DashboardLayout({
     if (bestMatch) {
       currentPageTitle = (bestMatch as NavItem).text;
       currentPageIconInstance = React.cloneElement((bestMatch as NavItem).icon, { sx: { ...(bestMatch as NavItem).icon.props.sx, mr: 0.5, fontSize: "inherit" } });
+
+      if (bestMatchGroup) {
+        const group = bestMatchGroup as NavGroup;
+        currentGroupText = group.groupText;
+        currentGroupIcon = React.cloneElement(group.groupIcon, { sx: { ...group.groupIcon.props.sx, mr: 0.5, fontSize: "inherit" } });
+      }
     } else if (currentPathname === '/admin/dashboard') {
-      // Special case for dashboard itself if not explicitly found by logic above (e.g. if base path doesn't match)
       const dashboardItem = navigationStructure.find(item => 'href' in item && item.href === '/admin/dashboard') as NavItem | undefined;
       if (dashboardItem) {
         currentPageTitle = dashboardItem.text;
         currentPageIconInstance = React.cloneElement(dashboardItem.icon, { sx: { ...dashboardItem.icon.props.sx, mr: 0.5, fontSize: "inherit" } });
       }
     }
-
 
     return (
       <Breadcrumbs aria-label="breadcrumb" sx={{ color: 'text.secondary' }}>
@@ -431,6 +441,12 @@ export default function DashboardLayout({
           <DashboardIcon sx={{ mr: 0.5, fontSize: "inherit" }} />
           Dashboard
         </MuiLink>
+        {currentGroupText && (
+          <Typography color="text.secondary" sx={{ display: 'flex', alignItems: 'center' }}>
+            {currentGroupIcon}
+            {currentGroupText}
+          </Typography>
+        )}
         {(currentPathname !== '/admin/dashboard' && pathParts.length > 1 && (currentPageTitle !== "Page" || bestMatch)) && (
           <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center' }}>
             {currentPageIconInstance}
