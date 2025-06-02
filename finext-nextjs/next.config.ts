@@ -6,13 +6,26 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'avatars.githubusercontent.com',
-        // search: '' // Thuộc tính search không được hỗ trợ trong Next.js 13+ cho remotePatterns, bạn có thể bỏ nó đi.
-                       // Nếu bạn cần kiểm soát query params, hãy dùng pathname.
+        port: '',
+        pathname: '/**',
       },
       {
         protocol: 'https',
         hostname: '*.public.blob.vercel-storage.com',
-        // search: ''
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'https://6aa6ced0145a5c1793ce63571c9c2799.r2.cloudflarestorage.com',
+        port: '',
+        pathname: '/**', 
       }
     ]
   }

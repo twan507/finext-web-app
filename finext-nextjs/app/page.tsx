@@ -1,0 +1,2140 @@
+// app/page.tsx
+'use client';
+
+import Script from 'next/script';
+import { useEffect } from 'react';
+
+
+export default function FinextPage() {
+  useEffect(() => {
+    document.title = 'Finext - Market Insights & Predictive Analytics';
+
+    // Chart.js initialization and other JS logic
+    // Ensure Chart is available (loaded by next/script)
+    if (typeof (window as any).Chart === 'undefined') {
+      console.warn('Chart.js is not loaded yet.');
+      // You might want to delay chart initialization or show a loading state
+      // For this example, we'll proceed assuming it loads fast enough.
+    }
+
+    const Chart = (window as any).Chart; // Access Chart from global scope
+
+    // Hero chart
+    const heroCtxElement = document.getElementById('heroChart') as HTMLCanvasElement | null;
+    if (heroCtxElement && Chart) {
+      const heroCtx = heroCtxElement.getContext('2d');
+      if (heroCtx) {
+        let heroData = Array.from({ length: 30 }, () => Math.random() * 5 + 165);
+        const heroChart = new Chart(heroCtx, {
+          type: 'line',
+          data: {
+            labels: Array.from({ length: 30 }, (_, i) => i + 1),
+            datasets: [{
+              label: 'AAPL',
+              data: heroData,
+              borderColor: '#8b5cf6', // var(--deepPurple-500)
+              backgroundColor: 'rgba(139, 92, 246, 0.1)',
+              borderWidth: 2,
+              pointRadius: 0,
+              tension: 0.4,
+              fill: true
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+              duration: 2000
+            },
+            plugins: {
+              legend: { display: false },
+              tooltip: { enabled: false }
+            },
+            scales: {
+              x: { display: false },
+              y: { display: false }
+            }
+          }
+        });
+
+        const heroInterval = setInterval(() => {
+          heroData.shift();
+          const lastValue = heroData[heroData.length - 1] || 170; // fallback if array becomes empty
+          const change = (Math.random() - 0.5) * 1.5;
+          heroData.push(Math.max(160, Math.min(175, lastValue + change)));
+          if (heroChart && typeof heroChart.update === 'function') {
+             heroChart.update();
+          }
+        }, 1500);
+        // Cleanup interval on component unmount
+        return () => clearInterval(heroInterval);
+      }
+    }
+
+    // Allocation chart
+    const allocCtxElement = document.getElementById('allocationChart') as HTMLCanvasElement | null;
+    if (allocCtxElement && Chart) {
+      const allocCtx = allocCtxElement.getContext('2d');
+      if (allocCtx) {
+        new Chart(allocCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Technology', 'Finance', 'Crypto', 'Other'],
+            datasets: [{
+              data: [45, 25, 20, 10],
+              backgroundColor: ['#8b5cf6', '#c084fc', '#a78bfa', '#ddd6fe'],
+              borderWidth: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: { legend: { display: false } }
+          }
+        });
+      }
+    }
+
+    // Performance chart
+    const perfCtxElement = document.getElementById('performanceChart') as HTMLCanvasElement | null;
+    if (perfCtxElement && Chart) {
+      const perfCtx = perfCtxElement.getContext('2d');
+      if (perfCtx) {
+        new Chart(perfCtx, {
+          type: 'line',
+          data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+            datasets: [{
+              label: 'Your Portfolio',
+              data: [100, 115, 135, 150, 170, 199],
+              borderColor: '#8b5cf6', // var(--deepPurple-500)
+              borderWidth: 3,
+              pointRadius: 0,
+              tension: 0.4
+            }, {
+              label: 'S&P 500',
+              data: [100, 110, 118, 126, 137, 155],
+              borderColor: '#c084fc', // var(--purple-300)
+              borderWidth: 2,
+              borderDash: [5, 5],
+              pointRadius: 0,
+              tension: 0.4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { color: '#9ca3af' } // var(--gray-400)
+              },
+              y: { display: false }
+            }
+          }
+        });
+      }
+    }
+
+    // Scroll animation for fade-in elements
+    const fadeElements = document.querySelectorAll('.fade-in');
+    const fadeInOnScroll = () => {
+      fadeElements.forEach(element => {
+        const elementTop = element.getBoundingClientRect().top;
+        const windowHeight = window.innerHeight;
+        if (elementTop < windowHeight - 100) {
+          element.classList.add('visible');
+        }
+      });
+    };
+    window.addEventListener('load', fadeInOnScroll);
+    window.addEventListener('scroll', fadeInOnScroll);
+    fadeInOnScroll(); // Initial check
+
+    // Form submission handler
+    const contactForm = document.getElementById('contactForm') as HTMLFormElement | null;
+    if (contactForm) {
+      const handleSubmit = (e: SubmitEvent) => {
+        e.preventDefault();
+        const submitBtn = contactForm.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+        if (!submitBtn) return;
+
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right: 0.5rem;"></i> Processing...';
+        submitBtn.disabled = true;
+        
+        setTimeout(() => {
+          submitBtn.innerHTML = '<i class="fas fa-check-circle" style="margin-right: 0.5rem;"></i> Success!';
+          submitBtn.style.backgroundImage = 'linear-gradient(to right, var(--green-500), var(--teal-500))';
+          
+          setTimeout(() => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+            submitBtn.style.backgroundImage = 'linear-gradient(to right, var(--deepPurple-600), var(--deepPurple-800))';
+          }, 2000);
+        }, 1500);
+      };
+      contactForm.addEventListener('submit', handleSubmit);
+       // Cleanup event listener on component unmount
+      return () => {
+          contactForm.removeEventListener('submit', handleSubmit);
+          window.removeEventListener('load', fadeInOnScroll);
+          window.removeEventListener('scroll', fadeInOnScroll);
+      };
+    }
+
+
+    // Simulate market ticker movement
+    const tickerTape = document.querySelector('.ticker-tape') as HTMLElement | null;
+    if (tickerTape) {
+      const tickerWidth = tickerTape.offsetWidth;
+      const container = tickerTape.parentElement as HTMLElement | null;
+      if (container) {
+        const containerWidth = container.offsetWidth;
+        if (tickerWidth > containerWidth) {
+          const duration = tickerWidth / 50; // Adjust speed: higher divisor = slower
+          tickerTape.style.animationDuration = `${duration}s`;
+        }
+      }
+    }
+    
+  }, []); // Empty dependency array means this runs once on mount
+
+  return (
+    <>
+      {/* It's generally better to put global CDN links in layout.tsx or _document.tsx (pages router) */}
+      {/* For App router, layout.tsx <head> is preferred. */}
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+      <Script src="https://cdn.jsdelivr.net/npm/chart.js" strategy="afterInteractive" />
+
+      <style jsx global>{`
+        /* Reset and Base Styles */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --deepPurple-50: #f5f3ff;
+            --deepPurple-100: #ede9fe;
+            --deepPurple-200: #ddd6fe;
+            --deepPurple-300: #c4b5fd;
+            --deepPurple-400: #a78bfa;
+            --deepPurple-500: #8b5cf6;
+            --deepPurple-600: #7c3aed;
+            --deepPurple-700: #6d28d9;
+            --deepPurple-800: #5b21b6;
+            --deepPurple-900: #4c1d95;
+
+            --royalPurple-50: #f6f0ff;
+            --royalPurple-100: #eddbfe;
+            --royalPurple-200: #d6bef9;
+            --royalPurple-300: #bd93f5;
+            --royalPurple-400: #a368f1;
+            --royalPurple-500: #8a3ee8;
+            --royalPurple-600: #7928d4;
+            --royalPurple-700: #6721b7;
+            --royalPurple-800: #551c96;
+            --royalPurple-900: #46157a;
+
+            /* Violet Berry */
+            --violetBerry: #7E22CE;
+
+            /* Standard Colors Used */
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-700: #374151;
+            --gray-750: #2a3342; /* Custom, for hover:bg-gray-750 */
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --gray-950: #0c111d; /* Custom, for to-gray-950 */
+            --white: #ffffff;
+            --green-400: #34d399;
+            --green-500: #10b981;
+            --red-400: #f87171;
+            --red-500: #ef4444;
+            --yellow-400: #fbbf24;
+            --yellow-500: #f59e0b;
+            --blue-500: #3b82f6;
+            --teal-500: #14b8a6;
+            --pink-500: #ec4899;
+            --purple-300: #c084fc; /* For S&P 500 legend */
+            --purple-500: #a855f7;
+
+            /* Font Awesome */
+            --fa-font-family: "Font Awesome 6 Free";
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            color: var(--gray-100);
+            background-color: var(--gray-900);
+        }
+
+        /* Custom Animations & Effects from original <style> block */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-12px); }
+        }
+        .floating {
+            animation: float 5s ease-in-out infinite;
+        }
+
+        .fade-in {
+            opacity: 0;
+            transition: opacity 0.6s ease-in;
+        }
+        .fade-in.visible {
+            opacity: 1;
+        }
+
+        .gradient-bg { /* Hero section background */
+            background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #a78bfa 100%);
+        }
+
+        .purple-glow { /* Hero chart glow */
+            box-shadow: 0 0 25px rgba(167, 139, 250, 0.5);
+        }
+
+        .card-hover {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(123, 97, 255, 0.3);
+        }
+
+        .btn-glow { /* Used on nav 'Get Started' and hero 'Explore Platform' */
+            box-shadow: 0 0 15px rgba(167, 139, 250, 0.7);
+        }
+        .btn-glow:hover {
+            box-shadow: 0 0 20px rgba(167, 139, 250, 0.9);
+        }
+
+        .data-cell { /* Portfolio summary cells */
+            background: linear-gradient(145deg, rgba(123, 97, 255, 0.1), rgba(156, 85, 247, 0.05));
+            backdrop-filter: blur(10px);
+            border-radius: 0.75rem; /* rounded-xl */
+            padding: 1rem; /* p-4 */
+        }
+
+        .pulse { /* Risk level indicator */
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--green-500);
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulse-green 1.5s infinite;
+        }
+        @keyframes pulse-green {
+            0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .chart-container { /* General chart container */
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .ticker-tape { /* Market Ticker */
+            white-space: nowrap;
+            animation: ticker-scroll 40s linear infinite;
+            font-family: monospace;
+        }
+        @keyframes ticker-scroll {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+
+        .stock-up {
+            color: var(--green-500);
+            position: relative;
+        }
+        .stock-down {
+            color: var(--red-500);
+            position: relative;
+        }
+
+        .tooltip {
+            position: absolute;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border-radius: 4px;
+            font-size: 14px;
+            pointer-events: none;
+            transform: translate(-50%, -100%);
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 100;
+            min-width: 120px;
+        }
+
+        /* General Helper classes (can be expanded) */
+        .text-center { text-align: center; }
+        .text-left { text-align: left; }
+        .font-bold { font-weight: 700; }
+        .font-semibold { font-weight: 600; }
+        .font-medium { font-weight: 500; }
+        .italic { font-style: italic; }
+        .mx-auto { margin-left: auto; margin-right: auto; }
+        .cursor-pointer { cursor: pointer; }
+
+        /* Navigation */
+        .main-nav {
+            background-color: var(--gray-800);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+        .main-nav .nav-container {
+            max-width: 80rem;
+            margin-left: auto;
+            margin-right: auto;
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+        .main-nav .nav-inner-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center; /* Ensure vertical alignment */
+            height: 4rem;
+        }
+        .main-nav .logo-group { /* flex items-center */
+            display: flex;
+            align-items: center;
+        }
+        .main-nav .logo-icon-wrapper { /* flex-shrink-0 flex items-center */
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+        }
+        .main-nav .logo-svg { /* h-8 w-8 text-deepPurple-400 */
+            height: 2rem;
+            width: 2rem;
+            color: var(--deepPurple-400);
+        }
+        .main-nav .logo-text { /* ml-2 text-xl font-bold text-deepPurple-300 */
+            margin-left: 0.5rem;
+            font-size: 1.25rem;
+            line-height: 1.75rem;
+            font-weight: 700;
+            color: var(--deepPurple-300);
+        }
+        .main-nav .nav-links-wrapper { /* hidden md:ml-6 md:flex md:items-center md:space-x-8 */
+            display: none; /* Default: hidden */
+        }
+        .main-nav .nav-link { /* text-gray-300 hover:text-deepPurple-300 px-3 py-2 text-sm font-medium */
+            color: var(--gray-300);
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+            font-weight: 500;
+            text-decoration: none;
+        }
+        .main-nav .nav-link:hover {
+            color: var(--deepPurple-300);
+        }
+        .main-nav .nav-actions-group { /* flex items-center */
+            display: flex;
+            align-items: center;
+        }
+        .main-nav .get-started-btn { /* bg-gradient-to-r from-deepPurple-600 to-deepPurple-800 hover:from-deepPurple-700 hover:to-deepPurple-900 text-white px-4 py-2 rounded-md text-sm font-medium transition duration-300 */
+            background-image: linear-gradient(to right, var(--deepPurple-600), var(--deepPurple-800));
+            color: var(--white);
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+            font-weight: 500;
+            transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 300ms;
+            border: none;
+            cursor: pointer;
+        }
+        .main-nav .get-started-btn:hover {
+            background-image: linear-gradient(to right, var(--deepPurple-700), var(--deepPurple-900));
+        }
+
+        /* Market Ticker */
+        .market-ticker-bar {
+            background-color: var(--gray-800);
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+            overflow: hidden;
+        }
+        .market-ticker-bar .ticker-tape > span { /* Direct children spans */
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+        .market-ticker-bar .ticker-tape .market-update-label {
+            color: var(--gray-400);
+        }
+
+        /* Hero Section */
+        /* .gradient-bg is globally defined */
+        .hero-section-container { /* max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32 */
+            max-width: 80rem;
+            margin-left: auto;
+            margin-right: auto;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            padding-top: 5rem;
+            padding-bottom: 5rem;
+        }
+        .hero-content-wrapper { /* md:flex items-center */
+            /* display: flex and align-items: center applied at md breakpoint */
+        }
+        .hero-text-column { /* md:w-1/2 mb-10 md:mb-0 */
+            margin-bottom: 2.5rem;
+        }
+        .hero-main-title { /* text-4xl md:text-5xl font-bold leading-tight mb-6 */
+            font-size: 2.25rem; /* text-4xl */
+            font-weight: 700;
+            line-height: 1.2; /* leading-tight */
+            margin-bottom: 1.5rem;
+        }
+        .hero-main-title .title-block { display: block; }
+        .hero-main-title .title-highlight { /* block bg-gradient-to-r from-white to-deepPurple-100 text-transparent bg-clip-text */
+            display: block;
+            background-image: linear-gradient(to right, var(--white), var(--deepPurple-100));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .hero-sub-text { /* text-xl text-deepPurple-100 mb-4 */
+            font-size: 1.25rem;
+            line-height: 1.75rem;
+            color: var(--deepPurple-100);
+            margin-bottom: 1rem;
+        }
+        .hero-detailed-text { /* text-lg text-deepPurple-100 mb-8 */
+            font-size: 1.125rem;
+            line-height: 1.75rem;
+            color: var(--deepPurple-100);
+            margin-bottom: 2rem;
+        }
+        .hero-buttons-group { /* flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 */
+            display: flex;
+            flex-direction: column;
+        }
+        .hero-buttons-group > button:not(:last-child) { /* space-y-4 */
+             margin-bottom: 1rem;
+        }
+
+        .hero-button { /* Common styles for hero buttons */
+            padding: 0.75rem 1.5rem; /* px-6 py-3 */
+            border-radius: 0.5rem; /* rounded-lg */
+            font-weight: 600; /* font-semibold */
+            transition-property: all;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 300ms;
+            transform-origin: center;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .hero-button:hover {
+            transform: scale(1.05);
+        }
+        .hero-button i {
+            margin-right: 0.5rem; /* mr-2 */
+        }
+        .hero-button-primary { /* bg-white text-deepPurple-700 hover:bg-gray-100 */
+            background-color: var(--white);
+            color: var(--deepPurple-700);
+        }
+        .hero-button-primary:hover {
+            background-color: var(--gray-100);
+        }
+        .hero-button-secondary { /* bg-transparent border-2 border-white text-white hover:bg-white hover:text-deepPurple-700 */
+            background-color: transparent;
+            border: 2px solid var(--white);
+            color: var(--white);
+        }
+        .hero-button-secondary:hover {
+            background-color: var(--white);
+            color: var(--deepPurple-700);
+        }
+
+        .hero-chart-column { /* md:w-1/2 relative */
+            position: relative;
+        }
+        .hero-chart-visual { /* floating purple-glow bg-gradient-to-br from-deepPurple-700 to-deepPurple-900 rounded-2xl p-6 */
+            /* floating and purple-glow are globally defined animations/effects */
+            background-image: linear-gradient(to bottom right, var(--deepPurple-700), var(--deepPurple-900));
+            border-radius: 1rem; /* rounded-2xl */
+            padding: 1.5rem; /* p-6 */
+        }
+        /* #heroChart canvas height is set via attribute, styling via .chart-container */
+        .hero-chart-info-text { /* flex justify-between mt-4 text-sm text-deepPurple-200 */
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1rem;
+            font-size: 0.875rem;
+            color: var(--deepPurple-200);
+        }
+        .hero-blur-deco-1 { /* absolute -bottom-10 -right-10 w-32 h-32 bg-deepPurple-500 rounded-full opacity-20 blur-xl */
+            position: absolute;
+            bottom: -2.5rem;
+            right: -2.5rem;
+            width: 8rem;
+            height: 8rem;
+            background-color: var(--deepPurple-500);
+            border-radius: 9999px;
+            opacity: 0.2;
+            filter: blur(16px); /* blur-xl */
+        }
+        .hero-blur-deco-2 { /* absolute -top-10 -left-10 w-24 h-24 bg-purple-500 rounded-full opacity-20 blur-xl */
+            position: absolute;
+            top: -2.5rem;
+            left: -2.5rem;
+            width: 6rem;
+            height: 6rem;
+            background-color: var(--purple-500);
+            border-radius: 9999px;
+            opacity: 0.2;
+            filter: blur(16px);
+        }
+
+        /* AI Dashboard Section */
+        .ai-dashboard-section { /* py-20 bg-gray-900 */
+            padding-top: 5rem;
+            padding-bottom: 5rem;
+            background-color: var(--gray-900);
+        }
+        .ai-dashboard-section .section-container { /* max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 */
+            max-width: 80rem;
+            margin-left: auto;
+            margin-right: auto;
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+        .ai-dashboard-section .section-header { /* text-center mb-16 fade-in */
+            text-align: center;
+            margin-bottom: 4rem;
+            /* fade-in is global */
+        }
+        .ai-dashboard-section .section-main-title { /* text-3xl font-bold text-white mb-4 */
+            font-size: 1.875rem;
+            line-height: 2.25rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 1rem;
+        }
+        .ai-dashboard-section .title-decorator-line { /* w-20 h-1 bg-deepPurple-500 mx-auto mb-6 */
+            width: 5rem;
+            height: 0.25rem;
+            background-color: var(--deepPurple-500);
+            margin-left: auto;
+            margin-right: auto;
+            margin-bottom: 1.5rem;
+        }
+        .ai-dashboard-section .section-subtitle { /* max-w-3xl mx-auto text-xl text-gray-400 */
+            max-width: 48rem;
+            margin-left: auto;
+            margin-right: auto;
+            font-size: 1.25rem;
+            line-height: 1.75rem;
+            color: var(--gray-400);
+        }
+        .ai-dashboard-section .dashboard-layout-grid { /* grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12 */
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        .dashboard-card { /* bg-gray-800 rounded-2xl p-6 card-hover */
+            background-color: var(--gray-800);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            /* card-hover is global */
+        }
+        .dashboard-card-header { /* flex justify-between items-center mb-6 */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .dashboard-card-title { /* text-xl font-bold text-white */
+            font-size: 1.25rem;
+            line-height: 1.75rem;
+            font-weight: 700;
+            color: var(--white);
+        }
+        .dashboard-card-badge { /* bg-deepPurple-600 rounded-full px-3 py-1 text-xs font-medium */
+            background-color: var(--deepPurple-600);
+            border-radius: 9999px;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.75rem;
+            line-height: 1rem;
+            font-weight: 500;
+            color: var(--white); /* Added as text color usually specified */
+        }
+        .summary-data-grid { /* grid grid-cols-2 gap-4 mb-6 */
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        /* .data-cell is global */
+        .data-cell-label { /* text-gray-400 text-sm */
+            color: var(--gray-400);
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+        }
+        .data-cell-value { /* text-xl font-bold text-white */
+            font-size: 1.25rem;
+            line-height: 1.75rem;
+            font-weight: 700;
+            color: var(--white);
+        }
+        .data-cell-change { /* text-green-400 text-sm flex items-center */
+            color: var(--green-400);
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+        }
+        .data-cell-change i { /* fas fa-arrow-up ml-1 */
+            margin-left: 0.25rem;
+        }
+        .risk-status-indicator { /* flex items-center */
+            display: flex;
+            align-items: center;
+        }
+        .risk-status-indicator .pulse { margin-right: 0.5rem; } /* pulse is global */
+        .risk-status-text { /* text-green-400 text-sm */
+            color: var(--green-400);
+            font-size: 0.875rem;
+        }
+        .confidence-progress-bar { /* w-full bg-gray-700 rounded-full h-2 mt-2 */
+            width: 100%;
+            background-color: var(--gray-700);
+            border-radius: 9999px;
+            height: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .confidence-progress-fill { /* bg-gradient-to-r from-green-400 to-blue-500 h-2 rounded-full (width inline) */
+            background-image: linear-gradient(to right, var(--green-400), var(--blue-500));
+            height: 0.5rem;
+            border-radius: 9999px;
+        }
+        .card-footer-note { /* text-gray-400 text-sm mt-4 */
+            color: var(--gray-400);
+            font-size: 0.875rem;
+            margin-top: 1rem;
+        }
+        .card-footer-note i { /* fas fa-info-circle text-deepPurple-400 mr-1 */
+            color: var(--deepPurple-400);
+            margin-right: 0.25rem;
+        }
+
+        .asset-allocation-card .card-header-icon { /* text-deepPurple-300 */
+            color: var(--deepPurple-300);
+        }
+        .asset-allocation-card .chart-container { height: 200px; }
+        .allocation-legend { /* grid grid-cols-4 gap-2 mt-4 text-center text-xs */
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.5rem;
+            margin-top: 1rem;
+            text-align: center;
+            font-size: 0.75rem;
+        }
+        .allocation-legend-item { /* p-1 */ padding: 0.25rem; }
+        .legend-color-indicator { /* w-3 h-3 rounded-full mx-auto mb-1 */
+            width: 0.75rem;
+            height: 0.75rem;
+            border-radius: 9999px;
+            margin-left: auto;
+            margin-right: auto;
+            margin-bottom: 0.25rem;
+        }
+        /* Specific legend colors */
+        .legend-tech-color { background-color: #8b5cf6; }
+        .legend-finance-color { background-color: #c084fc; }
+        .legend-crypto-color { background-color: #a78bfa; }
+        .legend-other-color { background-color: #ddd6fe; }
+        .legend-item-label { /* text-gray-400 */ color: var(--gray-400); }
+
+        .performance-card .controls-dropdown { /* bg-gray-700 text-gray-200 rounded-md px-2 py-1 text-sm */
+            background-color: var(--gray-700);
+            color: var(--gray-200);
+            border-radius: 0.375rem;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            border: 1px solid var(--gray-600); /* Added for better definition */
+        }
+        .performance-card .chart-container { height: 200px; }
+        .performance-legend-container { /* flex justify-between mt-4 text-sm */
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1rem;
+            font-size: 0.875rem;
+        }
+        .performance-legend-item .item-label { /* text-deepPurple-300 (for portfolio) flex items-center */
+            color: var(--deepPurple-300);
+            display: flex;
+            align-items: center;
+        }
+        .performance-legend-item .item-label.sp500 { color: var(--purple-300); } /* for S&P 500 */
+        .performance-legend-item .item-label i { /* fas fa-circle text-xs mr-1 */
+            font-size: 0.75rem;
+            margin-right: 0.25rem;
+        }
+        .performance-legend-item .item-value-portfolio { /* text-green-400 */ color: var(--green-400); }
+        .performance-legend-item .item-value-sp500 { /* text-gray-400 */ color: var(--gray-400); }
+
+
+        /* AI Recommended Assets Table card */
+        .ai-assets-table-card { /* bg-gray-800 rounded-2xl p-6 - dashboard-card can be reused */ }
+        .ai-assets-table-card .card-header-action button { /* text-deepPurple-300 hover:text-white */
+            color: var(--deepPurple-300);
+            background: none; border: none; cursor: pointer; font-size: 0.875rem; /* approx */
+        }
+        .ai-assets-table-card .card-header-action button:hover { color: var(--white); }
+        .ai-assets-table-card .card-header-action button i { margin-right: 0.25rem; }
+
+        .table-wrapper { /* overflow-x-auto */ overflow-x: auto; }
+        .predictions-table { /* w-full */ width: 100%; }
+        .predictions-table th { /* text-left text-gray-400 text-sm border-b border-gray-700 py-3 */
+            text-align: left;
+            color: var(--gray-400);
+            font-size: 0.875rem;
+            border-bottom: 1px solid var(--gray-700);
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+            font-weight: normal; /* Default th is bold */
+        }
+         .predictions-table td { /* text-gray-200 py-3 */
+            color: var(--gray-200);
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+            vertical-align: middle; /* Added for better alignment */
+        }
+        .predictions-table tbody tr { /* border-b border-gray-800 hover:bg-gray-750 */
+            border-bottom: 1px solid var(--gray-800); /* Changed from 800 to 700 for visibility */
+        }
+        .predictions-table tbody tr:hover { background-color: var(--gray-750); }
+
+        .asset-identity-cell { /* flex items-center */ display: flex; align-items: center; }
+        .asset-icon-container { /* bg-gray-700 p-2 rounded-lg mr-3 */
+            background-color: var(--gray-700);
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            margin-right: 0.75rem;
+            display:flex; align-items:center; justify-content:center; /* For icon inside */
+            width: 2.5rem; /* Ensure consistent size */
+            height: 2.5rem; /* Ensure consistent size */
+        }
+        .asset-icon-container i { font-size: 1.25rem; /* text-xl */ }
+        .asset-name-full { /* font-medium */ font-weight: 500; }
+        .asset-ticker-symbol { /* text-gray-500 text-sm */ color: var(--gray-500); font-size: 0.875rem; }
+        .asset-price-change.positive { /* text-green-400 font-medium */ color: var(--green-400); font-weight: 500; }
+        .asset-price-change.negative { /* text-red-400 font-medium */ color: var(--red-400); font-weight: 500; }
+
+        .ai-confidence-rating .confidence-bar-bg { /* w-full bg-gray-700 rounded-full h-2 */
+            width: 100%; background-color: var(--gray-700); border-radius: 9999px; height: 0.5rem;
+        }
+        .ai-confidence-rating .confidence-bar-fill { /* h-2 rounded-full, width & bg inline */
+            height: 0.5rem; border-radius: 9999px;
+        }
+        /* Specific fill colors for confidence bars */
+        .confidence-bar-fill.green { background-color: var(--green-500); }
+        .confidence-bar-fill.yellow { background-color: var(--yellow-500); }
+
+        .ai-confidence-rating .confidence-percentage { /* text-xs mt-1 */
+            font-size: 0.75rem; margin-top: 0.25rem;
+        }
+        .confidence-percentage.green { color: var(--green-400); }
+        .confidence-percentage.yellow { color: var(--yellow-400); }
+
+        .asset-predicted-price { /* font-medium */ font-weight: 500; }
+        .asset-action-button { /* px-3 py-1 rounded-md text-xs font-medium text-white */
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--white);
+            border: none; cursor: pointer;
+            min-width: 50px; /* Ensure buttons have a decent size */
+            text-align: center;
+        }
+        .asset-action-button.buy { /* bg-gradient-to-r from-green-500 to-teal-500 */
+            background-image: linear-gradient(to right, var(--green-500), var(--teal-500));
+        }
+        .asset-action-button.sell { /* bg-gradient-to-r from-red-500 to-pink-500 */
+            background-image: linear-gradient(to right, var(--red-500), var(--pink-500));
+        }
+        .table-footer-disclaimer { /* mt-6 text-gray-400 text-sm */
+            margin-top: 1.5rem; color: var(--gray-400); font-size: 0.875rem;
+        }
+        .table-footer-disclaimer i { /* fas fa-exclamation-triangle text-yellow-400 mr-1 */
+            color: var(--yellow-400); margin-right: 0.25rem;
+        }
+
+        /* Mission Section */
+        .mission-section { /* py-20 bg-gradient-to-b from-gray-900 to-gray-950 */
+            padding: 5rem 0;
+            background-image: linear-gradient(to bottom, var(--gray-900), var(--gray-950));
+        }
+        .mission-section .section-container, /* max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 */
+        .features-section .section-container,
+        .community-reviews-section .section-container,
+        .contact-section .section-container-wrapper {
+            max-width: 80rem;
+            margin-left: auto; margin-right: auto;
+            padding-left: 1rem; padding-right: 1rem;
+        }
+        /* Re-use .section-header, .section-main-title, .title-decorator-line, .section-subtitle from AI Dashboard for Mission and Features */
+        .mission-section .section-subtitle { margin-bottom: 2rem; } /* Specific to mission section */
+
+        .mission-cards-group { /* flex flex-col md:flex-row justify-center gap-8 */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 2rem;
+        }
+        .mission-card-item { /* bg-gray-800 rounded-2xl p-6 max-w-sm card-hover */
+            background-color: var(--gray-800);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            max-width: 24rem; /* max-w-sm */
+            margin-left: auto; margin-right: auto; /* Center when stacked */
+            /* card-hover is global */
+        }
+        .mission-card-item .card-icon { /* text-deepPurple-400 text-4xl mb-4 */
+            color: var(--deepPurple-400);
+            font-size: 2.25rem;
+            line-height: 2.5rem; /* for icon size */
+            margin-bottom: 1rem;
+        }
+        .mission-card-item .card-title { /* text-xl font-bold text-white mb-2 */
+            font-size: 1.25rem; font-weight: 700; color: var(--white); margin-bottom: 0.5rem;
+        }
+        .mission-card-item .card-text { /* text-gray-400 */ color: var(--gray-400); line-height: 1.6; }
+
+        /* Features Section */
+        .features-section { /* py-20 bg-gradient-to-b from-gray-900 to-gray-950 */
+             padding: 5rem 0;
+             background-image: linear-gradient(to bottom, var(--gray-900), var(--gray-950));
+        }
+        .features-grid-layout { /* grid md:grid-cols-2 lg:grid-cols-3 gap-8 */
+            display: grid;
+            gap: 2rem;
+        }
+        .feature-item-card { /* bg-gray-800 p-8 rounded-2xl hover:shadow-xl transition duration-300 fade-in card-hover */
+            background-color: var(--gray-800);
+            padding: 2rem;
+            border-radius: 1rem;
+            transition-property: box-shadow, transform; /* Added transform */
+            transition-duration: 300ms;
+            /* fade-in and card-hover are global */
+        }
+        .feature-item-card:hover {
+             box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); /* shadow-xl */
+             /* transform: translateY(-5px); from card-hover will also apply */
+        }
+        .feature-item-card .card-icon-area { /* text-deepPurple-400 mb-6 */
+            color: var(--deepPurple-400); margin-bottom: 1.5rem;
+        }
+        .feature-item-card .card-icon-area i { font-size: 2.25rem; /* text-4xl */ }
+        .feature-item-card .card-main-title { /* text-xl font-bold text-white mb-3 */
+            font-size: 1.25rem; font-weight: 700; color: var(--white); margin-bottom: 0.75rem;
+        }
+        .feature-item-card .card-description-text { /* text-gray-400 mb-4 */
+            color: var(--gray-400); margin-bottom: 1rem; line-height: 1.6;
+        }
+        .feature-item-card .stat-visual-container { /* mt-6 */ margin-top: 1.5rem; }
+        .feature-item-card .stat-labels { /* flex justify-between text-sm text-gray-500 mb-1 */
+            display: flex; justify-content: space-between; font-size: 0.875rem; color: var(--gray-500); margin-bottom: 0.25rem;
+        }
+        .feature-item-card .stat-progress-bar { /* w-full bg-gray-700 rounded-full h-2 */
+            width: 100%; background-color: var(--gray-700); border-radius: 9999px; height: 0.5rem;
+        }
+        .feature-item-card .stat-progress-fill { /* bg-gradient-to-r from-deepPurple-500 to-purple-500 h-2 rounded-full (width inline) */
+            background-image: linear-gradient(to right, var(--deepPurple-500), var(--purple-500));
+            height: 0.5rem; border-radius: 9999px;
+        }
+        .feature-item-card .latency-uptime-stats { /* mt-6 flex items-center */
+            margin-top: 1.5rem; display: flex; align-items: center;
+        }
+        .feature-item-card .stat-block { /* bg-gray-900 rounded-lg p-3 */
+            background-color: var(--gray-900); border-radius: 0.5rem; padding: 0.75rem; flex-grow: 1; text-align: center;
+        }
+        .feature-item-card .stat-block:first-child { margin-right: 1rem; /* mr-4 */ }
+        .feature-item-card .stat-block-value { /* text-green-400 text-2xl font-mono */
+            color: var(--green-400); font-size: 1.5rem; line-height: 2rem; font-family: monospace;
+        }
+        .feature-item-card .stat-block-label { /* text-gray-500 text-xs */
+            color: var(--gray-500); font-size: 0.75rem;
+        }
+        .feature-item-card .correlation-stats-display { /* mt-6 grid grid-cols-3 gap-2 text-center */
+            margin-top: 1.5rem; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; text-align: center;
+        }
+        .feature-item-card .correlation-item-block { /* bg-gray-900 py-2 rounded */
+            background-color: var(--gray-900); padding-top: 0.5rem; padding-bottom: 0.5rem; border-radius: 0.25rem;
+        }
+        .feature-item-card .correlation-value { font-weight: bold; } /* Added */
+        .feature-item-card .correlation-value.positive { color: var(--green-400); }
+        .feature-item-card .correlation-value.negative { color: var(--red-400); }
+        .feature-item-card .correlation-value.neutral { color: var(--yellow-400); }
+        .feature-item-card .correlation-asset-pair { /* text-gray-500 text-xs */
+            color: var(--gray-500); font-size: 0.75rem;
+        }
+        .feature-item-card .risk-display .stat-labels { margin-bottom: 0.5rem; /* mb-2 */ }
+        .feature-item-card .risk-display .portfolio-risk-text { color: var(--gray-400); }
+        .feature-item-card .risk-display .portfolio-risk-value { color: var(--green-400); } /* for Medium example */
+        .feature-item-card .risk-display .stat-progress-fill.yellow { /* bg-gradient-to-r from-yellow-500 to-yellow-400 */
+            background-image: linear-gradient(to right, var(--yellow-500), var(--yellow-400));
+        }
+        .feature-item-card .automated-trading-metrics { /* mt-6 flex */ margin-top: 1.5rem; display: flex; justify-content: space-around; }
+        .feature-item-card .trading-metric-item { text-align: center; }
+        /* .feature-item-card .trading-metric-item:first-child { margin-right: 1rem; /* mr-4 */ } /* Removed for space-around */
+        .feature-item-card .metric-value { /* text-green-400 text-xl */ color: var(--green-400); font-size: 1.25rem; font-weight: bold; }
+        .feature-item-card .metric-label { /* text-gray-500 text-xs */ color: var(--gray-500); font-size: 0.75rem; }
+
+        .feature-item-card .education-tags-list { /* mt-6 flex flex-wrap gap-2 */
+            margin-top: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.5rem;
+        }
+        .feature-item-card .education-tag-item { /* bg-deepPurple-900 text-deepPurple-300 px-3 py-1 rounded-full text-xs */
+            background-color: var(--deepPurple-900); color: var(--deepPurple-300);
+            padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem;
+        }
+
+        /* Community Reviews Section */
+        .community-reviews-section { /* py-20 bg-gradient-to-b from-gray-950 to-gray-900 */
+            padding: 5rem 0;
+            background-image: linear-gradient(to bottom, var(--gray-950), var(--gray-900));
+        }
+        .community-reviews-grid { /* grid grid-cols-1 md:grid-cols-3 gap-8 mb-12 */
+            display: grid; grid-template-columns: 1fr; gap: 2rem; margin-bottom: 3rem;
+        }
+        .review-item-card { /* bg-gray-800 rounded-2xl p-8 card-hover */
+            background-color: var(--gray-800); border-radius: 1rem; padding: 2rem;
+            /* card-hover is global */
+            display: flex; /* Added for flex structure */
+            flex-direction: column; /* Added */
+        }
+        .reviewer-profile-area { /* flex mb-6 */ display: flex; margin-bottom: 1.5rem; align-items: center; }
+        .reviewer-avatar-wrapper { margin-right: 1rem; /* mr-4 */ flex-shrink: 0; }
+        .reviewer-avatar-img { /* w-16 h-16 rounded-full */
+            width: 4rem; height: 4rem; border-radius: 9999px; object-fit: cover;
+        }
+        .reviewer-info .reviewer-name { /* text-xl font-bold text-white */
+            font-size: 1.25rem; font-weight: 700; color: var(--white);
+        }
+        .reviewer-info .reviewer-role { /* text-deepPurple-400 */ color: var(--deepPurple-400); font-size: 0.875rem; }
+        .reviewer-info .star-rating { /* flex text-yellow-400 mt-2 */
+            display: flex; color: var(--yellow-400); margin-top: 0.5rem;
+        }
+         .reviewer-info .star-rating i { font-size: 0.875rem; } /* Adjust star size */
+        .review-quote-text { /* text-gray-300 italic mb-6 */
+            color: var(--gray-300); font-style: italic; margin-bottom: 1.5rem; line-height: 1.6; flex-grow: 1; /* Added */
+        }
+        .review-join-date { /* flex items-center text-sm text-gray-500 */
+            display: flex; align-items: center; font-size: 0.875rem; color: var(--gray-500);
+        }
+        .review-join-date i { margin-right: 0.5rem; /* mr-2 */ }
+
+        .community-stats-overview { /* text-center mt-16 */ text-align: center; margin-top: 4rem; }
+        .community-stats-card { /* max-w-3xl mx-auto bg-gradient-to-r from-deepPurple-900 to-violetBerry rounded-2xl p-8 text-left */
+            max-width: 48rem; margin-left: auto; margin-right: auto;
+            background-image: linear-gradient(to right, var(--deepPurple-900), var(--violetBerry));
+            border-radius: 1rem; padding: 2rem; text-align: left;
+        }
+        .stats-card-header-flex { /* flex items-center justify-between mb-6 */
+            display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;
+        }
+        .stats-card-main-title { /* text-xl font-bold text-white mb-2 */
+            font-size: 1.25rem; font-weight: 700; color: var(--white); margin-bottom: 0.5rem;
+        }
+        .stats-card-title-underline { /* w-16 h-1 bg-deepPurple-300 */
+            width: 4rem; height: 0.25rem; background-color: var(--deepPurple-300);
+        }
+        .live-data-chip { /* bg-deepPurple-700 px-3 py-1 rounded-full text-sm font-medium */
+            background-color: var(--deepPurple-700); padding: 0.25rem 0.75rem;
+            border-radius: 9999px; font-size: 0.875rem; font-weight: 500; color: var(--white);
+        }
+        .community-stats-grid { /* grid grid-cols-2 md:grid-cols-4 gap-4 text-center */
+            display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; text-align: center;
+        }
+        .stat-data-point { /* bg-deepPurple-800 rounded-lg p-4 */
+            background-color: var(--deepPurple-800); border-radius: 0.5rem; padding: 1rem;
+        }
+        .stat-data-value { /* text-3xl font-bold text-white */
+            font-size: 1.875rem; line-height: 2.25rem; font-weight: 700; color: var(--white);
+        }
+        .stat-data-value.highlight { color: var(--green-400); } /* for avg returns */
+        .stat-data-label { /* text-deepPurple-200 text-sm mt-1 */
+            color: var(--deepPurple-200); font-size: 0.875rem; margin-top: 0.25rem;
+        }
+
+        /* Contact Section */
+        .contact-section { /* py-20 bg-gradient-to-b from-gray-950 to-gray-900 */
+            padding: 5rem 0;
+            background-image: linear-gradient(to bottom, var(--gray-950), var(--gray-900));
+        }
+        .contact-form-container { /* bg-gradient-to-br from-gray-800 to-deepPurple-900 rounded-3xl overflow-hidden shadow-2xl */
+            background-image: linear-gradient(to bottom right, var(--gray-800), var(--deepPurple-900));
+            border-radius: 1.5rem; overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+        }
+        .contact-layout-flex { /* md:flex */ }
+        .contact-info-panel { /* md:w-1/2 relative p-12 bg-gradient-to-br from-deepPurple-900 to-violetBerry */
+            position: relative; padding: 3rem;
+            background-image: linear-gradient(to bottom right, var(--deepPurple-900), var(--violetBerry));
+        }
+        .contact-info-panel .deco-blur-1 { /* absolute top-0 right-0 -mt-8 -mr-8 w-24 h-24 bg-deepPurple-600 rounded-full opacity-20 */
+            position: absolute; top: 0; right: 0; margin-top: -2rem; margin-right: -2rem;
+            width: 6rem; height: 6rem; background-color: var(--deepPurple-600);
+            border-radius: 9999px; opacity: 0.2; filter: blur(12px); /* Adjusted blur */
+        }
+        .contact-info-panel .deco-blur-2 { /* absolute bottom-0 left-0 -mb-8 -ml-8 w-32 h-32 bg-purple-500 rounded-full opacity-10 */
+            position: absolute; bottom: 0; left: 0; margin-bottom: -2rem; margin-left: -2rem;
+            width: 8rem; height: 8rem; background-color: var(--purple-500);
+            border-radius: 9999px; opacity: 0.1; filter: blur(12px); /* Adjusted blur */
+        }
+        .contact-info-panel .panel-title { /* text-3xl font-bold text-white mb-4 */
+            font-size: 1.875rem; font-weight: 700; color: var(--white); margin-bottom: 1rem; position: relative; z-index: 1;
+        }
+        .contact-info-panel .panel-description { /* text-deepPurple-200 mb-8 */
+            color: var(--deepPurple-200); margin-bottom: 2rem; line-height: 1.6; position: relative; z-index: 1;
+        }
+        .contact-info-panel .key-metrics-list { position: relative; z-index: 1; }
+        .contact-info-panel .key-metrics-list > div { margin-bottom: 1.5rem; } /* space-y-6 */
+        .contact-info-panel .key-metrics-list > div:last-child { margin-bottom: 0; }
+        .contact-info-panel .metric-item { /* flex */ display: flex; align-items:center; }
+        .contact-info-panel .metric-icon-wrapper { margin-right: 1rem; /* mr-4 */ flex-shrink: 0; }
+        .contact-info-panel .metric-icon-bg { /* bg-deepPurple-700 rounded-full w-12 h-12 flex items-center justify-center */
+            background-color: var(--deepPurple-700); border-radius: 9999px;
+            width: 3rem; height: 3rem; display: flex; align-items: center; justify-content: center;
+        }
+        .contact-info-panel .metric-icon-bg i { /* fas text-lg text-white */ font-size: 1.125rem; color: var(--white); }
+        .contact-info-panel .metric-details .metric-title { /* text-white font-bold */ color: var(--white); font-weight: 700; }
+        .contact-info-panel .metric-details .metric-subtitle { /* text-deepPurple-200 text-sm */ color: var(--deepPurple-200); font-size: 0.875rem; }
+
+        .contact-form-panel { /* md:w-1/2 p-12 */ padding: 3rem; }
+        .contact-form-panel form > div:not(:last-of-type) { margin-bottom: 1.5rem; } /* space-y-6 for form fields */
+        /* .contact-form-panel form > button { margin-top: 1.5rem; } /* Add margin if button is direct child */
+        .contact-form-panel .form-field label { /* block text-sm font-medium text-gray-300 mb-1 (or mb-3 for checkbox group) */
+            display: block; font-size: 0.875rem; font-weight: 500; color: var(--gray-300); margin-bottom: 0.25rem;
+        }
+        .contact-form-panel .form-field.checkbox-group-label label { margin-bottom: 0.75rem; /* mb-3 */ }
+        .contact-form-panel .form-text-input,
+        .contact-form-panel .form-dropdown-select { /* w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-deepPurple-500 focus:border-transparent text-white */
+            width: 100%; padding: 0.75rem 1rem; background-color: var(--gray-800);
+            border: 1px solid var(--gray-700); border-radius: 0.5rem; color: var(--white); outline: none;
+        }
+        .contact-form-panel .form-text-input:focus,
+        .contact-form-panel .form-dropdown-select:focus {
+            border-color: transparent;
+            box-shadow: 0 0 0 2px var(--deepPurple-500);
+        }
+        .contact-form-panel .form-text-input::placeholder { color: var(--gray-500); }
+        .contact-form-panel .interests-checkbox-grid { /* grid grid-cols-2 gap-3 */
+            display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem;
+        }
+        .contact-form-panel .checkbox-option-label { /* inline-flex items-center bg-gray-800 rounded-lg p-3 border border-gray-700 cursor-pointer */
+            display: inline-flex; align-items: center; background-color: var(--gray-800);
+            border-radius: 0.5rem; padding: 0.75rem; border: 1px solid var(--gray-700); cursor: pointer;
+            transition: background-color 0.2s ease; /* Added for hover effect */
+        }
+        .contact-form-panel .checkbox-option-label:hover {
+            background-color: var(--gray-750);
+        }
+        .contact-form-panel .styled-checkbox { /* form-checkbox h-5 w-5 text-deepPurple-500 */
+            height: 1.25rem; width: 1.25rem; accent-color: var(--deepPurple-500); margin-right: 0.5rem;
+        }
+        .contact-form-panel .checkbox-label-text { /* ml-2 text-gray-300 */ /* margin-left: 0.5rem; */ color: var(--gray-300); }
+        .contact-form-panel .form-submit-button { /* w-full py-3 px-6 bg-gradient-to-r from-deepPurple-600 to-deepPurple-800 hover:from-deepPurple-700 hover:to-deepPurple-900 text-white rounded-lg font-medium transition duration-300 btn-glow transform hover:scale-105 */
+            width: 100%; padding: 0.75rem 1.5rem;
+            background-image: linear-gradient(to right, var(--deepPurple-600), var(--deepPurple-800));
+            color: var(--white); border-radius: 0.5rem; font-weight: 500;
+            transition-property: all; transition-duration: 300ms; border: none; cursor: pointer;
+            margin-top: 1.5rem; /* Added margin to separate from checkboxes */
+            /* btn-glow is global */
+        }
+        .contact-form-panel .form-submit-button:hover {
+            background-image: linear-gradient(to right, var(--deepPurple-700), var(--deepPurple-900));
+            transform: scale(1.05);
+        }
+        .contact-form-panel .trial-info-text { /* text-center text-gray-500 text-sm */
+            text-align: center; color: var(--gray-500); font-size: 0.875rem; margin-top: 1rem;
+        }
+
+        /* Footer */
+        .site-footer { /* bg-gray-900 border-t border-gray-800 */
+            background-color: var(--gray-900); border-top: 1px solid var(--gray-800);
+        }
+        .site-footer .footer-content-area { /* max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 */
+            max-width: 80rem; margin-left: auto; margin-right: auto;
+            padding: 3rem 1rem;
+        }
+        .site-footer .footer-main-grid { /* grid grid-cols-1 md:grid-cols-4 gap-8 */
+            display: grid; grid-template-columns: 1fr; gap: 2rem;
+        }
+        .site-footer .company-info-column { /* col-span-1 md:col-span-2 */ }
+        .site-footer .footer-logo-group { /* flex items-center (same as nav) */ display: flex; align-items: center; }
+        .site-footer .footer-logo-svg { /* h-8 w-8 text-deepPurple-400 (same as nav) */
+            height: 2rem; width: 2rem; color: var(--deepPurple-400);
+        }
+        .site-footer .footer-brand-name { /* ml-2 text-xl font-bold text-deepPurple-300 (same as nav) */
+            margin-left: 0.5rem; font-size: 1.25rem; font-weight: 700; color: var(--deepPurple-300);
+        }
+        .site-footer .company-tagline { /* mt-4 text-gray-500 */
+            margin-top: 1rem; color: var(--gray-500); line-height: 1.6;
+        }
+        .site-footer .social-media-links { /* mt-6 flex space-x-6 */ margin-top: 1.5rem; display: flex; }
+        .site-footer .social-media-links a { /* text-gray-500 hover:text-deepPurple-300 */
+            color: var(--gray-500); text-decoration: none; margin-right: 1.5rem; /* space-x-6 */
+            transition: color 0.2s ease; /* Added */
+        }
+        .site-footer .social-media-links a:last-child { margin-right: 0; }
+        .site-footer .social-media-links a:hover { color: var(--deepPurple-300); }
+        .site-footer .social-media-links a i { font-size: 1.25rem; /* text-xl */ }
+
+        .site-footer .footer-nav-column .column-heading { /* text-sm font-semibold text-gray-300 uppercase tracking-wider */
+            font-size: 0.875rem; font-weight: 600; color: var(--gray-300);
+            text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem; /* Added */
+        }
+        .site-footer .footer-links-listing { /* mt-4 space-y-4 */ /* margin-top: 1rem; */ }
+        .site-footer .footer-links-listing a { /* text-base text-gray-500 hover:text-white block */
+            font-size: 1rem; color: var(--gray-500); text-decoration: none; display: block; margin-bottom: 1rem; /* space-y-4 */
+            transition: color 0.2s ease; /* Added */
+        }
+        .site-footer .footer-links-listing a:last-child { margin-bottom: 0; }
+        .site-footer .footer-links-listing a:hover { color: var(--white); }
+
+        .site-footer .footer-bottom-bar { /* mt-12 border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between */
+            margin-top: 3rem; border-top: 1px solid var(--gray-800); padding-top: 2rem;
+            display: flex; flex-direction: column; justify-content: space-between; align-items: center; /* Centered for mobile */
+        }
+        .site-footer .copyright-notice { /* text-gray-500 text-sm */ color: var(--gray-500); font-size: 0.875rem; }
+        .site-footer .legal-links-group { /* mt-4 md:mt-0 flex space-x-6 */ display: flex; margin-top: 1rem; }
+        .site-footer .legal-links-group a { /* text-gray-500 hover:text-white text-sm */
+            color: var(--gray-500); text-decoration: none; font-size: 0.875rem; margin-right: 1.5rem; /* space-x-6 */
+            transition: color 0.2s ease; /* Added */
+        }
+        .site-footer .legal-links-group a:last-child { margin-right: 0; }
+        .site-footer .legal-links-group a:hover { color: var(--white); }
+
+
+        /* Responsive Adjustments */
+        @media (min-width: 640px) { /* sm */
+            .main-nav .nav-container,
+            .hero-section-container,
+            .ai-dashboard-section .section-container,
+            .mission-section .section-container,
+            .features-section .section-container,
+            .community-reviews-section .section-container,
+            .contact-section .section-container-wrapper,
+            .site-footer .footer-content-area {
+                padding-left: 1.5rem;
+                padding-right: 1.5rem;
+            }
+            .hero-buttons-group {
+                flex-direction: row;
+            }
+            .hero-buttons-group > button:not(:last-child) {
+                 margin-bottom: 0;
+                 margin-right: 1rem; /* sm:space-x-4 */
+            }
+        }
+
+        @media (min-width: 768px) { /* md */
+            .main-nav .nav-links-wrapper {
+                display: flex;
+                align-items: center;
+                margin-left: 1.5rem;
+            }
+            .main-nav .nav-links-wrapper .nav-link + .nav-link {
+                margin-left: 2rem; /* space-x-8 */
+            }
+
+            .hero-section-container {
+                padding-top: 8rem;
+                padding-bottom: 8rem;
+            }
+            .hero-content-wrapper {
+                display: flex;
+                align-items: center;
+            }
+            .hero-text-column {
+                width: 50%;
+                margin-bottom: 0;
+                padding-right: 2rem; /* Added for spacing */
+            }
+            .hero-chart-column {
+                width: 50%;
+                padding-left: 2rem; /* Added for spacing */
+            }
+            .hero-main-title {
+                font-size: 3rem; /* md:text-5xl */
+                line-height: 1.1;
+            }
+
+            .mission-cards-group { flex-direction: row; }
+            .mission-card-item { margin-left: 0; margin-right: 0; flex: 1; } /* Reset centering and allow equal growth */
+
+            .features-grid-layout { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .community-reviews-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            .community-stats-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+            .contact-layout-flex { display: flex; }
+            .contact-info-panel, .contact-form-panel { width: 50%; }
+
+            .site-footer .footer-main-grid { grid-template-columns: 2fr 1fr 1fr; gap: 2rem; /* Adjusted for 3 columns on md */ }
+            .site-footer .company-info-column { grid-column: span 1; /* Occupy first column */ }
+
+            .site-footer .footer-bottom-bar { flex-direction: row; justify-content: space-between; align-items: center; }
+            .site-footer .legal-links-group { margin-top: 0; }
+        }
+
+        @media (min-width: 1024px) { /* lg */
+            .main-nav .nav-container,
+            .hero-section-container,
+            .ai-dashboard-section .section-container,
+            .mission-section .section-container,
+            .features-section .section-container,
+            .community-reviews-section .section-container,
+            .contact-section .section-container-wrapper,
+            .site-footer .footer-content-area {
+                padding-left: 2rem;
+                padding-right: 2rem;
+            }
+            .ai-dashboard-section .dashboard-layout-grid,
+            .features-grid-layout {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+            .site-footer .footer-main-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } /* Back to 4 columns for lg */
+             .site-footer .company-info-column { grid-column: span 2 / span 2; }
+        }
+
+        /* Font Awesome specific styles if needed for icons used as pseudo-elements */
+        /* This might not be strictly necessary if FA is loaded via CSS link and classes are direct on <i> tags */
+        [class^="fa-"]::before, [class*=" fa-"]::before {
+            font-family: var(--fa-font-family), "Font Awesome 6 Free" !important; /* Ensure correct font and override if necessary*/
+            font-weight: 900; /* For solid icons */
+        }
+        .fab::before { /* For brand icons like fa-apple, fa-google */
+            font-family: var(--fa-font-family), "Font Awesome 6 Brands" !important; /* Ensure correct font and override */
+            font-weight: 400; /* Font Awesome brands are typically regular weight */
+        }
+        /* For solid icons (fas) - already covered by default */
+        /* For regular icons (far) if used */
+        /* .far::before { font-weight: 400; } */
+      `}
+      </style>
+
+      <nav className="main-nav">
+        <div className="nav-container">
+            <div className="nav-inner-flex">
+                <div className="logo-group">
+                    <div className="logo-icon-wrapper">
+                        <svg className="logo-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2L3 7L12 12L21 7L12 2Z" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M3 12L12 17L21 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M3 17L12 22L21 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        <span className="logo-text">Finext</span>
+                    </div>
+                </div>
+                <div className="nav-links-wrapper">
+                    <a href="#features" className="nav-link">Features</a>
+                    <a href="#dashboard" className="nav-link">Dashboard</a>
+                    <a href="#mission" className="nav-link">Mission</a>
+                    <a href="#reviews" className="nav-link">Reviews</a>
+                    <a href="#contact" className="nav-link">Contact</a>
+                </div>
+                <div className="nav-actions-group">
+                    <button className="get-started-btn btn-glow">
+                        Get Started
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div className="market-ticker-bar">
+        <div className="ticker-tape">
+            <span className="market-update-label">MARKET UPDATE:</span>
+            <span>SPY <span className="stock-up">+1.24%</span></span>
+            <span>AAPL <span className="stock-up">+2.15%</span></span>
+            <span>MSFT <span className="stock-up">+0.87%</span></span>
+            <span>TSLA <span className="stock-down">-0.63%</span></span>
+            <span>BTC <span className="stock-up">+3.56%</span></span>
+            <span>ETH <span className="stock-up">+2.44%</span></span>
+            <span>OIL <span className="stock-down">-1.21%</span></span>
+            <span>GOLD <span className="stock-down">-0.33%</span></span>
+            <span>VIX <span className="stock-down">-5.13%</span></span>
+        </div>
+    </div>
+
+    <section className="gradient-bg">
+        <div className="hero-section-container">
+            <div className="hero-content-wrapper">
+                <div className="hero-text-column">
+                    <h1 className="hero-main-title">
+                        <span className="title-block">Finext:</span>
+                        <span className="title-block title-highlight">Market Intelligence Redefined</span>
+                    </h1>
+                    <p className="hero-sub-text">
+                        AI-driven insights and predictive analytics to transform your trading strategy and maximize returns.
+                    </p>
+                    <p className="hero-detailed-text">
+                        Finext combines cutting-edge artificial intelligence with comprehensive market data to give you an edge in today&apos;s volatile markets. Our proprietary algorithms analyze patterns across global markets, enabling smarter investment decisions.
+                    </p>
+                    <div className="hero-buttons-group">
+                        <button className="hero-button hero-button-primary btn-glow">
+                            <i className="fas fa-chart-line"></i> Explore Platform
+                        </button>
+                        <button className="hero-button hero-button-secondary">
+                            <i className="fas fa-play-circle"></i> Watch Demo
+                        </button>
+                    </div>
+                </div>
+                <div className="hero-chart-column">
+                    <div className="hero-chart-visual floating purple-glow">
+                        <div className="chart-container">
+                            <canvas id="heroChart" height="280"></canvas>
+                        </div>
+                        <div className="hero-chart-info-text">
+                            <span>Prev Close: $168.24</span>
+                            <span>Last Price: $170.42 <span className="stock-up">+1.29%</span></span>
+                        </div>
+                    </div>
+                    <div className="hero-blur-deco-1"></div>
+                    <div className="hero-blur-deco-2"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="dashboard" className="ai-dashboard-section">
+        <div className="section-container">
+            <div className="section-header fade-in">
+                <h2 className="section-main-title">AI Predictive Dashboard</h2>
+                <div className="title-decorator-line"></div>
+                <p className="section-subtitle">
+                    Real-time market intelligence with predictive analytics to maximize your returns. Our comprehensive dashboard provides an overview of your entire portfolio while predicting future market movements with industry-leading accuracy.
+                </p>
+            </div>
+            
+            <div className="dashboard-layout-grid">
+                <div className="dashboard-card card-hover">
+                    <div className="dashboard-card-header">
+                        <h3 className="dashboard-card-title">Portfolio Summary</h3>
+                        <div className="dashboard-card-badge">Live</div>
+                    </div>
+                    <div className="summary-data-grid">
+                        <div className="data-cell">
+                            <div className="data-cell-label">Total Value</div>
+                            <div className="data-cell-value">$124,563.82</div>
+                            <div className="data-cell-change">
+                                <span>+3.2%</span>
+                                <i className="fas fa-arrow-up"></i>
+                            </div>
+                        </div>
+                        <div className="data-cell">
+                            <div className="data-cell-label">Today&apos;s Gain</div>
+                            <div className="data-cell-value">$1,824.16</div>
+                            <div className="data-cell-change">
+                                <span>+1.45%</span>
+                                <i className="fas fa-arrow-up"></i>
+                            </div>
+                        </div>
+                        <div className="data-cell">
+                            <div className="data-cell-label">Risk Level</div>
+                            <div className="data-cell-value">Medium</div>
+                            <div className="risk-status-indicator">
+                                <div className="pulse"></div>
+                                <span className="risk-status-text">Optimal</span>
+                            </div>
+                        </div>
+                        <div className="data-cell">
+                            <div className="data-cell-label">AI Confidence</div>
+                            <div className="data-cell-value">87%</div>
+                            <div className="confidence-progress-bar">
+                                <div className="confidence-progress-fill" style={{width: '87%'}}></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="card-footer-note">
+                        <i className="fas fa-info-circle"></i>&nbsp;
+                        Portfolio optimized based on current market conditions and AI predictions
+                    </div>
+                </div>
+                
+                <div className="dashboard-card card-hover asset-allocation-card">
+                    <div className="dashboard-card-header">
+                        <h3 className="dashboard-card-title">Asset Allocation</h3>
+                        <div className="card-header-icon">
+                            <i className="fas fa-sync-alt cursor-pointer"></i>
+                        </div>
+                    </div>
+                    <div className="chart-container" style={{height: "200px"}}>
+                        <canvas id="allocationChart"></canvas>
+                    </div>
+                    <div className="allocation-legend">
+                        <div className="allocation-legend-item legend-tech">
+                            <div className="legend-color-indicator legend-tech-color"></div>
+                            <div className="legend-item-label">Tech</div>
+                        </div>
+                        <div className="allocation-legend-item legend-finance">
+                            <div className="legend-color-indicator legend-finance-color"></div>
+                            <div className="legend-item-label">Finance</div>
+                        </div>
+                        <div className="allocation-legend-item legend-crypto">
+                            <div className="legend-color-indicator legend-crypto-color"></div>
+                            <div className="legend-item-label">Crypto</div>
+                        </div>
+                        <div className="allocation-legend-item legend-other">
+                            <div className="legend-color-indicator legend-other-color"></div>
+                            <div className="legend-item-label">Other</div>
+                        </div>
+                    </div>
+                    <div className="card-footer-note">
+                        <i className="fas fa-lightbulb"></i>&nbsp;
+                        AI recommendation: Increase tech allocation by 5% for higher growth potential
+                    </div>
+                </div>
+                
+                <div className="dashboard-card card-hover performance-card">
+                    <div className="dashboard-card-header">
+                        <h3 className="dashboard-card-title">Performance</h3>
+                        <div>
+                            <select className="controls-dropdown" defaultValue="YTD">
+                                <option>1M</option>
+                                <option>3M</option>
+                                <option>6M</option>
+                                <option>YTD</option>
+                                <option>1Y</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="chart-container" style={{height: "200px"}}>
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                    <div className="performance-legend-container">
+                        <div className="performance-legend-item">
+                            <div className="item-label">
+                                <i className="fas fa-circle"></i>
+                                <span>Your Portfolio</span>
+                            </div>
+                            <div className="item-value-portfolio">+24.6%</div>
+                        </div>
+                        <div className="performance-legend-item">
+                            <div className="item-label sp500">
+                                <i className="fas fa-circle"></i>
+                                <span>S&amp;P 500</span>
+                            </div>
+                            <div className="item-value-sp500">+18.2%</div>
+                        </div>
+                    </div>
+                    <div className="card-footer-note">
+                        <i className="fas fa-trophy"></i>&nbsp;
+                        Your portfolio has outperformed the benchmark by 6.4% YTD
+                    </div>
+                </div>
+            </div>
+            
+            <div className="dashboard-card ai-assets-table-card card-hover"> {/* Added card-hover here too */}
+                <div className="dashboard-card-header">
+                    <h3 className="dashboard-card-title">AI Recommended Assets</h3>
+                    <div className="card-header-action">
+                        <button>
+                            <i className="fas fa-sync-alt"></i> Refresh Predictions
+                        </button>
+                    </div>
+                </div>
+                <div className="table-wrapper">
+                    <table className="predictions-table">
+                        <thead>
+                            <tr>
+                                <th>Asset</th>
+                                <th>Current Price</th>
+                                <th>Predicted Change</th>
+                                <th>AI Confidence</th>
+                                <th>Predicted Price</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div className="asset-identity-cell">
+                                        <div className="asset-icon-container">
+                                            <i className="fab fa-apple"></i>
+                                        </div>
+                                        <div>
+                                            <div className="asset-name-full">Apple Inc.</div>
+                                            <div className="asset-ticker-symbol">AAPL</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>$189.25</td>
+                                <td className="asset-price-change positive">+7.2%</td>
+                                <td className="ai-confidence-rating">
+                                    <div className="confidence-bar-bg">
+                                        <div className="confidence-bar-fill green" style={{width: "92%"}}></div>
+                                    </div>
+                                    <div className="confidence-percentage green">92%</div>
+                                </td>
+                                <td className="asset-predicted-price">$202.92</td>
+                                <td>
+                                    <button className="asset-action-button buy">Buy</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div className="asset-identity-cell">
+                                        <div className="asset-icon-container">
+                                            <i className="fab fa-google"></i>
+                                        </div>
+                                        <div>
+                                            <div className="asset-name-full">Alphabet Inc.</div>
+                                            <div className="asset-ticker-symbol">GOOGL</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>$138.42</td>
+                                <td className="asset-price-change positive">+5.8%</td>
+                                <td className="ai-confidence-rating">
+                                    <div className="confidence-bar-bg">
+                                        <div className="confidence-bar-fill green" style={{width: "85%"}}></div>
+                                    </div>
+                                    <div className="confidence-percentage green">85%</div>
+                                </td>
+                                <td className="asset-predicted-price">$146.37</td>
+                                <td>
+                                    <button className="asset-action-button buy">Buy</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div className="asset-identity-cell">
+                                        <div className="asset-icon-container">
+                                            <i className="fab fa-microsoft"></i>
+                                        </div>
+                                        <div>
+                                            <div className="asset-name-full">Microsoft</div>
+                                            <div className="asset-ticker-symbol">MSFT</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>$338.11</td>
+                                <td className="asset-price-change negative">-2.3%</td>
+                                <td className="ai-confidence-rating">
+                                    <div className="confidence-bar-bg">
+                                        <div className="confidence-bar-fill yellow" style={{width: "78%"}}></div>
+                                    </div>
+                                    <div className="confidence-percentage yellow">78%</div>
+                                </td>
+                                <td className="asset-predicted-price">$330.24</td>
+                                <td>
+                                    <button className="asset-action-button sell">Sell</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div className="asset-identity-cell">
+                                        <div className="asset-icon-container">
+                                            <i className="fab fa-bitcoin"></i>
+                                        </div>
+                                        <div>
+                                            <div className="asset-name-full">Bitcoin</div>
+                                            <div className="asset-ticker-symbol">BTC</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>$42,876</td>
+                                <td className="asset-price-change positive">+12.5%</td>
+                                <td className="ai-confidence-rating">
+                                    <div className="confidence-bar-bg">
+                                        <div className="confidence-bar-fill green" style={{width: "88%"}}></div>
+                                    </div>
+                                    <div className="confidence-percentage green">88%</div>
+                                </td>
+                                <td className="asset-predicted-price">$48,235</td>
+                                <td>
+                                    <button className="asset-action-button buy">Buy</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div className="table-footer-disclaimer">
+                    <i className="fas fa-exclamation-triangle"></i>&nbsp;
+                    Past performance is not indicative of future results. Asset recommendations are generated by AI algorithms based on historical data and current market conditions.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="mission" className="mission-section">
+        <div className="section-container">
+            <div className="section-header fade-in"> <h2 className="section-main-title">Our Mission</h2>
+                <div className="title-decorator-line"></div>
+                <p className="section-subtitle">
+                    We&apos;re on a mission to democratize access to institutional-grade financial tools and intelligence.&nbsp; 
+                    In a world where information advantage translates to financial advantage, Finext levels the playing&nbsp; 
+                    field for all investors.
+                </p>
+            </div>
+            <div className="mission-cards-group">
+                <div className="mission-card-item card-hover">
+                    <div className="card-icon">
+                        <i className="fas fa-unlock-alt"></i>
+                    </div>
+                    <h3 className="card-title">Accessible Intelligence</h3>
+                    <p className="card-text">
+                        We transform complex financial data into actionable insights accessible to investors at all levels,&nbsp; 
+                        without requiring financial expertise.
+                    </p>
+                </div>
+                <div className="mission-card-item card-hover">
+                    <div className="card-icon">
+                        <i className="fas fa-brain"></i>
+                    </div>
+                    <h3 className="card-title">AI Innovation</h3>
+                    <p className="card-text">
+                        Our continuous research and development push the boundaries of what&apos;s possible in predictive market&nbsp; 
+                        analysis and portfolio optimization.
+                    </p>
+                </div>
+                <div className="mission-card-item card-hover">
+                    <div className="card-icon">
+                        <i className="fas fa-hand-holding-heart"></i>
+                    </div>
+                    <h3 className="card-title">Ethical Approach</h3>
+                    <p className="card-text">
+                        We maintain transparency in our algorithms and uphold the highest ethical standards in financial&nbsp; 
+                        technology development.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" className="features-section">
+        <div className="section-container">
+            <div className="section-header fade-in"> <h2 className="section-main-title">Advanced Features</h2>
+                <div className="title-decorator-line"></div>
+                <p className="section-subtitle">
+                    Empower your trading strategy with cutting-edge financial technology
+                </p>
+            </div>
+            <div className="features-grid-layout">
+                <div className="feature-item-card card-hover fade-in">
+                    <div className="card-icon-area">
+                        <i className="fas fa-brain"></i>
+                    </div>
+                    <h3 className="card-main-title">AI Forecasting</h3>
+                    <p className="card-description-text">
+                        Proprietary machine learning models predict price movements with 87.4% accuracy.&nbsp; 
+                        Our multi-modal AI approach combines technical indicators, fundamental analysis,&nbsp; 
+                        sentiment scoring, and macroeconomic data to generate highly reliable forecasts.
+                    </p>
+                    <div className="stat-visual-container">
+                        <div className="stat-labels">
+                            <span>Accuracy</span>
+                            <span>87.4%</span>
+                        </div>
+                        <div className="stat-progress-bar">
+                            <div className="stat-progress-fill" style={{width: "87.4%"}}></div>
+                        </div>
+                    </div>
+                </div>
+                <div className="feature-item-card card-hover fade-in">
+                    <div className="card-icon-area">
+                        <i className="fas fa-bolt"></i>
+                    </div>
+                    <h3 className="card-main-title">Real-Time Analytics</h3>
+                    <p className="card-description-text">
+                        Our ultra-low latency platform delivers market updates with sub-millisecond precision&nbsp; 
+                        across 64 global exchanges. Real-time portfolio stress testing alerts you to potential&nbsp; 
+                        risks before they impact your investments.
+                    </p>
+                    <div className="latency-uptime-stats">
+                        <div className="stat-block">
+                            <div className="stat-block-value">320ms</div>
+                            <div className="stat-block-label">Avg. Latency</div>
+                        </div>
+                        <div className="stat-block">
+                            <div className="stat-block-value">99.99%</div>
+                            <div className="stat-block-label">Uptime</div>
+                        </div>
+                    </div>
+                </div>
+                <div className="feature-item-card card-hover fade-in">
+                    <div className="card-icon-area">
+                        <i className="fas fa-project-diagram"></i> </div>
+                    <h3 className="card-main-title">Market Correlation</h3>
+                    <p className="card-description-text">
+                        Our platform uncovers hidden relationships between assets to optimize your portfolio strategy.&nbsp; 
+                        Finext&apos;s correlation matrix tracks over 50,000 asset pairs across multiple asset classes,&nbsp; 
+                        detecting emerging relationships before they become mainstream knowledge.
+                    </p>
+                    <div className="correlation-stats-display">
+                        <div className="correlation-item-block">
+                            <div className="correlation-value positive">0.87</div>
+                            <div className="correlation-asset-pair">AAPL/MSFT</div>
+                        </div>
+                        <div className="correlation-item-block">
+                            <div className="correlation-value negative">-0.63</div>
+                            <div className="correlation-asset-pair">GOLD/BTC</div>
+                        </div>
+                        <div className="correlation-item-block">
+                            <div className="correlation-value neutral">0.42</div>
+                            <div className="correlation-asset-pair">TSLA/NVDA</div>
+                        </div>
+                    </div>
+                </div>
+                <div className="feature-item-card card-hover fade-in">
+                    <div className="card-icon-area">
+                        <i className="fas fa-shield-alt"></i>
+                    </div>
+                    <h3 className="card-main-title">Risk Management</h3>
+                    <p className="card-description-text">
+                        Advanced scenario modeling simulates market shocks to quantify potential portfolio impacts.&nbsp; 
+                        Our conditional stop-loss algorithm dynamically adjusts to market volatility to better protect&nbsp; 
+                        your assets during turbulent periods.
+                    </p>
+                    <div className="stat-visual-container risk-display">
+                        <div className="stat-labels">
+                            <span className="portfolio-risk-text">Portfolio Risk</span>
+                            <span className="portfolio-risk-value">Medium</span>
+                        </div>
+                        <div className="stat-progress-bar">
+                            <div className="stat-progress-fill yellow" style={{width: "45%"}}></div>
+                        </div>
+                    </div>
+                </div>
+                <div className="feature-item-card card-hover fade-in">
+                    <div className="card-icon-area">
+                        <i className="fas fa-robot"></i>
+                    </div>
+                    <h3 className="card-main-title">Automated Trading</h3>
+                    <p className="card-description-text">
+                        Finext&apos;s strategy builder requires no coding skills while offering the flexibility for&nbsp; 
+                        sophisticated algorithmic implementations. Our cloud-based backtesting engine can simulate&nbsp; 
+                        10 years of market history in under 30 seconds for accurate strategy validation.
+                    </p>
+                    <div className="automated-trading-metrics">
+                        <div className="trading-metric-item">
+                            <div className="metric-value">+23.7%</div>
+                            <div className="metric-label">Avg. Return</div>
+                        </div>
+                        <div className="trading-metric-item">
+                            <div className="metric-value">76%</div>
+                            <div className="metric-label">Win Rate</div>
+                        </div>
+                    </div>
+                </div>
+                <div className="feature-item-card card-hover fade-in">
+                    <div className="card-icon-area">
+                        <i className="fas fa-graduation-cap"></i>
+                    </div>
+                    <h3 className="card-main-title">Educational Resources</h3>
+                    <p className="card-description-text">
+                        Our comprehensive learning center features daily live webinars, interactive tutorials,&nbsp; 
+                        and real-time market analysis. Case studies deconstruct successful trades while&nbsp; 
+                        strategy guides translate complex market concepts into actionable insights.
+                    </p>
+                    <div className="education-tags-list">
+                        <span className="education-tag-item">Webinars</span>
+                        <span className="education-tag-item">Tutorials</span>
+                        <span className="education-tag-item">Case Studies</span>
+                        <span className="education-tag-item">Strategy Guides</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="reviews" className="community-reviews-section">
+        <div className="section-container">
+            <div className="section-header fade-in"> <h2 className="section-main-title">Trusted by the Trading Community</h2>
+                <div className="title-decorator-line"></div>
+                <p className="section-subtitle">
+                    Join thousands of traders who have transformed their strategies with Finext
+                </p>
+            </div>
+            
+            <div className="community-reviews-grid">
+                <div className="review-item-card card-hover">
+                    <div className="reviewer-profile-area">
+                        <div className="reviewer-avatar-wrapper">
+                            <img className="reviewer-avatar-img" src="https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80" alt="Sarah Johnson Profile Picture" />
+                        </div>
+                        <div className="reviewer-info">
+                            <h3 className="reviewer-name">Sarah Johnson</h3>
+                            <div className="reviewer-role">Professional Trader • 8 years experience</div>
+                            <div className="star-rating">
+                                <i className="fas fa-star"></i><i className="fas fa-star"></i><i className="fas fa-star"></i><i className="fas fa-star"></i><i className="fas fa-star"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <p className="review-quote-text">
+                        &quot;As a professional trader, I&apos;ve tested every analytics platform on the market. Finext&apos;s predictive accuracy is unmatched. Their AI predicted the April market dip with 96% accuracy, allowing me to reposition my portfolio and actually profit during the downturn.&quot;
+                    </p>
+                    <div className="review-join-date">
+                        <i className="fas fa-clock"></i> Joined 14 months ago
+                    </div>
+                </div>
+                
+                <div className="review-item-card card-hover">
+                    <div className="reviewer-profile-area">
+                        <div className="reviewer-avatar-wrapper">
+                             <img className="reviewer-avatar-img" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80" alt="Michael Chen Profile Picture" />
+                        </div>
+                        <div className="reviewer-info">
+                            <h3 className="reviewer-name">Michael Chen</h3>
+                            <div className="reviewer-role">Hedge Fund Manager</div>
+                            <div className="star-rating">
+                                <i className="fas fa-star"></i><i className="fas fa-star"></i><i className="fas fa-star"></i><i className="fas fa-star"></i><i className="fas fa-star-half-alt"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <p className="review-quote-text">
+                        &quot;We&apos;ve integrated Finext across our entire fund management team. The correlation analysis and risk management tools have reduced our portfolio volatility by 22% while increasing returns. The institutional-grade API was simple to integrate with our existing systems.&quot;
+                    </p>
+                    <div className="review-join-date">
+                        <i className="fas fa-clock"></i> Institutional user since 2022
+                    </div>
+                </div>
+
+                <div className="review-item-card card-hover">
+                    <div className="reviewer-profile-area">
+                        <div className="reviewer-avatar-wrapper">
+                            <img className="reviewer-avatar-img" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80" alt="Alex Rivera Profile Picture" />
+                        </div>
+                        <div className="reviewer-info">
+                            <h3 className="reviewer-name">Alex Rivera</h3>
+                            <div className="reviewer-role">Part-time Investor</div>
+                            <div className="star-rating">
+                                <i className="fas fa-star"></i><i className="fas fa-star"></i><i className="fas fa-star"></i><i className="fas fa-star"></i><i className="fas fa-star"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <p className="review-quote-text">
+                        &quot;I work full-time as an engineer and invest on the side. Before Finext, I was overwhelmed trying to analyze markets. Now the AI highlights the best opportunities for me. My portfolio is up 35% in 6 months with just 2-3 hours a week. The educational resources are phenomenal for continuous learning.&quot;
+                    </p>
+                    <div className="review-join-date">
+                        <i className="fas fa-clock"></i> Member for 9 months
+                    </div>
+                </div>
+            </div>
+            
+            <div className="community-stats-overview">
+                <div className="community-stats-card">
+                    <div className="stats-card-header-flex">
+                        <div>
+                            <h3 className="stats-card-main-title">Community Statistics</h3>
+                            <div className="stats-card-title-underline"></div>
+                        </div>
+                        <div className="live-data-chip">Live Data</div>
+                    </div>
+                    <div className="community-stats-grid">
+                        <div className="stat-data-point">
+                            <div className="stat-data-value">18,742</div>
+                            <div className="stat-data-label">Active Users</div>
+                        </div>
+                        <div className="stat-data-point">
+                            <div className="stat-data-value highlight">+24.7%</div>
+                            <div className="stat-data-label">Avg. Annual Returns</div>
+                        </div>
+                        <div className="stat-data-point">
+                            <div className="stat-data-value">94%</div>
+                            <div className="stat-data-label">Recommend Rate</div>
+                        </div>
+                        <div className="stat-data-point">
+                            <div className="stat-data-value">4.8/5</div>
+                            <div className="stat-data-label">Avg. Rating</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="contact" className="contact-section">
+        <div className="section-container-wrapper"> <div className="contact-form-container">
+                <div className="contact-layout-flex">
+                    <div className="contact-info-panel">
+                        <div className="deco-blur-1"></div>
+                        <div className="deco-blur-2"></div>
+                        
+                        <h2 className="panel-title">Ready to Transform Your Trading?</h2>
+                        <p className="panel-description">
+                            Join thousands of traders who have enhanced their strategies with Finext.&nbsp; 
+                            Start with our free 7-day trial and experience the future of financial&nbsp; 
+                            analysis.
+                        </p>
+                        
+                        <div className="key-metrics-list">
+                            <div className="metric-item">
+                                <div className="metric-icon-wrapper">
+                                    <div className="metric-icon-bg"><i className="fas fa-users"></i></div>
+                                </div>
+                                <div className="metric-details">
+                                    <h4 className="metric-title">35K+ Active Traders</h4>
+                                    <p className="metric-subtitle">Join a growing community of successful investors</p>
+                                </div>
+                            </div>
+                            <div className="metric-item">
+                                <div className="metric-icon-wrapper">
+                                    <div className="metric-icon-bg"><i className="fas fa-chart-line"></i></div>
+                                </div>
+                                <div className="metric-details">
+                                    <h4 className="metric-title">24.7% Avg. ROI</h4>
+                                    <p className="metric-subtitle">Based on verified user results in the past year</p>
+                                </div>
+                            </div>
+                            <div className="metric-item">
+                                <div className="metric-icon-wrapper">
+                                    <div className="metric-icon-bg"><i className="fas fa-shield-alt"></i></div>
+                                </div>
+                                <div className="metric-details">
+                                    <h4 className="metric-title">Secure &amp; Private</h4>
+                                    <p className="metric-subtitle">Bank-level encryption and data privacy standards</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="contact-form-panel">
+                        <form id="contactForm">
+                            <div className="form-field">
+                                <label htmlFor="name" className="form-label">Full Name</label>
+                                <input type="text" id="name" name="name" className="form-text-input" placeholder="Enter your full name" />
+                            </div>
+                            <div className="form-field">
+                                <label htmlFor="email" className="form-label">Email Address</label>
+                                <input type="email" id="email" name="email" className="form-text-input" placeholder="your.email@example.com" />
+                            </div>
+                            <div className="form-field">
+                                <label htmlFor="experience" className="form-label">Trading Experience</label>
+                                <select id="experience" name="experience" className="form-dropdown-select" defaultValue="">
+                                    <option value="" disabled>Select your experience level</option>
+                                    <option value="Beginner">Beginner</option>
+                                    <option value="Intermediate">Intermediate</option>
+                                    <option value="Advanced">Advanced</option>
+                                    <option value="Professional">Professional</option>
+                                </select>
+                            </div>
+                            <div className="form-field checkbox-group-label">
+                                <label className="form-label">Markets You&apos;re Interested In</label>
+                                <div className="interests-checkbox-grid">
+                                    <label className="checkbox-option-label">
+                                        <input type="checkbox" className="styled-checkbox" name="interest" value="stocks" />
+                                        <span className="checkbox-label-text">Stocks</span>
+                                    </label>
+                                    <label className="checkbox-option-label">
+                                        <input type="checkbox" className="styled-checkbox" name="interest" value="crypto" />
+                                        <span className="checkbox-label-text">Crypto</span>
+                                    </label>
+                                    <label className="checkbox-option-label">
+                                        <input type="checkbox" className="styled-checkbox" name="interest" value="forex" />
+                                        <span className="checkbox-label-text">Forex</span>
+                                    </label>
+                                    <label className="checkbox-option-label">
+                                        <input type="checkbox" className="styled-checkbox" name="interest" value="commodities" />
+                                        <span className="checkbox-label-text">Commodities</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <button type="submit" className="form-submit-button btn-glow">
+                                Unlock Premium Access
+                            </button>
+                            <p className="trial-info-text">
+                                Start your 7-day free trial. No credit card required.
+                            </p>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer className="site-footer">
+        <div className="footer-content-area">
+            <div className="footer-main-grid">
+                <div className="company-info-column">
+                    <div className="footer-logo-group">
+                        <svg className="footer-logo-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2L3 7L12 12L21 7L12 2Z" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M3 12L12 17L21 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M3 17L12 22L21 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        <span className="footer-brand-name">Finext</span>
+                    </div>
+                    <p className="company-tagline">
+                        Advanced market intelligence and predictive analytics for the modern investor.&nbsp; 
+                        Finext is transforming how investors of all levels approach financial markets&nbsp; 
+                        with AI-powered insights.
+                    </p>
+                    <div className="social-media-links">
+                        <a href="#"><i className="fab fa-twitter"></i></a>
+                        <a href="#"><i className="fab fa-linkedin"></i></a>
+                        <a href="#"><i className="fab fa-github"></i></a>
+                        <a href="#"><i className="fab fa-discord"></i></a>
+                    </div>
+                </div>
+                <div className="footer-nav-column">
+                    <h3 className="column-heading">Solutions</h3>
+                    <div className="footer-links-listing">
+                        <a href="#" className="footer-link">Forex Trading</a>
+                        <a href="#" className="footer-link">Stock Analysis</a>
+                        <a href="#" className="footer-link">Crypto Insights</a>
+                        <a href="#" className="footer-link">Portfolio Management</a>
+                        <a href="#" className="footer-link">Algorithmic Trading</a>
+                    </div>
+                </div>
+                <div className="footer-nav-column">
+                    <h3 className="column-heading">Company</h3>
+                    <div className="footer-links-listing">
+                        <a href="#" className="footer-link">About Us</a>
+                        <a href="#" className="footer-link">Careers</a>
+                        <a href="#" className="footer-link">Blog</a>
+                        <a href="#" className="footer-link">Partners</a>
+                        <a href="#" className="footer-link">Research</a>
+                    </div>
+                </div>
+                 {/* Empty column for 4-column layout on large screens, or adjust md grid */}
+                <div className="footer-nav-column hidden md:block lg:hidden"></div>
+            </div>
+            <div className="footer-bottom-bar">
+                <p className="copyright-notice">
+                    &copy; 2024 Finext, Inc. All rights reserved. {/* Updated year */}
+                </p>
+                <div className="legal-links-group">
+                    <a href="#" className="legal-link">Privacy</a>
+                    <a href="#" className="legal-link">Terms</a>
+                    <a href="#" className="legal-link">Security</a>
+                    <a href="#" className="legal-link">Disclosures</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+    </>
+  );
+}

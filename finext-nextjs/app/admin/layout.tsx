@@ -36,18 +36,18 @@ import {
   DiamondOutlined as LogoIcon,
 } from '@mui/icons-material';
 
-import UserMenu from './_components/UserMenu';
+import UserMenu from './components/UserMenu';
 import ThemeToggleButton from 'components/ThemeToggleButton';
 
 import { layoutTokens } from '../../theme/tokens';
 
 const mainNavItems = [
-  { text: 'Dashboard', href: '/', icon: <DashboardIcon /> },
-  { text: 'Users', href: '/users', icon: <PeopleIcon /> },
-  { text: 'Products', href: '/products', icon: <ProductsIcon /> },
-  { text: 'Analytics', href: '/analytics', icon: <AnalyticsIcon /> },
-  { text: 'Messages', href: '/messages', icon: <MessagesIcon /> },
-  { text: 'Invoices', href: '/invoices', icon: <InvoicesIcon /> },
+  { text: 'Dashboard', href: '/admin/dashboard', icon: <DashboardIcon /> },
+  { text: 'Users', href: '/admin/users', icon: <PeopleIcon /> },
+  { text: 'Products', href: '/admin/products', icon: <ProductsIcon /> },
+  { text: 'Analytics', href: '/admin/analytics', icon: <AnalyticsIcon /> },
+  { text: 'Messages', href: '/admin/messages', icon: <MessagesIcon /> },
+  { text: 'Invoices', href: '/admin/invoices', icon: <InvoicesIcon /> },
 ];
 
 const bottomNavItems = [
