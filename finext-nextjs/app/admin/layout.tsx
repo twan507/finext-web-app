@@ -1,7 +1,7 @@
-// finext-nextjs/app/(dashboard)/layout.tsx
+// finext-nextjs/app/admin/layout.tsx
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react'; // Added useRef
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from 'components/AuthProvider';
@@ -20,33 +20,32 @@ import {
   Paper,
 } from '@mui/material';
 import MuiLink from '@mui/material/Link';
-import { SvgIconProps } from '@mui/material/SvgIcon'; // Import SvgIconProps
+import { SvgIconProps } from '@mui/material/SvgIcon';
 
 // Icons
 import {
   Dashboard as DashboardIcon,
   People as PeopleIcon,
-  Inventory2Outlined as ProductsIcon,
-  BarChartOutlined as AnalyticsIcon,
-  MailOutline as MessagesIcon,
-  DescriptionOutlined as InvoicesIcon,
+  // Inventory2Outlined as ProductsIcon, // Removed as not used
+  // BarChartOutlined as AnalyticsIcon, // Removed as not used
+  // MailOutline as MessagesIcon, // Removed as not used
+  // DescriptionOutlined as InvoicesIcon, // Removed as not used
   Logout as LogoutIcon,
   NotificationsNoneOutlined as NotificationsIcon,
   Search as SearchIcon,
   Menu as MenuIcon,
   ChevronRight as ChevronRightIcon,
   DiamondOutlined as LogoIcon,
-  AccountBalanceWalletOutlined, // Added import
-  AdminPanelSettingsOutlined as AdminToolsIcon,
-  ListAltOutlined,         // Added import
-  SecurityOutlined as SecurityIcon,
-  CategoryOutlined as CategoryIcon,
-  AccountBalanceWalletOutlined as FinanceIcon, // Used AccountBalanceWalletOutlined again, ensure correct usage or pick another for Finance
-  // If FinanceIcon was meant to be different, pick one e.g. MonetizationOnOutlined
-  MonetizationOnOutlined as FinanceGroupIcon, // Example if FinanceIcon should be distinct
-  DynamicFeedOutlined as DataManagementIcon,
+  // AccountBalanceWalletOutlined, // Defined below with alias
+  // AdminPanelSettingsOutlined as AdminToolsIcon, // Defined below with alias
+  // ListAltOutlined, // Defined below with alias
+  // SecurityOutlined as SecurityIcon, // Defined below with alias
+  // CategoryOutlined as CategoryIcon, // Defined below with alias
+  // AccountBalanceWalletOutlined as FinanceIcon, // Defined below with alias
+  // MonetizationOnOutlined as FinanceGroupIcon, // Defined below with alias
+  // DynamicFeedOutlined as DataManagementIcon, // Defined below with alias
   AdminPanelSettings,
-  FolderShared,
+  // FolderShared, // Removed as not used
   Security,
   Gavel,
   VerifiedUser,
@@ -54,15 +53,14 @@ import {
   Campaign,
   Subscriptions,
   ReceiptLong,
-  MonetizationOn,
+  // MonetizationOn, // Removed as not used
   Policy,
   AccountBalanceWallet,
   ListAlt,
   Devices,
-  Key,
-  AccountCircle,
+  // Key, // Removed as not used
+  // AccountCircle, // Removed as not used
   VpnKey,
-  LockOpen,
   ShoppingCart,
   ManageAccounts,
   ContactPage
@@ -74,20 +72,18 @@ import ThemeToggleButton from 'components/ThemeToggleButton';
 import { layoutTokens } from '../../theme/tokens';
 import Image from 'next/image';
 
-// Define types for navigation items
 interface NavItem {
   text: string;
   href: string;
-  icon: React.ReactElement<SvgIconProps>; // Use SvgIconProps for type safety with sx prop
+  icon: React.ReactElement<SvgIconProps>;
 }
 
 interface NavGroup {
   groupText: string;
-  groupIcon: React.ReactElement<SvgIconProps>; // Use SvgIconProps
+  groupIcon: React.ReactElement<SvgIconProps>;
   subItems: NavItem[];
 }
 
-// Restructured navigation items
 const navigationStructure: (NavItem | NavGroup)[] = [
   { text: 'Dashboard', href: '/admin/dashboard', icon: <DashboardIcon /> },
   {
@@ -103,7 +99,7 @@ const navigationStructure: (NavItem | NavGroup)[] = [
     groupIcon: <ShoppingCart />,
     subItems: [
       { text: 'Transactions', href: '/admin/transactions', icon: <ReceiptLong /> },
-      { text: 'Subscriptions', href: '/admin/subscriptions', icon: <LockOpen /> },
+      { text: 'Subscriptions', href: '/admin/subscriptions', icon: <Subscriptions /> }, // Changed Icon
       { text: 'Promotions', href: '/admin/promotions', icon: <Campaign /> },
     ],
   },
@@ -148,9 +144,9 @@ export default function DashboardLayout({
 
   const [popoverAnchorEl, setPopoverAnchorEl] = useState<null | HTMLElement>(null);
   const [openPopoverGroupId, setOpenPopoverGroupId] = useState<null | string>(null);
-  const [isTooltipDisabled, setIsTooltipDisabled] = useState(false); // State to disable tooltip
+  const [isTooltipDisabled, setIsTooltipDisabled] = useState(false);
 
-  const popoverTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Ref for popover close timeout
+  const popoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const drawerWidth = layoutTokens.compactDrawerWidth;
 
@@ -171,24 +167,18 @@ export default function DashboardLayout({
     }
     setPopoverAnchorEl(event.currentTarget);
     setOpenPopoverGroupId(groupId);
-    setIsTooltipDisabled(true); // Disable tooltip when popover is to be opened
+    setIsTooltipDisabled(true);
   };
 
   const handlePopoverClose = () => {
-    // Clear any existing timeout before setting a new one.
-    // This prevents orphaned timeouts if handlePopoverClose is called multiple times rapidly.
     if (popoverTimeoutRef.current) {
       clearTimeout(popoverTimeoutRef.current);
-      // popoverTimeoutRef.current is not set to null here because
-      // it will be immediately reassigned by the new setTimeout.
     }
-
-    // Delay closing to allow mouse to move into popover
     popoverTimeoutRef.current = setTimeout(() => {
       setPopoverAnchorEl(null);
       setOpenPopoverGroupId(null);
-      setIsTooltipDisabled(false); // Re-enable tooltip
-    }, 100); // Adjust delay as needed
+      setIsTooltipDisabled(false);
+    }, 100);
   };
 
   const handlePopoverMouseEnter = () => {
@@ -234,7 +224,7 @@ export default function DashboardLayout({
         ? (theme.palette.mode === 'light' ? theme.palette.primary.dark : theme.palette.primary.main)
         : (theme.palette.mode === 'light' ? theme.palette.grey[700] : theme.palette.grey[300]),
     },
-    '&.Mui-selected': {
+    '&.Mui-selected': { // Ensure Mui-selected styles are consistent or more prominent if needed
       color: theme.palette.mode === 'light' ? theme.palette.primary.main : theme.palette.primary.light,
       backgroundColor: theme.palette.mode === 'light' ? alpha(theme.palette.primary.main, 0.08) : alpha(theme.palette.primary.light, 0.12),
       '&:hover': {
@@ -254,15 +244,15 @@ export default function DashboardLayout({
           <Image
             src="/finext-icon-trans.png"
             alt="Finext Logo"
-            width={20}
-            height={20}
-            style={{ height: '30px', width: 'auto', marginTop: theme.spacing(1) }}
+            width={20} // Intrinsic width of the image if known, or desired display width
+            height={20} // Intrinsic height for aspect ratio, or desired display height
+            style={{ height: '30px', width: 'auto', marginTop: theme.spacing(1) }} // Style for rendered size
           />
         </Link>
       </Box>
       <List sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', py: theme.spacing(1), width: '100%' }}>
         {navigationStructure.map((item) => {
-          if ('href' in item) {
+          if ('href' in item) { // NavItem
             const isActive = item.href === '/' ? currentPathname === '/' : currentPathname.startsWith(item.href);
             return (
               <ListItem key={item.text} disablePadding sx={{ width: 'auto', my: theme.spacing(0.75) }}>
@@ -277,7 +267,7 @@ export default function DashboardLayout({
                 </Tooltip>
               </ListItem>
             );
-          } else { // Group item
+          } else { // NavGroup
             const isGroupActive = item.subItems.some(sub => currentPathname.startsWith(sub.href));
             const isOpen = openPopoverGroupId === item.groupText;
             return (
@@ -290,7 +280,7 @@ export default function DashboardLayout({
               >
                 <Tooltip title={item.groupText} placement="right" disableHoverListener={true}>
                   <ListItemButton
-                    selected={isGroupActive && !isOpen} // Keep selection visual feedback if active and popover not matching current hover
+                    selected={isGroupActive && !isOpen}
                     sx={drawerLinkStyles(isGroupActive || isOpen)}
                   >
                     <ListItemIcon sx={{ minWidth: 'auto', color: 'inherit' }}>
@@ -301,23 +291,22 @@ export default function DashboardLayout({
                 <Popover
                   open={isOpen}
                   anchorEl={popoverAnchorEl}
-                  onClose={handlePopoverClose} // This will be triggered if mouse leaves popover area too
+                  onClose={handlePopoverClose}
                   anchorOrigin={{ vertical: 'center', horizontal: 'right' }}
                   transformOrigin={{ vertical: 'center', horizontal: 'left' }}
                   slotProps={{
                     paper: {
-                      onMouseEnter: handlePopoverMouseEnter, // Keep popover open when mouse enters it
-                      onMouseLeave: handlePopoverMouseLeave, // Close popover when mouse leaves it
+                      onMouseEnter: handlePopoverMouseEnter,
+                      onMouseLeave: handlePopoverMouseLeave,
                       sx: {
                         ml: 1, p: 1, minWidth: 200, bgcolor: 'background.paper',
                         backgroundImage: 'none', boxShadow: theme.shadows[6], borderRadius: '8px',
-                        pointerEvents: 'auto', // Ensure popover itself is interactive
+                        pointerEvents: 'auto',
                       }
                     }
                   }}
-                  // To prevent Popover from stealing focus and closing immediately on mouse leave from ListItem
                   disableRestoreFocus
-                  sx={{ pointerEvents: 'none' }} // Prevent popover from capturing mouse events initially that would close it
+                  sx={{ pointerEvents: 'none' }}
                 >
                   <Typography color="text.primary" variant="caption" sx={{ px: 1, py: 1, display: 'block', fontWeight: 'bold' }}>
                     {item.groupText}
@@ -332,13 +321,13 @@ export default function DashboardLayout({
                               selected={isSubActive}
                               sx={drawerLinkStyles(isSubActive, true)}
                               onClick={() => {
-                                handlePopoverClose(); // Close popover on subitem click
+                                handlePopoverClose();
                               }}
                             >
                               <ListItemIcon sx={{ minWidth: 32, color: 'inherit', mr: 1 }}>
                                 {React.cloneElement(subItem.icon, { sx: { ...subItem.icon.props.sx, fontSize: '16px' } })}
                               </ListItemIcon>
-                              <ListItemText primary={subItem.text} primaryTypographyProps={{ variant: 'body2', fontWeight: isSubActive ? 'medium' : 'normal' }} />
+                              <ListItemText primary={subItem.text} slotProps={{ primary: { variant: 'body2', fontWeight: isSubActive ? 'medium' : 'normal' } }} />
                             </ListItemButton>
                           </Link>
                         </ListItem>
@@ -372,7 +361,6 @@ export default function DashboardLayout({
     let currentGroupText: string | null = null;
     let currentGroupIcon: React.ReactElement<SvgIconProps> | null = null;
 
-    // Helper to find item in navigation structure and return both item and group
     const findItemWithGroup = (items: (NavItem | NavGroup)[], path: string): { item: NavItem | undefined, group: NavGroup | undefined } => {
       for (const item of items) {
         if ('href' in item && path.startsWith(item.href)) {
@@ -389,7 +377,6 @@ export default function DashboardLayout({
       return { item: undefined, group: undefined };
     };
 
-    // Find the best matching item and its group
     let bestMatch: NavItem | undefined = undefined;
     let bestMatchGroup: NavGroup | undefined = undefined;
     let longestMatchLength = 0;
@@ -403,6 +390,7 @@ export default function DashboardLayout({
             longestMatchLength = item.href.length;
           }
         } else if ('subItems' in item) {
+          // Check if any subitem's href is a prefix of currentPathname before recursing
           if (item.subItems.some(sub => currentPathname.startsWith(sub.href))) {
             findBestMatchRecursive(item.subItems, item);
           }
@@ -428,6 +416,7 @@ export default function DashboardLayout({
         currentPageIconInstance = React.cloneElement(dashboardItem.icon, { sx: { ...dashboardItem.icon.props.sx, mr: 0.5, fontSize: "inherit" } });
       }
     }
+
 
     return (
       <Breadcrumbs aria-label="breadcrumb" sx={{ color: 'text.secondary' }}>
@@ -462,23 +451,22 @@ export default function DashboardLayout({
       <CssBaseline />
       <AppBar
         position="fixed"
-        elevation={0}
+        elevation={0} // Style can be controlled via MuiProvider if needed
         sx={{
           width: { md: `calc(100% - ${drawerWidth}px)` },
           ml: { md: `${drawerWidth}px` },
-          // bgcolor: 'background.paper', // Consider if needed
-          // borderBottom: `1px solid ${theme.palette.divider}`,
+          // bgcolor and borderBottom are now primarily controlled by MuiProvider's styleOverrides
         }}
       >
         <Toolbar sx={{ justifyContent: 'space-between', px: theme.spacing(3), py: theme.spacing(0) }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             {isMobile && (
               <MuiIconButton
-                color="inherit" // Will inherit color from parent, or set explicitly e.g. "default" or "primary"
+                color="inherit"
                 aria-label="open drawer"
                 edge="start"
                 onClick={handleDrawerToggle}
-                sx={{ mr: 2, color: 'text.primary' /* More explicit for visibility */ }}
+                sx={{ mr: 2, color: 'text.primary' }}
               >
                 <MenuIcon />
               </MuiIconButton>
@@ -492,7 +480,7 @@ export default function DashboardLayout({
                 variant="standard"
                 size="small"
                 placeholder="Search..."
-                InputProps={{ // Changed from slotProps.input to InputProps
+                InputProps={{
                   disableUnderline: true,
                   startAdornment: (
                     <InputAdornment position="start">
@@ -500,7 +488,7 @@ export default function DashboardLayout({
                     </InputAdornment>
                   ),
                 }}
-                inputProps={{ // sx for the input element itself goes here
+                inputProps={{
                   sx: {
                     borderRadius: '20px',
                     bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[100] : alpha(theme.palette.common.white, 0.1),
@@ -552,66 +540,69 @@ export default function DashboardLayout({
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{ keepMounted: true }}
-          elevation={0}
+          elevation={0} // Consistent with desktop
           sx={{
             display: { xs: 'block', md: 'none' },
             '& .MuiDrawer-paper': {
               width: layoutTokens.drawerWidth, // full drawer width for mobile
+              // bgcolor & borderRight will be inherited from MuiProvider styles
             },
           }}
         >
-          <Box sx={{ p: theme.spacing(2), display: 'flex', alignItems: 'center', borderBottom: `1px solid ${theme.palette.divider}` }}>
-            <LogoIcon sx={{ fontSize: '24px', color: 'primary.main', mr: 1 }} />
-            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Finext</Typography>
-          </Box>
-          <List sx={{ flexGrow: 1, overflowY: 'auto' }}> {/* Added flexGrow and overflowY for long lists */}
-            {navigationStructure.map((itemOrGroup) => {
-              if ('href' in itemOrGroup) {
-                return (
-                  <ListItem key={itemOrGroup.text} disablePadding>
-                    <Link href={itemOrGroup.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
-                      <ListItemButton selected={currentPathname.startsWith(itemOrGroup.href)} onClick={handleDrawerToggle}>
-                        <ListItemIcon sx={{ color: currentPathname.startsWith(itemOrGroup.href) ? 'primary.main' : 'text.secondary', minWidth: 40 }}>
-                          {itemOrGroup.icon}
-                        </ListItemIcon>
-                        <ListItemText primary={itemOrGroup.text} />
-                      </ListItemButton>
-                    </Link>
-                  </ListItem>
-                );
-              } else {
-                return (
-                  <React.Fragment key={itemOrGroup.groupText}>
-                    <ListItem sx={{ pt: 2, pb: 1, mt: 1 }}> {/* Added some margin top for group headers */}
-                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'medium', textTransform: 'uppercase', pl: 1 }}>
-                        {itemOrGroup.groupText}
-                      </Typography>
-                    </ListItem>
-                    {itemOrGroup.subItems.map(subItem => (
-                      <ListItem key={subItem.text} disablePadding sx={{ pl: 1.5 }}>
-                        <Link href={subItem.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
-                          <ListItemButton selected={currentPathname.startsWith(subItem.href)} onClick={handleDrawerToggle}>
-                            <ListItemIcon sx={{ color: currentPathname.startsWith(subItem.href) ? 'primary.main' : 'text.secondary', minWidth: 40 }}>
-                              {subItem.icon}
+           {/* Content for mobile drawer - using a slightly different structure or can reuse drawerContent */}
+           {/* Simplified example for mobile drawer content structure: */}
+            <Box sx={{ p: theme.spacing(2), display: 'flex', alignItems: 'center', borderBottom: `1px solid ${theme.palette.divider}` }}>
+                <LogoIcon sx={{ fontSize: '24px', color: 'primary.main', mr: 1 }} />
+                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Finext</Typography>
+            </Box>
+            <List sx={{ flexGrow: 1, overflowY: 'auto' }}>
+                {navigationStructure.map((itemOrGroup) => {
+                if ('href' in itemOrGroup) {
+                    return (
+                    <ListItem key={itemOrGroup.text} disablePadding>
+                        <Link href={itemOrGroup.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
+                        <ListItemButton selected={currentPathname.startsWith(itemOrGroup.href)} onClick={handleDrawerToggle}>
+                            <ListItemIcon sx={{ color: currentPathname.startsWith(itemOrGroup.href) ? 'primary.main' : 'text.secondary', minWidth: 40 }}>
+                            {itemOrGroup.icon}
                             </ListItemIcon>
-                            <ListItemText primary={subItem.text} />
-                          </ListItemButton>
+                            <ListItemText primary={itemOrGroup.text} />
+                        </ListItemButton>
                         </Link>
-                      </ListItem>
-                    ))}
-                  </React.Fragment>
-                );
-              }
-            })}
-          </List>
-          <Box sx={{ p: theme.spacing(1), mt: 'auto', borderTop: `1px solid ${theme.palette.divider}` }}>
-            <ListItem disablePadding>
-              <ListItemButton onClick={() => { logout(); handleDrawerToggle(); }}>
-                <ListItemIcon sx={{ color: 'text.secondary', minWidth: 40 }}><LogoutIcon /></ListItemIcon>
-                <ListItemText primary="Logout" />
-              </ListItemButton>
-            </ListItem>
-          </Box>
+                    </ListItem>
+                    );
+                } else {
+                    return (
+                    <React.Fragment key={itemOrGroup.groupText}>
+                        <ListItem sx={{ pt: 2, pb: 1, mt: 1 }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'medium', textTransform: 'uppercase', pl: 1 }}>
+                            {itemOrGroup.groupText}
+                        </Typography>
+                        </ListItem>
+                        {itemOrGroup.subItems.map(subItem => (
+                        <ListItem key={subItem.text} disablePadding sx={{ pl: 1.5 }}>
+                            <Link href={subItem.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
+                            <ListItemButton selected={currentPathname.startsWith(subItem.href)} onClick={handleDrawerToggle}>
+                                <ListItemIcon sx={{ color: currentPathname.startsWith(subItem.href) ? 'primary.main' : 'text.secondary', minWidth: 40 }}>
+                                {subItem.icon}
+                                </ListItemIcon>
+                                <ListItemText primary={subItem.text} />
+                            </ListItemButton>
+                            </Link>
+                        </ListItem>
+                        ))}
+                    </React.Fragment>
+                    );
+                }
+                })}
+            </List>
+            <Box sx={{ p: theme.spacing(1), mt: 'auto', borderTop: `1px solid ${theme.palette.divider}` }}>
+                <ListItem disablePadding>
+                <ListItemButton onClick={() => { logout(); handleDrawerToggle(); }}>
+                    <ListItemIcon sx={{ color: 'text.secondary', minWidth: 40 }}><LogoutIcon /></ListItemIcon>
+                    <ListItemText primary="Logout" />
+                </ListItemButton>
+                </ListItem>
+            </Box>
         </Drawer>
 
         {/* Desktop Drawer (Compact with Popovers on Hover) */}
@@ -622,12 +613,13 @@ export default function DashboardLayout({
             flexDirection: 'column',
             '& .MuiDrawer-paper': {
               boxSizing: 'border-box',
-              width: drawerWidth, // compact drawer width
+              width: drawerWidth,
               height: '100vh',
               display: 'flex',
               flexDirection: 'column',
-              bgcolor: 'background.paper',
-              borderRight: `1px solid ${theme.palette.divider}`,
+              // bgcolor and borderRight are now primarily controlled by MuiProvider's styleOverrides
+              // Removed: bgcolor: 'background.paper',
+              // Removed: borderRight: `1px solid ${theme.palette.divider}`,
             },
           }}
           open

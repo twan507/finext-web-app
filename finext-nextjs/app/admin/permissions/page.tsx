@@ -6,10 +6,10 @@ import { apiClient } from 'services/apiClient';
 import {
     Box, Typography, Container, Paper, Link as MuiLink,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Alert, CircularProgress, TablePagination, Tooltip
+    Alert, CircularProgress, TablePagination, Tooltip, Button, Switch
 } from '@mui/material';
 import Breadcrumbs from '@mui/material/Breadcrumbs';
-import { Home as HomeIcon, Security as SecurityIcon, InfoOutlined as InfoIcon } from '@mui/icons-material';
+import { Home as HomeIcon, Security as SecurityIcon, InfoOutlined as InfoIcon, Gavel as PermissionIcon, Add as AddIcon } from '@mui/icons-material';
 // Bỏ AddIcon nếu không có chức năng thêm permission từ UI
 
 // Định nghĩa kiểu dữ liệu cho Permission (phải khớp với PermissionPublic từ FastAPI)

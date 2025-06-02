@@ -5,7 +5,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import {
   Box, Typography, Container, Paper, Link as MuiLink,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  IconButton, Alert, CircularProgress, TablePagination, Tooltip, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle
+  IconButton, Alert, CircularProgress, TablePagination, Tooltip, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Chip
 } from '@mui/material';
 import Breadcrumbs from '@mui/material/Breadcrumbs';
 import {
@@ -163,11 +163,12 @@ const SessionsPage: React.FC = () => {
             <Table sx={{ minWidth: 750 }} aria-label="sessions table">
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold' }}>User ID</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Device Info</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Created At</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Last Active At</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>JTI (Session ID)</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Session ID</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>User</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Device</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>IP Address</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Last Active</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }} align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
@@ -179,46 +180,51 @@ const SessionsPage: React.FC = () => {
                     sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
                   >
                     <TableCell>
-                      <Tooltip title={session.user_id}>
-                         <Typography variant="body2" sx={{
-                           maxWidth: '150px',
-                           overflow: 'hidden',
-                           textOverflow: 'ellipsis',
-                           whiteSpace: 'nowrap'
-                         }}>
-                           {session.user_id}
-                         </Typography>
+                      <Tooltip title={session.jti}>
+                        <Typography variant="body2" sx={{
+                          maxWidth: '150px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {session.jti}
+                          {isCurrentSession(session.jti) && " (Current)"}
+                        </Typography>
                       </Tooltip>
                     </TableCell>
                     <TableCell>
-                       <Tooltip title={session.device_info || 'N/A'}>
-                         <Typography variant="body2" sx={{
-                           maxWidth: '200px',
-                           overflow: 'hidden',
-                           textOverflow: 'ellipsis',
-                           whiteSpace: 'nowrap'
-                         }}>
-                           {session.device_info || 'N/A'}
-                         </Typography>
-                       </Tooltip>
+                      <Tooltip title={session.user_id}>
+                        <Typography variant="body2" sx={{
+                          maxWidth: '150px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {session.user_id}
+                        </Typography>
+                      </Tooltip>
                     </TableCell>
-                    <TableCell>{format(parseISO(session.created_at), 'dd/MM/yyyy HH:mm:ss')}</TableCell>
-                    <TableCell>{format(parseISO(session.last_active_at), 'dd/MM/yyyy HH:mm:ss')}</TableCell>
                     <TableCell>
-                      <Tooltip title={session.jti}>
-                         <Typography variant="body2" sx={{
-                           maxWidth: '150px',
-                           overflow: 'hidden',
-                           textOverflow: 'ellipsis',
-                           whiteSpace: 'nowrap',
-                           fontWeight: isCurrentSession(session.jti) ? 'bold' : 'normal',
-                           color: isCurrentSession(session.jti) ? 'primary.main' : 'inherit'
-                         }}>
-                           {session.jti}
-                           {isCurrentSession(session.jti) && " (Current)"}
-                         </Typography>
-                       </Tooltip>
+                      <Tooltip title={session.device_info || 'N/A'}>
+                        <Typography variant="body2" sx={{
+                          maxWidth: '200px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {session.device_info || 'N/A'}
+                        </Typography>
+                      </Tooltip>
                     </TableCell>
+                    <TableCell>{/* IP Address - nếu có thông tin này */}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={isCurrentSession(session.jti) ? "Active" : "Inactive"}
+                        color={isCurrentSession(session.jti) ? "success" : "default"}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>{format(parseISO(session.last_active_at), 'dd/MM/yyyy HH:mm:ss')}</TableCell>
                     <TableCell align="right">
                       <IconButton
                         size="small"
@@ -234,7 +240,7 @@ const SessionsPage: React.FC = () => {
                 ))}
                 {sessions.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+                    <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
                       No active sessions found.
                     </TableCell>
                   </TableRow>
@@ -269,9 +275,9 @@ const SessionsPage: React.FC = () => {
         <DialogContent>
           <DialogContentText id="alert-dialog-description">
             Are you sure you want to terminate this session? This will log the user out from the device/browser associated with this session.
-            <br/>
+            <br />
             User ID: {sessionToDelete?.user_id}
-            <br/>
+            <br />
             Device: {sessionToDelete?.device_info || 'N/A'}
           </DialogContentText>
         </DialogContent>
