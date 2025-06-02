@@ -2,153 +2,223 @@
 'use client';
 
 import React from 'react';
-// Sử dụng import Grid cụ thể hơn để đảm bảo
-import Grid from '@mui/material/Grid';
-import { Box, Typography, Container, Paper, Link as MuiLink, Button } from '@mui/material'; // THÊM Button
-import { Home as HomeIcon, ShowChart as ShowChartIcon, People as PeopleIcon, VpnKey as VpnKeyIcon, Security as SecurityIcon, CloudUpload as CloudUploadIcon } from '@mui/icons-material'; // THÊM CloudUploadIcon
-import Breadcrumbs from '@mui/material/Breadcrumbs';
-import FeatureGuard from 'components/FeatureGuard'; // THÊM IMPORT
+import {
+  Box, Typography, Paper, Grid, Link as MuiLink, Avatar, List, ListItem, ListItemAvatar, ListItemText,
+  ToggleButton, ToggleButtonGroup, useTheme
+} from '@mui/material';
+import {
+  AttachMoney as RevenueIcon,
+  PeopleOutline as AccountsIcon,
+  ShoppingCartOutlined as OrdersIcon,
+  TrendingUp as ConversionIcon,
+  AddShoppingCart as NewOrderIcon,
+  PersonAddAlt1Outlined as NewUserIcon,
+  MailOutline as SupportTicketIcon,
+  ReceiptLongOutlined as InvoicePaidIcon,
+} from '@mui/icons-material';
+
+// Dummy Data (Giữ nguyên)
+const kpiData = [
+  { title: "Total Revenue", value: "$24,780", change: "+12.5%", changeColorKey: "success.main", icon: <RevenueIcon /> },
+  { title: "Total Accounts", value: "1,842", change: "+8.2%", changeColorKey: "success.main", icon: <AccountsIcon /> },
+  { title: "New Orders", value: "327", change: "+3.1%", changeColorKey: "success.main", icon: <OrdersIcon /> },
+  { title: "Conversion Rate", value: "3.6%", change: "-0.8%", changeColorKey: "error.main", icon: <ConversionIcon /> },
+];
+
+const recentActivityData = [
+  { icon: <NewUserIcon />, text: "<strong>John Smith</strong> created a new account", time: "2 hours ago" },
+  { icon: <NewOrderIcon />, text: "New order <strong>#ORD-4829</strong> was placed", time: "4 hours ago" },
+  { icon: <SupportTicketIcon />, text: "<strong>Sarah Johnson</strong> sent a support ticket", time: "1 day ago" },
+  { icon: <InvoicePaidIcon />, text: "Invoice <strong>#INV-2948</strong> was paid", time: "2 days ago" },
+];
 
 const DashboardHomePage: React.FC = () => {
+  const theme = useTheme();
+  const [revenueChartPeriod, setRevenueChartPeriod] = React.useState('Monthly');
+  const [userGrowthChartPeriod, setUserGrowthChartPeriod] = React.useState('Monthly');
+
+  const handleChartPeriodChange = (
+    event: React.MouseEvent<HTMLElement>,
+    newPeriod: string | null,
+    setter: React.Dispatch<React.SetStateAction<string>>
+  ) => {
+    if (newPeriod !== null) {
+      setter(newPeriod);
+    }
+  };
+
+  // Style chung cho các card
+  const cardHoverStyles = {
+    transition: theme.transitions.create(['transform', 'box-shadow'], {
+        duration: theme.transitions.duration.short, // 'all 0.2s ease'
+    }),
+    '&:hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: theme.shadows[3], // Tăng nhẹ shadow khi hover
+    },
+  };
+
   return (
-    <Container maxWidth={false} sx={{ p: '0 !important' }}>
-      <Box sx={{ mb: 3 }}>
-        <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
-          <MuiLink underline="hover" color="inherit" href="/" sx={{ display: 'flex', alignItems: 'center' }}>
-            <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
-            Dashboard
-          </MuiLink>
-          <Typography color="text.primary">Overview</Typography>
-        </Breadcrumbs>
-        <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
+    <Box>
+      {/* Page Header */}
+      <Box sx={{ mb: theme.spacing(3) }}>
+        <Typography variant="h4" component="h1" sx={{ fontWeight: 600, mb: 0.5, color: 'text.primary' }}>
           Dashboard Overview
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Welcome to the Finext Admin Dashboard. Here's a quick overview of your application.
         </Typography>
       </Box>
 
-      <Grid container spacing={3}> {/* Grid container */}
-        {/* Dummy Card 1 */}
-        <Grid size={{ xs: 12, md: 6, lg: 3 }}>
-          <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', height: 180, borderRadius: '12px' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <PeopleIcon color="primary" sx={{ mr: 1 }} />
-              <Typography variant="h6" component="h2">
-                Total Users
-              </Typography>
-            </Box>
-            <Typography component="p" variant="h4">
-              1,234
-            </Typography>
-            <Typography color="text.secondary" sx={{ flexGrow: 1 }}>
-              Active users in the system.
-            </Typography>
-            <MuiLink href="/users" color="primary">
-              View Users
-            </MuiLink>
-          </Paper>
-        </Grid>
-
-        {/* Dummy Card 2 - BẢO VỆ BẰNG FEATURE GUARD */}
-        <Grid size={{ xs: 12, md: 6, lg: 3 }}>
-          <FeatureGuard requires="view_advanced_chart">
-            <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', height: 180, borderRadius: '12px' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <ShowChartIcon color="secondary" sx={{ mr: 1 }} />
-                <Typography variant="h6" component="h2">
-                  Advanced Sales
+      {/* KPI Cards */}
+      <Grid container spacing={2.5} sx={{ mb: 3 }}> {/* Tăng spacing một chút giữa các thẻ */}
+        {kpiData.map((kpi, index) => (
+          <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 2.5,
+                borderRadius: theme.shape.borderRadius, // Sử dụng theme.shape.borderRadius
+                borderColor: theme.palette.divider,
+                height: '100%', // Đảm bảo các card có chiều cao bằng nhau nếu cần
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                ...cardHoverStyles, // Áp dụng hiệu ứng hover
+              }}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                <Box>
+                  <Typography sx={{ color: 'text.secondary', fontSize: '0.875rem', fontWeight: 500 }}>
+                    {kpi.title}
+                  </Typography>
+                  <Typography variant="h5" component="h3" sx={{ fontWeight: 700, mt: 0.5, color: 'text.primary' }}>
+                    {kpi.value}
+                  </Typography>
+                </Box>
+                <Avatar sx={{ bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[100] : theme.palette.grey[800], color: 'text.secondary' }}>
+                  {kpi.icon}
+                </Avatar>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography sx={{ color: kpi.changeColorKey, fontSize: '0.875rem', fontWeight: 500 }}>
+                  {kpi.change}
+                </Typography>
+                <Typography sx={{ color: 'text.disabled', fontSize: '0.75rem', ml: 1 }}>
+                  vs last month
                 </Typography>
               </Box>
-              <Typography component="p" variant="h4">
-                $5,678
-              </Typography>
-              <Typography color="text.secondary" sx={{ flexGrow: 1 }}>
-                Advanced revenue data.
-              </Typography>
-              <MuiLink href="#" color="secondary">
-                View Advanced Reports
-              </MuiLink>
             </Paper>
-          </FeatureGuard>
-          {/* Bạn có thể thêm dummyComponent hoặc để nó ẩn nếu không có quyền */}
-        </Grid>
+          </Grid>
+        ))}
+      </Grid>
 
-        {/* Dummy Card 3 */}
-        <Grid size={{ xs: 12, md: 6, lg: 3 }}>
-          <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', height: 180, borderRadius: '12px' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <VpnKeyIcon sx={{ mr: 1, color: 'success.main' }} />
-              <Typography variant="h6" component="h2">
-                Active Roles
+      {/* Charts Section - Sửa layout thành 2 cột */}
+      <Grid container spacing={2.5} sx={{ mb: 3 }}>
+        {/* Revenue Chart Card */}
+        <Grid size={{ xs: 12, lg: 6 }}> {/* lg={6} để chiếm 50% trên màn hình lớn */}
+          <Paper variant="outlined" sx={{ p: 2.5, borderRadius: theme.shape.borderRadius, borderColor: theme.palette.divider, ...cardHoverStyles }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" component="h3" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                Revenue Overview
               </Typography>
+              <ToggleButtonGroup
+                value={revenueChartPeriod}
+                exclusive
+                onChange={(event, newPeriod) => handleChartPeriodChange(event, newPeriod, setRevenueChartPeriod)}
+                aria-label="Revenue chart period"
+                size="small"
+              >
+                {['Monthly', 'Quarterly', 'Yearly'].map((period) => (
+                  <ToggleButton
+                    key={period}
+                    value={period}
+                    aria-label={period}
+                    sx={{
+                        borderRadius: '20px !important', // Ghi đè border-radius của ToggleButton
+                        px: 1.5, py: 0.5, fontSize: '0.75rem',
+                        border: 'none',
+                        textTransform: 'none',
+                        color: 'text.secondary',
+                        '&.Mui-selected': {
+                            bgcolor: theme.palette.action.selected, // Sử dụng màu action.selected của theme
+                            color: 'text.primary',
+                            fontWeight: 500,
+                            '&:hover': {
+                                bgcolor: theme.palette.action.hover, //
+                            }
+                         },
+                         '&:hover': {
+                            bgcolor: theme.palette.action.hover,
+                         }
+                    }}
+                  >
+                    {period}
+                  </ToggleButton>
+                ))}
+              </ToggleButtonGroup>
             </Box>
-            <Typography component="p" variant="h4">
-              5
-            </Typography>
-            <Typography color="text.secondary" sx={{ flexGrow: 1 }}>
-              Configured user roles.
-            </Typography>
-            <MuiLink href="/roles" sx={{ color: 'success.main' }}>
-              Manage Roles
-            </MuiLink>
+            <Box sx={{
+                height: 300, width: '100%',
+                bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[50] : theme.palette.grey[800], // Phù hợp với theme
+                borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled'
+            }}>
+              Revenue chart would appear here
+            </Box>
           </Paper>
         </Grid>
 
-        {/* Dummy Card 4 */}
-        <Grid size={{ xs: 12, md: 6, lg: 3 }}>
-          <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', height: 180, borderRadius: '12px' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <SecurityIcon sx={{ mr: 1, color: 'warning.main' }} />
-              <Typography variant="h6" component="h2">
-                Permissions
+        {/* User Growth Chart Card */}
+        <Grid size={{ xs: 12, lg: 6 }}> {/* lg={6} để chiếm 50% trên màn hình lớn */}
+          <Paper variant="outlined" sx={{ p: 2.5, borderRadius: theme.shape.borderRadius, borderColor: theme.palette.divider, ...cardHoverStyles }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" component="h3" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                User Growth
               </Typography>
+              <ToggleButtonGroup
+                value={userGrowthChartPeriod}
+                exclusive
+                onChange={(event, newPeriod) => handleChartPeriodChange(event, newPeriod, setUserGrowthChartPeriod)}
+                aria-label="User growth chart period"
+                size="small"
+              >
+                {['Monthly', 'Quarterly', 'Yearly'].map((period) => (
+                  <ToggleButton
+                    key={period}
+                    value={period}
+                    aria-label={period}
+                    sx={{
+                        borderRadius: '20px !important',
+                        px: 1.5, py: 0.5, fontSize: '0.75rem',
+                        border: 'none',
+                        textTransform: 'none',
+                        color: 'text.secondary',
+                        '&.Mui-selected': {
+                            bgcolor: theme.palette.action.selected,
+                            color: 'text.primary',
+                            fontWeight: 500,
+                             '&:hover': {
+                                bgcolor: theme.palette.action.hover,
+                            }
+                         },
+                         '&:hover': {
+                            bgcolor: theme.palette.action.hover,
+                         }
+                    }}
+                  >
+                    {period}
+                  </ToggleButton>
+                ))}
+              </ToggleButtonGroup>
             </Box>
-            <Typography component="p" variant="h4">
-              25
-            </Typography>
-            <Typography color="text.secondary" sx={{ flexGrow: 1 }}>
-              Defined system permissions.
-            </Typography>
-            <MuiLink href="/permissions" sx={{ color: 'warning.main' }}>
-              View Permissions
-            </MuiLink>
+            <Box sx={{
+                height: 300, width: '100%',
+                bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[50] : theme.palette.grey[800],
+                borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled'
+            }}>
+              User growth chart would appear here
+            </Box>
           </Paper>
         </Grid>
       </Grid>
-
-      <Paper sx={{ mt: 3, p: 3, borderRadius: '12px' }}>
-        <Typography variant="h5" gutterBottom>
-          Recent Activity
-        </Typography>
-        <Typography>
-          - User 'john.doe@example.com' logged in.
-        </Typography>
-        <Typography>
-          - New role 'Editor' was created.
-        </Typography>
-        <Typography>
-          - System maintenance scheduled for tomorrow.
-        </Typography>
-        {/* THÊM NÚT ĐƯỢC BẢO VỆ */}
-        <Box sx={{ mt: 2 }}>
-          <FeatureGuard requires="export_data">
-            <Button variant="contained" startIcon={<CloudUploadIcon />}>
-              Export All Data
-            </Button>
-          </FeatureGuard>
-          {/* Thêm một nút khác, nhưng hiển thị disabled nếu không có quyền */}
-          <FeatureGuard
-            requires="api_access"
-            tooltipMessage="Nâng cấp lên gói EXAMPLE để truy cập API"
-          >
-            <Button variant="outlined" sx={{ ml: 2 }}>
-              Access API Docs
-            </Button>
-          </FeatureGuard>
-        </Box>
-      </Paper>
-    </Container>
+    </Box>
   );
 };
 

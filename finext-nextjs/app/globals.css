@@ -1,47 +1,40 @@
+/* finext-nextjs/app/globals.css */
 
-:root {
-  /* Light Mode (Mặc định) */
-  --background: #ffffff;
-  --foreground: #000000;
-  --primary: #1976d2;
-  --secondary: #dc004e;
-  --paper-bg: #ffffff;
-  --text-primary: rgba(0, 0, 0, 0.87);
-  --text-secondary: rgba(0, 0, 0, 0.6);
-  --appbar-bg: #fff;
-  --appbar-text: #000;
-  --drawer-bg: #fff;
-  --drawer-border: #f0f0f0;
-  --table-head-bg: #fafafa;
-  --main-bg: #f5f5f5;
-  /* ... các biến màu khác nếu cần ... */
+/* 1. Khai báo box-sizing và font smoothing cơ bản cho <html> */
+html {
+  box-sizing: border-box; /* Đảm bảo padding và border không làm tăng kích thước tổng thể của phần tử.
+                           Đây là một thực hành tốt và phổ biến. CssBaseline của MUI cũng có thể đã bao gồm điều này. */
+  -webkit-font-smoothing: antialiased; /* Cải thiện hiển thị font trên trình duyệt WebKit (Chrome, Safari). */
+  -moz-osx-font-smoothing: grayscale;  /* Cải thiện hiển thị font trên Firefox (macOS). */
+                           /* CssBaseline của MUI có thể cũng đã xử lý các thuộc tính font-smoothing này. */
 }
 
-html[data-theme='dark'] {
-  /* Dark Mode */
-  --background: #121212;
-  --foreground: #ffffff;
-  --primary: #90caf9;
-  --secondary: #f48fb1;
-  --paper-bg: #1e1e1e;
-  --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.7);
-  --appbar-bg: #1e1e1e;
-  --appbar-text: #fff;
-  --drawer-bg: #1e1e1e;
-  --drawer-border: #303030;
-  --table-head-bg: #2a2a2a;
-  --main-bg: #121212; /* Có thể dùng #0a0a0a hoặc #121212 tùy sở thích */
-  /* ... các biến màu khác nếu cần ... */
+/* 2. Kế thừa box-sizing cho tất cả các phần tử */
+*,
+*::before,
+*::after {
+  box-sizing: inherit; /* Tất cả các phần tử và pseudo-elements sẽ kế thừa box-sizing từ html.
+                         Giúp quản lý kích thước phần tử dễ dàng hơn.
+                         CssBaseline của MUI cũng thường bao gồm quy tắc này. */
 }
 
+/* 3. Reset margin mặc định của body */
 body {
-  /* Các style global cho body nếu có */
-  /* Lưu ý: Màu nền và màu chữ sẽ được MUI quản lý qua CssBaseline */
-  margin: 0;
-  font-family: "Roboto", "Helvetica", "Arial", sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  margin: 0; /* Loại bỏ margin mặc định của trình duyệt cho thẻ body.
+                CssBaseline của MUI cũng sẽ làm điều này.
+                Font-family, background-color, color cho body sẽ được
+                CssBaseline và MuiProvider (thông qua theme) áp dụng.
+                Vì vậy, không cần định nghĩa chúng ở đây nữa nếu bạn
+                hoàn toàn dựa vào MUI cho các style nền tảng này. */
 }
 
-/* Các style global khác bạn muốn thêm */
+/* 4. Style cơ bản cho hình ảnh, video, svg (Tùy chọn nhưng hữu ích) */
+img,
+video,
+svg {
+  max-width: 100%; /* Đảm bảo các media không tràn ra ngoài container cha của chúng. */
+  height: auto;   /* Giữ tỷ lệ khung hình khi max-width được áp dụng. */
+  display: block; /* Loại bỏ khoảng trắng thừa bên dưới các phần tử inline như <img>.
+                     Nếu bạn thường xuyên dùng MUI Image component hoặc Box để bọc img,
+                     thì style này có thể không quá cần thiết. */
+}
