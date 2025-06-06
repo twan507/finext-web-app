@@ -16,6 +16,7 @@ import {
 import { format, parseISO } from 'date-fns';
 import UserSearch from './components/UserSearch';
 import AddUserModal from './components/AddUserModal';
+import EditUserModal from './components/EditUserModal';
 
 // Interface for User data (matching UserPublic from backend)
 interface UserPublic {
@@ -76,7 +77,9 @@ const UsersPage: React.FC = () => {
   const [totalCount, setTotalCount] = useState(0); const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserPublic | null>(null);
   const [expandedView, setExpandedView] = useState(false);
-  const [openAddUserModal, setOpenAddUserModal] = useState(false); const fetchUsers = useCallback(async () => {
+  const [openAddUserModal, setOpenAddUserModal] = useState(false);
+  const [openEditUserModal, setOpenEditUserModal] = useState(false);
+  const [userToEdit, setUserToEdit] = useState<UserPublic | null>(null); const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -121,20 +124,23 @@ const UsersPage: React.FC = () => {
     const subscriptionsMap = new Map<string, SubscriptionPublic>();
 
     try {
+      // Get user details to access subscription_id
+      const usersWithSubscriptionIds = users.filter(user => user.subscription_id);
+
       // Process all requests in parallel for fastest loading
-      const subscriptionPromises = userIds.map(async (userId) => {
+      const subscriptionPromises = usersWithSubscriptionIds.map(async (user) => {
         try {
-          const response = await apiClient<SubscriptionPublic[]>({
-            url: `/api/v1/subscriptions/user/${userId}?skip=0&limit=1`,
+          // Use subscription_id to directly fetch the assigned subscription
+          const response = await apiClient<SubscriptionPublic>({
+            url: `/api/v1/subscriptions/${user.subscription_id}`,
             method: 'GET',
           });
 
-          if (response.status === 200 && response.data && Array.isArray(response.data) && response.data.length > 0) {
-            const activeSubscription = response.data.find(sub => sub.is_active) || response.data[0];
-            return { userId, subscription: activeSubscription };
+          if (response.status === 200 && response.data) {
+            return { userId: user.id, subscription: response.data };
           }
         } catch (err) {
-          console.warn(`Failed to load subscription for user ${userId}`);
+          console.warn(`Failed to load subscription for user ${user.id}`);
         }
         return null;
       });
@@ -153,7 +159,7 @@ const UsersPage: React.FC = () => {
     } finally {
       setSubscriptionsLoading(false);
     }
-  }, []); useEffect(() => {
+  }, [users]); useEffect(() => {
     fetchRoles();
   }, [fetchRoles]);
   useEffect(() => {
@@ -166,7 +172,6 @@ const UsersPage: React.FC = () => {
       setFilteredUsers(users);
     }
   }, [users, isFiltering]);
-
   useEffect(() => {
     if (users.length > 0) {
       const userIds = users.map(user => user.id);
@@ -222,11 +227,23 @@ const UsersPage: React.FC = () => {
   const handleCloseAddUserModal = () => {
     setOpenAddUserModal(false);
   };
-
   const handleUserAdded = () => {
     fetchUsers(); // Refresh the users list
   };
-  const handleEditUser = (userId: string) => console.log("Edit user action triggered for:", userId, " (not implemented)");
+
+  const handleEditUser = (user: UserPublic) => {
+    setUserToEdit(user);
+    setOpenEditUserModal(true);
+  };
+
+  const handleCloseEditUserModal = () => {
+    setUserToEdit(null);
+    setOpenEditUserModal(false);
+  };
+
+  const handleUserUpdated = () => {
+    fetchUsers(); // Refresh the users list
+  };
 
   // Helper function to get role names from role IDs
   const getRoleNames = (roleIds: string[]): string[] => {
@@ -241,6 +258,12 @@ const UsersPage: React.FC = () => {
       return { status: '...', color: 'primary', loading: true };
     }
 
+    // Check if user has subscription_id assigned
+    const user = users.find(u => u.id === userId);
+    if (!user?.subscription_id) {
+      return { status: 'Free', color: 'default' };
+    }
+
     const subscription = subscriptions.get(userId);
     if (!subscription) {
       return { status: 'Free', color: 'default' };
@@ -252,7 +275,7 @@ const UsersPage: React.FC = () => {
       color: isActive ? 'success' : 'default',
       details: subscription
     };
-  };  // Calculate paginated users - use server pagination when not filtering, client pagination when filtering
+  };// Calculate paginated users - use server pagination when not filtering, client pagination when filtering
   const paginatedUsers = React.useMemo(() => {
     if (isFiltering) {
       // Client-side pagination for filtered results
@@ -445,10 +468,9 @@ const UsersPage: React.FC = () => {
                           />
                         </TableCell>
                       )}
-                      <TableCell align="right">
-                        <Tooltip title="Edit User">
-                          <IconButton size="small" onClick={() => handleEditUser(user.id)}><EditIcon fontSize="small" /></IconButton>
-                        </Tooltip>
+                      <TableCell align="right">                        <Tooltip title="Edit User">
+                        <IconButton size="small" onClick={() => handleEditUser(user)}><EditIcon fontSize="small" /></IconButton>
+                      </Tooltip>
                         <Tooltip title="Delete User">
                           <IconButton size="small" onClick={() => handleOpenDeleteDialog(user)}><DeleteIcon fontSize="small" /></IconButton>
                         </Tooltip>
@@ -495,6 +517,14 @@ const UsersPage: React.FC = () => {
         onClose={handleCloseAddUserModal}
         onUserAdded={handleUserAdded}
         roles={roles}
+      />
+
+      <EditUserModal
+        open={openEditUserModal}
+        user={userToEdit}
+        roles={roles}
+        onClose={handleCloseEditUserModal}
+        onUserUpdated={handleUserUpdated}
       />
     </Box>
   );

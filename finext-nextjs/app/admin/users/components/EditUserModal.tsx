@@ -1,0 +1,604 @@
+// finext-nextjs/app/admin/users/components/EditUserModal.tsx
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import {
+    Dialog, DialogTitle, DialogContent, DialogActions,
+    TextField, Button, Box, Alert, CircularProgress,
+    Typography, useTheme, Divider, Chip, Stack,
+    IconButton, Tooltip
+} from '@mui/material';
+import {
+    PersonOff as DeactivateIcon,
+    PersonAdd as ActivateIcon,
+    BusinessCenter as BrokerIcon,
+    RemoveCircleOutline as RemoveBrokerIcon
+} from '@mui/icons-material';
+import { apiClient } from 'services/apiClient';
+import { colorTokens } from 'theme/tokens';
+
+interface UserPublic {
+    id: string;
+    role_ids: string[];
+    full_name: string;
+    email: string;
+    phone_number?: string | null;
+    is_active?: boolean;
+    created_at: string;
+    updated_at: string;
+    avatar_url?: string | null;
+    referral_code?: string | null;
+    google_id?: string | null;
+    subscription_id?: string | null;
+}
+
+interface RolePublic {
+    id: string;
+    name: string;
+    description?: string;
+}
+
+interface EditUserModalProps {
+    open: boolean;
+    user: UserPublic | null;
+    roles: RolePublic[];
+    onClose: () => void;
+    onUserUpdated: () => void;
+}
+
+interface ConfirmAction {
+    type: 'activate' | 'deactivate' | 'grant_broker' | 'remove_broker';
+    title: string;
+    message: string;
+    confirmText: string;
+    variant: 'contained' | 'outlined';
+    color: 'primary' | 'error' | 'warning' | 'success';
+}
+
+const EditUserModal: React.FC<EditUserModalProps> = ({
+    open,
+    user,
+    roles,
+    onClose,
+    onUserUpdated
+}) => {
+    const theme = useTheme();
+    const componentColors = theme.palette.mode === 'light'
+        ? colorTokens.lightComponentColors
+        : colorTokens.darkComponentColors;
+
+    const [formData, setFormData] = useState({
+        full_name: '',
+        phone_number: '',
+        referral_code: '' // Added referral_code
+    });
+
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
+    const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+    const [actionLoading, setActionLoading] = useState<string | null>(null);
+    const [localUser, setLocalUser] = useState<UserPublic | null>(null);
+
+    // Reset form khi user thay đổi
+    useEffect(() => {
+        if (user) {
+            setLocalUser(user);
+            setFormData({
+                full_name: user.full_name || '',
+                phone_number: user.phone_number || '',
+                referral_code: user.referral_code || '' // Initialize referral_code
+            });
+            setError(null);
+            setSuccess(null);
+        }
+    }, [user]);
+
+    const handleInputChange = (field: keyof typeof formData) => (
+        event: React.ChangeEvent<HTMLInputElement>
+    ) => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: event.target.value
+        }));
+    };
+
+    const validateForm = (): string | null => {
+        if (!formData.full_name.trim()) {
+            return 'Họ và tên là bắt buộc';
+        }
+        if (formData.phone_number && !/^[0-9+\-\s()]*$/.test(formData.phone_number)) {
+            return 'Số điện thoại không hợp lệ';
+        }
+        // Added referral_code validation
+        if (formData.referral_code.trim() !== '' && !/^[a-zA-Z0-9]{4}$/.test(formData.referral_code.trim())) {
+            return 'Mã giới thiệu không hợp lệ. Phải là 4 ký tự chữ và số, hoặc để trống.';
+        }
+        return null;
+    };
+
+    // Cập nhật thông tin cơ bản
+    const handleUpdateBasicInfo = async () => {
+        if (!user) return;
+
+        const validationError = validateForm();
+        if (validationError) {
+            setError(validationError);
+            return;
+        }
+
+        setLoading(true);
+        setError(null);
+        setSuccess(null);
+
+        try {
+            const updateData: any = {
+                full_name: formData.full_name.trim()
+            };
+
+            if (formData.phone_number?.trim()) {
+                updateData.phone_number = formData.phone_number.trim();
+            }
+
+            // Add referral_code to update payload
+            if (formData.referral_code.trim() === '') {
+                updateData.referral_code = null;
+            } else {
+                // Broker codes are typically uppercase, and validation ensures 4 chars if not empty
+                updateData.referral_code = formData.referral_code.trim().toUpperCase();
+            }
+
+            const response = await apiClient({
+                url: `/api/v1/users/${user.id}`,
+                method: 'PUT',
+                body: updateData
+            });
+            if (response.status === 200) {
+                setSuccess('Cập nhật thông tin thành công');
+                // Update localUser state with the new form data
+                if (localUser) {
+                    setLocalUser(prevUser => ({
+                        ...prevUser!,
+                        full_name: formData.full_name.trim(),
+                        phone_number: formData.phone_number.trim() || null,
+                        referral_code: updateData.referral_code // Use the processed value
+                    }));
+                }
+                onUserUpdated();
+            } else {
+                setError(response.message || 'Đã xảy ra lỗi khi cập nhật');
+            }
+        } catch (err: any) {
+            console.error('Error updating user:', err);
+            setError(err.message || 'Đã xảy ra lỗi khi cập nhật');
+        } finally {
+            setLoading(false);
+        }
+    };    // Xử lý các hành động đặc biệt
+    const handleSpecialAction = async (actionType: string) => {
+        if (!user || !localUser || !confirmAction) return;
+
+        setActionLoading(actionType);
+        setError(null);
+        setSuccess(null);
+
+        try {
+            let response;
+            let successMessage = '';
+
+            switch (actionType) {
+                case 'activate':
+                    response = await apiClient({
+                        url: `/api/v1/users/${localUser.id}`,
+                        method: 'PUT',
+                        body: { is_active: true }
+                    });
+                    successMessage = 'Kích hoạt tài khoản thành công';
+                    break;
+
+                case 'deactivate':
+                    response = await apiClient({
+                        url: `/api/v1/users/${localUser.id}`,
+                        method: 'PUT',
+                        body: { is_active: false }
+                    });
+                    successMessage = 'Vô hiệu hóa tài khoản thành công';
+                    break; case 'grant_broker':
+                    response = await apiClient({
+                        url: `/api/v1/brokers/`,
+                        method: 'POST',
+                        body: { user_id: localUser.id }
+                    });
+                    successMessage = 'Cấp quyền broker thành công.';
+                    break; case 'remove_broker':
+                    // Use referral_code as broker_code to call delete broker API
+                    const brokerCode = localUser.referral_code;
+
+                    if (!brokerCode) {
+                        throw new Error('Người dùng không có mã broker để xóa');
+                    }
+
+                    response = await apiClient({
+                        url: `/api/v1/brokers/${brokerCode}`,
+                        method: 'DELETE'
+                    });
+                    successMessage = 'Xóa quyền broker thành công.';
+                    break;
+
+                default:
+                    throw new Error('Hành động không hợp lệ');
+            }            if (response.status >= 200 && response.status < 300) {
+                setSuccess(successMessage);                // Cập nhật localUser state cho các actions
+                if (localUser) {
+                    let updatedUser = { ...localUser };
+
+                    switch (actionType) {
+                        case 'activate':
+                            updatedUser.is_active = true;
+                            break;
+                        case 'deactivate':
+                            updatedUser.is_active = false;
+                            break; case 'grant_broker':
+                            // Add broker role if not already present
+                            const brokerRoleId = roles.find(r => r.name.toLowerCase() === 'broker')?.id;
+                            if (brokerRoleId && !updatedUser.role_ids.includes(brokerRoleId)) {
+                                updatedUser.role_ids = [...updatedUser.role_ids, brokerRoleId];
+                            }
+                            // Use the broker_code from the API response (response.data is BrokerPublic)
+                            const newBrokerCode = response.data?.broker_code;
+                            if (newBrokerCode) {
+                                updatedUser.referral_code = newBrokerCode;
+                                // Also update formData to keep UI consistent
+                                setFormData(prev => ({ ...prev, referral_code: newBrokerCode }));
+                            }
+                            break; case 'remove_broker':
+                            // Remove broker role
+                            const brokerRoleIdToRemove = roles.find(r => r.name.toLowerCase() === 'broker')?.id;
+                            if (brokerRoleIdToRemove) {
+                                updatedUser.role_ids = updatedUser.role_ids.filter(id => id !== brokerRoleIdToRemove);
+                            }
+                            // Clear referral_code as backend does this for the broker user
+                            updatedUser.referral_code = null;
+                            // Also update formData
+                            setFormData(prev => ({ ...prev, referral_code: '' }));
+                            break;
+                    }
+
+                    setLocalUser(updatedUser);
+                }
+
+                onUserUpdated();
+            } else {
+                setError(response.message || 'Đã xảy ra lỗi');
+            }
+        } catch (err: any) {
+            console.error(`Error ${actionType}:`, err);
+            setError(err.message || 'Đã xảy ra lỗi');
+        } finally {
+            setActionLoading(null);
+            setConfirmAction(null);
+        }
+    };
+
+    const openConfirmAction = (action: ConfirmAction) => {
+        setConfirmAction(action);
+    };
+
+    const closeConfirmAction = () => {
+        setConfirmAction(null);
+    };
+
+    const handleClose = () => {
+        if (!loading && !actionLoading) {
+            setError(null);
+            setSuccess(null);
+            setConfirmAction(null);
+            onClose();
+        }
+    };    // Helper functions
+    const getRoleNames = (roleIds: string[]): string[] => {
+        return roleIds.map(roleId => {
+            const role = roles.find(r => r.id === roleId);
+            return role ? role.name : roleId;
+        });
+    }; const isBroker = localUser?.role_ids?.some(roleId => {
+        const role = roles.find(r => r.id === roleId);
+        return role?.name?.toLowerCase().includes('broker');
+    });
+
+    const isAdmin = localUser?.role_ids?.some(roleId => {
+        const role = roles.find(r => r.id === roleId);
+        return role?.name?.toLowerCase().includes('admin');
+    });
+
+    if (!user || !localUser) return null;
+
+    return (
+        <>
+            <Dialog
+                open={open}
+                onClose={handleClose}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{
+                    sx: { borderRadius: 2 }
+                }}
+            >
+                <DialogTitle>
+                    <Typography variant="h5" component="div" fontWeight="bold">
+                        Chỉnh sửa người dùng
+                    </Typography>                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        {localUser.email}
+                    </Typography>
+                </DialogTitle>
+
+                <DialogContent>
+                    <Box sx={{ mt: 2 }}>
+                        {error && (
+                            <Alert severity="error" sx={{ mb: 3 }}>
+                                {error}
+                            </Alert>
+                        )}
+
+                        {success && (
+                            <Alert severity="success" sx={{ mb: 3 }}>
+                                {success}
+                            </Alert>
+                        )}
+
+                        {/* Thông tin cơ bản */}
+                        <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+                            Thông tin cơ bản
+                        </Typography>
+
+                        <Box sx={{
+                            display: 'grid',
+                            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                            gap: 3,
+                            mb: 3
+                        }}>
+                            {/* Họ và tên - có thể chỉnh sửa */}
+                            <TextField
+                                fullWidth
+                                label="Họ và tên *"
+                                value={formData.full_name}
+                                onChange={handleInputChange('full_name')}
+                                disabled={loading}
+                                variant="outlined"
+                            />
+
+                            {/* Số điện thoại - có thể chỉnh sửa */}
+                            <TextField
+                                fullWidth
+                                label="Số điện thoại"
+                                value={formData.phone_number}
+                                onChange={handleInputChange('phone_number')}
+                                disabled={loading}
+                                variant="outlined"
+                            />                            {/* Email - chỉ hiển thị */}
+                            <TextField
+                                fullWidth
+                                label="Email"
+                                value={localUser.email}
+                                disabled
+                                variant="outlined"
+                                helperText="Không thể chỉnh sửa"
+                            />                            {/* Mã referral_code - có thể chỉnh sửa */}
+                            <TextField
+                                fullWidth
+                                label="Mã giới thiệu" // Changed label
+                                value={formData.referral_code} // Bind to formData
+                                onChange={handleInputChange('referral_code')} // Enable input change
+                                disabled={loading || Boolean(actionLoading)} // Enable when not loading
+                                variant="outlined"
+                                helperText="4 ký tự chữ và số. Để trống nếu không có." // Updated helper text
+                            />
+                        </Box>
+
+                        <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                            <Button
+                                onClick={handleUpdateBasicInfo}
+                                disabled={loading || Boolean(actionLoading)}
+                                variant="contained"
+                                startIcon={loading && <CircularProgress size={20} />}
+                            >
+                                {loading ? 'Đang cập nhật...' : 'Cập nhật thông tin'}
+                            </Button>
+                        </Box>
+
+                        <Divider sx={{ my: 3 }} />
+
+                        {/* Thông tin trạng thái */}
+                        <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+                            Trạng thái tài khoản
+                        </Typography>                        <Box sx={{ mb: 3 }}>                            <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                            <Chip
+                                label={localUser.is_active ? 'Hoạt động' : 'Không hoạt động'}
+                                color={localUser.is_active ? 'success' : 'default'}
+                                size="small"
+                            />
+                            <Chip
+                                label={localUser.google_id ? 'Google Login' : 'Email/Password'}
+                                color={localUser.google_id ? 'info' : 'default'}
+                                size="small"
+                                variant="outlined"
+                            />
+                            {getRoleNames(localUser.role_ids).map((roleName, index) => (
+                                <Chip
+                                    key={index}
+                                    label={roleName}
+                                    size="small"
+                                    variant="outlined"
+                                    color={
+                                        roleName.toLowerCase().includes('admin') ? 'error' :
+                                            roleName.toLowerCase().includes('broker') ? 'warning' : 'primary'
+                                    }
+                                />
+                            ))}
+                            {isAdmin && (
+                                <Chip
+                                    label="🔒 Tài khoản bảo vệ"
+                                    size="small"
+                                    color="error"
+                                    variant="filled"
+                                />
+                            )}
+                        </Stack>
+                        </Box>
+
+                        <Divider sx={{ my: 3 }} />                        {/* Các hành động đặc biệt */}
+                        <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+                            Hành động đặc biệt
+                        </Typography>                        <Box sx={{
+                            display: 'flex',
+                            flexDirection: { xs: 'column', sm: 'row' },
+                            gap: 2,
+                            justifyContent: 'stretch',
+                            '& .MuiButton-root': {
+                                flex: 1
+                            }
+                        }}>                            {/* Activate/Deactivate */}
+                            <Button
+                                variant="outlined"
+                                color={localUser.is_active ? 'error' : 'success'}
+                                startIcon={
+                                    actionLoading === (localUser.is_active ? 'deactivate' : 'activate') ?
+                                        <CircularProgress size={20} /> :
+                                        (localUser.is_active ? <DeactivateIcon /> : <ActivateIcon />)
+                                }
+                                disabled={Boolean(actionLoading) || isAdmin}
+                                onClick={() => openConfirmAction({
+                                    type: localUser.is_active ? 'deactivate' : 'activate',
+                                    title: localUser.is_active ? 'Vô hiệu hóa tài khoản' : 'Kích hoạt tài khoản',
+                                    message: localUser.is_active ?
+                                        'Bạn có chắc muốn vô hiệu hóa tài khoản này? Người dùng sẽ không thể đăng nhập.' :
+                                        'Bạn có chắc muốn kích hoạt tài khoản này? Người dùng sẽ có thể đăng nhập.',
+                                    confirmText: localUser.is_active ? 'Vô hiệu hóa' : 'Kích hoạt',
+                                    variant: 'contained',
+                                    color: localUser.is_active ? 'error' : 'success'
+                                })}
+                                title={isAdmin ? 'Không thể thay đổi trạng thái tài khoản Admin' : ''}
+                            >
+                                {localUser.is_active ? 'Vô hiệu hóa' : 'Kích hoạt'}
+                            </Button>
+
+                            {/* Grant/Remove Broker */}
+                            <Button
+                                variant="outlined"
+                                color={isBroker ? 'error' : 'warning'}
+                                startIcon={
+                                    actionLoading === (isBroker ? 'remove_broker' : 'grant_broker') ?
+                                        <CircularProgress size={20} /> :
+                                        (isBroker ? <RemoveBrokerIcon /> : <BrokerIcon />)
+                                }
+                                disabled={Boolean(actionLoading) || isAdmin}
+                                onClick={() => openConfirmAction({
+                                    type: isBroker ? 'remove_broker' : 'grant_broker',
+                                    title: isBroker ? 'Xóa quyền Broker' : 'Cấp quyền Broker',
+                                    message: isBroker ?
+                                        'Bạn có chắc muốn xóa quyền broker? Tất cả subscription sẽ được chuyển về Basic.' :
+                                        'Bạn có chắc muốn cấp quyền broker cho người dùng này?',
+                                    confirmText: isBroker ? 'Xóa quyền' : 'Cấp quyền',
+                                    variant: 'contained',
+                                    color: isBroker ? 'error' : 'warning'
+                                })}
+                                title={isAdmin ? 'Không thể thay đổi quyền của tài khoản Admin' : ''}
+                            >
+                                {isBroker ? 'Xóa quyền Broker' : 'Cấp quyền Broker'}
+                            </Button>
+                        </Box>
+
+                        {/* Ghi chú */}
+                        <Box sx={{
+                            mt: 3,
+                            p: 2,
+                            bgcolor: componentColors.modal.noteBackground,
+                            borderRadius: 1,
+                            border: `1px solid ${componentColors.modal.noteBorder}`,
+                            '&::before': {
+                                content: '""',
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                height: '3px',
+                                bgcolor: 'warning.main',
+                                borderRadius: '4px 4px 0 0'
+                            },
+                            position: 'relative'
+                        }}>
+                            <Typography
+                                variant="body2"
+                                fontWeight="bold"
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                    color: 'warning.main'
+                                }}
+                            >
+                                ⚠️ Lưu ý quan trọng:
+                            </Typography>                            <Typography variant="body2" sx={{ mt: 1, color: componentColors.modal.noteText }}>
+                                • Các hành động đặc biệt không thể hoàn tác
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                                • Xóa quyền broker sẽ tự động chuyển subscription về Basic
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                                • Người dùng có thể tự reset mật khẩu qua tính năng "Quên mật khẩu"
+                            </Typography>
+                            {isAdmin && (
+                                <Typography variant="body2" sx={{ color: 'error.main', fontWeight: 'bold' }}>
+                                    • Tài khoản Admin không thể bị vô hiệu hóa hoặc thay đổi quyền
+                                </Typography>
+                            )}
+                        </Box>
+                    </Box>
+                </DialogContent>
+
+                <DialogActions sx={{ p: 3, pt: 1 }}>
+                    <Button
+                        onClick={handleClose}
+                        disabled={loading || Boolean(actionLoading)}
+                        variant="outlined"
+                    >
+                        Đóng
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Confirm Dialog */}
+            <Dialog
+                open={Boolean(confirmAction)}
+                onClose={closeConfirmAction}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>
+                    {confirmAction?.title}
+                </DialogTitle>
+                <DialogContent>
+                    <Typography>
+                        {confirmAction?.message}
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={closeConfirmAction} disabled={Boolean(actionLoading)}>
+                        Hủy
+                    </Button>
+                    <Button
+                        onClick={() => handleSpecialAction(confirmAction?.type || '')}
+                        variant={confirmAction?.variant || 'contained'}
+                        color={confirmAction?.color || 'primary'}
+                        disabled={Boolean(actionLoading)}
+                        startIcon={actionLoading && <CircularProgress size={20} />}
+                    >
+                        {actionLoading ? 'Đang xử lý...' : confirmAction?.confirmText}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </>
+    );
+};
+
+export default EditUserModal;

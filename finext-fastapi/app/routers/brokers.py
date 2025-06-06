@@ -77,38 +77,72 @@ async def create_or_reactivate_broker_endpoint(
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Lỗi cấu hình hệ thống: Vai trò 'broker' không tồn tại.",
-            )
-
-        # crud_users.assign_roles_to_user mong đợi user_id_str là PyObjectId (str)
+            )  # crud_users.assign_roles_to_user mong đợi user_id_str là PyObjectId (str)
         await crud_users.assign_roles_to_user(db, user_id_for_broker, [str(broker_role["_id"])])
         logger.info(f"Đã đảm bảo user ID: {user_id_for_broker} có vai trò 'broker'.")
 
-        # Gán license PARTNER
+        # Chuyển đổi subscription từ BASIC sang PARTNER
+        from datetime import datetime, timezone
+
+        # 1. Tắt tất cả BASIC subscriptions
+        basic_license = await crud_licenses.get_license_by_key(db, "BASIC")
+        if basic_license and basic_license.id:
+            basic_update_result = await db.subscriptions.update_many(
+                {
+                    "user_id": ObjectId(user_id_for_broker),
+                    "license_id": ObjectId(str(basic_license.id)),
+                    "is_active": True,
+                },
+                {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc)}},
+            )
+            if basic_update_result.modified_count > 0:
+                logger.info(f"Đã tắt {basic_update_result.modified_count} subscription(s) 'BASIC' cho user ID: {user_id_for_broker}.")
+
+        # 2. Kích hoạt PARTNER subscription (tìm existing hoặc tạo mới)
         partner_sub: Optional[SubscriptionInDB] = None
-        existing_inactive_partner_sub = await crud_subscriptions.find_inactive_partner_subscription_for_user(db, user_id_for_broker)
+        partner_license = await crud_licenses.get_license_by_key(db, "PARTNER")
 
-        if existing_inactive_partner_sub and existing_inactive_partner_sub.id:
-            logger.info(
-                f"Tìm thấy inactive 'PARTNER' subscription (ID: {existing_inactive_partner_sub.id}) cho user {user_id_for_broker}. Sẽ kích hoạt lại."
+        if partner_license and partner_license.id:
+            # Tìm PARTNER subscription hiện có (bất kể active hay inactive)
+            existing_partner_sub_doc = await db.subscriptions.find_one(
+                {"user_id": ObjectId(user_id_for_broker), "license_id": ObjectId(str(partner_license.id))}
             )
-            partner_sub = await crud_subscriptions.activate_specific_subscription_for_user(
-                db,
-                user_id_str=user_id_for_broker,
-                subscription_id_to_activate_str=existing_inactive_partner_sub.id,
-            )
-            if partner_sub:
-                logger.info(f"Đã kích hoạt lại 'PARTNER' subscription (ID: {partner_sub.id}) cho user ID: {user_id_for_broker}")
 
-        if not partner_sub:  # Nếu không có sub inactive để kích hoạt lại, hoặc kích hoạt lại thất bại
-            logger.info(f"Sẽ tạo mới 'PARTNER' subscription cho user {user_id_for_broker}.")
-            partner_license_sub_create = AppSubscriptionCreateSchema(
-                user_id=user_id_for_broker,
-                license_key="PARTNER",  # Key mặc định cho partner
-                duration_override_days=None,  # Sử dụng duration mặc định từ license
-            )
-            partner_sub = await crud_subscriptions.create_subscription_db(db, partner_license_sub_create)
+            if existing_partner_sub_doc:
+                # Kích hoạt PARTNER subscription hiện có
+                if not existing_partner_sub_doc.get("is_active", False):
+                    await db.subscriptions.update_one(
+                        {"_id": existing_partner_sub_doc["_id"]}, {"$set": {"is_active": True, "updated_at": datetime.now(timezone.utc)}}
+                    )
+                    logger.info(
+                        f"Đã kích hoạt lại PARTNER subscription (ID: {existing_partner_sub_doc['_id']}) cho user ID: {user_id_for_broker}."
+                    )
+                else:
+                    logger.info(
+                        f"PARTNER subscription (ID: {existing_partner_sub_doc['_id']}) đã ở trạng thái active cho user ID: {user_id_for_broker}."
+                    )
+                partner_sub = await crud_subscriptions.get_subscription_by_id_db(db, str(existing_partner_sub_doc["_id"]))
+            else:
+                # Tạo mới PARTNER subscription nếu chưa có
+                logger.info(f"Tạo mới PARTNER subscription cho user {user_id_for_broker}.")
+                partner_license_sub_create = AppSubscriptionCreateSchema(
+                    user_id=user_id_for_broker,
+                    license_key="PARTNER",
+                    duration_override_days=None,
+                )
+                partner_sub = await crud_subscriptions.create_subscription_db(db, partner_license_sub_create)
+                if partner_sub:
+                    logger.info(f"Đã tạo mới PARTNER subscription (ID: {partner_sub.id}) cho user ID: {user_id_for_broker}.")
 
-        if not partner_sub:  # Nếu cả kích hoạt lại và tạo mới đều thất bại
+        # 3. Gán PARTNER subscription_id cho user
+        if partner_sub and partner_sub.id:
+            await db.users.update_one(
+                {"_id": ObjectId(user_id_for_broker)},
+                {"$set": {"subscription_id": ObjectId(str(partner_sub.id)), "updated_at": datetime.now(timezone.utc)}},
+            )
+            logger.info(f"Đã gán PARTNER subscription (ID: {partner_sub.id}) cho user ID: {user_id_for_broker}.")
+
+        if not partner_sub:
             logger.error(f"Không thể gán hoặc kích hoạt license 'PARTNER' cho user ID: {user_id_for_broker}.")
             if broker_record and broker_record.id:
                 await crud_users.revoke_roles_from_user(db, user_id_for_broker, [str(broker_role["_id"])])
@@ -294,26 +328,71 @@ async def deactivate_and_revoke_broker(  # Đổi tên hàm cho rõ nghĩa
         await crud_users.revoke_roles_from_user(db, user_id_of_broker_str, [str(broker_role["_id"])])
         logger.info(f"Đã thu hồi vai trò 'broker' từ user ID: {user_id_of_broker_str}")
     else:
-        logger.warning("Không tìm thấy vai trò 'broker' để thu hồi khi hủy tư cách đối tác.")
+        logger.warning(
+            "Không tìm thấy vai trò 'broker' để thu hồi khi hủy tư cách đối tác."
+        )  # 2. Chuyển đổi subscription từ PARTNER về BASIC
+    from datetime import datetime, timezone
 
-    # 2. Hủy kích hoạt subscription "PARTNER"
+    # Tắt tất cả PARTNER subscriptions
     partner_license = await crud_licenses.get_license_by_key(db, "PARTNER")
     if partner_license and partner_license.id:
-        partner_subs_cursor = db.subscriptions.find(
+        partner_update_result = await db.subscriptions.update_many(
             {
                 "user_id": ObjectId(user_id_of_broker_str),
                 "license_id": ObjectId(str(partner_license.id)),
-                "is_active": True,  # Chỉ hủy các sub PARTNER đang active
-            }
+                "is_active": True,
+            },
+            {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc)}},
         )
-        async for sub_doc in partner_subs_cursor:
+
+        if partner_update_result.modified_count > 0:
+            logger.info(f"Đã tắt {partner_update_result.modified_count} subscription(s) 'PARTNER' cho user ID: {user_id_of_broker_str}.")
+
+    # Kích hoạt BASIC subscription (tìm existing hoặc tạo mới)
+    basic_license = await crud_licenses.get_license_by_key(db, "BASIC")
+    if basic_license and basic_license.id:
+        # Tìm BASIC subscription hiện có (bất kể active hay inactive)
+        existing_basic_sub_doc = await db.subscriptions.find_one(
+            {"user_id": ObjectId(user_id_of_broker_str), "license_id": ObjectId(str(basic_license.id))}
+        )
+
+        if existing_basic_sub_doc:
+            # Kích hoạt BASIC subscription hiện có
+            if not existing_basic_sub_doc.get("is_active", False):
+                await db.subscriptions.update_one(
+                    {"_id": existing_basic_sub_doc["_id"]}, {"$set": {"is_active": True, "updated_at": datetime.now(timezone.utc)}}
+                )
+                logger.info(
+                    f"Đã kích hoạt lại BASIC subscription (ID: {existing_basic_sub_doc['_id']}) cho user ID: {user_id_of_broker_str}."
+                )
+            else:
+                logger.info(
+                    f"BASIC subscription (ID: {existing_basic_sub_doc['_id']}) đã ở trạng thái active cho user ID: {user_id_of_broker_str}."
+                )
+
+            # Gán BASIC subscription_id cho user
+            await db.users.update_one(
+                {"_id": ObjectId(user_id_of_broker_str)},
+                {"$set": {"subscription_id": existing_basic_sub_doc["_id"], "updated_at": datetime.now(timezone.utc)}},
+            )
+            logger.info(f"Đã gán BASIC subscription (ID: {existing_basic_sub_doc['_id']}) cho user ID: {user_id_of_broker_str}.")
+        else:
+            # Tạo mới BASIC subscription nếu chưa có
             try:
-                # deactivate_subscription_db sẽ KHÔNG tự động gán FREE sub nếu license là PARTNER (vì PARTNER là protected)
-                # nhưng nó sẽ set is_active=False cho sub PARTNER này.
-                await crud_subscriptions.deactivate_subscription_db(db, str(sub_doc["_id"]))
-                logger.info(f"Đã hủy kích hoạt subscription 'PARTNER' (ID: {str(sub_doc['_id'])}) cho user ID: {user_id_of_broker_str}.")
-            except ValueError as e:  # Bắt lỗi nếu cố hủy sub được bảo vệ (không nên xảy ra nếu logic đúng)
-                logger.error(f"Lỗi khi hủy kích hoạt PARTNER sub {str(sub_doc['_id'])} cho broker {broker_id_or_code}: {e}")
+                basic_license_sub_create = AppSubscriptionCreateSchema(
+                    user_id=user_id_of_broker_str,
+                    license_key="BASIC",
+                    duration_override_days=None,
+                )
+                basic_sub = await crud_subscriptions.create_subscription_db(db, basic_license_sub_create)
+                if basic_sub:
+                    logger.info(
+                        f"Đã tạo mới BASIC subscription (ID: {basic_sub.id}) cho user ID: {user_id_of_broker_str} sau khi remove broker."
+                    )
+                else:
+                    logger.warning(f"Không thể tạo subscription 'BASIC' cho user ID: {user_id_of_broker_str} sau khi remove broker.")
+            except Exception as e:
+                logger.error(f"Lỗi khi tạo subscription 'BASIC' cho user {user_id_of_broker_str}: {e}")
 
     # 3. Cập nhật trạng thái is_active=False cho bản ghi broker và xóa referral_code của user
     try:
