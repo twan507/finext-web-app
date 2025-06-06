@@ -29,31 +29,19 @@ class UploadUpdate(BaseModel):
     content_type: Optional[str] = None
     size: Optional[int] = None
 
+
 class UploadInDB(UploadBase):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     user_id: PyObjectId
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     object_name: str = Field(..., description="Unique object name in storage")
 
-    model_config = ConfigDict(
-        populate_by_name = True,
-        arbitrary_types_allowed = True,
-        json_encoders = {ObjectId: str}
-    )
+    model_config = ConfigDict(populate_by_name=True, arbitrary_types_allowed=True, json_encoders={ObjectId: str})
+
 
 class UploadPublic(UploadBase):
     id: PyObjectId = Field(alias="_id")
     user_id: PyObjectId
     created_at: datetime
 
-    model_config = ConfigDict(
-        populate_by_name = True,
-        arbitrary_types_allowed = True,
-        json_encoders = {ObjectId: str}
-    )
-
-
-class UploadResponse(BaseModel):
-    success: bool = True
-    message: str = "File uploaded successfully"
-    data: UploadPublic
+    model_config = ConfigDict(populate_by_name=True, arbitrary_types_allowed=True, json_encoders={ObjectId: str})

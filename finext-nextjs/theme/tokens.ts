@@ -61,8 +61,7 @@ export const colorTokens = {
       900: '#4c1d95',
     },
     violetBerry: '#7E22CE',
-  },
-  // Component-specific color definitions
+  },  // Component-specific color definitions
   lightComponentColors: {
     appBar: {
       background: '#ffffff',
@@ -75,14 +74,24 @@ export const colorTokens = {
     tableHead: {
       background: '#fafafa',
     },
+    tableRow: {
+      background: '#ffffff',
+      hover: '#f5f5f5',
+      selected: '#e3f2fd',
+    },
     chip: {
-        successBackground: '#e6f7ff', // Example for light mode success chip
-        successColor: '#1890ff',      // Example for light mode success chip text
-        defaultBackground: '#f5f5f5',
-        defaultColor: '#595959',
+      successBackground: '#e6f7ff', // Example for light mode success chip
+      successColor: '#1890ff',      // Example for light mode success chip text
+      defaultBackground: '#f5f5f5',
+      defaultColor: '#595959',
+    },
+    modal: {
+      background: '#ffffff',
+      noteBackground: '#f8f9fa', // Nền xám nhạt cho phần lưu ý
+      noteBorder: '#e9ecef',
+      noteText: '#6c757d',
     }
-  },
-  darkComponentColors: {
+  }, darkComponentColors: {
     appBar: {
       background: '#1a1a1a',
       text: '#ffffff',
@@ -92,13 +101,24 @@ export const colorTokens = {
       border: '#303030',
     },
     tableHead: {
-      background: '#2a2a2a',
+      background: '#1a1a1a',
+    },
+    tableRow: {
+      background: '#1e1e1e',
+      hover: '#2a2a2a',
+      selected: '#1976d2',
     },
     chip: {
-        successBackground: '#003768', // Example for dark mode success chip
-        successColor: '#90caf9',      // Example for dark mode success chip text
-        defaultBackground: '#303030',
-        defaultColor: '#bdbdbd',
+      successBackground: '#003768', // Example for dark mode success chip
+      successColor: '#90caf9',      // Example for dark mode success chip text
+      defaultBackground: '#303030',
+      defaultColor: '#bdbdbd',
+    },
+    modal: {
+      background: '#1a1a1a', // Nền modal tối hơn
+      noteBackground: '#2d2d2d', // Nền xám nhạt hơn modal cho phần lưu ý
+      noteBorder: '#404040',
+      noteText: '#b0b0b0',
     }
   },
 };
@@ -142,10 +162,9 @@ export const darkThemePalette: PaletteOptions = {
   error: colorTokens.error,
   warning: colorTokens.warning,
   info: colorTokens.info,
-  success: colorTokens.success,
-  background: {
+  success: colorTokens.success, background: {
     default: '#121212',
-    paper: '#1e1e1e',
+    paper: '#1a1a1a', // Sử dụng màu tối hơn cho modal
   },
   text: {
     primary: '#ffffff',
@@ -171,13 +190,13 @@ export const typographyTokens: ThemeOptions['typography'] = {
   h4: { fontSize: '1.5rem', fontWeight: 600 },
   h5: { fontSize: '1.25rem', fontWeight: 600 },
   h6: { fontSize: '1.1rem', fontWeight: 600 },
-  subtitle1: { fontSize: '1rem', fontWeight: 500 },
-  subtitle2: { fontSize: '0.875rem', fontWeight: 500 },
-  body1: { fontSize: '1rem', fontWeight: 400 },
-  body2: { fontSize: '0.875rem', fontWeight: 400 },
-  button: { textTransform: 'none', fontWeight: 500 },
-  caption: { fontSize: '0.75rem', fontWeight: 400 },
-  overline: { fontSize: '0.75rem', fontWeight: 400, textTransform: 'uppercase' },
+  subtitle1: { fontSize: '0.9375rem', fontWeight: 500 }, // Tăng từ 0.875rem lên 0.9375rem (+1px)
+  subtitle2: { fontSize: '0.875rem', fontWeight: 500 }, // Tăng từ 0.8125rem lên 0.875rem (+1px)
+  body1: { fontSize: '0.875rem', fontWeight: 400 }, // Tăng từ 0.8125rem lên 0.875rem (+1px) - Cỡ chữ chính
+  body2: { fontSize: '0.8125rem', fontWeight: 400 }, // Tăng từ 0.75rem lên 0.8125rem (+1px) - Cỡ chữ phụ
+  button: { fontSize: '0.875rem', textTransform: 'none', fontWeight: 500 }, // Tăng từ 0.8125rem lên 0.875rem (+1px)
+  caption: { fontSize: '0.75rem', fontWeight: 400 }, // Tăng từ 0.6875rem lên 0.75rem (+1px) - Cỡ chữ nhỏ nhất
+  overline: { fontSize: '0.75rem', fontWeight: 400, textTransform: 'uppercase' }, // Tăng từ 0.6875rem lên 0.75rem (+1px)
 };
 
 // --------------------

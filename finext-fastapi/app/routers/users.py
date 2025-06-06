@@ -15,21 +15,22 @@ from app.crud.users import (
     create_user_db,
     get_user_by_id_db,
     revoke_roles_from_user,
-    update_user_db, # Thêm update_user_db nếu chưa có
-    get_all_users_paginated # Thêm hàm mới
+    update_user_db,  # Thêm update_user_db nếu chưa có
+    get_all_users_paginated,  # Thêm hàm mới
 )
+
 # <<<< KẾT THÚC PHẦN CẬP NHẬT IMPORT >>>>
 import app.crud.brokers as crud_brokers
 import app.crud.subscriptions as crud_subscriptions
 
 from app.schemas.users import UserCreate, UserPublic, UserRoleModificationRequest, UserUpdate, UserInDB
-from app.schemas.common import PaginatedResponse # <<<< IMPORT SCHEMA PHÂN TRANG >>>>
+from app.schemas.common import PaginatedResponse  # <<<< IMPORT SCHEMA PHÂN TRANG >>>>
 from app.utils.response_wrapper import StandardApiResponse, api_response_wrapper
 from app.utils.types import PyObjectId
 from app.core.config import PROTECTED_USER_EMAILS, ADMIN_EMAIL, BROKER_EMAIL_1, BROKER_EMAIL_2
 
 logger = logging.getLogger(__name__)
-router = APIRouter() # Prefix và tags sẽ được đặt ở main.py
+router = APIRouter()  # Prefix và tags sẽ được đặt ở main.py
 
 
 @router.post(
@@ -49,7 +50,8 @@ async def create_new_user_endpoint(
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
     try:
-        created_user = await create_user_db(db, user_create_data=user_data)
+        # Admin tạo user nên kích hoạt ngay lập tức (set_active_on_create=True)
+        created_user = await create_user_db(db, user_create_data=user_data, set_active_on_create=True)
         if not created_user:
             # create_user_db đã raise ValueError nếu email tồn tại hoặc lỗi logic khác
             # Lỗi ở đây có thể là lỗi không mong muốn khi ghi DB
@@ -108,34 +110,33 @@ async def update_user_info_endpoint(
         if "email" in user_update_data.model_dump(exclude_unset=True) and user_update_data.email != target_user.email:
             # Chỉ admin hoặc chính user đó mới được thử đổi email (và sẽ bị chặn nếu là protected)
             # Logic này có thể cần xem xét lại nếu admin được phép đổi email user protected trong một số trường hợp
-            logger.warning(
-                f"Attempt to change email for protected user {target_user.email} by {current_user_from_token.email}. Denied."
-            )
+            logger.warning(f"Attempt to change email for protected user {target_user.email} by {current_user_from_token.email}. Denied.")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=f"Cannot change email for protected user '{target_user.email}'."
             )
-        if "avatar_url" in user_update_data.model_dump(exclude_unset=True) and str(current_user_from_token.id) != str(target_user.id) :
-             logger.warning(
+        if "avatar_url" in user_update_data.model_dump(exclude_unset=True) and str(current_user_from_token.id) != str(target_user.id):
+            logger.warning(
                 f"Attempt to change avatar_url for protected user {target_user.email} by admin {current_user_from_token.email} via user update endpoint. Denied."
             )
-             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail=f"Avatar for protected user '{target_user.email}' cannot be changed directly here. Use the upload feature."
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Avatar for protected user '{target_user.email}' cannot be changed directly here. Use the upload feature.",
             )
-    
+
     update_dict_for_crud = user_update_data.model_dump(exclude_unset=True)
     if not update_dict_for_crud:
-         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Không có dữ liệu nào được cung cấp để cập nhật.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Không có dữ liệu nào được cung cấp để cập nhật.")
 
     try:
         updated_user_doc = await update_user_db(db, user_id_to_update_str=user_id, user_update_data=update_dict_for_crud)
         if not updated_user_doc:
             # update_user_db trả về None nếu user không tìm thấy hoặc lỗi logic khác không phải ValueError
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, # Hoặc 500 tùy thuộc nguyên nhân
+                status_code=status.HTTP_404_NOT_FOUND,  # Hoặc 500 tùy thuộc nguyên nhân
                 detail=f"User with ID {user_id} not found for update or update failed.",
             )
         return UserPublic.model_validate(updated_user_doc)
-    except ValueError as ve: # Bắt lỗi từ CRUD (ví dụ: email trùng, ref_code không hợp lệ)
+    except ValueError as ve:  # Bắt lỗi từ CRUD (ví dụ: email trùng, ref_code không hợp lệ)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
@@ -170,7 +171,7 @@ async def delete_user_by_id_endpoint(
             detail=f"Không thể xóa người dùng được bảo vệ: '{user_to_delete.email}'.",
         )
 
-    broker_info = await crud_brokers.get_broker_by_user_id(db, user_to_delete.id) # type: ignore
+    broker_info = await crud_brokers.get_broker_by_user_id(db, user_to_delete.id)  # type: ignore
     if broker_info:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -188,7 +189,7 @@ async def delete_user_by_id_endpoint(
     # Xóa watchlists của user
     await db.watchlists.delete_many({"user_id": ObjectId(user_to_delete.id)})
     logger.info(f"Đã xóa tất cả watchlists của user {user_to_delete.email} (ID: {user_id}).")
-    
+
     # Xóa OTPs của user
     await db.otps.delete_many({"user_id": ObjectId(user_to_delete.id)})
     logger.info(f"Đã xóa tất cả OTPs của user {user_to_delete.email} (ID: {user_id}).")
@@ -196,7 +197,6 @@ async def delete_user_by_id_endpoint(
     # Xóa uploads của user (ví dụ avatar) - cần logic để xóa file trên R2 nếu cần
     # await db.uploads.delete_many({"user_id": ObjectId(user_to_delete.id)})
     # logger.info(f"Đã xóa tất cả uploads của user {user_to_delete.email} (ID: {user_id}). Cần xử lý file trên R2 thủ công hoặc bằng trigger.")
-
 
     users_collection = db.get_collection("users")
     delete_result = await users_collection.delete_one({"_id": ObjectId(user_id)})
@@ -211,7 +211,7 @@ async def delete_user_by_id_endpoint(
 # <<<< PHẦN CẬP NHẬT ENDPOINT LIST ALL USERS >>>>
 @router.get(
     "/",
-    response_model=StandardApiResponse[PaginatedResponse[UserPublic]], # SỬA RESPONSE MODEL
+    response_model=StandardApiResponse[PaginatedResponse[UserPublic]],  # SỬA RESPONSE MODEL
     summary="Lấy danh sách người dùng (phân trang, yêu cầu quyền user:list)",
     dependencies=[Depends(require_permission("user", "list"))],
     tags=["users"],
@@ -226,15 +226,17 @@ async def read_all_users_endpoint(
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
     user_docs, total_count = await get_all_users_paginated(
-        db, 
-        skip=skip, 
+        db,
+        skip=skip,
         limit=limit,
         # email_filter=email_filter, # Truyền các filter vào CRUD
         # is_active_filter=is_active_filter,
     )
-    
+
     items = [UserPublic.model_validate(doc) for doc in user_docs]
     return PaginatedResponse[UserPublic](items=items, total=total_count)
+
+
 # <<<< KẾT THÚC PHẦN CẬP NHẬT >>>>
 
 
@@ -257,7 +259,9 @@ async def assign_roles_to_user_endpoint(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
     if not updated_user:
         # Lỗi này có thể do user_id không tồn tại, hoặc role_ids không hợp lệ và không có role nào được gán
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Người dùng không tìm thấy hoặc không có vai trò hợp lệ nào được gán.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Người dùng không tìm thấy hoặc không có vai trò hợp lệ nào được gán."
+        )
     return UserPublic.model_validate(updated_user)
 
 
@@ -273,7 +277,7 @@ async def revoke_roles_from_user_endpoint(
     user_id: PyObjectId,
     request_body: UserRoleModificationRequest,
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
-    current_admin: UserInDB = Depends(get_current_active_user), 
+    current_admin: UserInDB = Depends(get_current_active_user),
 ):
     target_user = await get_user_by_id_db(db, str(user_id))
     if not target_user:
@@ -296,6 +300,6 @@ async def revoke_roles_from_user_endpoint(
             )
 
     updated_user = await revoke_roles_from_user(db, user_id, request_body.role_ids)
-    if not updated_user: # Should not happen if user was found initially
+    if not updated_user:  # Should not happen if user was found initially
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Người dùng không tìm thấy sau khi thu hồi vai trò.")
     return UserPublic.model_validate(updated_user)

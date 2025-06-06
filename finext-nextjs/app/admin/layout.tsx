@@ -1,51 +1,26 @@
-// finext-nextjs/app/admin/layout.tsx
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from 'components/AuthProvider';
-
-// MUI Components
 import {
   AppBar, Box, CssBaseline, Drawer, Toolbar, List, ListItem, ListItemButton,
-  ListItemIcon, ListItemText, Typography, TextField, InputAdornment,
-  CircularProgress, useTheme, IconButton as MuiIconButton,
-  Tooltip,
-  useMediaQuery,
-  Badge,
-  Breadcrumbs,
-  alpha,
-  Popover,
-  Paper,
+  ListItemIcon, ListItemText, Typography, CircularProgress, useTheme,
+  IconButton as MuiIconButton, Tooltip, useMediaQuery, Breadcrumbs,
+  alpha, Popover,
 } from '@mui/material';
 import MuiLink from '@mui/material/Link';
 import { SvgIconProps } from '@mui/material/SvgIcon';
-
-// Icons
 import {
   Dashboard as DashboardIcon,
   People as PeopleIcon,
-  // Inventory2Outlined as ProductsIcon, // Removed as not used
-  // BarChartOutlined as AnalyticsIcon, // Removed as not used
-  // MailOutline as MessagesIcon, // Removed as not used
-  // DescriptionOutlined as InvoicesIcon, // Removed as not used
   Logout as LogoutIcon,
-  NotificationsNoneOutlined as NotificationsIcon,
-  Search as SearchIcon,
   Menu as MenuIcon,
   ChevronRight as ChevronRightIcon,
   DiamondOutlined as LogoIcon,
-  // AccountBalanceWalletOutlined, // Defined below with alias
-  // AdminPanelSettingsOutlined as AdminToolsIcon, // Defined below with alias
-  // ListAltOutlined, // Defined below with alias
-  // SecurityOutlined as SecurityIcon, // Defined below with alias
-  // CategoryOutlined as CategoryIcon, // Defined below with alias
-  // AccountBalanceWalletOutlined as FinanceIcon, // Defined below with alias
-  // MonetizationOnOutlined as FinanceGroupIcon, // Defined below with alias
-  // DynamicFeedOutlined as DataManagementIcon, // Defined below with alias
   AdminPanelSettings,
-  // FolderShared, // Removed as not used
   Security,
   Gavel,
   VerifiedUser,
@@ -53,13 +28,10 @@ import {
   Campaign,
   Subscriptions,
   ReceiptLong,
-  // MonetizationOn, // Removed as not used
   Policy,
   AccountBalanceWallet,
   ListAlt,
   Devices,
-  // Key, // Removed as not used
-  // AccountCircle, // Removed as not used
   VpnKey,
   ShoppingCart,
   ManageAccounts,
@@ -68,9 +40,7 @@ import {
 
 import UserMenu from './components/UserMenu';
 import ThemeToggleButton from 'components/ThemeToggleButton';
-
 import { layoutTokens } from '../../theme/tokens';
-import Image from 'next/image';
 
 interface NavItem {
   text: string;
@@ -85,7 +55,6 @@ interface NavGroup {
 }
 
 const navigationStructure: (NavItem | NavGroup)[] = [
-  // { text: 'Dashboard', href: '/admin/dashboard', icon: <DashboardIcon /> },
   {
     groupText: 'Account Management',
     groupIcon: <ManageAccounts />,
@@ -99,7 +68,7 @@ const navigationStructure: (NavItem | NavGroup)[] = [
     groupIcon: <ShoppingCart />,
     subItems: [
       { text: 'Transactions', href: '/admin/transactions', icon: <ReceiptLong /> },
-      { text: 'Subscriptions', href: '/admin/subscriptions', icon: <Subscriptions /> }, // Changed Icon
+      { text: 'Subscriptions', href: '/admin/subscriptions', icon: <Subscriptions /> },
       { text: 'Promotions', href: '/admin/promotions', icon: <Campaign /> },
     ],
   },
@@ -130,24 +99,19 @@ const navigationStructure: (NavItem | NavGroup)[] = [
   },
 ];
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { session, loading: authLoading, logout } = useAuth();
   const router = useRouter();
   const currentPathname = usePathname();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [mobileOpen, setMobileOpen] = useState(false);
 
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [popoverAnchorEl, setPopoverAnchorEl] = useState<null | HTMLElement>(null);
   const [openPopoverGroupId, setOpenPopoverGroupId] = useState<null | string>(null);
   const [isTooltipDisabled, setIsTooltipDisabled] = useState(false);
 
   const popoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
   const drawerWidth = layoutTokens.compactDrawerWidth;
 
   useEffect(() => {
@@ -156,9 +120,7 @@ export default function DashboardLayout({
     }
   }, [session, authLoading, router]);
 
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-  };
+  const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
 
   const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>, groupId: string) => {
     if (popoverTimeoutRef.current) {
@@ -171,9 +133,7 @@ export default function DashboardLayout({
   };
 
   const handlePopoverClose = () => {
-    if (popoverTimeoutRef.current) {
-      clearTimeout(popoverTimeoutRef.current);
-    }
+    if (popoverTimeoutRef.current) clearTimeout(popoverTimeoutRef.current);
     popoverTimeoutRef.current = setTimeout(() => {
       setPopoverAnchorEl(null);
       setOpenPopoverGroupId(null);
@@ -188,11 +148,6 @@ export default function DashboardLayout({
     }
   };
 
-  const handlePopoverMouseLeave = () => {
-    handlePopoverClose();
-  };
-
-
   if (authLoading || !session) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: 'background.default' }}>
@@ -200,7 +155,6 @@ export default function DashboardLayout({
       </Box>
     );
   }
-
   const drawerLinkStyles = (isActive: boolean, isSubItem: boolean = false) => ({
     p: theme.spacing(isSubItem ? 1.25 : 1.5),
     borderRadius: '8px',
@@ -209,33 +163,40 @@ export default function DashboardLayout({
     display: 'flex',
     alignItems: 'center',
     justifyContent: isSubItem ? 'flex-start' : 'center',
-    color: isActive
-      ? (theme.palette.mode === 'light' ? theme.palette.primary.main : theme.palette.primary.light)
-      : theme.palette.text.secondary,
-    backgroundColor: isActive
-      ? (theme.palette.mode === 'light' ? alpha(theme.palette.primary.main, 0.08) : alpha(theme.palette.primary.light, 0.12))
-      : 'transparent',
+    color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
+    backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
     '&:hover': {
       transform: isSubItem ? 'none' : 'scale(1.1)',
-      backgroundColor: isActive
-        ? (theme.palette.mode === 'light' ? alpha(theme.palette.primary.main, 0.12) : alpha(theme.palette.primary.light, 0.20))
-        : (theme.palette.mode === 'light' ? theme.palette.grey[100] : alpha(theme.palette.common.white, 0.08)),
-      color: isActive
-        ? (theme.palette.mode === 'light' ? theme.palette.primary.dark : theme.palette.primary.main)
-        : (theme.palette.mode === 'light' ? theme.palette.grey[700] : theme.palette.grey[300]),
-    },
-    '&.Mui-selected': { // Ensure Mui-selected styles are consistent or more prominent if needed
-      color: theme.palette.mode === 'light' ? theme.palette.primary.main : theme.palette.primary.light,
-      backgroundColor: theme.palette.mode === 'light' ? alpha(theme.palette.primary.main, 0.08) : alpha(theme.palette.primary.light, 0.12),
-      '&:hover': {
-        backgroundColor: theme.palette.mode === 'light' ? alpha(theme.palette.primary.main, 0.12) : alpha(theme.palette.primary.light, 0.20),
-        color: theme.palette.mode === 'light' ? theme.palette.primary.dark : theme.palette.primary.main,
-      }
+      backgroundColor: alpha(theme.palette.primary.main, isActive ? 0.12 : 0.04),
+      color: isActive ? theme.palette.primary.dark : theme.palette.primary.main,
     },
     transition: theme.transitions.create(['transform', 'background-color', 'color'], {
       duration: theme.transitions.duration.shortest,
     }),
   });
+
+  const findBestMatch = () => {
+    let bestMatch: NavItem | undefined;
+    let bestMatchGroup: NavGroup | undefined;
+    let longestMatchLength = 0;
+
+    const searchItems = (items: (NavItem | NavGroup)[], parentGroup?: NavGroup) => {
+      for (const item of items) {
+        if ('href' in item) {
+          if (currentPathname.startsWith(item.href) && item.href.length > longestMatchLength) {
+            bestMatch = item;
+            bestMatchGroup = parentGroup;
+            longestMatchLength = item.href.length;
+          }
+        } else if ('subItems' in item && item.subItems.some(sub => currentPathname.startsWith(sub.href))) {
+          searchItems(item.subItems, item);
+        }
+      }
+    };
+
+    searchItems(navigationStructure);
+    return { bestMatch, bestMatchGroup };
+  };
 
   const drawerContent = (
     <>
@@ -293,11 +254,10 @@ export default function DashboardLayout({
                   anchorEl={popoverAnchorEl}
                   onClose={handlePopoverClose}
                   anchorOrigin={{ vertical: 'center', horizontal: 'right' }}
-                  transformOrigin={{ vertical: 'center', horizontal: 'left' }}
-                  slotProps={{
+                  transformOrigin={{ vertical: 'center', horizontal: 'left' }} slotProps={{
                     paper: {
                       onMouseEnter: handlePopoverMouseEnter,
-                      onMouseLeave: handlePopoverMouseLeave,
+                      onMouseLeave: handlePopoverClose,
                       sx: {
                         ml: 1, p: 1, minWidth: 200, bgcolor: 'background.paper',
                         backgroundImage: 'none', boxShadow: theme.shadows[6], borderRadius: '8px',
@@ -353,80 +313,27 @@ export default function DashboardLayout({
       </Box>
     </>
   );
-
   const generateBreadcrumbs = () => {
-    const pathParts = currentPathname.split('/').filter(part => part);
+    const { bestMatch, bestMatchGroup } = findBestMatch();
+
     let currentPageTitle = "Page";
-    let currentPageIconInstance: React.ReactElement<SvgIconProps> = <ChevronRightIcon sx={{ mr: 0.5, fontSize: "inherit" }} />;
+    let currentPageIcon = <ChevronRightIcon sx={{ mr: 0.5, fontSize: "inherit" }} />;
     let currentGroupText: string | null = null;
     let currentGroupIcon: React.ReactElement<SvgIconProps> | null = null;
 
-    const findItemWithGroup = (items: (NavItem | NavGroup)[], path: string): { item: NavItem | undefined, group: NavGroup | undefined } => {
-      for (const item of items) {
-        if ('href' in item && path.startsWith(item.href)) {
-          if (path === item.href || (path.startsWith(item.href) && path[item.href.length] === '/')) {
-            return { item, group: undefined };
-          }
-        } else if ('subItems' in item) {
-          const foundInSub = findItemWithGroup(item.subItems, path);
-          if (foundInSub.item) {
-            return { item: foundInSub.item, group: item };
-          }
-        }
-      }
-      return { item: undefined, group: undefined };
-    };
-
-    let bestMatch: NavItem | undefined = undefined;
-    let bestMatchGroup: NavGroup | undefined = undefined;
-    let longestMatchLength = 0;
-
-    const findBestMatchRecursive = (items: (NavItem | NavGroup)[], parentGroup?: NavGroup) => {
-      for (const item of items) {
-        if ('href' in item) {
-          if (currentPathname.startsWith(item.href) && item.href.length > longestMatchLength) {
-            bestMatch = item;
-            bestMatchGroup = parentGroup;
-            longestMatchLength = item.href.length;
-          }
-        } else if ('subItems' in item) {
-          // Check if any subitem's href is a prefix of currentPathname before recursing
-          if (item.subItems.some(sub => currentPathname.startsWith(sub.href))) {
-            findBestMatchRecursive(item.subItems, item);
-          }
-        }
-      }
-    };
-
-    findBestMatchRecursive(navigationStructure);
-
     if (bestMatch) {
-      currentPageTitle = (bestMatch as NavItem).text;
-      currentPageIconInstance = React.cloneElement((bestMatch as NavItem).icon, { sx: { ...(bestMatch as NavItem).icon.props.sx, mr: 0.5, fontSize: "inherit" } });
+      currentPageTitle = bestMatch.text;
+      currentPageIcon = React.cloneElement(bestMatch.icon, { sx: { mr: 0.5, fontSize: "inherit" } });
 
       if (bestMatchGroup) {
-        const group = bestMatchGroup as NavGroup;
-        currentGroupText = group.groupText;
-        currentGroupIcon = React.cloneElement(group.groupIcon, { sx: { ...group.groupIcon.props.sx, mr: 0.5, fontSize: "inherit" } });
-      }
-    } else if (currentPathname === '/admin/dashboard') {
-      const dashboardItem = navigationStructure.find(item => 'href' in item && item.href === '/admin/dashboard') as NavItem | undefined;
-      if (dashboardItem) {
-        currentPageTitle = dashboardItem.text;
-        currentPageIconInstance = React.cloneElement(dashboardItem.icon, { sx: { ...dashboardItem.icon.props.sx, mr: 0.5, fontSize: "inherit" } });
+        currentGroupText = bestMatchGroup.groupText;
+        currentGroupIcon = React.cloneElement(bestMatchGroup.groupIcon, { sx: { mr: 0.5, fontSize: "inherit" } });
       }
     }
 
-
     return (
       <Breadcrumbs aria-label="breadcrumb" sx={{ color: 'text.secondary' }}>
-        <MuiLink
-          component={Link}
-          underline="hover"
-          color="inherit"
-          href="/admin/dashboard"
-          sx={{ display: 'flex', alignItems: 'center' }}
-        >
+        <MuiLink component={Link} underline="hover" color="inherit" href="/admin/dashboard" sx={{ display: 'flex', alignItems: 'center' }}>
           <DashboardIcon sx={{ mr: 0.5, fontSize: "inherit" }} />
           Dashboard
         </MuiLink>
@@ -436,9 +343,9 @@ export default function DashboardLayout({
             {currentGroupText}
           </Typography>
         )}
-        {(currentPathname !== '/admin/dashboard' && pathParts.length > 1 && (currentPageTitle !== "Page" || bestMatch)) && (
+        {currentPathname !== '/admin/dashboard' && bestMatch && (
           <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center' }}>
-            {currentPageIconInstance}
+            {currentPageIcon}
             {currentPageTitle}
           </Typography>
         )}
@@ -475,54 +382,6 @@ export default function DashboardLayout({
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: theme.spacing(isMobile ? 1 : 2) }}>
-            {!isMobile && (
-              <TextField
-                variant="standard"
-                size="small"
-                placeholder="Search..."
-                InputProps={{
-                  disableUnderline: true,
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon sx={{ color: theme.palette.text.secondary }} />
-                    </InputAdornment>
-                  ),
-                }}
-                inputProps={{
-                  sx: {
-                    borderRadius: '20px',
-                    bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[100] : alpha(theme.palette.common.white, 0.1),
-                    px: theme.spacing(2),
-                    py: theme.spacing(0.75),
-                    fontSize: '0.875rem',
-                    minWidth: 220,
-                    color: 'text.primary',
-                    transition: theme.transitions.create(['background-color', 'box-shadow']),
-                    '&:hover': {
-                      bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[200] : alpha(theme.palette.common.white, 0.15),
-                    },
-                    '&.Mui-focused': {
-                      bgcolor: theme.palette.background.paper,
-                      boxShadow: `0 0 0 2px ${theme.palette.primary.main}`,
-                    }
-                  }
-                }}
-              />
-            )}
-            {isMobile && (
-              <MuiIconButton sx={{ color: 'text.secondary', '&:hover': { color: 'text.primary' } }}>
-                <Tooltip title="Search">
-                  <SearchIcon />
-                </Tooltip>
-              </MuiIconButton>
-            )}
-            <MuiIconButton sx={{ color: 'text.secondary', '&:hover': { color: 'text.primary' } }}>
-              <Tooltip title="Notifications">
-                <Badge color="error" variant="dot" overlap="circular">
-                  <NotificationsIcon sx={{ fontSize: '20px' }} />
-                </Badge>
-              </Tooltip>
-            </MuiIconButton>
             <ThemeToggleButton />
             <UserMenu />
           </Box>
@@ -547,62 +406,63 @@ export default function DashboardLayout({
               width: layoutTokens.drawerWidth, // full drawer width for mobile
               // bgcolor & borderRight will be inherited from MuiProvider styles
             },
-          }}
-        >
-           {/* Content for mobile drawer - using a slightly different structure or can reuse drawerContent */}
-           {/* Simplified example for mobile drawer content structure: */}
-            <Box sx={{ p: theme.spacing(2), display: 'flex', alignItems: 'center', borderBottom: `1px solid ${theme.palette.divider}` }}>
-                <LogoIcon sx={{ fontSize: '24px', color: 'primary.main', mr: 1 }} />
-                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Finext</Typography>
-            </Box>
-            <List sx={{ flexGrow: 1, overflowY: 'auto' }}>
-                {navigationStructure.map((itemOrGroup) => {
-                if ('href' in itemOrGroup) {
-                    return (
-                    <ListItem key={itemOrGroup.text} disablePadding>
-                        <Link href={itemOrGroup.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
-                        <ListItemButton selected={currentPathname.startsWith(itemOrGroup.href)} onClick={handleDrawerToggle}>
-                            <ListItemIcon sx={{ color: currentPathname.startsWith(itemOrGroup.href) ? 'primary.main' : 'text.secondary', minWidth: 40 }}>
-                            {itemOrGroup.icon}
-                            </ListItemIcon>
-                            <ListItemText primary={itemOrGroup.text} />
-                        </ListItemButton>
-                        </Link>
+          }}        >
+          <Box sx={{ p: theme.spacing(2), display: 'flex', alignItems: 'center', borderBottom: `1px solid ${theme.palette.divider}` }}>
+            <LogoIcon sx={{ fontSize: '24px', color: 'primary.main', mr: 1 }} />
+            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Finext</Typography>
+          </Box>
+          <List sx={{ flexGrow: 1, overflowY: 'auto' }}>
+            {navigationStructure.map((itemOrGroup) => {
+              if ('href' in itemOrGroup) {
+                const isActive = currentPathname.startsWith(itemOrGroup.href);
+                return (
+                  <ListItem key={itemOrGroup.text} disablePadding>
+                    <Link href={itemOrGroup.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
+                      <ListItemButton selected={isActive} onClick={handleDrawerToggle}>
+                        <ListItemIcon sx={{ color: isActive ? 'primary.main' : 'text.secondary', minWidth: 40 }}>
+                          {itemOrGroup.icon}
+                        </ListItemIcon>
+                        <ListItemText primary={itemOrGroup.text} />
+                      </ListItemButton>
+                    </Link>
+                  </ListItem>
+                );
+              } else {
+                return (
+                  <React.Fragment key={itemOrGroup.groupText}>
+                    <ListItem sx={{ pt: 2, pb: 1, mt: 1 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'medium', textTransform: 'uppercase', pl: 1 }}>
+                        {itemOrGroup.groupText}
+                      </Typography>
                     </ListItem>
-                    );
-                } else {
-                    return (
-                    <React.Fragment key={itemOrGroup.groupText}>
-                        <ListItem sx={{ pt: 2, pb: 1, mt: 1 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'medium', textTransform: 'uppercase', pl: 1 }}>
-                            {itemOrGroup.groupText}
-                        </Typography>
-                        </ListItem>
-                        {itemOrGroup.subItems.map(subItem => (
+                    {itemOrGroup.subItems.map(subItem => {
+                      const isActive = currentPathname.startsWith(subItem.href);
+                      return (
                         <ListItem key={subItem.text} disablePadding sx={{ pl: 1.5 }}>
-                            <Link href={subItem.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
-                            <ListItemButton selected={currentPathname.startsWith(subItem.href)} onClick={handleDrawerToggle}>
-                                <ListItemIcon sx={{ color: currentPathname.startsWith(subItem.href) ? 'primary.main' : 'text.secondary', minWidth: 40 }}>
+                          <Link href={subItem.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
+                            <ListItemButton selected={isActive} onClick={handleDrawerToggle}>
+                              <ListItemIcon sx={{ color: isActive ? 'primary.main' : 'text.secondary', minWidth: 40 }}>
                                 {subItem.icon}
-                                </ListItemIcon>
-                                <ListItemText primary={subItem.text} />
+                              </ListItemIcon>
+                              <ListItemText primary={subItem.text} />
                             </ListItemButton>
-                            </Link>
+                          </Link>
                         </ListItem>
-                        ))}
-                    </React.Fragment>
-                    );
-                }
-                })}
-            </List>
-            <Box sx={{ p: theme.spacing(1), mt: 'auto', borderTop: `1px solid ${theme.palette.divider}` }}>
-                <ListItem disablePadding>
-                <ListItemButton onClick={() => { logout(); handleDrawerToggle(); }}>
-                    <ListItemIcon sx={{ color: 'text.secondary', minWidth: 40 }}><LogoutIcon /></ListItemIcon>
-                    <ListItemText primary="Logout" />
-                </ListItemButton>
-                </ListItem>
-            </Box>
+                      );
+                    })}
+                  </React.Fragment>
+                );
+              }
+            })}
+          </List>
+          <Box sx={{ p: theme.spacing(1), mt: 'auto', borderTop: `1px solid ${theme.palette.divider}` }}>
+            <ListItem disablePadding>
+              <ListItemButton onClick={() => { logout(); handleDrawerToggle(); }}>
+                <ListItemIcon sx={{ color: 'text.secondary', minWidth: 40 }}><LogoutIcon /></ListItemIcon>
+                <ListItemText primary="Logout" />
+              </ListItemButton>
+            </ListItem>
+          </Box>
         </Drawer>
 
         {/* Desktop Drawer (Compact with Popovers on Hover) */}

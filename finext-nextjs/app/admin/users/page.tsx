@@ -4,226 +4,448 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { apiClient } from 'services/apiClient';
 import {
-    Box, Typography, Paper, TableContainer,
-    Table, TableHead, TableRow, TableCell, TableBody, Chip, IconButton,
-    Alert, Button, TablePagination, Avatar, Tooltip, CircularProgress,
-    Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle
+  Box, Typography, Paper, TableContainer,
+  Table, TableHead, TableRow, TableCell, TableBody, Chip, IconButton,
+  Alert, Button, TablePagination, Avatar, Tooltip, CircularProgress,
+  Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+import {
+  Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon,
+  UnfoldMore as ExpandIcon, UnfoldLess as CollapseIcon
+} from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
+import UserSearch from './components/UserSearch';
+import AddUserModal from './components/AddUserModal';
 
 // Interface for User data (matching UserPublic from backend)
 interface UserPublic {
-    id: string;
-    role_ids: string[];
-    full_name: string;
-    email: string;
-    phone_number?: string | null;
-    is_active?: boolean;
-    created_at: string;
-    avatar_url?: string | null;
-    referral_code?: string | null;
-    google_id?: string | null;
-    subscription_id?: string | null;
+  id: string;
+  role_ids: string[];
+  full_name: string;
+  email: string;
+  phone_number?: string | null;
+  is_active?: boolean;
+  created_at: string;
+  updated_at: string;
+  avatar_url?: string | null;
+  referral_code?: string | null;
+  google_id?: string | null;
+  subscription_id?: string | null;
+}
+
+// Interface for Role data
+interface RolePublic {
+  id: string;
+  name: string;
+  description?: string;
+  permission_ids: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+// Interface for Subscription data
+interface SubscriptionPublic {
+  id: string;
+  user_id: string;
+  user_email: string;
+  license_id: string;
+  license_key: string;
+  is_active: boolean;
+  start_date: string;
+  expiry_date: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // Expected structure for paginated API response within StandardApiResponse.data
 interface PaginatedUsersResponse {
-    items: UserPublic[];
-    total: number;
+  items: UserPublic[];
+  total: number;
 }
 
 const UsersPage: React.FC = () => {
-    const [users, setUsers] = useState<UserPublic[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
-    const [totalCount, setTotalCount] = useState(0);
+  const [users, setUsers] = useState<UserPublic[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<UserPublic[]>([]);
+  const [roles, setRoles] = useState<RolePublic[]>([]);
+  const [subscriptions, setSubscriptions] = useState<Map<string, SubscriptionPublic>>(new Map());
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalCount, setTotalCount] = useState(0); const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserPublic | null>(null);
+  const [expandedView, setExpandedView] = useState(false);
+  const [openAddUserModal, setOpenAddUserModal] = useState(false); const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Expecting StandardApiResponse<PaginatedUsersResponse>
+      const response = await apiClient<PaginatedUsersResponse>({
+        url: `/api/v1/users/?skip=${page * rowsPerPage}&limit=${rowsPerPage}`,
+        method: 'GET',
+      }); if (response.status === 200 && response.data &&
+        Array.isArray(response.data.items) && typeof response.data.total === 'number') {
+        setUsers(response.data.items);
+        setTotalCount(response.data.total);
+      } else {
+        // Fallback or error if structure is not as expected
+        setError(response.message || 'Failed to load users or unexpected data structure.');
+        setUsers([]);
+        setTotalCount(0);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Connection error or unauthorized access.');
+      setUsers([]);
+      setTotalCount(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, rowsPerPage]); const fetchRoles = useCallback(async () => {
+    try {
+      const response = await apiClient<{ items: RolePublic[]; total: number }>({
+        url: `/api/v1/roles/?skip=0&limit=200`,
+        method: 'GET',
+      });
 
-    const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-    const [userToDelete, setUserToDelete] = useState<UserPublic | null>(null);
+      if (response.status === 200 && response.data && Array.isArray(response.data.items)) {
+        setRoles(response.data.items);
+      }
+    } catch (err: any) {
+      console.error('Failed to load roles:', err.message);
+    }
+  }, []);
 
-    const fetchUsers = useCallback(async () => {
-        setLoading(true);
-        setError(null);
+  const fetchSubscriptions = useCallback(async (userIds: string[]) => {
+    if (userIds.length === 0) return;
+
+    try {
+      const subscriptionsMap = new Map<string, SubscriptionPublic>();
+
+      // Fetch subscriptions for each user
+      for (const userId of userIds) {
         try {
-            // Expecting StandardApiResponse<PaginatedUsersResponse>
-            const response = await apiClient<PaginatedUsersResponse>({
-                url: `/api/v1/users/?skip=${page * rowsPerPage}&limit=${rowsPerPage}`,
-                method: 'GET',
-            });
+          const response = await apiClient<SubscriptionPublic[]>({
+            url: `/api/v1/subscriptions/user/${userId}?skip=0&limit=1`,
+            method: 'GET',
+          });
 
-            if (response.status === 200 && response.data && 
-                Array.isArray(response.data.items) && typeof response.data.total === 'number') {
-                setUsers(response.data.items);
-                setTotalCount(response.data.total);
-            } else {
-                // Fallback or error if structure is not as expected
-                setError(response.message || 'Failed to load users or unexpected data structure.');
-                setUsers([]);
-                setTotalCount(0);
-            }
-        } catch (err: any) {
-            setError(err.message || 'Connection error or unauthorized access.');
-            setUsers([]);
-            setTotalCount(0);
-        } finally {
-            setLoading(false);
+          if (response.status === 200 && response.data && Array.isArray(response.data) && response.data.length > 0) {
+            // Get the latest active subscription
+            const activeSubscription = response.data.find(sub => sub.is_active) || response.data[0];
+            subscriptionsMap.set(userId, activeSubscription);
+          }
+        } catch (err) {
+          // Skip individual errors
+          console.warn(`Failed to load subscription for user ${userId}`);
         }
-    }, [page, rowsPerPage]);
+      }
 
-    useEffect(() => {
-        fetchUsers();
-    }, [fetchUsers]);
+      setSubscriptions(subscriptionsMap);
+    } catch (err: any) {
+      console.error('Failed to load subscriptions:', err.message);
+    }
+  }, []); useEffect(() => {
+    fetchRoles();
+  }, [fetchRoles]);
 
-    const handleChangePage = (event: unknown, newPage: number) => {
-        setPage(newPage);
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  useEffect(() => {
+    if (users.length > 0) {
+      const userIds = users.map(user => user.id);
+      fetchSubscriptions(userIds);
+    }
+  }, [users, fetchSubscriptions]);
+
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  }; const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const handleFilteredUsers = (filtered: UserPublic[]) => {
+    setFilteredUsers(filtered);
+    setPage(0); // Reset to first page when filtering
+  };
+
+  const handleOpenDeleteDialog = (user: UserPublic) => {
+    setUserToDelete(user);
+    setOpenDeleteDialog(true);
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setUserToDelete(null);
+    setOpenDeleteDialog(false);
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    // setLoading(true); // Consider a more specific loading state for this action
+    try {
+      await apiClient({
+        url: `/api/v1/users/${userToDelete.id}`,
+        method: 'DELETE',
+      });
+      fetchUsers(); // Refresh list
+      handleCloseDeleteDialog();
+    } catch (delError: any) {
+      setError(delError.message || 'Failed to delete user.');
+      handleCloseDeleteDialog();
+    } finally {
+      // setLoading(false); // Reset specific loading state
+    }
+  }; const handleAddUser = () => {
+    setOpenAddUserModal(true);
+  };
+
+  const handleCloseAddUserModal = () => {
+    setOpenAddUserModal(false);
+  };
+
+  const handleUserAdded = () => {
+    fetchUsers(); // Refresh the users list
+  };
+  const handleEditUser = (userId: string) => console.log("Edit user action triggered for:", userId, " (not implemented)");
+
+  // Helper function to get role names from role IDs
+  const getRoleNames = (roleIds: string[]): string[] => {
+    return roleIds.map(roleId => {
+      const role = roles.find(r => r.id === roleId);
+      return role ? role.name : roleId;
+    });
+  };
+
+  // Helper function to get subscription info
+  const getSubscriptionInfo = (userId: string): { status: string; color: 'success' | 'default'; details?: SubscriptionPublic } => {
+    const subscription = subscriptions.get(userId);
+    if (!subscription) {
+      return { status: 'Free', color: 'default' };
+    }
+
+    const isActive = subscription.is_active && new Date(subscription.expiry_date) > new Date();
+    return {
+      status: isActive ? subscription.license_key : 'Expired',
+      color: isActive ? 'success' : 'default',
+      details: subscription
     };
+  };
 
-    const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(0);
-    };
+  // Calculate paginated users from filtered users
+  const paginatedUsers = React.useMemo(() => {
+    const startIndex = page * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    return filteredUsers.slice(startIndex, endIndex);
+  }, [filteredUsers, page, rowsPerPage]);
 
-    const handleOpenDeleteDialog = (user: UserPublic) => {
-        setUserToDelete(user);
-        setOpenDeleteDialog(true);
-    };
-
-    const handleCloseDeleteDialog = () => {
-        setUserToDelete(null);
-        setOpenDeleteDialog(false);
-    };
-
-    const handleDeleteUser = async () => {
-        if (!userToDelete) return;
-        // setLoading(true); // Consider a more specific loading state for this action
-        try {
-            await apiClient({
-                url: `/api/v1/users/${userToDelete.id}`,
-                method: 'DELETE',
-            });
-            fetchUsers(); // Refresh list
-            handleCloseDeleteDialog();
-        } catch (delError: any) {
-            setError(delError.message || 'Failed to delete user.');
-            handleCloseDeleteDialog();
-        } finally {
-            // setLoading(false); // Reset specific loading state
-        }
-    };
-    
-    const handleAddUser = () => console.log("Add user action triggered (not implemented)");
-    const handleEditUser = (userId: string) => console.log("Edit user action triggered for:", userId, " (not implemented)");
-
-    return (
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+        <Typography variant="h4" component="h1">Users Management</Typography>
         <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-                <Typography variant="h4" component="h1">Users Management</Typography>
-                <Box>
-                    <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchUsers} disabled={loading} sx={{ mr: 1 }}>
-                        Refresh
-                    </Button>
-                    <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddUser}>
-                        Add User
-                    </Button>
-                </Box>
-            </Box>
-
-            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-
-            <Paper sx={{ width: '100%', overflow: 'hidden', borderRadius: 2 }}>
-                {loading && users.length === 0 ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 3, minHeight: 300 }}>
-                        <CircularProgress />
-                    </Box>
-                ) : (
-                    <>
-                        <TableContainer sx={{ maxHeight: 600 }}>
-                            <Table stickyHeader>
-                                <TableHead>
-                                    <TableRow>
-                                        <TableCell>Name</TableCell>
-                                        <TableCell>Contact</TableCell>
-                                        <TableCell>Status</TableCell>
-                                        <TableCell>Roles</TableCell>
-                                        <TableCell>Joined</TableCell>
-                                        <TableCell align="right">Actions</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {Array.isArray(users) && users.map((user) => (
-                                        <TableRow hover key={user.id}>
-                                            <TableCell>
-                                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                                    <Avatar src={user.avatar_url || undefined} sx={{ mr: 2, width: 40, height: 40 }}>
-                                                        {user.full_name ? user.full_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
-                                                    </Avatar>
-                                                    <Box>
-                                                        <Typography variant="body1" fontWeight="medium">{user.full_name}</Typography>
-                                                        <Typography variant="body2" color="text.secondary">{user.email}</Typography>
-                                                    </Box>
-                                                </Box>
-                                            </TableCell>
-                                            <TableCell>{user.phone_number || 'N/A'}</TableCell>
-                                            <TableCell>
-                                                <Chip
-                                                    label={user.is_active ? 'Active' : 'Inactive'}
-                                                    color={user.is_active ? 'success' : 'default'}
-                                                    size="small"
-                                                />
-                                            </TableCell>
-                                            <TableCell>{user.role_ids?.join(', ') || 'N/A'}</TableCell>
-                                            <TableCell>{user.created_at ? format(parseISO(user.created_at), 'dd/MM/yyyy') : 'N/A'}</TableCell>
-                                            <TableCell align="right">
-                                                <Tooltip title="Edit User">
-                                                    <IconButton size="small" onClick={() => handleEditUser(user.id)}><EditIcon fontSize="small" /></IconButton>
-                                                </Tooltip>
-                                                <Tooltip title="Delete User">
-                                                    <IconButton size="small" onClick={() => handleOpenDeleteDialog(user)}><DeleteIcon fontSize="small" /></IconButton>
-                                                </Tooltip>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {Array.isArray(users) && users.length === 0 && !loading && (
-                                        <TableRow>
-                                            <TableCell colSpan={6} align="center">No users found.</TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-                        <TablePagination
-                            rowsPerPageOptions={[5, 10, 25, 50]}
-                            component="div"
-                            count={totalCount}
-                            rowsPerPage={rowsPerPage}
-                            page={page}
-                            onPageChange={handleChangePage}
-                            onRowsPerPageChange={handleChangeRowsPerPage}
-                        />
-                    </>
-                )}
-            </Paper>
-
-            <Dialog open={openDeleteDialog} onClose={handleCloseDeleteDialog}>
-                <DialogTitle>Confirm Delete</DialogTitle>
-                <DialogContent>
-                    <DialogContentText>
-                        Are you sure you want to delete user {userToDelete?.full_name} ({userToDelete?.email})? This action cannot be undone.
-                    </DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseDeleteDialog}>Cancel</Button>
-                    <Button onClick={handleDeleteUser} color="error" /* disabled={specificDeleteLoading} */ >
-                        {/* {specificDeleteLoading ? <CircularProgress size={20} /> : "Delete"} */}
-                        Delete
-                    </Button>
-                </DialogActions>
-            </Dialog>
+          <Button
+            variant="outlined"
+            startIcon={expandedView ? <CollapseIcon /> : <ExpandIcon />}
+            onClick={() => setExpandedView(!expandedView)}
+            sx={{ mr: 1 }}
+          >
+            {expandedView ? 'Compact View' : 'Detailed View'}
+          </Button>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddUser}>
+            Add User
+          </Button>
         </Box>
-    );
+      </Box>{error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      <UserSearch
+        users={users}
+        onFilteredUsers={handleFilteredUsers}
+        loading={loading}
+      />
+
+      <Paper sx={{ width: '100%', overflow: 'hidden', borderRadius: 2 }}>
+        {loading && users.length === 0 ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 3, minHeight: 300 }}>
+            <CircularProgress />
+          </Box>
+        ) : (<>
+          <TableContainer sx={{ maxHeight: 600, overflowX: expandedView ? 'auto' : 'hidden' }}>
+            <Table stickyHeader sx={{ minWidth: expandedView ? 1400 : 'auto' }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ minWidth: expandedView ? 250 : 200 }}>Name</TableCell>
+                  <TableCell sx={{ minWidth: expandedView ? 150 : 120 }}>Contact</TableCell>
+                  <TableCell sx={{ minWidth: expandedView ? 120 : 100 }}>Subscription</TableCell>
+                  <TableCell sx={{ minWidth: expandedView ? 100 : 80 }}>Status</TableCell>
+                  {expandedView && <TableCell sx={{ minWidth: 120 }}>Roles</TableCell>}
+                  {expandedView && <TableCell sx={{ minWidth: 120 }}>Joined</TableCell>}
+                  {expandedView && <TableCell sx={{ minWidth: 120 }}>Updated</TableCell>}
+                  {expandedView && <TableCell sx={{ minWidth: 140 }}>Referral Code</TableCell>}
+                  {expandedView && <TableCell sx={{ minWidth: 120 }}>Login Method</TableCell>}
+                  <TableCell align="right" sx={{ minWidth: expandedView ? 120 : 100 }}>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {Array.isArray(paginatedUsers) && paginatedUsers.map((user) => (
+                  <TableRow hover key={user.id}>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Avatar src={user.avatar_url || undefined} sx={{ mr: 2, width: 25, height: 25 }}>
+                          {user.full_name ? user.full_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="body1" fontWeight="medium">{user.full_name}</Typography>
+                          <Typography variant="body2" color="text.secondary">{user.email}</Typography>
+                        </Box>
+                      </Box>
+                    </TableCell>
+                    <TableCell>{user.phone_number || 'N/A'}</TableCell>
+                    <TableCell>
+                      {(() => {
+                        const subscriptionInfo = getSubscriptionInfo(user.id);
+                        return (
+                          <Tooltip title={
+                            subscriptionInfo.details ?
+                              `Expires: ${format(parseISO(subscriptionInfo.details.expiry_date), 'dd/MM/yyyy')}` :
+                              'No active subscription'
+                          }>
+                            <Chip
+                              label={subscriptionInfo.status}
+                              color={subscriptionInfo.color}
+                              size="small"
+                            />
+                          </Tooltip>
+                        );
+                      })()}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={user.is_active ? 'Active' : 'Inactive'}
+                        color={user.is_active ? 'success' : 'default'}
+                        size="small"
+                      />
+                    </TableCell>
+                    {expandedView && (
+                      <TableCell>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {user.role_ids?.length > 0 ? (
+                            getRoleNames(user.role_ids).map((roleName, index) => (
+                              <Chip key={index} label={roleName} size="small" variant="outlined" />
+                            ))
+                          ) : (
+                            <Typography variant="body2" color="text.secondary">N/A</Typography>
+                          )}
+                        </Box>
+                      </TableCell>
+                    )}
+                    {expandedView && (
+                      <TableCell>
+                        {(() => {
+                          if (!user.created_at) {
+                            return 'N/A';
+                          }
+                          try {
+                            const formatted = format(parseISO(user.created_at), 'dd/MM/yyyy');
+                            return formatted;
+                          } catch (error) {
+                            return 'Invalid Date';
+                          }
+                        })()}
+                      </TableCell>
+                    )}{expandedView && (
+                      <TableCell>
+                        {(() => {
+                          if (!user.updated_at) {
+                            return 'N/A';
+                          }
+                          try {
+                            const formatted = format(parseISO(user.updated_at), 'dd/MM/yyyy');
+                            return formatted;
+                          } catch (error) {
+                            return 'Invalid Date';
+                          }
+                        })()}
+                      </TableCell>
+                    )}
+                    {expandedView && (
+                      <TableCell>
+                        {user.referral_code ? (
+                          <Chip
+                            label={user.referral_code}
+                            size="small"
+                            variant="outlined"
+                            color="primary"
+                          />
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">N/A</Typography>
+                        )}
+                      </TableCell>)}
+                    {expandedView && (
+                      <TableCell>
+                        <Chip
+                          label={user.google_id ? 'Google' : 'Email'}
+                          color={user.google_id ? 'info' : 'default'}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </TableCell>
+                    )}
+                    <TableCell align="right">
+                      <Tooltip title="Edit User">
+                        <IconButton size="small" onClick={() => handleEditUser(user.id)}><EditIcon fontSize="small" /></IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete User">
+                        <IconButton size="small" onClick={() => handleOpenDeleteDialog(user)}><DeleteIcon fontSize="small" /></IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {Array.isArray(users) && users.length === 0 && !loading && (
+                  <TableRow>
+                    <TableCell colSpan={expandedView ? 9 : 5} align="center">No users found.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25, 50]}
+            component="div"
+            count={totalCount}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+          />
+        </>
+        )}
+      </Paper>
+
+      <Dialog open={openDeleteDialog} onClose={handleCloseDeleteDialog}>
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete user {userToDelete?.full_name} ({userToDelete?.email})? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDeleteDialog}>Cancel</Button>
+          <Button onClick={handleDeleteUser} color="error" /* disabled={specificDeleteLoading} */ >
+            {/* {specificDeleteLoading ? <CircularProgress size={20} /> : "Delete"} */}
+            Delete
+          </Button>
+        </DialogActions>      </Dialog>
+
+      <AddUserModal
+        open={openAddUserModal}
+        onClose={handleCloseAddUserModal}
+        onUserAdded={handleUserAdded}
+        roles={roles}
+      />
+    </Box>
+  );
 };
 
 export default UsersPage;
