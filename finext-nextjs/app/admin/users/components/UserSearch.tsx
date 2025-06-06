@@ -109,12 +109,10 @@ const UserSearch: React.FC<UserSearchProps> = ({
             user.phone_number,
             user.referral_code,
             user.id
-        ].filter(field => field); // Remove null/undefined values
-
-        // Status fields
+        ].filter(field => field); // Remove null/undefined values        // Status fields
         const statusFields = [
             user.is_active ? 'active' : 'inactive',
-            user.google_id ? 'google' : 'email'
+            user.google_id ? 'google' : 'credentials'
         ];
 
         // Role names
@@ -196,7 +194,7 @@ const UserSearch: React.FC<UserSearchProps> = ({
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>                <TextField
                 fullWidth
                 size="small"
-                placeholder="Tìm kiếm theo tên, email, SĐT, trạng thái, subscription, vai trò, mã giới thiệu, ngày tham gia..."
+                placeholder="Tìm kiếm theo tên, email, SĐT, trạng thái, subscription, vai trò, mã giới thiệu, phương thức đăng nhập, ngày tham gia..."
                 value={searchTerm}
                 onChange={handleSearchChange}
                 disabled={loading}
@@ -287,9 +285,10 @@ const UserSearch: React.FC<UserSearchProps> = ({
                                 { label: 'Free', value: 'free' },
                                 { label: 'Expired', value: 'expired' },
                                 { label: 'Google', value: 'google' },
-                                { label: 'Email Login', value: 'email' },
+                                { label: 'Credentials', value: 'credentials' },
                                 { label: 'Admin', value: 'admin' },
                                 { label: 'User', value: 'user' },
+                                { label: 'Broker', value: 'broker' },
                             ].map((filter) => (
                                 <Chip
                                     key={filter.value}

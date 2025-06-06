@@ -438,7 +438,7 @@ const UsersPage: React.FC = () => {
                       {expandedView && (
                         <TableCell>
                           <Chip
-                            label={user.google_id ? 'Google' : 'Email'}
+                            label={user.google_id ? 'Google' : 'Credentials'}
                             color={user.google_id ? 'info' : 'default'}
                             size="small"
                             variant="outlined"
