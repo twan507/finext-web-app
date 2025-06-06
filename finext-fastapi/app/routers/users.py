@@ -219,7 +219,7 @@ async def delete_user_by_id_endpoint(
 @api_response_wrapper(default_success_message="Lấy danh sách người dùng thành công.")
 async def read_all_users_endpoint(
     skip: int = Query(0, ge=0, description="Số lượng bản ghi bỏ qua"),
-    limit: int = Query(100, ge=1, le=200, description="Số lượng bản ghi tối đa trả về"),
+    limit: int = Query(100, ge=1, le=99999, description="Số lượng bản ghi tối đa trả về (99999 cho 'All')"),
     # Thêm các filter nếu cần, ví dụ:
     # email_filter: Optional[str] = Query(None, description="Lọc theo email (chứa)"),
     # is_active_filter: Optional[bool] = Query(None, description="Lọc theo trạng thái active"),

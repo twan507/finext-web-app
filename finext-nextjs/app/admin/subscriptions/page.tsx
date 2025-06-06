@@ -75,11 +75,11 @@ export default function SubscriptionsPage() {
                     setSubscriptions(response.data as SubscriptionPublic[]);
                     const currentDataLength = (response.data as SubscriptionPublic[]).length;
                     if (page === 0) {
-                        setTotalCount(currentDataLength < rowsPerPage ? currentDataLength : currentDataLength + (currentDataLength === rowsPerPage ? rowsPerPage : 0) );
+                        setTotalCount(currentDataLength < rowsPerPage ? currentDataLength : currentDataLength + (currentDataLength === rowsPerPage ? rowsPerPage : 0));
                     } else if (currentDataLength < rowsPerPage) {
                         setTotalCount(page * rowsPerPage + currentDataLength);
                     } else {
-                         setTotalCount(page * rowsPerPage + currentDataLength + rowsPerPage);
+                        setTotalCount(page * rowsPerPage + currentDataLength + rowsPerPage);
                     }
                 } else {
                     throw new Error("Unexpected data structure from API for subscriptions.");
@@ -138,7 +138,7 @@ export default function SubscriptionsPage() {
             // setLoading(false);
         }
     };
-    
+
     const handleOpenActivateDialog = (sub: SubscriptionPublic) => {
         setActionSubscription(sub);
         setOpenActivateDialog(true);
@@ -179,7 +179,7 @@ export default function SubscriptionsPage() {
                     <Typography variant="h4" component="h1">Subscriptions</Typography>
                 </Box>
                 <Box>
-                    <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchSubscriptions} disabled={loading} sx={{mr: 1}}>
+                    <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchSubscriptions} disabled={loading} sx={{ mr: 1 }}>
                         Refresh
                     </Button>
                     <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddSubscription}>
@@ -191,13 +191,13 @@ export default function SubscriptionsPage() {
             <Paper sx={{ p: 2, mb: 2, borderRadius: 2 }}>
                 <Typography variant="h6" gutterBottom>Filters</Typography>
                 <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, sm: 4}}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
                         <TextField label="User ID" value={filterUserId} onChange={(e) => setFilterUserId(e.target.value)} fullWidth size="small" />
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 4}}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
                         <TextField label="License Key" value={filterLicenseKey} onChange={(e) => setFilterLicenseKey(e.target.value)} fullWidth size="small" />
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 4}}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
                         <TextField select label="Status" value={filterIsActive} onChange={(e) => setFilterIsActive(e.target.value)} fullWidth size="small">
                             <MenuItem value=""><em>All</em></MenuItem>
                             <MenuItem value="true">Active</MenuItem>
@@ -211,7 +211,7 @@ export default function SubscriptionsPage() {
 
             <Paper sx={{ width: '100%', overflow: 'hidden', borderRadius: 2 }}>
                 {loading && subscriptions.length === 0 ? (
-                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 3, minHeight: 300 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 3, minHeight: 300 }}>
                         <CircularProgress />
                     </Box>
                 ) : (
@@ -234,7 +234,7 @@ export default function SubscriptionsPage() {
                                         <TableRow hover key={sub.id}>
                                             <TableCell>
                                                 <Tooltip title={sub.id}>
-                                                    <Typography variant="body2" sx={{maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis'}}>...{sub.id.slice(-6)}</Typography>
+                                                    <Typography variant="body2" sx={{ maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis' }}>...{sub.id.slice(-6)}</Typography>
                                                 </Tooltip>
                                             </TableCell>
                                             <TableCell>{sub.user_email}</TableCell>
@@ -265,9 +265,8 @@ export default function SubscriptionsPage() {
                                     )}
                                 </TableBody>
                             </Table>
-                        </TableContainer>
-                        <TablePagination
-                            rowsPerPageOptions={[5, 10, 25, 50]}
+                        </TableContainer>                        <TablePagination
+                            rowsPerPageOptions={[5, 10, 25, 50, { label: 'All', value: 99999 }]}
                             component="div"
                             count={totalCount}
                             rowsPerPage={rowsPerPage}
@@ -294,7 +293,7 @@ export default function SubscriptionsPage() {
             </Dialog>
 
             {/* Activate Confirmation Dialog */}
-             <Dialog open={openActivateDialog} onClose={handleCloseActivateDialog}>
+            <Dialog open={openActivateDialog} onClose={handleCloseActivateDialog}>
                 <DialogTitle>Confirm Activation</DialogTitle>
                 <DialogContent>
                     <DialogContentText>

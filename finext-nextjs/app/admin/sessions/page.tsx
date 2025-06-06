@@ -94,7 +94,7 @@ const RolesPage: React.FC = () => {
                 url: `/api/v1/roles/${roleToDelete.id}`,
                 method: 'DELETE',
             });
-            fetchRoles(); 
+            fetchRoles();
             handleCloseDeleteDialog();
         } catch (delError: any) {
             setError(delError.message || 'Failed to delete role. It might be protected or in use.');
@@ -115,7 +115,7 @@ const RolesPage: React.FC = () => {
                     <Typography variant="h4" component="h1">Role Management</Typography>
                 </Box>
                 <Box>
-                    <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchRoles} disabled={loading} sx={{mr: 1}}>
+                    <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchRoles} disabled={loading} sx={{ mr: 1 }}>
                         Refresh
                     </Button>
                     <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddRole}>
@@ -153,7 +153,7 @@ const RolesPage: React.FC = () => {
                                             </TableCell>
                                             <TableCell>
                                                 <Tooltip title={role.description || ''}>
-                                                     <Typography variant="body2" sx={{maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                                                    <Typography variant="body2" sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                         {role.description || 'N/A'}
                                                     </Typography>
                                                 </Tooltip>
@@ -180,9 +180,8 @@ const RolesPage: React.FC = () => {
                                     )}
                                 </TableBody>
                             </Table>
-                        </TableContainer>
-                        <TablePagination
-                            rowsPerPageOptions={[5, 10, 25, 50]}
+                        </TableContainer>                        <TablePagination
+                            rowsPerPageOptions={[5, 10, 25, 50, { label: 'All', value: 99999 }]}
                             component="div"
                             count={totalCount}
                             rowsPerPage={rowsPerPage}

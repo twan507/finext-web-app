@@ -65,19 +65,19 @@ export default function WatchlistsPage() {
             });
 
             if (response.status === 200 && response.data) {
-                 if ('items' in response.data && Array.isArray(response.data.items) && typeof response.data.total === 'number') {
+                if ('items' in response.data && Array.isArray(response.data.items) && typeof response.data.total === 'number') {
                     setWatchlists(response.data.items);
                     setTotalCount(response.data.total);
                 } else if (Array.isArray(response.data)) {
                     console.warn("Backend for watchlists did not return total count. Pagination might be inaccurate.");
                     setWatchlists(response.data as WatchlistPublicAdmin[]);
                     const currentDataLength = (response.data as WatchlistPublicAdmin[]).length;
-                     if (page === 0) {
-                        setTotalCount(currentDataLength < rowsPerPage ? currentDataLength : currentDataLength + (currentDataLength === rowsPerPage ? rowsPerPage : 0) );
+                    if (page === 0) {
+                        setTotalCount(currentDataLength < rowsPerPage ? currentDataLength : currentDataLength + (currentDataLength === rowsPerPage ? rowsPerPage : 0));
                     } else if (currentDataLength < rowsPerPage) {
                         setTotalCount(page * rowsPerPage + currentDataLength);
                     } else {
-                         setTotalCount(page * rowsPerPage + currentDataLength + rowsPerPage);
+                        setTotalCount(page * rowsPerPage + currentDataLength + rowsPerPage);
                     }
                 } else {
                     throw new Error("Unexpected data structure from API for watchlists.");
@@ -139,7 +139,7 @@ export default function WatchlistsPage() {
             setLoading(false);
         }
     };
-    
+
     const handleViewWatchlist = (watchlistId: string) => console.log("View watchlist details:", watchlistId);
 
 
@@ -150,7 +150,7 @@ export default function WatchlistsPage() {
                     <WatchlistIcon sx={{ mr: 1, fontSize: '24px' }} />
                     <Typography variant="h4" component="h1">User Watchlists</Typography>
                 </Box>
-                 <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchWatchlists} disabled={loading}>
+                <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchWatchlists} disabled={loading}>
                     Refresh
                 </Button>
             </Box>
@@ -158,10 +158,10 @@ export default function WatchlistsPage() {
             <Paper sx={{ p: 2, mb: 2, borderRadius: 2 }}>
                 <Typography variant="h6" gutterBottom>Filters</Typography>
                 <Grid container spacing={2}>
-                    <Grid size = {{  xs: 12, sm: 6 }}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField label="User ID" value={filterUserId} onChange={(e) => setFilterUserId(e.target.value)} fullWidth size="small" />
                     </Grid>
-                    <Grid size = {{  xs: 12, sm: 6 }}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField label="Watchlist Name (contains)" value={filterWatchlistName} onChange={(e) => setFilterWatchlistName(e.target.value)} fullWidth size="small" />
                     </Grid>
                 </Grid>
@@ -193,19 +193,19 @@ export default function WatchlistsPage() {
                                         <TableRow hover key={watchlist.id}>
                                             <TableCell>
                                                 <Tooltip title={watchlist.id}>
-                                                    <Typography variant="body2" sx={{maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis'}}>...{watchlist.id.slice(-6)}</Typography>
+                                                    <Typography variant="body2" sx={{ maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis' }}>...{watchlist.id.slice(-6)}</Typography>
                                                 </Tooltip>
                                             </TableCell>
                                             <TableCell>{watchlist.user_email || watchlist.user_id}</TableCell>
                                             <TableCell>{watchlist.name}</TableCell>
-                                            <TableCell align="center"><Chip label={watchlist.stock_symbols.length} size="small"/></TableCell>
+                                            <TableCell align="center"><Chip label={watchlist.stock_symbols.length} size="small" /></TableCell>
                                             <TableCell>{format(parseISO(watchlist.created_at), 'dd/MM/yyyy')}</TableCell>
                                             <TableCell align="right">
                                                 <Tooltip title="View Details">
-                                                    <IconButton size="small" onClick={() => handleViewWatchlist(watchlist.id)}><ViewIcon fontSize="small"/></IconButton>
+                                                    <IconButton size="small" onClick={() => handleViewWatchlist(watchlist.id)}><ViewIcon fontSize="small" /></IconButton>
                                                 </Tooltip>
                                                 <Tooltip title="Delete Watchlist">
-                                                    <IconButton size="small" onClick={() => handleOpenDeleteDialog(watchlist)}><DeleteIcon fontSize="small"/></IconButton>
+                                                    <IconButton size="small" onClick={() => handleOpenDeleteDialog(watchlist)}><DeleteIcon fontSize="small" /></IconButton>
                                                 </Tooltip>
                                             </TableCell>
                                         </TableRow>
@@ -215,9 +215,8 @@ export default function WatchlistsPage() {
                                     )}
                                 </TableBody>
                             </Table>
-                        </TableContainer>
-                        <TablePagination
-                            rowsPerPageOptions={[5, 10, 25, 50]}
+                        </TableContainer>                        <TablePagination
+                            rowsPerPageOptions={[5, 10, 25, 50, { label: 'All', value: 99999 }]}
                             component="div"
                             count={totalCount}
                             rowsPerPage={rowsPerPage}

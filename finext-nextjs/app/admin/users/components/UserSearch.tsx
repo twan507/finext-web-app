@@ -32,44 +32,135 @@ interface UserPublic {
     subscription_id?: string | null;
 }
 
+interface RolePublic {
+    id: string;
+    name: string;
+    description?: string;
+    permission_ids: string[];
+    created_at: string;
+    updated_at: string;
+}
+
+interface SubscriptionPublic {
+    id: string;
+    user_id: string;
+    user_email: string;
+    license_id: string;
+    license_key: string;
+    is_active: boolean;
+    start_date: string;
+    expiry_date: string;
+    created_at: string;
+    updated_at: string;
+}
+
 interface UserSearchProps {
     users: UserPublic[];
-    onFilteredUsers: (filteredUsers: UserPublic[]) => void;
+    roles: RolePublic[];
+    subscriptions: Map<string, SubscriptionPublic>;
+    subscriptionsLoading?: boolean;
+    onFilteredUsers: (filteredUsers: UserPublic[], isFiltering: boolean) => void;
     loading?: boolean;
 }
 
 const UserSearch: React.FC<UserSearchProps> = ({
     users,
+    roles,
+    subscriptions,
+    subscriptionsLoading = false,
     onFilteredUsers,
     loading = false
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [showFilters, setShowFilters] = useState(false);
 
-    // Function to search in all user fields
+    // Helper function to get role names from role IDs
+    const getRoleNames = (roleIds: string[]): string[] => {
+        return roleIds.map(roleId => {
+            const role = roles.find(r => r.id === roleId);
+            return role ? role.name : roleId;
+        });
+    };
+
+    // Helper function to get subscription info for search
+    const getSubscriptionInfo = (userId: string) => {
+        const subscription = subscriptions.get(userId);
+        if (!subscription) {
+            return { status: 'Free', isActive: false, licenseKey: '' };
+        }
+
+        const isActive = subscription.is_active && new Date(subscription.expiry_date) > new Date();
+        return {
+            status: isActive ? 'Premium' : 'Expired',
+            isActive,
+            licenseKey: subscription.license_key
+        };
+    };
+
+    // Enhanced function to search in all user fields and related data
     const searchInUser = (user: UserPublic, term: string): boolean => {
         const searchLower = term.toLowerCase().trim();
-
         if (!searchLower) return true;
 
-        // Search in all text fields
-        const searchFields = [
+        // Basic user fields
+        const basicFields = [
             user.full_name,
             user.email,
             user.phone_number,
             user.referral_code,
-            user.id,
-            // Convert boolean and array fields to searchable strings
+            user.id
+        ].filter(field => field); // Remove null/undefined values
+
+        // Status fields
+        const statusFields = [
             user.is_active ? 'active' : 'inactive',
-            user.google_id ? 'google' : 'email',
-            user.subscription_id ? 'premium' : 'free',
-            // Search in roles
-            ...(user.role_ids || []),
-            // Search in formatted date
-            new Date(user.created_at).toLocaleDateString('vi-VN')
+            user.google_id ? 'google' : 'email'
         ];
 
-        return searchFields.some(field =>
+        // Role names
+        const userRoleNames = getRoleNames(user.role_ids || []);
+
+        // Subscription information
+        const subscriptionInfo = getSubscriptionInfo(user.id);
+        const subscriptionFields = [
+            subscriptionInfo.status.toLowerCase(), // 'free', 'premium', 'expired'
+            subscriptionInfo.licenseKey
+        ];
+
+        // Date fields (formatted for Vietnamese locale)
+        const dateFields = [];
+        try {
+            if (user.created_at) {
+                const createdDate = new Date(user.created_at);
+                dateFields.push(
+                    createdDate.toLocaleDateString('vi-VN'),
+                    createdDate.toLocaleDateString('en-US'),
+                    createdDate.getFullYear().toString()
+                );
+            }
+            if (user.updated_at) {
+                const updatedDate = new Date(user.updated_at);
+                dateFields.push(
+                    updatedDate.toLocaleDateString('vi-VN'),
+                    updatedDate.toLocaleDateString('en-US'),
+                    updatedDate.getFullYear().toString()
+                );
+            }
+        } catch (error) {
+            // Skip invalid dates
+        }
+
+        // Combine all searchable fields
+        const allSearchableFields = [
+            ...basicFields,
+            ...statusFields,
+            ...userRoleNames,
+            ...subscriptionFields,
+            ...dateFields
+        ];
+
+        // Check if any field contains the search term
+        return allSearchableFields.some(field =>
             field && field.toString().toLowerCase().includes(searchLower)
         );
     };
@@ -80,12 +171,11 @@ const UserSearch: React.FC<UserSearchProps> = ({
             return users;
         }
         return users.filter(user => searchInUser(user, searchTerm));
-    }, [users, searchTerm]);
-
-    // Update parent component when filtered users change
+    }, [users, searchTerm]);    // Update parent component when filtered users change
     React.useEffect(() => {
-        onFilteredUsers(filteredUsers);
-    }, [filteredUsers, onFilteredUsers]);
+        const isActivelyFiltering = searchTerm.trim() !== '';
+        onFilteredUsers(filteredUsers, isActivelyFiltering);
+    }, [filteredUsers, onFilteredUsers, searchTerm]);
 
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(event.target.value);
@@ -103,39 +193,38 @@ const UserSearch: React.FC<UserSearchProps> = ({
 
     const stats = getSearchStats(); return (
         <Paper elevation={0} sx={{ p: 1.5, mb: 1.5, bgcolor: 'background.paper' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <TextField
-                    fullWidth
-                    size="small"
-                    placeholder="Tìm kiếm user theo tên, email, số điện thoại, trạng thái, subscription..."
-                    value={searchTerm}
-                    onChange={handleSearchChange}
-                    disabled={loading}
-                    InputProps={{
-                        startAdornment: (
-                            <InputAdornment position="start">
-                                <SearchIcon fontSize="small" color="action" />
-                            </InputAdornment>
-                        ),
-                        endAdornment: searchTerm && (
-                            <InputAdornment position="end">
-                                <IconButton
-                                    size="small"
-                                    onClick={handleClearSearch}
-                                    edge="end"
-                                >
-                                    <ClearIcon fontSize="small" />
-                                </IconButton>
-                            </InputAdornment>
-                        ),
-                    }}
-                    sx={{
-                        '& .MuiOutlinedInput-root': {
-                            fontSize: '0.8125rem',
-                            height: '36px',
-                        }
-                    }}
-                />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>                <TextField
+                fullWidth
+                size="small"
+                placeholder="Tìm kiếm theo tên, email, SĐT, trạng thái, subscription, vai trò, mã giới thiệu, ngày tham gia..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                disabled={loading}
+                InputProps={{
+                    startAdornment: (
+                        <InputAdornment position="start">
+                            <SearchIcon fontSize="small" color="action" />
+                        </InputAdornment>
+                    ),
+                    endAdornment: searchTerm && (
+                        <InputAdornment position="end">
+                            <IconButton
+                                size="small"
+                                onClick={handleClearSearch}
+                                edge="end"
+                            >
+                                <ClearIcon fontSize="small" />
+                            </IconButton>
+                        </InputAdornment>
+                    ),
+                }}
+                sx={{
+                    '& .MuiOutlinedInput-root': {
+                        fontSize: '0.8125rem',
+                        height: '36px',
+                    }
+                }}
+            />
 
                 <IconButton
                     size="small"
@@ -145,9 +234,7 @@ const UserSearch: React.FC<UserSearchProps> = ({
                 >
                     <FilterIcon fontSize="small" />
                 </IconButton>
-            </Box>
-
-            {/* Search Statistics - Compact */}
+            </Box>            {/* Search Statistics - Compact */}
             <Box sx={{
                 display: 'flex',
                 alignItems: 'center',
@@ -164,10 +251,13 @@ const UserSearch: React.FC<UserSearchProps> = ({
                                 variant="outlined"
                                 sx={{ height: '20px', fontSize: '0.6875rem' }}
                             />
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6875rem' }}>
+                                (trang hiện tại)
+                            </Typography>
                         </>
                     ) : (
                         <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6875rem' }}>
-                            {stats.total} users
+                            {stats.total} users (trang hiện tại)
                         </Typography>
                     )}
                 </Box>
@@ -182,22 +272,24 @@ const UserSearch: React.FC<UserSearchProps> = ({
                         sx={{ height: '20px', fontSize: '0.6875rem', maxWidth: '120px' }}
                     />
                 )}
-            </Box>            {/* Quick Search Filters - Compact */}
+            </Box>{/* Quick Search Filters - Compact */}
             {showFilters && (
                 <>
                     <Divider sx={{ my: 1 }} />
                     <Box>
                         <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontSize: '0.6875rem' }}>
                             Bộ lọc nhanh:
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        </Typography>                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                             {[
                                 { label: 'Active', value: 'active' },
                                 { label: 'Inactive', value: 'inactive' },
                                 { label: 'Premium', value: 'premium' },
                                 { label: 'Free', value: 'free' },
+                                { label: 'Expired', value: 'expired' },
                                 { label: 'Google', value: 'google' },
-                                { label: 'Email', value: 'email' },
+                                { label: 'Email Login', value: 'email' },
+                                { label: 'Admin', value: 'admin' },
+                                { label: 'User', value: 'user' },
                             ].map((filter) => (
                                 <Chip
                                     key={filter.value}
