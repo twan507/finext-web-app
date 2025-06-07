@@ -176,8 +176,7 @@ export default function WatchlistsPage() {
                     </Box>
                 ) : (
                     <>
-                        <TableContainer sx={{ maxHeight: 600 }}>
-                            <Table stickyHeader>
+                        <TableContainer sx={{ maxHeight: 600 }}>                            <Table stickyHeader>
                                 <TableHead>
                                     <TableRow>
                                         <TableCell>ID</TableCell>
@@ -187,8 +186,7 @@ export default function WatchlistsPage() {
                                         <TableCell>Created</TableCell>
                                         <TableCell align="right">Actions</TableCell>
                                     </TableRow>
-                                </TableHead>
-                                <TableBody>
+                                </TableHead>                                <TableBody>
                                     {Array.isArray(watchlists) && watchlists.map((watchlist) => (
                                         <TableRow hover key={watchlist.id}>
                                             <TableCell>

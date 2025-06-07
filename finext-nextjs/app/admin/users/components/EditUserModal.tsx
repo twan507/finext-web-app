@@ -382,6 +382,15 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                             gap: 3,
                             mb: 3
                         }}>
+                            {/* Email - chỉ hiển thị */}
+                            <TextField
+                                fullWidth
+                                label="Email"
+                                value={localUser.email}
+                                disabled
+                                variant="outlined"
+                                helperText="Không thể chỉnh sửa"
+                            />
                             {/* Họ và tên - có thể chỉnh sửa */}
                             <TextField
                                 fullWidth
@@ -392,6 +401,17 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                                 variant="outlined"
                             />
 
+                            {/* Mã referral_code - có thể chỉnh sửa */}
+                            <TextField
+                                fullWidth
+                                label="Mã giới thiệu" // Changed label
+                                value={formData.referral_code} // Bind to formData
+                                onChange={handleInputChange('referral_code')} // Enable input change
+                                disabled={loading || Boolean(actionLoading) || isAdmin || isBroker} // Updated disabled logic
+                                variant="outlined"
+                                helperText="4 ký tự in hoa. Để trống nếu không có." // Updated helper text
+                            />
+
                             {/* Số điện thoại - có thể chỉnh sửa */}
                             <TextField
                                 fullWidth
@@ -400,27 +420,11 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                                 onChange={handleInputChange('phone_number')}
                                 disabled={loading}
                                 variant="outlined"
-                            />                            {/* Email - chỉ hiển thị */}
-                            <TextField
-                                fullWidth
-                                label="Email"
-                                value={localUser.email}
-                                disabled
-                                variant="outlined"
-                                helperText="Không thể chỉnh sửa"
-                            />                            {/* Mã referral_code - có thể chỉnh sửa */}
-                            <TextField
-                                fullWidth
-                                label="Mã giới thiệu" // Changed label
-                                value={formData.referral_code} // Bind to formData
-                                onChange={handleInputChange('referral_code')} // Enable input change
-                                disabled={loading || Boolean(actionLoading) || isAdmin || isBroker} // Updated disabled logic
-                                variant="outlined"
-                                helperText="4 ký tự chữ và số. Để trống nếu không có." // Updated helper text
                             />
+
                         </Box>
 
-                        <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                        <Box sx={{ display: 'flex', gap: 2, mb: 3, justifyContent: 'flex-end'  }}>
                             <Button
                                 onClick={handleUpdateBasicInfo}
                                 disabled={loading || Boolean(actionLoading)}

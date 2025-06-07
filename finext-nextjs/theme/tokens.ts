@@ -180,23 +180,83 @@ export const getMuiPaletteOptions = (mode: PaletteMode): PaletteOptions => {
 };
 
 // --------------------
-// TYPOGRAPHY TOKENS
+// BASE TYPOGRAPHY SIZES
+// --------------------
+const baseFontSizes = {
+  // Headers
+  h1: { xs: '2rem', sm: '2.25rem', md: '2.5rem' },
+  h2: { xs: '1.75rem', sm: '1.875rem', md: '2rem' },
+  h3: { xs: '1.5rem', sm: '1.625rem', md: '1.75rem' },
+  h4: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem' },
+  h5: { xs: '1.125rem', sm: '1.25rem', md: '1.375rem' },
+  h6: { xs: '1rem', sm: '1.1rem', md: '1.25rem' },
+
+  // Content text
+  subtitle1: { xs: '0.875rem', sm: '0.9375rem' },
+  subtitle2: { xs: '0.8125rem', sm: '0.875rem' },
+  body1: { xs: '0.8125rem', sm: '0.875rem' }, // Cỡ chữ chính
+  body2: { xs: '0.75rem', sm: '0.8125rem' }, // Cỡ chữ phụ
+  button: { xs: '0.75rem', sm: '0.875rem' },
+  caption: { xs: '0.6875rem', sm: '0.75rem' }, // Cỡ chữ nhỏ nhất
+  overline: { xs: '0.6875rem', sm: '0.75rem' },
+
+  // Custom variants
+  tableCell: { xs: '0.75rem', sm: '0.875rem' },
+  tableCellSmall: { xs: '0.6875rem', sm: '0.75rem' },
+
+  // Enhanced responsive variants
+  h4Enhanced: { xs: '1.5rem', sm: '2rem', md: '2.125rem' }, // Cho page headers
+  h5Enhanced: { xs: '1.125rem', sm: '1.25rem', md: '1.5rem' },
+};
+
+// --------------------
+// TYPOGRAPHY TOKENS (MUI Theme)
 // --------------------
 export const typographyTokens: ThemeOptions['typography'] = {
   fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-  h1: { fontSize: '2.5rem', fontWeight: 700 },
-  h2: { fontSize: '2rem', fontWeight: 700 },
-  h3: { fontSize: '1.75rem', fontWeight: 700 },
-  h4: { fontSize: '1.5rem', fontWeight: 600 },
-  h5: { fontSize: '1.25rem', fontWeight: 600 },
-  h6: { fontSize: '1.1rem', fontWeight: 600 },
-  subtitle1: { fontSize: '0.9375rem', fontWeight: 500 }, // Tăng từ 0.875rem lên 0.9375rem (+1px)
-  subtitle2: { fontSize: '0.875rem', fontWeight: 500 }, // Tăng từ 0.8125rem lên 0.875rem (+1px)
-  body1: { fontSize: '0.875rem', fontWeight: 400 }, // Tăng từ 0.8125rem lên 0.875rem (+1px) - Cỡ chữ chính
-  body2: { fontSize: '0.8125rem', fontWeight: 400 }, // Tăng từ 0.75rem lên 0.8125rem (+1px) - Cỡ chữ phụ
-  button: { fontSize: '0.875rem', textTransform: 'none', fontWeight: 500 }, // Tăng từ 0.8125rem lên 0.875rem (+1px)
-  caption: { fontSize: '0.75rem', fontWeight: 400 }, // Tăng từ 0.6875rem lên 0.75rem (+1px) - Cỡ chữ nhỏ nhất
-  overline: { fontSize: '0.75rem', fontWeight: 400, textTransform: 'uppercase' }, // Tăng từ 0.6875rem lên 0.75rem (+1px)
+  h1: { fontSize: baseFontSizes.h1.md, fontWeight: 700 },
+  h2: { fontSize: baseFontSizes.h2.md, fontWeight: 700 },
+  h3: { fontSize: baseFontSizes.h3.md, fontWeight: 700 },
+  h4: { fontSize: baseFontSizes.h4.md, fontWeight: 600 },
+  h5: { fontSize: baseFontSizes.h5.md, fontWeight: 600 },
+  h6: { fontSize: baseFontSizes.h6.md, fontWeight: 600 },
+  subtitle1: { fontSize: baseFontSizes.subtitle1.sm, fontWeight: 500 },
+  subtitle2: { fontSize: baseFontSizes.subtitle2.sm, fontWeight: 500 },
+  body1: { fontSize: baseFontSizes.body1.sm, fontWeight: 400 },
+  body2: { fontSize: baseFontSizes.body2.sm, fontWeight: 400 },
+  button: { fontSize: baseFontSizes.button.sm, textTransform: 'none', fontWeight: 500 },
+  caption: { fontSize: baseFontSizes.caption.sm, fontWeight: 400 },
+  overline: { fontSize: baseFontSizes.overline.sm, fontWeight: 400, textTransform: 'uppercase' },
+};
+
+// --------------------
+// RESPONSIVE TYPOGRAPHY TOKENS
+// --------------------
+export const responsiveTypographyTokens = {
+  // Headers - using base sizes
+  h1: { fontSize: baseFontSizes.h1 },
+  h2: { fontSize: baseFontSizes.h2 },
+  h3: { fontSize: baseFontSizes.h3 },
+  h4: { fontSize: baseFontSizes.h4 },
+  h5: { fontSize: baseFontSizes.h5 },
+  h6: { fontSize: baseFontSizes.h6 },
+
+  // Enhanced headers for special use cases
+  h4Enhanced: { fontSize: baseFontSizes.h4Enhanced },
+  h5Enhanced: { fontSize: baseFontSizes.h5Enhanced },
+
+  // Content text
+  subtitle1: { fontSize: baseFontSizes.subtitle1 },
+  subtitle2: { fontSize: baseFontSizes.subtitle2 },
+  body1: { fontSize: baseFontSizes.body1 },
+  body2: { fontSize: baseFontSizes.body2 },
+  button: { fontSize: baseFontSizes.button },
+  caption: { fontSize: baseFontSizes.caption },
+  overline: { fontSize: baseFontSizes.overline },
+
+  // Table specific
+  tableCell: { fontSize: baseFontSizes.tableCell },
+  tableCellSmall: { fontSize: baseFontSizes.tableCellSmall },
 };
 
 // --------------------
@@ -232,4 +292,6 @@ export const breakpointTokens: ThemeOptions['breakpoints'] = {
 export const layoutTokens = {
   drawerWidth: 240, // Chiều rộng drawer mặc định (khi có text)
   compactDrawerWidth: 64, // Chiều rộng drawer mới (chỉ icon, tương đương w-16)
+  appBarHeight: 64, // Chiều cao AppBar tiêu chuẩn
+  toolbarMinHeight: 56, // Chiều cao tối thiểu của Toolbar
 };

@@ -15,7 +15,7 @@ import {
   UnfoldMore as ExpandIcon, UnfoldLess as CollapseIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { colorTokens } from 'theme/tokens';
+import { colorTokens, responsiveTypographyTokens } from 'theme/tokens';
 import UserSearch from './components/UserSearch';
 import AddUserModal from './components/AddUserModal';
 import EditUserModal from './components/EditUserModal';
@@ -74,7 +74,8 @@ const UsersPage: React.FC = () => {
 
   const [users, setUsers] = useState<UserPublic[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserPublic[]>([]);
-  const [isFiltering, setIsFiltering] = useState(false); const [roles, setRoles] = useState<RolePublic[]>([]);
+  const [isFiltering, setIsFiltering] = useState(false);
+  const [roles, setRoles] = useState<RolePublic[]>([]);
   const [subscriptions, setSubscriptions] = useState<Map<string, SubscriptionPublic>>(new Map());
   const [subscriptionsLoading, setSubscriptionsLoading] = useState(false);
   const [protectedEmails, setProtectedEmails] = useState<string[]>([]);
@@ -82,14 +83,17 @@ const UsersPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalCount, setTotalCount] = useState(0); const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserPublic | null>(null);
   const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [expandedView, setExpandedView] = useState(false);
   const [openAddUserModal, setOpenAddUserModal] = useState(false);
   const [openEditUserModal, setOpenEditUserModal] = useState(false);
-  const [userToEdit, setUserToEdit] = useState<UserPublic | null>(null); const fetchUsers = useCallback(async () => {
+  const [userToEdit, setUserToEdit] = useState<UserPublic | null>(null);
+
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -97,7 +101,9 @@ const UsersPage: React.FC = () => {
       const response = await apiClient<PaginatedUsersResponse>({
         url: `/api/v1/users/?skip=${page * rowsPerPage}&limit=${rowsPerPage}`,
         method: 'GET',
-      }); if (response.status === 200 && response.data &&
+      });
+
+      if (response.status === 200 && response.data &&
         Array.isArray(response.data.items) && typeof response.data.total === 'number') {
         setUsers(response.data.items);
         setTotalCount(response.data.total);
@@ -114,7 +120,9 @@ const UsersPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage]); const fetchRoles = useCallback(async () => {
+  }, [page, rowsPerPage]);
+
+  const fetchRoles = useCallback(async () => {
     try {
       const response = await apiClient<{ items: RolePublic[]; total: number }>({
         url: `/api/v1/roles/?skip=0&limit=200`,
@@ -142,7 +150,9 @@ const UsersPage: React.FC = () => {
     } catch (err: any) {
       console.error('Failed to load protected emails:', err.message);
     }
-  }, []); const fetchSubscriptions = useCallback(async (userIds: string[]) => {
+  }, []);
+
+  const fetchSubscriptions = useCallback(async (userIds: string[]) => {
     if (userIds.length === 0) return;
 
     setSubscriptionsLoading(true);
@@ -184,7 +194,9 @@ const UsersPage: React.FC = () => {
     } finally {
       setSubscriptionsLoading(false);
     }
-  }, [users]); useEffect(() => {
+  }, [users]);
+
+  useEffect(() => {
     fetchRoles();
     fetchProtectedEmails();
   }, [fetchRoles, fetchProtectedEmails]);
@@ -207,18 +219,24 @@ const UsersPage: React.FC = () => {
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
-  }; const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(event.target.value, 10);
     setRowsPerPage(value);
     setPage(0);
-  }; const handleFilteredUsers = (filtered: UserPublic[], isActivelyFiltering: boolean) => {
+  };
+
+  const handleFilteredUsers = (filtered: UserPublic[], isActivelyFiltering: boolean) => {
     setFilteredUsers(filtered);
     setIsFiltering(isActivelyFiltering);
     // Only reset page when actively switching between filtering states
     if (isActivelyFiltering !== isFiltering) {
       setPage(0);
     }
-  }; const handleOpenDeleteDialog = (user: UserPublic) => {
+  };
+
+  const handleOpenDeleteDialog = (user: UserPublic) => {
     // Check if user is protected
     if (isUserProtected(user.email)) {
       setError('Cannot delete protected user account.');
@@ -249,7 +267,9 @@ const UsersPage: React.FC = () => {
     setDeleteConfirmEmail('');
     setDeleteLoading(false);
     setOpenDeleteDialog(false);
-  }; const handleDeleteUser = async () => {
+  };
+
+  const handleDeleteUser = async () => {
     if (!userToDelete) return;
 
     // Validate email confirmation
@@ -302,7 +322,9 @@ const UsersPage: React.FC = () => {
     } finally {
       setDeleteLoading(false);
     }
-  }; const handleAddUser = () => {
+  };
+
+  const handleAddUser = () => {
     setOpenAddUserModal(true);
   };
 
@@ -333,7 +355,9 @@ const UsersPage: React.FC = () => {
       const role = roles.find(r => r.id === roleId);
       return role ? role.name : roleId;
     });
-  };  // Helper function to get subscription info
+  };
+
+  // Helper function to get subscription info
   const getSubscriptionInfo = (userId: string): { status: string; color: 'success' | 'default' | 'primary'; details?: SubscriptionPublic; loading?: boolean } => {
     // If subscriptions are still loading, show loading state
     if (subscriptionsLoading) {
@@ -362,7 +386,9 @@ const UsersPage: React.FC = () => {
   // Helper function to check if a user is protected
   const isUserProtected = (userEmail: string): boolean => {
     return protectedEmails.includes(userEmail);
-  };// Calculate paginated users - use server pagination when not filtering, client pagination when filtering
+  };
+
+  // Calculate paginated users - use server pagination when not filtering, client pagination when filtering
   const paginatedUsers = React.useMemo(() => {
     if (isFiltering) {
       // Client-side pagination for filtered results
@@ -383,23 +409,86 @@ const UsersPage: React.FC = () => {
   const displayTotalCount = isFiltering ? filteredUsers.length : totalCount;
 
   return (
-    <Box>
+    <Box sx={{
+      p: { xs: 1, sm: 2, md: 3 },
+      maxWidth: '100%',
+      overflow: 'hidden'
+    }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h4" component="h1">Users Management</Typography>
-        <Box>
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={responsiveTypographyTokens.h4Enhanced}
+        >
+          Users Management
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
             variant="outlined"
             startIcon={expandedView ? <CollapseIcon /> : <ExpandIcon />}
             onClick={() => setExpandedView(!expandedView)}
-            sx={{ mr: 1 }}
+            sx={{
+              minWidth: { xs: 'auto', sm: 'auto', md: 'auto' },
+              '& .MuiButton-startIcon': {
+                margin: { xs: 0, sm: 0, md: '0 8px 0 -4px' }
+              },
+              px: { xs: 1, sm: 2 },
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center'
+            }}
           >
-            {expandedView ? 'Compact View' : 'Detailed View'}
+            <Box
+              component="span"
+              sx={{
+                display: { xs: 'none', sm: 'none', md: 'inline' }
+              }}
+            >
+              {expandedView ? 'Compact View' : 'Detailed View'}
+            </Box>
           </Button>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddUser}>
-            Add User
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleAddUser}
+            sx={{
+              minWidth: { xs: 'auto', sm: 'auto', md: 'auto' },
+              '& .MuiButton-startIcon': {
+                margin: { xs: 0, sm: 0, md: '0 8px 0 -4px' }
+              },
+              px: { xs: 1, sm: 2 },
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center'
+            }}
+          >
+            <Box
+              component="span"
+              sx={{
+                display: { xs: 'none', sm: 'none', md: 'inline' }
+              }}
+            >
+              Add User
+            </Box>
           </Button>
         </Box>
-      </Box>{error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}      <UserSearch
+      </Box>
+      {error && (
+        <Alert
+          severity="error"
+          sx={{
+            mb: 2,
+            ...responsiveTypographyTokens.body2,
+            '& .MuiAlert-message': {
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }
+          }}
+        >
+          {error}
+        </Alert>
+      )}
+      <UserSearch
         users={users}
         roles={roles}
         subscriptions={subscriptions}
@@ -408,26 +497,106 @@ const UsersPage: React.FC = () => {
         onFilteredUsers={handleFilteredUsers}
         loading={loading}
       />
-
-      <Paper sx={{ width: '100%', overflow: 'hidden', borderRadius: 2 }}>
+      <Paper sx={{
+        width: '100%',
+        overflow: 'hidden',
+        borderRadius: 2,
+        '& .MuiTableContainer-root': {
+          maxHeight: { xs: 'calc(100vh - 300px)', sm: 'none' }
+        }
+      }}>
         {loading && users.length === 0 ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 3, minHeight: 300 }}>
             <CircularProgress />
-          </Box>) : (<>
-            <TableContainer sx={{ overflowX: expandedView ? 'auto' : 'hidden' }}>
-              <Table sx={{ minWidth: expandedView ? 1400 : 'auto' }}>
+          </Box>
+        ) : (
+          <>
+            <TableContainer sx={{ overflowX: 'auto' }}>
+              <Table sx={{
+                minWidth: expandedView ? 1400 : { xs: 280, sm: 420, md: 650 },
+                tableLayout: 'auto',
+              }}>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ minWidth: expandedView ? 250 : 200 }}>Name</TableCell>
-                    <TableCell sx={{ minWidth: expandedView ? 150 : 120 }}>Contact</TableCell>
-                    <TableCell sx={{ minWidth: expandedView ? 120 : 100 }}>Subscription</TableCell>
-                    <TableCell sx={{ minWidth: expandedView ? 100 : 80 }}>Status</TableCell>
-                    {expandedView && <TableCell sx={{ minWidth: 120 }}>Roles</TableCell>}
-                    {expandedView && <TableCell sx={{ minWidth: 120 }}>Joined</TableCell>}
-                    {expandedView && <TableCell sx={{ minWidth: 120 }}>Updated</TableCell>}
-                    {expandedView && <TableCell sx={{ minWidth: 140 }}>Referral Code</TableCell>}
-                    {expandedView && <TableCell sx={{ minWidth: 120 }}>Login Method</TableCell>}
-                    <TableCell align="right" sx={{ minWidth: expandedView ? 120 : 100 }}>   </TableCell>
+                    <TableCell sx={{
+                      minWidth: 200,
+                      width: 'auto',
+                    }}>
+                      Name
+                    </TableCell>
+                    <TableCell sx={{
+                      minWidth: 120,
+                      width: 'auto',
+                      display: expandedView ? 'table-cell' : { xs: 'none', md: 'table-cell' }
+                    }}>
+                      Contact
+                    </TableCell>
+                    <TableCell sx={{
+                      minWidth: 140,
+                      width: 'auto',
+                      display: expandedView ? 'table-cell' : { xs: 'none', md: 'table-cell' }
+                    }}>
+                      Subscription
+                    </TableCell>
+                    <TableCell sx={{
+                      minWidth: 100,
+                      width: 'auto',
+                      display: expandedView ? 'table-cell' : { xs: 'none', sm: 'table-cell' }
+                    }}>
+                      Status
+                    </TableCell>
+                    {expandedView && (
+                      <TableCell sx={{
+                        minWidth: 120,
+                        width: 'auto'
+                      }}>
+                        Roles
+                      </TableCell>
+                    )}
+                    {expandedView && (
+                      <TableCell sx={{
+                        minWidth: 100,
+                        width: 'auto'
+                      }}>
+                        Joined
+                      </TableCell>
+                    )}
+                    {expandedView && (
+                      <TableCell sx={{
+                        minWidth: 100,
+                        width: 'auto'
+                      }}>
+                        Updated
+                      </TableCell>
+                    )}
+                    {expandedView && (
+                      <TableCell sx={{
+                        minWidth: 120,
+                        width: 'auto'
+                      }}>
+                        Referral Code
+                      </TableCell>
+                    )}
+                    {expandedView && (
+                      <TableCell sx={{
+                        minWidth: 100,
+                        width: 'auto'
+                      }}>
+                        Login Method
+                      </TableCell>
+                    )}
+                    <TableCell align="center" sx={{
+                      minWidth: 80,
+                      width: 80,
+                      position: 'sticky',
+                      right: 0,
+                      backgroundColor: 'background.paper',
+                      zIndex: 1,
+                      borderLeft: '1px solid',
+                      borderColor: 'divider'
+                    }}>
+                      Actions
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -438,13 +607,39 @@ const UsersPage: React.FC = () => {
                           <Avatar src={user.avatar_url || undefined} sx={{ mr: 2, width: 25, height: 25 }}>
                             {user.full_name ? user.full_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
                           </Avatar>
-                          <Box sx={{ flex: 1 }}>                            <Typography variant="body1" fontWeight="medium" sx={{ mb: 0.5 }}>{user.full_name}</Typography>
-                            <Typography variant="body2" color="text.secondary">{user.email}</Typography>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography
+                              variant="body1"
+                              fontWeight="medium"
+                              sx={{
+                                mb: 0.5,
+                                ...responsiveTypographyTokens.body1,
+                                lineHeight: 1.2
+                              }}
+                            >
+                              {user.full_name}
+                            </Typography>
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              sx={{
+                                ...responsiveTypographyTokens.body2,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              {user.email}
+                            </Typography>
                           </Box>
                         </Box>
                       </TableCell>
-                      <TableCell>{user.phone_number || 'N/A'}</TableCell>
-                      <TableCell>
+                      <TableCell sx={{ display: expandedView ? 'table-cell' : { xs: 'none', md: 'table-cell' } }}>
+                        <Typography sx={responsiveTypographyTokens.tableCell}>
+                          {user.phone_number || 'N/A'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={{ display: expandedView ? 'table-cell' : { xs: 'none', md: 'table-cell' } }}>
                         {(() => {
                           const subscriptionInfo = getSubscriptionInfo(user.id);
                           return (
@@ -483,7 +678,7 @@ const UsersPage: React.FC = () => {
                           );
                         })()}
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ display: expandedView ? 'table-cell' : { xs: 'none', sm: 'table-cell' } }}>
                         <Chip
                           label={user.is_active ? 'Active' : 'Inactive'}
                           color={user.is_active ? 'success' : 'default'}
@@ -498,38 +693,43 @@ const UsersPage: React.FC = () => {
                                 <Chip key={index} label={roleName} size="small" variant="outlined" />
                               ))
                             ) : (
-                              <Typography variant="body2" color="text.secondary">N/A</Typography>
+                              <Typography variant="body2" color="text.secondary" sx={responsiveTypographyTokens.tableCell}>N/A</Typography>
                             )}
                           </Box>
                         </TableCell>
                       )}
                       {expandedView && (
                         <TableCell>
-                          {(() => {
-                            if (!user.created_at) {
-                              return 'N/A';
-                            }
-                            try {
-                              const formatted = format(parseISO(user.created_at), 'dd/MM/yyyy');
-                              return formatted;
-                            } catch (error) {
-                              return 'Invalid Date';
-                            }
-                          })()}
+                          <Typography sx={responsiveTypographyTokens.tableCell}>
+                            {(() => {
+                              if (!user.created_at) {
+                                return 'N/A';
+                              }
+                              try {
+                                const formatted = format(parseISO(user.created_at), 'dd/MM/yyyy');
+                                return formatted;
+                              } catch (error) {
+                                return 'Invalid Date';
+                              }
+                            })()}
+                          </Typography>
                         </TableCell>
-                      )}{expandedView && (
+                      )}
+                      {expandedView && (
                         <TableCell>
-                          {(() => {
-                            if (!user.updated_at) {
-                              return 'N/A';
-                            }
-                            try {
-                              const formatted = format(parseISO(user.updated_at), 'dd/MM/yyyy');
-                              return formatted;
-                            } catch (error) {
-                              return 'Invalid Date';
-                            }
-                          })()}
+                          <Typography sx={responsiveTypographyTokens.tableCell}>
+                            {(() => {
+                              if (!user.updated_at) {
+                                return 'N/A';
+                              }
+                              try {
+                                const formatted = format(parseISO(user.updated_at), 'dd/MM/yyyy');
+                                return formatted;
+                              } catch (error) {
+                                return 'Invalid Date';
+                              }
+                            })()}
+                          </Typography>
                         </TableCell>
                       )}
                       {expandedView && (
@@ -542,9 +742,10 @@ const UsersPage: React.FC = () => {
                               color="primary"
                             />
                           ) : (
-                            <Typography variant="body2" color="text.secondary">N/A</Typography>
+                            <Typography variant="body2" color="text.secondary" sx={responsiveTypographyTokens.tableCell}>N/A</Typography>
                           )}
-                        </TableCell>)}
+                        </TableCell>
+                      )}
                       {expandedView && (
                         <TableCell>
                           <Chip
@@ -555,15 +756,40 @@ const UsersPage: React.FC = () => {
                           />
                         </TableCell>
                       )}
-                      <TableCell align="right">
-                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'right' }}>
+                      <TableCell align="right" sx={{
+                        position: 'sticky',
+                        right: 0,
+                        backgroundColor: 'background.paper',
+                        zIndex: 1,
+                        borderLeft: '1px solid',
+                        borderColor: 'divider',
+                        minWidth: 80,
+                        width: 80
+                      }}>
+                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
                           <Tooltip title="Edit User">
-                            <IconButton size="small" onClick={() => handleEditUser(user)}>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleEditUser(user)}
+                              sx={{
+                                minWidth: { xs: 32, sm: 'auto' },
+                                width: { xs: 32, sm: 'auto' },
+                                height: { xs: 32, sm: 'auto' }
+                              }}
+                            >
                               <EditIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="Delete User">
-                            <IconButton size="small" onClick={() => handleOpenDeleteDialog(user)}>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenDeleteDialog(user)}
+                              sx={{
+                                minWidth: { xs: 32, sm: 'auto' },
+                                width: { xs: 32, sm: 'auto' },
+                                height: { xs: 32, sm: 'auto' }
+                              }}
+                            >
                               <DeleteIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
@@ -573,12 +799,13 @@ const UsersPage: React.FC = () => {
                   ))}
                   {Array.isArray(users) && users.length === 0 && !loading && (
                     <TableRow>
-                      <TableCell colSpan={expandedView ? 9 : 5} align="center">No users found.</TableCell>
+                      <TableCell colSpan={expandedView ? 10 : 5} align="center">No users found.</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
               </Table>
-            </TableContainer>            <TablePagination
+            </TableContainer>
+            <TablePagination
               rowsPerPageOptions={[5, 10, 50, { label: 'All', value: 99999 }]}
               component="div"
               count={displayTotalCount}
@@ -586,6 +813,33 @@ const UsersPage: React.FC = () => {
               page={page}
               onPageChange={handleChangePage}
               onRowsPerPageChange={handleChangeRowsPerPage}
+              labelRowsPerPage={
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                  Rows per page:
+                </Box>
+              }
+              sx={{
+                '& .MuiTablePagination-toolbar': {
+                  minHeight: { xs: 48, sm: 52 },
+                  px: { xs: 1, sm: 2 }
+                },
+                '& .MuiTablePagination-selectLabel': {
+                  ...responsiveTypographyTokens.tableCellSmall,
+                  margin: 0
+                },
+                '& .MuiTablePagination-displayedRows': {
+                  ...responsiveTypographyTokens.tableCellSmall,
+                  margin: 0
+                },
+                '& .MuiTablePagination-select': {
+                  ...responsiveTypographyTokens.tableCellSmall
+                },
+                '& .MuiTablePagination-actions': {
+                  '& .MuiIconButton-root': {
+                    padding: { xs: '4px', sm: '8px' }
+                  }
+                }
+              }}
             />
           </>
         )}
@@ -598,7 +852,8 @@ const UsersPage: React.FC = () => {
       >
         <DialogTitle sx={{ color: 'error.main', fontWeight: 'bold' }}>
           ⚠️ Confirm User Deletion
-        </DialogTitle>        <DialogContent>          {/* User Information */}
+        </DialogTitle>
+        <DialogContent>
           <Box sx={{
             p: 1.5,
             bgcolor: componentColors.modal.noteBackground,
@@ -616,7 +871,7 @@ const UsersPage: React.FC = () => {
                 {userToDelete.phone_number}
               </Typography>
             )}
-          </Box>        {/* Combined User Info and Warning Note Box */}
+          </Box>
           <Box sx={{
             mb: 3,
             p: 2,
@@ -635,11 +890,6 @@ const UsersPage: React.FC = () => {
             },
             position: 'relative'
           }}>
-
-
-
-
-            {/* Warning Points */}
             <Typography
               variant="body2"
               fontWeight="bold"
@@ -669,7 +919,6 @@ const UsersPage: React.FC = () => {
               • Users with admin, broker, or other roles must have those roles revoked first
             </Typography>
           </Box>
-
           <TextField
             autoFocus
             fullWidth
@@ -707,13 +956,13 @@ const UsersPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
       <AddUserModal
         open={openAddUserModal}
         onClose={handleCloseAddUserModal}
         onUserAdded={handleUserAdded}
         roles={roles}
-      />      <EditUserModal
+      />
+      <EditUserModal
         open={openEditUserModal}
         user={userToEdit}
         roles={roles}

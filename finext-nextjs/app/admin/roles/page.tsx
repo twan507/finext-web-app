@@ -133,8 +133,7 @@ const RolesPage: React.FC = () => {
                     </Box>
                 ) : (
                     <>
-                        <TableContainer sx={{ maxHeight: 600 }}>
-                            <Table stickyHeader>
+                        <TableContainer sx={{ maxHeight: 600 }}>                            <Table stickyHeader>
                                 <TableHead>
                                     <TableRow>
                                         <TableCell>Name</TableCell>
@@ -144,8 +143,7 @@ const RolesPage: React.FC = () => {
                                         <TableCell>Updated At</TableCell>
                                         <TableCell align="right">Actions</TableCell>
                                     </TableRow>
-                                </TableHead>
-                                <TableBody>
+                                </TableHead>                                <TableBody>
                                     {Array.isArray(roles) && roles.map((role) => (
                                         <TableRow hover key={role.id}>
                                             <TableCell>

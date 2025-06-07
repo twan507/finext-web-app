@@ -263,8 +263,7 @@ export default function TransactionsPage() {
                     </Box>
                 ) : (
                     <>
-                        <TableContainer sx={{ maxHeight: 600 }}>
-                            <Table stickyHeader>
+                        <TableContainer sx={{ maxHeight: 600 }}>                            <Table stickyHeader>
                                 <TableHead>
                                     <TableRow>
                                         <TableCell sx={{minWidth: 120}}>ID</TableCell>
@@ -278,8 +277,7 @@ export default function TransactionsPage() {
                                         <TableCell sx={{minWidth: 120}}>Broker Code</TableCell>
                                         <TableCell align="right" sx={{minWidth: 180}}>Actions</TableCell>
                                     </TableRow>
-                                </TableHead>
-                                <TableBody>
+                                </TableHead>                                <TableBody>
                                     {Array.isArray(transactions) && transactions.map((transaction) => (
                                         <TableRow hover key={transaction.id}>
                                             <TableCell>

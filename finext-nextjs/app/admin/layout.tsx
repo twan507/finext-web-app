@@ -104,7 +104,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const currentPathname = usePathname();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [popoverAnchorEl, setPopoverAnchorEl] = useState<null | HTMLElement>(null);
@@ -329,23 +329,60 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         currentGroupText = bestMatchGroup.groupText;
         currentGroupIcon = React.cloneElement(bestMatchGroup.groupIcon, { sx: { mr: 0.5, fontSize: "inherit" } });
       }
-    }
-
-    return (
-      <Breadcrumbs aria-label="breadcrumb" sx={{ color: 'text.secondary' }}>
-        <MuiLink component={Link} underline="hover" color="inherit" href="/admin/dashboard" sx={{ display: 'flex', alignItems: 'center' }}>
-          <DashboardIcon sx={{ mr: 0.5, fontSize: "inherit" }} />
+    } return (
+      <Breadcrumbs
+        aria-label="breadcrumb"
+        sx={{
+          color: 'text.secondary',
+          '& .MuiBreadcrumbs-ol': {
+            alignItems: 'center',
+          },
+          '& .MuiBreadcrumbs-li': {
+            display: 'flex',
+            alignItems: 'center',
+          }
+        }}
+      >
+        <MuiLink
+          component={Link}
+          underline="hover"
+          color="inherit"
+          href="/admin/dashboard"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            textDecoration: 'none',
+            '&:hover': {
+              textDecoration: 'underline'
+            }
+          }}
+        >
+          <DashboardIcon sx={{ mr: 0.5, fontSize: "1rem" }} />
           Dashboard
-        </MuiLink>
-        {currentGroupText && (
-          <Typography color="text.secondary" sx={{ display: 'flex', alignItems: 'center' }}>
-            {currentGroupIcon}
+        </MuiLink>        {currentGroupText && currentGroupIcon && (
+          <Typography
+            color="text.secondary"
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              fontSize: '0.875rem'
+            }}
+          >
+            {React.cloneElement(currentGroupIcon, { sx: { mr: 0.5, fontSize: "1rem" } })}
             {currentGroupText}
           </Typography>
         )}
         {currentPathname !== '/admin/dashboard' && bestMatch && (
-          <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center' }}>
-            {currentPageIcon}
+          <Typography
+            color="text.primary"
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              fontSize: '0.875rem',
+              fontWeight: 500
+            }}
+          >
+            {React.cloneElement(currentPageIcon, { sx: { mr: 0.5, fontSize: "1rem" } })}
             {currentPageTitle}
           </Typography>
         )}
@@ -355,33 +392,66 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: theme.palette.background.default }}>
-      <CssBaseline />
-      <AppBar
+      <CssBaseline />      <AppBar
         position="fixed"
         elevation={0} // Style can be controlled via MuiProvider if needed
         sx={{
-          width: { md: `calc(100% - ${drawerWidth}px)` },
-          ml: { md: `${drawerWidth}px` },
+          width: { sm: `calc(100% - ${drawerWidth}px)` },
+          ml: { sm: `${drawerWidth}px` },
+          height: layoutTokens.appBarHeight,
           // bgcolor and borderBottom are now primarily controlled by MuiProvider's styleOverrides
         }}
-      >
-        <Toolbar sx={{ justifyContent: 'space-between', px: theme.spacing(3), py: theme.spacing(0) }}>
+      >        <Toolbar sx={{
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        px: { xs: theme.spacing(2), sm: theme.spacing(3) },
+        minHeight: `${layoutTokens.toolbarMinHeight}px !important`,
+        height: layoutTokens.appBarHeight,
+        maxHeight: layoutTokens.appBarHeight,
+      }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            {isMobile && (
+            {isMobile && ( // isMobile is true for 'xs' screens
               <MuiIconButton
                 color="inherit"
                 aria-label="open drawer"
                 edge="start"
                 onClick={handleDrawerToggle}
-                sx={{ mr: 2, color: 'text.primary' }}
+                sx={{ mr: 2, display: { sm: 'none' }, color: 'text.primary' }} // Correctly shows on xs, hidden on sm+
               >
                 <MenuIcon />
               </MuiIconButton>
             )}
-            {!isMobile && generateBreadcrumbs()}
-          </Box>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: theme.spacing(isMobile ? 1 : 2) }}>
+            {/* Corrected logic for breadcrumbs or mobile dashboard link */}            {isMobile ? ( // If on 'xs' screen (mobile)
+              currentPathname !== '/admin/dashboard' && ( // And not on the dashboard page itself
+                <MuiLink
+                  component={Link}
+                  underline="hover"
+                  color="inherit"
+                  href="/admin/dashboard"
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: 'text.primary',
+                    textDecoration: 'none',
+                    fontSize: '0.875rem',
+                    '&:hover': {
+                      textDecoration: 'underline'
+                    }
+                  }}
+                >
+                  <DashboardIcon sx={{ mr: 0.5, fontSize: "1rem" }} />
+                  Dashboard
+                </MuiLink>
+              )
+              // If on mobile AND on dashboard page, this part renders null, so only menu icon shows.
+            ) : ( // Else (if on 'sm' screen or larger - desktop)
+              generateBreadcrumbs() // Show full breadcrumbs
+            )}
+          </Box>          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: { xs: theme.spacing(1), sm: theme.spacing(1.5), md: theme.spacing(2) }
+          }}>
             <ThemeToggleButton />
             <UserMenu />
           </Box>
@@ -390,7 +460,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <Box
         component="nav"
-        sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }}
+        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
         aria-label="sidebar"
       >
         {/* Mobile Drawer */}
@@ -401,15 +471,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ModalProps={{ keepMounted: true }}
           elevation={0} // Consistent with desktop
           sx={{
-            display: { xs: 'block', md: 'none' },
+            display: { xs: 'block', sm: 'none' },
             '& .MuiDrawer-paper': {
               width: layoutTokens.drawerWidth, // full drawer width for mobile
               // bgcolor & borderRight will be inherited from MuiProvider styles
             },
           }}        >
           <Box sx={{ p: theme.spacing(2), display: 'flex', alignItems: 'center', borderBottom: `1px solid ${theme.palette.divider}` }}>
-            <LogoIcon sx={{ fontSize: '24px', color: 'primary.main', mr: 1 }} />
-            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Finext</Typography>
+            <Link href="/" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
+              <Image
+                src="/finext-icon-trans.png"
+                alt="Finext Logo"
+                width={20}
+                height={20}
+                style={{ height: '24px', width: 'auto', marginRight: theme.spacing(1) }}
+              />
+              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Finext</Typography>
+            </Link>
           </Box>
           <List sx={{ flexGrow: 1, overflowY: 'auto' }}>
             {navigationStructure.map((itemOrGroup) => {
@@ -458,7 +536,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Box sx={{ p: theme.spacing(1), mt: 'auto', borderTop: `1px solid ${theme.palette.divider}` }}>
             <ListItem disablePadding>
               <ListItemButton onClick={() => { logout(); handleDrawerToggle(); }}>
-                <ListItemIcon sx={{ color: 'text.secondary', minWidth: 40 }}><LogoutIcon /></ListItemIcon>
+                <ListItemIcon sx={{ color: 'text.secondary', minWidth: 40 }}>
+                  <LogoutIcon />
+                </ListItemIcon>
                 <ListItemText primary="Logout" />
               </ListItemButton>
             </ListItem>
@@ -469,7 +549,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <Drawer
           variant="permanent"
           sx={{
-            display: { xs: 'none', md: 'flex' },
+            display: { xs: 'none', sm: 'flex' },
             flexDirection: 'column',
             '& .MuiDrawer-paper': {
               boxSizing: 'border-box',
@@ -486,17 +566,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         >
           {drawerContent}
         </Drawer>
-      </Box>
-
-      <Box
+      </Box>      <Box
         component="main"
         sx={{
           flexGrow: 1,
           p: theme.spacing(3),
-          width: { md: `calc(100% - ${drawerWidth}px)` },
+          width: { sm: `calc(100% - ${drawerWidth}px)` },
           height: '100vh',
-          mt: `64px`, // Standard AppBar height
-          maxHeight: `calc(100vh - 64px)`,
+          mt: `${layoutTokens.appBarHeight}px`, // Updated AppBar height
+          maxHeight: `calc(100vh - ${layoutTokens.appBarHeight}px)`,
           overflowY: 'auto',
           bgcolor: theme.palette.mode === 'light' ? alpha(theme.palette.grey[500], 0.04) : theme.palette.background.default,
         }}

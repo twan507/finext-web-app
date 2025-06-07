@@ -280,7 +280,8 @@ const UserSearch: React.FC<UserSearchProps> = ({
                     <Box>
                         <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontSize: '0.6875rem' }}>
                             Bộ lọc nhanh:
-                        </Typography>                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                             {[
                                 { label: 'Active', value: 'active' },
                                 { label: 'Inactive', value: 'inactive' },
