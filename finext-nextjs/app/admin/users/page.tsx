@@ -1,7 +1,7 @@
 // finext-nextjs/app/admin/users/page.tsx
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { apiClient } from 'services/apiClient';
 import {
   Box, Typography, Paper, TableContainer, TextField,
@@ -19,6 +19,14 @@ import { colorTokens, responsiveTypographyTokens } from 'theme/tokens';
 import UserSearch from './components/UserSearch';
 import AddUserModal from './components/AddUserModal';
 import EditUserModal from './components/EditUserModal';
+import SortableTableHead from '../components/SortableTableHead';
+import {
+  SortConfig,
+  ColumnConfig,
+  sortData,
+  getNextSortDirection,
+  getResponsiveDisplayStyle
+} from '../components/TableSortUtils';
 
 // Interface for User data (matching UserPublic from backend)
 interface UserPublic {
@@ -87,11 +95,110 @@ const UsersPage: React.FC = () => {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserPublic | null>(null);
   const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [expandedView, setExpandedView] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false); const [expandedView, setExpandedView] = useState(false);
   const [openAddUserModal, setOpenAddUserModal] = useState(false);
   const [openEditUserModal, setOpenEditUserModal] = useState(false);
   const [userToEdit, setUserToEdit] = useState<UserPublic | null>(null);
+  // Sorting state
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);  // Column configuration for sortable table - using useMemo to include latest subscriptions state
+  const columnConfigs: ColumnConfig[] = useMemo(() => [
+    {
+      id: 'full_name',
+      label: 'Họ tên và Email',
+      sortable: true,
+      sortType: 'string',
+      accessor: (user: UserPublic) => user.full_name || user.email,
+      minWidth: expandedView ? 'auto' : 200
+      // No responsive config - always show in both compact and expanded view
+    }, {
+      id: 'phone_number',
+      label: 'Số điện thoại',
+      sortable: true,
+      sortType: 'string',
+      accessor: (user: UserPublic) => user.phone_number || '',
+      minWidth: expandedView ? 'auto' : 120,
+      responsive: { xs: 'none', sm: 'none' } // Hide from sm breakpoint down in compact view
+    }, {
+      id: 'subscription',
+      label: 'Gói đăng ký',
+      sortable: true,
+      sortType: 'string',
+      accessor: (user: UserPublic) => {
+        const subscription = subscriptions.get(user.id);
+        if (!subscription) return 'Basic';
+        const isActive = subscription.is_active && new Date(subscription.expiry_date) > new Date(); return isActive ? subscription.license_key || 'Premium' : 'Expired';
+      },
+      minWidth: expandedView ? 'auto' : 140,
+      responsive: { xs: 'none' } // Hide only at xs breakpoint in compact view
+    }, {
+      id: 'is_active',
+      label: 'Trạng thái',
+      sortable: true,
+      sortType: 'boolean',
+      accessor: (user: UserPublic) => user.is_active,
+      minWidth: expandedView ? 'auto' : 100,
+      responsive: { xs: 'none', sm: 'none' } // Hide from sm breakpoint down in compact view
+    },
+    {
+      id: 'roles',
+      label: 'Vai trò',
+      sortable: true,
+      sortType: 'string',
+      accessor: (user: UserPublic) => {
+        const roleNames = (user.role_ids || []).map(roleId => {
+          const role = roles.find(r => r.id === roleId);
+          return role ? role.name : roleId;
+        });
+        return roleNames.join(', ');
+      },
+      minWidth: expandedView ? 'auto' : 120,
+      responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' } // Only show in expanded view
+    },
+    {
+      id: 'created_at',
+      label: 'Ngày tham gia',
+      sortable: true,
+      sortType: 'date',
+      accessor: (user: UserPublic) => user.created_at,
+      minWidth: expandedView ? 'auto' : 100,
+      responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' } // Only show in expanded view
+    },
+    {
+      id: 'updated_at',
+      label: 'Ngày cập nhật',
+      sortable: true,
+      sortType: 'date',
+      accessor: (user: UserPublic) => user.updated_at,
+      minWidth: expandedView ? 'auto' : 100,
+      responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' } // Only show in expanded view
+    },
+    {
+      id: 'referral_code',
+      label: 'Mã giới thiệu',
+      sortable: true,
+      sortType: 'string',
+      accessor: (user: UserPublic) => user.referral_code || '',
+      minWidth: expandedView ? 'auto' : 120,
+      responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' } // Only show in expanded view
+    },
+    {
+      id: 'login_method',
+      label: 'Phương thức',
+      sortable: true,
+      sortType: 'string',
+      accessor: (user: UserPublic) => user.google_id ? 'Google' : 'Credentials',
+      minWidth: expandedView ? 'auto' : 100,
+      responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' } // Only show in expanded view
+    }, {
+      id: 'actions',
+      label: '',
+      sortable: false,
+      sortType: 'string',
+      accessor: () => '',
+      minWidth: expandedView ? 'auto' : 80,
+      align: 'center' as const
+    }
+  ], [subscriptions, roles, expandedView]);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -226,7 +333,6 @@ const UsersPage: React.FC = () => {
     setRowsPerPage(value);
     setPage(0);
   };
-
   const handleFilteredUsers = (filtered: UserPublic[], isActivelyFiltering: boolean) => {
     setFilteredUsers(filtered);
     setIsFiltering(isActivelyFiltering);
@@ -235,6 +341,33 @@ const UsersPage: React.FC = () => {
       setPage(0);
     }
   };
+
+  // Handle sorting
+  const handleSort = (columnKey: string) => {
+    const column = columnConfigs.find(col => col.id === columnKey);
+    if (!column || !column.sortable) return;
+
+    const newDirection = sortConfig?.key === columnKey
+      ? getNextSortDirection(sortConfig.direction)
+      : 'asc';
+
+    setSortConfig(newDirection ? { key: columnKey, direction: newDirection } : null);
+    setPage(0); // Reset to first page when sorting
+  };
+
+  // Compute sorted data
+  const sortedUsers = useMemo(() => {
+    const dataToSort = isFiltering ? filteredUsers : users;
+
+    if (!sortConfig || !sortConfig.direction) {
+      return dataToSort;
+    }
+
+    const column = columnConfigs.find(col => col.id === sortConfig.key);
+    if (!column) return dataToSort;
+
+    return sortData(dataToSort, sortConfig, column);
+  }, [users, filteredUsers, isFiltering, sortConfig, columnConfigs, subscriptions, roles]);
 
   const handleOpenDeleteDialog = (user: UserPublic) => {
     // Check if user is protected
@@ -356,7 +489,6 @@ const UsersPage: React.FC = () => {
       return role ? role.name : roleId;
     });
   };
-
   // Helper function to get subscription info
   const getSubscriptionInfo = (userId: string): { status: string; color: 'success' | 'default' | 'primary'; details?: SubscriptionPublic; loading?: boolean } => {
     // If subscriptions are still loading, show loading state
@@ -367,17 +499,27 @@ const UsersPage: React.FC = () => {
     // Check if user has subscription_id assigned
     const user = users.find(u => u.id === userId);
     if (!user?.subscription_id) {
-      return { status: 'Free', color: 'default' };
+      return { status: 'Basic', color: 'default' };
     }
 
     const subscription = subscriptions.get(userId);
     if (!subscription) {
-      return { status: 'Free', color: 'default' };
+      // User has subscription_id but we couldn't fetch the subscription details
+      // This might indicate an issue or the subscription is still loading
+      return { status: 'Loading...', color: 'primary' };
     }
 
     const isActive = subscription.is_active && new Date(subscription.expiry_date) > new Date();
+
+    // For better display, show the actual license key for active subscriptions
+    // or "Expired" with the license key for inactive ones
+    let displayStatus = subscription.license_key;
+    if (!isActive) {
+      displayStatus = `${subscription.license_key} (Expired)`;
+    }
+
     return {
-      status: isActive ? subscription.license_key : 'Expired',
+      status: displayStatus,
       color: isActive ? 'success' : 'default',
       details: subscription
     };
@@ -387,30 +529,27 @@ const UsersPage: React.FC = () => {
   const isUserProtected = (userEmail: string): boolean => {
     return protectedEmails.includes(userEmail);
   };
-
-  // Calculate paginated users - use server pagination when not filtering, client pagination when filtering
+  // Calculate paginated users - use server pagination when not filtering/sorting, client pagination when filtering/sorting
   const paginatedUsers = React.useMemo(() => {
-    if (isFiltering) {
-      // Client-side pagination for filtered results
+    if (isFiltering || sortConfig) {
+      // Client-side pagination for filtered/sorted results
       if (rowsPerPage === 99999) {
-        // Show all filtered results
-        return filteredUsers;
+        // Show all results
+        return sortedUsers;
       }
       const startIndex = page * rowsPerPage;
       const endIndex = startIndex + rowsPerPage;
-      return filteredUsers.slice(startIndex, endIndex);
+      return sortedUsers.slice(startIndex, endIndex);
     } else {
       // Server-side pagination - use users directly as they are already paginated
       return users;
     }
-  }, [users, filteredUsers, isFiltering, page, rowsPerPage]);
-
+  }, [users, sortedUsers, isFiltering, sortConfig, page, rowsPerPage]);
   // Calculate total count for pagination
-  const displayTotalCount = isFiltering ? filteredUsers.length : totalCount;
+  const displayTotalCount = (isFiltering || sortConfig) ? sortedUsers.length : totalCount;
 
   return (
     <Box sx={{
-      p: { xs: 1, sm: 2, md: 3 },
       maxWidth: '100%',
       overflow: 'hidden'
     }}>
@@ -420,7 +559,7 @@ const UsersPage: React.FC = () => {
           component="h1"
           sx={responsiveTypographyTokens.h4Enhanced}
         >
-          Users Management
+          Quản lý người dùng
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
@@ -510,301 +649,251 @@ const UsersPage: React.FC = () => {
             <CircularProgress />
           </Box>
         ) : (
-          <>
-            <TableContainer sx={{ overflowX: 'auto' }}>
-              <Table sx={{
-                minWidth: expandedView ? 1400 : { xs: 280, sm: 420, md: 650 },
-                tableLayout: 'auto',
-              }}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{
-                      minWidth: 200,
-                      width: 'auto',
-                    }}>
-                      Name
-                    </TableCell>
-                    <TableCell sx={{
-                      minWidth: 120,
-                      width: 'auto',
-                      display: expandedView ? 'table-cell' : { xs: 'none', md: 'table-cell' }
-                    }}>
-                      Contact
-                    </TableCell>
-                    <TableCell sx={{
-                      minWidth: 140,
-                      width: 'auto',
-                      display: expandedView ? 'table-cell' : { xs: 'none', md: 'table-cell' }
-                    }}>
-                      Subscription
-                    </TableCell>
-                    <TableCell sx={{
-                      minWidth: 100,
-                      width: 'auto',
-                      display: expandedView ? 'table-cell' : { xs: 'none', sm: 'table-cell' }
-                    }}>
-                      Status
-                    </TableCell>
-                    {expandedView && (
-                      <TableCell sx={{
-                        minWidth: 120,
-                        width: 'auto'
-                      }}>
-                        Roles
-                      </TableCell>
-                    )}
-                    {expandedView && (
-                      <TableCell sx={{
-                        minWidth: 100,
-                        width: 'auto'
-                      }}>
-                        Joined
-                      </TableCell>
-                    )}
-                    {expandedView && (
-                      <TableCell sx={{
-                        minWidth: 100,
-                        width: 'auto'
-                      }}>
-                        Updated
-                      </TableCell>
-                    )}
-                    {expandedView && (
-                      <TableCell sx={{
-                        minWidth: 120,
-                        width: 'auto'
-                      }}>
-                        Referral Code
-                      </TableCell>
-                    )}
-                    {expandedView && (
-                      <TableCell sx={{
-                        minWidth: 100,
-                        width: 'auto'
-                      }}>
-                        Login Method
-                      </TableCell>
-                    )}
-                    <TableCell align="center" sx={{
-                      minWidth: 80,
-                      width: 80,
-                      position: 'sticky',
-                      right: 0,
-                      backgroundColor: 'background.paper',
-                      zIndex: 1,
-                      borderLeft: '1px solid',
-                      borderColor: 'divider'
-                    }}>
-                      Actions
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {Array.isArray(paginatedUsers) && paginatedUsers.map((user) => (
-                    <TableRow hover key={user.id}>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Avatar src={user.avatar_url || undefined} sx={{ mr: 2, width: 25, height: 25 }}>
-                            {user.full_name ? user.full_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
-                          </Avatar>
-                          <Box sx={{ flex: 1 }}>
-                            <Typography
-                              variant="body1"
-                              fontWeight="medium"
-                              sx={{
-                                mb: 0.5,
-                                ...responsiveTypographyTokens.body1,
-                                lineHeight: 1.2
-                              }}
-                            >
-                              {user.full_name}
-                            </Typography>
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              sx={{
-                                ...responsiveTypographyTokens.body2,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap'
-                              }}
-                            >
-                              {user.email}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </TableCell>
-                      <TableCell sx={{ display: expandedView ? 'table-cell' : { xs: 'none', md: 'table-cell' } }}>
-                        <Typography sx={responsiveTypographyTokens.tableCell}>
-                          {user.phone_number || 'N/A'}
+          <>            <TableContainer sx={{ overflowX: 'auto' }}>                <Table sx={{
+            minWidth: expandedView ? 'fit-content' : { xs: 280, sm: 420, md: 650 },
+            tableLayout: expandedView ? 'auto' : 'fixed',
+            width: expandedView ? 'fit-content' : '100%'
+          }}>
+            <SortableTableHead
+              columns={columnConfigs}
+              sortConfig={sortConfig}
+              onSort={handleSort}
+              expandedView={expandedView}
+            />
+            <TableBody>
+              {Array.isArray(paginatedUsers) && paginatedUsers.map((user) => (
+                <TableRow hover key={user.id}>
+                  <TableCell sx={{
+                    ...getResponsiveDisplayStyle(columnConfigs[0], expandedView),
+                    whiteSpace: expandedView ? 'nowrap' : 'normal',
+                    minWidth: columnConfigs[0].minWidth,
+                    width: expandedView ? 'auto' : columnConfigs[0].minWidth
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Avatar src={user.avatar_url || undefined} sx={{ mr: 2, width: 25, height: 25 }}>
+                        {user.full_name ? user.full_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                      </Avatar>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography
+                          variant="body1"
+                          fontWeight="medium"
+                          sx={{
+                            mb: 0.5,
+                            ...responsiveTypographyTokens.body1,
+                            lineHeight: 1.2
+                          }}
+                        >
+                          {user.full_name}
                         </Typography>
-                      </TableCell>
-                      <TableCell sx={{ display: expandedView ? 'table-cell' : { xs: 'none', md: 'table-cell' } }}>
-                        {(() => {
-                          const subscriptionInfo = getSubscriptionInfo(user.id);
-                          return (
-                            <Tooltip title={
-                              subscriptionInfo.loading ?
-                                'Loading subscription info...' :
-                                subscriptionInfo.details ?
-                                  `Expires: ${format(parseISO(subscriptionInfo.details.expiry_date), 'dd/MM/yyyy')}` :
-                                  'No active subscription'
-                            }>
-                              <Chip
-                                label={subscriptionInfo.loading ?
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                    <CircularProgress
-                                      size={12}
-                                      sx={{
-                                        color: 'inherit',
-                                        '& .MuiCircularProgress-svg': {
-                                          filter: (theme) => theme.palette.mode === 'dark' ? 'brightness(1.2)' : 'brightness(0.8)'
-                                        }
-                                      }}
-                                    />
-                                    <span style={{ fontSize: '0.75rem' }}>Loading...</span>
-                                  </Box> :
-                                  subscriptionInfo.status
-                                }
-                                color={subscriptionInfo.color}
-                                size="small"
-                                sx={subscriptionInfo.loading ? {
-                                  '& .MuiChip-label': {
-                                    color: (theme) => theme.palette.mode === 'dark' ? '#003768' : '#e6f7ff'
-                                  }
-                                } : {}}
-                              />
-                            </Tooltip>
-                          );
-                        })()}
-                      </TableCell>
-                      <TableCell sx={{ display: expandedView ? 'table-cell' : { xs: 'none', sm: 'table-cell' } }}>
-                        <Chip
-                          label={user.is_active ? 'Active' : 'Inactive'}
-                          color={user.is_active ? 'success' : 'default'}
-                          size="small"
-                        />
-                      </TableCell>
-                      {expandedView && (
-                        <TableCell>
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                            {user.role_ids?.length > 0 ? (
-                              getRoleNames(user.role_ids).map((roleName, index) => (
-                                <Chip key={index} label={roleName} size="small" variant="outlined" />
-                              ))
-                            ) : (
-                              <Typography variant="body2" color="text.secondary" sx={responsiveTypographyTokens.tableCell}>N/A</Typography>
-                            )}
-                          </Box>
-                        </TableCell>
-                      )}
-                      {expandedView && (
-                        <TableCell>
-                          <Typography sx={responsiveTypographyTokens.tableCell}>
-                            {(() => {
-                              if (!user.created_at) {
-                                return 'N/A';
-                              }
-                              try {
-                                const formatted = format(parseISO(user.created_at), 'dd/MM/yyyy');
-                                return formatted;
-                              } catch (error) {
-                                return 'Invalid Date';
-                              }
-                            })()}
-                          </Typography>
-                        </TableCell>
-                      )}
-                      {expandedView && (
-                        <TableCell>
-                          <Typography sx={responsiveTypographyTokens.tableCell}>
-                            {(() => {
-                              if (!user.updated_at) {
-                                return 'N/A';
-                              }
-                              try {
-                                const formatted = format(parseISO(user.updated_at), 'dd/MM/yyyy');
-                                return formatted;
-                              } catch (error) {
-                                return 'Invalid Date';
-                              }
-                            })()}
-                          </Typography>
-                        </TableCell>
-                      )}
-                      {expandedView && (
-                        <TableCell>
-                          {user.referral_code ? (
-                            <Chip
-                              label={user.referral_code}
-                              size="small"
-                              variant="outlined"
-                              color="primary"
-                            />
-                          ) : (
-                            <Typography variant="body2" color="text.secondary" sx={responsiveTypographyTokens.tableCell}>N/A</Typography>
-                          )}
-                        </TableCell>
-                      )}
-                      {expandedView && (
-                        <TableCell>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{
+                            ...responsiveTypographyTokens.body2,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {user.email}
+                        </Typography>
+                      </Box>                    </Box>
+                  </TableCell>
+                  <TableCell sx={{
+                    ...getResponsiveDisplayStyle(columnConfigs[1], expandedView),
+                    whiteSpace: expandedView ? 'nowrap' : 'normal',
+                    minWidth: columnConfigs[1].minWidth,
+                    width: expandedView ? 'auto' : columnConfigs[1].minWidth
+                  }}>                    <Typography sx={responsiveTypographyTokens.tableCell}>
+                      {user.phone_number || 'N/A'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{
+                    ...getResponsiveDisplayStyle(columnConfigs[2], expandedView),
+                    whiteSpace: expandedView ? 'nowrap' : 'normal',
+                    minWidth: columnConfigs[2].minWidth,
+                    width: expandedView ? 'auto' : columnConfigs[2].minWidth
+                  }}>
+                    {(() => {
+                      const subscriptionInfo = getSubscriptionInfo(user.id);
+                      return (
+                        <Tooltip title={
+                          subscriptionInfo.loading ?
+                            'Loading subscription info...' :
+                            subscriptionInfo.details ?
+                              `Expires: ${format(parseISO(subscriptionInfo.details.expiry_date), 'dd/MM/yyyy')}` :
+                              'No active subscription'
+                        }>
                           <Chip
-                            label={user.google_id ? 'Google' : 'Credentials'}
-                            color={user.google_id ? 'info' : 'default'}
+                            label={subscriptionInfo.loading ?
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <CircularProgress
+                                  size={12}
+                                  sx={{
+                                    color: 'inherit',
+                                    '& .MuiCircularProgress-svg': {
+                                      filter: (theme) => theme.palette.mode === 'dark' ? 'brightness(1.2)' : 'brightness(0.8)'
+                                    }
+                                  }}
+                                />
+                                <span style={{ fontSize: '0.75rem' }}>Loading...</span>
+                              </Box> :
+                              subscriptionInfo.status
+                            }
+                            color={subscriptionInfo.color}
                             size="small"
-                            variant="outlined"
+                            sx={subscriptionInfo.loading ? {
+                              '& .MuiChip-label': {
+                                color: (theme) => theme.palette.mode === 'dark' ? '#003768' : '#e6f7ff'
+                              }
+                            } : {}}
                           />
-                        </TableCell>
-                      )}
-                      <TableCell align="right" sx={{
-                        position: 'sticky',
-                        right: 0,
-                        backgroundColor: 'background.paper',
-                        zIndex: 1,
-                        borderLeft: '1px solid',
-                        borderColor: 'divider',
-                        minWidth: 80,
-                        width: 80
-                      }}>
-                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                          <Tooltip title="Edit User">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleEditUser(user)}
-                              sx={{
-                                minWidth: { xs: 32, sm: 'auto' },
-                                width: { xs: 32, sm: 'auto' },
-                                height: { xs: 32, sm: 'auto' }
-                              }}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Delete User">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleOpenDeleteDialog(user)}
-                              sx={{
-                                minWidth: { xs: 32, sm: 'auto' },
-                                width: { xs: 32, sm: 'auto' },
-                                height: { xs: 32, sm: 'auto' }
-                              }}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {Array.isArray(users) && users.length === 0 && !loading && (
-                    <TableRow>
-                      <TableCell colSpan={expandedView ? 10 : 5} align="center">No users found.</TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                        </Tooltip>);
+                    })()}
+                  </TableCell>
+                  <TableCell sx={{
+                    ...getResponsiveDisplayStyle(columnConfigs[3], expandedView),
+                    whiteSpace: expandedView ? 'nowrap' : 'normal',
+                    minWidth: columnConfigs[3].minWidth,
+                    width: expandedView ? 'auto' : columnConfigs[3].minWidth
+                  }}>                    <Chip
+                      label={user.is_active ? 'Active' : 'Inactive'}
+                      color={user.is_active ? 'success' : 'default'}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell sx={{
+                    ...getResponsiveDisplayStyle(columnConfigs[4], expandedView),
+                    whiteSpace: expandedView ? 'nowrap' : 'normal',
+                    minWidth: columnConfigs[4].minWidth,
+                    width: expandedView ? 'auto' : columnConfigs[4].minWidth
+                  }}>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {user.role_ids?.length > 0 ? (
+                        getRoleNames(user.role_ids).map((roleName, index) => (
+                          <Chip key={index} label={roleName} size="small" variant="outlined" />
+                        ))
+                      ) : (
+                        <Typography variant="body2" color="text.secondary" sx={responsiveTypographyTokens.tableCell}>N/A</Typography>)}
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{
+                    ...getResponsiveDisplayStyle(columnConfigs[5], expandedView),
+                    whiteSpace: expandedView ? 'nowrap' : 'normal',
+                    minWidth: columnConfigs[5].minWidth,
+                    width: expandedView ? 'auto' : columnConfigs[5].minWidth
+                  }}>
+                    <Typography sx={responsiveTypographyTokens.tableCell}>
+                      {(() => {
+                        if (!user.created_at) {
+                          return 'N/A';
+                        }
+                        try {
+                          const formatted = format(parseISO(user.created_at), 'dd/MM/yyyy');
+                          return formatted;
+                        } catch (error) {
+                          return 'Invalid Date';
+                        }
+                      })()}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{
+                    ...getResponsiveDisplayStyle(columnConfigs[6], expandedView),
+                    whiteSpace: expandedView ? 'nowrap' : 'normal',
+                    minWidth: columnConfigs[6].minWidth,
+                    width: expandedView ? 'auto' : columnConfigs[6].minWidth
+                  }}>
+                    <Typography sx={responsiveTypographyTokens.tableCell}>
+                      {(() => {
+                        if (!user.updated_at) {
+                          return 'N/A';
+                        }
+                        try {
+                          const formatted = format(parseISO(user.updated_at), 'dd/MM/yyyy');
+                          return formatted;
+                        } catch (error) {
+                          return 'Invalid Date';
+                        }
+                      })()}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{
+                    ...getResponsiveDisplayStyle(columnConfigs[7], expandedView),
+                    whiteSpace: expandedView ? 'nowrap' : 'normal',
+                    minWidth: columnConfigs[7].minWidth,
+                    width: expandedView ? 'auto' : columnConfigs[7].minWidth
+                  }}>
+                    {user.referral_code ? (
+                      <Chip
+                        label={user.referral_code}
+                        size="small"
+                        variant="outlined"
+                        color="primary"
+                      />
+                    ) : (<Typography variant="body2" color="text.secondary" sx={responsiveTypographyTokens.tableCell}>N/A</Typography>
+                    )}
+                  </TableCell>
+                  <TableCell sx={{
+                    ...getResponsiveDisplayStyle(columnConfigs[8], expandedView),
+                    whiteSpace: expandedView ? 'nowrap' : 'normal',
+                    minWidth: columnConfigs[8].minWidth,
+                    width: expandedView ? 'auto' : columnConfigs[8].minWidth
+                  }}>                    <Chip
+                      label={user.google_id ? 'Google' : 'Credentials'}
+                      color={user.google_id ? 'info' : 'default'}
+                      size="small"
+                      variant="outlined"
+                    />
+                  </TableCell>
+                  <TableCell align="right" sx={{
+                    position: 'sticky',
+                    right: 0,
+                    backgroundColor: 'background.paper',
+                    zIndex: 1,
+                    borderLeft: '1px solid',
+                    borderColor: 'divider',
+                    minWidth: expandedView ? 'auto' : 80,
+                    width: expandedView ? 'auto' : 80
+                  }}>
+                    <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                      <Tooltip title="Edit User">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleEditUser(user)}
+                          sx={{
+                            minWidth: { xs: 32, sm: 'auto' },
+                            width: { xs: 32, sm: 'auto' },
+                            height: { xs: 32, sm: 'auto' }
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete User">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleOpenDeleteDialog(user)}
+                          sx={{
+                            minWidth: { xs: 32, sm: 'auto' },
+                            width: { xs: 32, sm: 'auto' },
+                            height: { xs: 32, sm: 'auto' }
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {Array.isArray(users) && users.length === 0 && !loading && (
+                <TableRow>
+                  <TableCell colSpan={expandedView ? 10 : 5} align="center">No users found.</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+          </TableContainer>
             <TablePagination
               rowsPerPageOptions={[5, 10, 50, { label: 'All', value: 99999 }]}
               component="div"

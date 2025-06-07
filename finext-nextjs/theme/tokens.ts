@@ -70,9 +70,12 @@ export const colorTokens = {
     drawer: {
       background: '#ffffff',
       border: '#f0f0f0',
-    },
-    tableHead: {
+    }, tableHead: {
       background: '#fafafa',
+      text: 'rgba(0, 0, 0, 0.87)',
+      sortActive: '#1976d2', // Primary color for active sort
+      sortHover: '#1976d2',  // Primary color for hover
+      sortIcon: 'rgba(0, 0, 0, 0.54)',
     },
     tableRow: {
       background: '#ffffff',
@@ -99,9 +102,12 @@ export const colorTokens = {
     drawer: {
       background: '#1a1a1a',
       border: '#303030',
-    },
-    tableHead: {
+    }, tableHead: {
       background: '#1a1a1a',
+      text: '#ffffff',
+      sortActive: '#90caf9', // Light blue for active sort in dark mode
+      sortHover: '#90caf9',  // Light blue for hover in dark mode
+      sortIcon: 'rgba(255, 255, 255, 0.7)',
     },
     tableRow: {
       background: '#1e1e1e',

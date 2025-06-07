@@ -88,7 +88,7 @@ const UserSearch: React.FC<UserSearchProps> = ({
     const getSubscriptionInfo = (userId: string) => {
         const subscription = subscriptions.get(userId);
         if (!subscription) {
-            return { status: 'Free', isActive: false, licenseKey: '' };
+            return { status: 'Basic', isActive: false, licenseKey: '' };
         }
 
         const isActive = subscription.is_active && new Date(subscription.expiry_date) > new Date();
@@ -124,7 +124,7 @@ const UserSearch: React.FC<UserSearchProps> = ({
         // Subscription information
         const subscriptionInfo = getSubscriptionInfo(user.id);
         const subscriptionFields = [
-            subscriptionInfo.status.toLowerCase(), // 'free', 'premium', 'expired'
+            subscriptionInfo.status.toLowerCase(),
             subscriptionInfo.licenseKey
         ];
 
@@ -197,7 +197,7 @@ const UserSearch: React.FC<UserSearchProps> = ({
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>                <TextField
                 fullWidth
                 size="small"
-                placeholder="Tìm kiếm theo tên, email, SĐT, trạng thái, protection, subscription, vai trò, mã giới thiệu, phương thức đăng nhập, ngày tham gia..."
+                placeholder="Tìm kiếm theo Tên, Email, SĐT, Trạng thái, Gói đăng ký, Vai trò, Mã giới thiệu, Phương thức, ..."
                 value={searchTerm}
                 onChange={handleSearchChange}
                 disabled={loading}
@@ -285,9 +285,9 @@ const UserSearch: React.FC<UserSearchProps> = ({
                             {[
                                 { label: 'Active', value: 'active' },
                                 { label: 'Inactive', value: 'inactive' },
+                                { label: 'Basic', value: 'basic' },
+                                { label: 'Pro', value: 'pro' },
                                 { label: 'Premium', value: 'premium' },
-                                { label: 'Free', value: 'free' },
-                                { label: 'Expired', value: 'expired' },
                                 { label: 'Google', value: 'google' },
                                 { label: 'Credentials', value: 'credentials' },
                                 { label: 'Admin', value: 'admin' },

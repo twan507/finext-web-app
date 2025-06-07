@@ -40,15 +40,13 @@ async def assign_free_subscription_if_needed(db: AsyncIOMotorDatabase, user_id_o
     It will try to activate an existing BASIC subscription first. If none exists, it creates one.
     """
     logger.debug(f"Ensuring BASIC subscription for user {user_id_obj}.")
-    now = datetime.now(timezone.utc)
-
-    # 1. Check for any active non-BASIC, non-protected subscription for the user
+    now = datetime.now(timezone.utc)  # 1. Check for any active non-BASIC subscription for the user (including protected ones)
     active_non_basic_sub = await db.subscriptions.find_one(
         {
             "user_id": user_id_obj,
             "is_active": True,
             "expiry_date": {"$gt": now},
-            "license_key": {"$nin": PROTECTED_LICENSE_KEYS + [BASIC_LICENSE_KEY]},
+            "license_key": {"$ne": BASIC_LICENSE_KEY},
         }
     )
 
@@ -65,10 +63,11 @@ async def assign_free_subscription_if_needed(db: AsyncIOMotorDatabase, user_id_o
                 {"_id": user_id_obj}, {"$set": {"subscription_id": active_non_basic_sub["_id"], "updated_at": datetime.now(timezone.utc)}}
             )
             logger.info(f"Updated user {user_id_obj}'s primary subscription_id to active non-BASIC sub {active_non_basic_sub['_id']}")
-        return SubscriptionInDB(**active_non_basic_sub)  # Return the active non-basic sub
-
-    # 2. User does not have an active non-BASIC subscription.
-    #    Try to find and activate an existing BASIC subscription.    logger.info(f"User {user_id_obj} has no active non-BASIC subscription. Checking for existing BASIC subscription.")
+        return SubscriptionInDB(
+            **active_non_basic_sub
+        )  # Return the active non-basic sub    # 2. User does not have an active non-BASIC subscription.
+    #    Try to find and activate an existing BASIC subscription.
+    logger.info(f"User {user_id_obj} has no active non-BASIC subscription. Checking for existing BASIC subscription.")
     existing_basic_sub = await get_basic_subscription_for_user(db, user_id_obj)
 
     if existing_basic_sub and existing_basic_sub.id:
