@@ -42,6 +42,7 @@ interface EditUserModalProps {
     open: boolean;
     user: UserPublic | null;
     roles: RolePublic[];
+    protectedEmails: string[];
     onClose: () => void;
     onUserUpdated: () => void;
 }
@@ -59,6 +60,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     open,
     user,
     roles,
+    protectedEmails,
     onClose,
     onUserUpdated
 }) => {
@@ -119,7 +121,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
 
     // Cập nhật thông tin cơ bản
     const handleUpdateBasicInfo = async () => {
-        if (!user) return;
+        if (!user || !localUser) return; // Added localUser check for isAdmin/isBroker
 
         const validationError = validateForm();
         if (validationError) {
@@ -132,6 +134,28 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         setSuccess(null);
 
         try {
+            // Validate referral_code via API if user is not admin/broker and code is entered
+            if (!isAdmin && !isBroker && formData.referral_code.trim() !== '') {
+                const brokerCodeToValidate = formData.referral_code.trim().toUpperCase();
+                try {
+                    const validationResponse = await apiClient({
+                        url: `/api/v1/brokers/validate/${brokerCodeToValidate}`,
+                        method: 'GET'
+                    });
+                    // Assuming response.data contains { is_valid: boolean, ... }
+                    if (!validationResponse.data?.is_valid) {
+                        setError('Mã giới thiệu không hợp lệ hoặc không (còn) hoạt động. Vui lòng kiểm tra lại hoặc để trống.');
+                        setLoading(false);
+                        return;
+                    }
+                } catch (validationErr: any) {
+                    console.error('Error validating broker code:', validationErr);
+                    setError(validationErr.message || 'Lỗi khi kiểm tra mã giới thiệu. Vui lòng thử lại.');
+                    setLoading(false);
+                    return;
+                }
+            }
+
             const updateData: any = {
                 full_name: formData.full_name.trim()
             };
@@ -304,7 +328,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     }; const isBroker = localUser?.role_ids?.some(roleId => {
         const role = roles.find(r => r.id === roleId);
         return role?.name?.toLowerCase().includes('broker');
-    });
+    });    // Check if user is protected
+    const isProtectedUser = Boolean(localUser?.email && protectedEmails.includes(localUser.email));
 
     const isAdmin = localUser?.role_ids?.some(roleId => {
         const role = roles.find(r => r.id === roleId);
@@ -389,7 +414,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                                 label="Mã giới thiệu" // Changed label
                                 value={formData.referral_code} // Bind to formData
                                 onChange={handleInputChange('referral_code')} // Enable input change
-                                disabled={loading || Boolean(actionLoading)} // Enable when not loading
+                                disabled={loading || Boolean(actionLoading) || isAdmin || isBroker} // Updated disabled logic
                                 variant="outlined"
                                 helperText="4 ký tự chữ và số. Để trống nếu không có." // Updated helper text
                             />
@@ -418,7 +443,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                                 size="small"
                             />
                             <Chip
-                                label={localUser.google_id ? 'Google Login' : 'Email/Password'}
+                                label={localUser.google_id ? 'Google Login' : 'Credentials Login'}
                                 color={localUser.google_id ? 'info' : 'default'}
                                 size="small"
                                 variant="outlined"
@@ -435,7 +460,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                                     }
                                 />
                             ))}
-                            {isAdmin && (
+                            {isProtectedUser && (
                                 <Chip
                                     label="🔒 Tài khoản bảo vệ"
                                     size="small"
@@ -465,8 +490,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                                     actionLoading === (localUser.is_active ? 'deactivate' : 'activate') ?
                                         <CircularProgress size={20} /> :
                                         (localUser.is_active ? <DeactivateIcon /> : <ActivateIcon />)
-                                }
-                                disabled={Boolean(actionLoading) || isAdmin}
+                                } disabled={Boolean(actionLoading) || isProtectedUser}
                                 onClick={() => openConfirmAction({
                                     type: localUser.is_active ? 'deactivate' : 'activate',
                                     title: localUser.is_active ? 'Vô hiệu hóa tài khoản' : 'Kích hoạt tài khoản',
@@ -477,7 +501,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                                     variant: 'contained',
                                     color: localUser.is_active ? 'error' : 'success'
                                 })}
-                                title={isAdmin ? 'Không thể thay đổi trạng thái tài khoản Admin' : ''}
                             >
                                 {localUser.is_active ? 'Vô hiệu hóa' : 'Kích hoạt'}
                             </Button>
@@ -490,8 +513,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                                     actionLoading === (isBroker ? 'remove_broker' : 'grant_broker') ?
                                         <CircularProgress size={20} /> :
                                         (isBroker ? <RemoveBrokerIcon /> : <BrokerIcon />)
-                                }
-                                disabled={Boolean(actionLoading) || isAdmin}
+                                } disabled={Boolean(actionLoading) || isProtectedUser}
                                 onClick={() => openConfirmAction({
                                     type: isBroker ? 'remove_broker' : 'grant_broker',
                                     title: isBroker ? 'Xóa quyền Broker' : 'Cấp quyền Broker',
@@ -502,7 +524,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                                     variant: 'contained',
                                     color: isBroker ? 'error' : 'warning'
                                 })}
-                                title={isAdmin ? 'Không thể thay đổi quyền của tài khoản Admin' : ''}
                             >
                                 {isBroker ? 'Xóa quyền Broker' : 'Cấp quyền Broker'}
                             </Button>

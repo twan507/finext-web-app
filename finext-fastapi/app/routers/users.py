@@ -52,8 +52,7 @@ async def create_new_user_endpoint(
     try:
         # Admin tạo user nên kích hoạt ngay lập tức (set_active_on_create=True)
         created_user = await create_user_db(db, user_create_data=user_data, set_active_on_create=True)
-        if not created_user:
-            # create_user_db đã raise ValueError nếu email tồn tại hoặc lỗi logic khác
+        if not created_user:  # create_user_db đã raise ValueError nếu email tồn tại hoặc lỗi logic khác
             # Lỗi ở đây có thể là lỗi không mong muốn khi ghi DB
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -62,6 +61,21 @@ async def create_new_user_endpoint(
         return UserPublic.model_validate(created_user)
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
+
+@router.get(
+    "/protected-emails",
+    response_model=StandardApiResponse[list[str]],
+    summary="Lấy danh sách email được bảo vệ (yêu cầu quyền user:list)",
+    dependencies=[Depends(require_permission("user", "list"))],
+    tags=["users"],
+)
+@api_response_wrapper(default_success_message="Lấy danh sách email được bảo vệ thành công.")
+async def get_protected_emails_endpoint():
+    """
+    Trả về danh sách các email được bảo vệ trong hệ thống.
+    """
+    return PROTECTED_USER_EMAILS
 
 
 @router.get(
@@ -238,6 +252,9 @@ async def read_all_users_endpoint(
 
 
 # <<<< KẾT THÚC PHẦN CẬP NHẬT >>>>
+
+
+# <<<< PHẦN CẬP NHẬT ENDPOINT ROLE MANAGEMENT >>>>
 
 
 @router.post(

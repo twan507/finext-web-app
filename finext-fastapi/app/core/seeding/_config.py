@@ -222,8 +222,7 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
         "name": "upload:create",
         "description": "Quyền upload file/image cho chính mình.",
     },
-
-        # <<<< PHẦN BỔ SUNG MỚI CHO ADMIN >>>>
+    # <<<< PHẦN BỔ SUNG MỚI CHO ADMIN >>>>
     {
         "name": "permission:list_all_definitions",
         "description": "Quyền xem danh sách tất cả các permission được định nghĩa trong hệ thống (admin).",
@@ -274,6 +273,11 @@ DEFAULT_FEATURES_DATA: List[Dict[str, Any]] = [
         "key": "admin_feature",
         "name": "Tính năng Quản trị viên",
         "description": "Tính năng dành cho quản trị viên hệ thống.",
+    },
+    {
+        "key": "manager_feature",
+        "name": "Tính năng Quản lý",
+        "description": "Tính năng dành cho quản lý.",
     },
 ]
 

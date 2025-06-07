@@ -59,6 +59,7 @@ interface UserSearchProps {
     roles: RolePublic[];
     subscriptions: Map<string, SubscriptionPublic>;
     subscriptionsLoading?: boolean;
+    protectedEmails?: string[];
     onFilteredUsers: (filteredUsers: UserPublic[], isFiltering: boolean) => void;
     loading?: boolean;
 }
@@ -68,6 +69,7 @@ const UserSearch: React.FC<UserSearchProps> = ({
     roles,
     subscriptions,
     subscriptionsLoading = false,
+    protectedEmails = [],
     onFilteredUsers,
     loading = false
 }) => {
@@ -112,7 +114,8 @@ const UserSearch: React.FC<UserSearchProps> = ({
         ].filter(field => field); // Remove null/undefined values        // Status fields
         const statusFields = [
             user.is_active ? 'active' : 'inactive',
-            user.google_id ? 'google' : 'credentials'
+            user.google_id ? 'google' : 'credentials',
+            protectedEmails.includes(user.email) ? 'protected' : 'unprotected'
         ];
 
         // Role names
@@ -194,7 +197,7 @@ const UserSearch: React.FC<UserSearchProps> = ({
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>                <TextField
                 fullWidth
                 size="small"
-                placeholder="Tìm kiếm theo tên, email, SĐT, trạng thái, subscription, vai trò, mã giới thiệu, phương thức đăng nhập, ngày tham gia..."
+                placeholder="Tìm kiếm theo tên, email, SĐT, trạng thái, protection, subscription, vai trò, mã giới thiệu, phương thức đăng nhập, ngày tham gia..."
                 value={searchTerm}
                 onChange={handleSearchChange}
                 disabled={loading}

@@ -8,18 +8,12 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.schemas.users import UserSeed
 from app.utils.security import get_password_hash
 from app.utils.types import PyObjectId
-from app.core.config import (
-    ADMIN_EMAIL, ADMIN_PWD,
-    BROKER_EMAIL_1, BROKER_EMAIL_2,
-    USER_EMAIL_1, USER_EMAIL_2, USER_EMAIL_3
-)
+from app.core.config import ADMIN_EMAIL, ADMIN_PWD, MANAGER_EMAIL, BROKER_EMAIL_1, BROKER_EMAIL_2, USER_EMAIL_1, USER_EMAIL_2, USER_EMAIL_3
 
 logger = logging.getLogger(__name__)
 
 
-async def seed_users(
-    db: AsyncIOMotorDatabase, role_ids_map: Optional[Dict[str, PyObjectId]]
-) -> Dict[str, PyObjectId]:
+async def seed_users(db: AsyncIOMotorDatabase, role_ids_map: Optional[Dict[str, PyObjectId]]) -> Dict[str, PyObjectId]:
     created_user_ids: Dict[str, PyObjectId] = {}
     if not role_ids_map:
         logger.warning("role_ids_map không tồn tại. Bỏ qua việc tạo sample users.")
@@ -28,6 +22,7 @@ async def seed_users(
     users_collection = db.get_collection("users")
 
     admin_role_id_str = role_ids_map.get("admin")
+    manager_role_id_str = role_ids_map.get("manager")
     broker_role_id_str = role_ids_map.get("broker")
     user_role_id_str = role_ids_map.get("user")
 
@@ -46,6 +41,19 @@ async def seed_users(
             }
         )
 
+    # 1 Manager User
+    if MANAGER_EMAIL and ADMIN_PWD and manager_role_id_str:
+        sample_users_data_dicts.append(
+            {
+                "email": MANAGER_EMAIL,
+                "password": ADMIN_PWD,
+                "full_name": "System Manager",
+                "phone_number": "0000000001",
+                "role_ids_str": list([manager_role_id_str, user_role_id_str]),
+                "is_active": True,
+            }
+        )
+
     # 2 Broker Users
     broker_emails_to_seed = [BROKER_EMAIL_1, BROKER_EMAIL_2]
     for i, broker_email_val in enumerate(broker_emails_to_seed):
@@ -54,8 +62,8 @@ async def seed_users(
                 {
                     "email": broker_email_val,
                     "password": ADMIN_PWD,
-                    "full_name": f"Default Broker {i+1}",
-                    "phone_number": f"011111111{i+1}",
+                    "full_name": f"Default Broker {i + 1}",
+                    "phone_number": f"011111111{i + 1}",
                     "role_ids_str": list(set([broker_role_id_str, user_role_id_str])),
                     "is_active": True,
                 }
@@ -69,8 +77,8 @@ async def seed_users(
                 {
                     "email": user_email_val,
                     "password": ADMIN_PWD,
-                    "full_name": f"Default User {i+1}",
-                    "phone_number": f"099999999{i+1}",
+                    "full_name": f"Default User {i + 1}",
+                    "phone_number": f"099999999{i + 1}",
                     "role_ids_str": [user_role_id_str],
                     "is_active": True,
                 }
@@ -82,7 +90,7 @@ async def seed_users(
         if not user_data_dict.get("email"):
             logger.warning(f"Bỏ qua seeding user vì email không được cung cấp trong user_data_dict: {user_data_dict.get('full_name')}")
             continue
-        
+
         existing_user = await users_collection.find_one({"email": user_data_dict["email"]})
         if existing_user:
             existing_emails.append(user_data_dict["email"])
@@ -98,7 +106,7 @@ async def seed_users(
     for user_data_dict in sample_users_data_dicts:
         if not user_data_dict.get("email"):
             continue
-            
+
         if user_data_dict["email"] not in existing_emails:
             user_create_instance = UserSeed(
                 email=user_data_dict["email"],
@@ -110,12 +118,8 @@ async def seed_users(
                 subscription_id=None,
             )
 
-            user_document_for_db = user_create_instance.model_dump(
-                exclude={"password", "role_ids"}
-            )
-            user_document_for_db["hashed_password"] = get_password_hash(
-                user_create_instance.password
-            )
+            user_document_for_db = user_create_instance.model_dump(exclude={"password", "role_ids"})
+            user_document_for_db["hashed_password"] = get_password_hash(user_create_instance.password)
             user_document_for_db["created_at"] = user_create_instance.created_at
             user_document_for_db["updated_at"] = user_create_instance.updated_at
 
@@ -127,9 +131,7 @@ async def seed_users(
             user_document_for_db["role_ids"] = role_obj_ids_for_db
 
             result = await users_collection.insert_one(user_document_for_db)
-            logger.info(
-                f"Đã tạo user: {user_data_dict['email']} với ID: {result.inserted_id}"
-            )
+            logger.info(f"Đã tạo user: {user_data_dict['email']} với ID: {result.inserted_id}")
             created_user_ids[user_data_dict["email"]] = str(result.inserted_id)
-            
+
     return created_user_ids

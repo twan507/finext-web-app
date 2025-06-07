@@ -56,13 +56,12 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
     const [showPassword, setShowPassword] = useState(false); const handleInputChange = (field: keyof UserCreate) => (
         event: React.ChangeEvent<HTMLInputElement>
     ) => {
+        const value = event.target.value;
         setFormData(prev => ({
             ...prev,
-            [field]: event.target.value
+            [field]: field === 'referral_code' ? value.toUpperCase() : value
         }));
-    };
-
-    const validateForm = (): string | null => {
+    }; const validateForm = (): string | null => {
         if (!formData.full_name.trim()) {
             return 'Họ và tên là bắt buộc';
         }
@@ -75,18 +74,42 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
         if (formData.phone_number && !/^[0-9+\-\s()]*$/.test(formData.phone_number)) {
             return 'Số điện thoại không hợp lệ';
         }
+        // Validate referral_code format if provided
+        if (formData.referral_code?.trim() && !/^[a-zA-Z0-9]{4}$/.test(formData.referral_code.trim())) {
+            return 'Mã giới thiệu không hợp lệ. Phải là 4 ký tự chữ và số, hoặc để trống.';
+        }
         return null;
     }; const handleSubmit = async () => {
         const validationError = validateForm();
         if (validationError) {
             setError(validationError);
             return;
-        }
-
-        setLoading(true);
+        } setLoading(true);
         setError(null);
 
         try {
+            // Validate referral_code via API if provided
+            if (formData.referral_code?.trim()) {
+                const brokerCodeToValidate = formData.referral_code.trim().toUpperCase();
+                try {
+                    const validationResponse = await apiClient({
+                        url: `/api/v1/brokers/validate/${brokerCodeToValidate}`,
+                        method: 'GET'
+                    });
+                    // Assuming response.data contains { is_valid: boolean, ... }
+                    if (!validationResponse.data?.is_valid) {
+                        setError('Mã giới thiệu không hợp lệ hoặc không (còn) hoạt động. Vui lòng kiểm tra lại hoặc để trống.');
+                        setLoading(false);
+                        return;
+                    }
+                } catch (validationErr: any) {
+                    console.error('Error validating broker code:', validationErr);
+                    setError(validationErr.message || 'Lỗi khi kiểm tra mã giới thiệu. Vui lòng thử lại.');
+                    setLoading(false);
+                    return;
+                }
+            }
+
             // Chuẩn bị data để gửi - loại bỏ các field trống
             const submitData: any = {
                 full_name: formData.full_name.trim(),
@@ -235,9 +258,13 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
                             value={formData.referral_code}
                             onChange={handleInputChange('referral_code')}
                             disabled={loading}
-                            placeholder="Mã giới thiệu (nếu có)"
+                            placeholder="Ví dụ: AB12"
                             variant="outlined"
-                            helperText="Tùy chọn - mã từ đối tác"
+                            helperText="Tùy chọn - mã 4 ký tự từ đối tác (sẽ được kiểm tra tính hợp lệ)"
+                            inputProps={{
+                                maxLength: 4,
+                                style: { textTransform: 'uppercase' }
+                            }}
                         />
                     </Box>                    <Box sx={{
                         mt: 3,

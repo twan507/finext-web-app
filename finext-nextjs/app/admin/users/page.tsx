@@ -4,16 +4,18 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { apiClient } from 'services/apiClient';
 import {
-  Box, Typography, Paper, TableContainer,
+  Box, Typography, Paper, TableContainer, TextField,
   Table, TableHead, TableRow, TableCell, TableBody, Chip, IconButton,
   Alert, Button, TablePagination, Avatar, Tooltip, CircularProgress,
-  Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle
+  Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
+  useTheme
 } from '@mui/material';
 import {
   Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon,
   UnfoldMore as ExpandIcon, UnfoldLess as CollapseIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
+import { colorTokens } from 'theme/tokens';
 import UserSearch from './components/UserSearch';
 import AddUserModal from './components/AddUserModal';
 import EditUserModal from './components/EditUserModal';
@@ -65,17 +67,25 @@ interface PaginatedUsersResponse {
 }
 
 const UsersPage: React.FC = () => {
+  const theme = useTheme();
+  const componentColors = theme.palette.mode === 'light'
+    ? colorTokens.lightComponentColors
+    : colorTokens.darkComponentColors;
+
   const [users, setUsers] = useState<UserPublic[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserPublic[]>([]);
   const [isFiltering, setIsFiltering] = useState(false); const [roles, setRoles] = useState<RolePublic[]>([]);
   const [subscriptions, setSubscriptions] = useState<Map<string, SubscriptionPublic>>(new Map());
   const [subscriptionsLoading, setSubscriptionsLoading] = useState(false);
+  const [protectedEmails, setProtectedEmails] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0); const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserPublic | null>(null);
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [expandedView, setExpandedView] = useState(false);
   const [openAddUserModal, setOpenAddUserModal] = useState(false);
   const [openEditUserModal, setOpenEditUserModal] = useState(false);
@@ -116,6 +126,21 @@ const UsersPage: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Failed to load roles:', err.message);
+    }
+  }, []);
+
+  const fetchProtectedEmails = useCallback(async () => {
+    try {
+      const response = await apiClient<string[]>({
+        url: `/api/v1/users/protected-emails`,
+        method: 'GET',
+      });
+
+      if (response.status === 200 && response.data && Array.isArray(response.data)) {
+        setProtectedEmails(response.data);
+      }
+    } catch (err: any) {
+      console.error('Failed to load protected emails:', err.message);
     }
   }, []); const fetchSubscriptions = useCallback(async (userIds: string[]) => {
     if (userIds.length === 0) return;
@@ -161,7 +186,8 @@ const UsersPage: React.FC = () => {
     }
   }, [users]); useEffect(() => {
     fetchRoles();
-  }, [fetchRoles]);
+    fetchProtectedEmails();
+  }, [fetchRoles, fetchProtectedEmails]);
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
@@ -193,32 +219,61 @@ const UsersPage: React.FC = () => {
       setPage(0);
     }
   };
-
   const handleOpenDeleteDialog = (user: UserPublic) => {
+    // Check if user is protected
+    if (isUserProtected(user.email)) {
+      setError('Cannot delete protected user account.');
+      return;
+    }
+
     setUserToDelete(user);
+    setDeleteConfirmEmail('');
     setOpenDeleteDialog(true);
   };
 
   const handleCloseDeleteDialog = () => {
     setUserToDelete(null);
+    setDeleteConfirmEmail('');
+    setDeleteLoading(false);
     setOpenDeleteDialog(false);
   };
-
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
-    // setLoading(true); // Consider a more specific loading state for this action
+
+    // Validate email confirmation
+    if (deleteConfirmEmail.trim().toLowerCase() !== userToDelete.email.toLowerCase()) {
+      setError('Email confirmation does not match. Please enter the exact email address.');
+      return;
+    }
+
+    // Double check if user is protected
+    if (isUserProtected(userToDelete.email)) {
+      setError('Cannot delete protected user account.');
+      return;
+    }
+
+    setDeleteLoading(true);
+    setError(null);
+
     try {
-      await apiClient({
+      const response = await apiClient({
         url: `/api/v1/users/${userToDelete.id}`,
         method: 'DELETE',
       });
-      fetchUsers(); // Refresh list
-      handleCloseDeleteDialog();
+
+      if (response.status === 200) {
+        fetchUsers(); // Refresh list
+        handleCloseDeleteDialog();
+        // Optional: show success message
+        // setSuccess(`User ${userToDelete.full_name} has been deleted successfully.`);
+      } else {
+        setError(response.message || 'Failed to delete user.');
+      }
     } catch (delError: any) {
-      setError(delError.message || 'Failed to delete user.');
-      handleCloseDeleteDialog();
+      console.error('Delete user error:', delError);
+      setError(delError.message || 'An error occurred while deleting the user.');
     } finally {
-      // setLoading(false); // Reset specific loading state
+      setDeleteLoading(false);
     }
   }; const handleAddUser = () => {
     setOpenAddUserModal(true);
@@ -275,6 +330,11 @@ const UsersPage: React.FC = () => {
       color: isActive ? 'success' : 'default',
       details: subscription
     };
+  };
+
+  // Helper function to check if a user is protected
+  const isUserProtected = (userEmail: string): boolean => {
+    return protectedEmails.includes(userEmail);
   };// Calculate paginated users - use server pagination when not filtering, client pagination when filtering
   const paginatedUsers = React.useMemo(() => {
     if (isFiltering) {
@@ -317,6 +377,7 @@ const UsersPage: React.FC = () => {
         roles={roles}
         subscriptions={subscriptions}
         subscriptionsLoading={subscriptionsLoading}
+        protectedEmails={protectedEmails}
         onFilteredUsers={handleFilteredUsers}
         loading={loading}
       />
@@ -350,8 +411,7 @@ const UsersPage: React.FC = () => {
                           <Avatar src={user.avatar_url || undefined} sx={{ mr: 2, width: 25, height: 25 }}>
                             {user.full_name ? user.full_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
                           </Avatar>
-                          <Box>
-                            <Typography variant="body1" fontWeight="medium">{user.full_name}</Typography>
+                          <Box sx={{ flex: 1 }}>                            <Typography variant="body1" fontWeight="medium" sx={{ mb: 0.5 }}>{user.full_name}</Typography>
                             <Typography variant="body2" color="text.secondary">{user.email}</Typography>
                           </Box>
                         </Box>
@@ -496,33 +556,129 @@ const UsersPage: React.FC = () => {
           </>
         )}
       </Paper>
+      <Dialog
+        open={openDeleteDialog}
+        onClose={!deleteLoading ? handleCloseDeleteDialog : undefined}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ color: 'error.main', fontWeight: 'bold' }}>
+          ⚠️ Confirm User Deletion
+        </DialogTitle>
+        <DialogContent>          {/* User Information */}
+          <Box sx={{
+            p: 1.5,
+            bgcolor: componentColors.modal.noteBackground,
+            borderRadius: 1,
+            mb: 2,
+          }}>
+            <Typography variant="body1" fontWeight="bold">
+              {userToDelete?.full_name}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {userToDelete?.email}
+            </Typography>
+            {userToDelete?.phone_number && (
+              <Typography variant="body2" color="text.secondary">
+                {userToDelete.phone_number}
+              </Typography>
+            )}
+          </Box>        {/* Combined User Info and Warning Note Box */}
+          <Box sx={{
+            mb: 3,
+            p: 2,
+            bgcolor: componentColors.modal.noteBackground,
+            borderRadius: 1,
+            border: `1px solid ${componentColors.modal.noteBorder}`,
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '3px',
+              bgcolor: 'error.main',
+              borderRadius: '4px 4px 0 0'
+            },
+            position: 'relative'
+          }}>
 
-      <Dialog open={openDeleteDialog} onClose={handleCloseDeleteDialog}>
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete user {userToDelete?.full_name} ({userToDelete?.email})? This action cannot be undone.
-          </DialogContentText>
+
+
+
+            {/* Warning Points */}
+            <Typography
+              variant="body2"
+              fontWeight="bold"
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                color: 'error.main',
+                mb: 2
+              }}
+            >
+              ⚠️ Critical Warning:
+            </Typography>
+            <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+              • This action cannot be undone
+            </Typography>
+            <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+              • All user data and history will be permanently lost
+            </Typography>
+            <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+              • User subscriptions will be terminated immediately
+            </Typography>
+          </Box>
+
+          <TextField
+            autoFocus
+            fullWidth
+            label="Type email address to confirm"
+            placeholder={userToDelete?.email}
+            value={deleteConfirmEmail}
+            onChange={(e) => setDeleteConfirmEmail(e.target.value)}
+            disabled={deleteLoading}
+            variant="outlined"
+            size="small"
+            sx={{ mt: 1 }}
+            helperText="Email must match exactly (case-insensitive)"
+          />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDeleteDialog}>Cancel</Button>
-          <Button onClick={handleDeleteUser} color="error" /* disabled={specificDeleteLoading} */ >
-            {/* {specificDeleteLoading ? <CircularProgress size={20} /> : "Delete"} */}
-            Delete
+        <DialogActions sx={{ p: 3, pt: 1 }}>
+          <Button
+            onClick={handleCloseDeleteDialog}
+            disabled={deleteLoading}
+            variant="outlined"
+          >
+            Cancel
           </Button>
-        </DialogActions>      </Dialog>
+          <Button
+            onClick={handleDeleteUser}
+            color="error"
+            variant="contained"
+            disabled={
+              deleteLoading ||
+              !deleteConfirmEmail.trim() ||
+              deleteConfirmEmail.trim().toLowerCase() !== userToDelete?.email.toLowerCase()
+            }
+            startIcon={deleteLoading ? <CircularProgress size={20} /> : null}
+          >
+            {deleteLoading ? 'Deleting...' : 'Delete User'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <AddUserModal
         open={openAddUserModal}
         onClose={handleCloseAddUserModal}
         onUserAdded={handleUserAdded}
         roles={roles}
-      />
-
-      <EditUserModal
+      />      <EditUserModal
         open={openEditUserModal}
         user={userToEdit}
         roles={roles}
+        protectedEmails={protectedEmails}
         onClose={handleCloseEditUserModal}
         onUserUpdated={handleUserUpdated}
       />

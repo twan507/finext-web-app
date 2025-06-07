@@ -23,41 +23,48 @@ async def seed_roles(db: AsyncIOMotorDatabase, permission_ids_map: Dict[str, PyO
             "permission_names": list(ALL_DEFAULT_PERMISSION_NAMES),  # Admin có tất cả quyền
         },
         {
-            "name": "user", # Vai trò người dùng thông thường
+            "name": "manager",
+            "description": "Quản lý với hầu hết các quyền, trừ quyền xóa.",
+            "permission_names": [
+                perm for perm in ALL_DEFAULT_PERMISSION_NAMES if "delete" not in perm
+            ],  # Manager có tất cả quyền trừ delete
+        },
+        {
+            "name": "user",  # Vai trò người dùng thông thường
             "description": "Người dùng thông thường.",
             "permission_names": [
-                "user:update_own", # Người dùng có thể tự cập nhật thông tin của chính mình
-                "session:list_own", # Người dùng có thể xem session của chính mình
-                "session:delete_own", # Người dùng có thể xóa session của chính mình
-                "subscription:read_own", # Người dùng có thể xem subscription của chính mình
-                "transaction:create_own", # Người dùng có thể tạo giao dịch của chính mình
-                "transaction:read_own", # Người dùng có thể xem giao dịch của chính mình
+                "user:update_own",  # Người dùng có thể tự cập nhật thông tin của chính mình
+                "session:list_own",  # Người dùng có thể xem session của chính mình
+                "session:delete_own",  # Người dùng có thể xóa session của chính mình
+                "subscription:read_own",  # Người dùng có thể xem subscription của chính mình
+                "transaction:create_own",  # Người dùng có thể tạo giao dịch của chính mình
+                "transaction:read_own",  # Người dùng có thể xem giao dịch của chính mình
                 "broker:validate",  # Người dùng có thể kiểm tra mã giới thiệu
-                "watchlist:create_own", # Người dùng có thể tạo watchlist của chính mình
-                "watchlist:read_own", # Người dùng có thể xem watchlist của chính mình
-                "watchlist:update_own", # Người dùng có thể cập nhật watchlist của chính mình
-                "watchlist:delete_own", # Người dùng có thể xóa watchlist của chính mình
-                "upload:create", # Người dùng có thể upload file
+                "watchlist:create_own",  # Người dùng có thể tạo watchlist của chính mình
+                "watchlist:read_own",  # Người dùng có thể xem watchlist của chính mình
+                "watchlist:update_own",  # Người dùng có thể cập nhật watchlist của chính mình
+                "watchlist:delete_own",  # Người dùng có thể xóa watchlist của chính mình
+                "upload:create",  # Người dùng có thể upload file
             ],
         },
         {
             "name": "broker",  # Vai trò mới cho Đối tác
             "description": "Đối tác giới thiệu.",
             "permission_names": [
-                "user:update_own", # Đối tác có thể tự cập nhật thông tin của chính mình
-                "session:list_own", # Đối tác có thể xem session của chính mình
-                "session:delete_own", # Đối tác có thể xóa session của chính mình
-                "subscription:read_own", # Đối tác có thể xem subscription của chính mình
-                "transaction:create_own", # Đối tác có thể tạo giao dịch của chính mình
-                "transaction:read_own", # Đối tác có thể xem giao dịch của chính mình
-                "broker:read_own", # Đối tác có thể xem thông tin Đối tác của chính mình
-                "transaction:read_referred", # Đối tác có thể xem các giao dịch được giới thiệu bởi mình
-                "broker:validate", # Đối tác có thể kiểm tra mã giới thiệu
-                "watchlist:create_own", # Đối tác có thể tạo watchlist của chính mình
-                "watchlist:read_own", # Đối tác có thể xem watchlist của chính mình
-                "watchlist:update_own", # Đối tác có thể cập nhật watchlist của chính mình
-                "watchlist:delete_own", # Đối tác có thể xóa watchlist của chính mình
-                "upload:create", # Đối tác có thể upload file
+                "user:update_own",  # Đối tác có thể tự cập nhật thông tin của chính mình
+                "session:list_own",  # Đối tác có thể xem session của chính mình
+                "session:delete_own",  # Đối tác có thể xóa session của chính mình
+                "subscription:read_own",  # Đối tác có thể xem subscription của chính mình
+                "transaction:create_own",  # Đối tác có thể tạo giao dịch của chính mình
+                "transaction:read_own",  # Đối tác có thể xem giao dịch của chính mình
+                "broker:read_own",  # Đối tác có thể xem thông tin Đối tác của chính mình
+                "transaction:read_referred",  # Đối tác có thể xem các giao dịch được giới thiệu bởi mình
+                "broker:validate",  # Đối tác có thể kiểm tra mã giới thiệu
+                "watchlist:create_own",  # Đối tác có thể tạo watchlist của chính mình
+                "watchlist:read_own",  # Đối tác có thể xem watchlist của chính mình
+                "watchlist:update_own",  # Đối tác có thể cập nhật watchlist của chính mình
+                "watchlist:delete_own",  # Đối tác có thể xóa watchlist của chính mình
+                "upload:create",  # Đối tác có thể upload file
             ],
         },
     ]
