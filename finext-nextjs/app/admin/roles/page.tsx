@@ -134,50 +134,50 @@ const RolesPage: React.FC = () => {
                 ) : (
                     <>
                         <TableContainer sx={{ maxHeight: 600 }}>                            <Table stickyHeader>
-                                <TableHead>
-                                    <TableRow>
-                                        <TableCell>Name</TableCell>
-                                        <TableCell>Description</TableCell>
-                                        <TableCell align="center">Permissions Count</TableCell>
-                                        <TableCell>Created At</TableCell>
-                                        <TableCell>Updated At</TableCell>
-                                        <TableCell align="right">Actions</TableCell>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell>Name</TableCell>
+                                    <TableCell>Description</TableCell>
+                                    <TableCell align="center">Permissions Count</TableCell>
+                                    <TableCell>Created At</TableCell>
+                                    <TableCell>Updated At</TableCell>
+                                    <TableCell align="right">Actions</TableCell>
+                                </TableRow>
+                            </TableHead>                                <TableBody>
+                                {Array.isArray(roles) && roles.map((role) => (
+                                    <TableRow hover key={role.id}>
+                                        <TableCell>
+                                            <Typography variant="body1" fontWeight="medium">{role.name}</Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Tooltip title={role.description || ''}>
+                                                <Typography variant="body2" sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    {role.description || 'N/A'}
+                                                </Typography>
+                                            </Tooltip>
+                                        </TableCell>
+                                        <TableCell align="center">
+                                            <Chip label={role.permission_ids?.length || 0} size="small" />
+                                        </TableCell>
+                                        <TableCell>{format(parseISO(role.created_at), 'dd/MM/yyyy HH:mm')}</TableCell>
+                                        <TableCell>{format(parseISO(role.updated_at), 'dd/MM/yyyy HH:mm')}</TableCell>
+                                        <TableCell align="right">
+                                            <Tooltip title="Edit Role">
+                                                <IconButton size="small" onClick={() => handleEditRole(role.id)}><EditIcon fontSize="small" /></IconButton>
+                                            </Tooltip>
+                                            <Tooltip title="Delete Role">
+                                                <IconButton size="small" onClick={() => handleOpenDeleteDialog(role)}><DeleteIcon fontSize="small" /></IconButton>
+                                            </Tooltip>
+                                        </TableCell>
                                     </TableRow>
-                                </TableHead>                                <TableBody>
-                                    {Array.isArray(roles) && roles.map((role) => (
-                                        <TableRow hover key={role.id}>
-                                            <TableCell>
-                                                <Typography variant="body1" fontWeight="medium">{role.name}</Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Tooltip title={role.description || ''}>
-                                                    <Typography variant="body2" sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                        {role.description || 'N/A'}
-                                                    </Typography>
-                                                </Tooltip>
-                                            </TableCell>
-                                            <TableCell align="center">
-                                                <Chip label={role.permission_ids?.length || 0} size="small" />
-                                            </TableCell>
-                                            <TableCell>{format(parseISO(role.created_at), 'dd/MM/yyyy HH:mm')}</TableCell>
-                                            <TableCell>{format(parseISO(role.updated_at), 'dd/MM/yyyy HH:mm')}</TableCell>
-                                            <TableCell align="right">
-                                                <Tooltip title="Edit Role">
-                                                    <IconButton size="small" onClick={() => handleEditRole(role.id)}><EditIcon fontSize="small" /></IconButton>
-                                                </Tooltip>
-                                                <Tooltip title="Delete Role">
-                                                    <IconButton size="small" onClick={() => handleOpenDeleteDialog(role)}><DeleteIcon fontSize="small" /></IconButton>
-                                                </Tooltip>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {Array.isArray(roles) && roles.length === 0 && !loading && (
-                                        <TableRow>
-                                            <TableCell colSpan={6} align="center">No roles found.</TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
+                                ))}
+                                {Array.isArray(roles) && roles.length === 0 && !loading && (
+                                    <TableRow>
+                                        <TableCell colSpan={6} align="center">No roles found.</TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
                         </TableContainer>                        <TablePagination
                             rowsPerPageOptions={[5, 10, 25, 50, { label: 'All', value: 99999 }]}
                             component="div"

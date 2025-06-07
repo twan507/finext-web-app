@@ -177,42 +177,42 @@ export default function WatchlistsPage() {
                 ) : (
                     <>
                         <TableContainer sx={{ maxHeight: 600 }}>                            <Table stickyHeader>
-                                <TableHead>
-                                    <TableRow>
-                                        <TableCell>ID</TableCell>
-                                        <TableCell>User ID/Email</TableCell>
-                                        <TableCell>Name</TableCell>
-                                        <TableCell>Symbols Count</TableCell>
-                                        <TableCell>Created</TableCell>
-                                        <TableCell align="right">Actions</TableCell>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell>ID</TableCell>
+                                    <TableCell>User ID/Email</TableCell>
+                                    <TableCell>Name</TableCell>
+                                    <TableCell>Symbols Count</TableCell>
+                                    <TableCell>Created</TableCell>
+                                    <TableCell align="right">Actions</TableCell>
+                                </TableRow>
+                            </TableHead>                                <TableBody>
+                                {Array.isArray(watchlists) && watchlists.map((watchlist) => (
+                                    <TableRow hover key={watchlist.id}>
+                                        <TableCell>
+                                            <Tooltip title={watchlist.id}>
+                                                <Typography variant="body2" sx={{ maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis' }}>...{watchlist.id.slice(-6)}</Typography>
+                                            </Tooltip>
+                                        </TableCell>
+                                        <TableCell>{watchlist.user_email || watchlist.user_id}</TableCell>
+                                        <TableCell>{watchlist.name}</TableCell>
+                                        <TableCell align="center"><Chip label={watchlist.stock_symbols.length} size="small" /></TableCell>
+                                        <TableCell>{format(parseISO(watchlist.created_at), 'dd/MM/yyyy')}</TableCell>
+                                        <TableCell align="right">
+                                            <Tooltip title="View Details">
+                                                <IconButton size="small" onClick={() => handleViewWatchlist(watchlist.id)}><ViewIcon fontSize="small" /></IconButton>
+                                            </Tooltip>
+                                            <Tooltip title="Delete Watchlist">
+                                                <IconButton size="small" onClick={() => handleOpenDeleteDialog(watchlist)}><DeleteIcon fontSize="small" /></IconButton>
+                                            </Tooltip>
+                                        </TableCell>
                                     </TableRow>
-                                </TableHead>                                <TableBody>
-                                    {Array.isArray(watchlists) && watchlists.map((watchlist) => (
-                                        <TableRow hover key={watchlist.id}>
-                                            <TableCell>
-                                                <Tooltip title={watchlist.id}>
-                                                    <Typography variant="body2" sx={{ maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis' }}>...{watchlist.id.slice(-6)}</Typography>
-                                                </Tooltip>
-                                            </TableCell>
-                                            <TableCell>{watchlist.user_email || watchlist.user_id}</TableCell>
-                                            <TableCell>{watchlist.name}</TableCell>
-                                            <TableCell align="center"><Chip label={watchlist.stock_symbols.length} size="small" /></TableCell>
-                                            <TableCell>{format(parseISO(watchlist.created_at), 'dd/MM/yyyy')}</TableCell>
-                                            <TableCell align="right">
-                                                <Tooltip title="View Details">
-                                                    <IconButton size="small" onClick={() => handleViewWatchlist(watchlist.id)}><ViewIcon fontSize="small" /></IconButton>
-                                                </Tooltip>
-                                                <Tooltip title="Delete Watchlist">
-                                                    <IconButton size="small" onClick={() => handleOpenDeleteDialog(watchlist)}><DeleteIcon fontSize="small" /></IconButton>
-                                                </Tooltip>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {Array.isArray(watchlists) && watchlists.length === 0 && !loading && (
-                                        <TableRow><TableCell colSpan={6} align="center">No watchlists found.</TableCell></TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
+                                ))}
+                                {Array.isArray(watchlists) && watchlists.length === 0 && !loading && (
+                                    <TableRow><TableCell colSpan={6} align="center">No watchlists found.</TableCell></TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
                         </TableContainer>                        <TablePagination
                             rowsPerPageOptions={[5, 10, 25, 50, { label: 'All', value: 99999 }]}
                             component="div"

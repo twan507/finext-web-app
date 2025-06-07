@@ -80,7 +80,7 @@ export default function TransactionsPage() {
                 method: 'GET',
                 queryParams,
             });
-            
+
             if (response.status === 200 && response.data) {
                 if ('items' in response.data && Array.isArray(response.data.items) && typeof response.data.total === 'number') {
                     // Handles PaginatedTransactionsResponse { items: [], total: number }
@@ -91,7 +91,7 @@ export default function TransactionsPage() {
                     console.warn("Backend for transactions did not return total count. Pagination might be inaccurate.");
                     setTransactions(response.data as TransactionPublic[]);
                     const currentDataLength = (response.data as TransactionPublic[]).length;
-                     if (page === 0) {
+                    if (page === 0) {
                         setTotalCount(currentDataLength < rowsPerPage ? currentDataLength : currentDataLength + (currentDataLength === rowsPerPage ? rowsPerPage : 0));
                     } else if (currentDataLength < rowsPerPage) {
                         setTotalCount(page * rowsPerPage + currentDataLength);
@@ -127,7 +127,7 @@ export default function TransactionsPage() {
         setRowsPerPage(parseInt(event.target.value, 10));
         setPage(0);
     };
-    
+
     const handleViewTransaction = (transactionId: string) => {
         console.log("View transaction (not implemented):", transactionId);
     };
@@ -135,7 +135,7 @@ export default function TransactionsPage() {
     const handleEditPendingTransaction = (transactionId: string) => {
         console.log("Edit pending transaction (not implemented):", transactionId);
     };
-    
+
     const handleConfirmPayment = async (transactionId: string) => {
         const notes = prompt("Enter admin notes for payment confirmation (optional):");
         // setLoading(true); // Consider a more specific loading state for this action
@@ -186,7 +186,7 @@ export default function TransactionsPage() {
                     <TransactionIcon sx={{ mr: 1, fontSize: '24px' }} />
                     <Typography variant="h4" component="h1">Transactions</Typography>
                 </Box>
-                 <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchTransactions} disabled={loading}>
+                <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchTransactions} disabled={loading}>
                     Refresh
                 </Button>
             </Box>
@@ -264,74 +264,74 @@ export default function TransactionsPage() {
                 ) : (
                     <>
                         <TableContainer sx={{ maxHeight: 600 }}>                            <Table stickyHeader>
-                                <TableHead>
-                                    <TableRow>
-                                        <TableCell sx={{minWidth: 120}}>ID</TableCell>
-                                        <TableCell sx={{minWidth: 120}}>User ID</TableCell>
-                                        <TableCell sx={{minWidth: 100}}>Amount</TableCell>
-                                        <TableCell sx={{minWidth: 120}}>License Key</TableCell>
-                                        <TableCell sx={{minWidth: 130}}>Type</TableCell>
-                                        <TableCell sx={{minWidth: 120}}>Status</TableCell>
-                                        <TableCell sx={{minWidth: 150}}>Created At</TableCell>
-                                        <TableCell sx={{minWidth: 120}}>Promo Code</TableCell>
-                                        <TableCell sx={{minWidth: 120}}>Broker Code</TableCell>
-                                        <TableCell align="right" sx={{minWidth: 180}}>Actions</TableCell>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell sx={{ minWidth: 120 }}>ID</TableCell>
+                                    <TableCell sx={{ minWidth: 120 }}>User ID</TableCell>
+                                    <TableCell sx={{ minWidth: 100 }}>Amount</TableCell>
+                                    <TableCell sx={{ minWidth: 120 }}>License Key</TableCell>
+                                    <TableCell sx={{ minWidth: 130 }}>Type</TableCell>
+                                    <TableCell sx={{ minWidth: 120 }}>Status</TableCell>
+                                    <TableCell sx={{ minWidth: 150 }}>Created At</TableCell>
+                                    <TableCell sx={{ minWidth: 120 }}>Promo Code</TableCell>
+                                    <TableCell sx={{ minWidth: 120 }}>Broker Code</TableCell>
+                                    <TableCell align="right" sx={{ minWidth: 180 }}>Actions</TableCell>
+                                </TableRow>
+                            </TableHead>                                <TableBody>
+                                {Array.isArray(transactions) && transactions.map((transaction) => (
+                                    <TableRow hover key={transaction.id}>
+                                        <TableCell>
+                                            <Tooltip title={transaction.id}>
+                                                <Typography variant="body2" sx={{ maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    ...{transaction.id.slice(-6)}
+                                                </Typography>
+                                            </Tooltip>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Tooltip title={transaction.buyer_user_id}>
+                                                <Typography variant="body2" sx={{ maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    ...{transaction.buyer_user_id.slice(-6)}
+                                                </Typography>
+                                            </Tooltip>
+                                        </TableCell>
+                                        <TableCell>${transaction.transaction_amount.toFixed(2)}</TableCell>
+                                        <TableCell>{transaction.license_key}</TableCell>
+                                        <TableCell>
+                                            <Chip label={transaction.transaction_type.replace('_', ' ').toUpperCase()} size="small" variant="outlined" />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Chip label={transaction.payment_status} color={getPaymentStatusChipColor(transaction.payment_status)} size="small" />
+                                        </TableCell>
+                                        <TableCell>{format(parseISO(transaction.created_at), 'dd/MM/yyyy HH:mm')}</TableCell>
+                                        <TableCell>{transaction.promotion_code_applied || 'N/A'}</TableCell>
+                                        <TableCell>{transaction.broker_code_applied || 'N/A'}</TableCell>
+                                        <TableCell align="right">
+                                            <Tooltip title="View Details">
+                                                <IconButton size="small" onClick={() => handleViewTransaction(transaction.id)}><ViewIcon fontSize="small" /></IconButton>
+                                            </Tooltip>
+                                            {transaction.payment_status === PaymentStatusEnumFE.PENDING && (
+                                                <>
+                                                    <Tooltip title="Edit Pending Details">
+                                                        <IconButton size="small" onClick={() => handleEditPendingTransaction(transaction.id)} color="info"><EditIcon fontSize="small" /></IconButton>
+                                                    </Tooltip>
+                                                    <Tooltip title="Confirm Payment">
+                                                        <IconButton size="small" onClick={() => handleConfirmPayment(transaction.id)} color="success"><ConfirmIcon fontSize="small" /></IconButton>
+                                                    </Tooltip>
+                                                    <Tooltip title="Cancel Transaction">
+                                                        <IconButton size="small" onClick={() => handleCancelTransaction(transaction.id)} color="error"><CancelIcon fontSize="small" /></IconButton>
+                                                    </Tooltip>
+                                                </>
+                                            )}
+                                        </TableCell>
                                     </TableRow>
-                                </TableHead>                                <TableBody>
-                                    {Array.isArray(transactions) && transactions.map((transaction) => (
-                                        <TableRow hover key={transaction.id}>
-                                            <TableCell>
-                                                <Tooltip title={transaction.id}>
-                                                    <Typography variant="body2" sx={{maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis'}}>
-                                                        ...{transaction.id.slice(-6)}
-                                                    </Typography>
-                                                </Tooltip>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Tooltip title={transaction.buyer_user_id}>
-                                                    <Typography variant="body2" sx={{maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis'}}>
-                                                        ...{transaction.buyer_user_id.slice(-6)}
-                                                    </Typography>
-                                                </Tooltip>
-                                            </TableCell>
-                                            <TableCell>${transaction.transaction_amount.toFixed(2)}</TableCell>
-                                            <TableCell>{transaction.license_key}</TableCell>
-                                            <TableCell>
-                                                <Chip label={transaction.transaction_type.replace('_', ' ').toUpperCase()} size="small" variant="outlined" />
-                                            </TableCell>
-                                            <TableCell>
-                                                <Chip label={transaction.payment_status} color={getPaymentStatusChipColor(transaction.payment_status)} size="small" />
-                                            </TableCell>
-                                            <TableCell>{format(parseISO(transaction.created_at), 'dd/MM/yyyy HH:mm')}</TableCell>
-                                            <TableCell>{transaction.promotion_code_applied || 'N/A'}</TableCell>
-                                            <TableCell>{transaction.broker_code_applied || 'N/A'}</TableCell>
-                                            <TableCell align="right">
-                                                <Tooltip title="View Details">
-                                                    <IconButton size="small" onClick={() => handleViewTransaction(transaction.id)}><ViewIcon fontSize="small" /></IconButton>
-                                                </Tooltip>
-                                                {transaction.payment_status === PaymentStatusEnumFE.PENDING && (
-                                                    <>
-                                                        <Tooltip title="Edit Pending Details">
-                                                            <IconButton size="small" onClick={() => handleEditPendingTransaction(transaction.id)} color="info"><EditIcon fontSize="small" /></IconButton>
-                                                        </Tooltip>
-                                                        <Tooltip title="Confirm Payment">
-                                                            <IconButton size="small" onClick={() => handleConfirmPayment(transaction.id)} color="success"><ConfirmIcon fontSize="small" /></IconButton>
-                                                        </Tooltip>
-                                                        <Tooltip title="Cancel Transaction">
-                                                            <IconButton size="small" onClick={() => handleCancelTransaction(transaction.id)} color="error"><CancelIcon fontSize="small" /></IconButton>
-                                                        </Tooltip>
-                                                    </>
-                                                )}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                     {Array.isArray(transactions) && transactions.length === 0 && !loading && (
-                                        <TableRow>
-                                            <TableCell colSpan={10} align="center">No transactions found matching your criteria.</TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
+                                ))}
+                                {Array.isArray(transactions) && transactions.length === 0 && !loading && (
+                                    <TableRow>
+                                        <TableCell colSpan={10} align="center">No transactions found matching your criteria.</TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
                         </TableContainer>
                         <TablePagination
                             rowsPerPageOptions={[5, 10, 25, 50, 100]}
