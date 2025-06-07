@@ -154,6 +154,24 @@ async def update_user_info_endpoint(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
+async def _get_user_role_names(db: AsyncIOMotorDatabase, user_id_obj: ObjectId) -> set[str]:
+    """Helper function to get role names for a user."""
+    user_doc = await db.users.find_one({"_id": user_id_obj}, {"role_ids": 1})
+    if not user_doc or not user_doc.get("role_ids"):
+        return set()
+
+    role_object_ids_from_user = user_doc.get("role_ids", [])
+    if not role_object_ids_from_user:
+        return set()
+
+    roles_cursor = db.roles.find({"_id": {"$in": role_object_ids_from_user}}, {"name": 1})
+    role_names = set()
+    async for role in roles_cursor:
+        if "name" in role:
+            role_names.add(role["name"])
+    return role_names
+
+
 @router.delete(
     "/{user_id}",
     response_model=StandardApiResponse[None],
@@ -184,6 +202,20 @@ async def delete_user_by_id_endpoint(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Không thể xóa người dùng được bảo vệ: '{user_to_delete.email}'.",
         )
+
+    # Check user roles - only allow deletion if user has only "user" role
+    user_role_names = await _get_user_role_names(db, ObjectId(user_to_delete.id))
+    if not user_role_names:
+        logger.warning(f"User {user_to_delete.email} has no roles assigned. Allowing deletion.")
+    elif user_role_names != {"user"}:
+        # User has roles other than just "user"
+        additional_roles = user_role_names - {"user"}
+        if additional_roles:
+            role_list = ", ".join(sorted(additional_roles))
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Không thể xóa người dùng '{user_to_delete.email}' vì còn có các vai trò: {role_list}. Vui lòng thu hồi các vai trò này trước khi xóa người dùng.",
+            )
 
     broker_info = await crud_brokers.get_broker_by_user_id(db, user_to_delete.id)  # type: ignore
     if broker_info:

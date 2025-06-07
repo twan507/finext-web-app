@@ -11,7 +11,7 @@ import {
   useTheme
 } from '@mui/material';
 import {
-  Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon,
+  Add as AddIcon, Settings as EditIcon, DeleteOutline as DeleteIcon,
   UnfoldMore as ExpandIcon, UnfoldLess as CollapseIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
@@ -218,11 +218,24 @@ const UsersPage: React.FC = () => {
     if (isActivelyFiltering !== isFiltering) {
       setPage(0);
     }
-  };
-  const handleOpenDeleteDialog = (user: UserPublic) => {
+  }; const handleOpenDeleteDialog = (user: UserPublic) => {
     // Check if user is protected
     if (isUserProtected(user.email)) {
       setError('Cannot delete protected user account.');
+      return;
+    }
+
+    // Check if user has roles other than just "user" (frontend validation for better UX)
+    const userRoleNames = getRoleNames(user.role_ids || []);
+    const hasNonUserRoles = userRoleNames.some(roleName =>
+      roleName.toLowerCase() !== 'user'
+    );
+
+    if (hasNonUserRoles) {
+      const nonUserRoles = userRoleNames.filter(roleName =>
+        roleName.toLowerCase() !== 'user'
+      );
+      setError(`Cannot delete user '${user.email}' because they have additional roles: ${nonUserRoles.join(', ')}. Please revoke these roles first before deleting the user.`);
       return;
     }
 
@@ -236,8 +249,7 @@ const UsersPage: React.FC = () => {
     setDeleteConfirmEmail('');
     setDeleteLoading(false);
     setOpenDeleteDialog(false);
-  };
-  const handleDeleteUser = async () => {
+  }; const handleDeleteUser = async () => {
     if (!userToDelete) return;
 
     // Validate email confirmation
@@ -271,7 +283,22 @@ const UsersPage: React.FC = () => {
       }
     } catch (delError: any) {
       console.error('Delete user error:', delError);
-      setError(delError.message || 'An error occurred while deleting the user.');
+
+      // Handle specific role-based validation errors with more user-friendly messages
+      let errorMessage = delError.message || 'An error occurred while deleting the user.';
+
+      // Check if it's a role-based validation error (HTTP 400)
+      if (delError.status === 400 && delError.message) {
+        if (delError.message.includes('vai trò') || delError.message.includes('roles')) {
+          // This is likely our role-based validation error - display it as-is since it's already user-friendly
+          errorMessage = delError.message;
+        } else if (delError.message.includes('Đối tác') || delError.message.includes('broker')) {
+          // This is likely a broker-related validation error
+          errorMessage = delError.message;
+        }
+      }
+
+      setError(errorMessage);
     } finally {
       setDeleteLoading(false);
     }
@@ -400,7 +427,7 @@ const UsersPage: React.FC = () => {
                     {expandedView && <TableCell sx={{ minWidth: 120 }}>Updated</TableCell>}
                     {expandedView && <TableCell sx={{ minWidth: 140 }}>Referral Code</TableCell>}
                     {expandedView && <TableCell sx={{ minWidth: 120 }}>Login Method</TableCell>}
-                    <TableCell align="right" sx={{ minWidth: expandedView ? 120 : 100 }}>Actions</TableCell>
+                    <TableCell align="right" sx={{ minWidth: expandedView ? 120 : 100 }}>   </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -528,12 +555,19 @@ const UsersPage: React.FC = () => {
                           />
                         </TableCell>
                       )}
-                      <TableCell align="right">                        <Tooltip title="Edit User">
-                        <IconButton size="small" onClick={() => handleEditUser(user)}><EditIcon fontSize="small" /></IconButton>
-                      </Tooltip>
-                        <Tooltip title="Delete User">
-                          <IconButton size="small" onClick={() => handleOpenDeleteDialog(user)}><DeleteIcon fontSize="small" /></IconButton>
-                        </Tooltip>
+                      <TableCell align="right">
+                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'right' }}>
+                          <Tooltip title="Edit User">
+                            <IconButton size="small" onClick={() => handleEditUser(user)}>
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete User">
+                            <IconButton size="small" onClick={() => handleOpenDeleteDialog(user)}>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -564,8 +598,7 @@ const UsersPage: React.FC = () => {
       >
         <DialogTitle sx={{ color: 'error.main', fontWeight: 'bold' }}>
           ⚠️ Confirm User Deletion
-        </DialogTitle>
-        <DialogContent>          {/* User Information */}
+        </DialogTitle>        <DialogContent>          {/* User Information */}
           <Box sx={{
             p: 1.5,
             bgcolor: componentColors.modal.noteBackground,
@@ -628,6 +661,12 @@ const UsersPage: React.FC = () => {
             </Typography>
             <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
               • User subscriptions will be terminated immediately
+            </Typography>
+            <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+              • Only users with the "user" role (or no roles) can be deleted
+            </Typography>
+            <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+              • Users with admin, broker, or other roles must have those roles revoked first
             </Typography>
           </Box>
 
