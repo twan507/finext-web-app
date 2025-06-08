@@ -860,39 +860,14 @@ export default function TransactionsPage() {
           📝 Lịch sử ghi chú giao dịch
         </DialogTitle>
         <DialogContent>
-          {/* Transaction Information */}
-          <Box sx={{
-            p: 1.5,
-            bgcolor: componentColors.modal.noteBackground,
-            borderRadius: 1,
-            mb: 2,
-          }}>                        <Typography variant="body1" fontWeight="bold">
-              ID Giao dịch: {selectedTransaction?.id.slice(0, 8)}...
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Số tiền: {selectedTransaction?.transaction_amount.toLocaleString('vi-VN')}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Trạng thái: <Chip
-                label={selectedTransaction?.payment_status}
-                size="small"
-                color={getPaymentStatusChipColor(selectedTransaction?.payment_status || PaymentStatusEnumFE.PENDING)}
-              />
-            </Typography>
-          </Box>
-
-          {/* Notes Content */}
           <Box sx={{
             p: 2,
             bgcolor: 'background.default',
             borderRadius: 1,
             border: '1px solid',
             borderColor: 'divider',
-            minHeight: 200
+            minHeight: 100
           }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Ghi chú:
-            </Typography>
             {selectedTransaction?.notes ? (
               <Typography variant="body2" sx={{
                 whiteSpace: 'pre-wrap',

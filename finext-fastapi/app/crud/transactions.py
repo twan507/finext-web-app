@@ -203,20 +203,24 @@ async def _prepare_transaction_data(
             if is_valid_override:
                 broker_code_to_apply_str = admin_broker_code_override.upper()
             else:
-                raise ValueError(f"Mã đối tác '{admin_broker_code_override}' do admin cung cấp không hợp lệ.")
-    # Tiếp theo, nếu user tự tạo order và nhập broker code
+                raise ValueError(
+                    f"Mã đối tác '{admin_broker_code_override}' do admin cung cấp không hợp lệ."
+                )  # Tiếp theo, nếu user tự tạo order và nhập broker code
     elif not is_admin_update_pending and input_broker_code_for_user_create:
         is_valid_input = await crud_brokers.is_broker_code_valid_and_active(db, input_broker_code_for_user_create)
         if is_valid_input:
             broker_code_to_apply_str = input_broker_code_for_user_create.upper()
         else:
             raise ValueError(f"Mã đối tác '{input_broker_code_for_user_create}' bạn nhập không hợp lệ hoặc không hoạt động.")
+
     # Cuối cùng, nếu không có override hoặc input, dùng referral_code từ user (nếu có và valid)
     elif buyer_user.referral_code and await crud_brokers.is_broker_code_valid_and_active(db, buyer_user.referral_code):
         broker_code_to_apply_str = buyer_user.referral_code.upper()
 
-    if broker_code_to_apply_str and license_doc.key not in PROTECTED_LICENSE_KEYS:
+    # Bước 1: Tính giảm giá broker trên giá gốc
+    if broker_code_to_apply_str:
         broker_discount_amount_val = round(original_price_for_calc * (BROKER_DISCOUNT_PERCENTAGE / 100), 2)
+        print('check broker_discount_amount_val:', broker_discount_amount_val, original_price_for_calc)
         logger.info(
             f"Áp dụng mã đối tác '{broker_code_to_apply_str}', giảm giá: {broker_discount_amount_val} cho license '{license_doc.key}'"
         )
@@ -225,11 +229,12 @@ async def _prepare_transaction_data(
             f"Mã đối tác '{broker_code_to_apply_str}' được ghi nhận cho giao dịch với license được bảo vệ '{license_doc.key}', không áp dụng giảm giá broker."
         )
 
+    # Bước 2: Tính giá sau khi áp dụng giảm giá broker
     price_after_broker_discount = original_price_for_calc - broker_discount_amount_val
     if price_after_broker_discount < 0:
         price_after_broker_discount = 0.0
 
-    # Promotion Code Application Logic
+    # Bước 3: Tính giảm giá khuyến mãi trên giá ĐÃ GIẢM bởi broker
     applied_promo_code_str: Optional[str] = None
     promotion_discount_amount_val: float = 0.0
     if input_promotion_code:
@@ -238,26 +243,36 @@ async def _prepare_transaction_data(
         )
         if valid_promo_obj:
             applied_promo_code_str = valid_promo_obj.promotion_code  # Dùng mã đã chuẩn hóa
-            if license_doc.key not in PROTECTED_LICENSE_KEYS:
-                # Tính giảm giá khuyến mãi trên giá ĐÃ GIẢM bởi broker (nếu có)
-                discount_val, _ = crud_promotions.calculate_discounted_amount(price_after_broker_discount, valid_promo_obj)
-                promotion_discount_amount_val = discount_val
-                logger.info(
-                    f"Áp dụng mã khuyến mãi '{applied_promo_code_str}', giảm thêm: {promotion_discount_amount_val} cho license '{license_doc.key}' (trên giá đã có thể giảm bởi broker)."
-                )
-            else:  # Khuyến mãi được ghi nhận nhưng không giảm giá cho license protected
-                logger.info(
-                    f"Mã khuyến mãi '{applied_promo_code_str}' được ghi nhận cho giao dịch với license được bảo vệ '{license_doc.key}', không áp dụng giảm giá khuyến mãi."
-                )
+            discount_val, _ = crud_promotions.calculate_discounted_amount(price_after_broker_discount, valid_promo_obj)
+            promotion_discount_amount_val = discount_val
+            logger.info(
+                f"Áp dụng mã khuyến mãi '{applied_promo_code_str}', giảm thêm: {promotion_discount_amount_val} cho license '{license_doc.key}' (trên giá đã giảm bởi broker)."
+            )
         elif not is_admin_update_pending:  # Nếu user tạo và mã KM không hợp lệ -> lỗi
             raise ValueError(f"Mã khuyến mãi '{input_promotion_code}' không hợp lệ hoặc không thể áp dụng cho đơn hàng này.")
-        # Nếu admin update pending và mã KM không hợp lệ -> bỏ qua, không áp dụng KM
 
-    total_discount_val = round(broker_discount_amount_val + promotion_discount_amount_val, 2)
-    final_transaction_amount_calc = round(original_price_for_calc - total_discount_val, 2)
+    # Bước 4: Tính toán cuối cùng - sử dụng giá sau khi giảm tất cả
+    final_transaction_amount_calc = price_after_broker_discount - promotion_discount_amount_val
     if final_transaction_amount_calc < 0:
+        # Nếu giảm giá quá nhiều, điều chỉnh lại
         final_transaction_amount_calc = 0.0
-        total_discount_val = original_price_for_calc  # Giảm giá tối đa bằng giá gốc
+        # Tính lại promotion discount để đảm bảo final_amount = 0
+        promotion_discount_amount_val = price_after_broker_discount
+
+    # Tính tổng giảm giá = giá gốc - giá cuối cùng
+    total_discount_val = original_price_for_calc - final_transaction_amount_calc
+    final_transaction_amount_calc = round(final_transaction_amount_calc, 2)
+    total_discount_val = round(total_discount_val, 2)
+
+    # Log để debug và kiểm tra tính chính xác
+    logger.info(
+        f"Tính toán giá cho giao dịch: "
+        f"Giá gốc: {original_price_for_calc}, "
+        f"Giảm giá broker: {broker_discount_amount_val}, "
+        f"Giảm giá promotion: {promotion_discount_amount_val}, "
+        f"Tổng giảm giá: {total_discount_val}, "
+        f"Giá cuối: {final_transaction_amount_calc}"
+    )
 
     dt_now = datetime.now(timezone.utc)
     return {
