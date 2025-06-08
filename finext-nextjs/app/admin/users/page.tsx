@@ -12,7 +12,8 @@ import {
 } from '@mui/material';
 import {
   Add as AddIcon, Settings as EditIcon, DeleteOutline as DeleteIcon,
-  UnfoldMore as ExpandIcon, UnfoldLess as CollapseIcon
+  UnfoldMore as ExpandIcon, UnfoldLess as CollapseIcon,
+  People
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 import { colorTokens, responsiveTypographyTokens } from 'theme/tokens';
@@ -546,13 +547,16 @@ const UsersPage: React.FC = () => {
       overflow: 'hidden'
     }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-        <Typography
-          variant="h4"
-          component="h1"
-          sx={responsiveTypographyTokens.h4Enhanced}
-        >
-          Quản lý người dùng
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <People sx={{ mr: 1, fontSize: '24px' }} />
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={responsiveTypographyTokens.h4Enhanced}
+          >
+            Quản lý Users
+          </Typography>
+        </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
             variant="outlined"

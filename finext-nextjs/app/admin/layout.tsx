@@ -29,7 +29,7 @@ import {
   Subscriptions,
   ReceiptLong,
   Policy,
-  AccountBalanceWallet,
+  BusinessCenter,
   ListAlt,
   Devices,
   VpnKey,
@@ -60,7 +60,7 @@ const navigationStructure: (NavItem | NavGroup)[] = [
     groupIcon: <ManageAccounts />,
     subItems: [
       { text: 'Users', href: '/admin/users', icon: <PeopleIcon /> },
-      { text: 'Brokers', href: '/admin/brokers', icon: <AccountBalanceWallet /> },
+      { text: 'Brokers', href: '/admin/brokers', icon: <BusinessCenter /> },
     ],
   },
   {

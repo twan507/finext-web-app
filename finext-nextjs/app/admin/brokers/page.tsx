@@ -10,7 +10,7 @@ import {
     TextField, useTheme
 } from '@mui/material';
 import {
-    AccountBalanceWallet as BrokerIcon,
+    BusinessCenter as BrokerIcon,
     Add as AddIcon,
     BusinessCenter as GrantIcon,
     RemoveCircleOutline as RevokeIcon,
@@ -398,9 +398,10 @@ export default function BrokersPage() {
                         component="h1"
                         sx={responsiveTypographyTokens.h4Enhanced}
                     >
-                        Quản lý môi giới
+                        Quản lý Brokers
                     </Typography>
-                </Box>                <Box sx={{ display: 'flex', gap: 1 }}>
+                </Box>
+                <Box sx={{ display: 'flex', gap: 1 }}>
                     <Button
                         variant="outlined"
                         startIcon={expandedView ? <CollapseIcon /> : <ExpandIcon />}
