@@ -7,13 +7,13 @@ import {
     Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
     TableHead, TableRow, Button, Chip, IconButton, Alert, CircularProgress,
     TablePagination, Tooltip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
-    useTheme
+    TextField, useTheme
 } from '@mui/material';
 import {
     AccountBalanceWallet as BrokerIcon,
     Add as AddIcon,
-    PersonAdd as GrantIcon,
-    PersonRemove as RevokeIcon,
+    BusinessCenter as GrantIcon,
+    RemoveCircleOutline as RevokeIcon,
     UnfoldMore as ExpandIcon,
     UnfoldLess as CollapseIcon
 } from '@mui/icons-material';
@@ -21,6 +21,7 @@ import { format, parseISO } from 'date-fns';
 import { colorTokens, responsiveTypographyTokens } from 'theme/tokens';
 import BrokerSearch from './components/BrokerSearch';
 import SortableTableHead from '../components/SortableTableHead';
+import AddBrokerModal from './components/AddBrokerModal';
 import {
     SortConfig,
     ColumnConfig,
@@ -44,6 +45,16 @@ interface PaginatedBrokersResponse {
     total: number;
 }
 
+interface UserPublic {
+    id: string;
+    full_name: string;
+    email: string;
+    phone_number?: string | null;
+    is_active?: boolean;
+    role_ids: string[];
+    referral_code?: string | null;
+}
+
 export default function BrokersPage() {
     const theme = useTheme();
     const componentColors = theme.palette.mode === 'light'
@@ -57,11 +68,15 @@ export default function BrokersPage() {
     const [error, setError] = useState<string | null>(null);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
-    const [totalCount, setTotalCount] = useState(0);
-
-    const [openActionDialog, setOpenActionDialog] = useState(false);
+    const [totalCount, setTotalCount] = useState(0); const [openActionDialog, setOpenActionDialog] = useState(false);
     const [brokerToAction, setBrokerToAction] = useState<BrokerPublic | null>(null);
-    const [actionType, setActionType] = useState<'deactivate' | 'delete' | ''>(''); // 'delete' now implies deactivation    // View and sorting state
+    const [actionType, setActionType] = useState<'revoke' | 'grant' | ''>(''); // 'revoke' for deactivating, 'grant' for activating
+    const [actionLoading, setActionLoading] = useState(false);
+    const [confirmEmail, setConfirmEmail] = useState('');
+
+    // Add Broker Modal
+    const [openAddBrokerModal, setOpenAddBrokerModal] = useState(false);
+    const [allUsers, setAllUsers] = useState<UserPublic[]>([]);// View and sorting state
     const [expandedView, setExpandedView] = useState(false);
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
     const [userEmails, setUserEmails] = useState<Map<string, string>>(new Map());
@@ -78,7 +93,7 @@ export default function BrokersPage() {
             minWidth: 'auto',
         }, {
             id: 'user_id',
-            label: 'User Email',
+            label: 'Email người dùng',
             sortable: true,
             sortType: 'string',
             accessor: (broker: BrokerPublic) => userEmails.get(broker.user_id) || broker.user_email || broker.user_id,
@@ -110,7 +125,8 @@ export default function BrokersPage() {
             accessor: (broker: BrokerPublic) => broker.updated_at,
             minWidth: 'auto',
             responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' }
-        }, {
+        },
+        {
             id: 'actions',
             label: '',
             sortable: false,
@@ -197,9 +213,7 @@ export default function BrokersPage() {
         if (userIds.length > 0) {
             fetchUserEmails(userIds);
         }
-    }, [brokers, fetchUserEmails]);
-
-    // Update filtered brokers when brokers change and not actively filtering
+    }, [brokers, fetchUserEmails]);    // Update filtered brokers when brokers change and not actively filtering
     useEffect(() => {
         if (!isFiltering) {
             setFilteredBrokers(brokers);
@@ -267,41 +281,91 @@ export default function BrokersPage() {
             setError(err.message || `Failed to update broker ${broker.broker_code} status.`);
             setBrokers(prev => prev.map(b => b.id === broker.id ? { ...b, is_active: originalStatus, updated_at: broker.updated_at } : b));
         }
-    };
-
-    const handleOpenActionDialog = (broker: BrokerPublic) => {
-        // For brokers, "Delete" means deactivating them and revoking privileges as per backend logic
+    }; const handleOpenActionDialog = (broker: BrokerPublic, action: 'revoke' | 'grant') => {
         setBrokerToAction(broker);
-        setActionType('deactivate'); // Unified action type for the dialog
+        setActionType(action);
         setOpenActionDialog(true);
-    };
+    }; const handleCloseActionDialog = () => {
+        if (!actionLoading) {
+            setBrokerToAction(null);
+            setOpenActionDialog(false);
+            setActionType('');
+            setConfirmEmail('');
+        }
+    }; const handleConfirmAction = async () => {
+        if (!brokerToAction || !actionType) return;
 
-    const handleCloseActionDialog = () => {
-        setBrokerToAction(null);
-        setOpenActionDialog(false);
-        setActionType('');
-    };
+        // For revoke action, validate email confirmation
+        if (actionType === 'revoke') {
+            const brokerEmail = userEmails.get(brokerToAction.user_id) || brokerToAction.user_email;
+            if (!confirmEmail.trim()) {
+                setError('Vui lòng nhập email để xác nhận.');
+                return;
+            }
+            if (confirmEmail.trim().toLowerCase() !== brokerEmail?.toLowerCase()) {
+                setError('Xác nhận email không khớp. Vui lòng nhập chính xác địa chỉ email của môi giới.');
+                return;
+            }
+        }
 
-    const handleConfirmDeactivateAction = async () => {
-        if (!brokerToAction) return;
-        // setLoading(true); // Specific loading for this action
+        setActionLoading(true);
+        setError(null);
+
         try {
-            // The backend DELETE /api/v1/brokers/{broker_id_or_code} actually deactivates and revokes.
-            // Or use PUT /api/v1/brokers/{broker_id_or_code} with {is_active: false}
-            // Based on router, the DELETE endpoint is for "Hủy tư cách Đối tác (set is_active=False và thu hồi quyền lợi)"
-            await apiClient({
-                url: `/api/v1/brokers/${brokerToAction.id}`,
-                method: 'DELETE',
-            });
-            fetchBrokers();
+            if (actionType === 'revoke') {
+                // Use DELETE endpoint to deactivate and revoke privileges
+                await apiClient({
+                    url: `/api/v1/brokers/${brokerToAction.id}`,
+                    method: 'DELETE',
+                });
+            } else if (actionType === 'grant') {
+                // Use PUT endpoint to reactivate broker
+                await apiClient<BrokerPublic>({
+                    url: `/api/v1/brokers/${brokerToAction.id}`,
+                    method: 'PUT',
+                    body: { is_active: true }
+                });
+            } fetchBrokers(); // Refresh the brokers list
             handleCloseActionDialog();
-        } catch (delError: any) {
-            setError(delError.message || `Failed to deactivate broker.`);
+        } catch (error: any) {
+            const actionText = actionType === 'revoke' ? 'thu hồi quyền' : 'khôi phục quyền';
+            setError(error.message || `Đã xảy ra lỗi khi ${actionText} broker.`);
             handleCloseActionDialog();
         } finally {
-            // setLoading(false);
+            setActionLoading(false);
         }
-    }; const handleAddBroker = () => console.log("Add broker action (not implemented)");
+    }; const fetchAllUsers = useCallback(async () => {
+        try {
+            const response = await apiClient<{ items: UserPublic[]; total: number }>({
+                url: '/api/v1/users/?skip=0&limit=1000', // Get a large number to include all users
+                method: 'GET',
+            });
+
+            if (response.status === 200 && response.data && Array.isArray(response.data.items)) {
+                setAllUsers(response.data.items);
+            } else {
+                console.error('Failed to load users:', response.message);
+            }
+        } catch (err: any) {
+            console.error('Failed to load users:', err.message);
+        }
+    }, []);
+
+    const handleAddBroker = () => {
+        setOpenAddBrokerModal(true);
+    };
+
+    const handleCloseAddBrokerModal = () => {
+        setOpenAddBrokerModal(false);
+    }; const handleBrokerAdded = () => {
+        setOpenAddBrokerModal(false);
+        fetchBrokers(); // Refresh the brokers list
+    };
+
+    // Fetch all users for add broker modal
+    useEffect(() => {
+        fetchAllUsers();
+    }, [fetchAllUsers]);
 
     // Calculate paginated brokers - use server pagination when not filtering/sorting, client pagination when filtering/sorting
     const paginatedBrokers = React.useMemo(() => {
@@ -358,7 +422,7 @@ export default function BrokersPage() {
                                 display: { xs: 'none', sm: 'none', md: 'inline' }
                             }}
                         >
-                            {expandedView ? 'Compact View' : 'Detailed View'}
+                            {expandedView ? 'Chế độ thu gọn' : 'Chế độ chi tiết'}
                         </Box>
                     </Button>
                     <Button
@@ -382,7 +446,7 @@ export default function BrokersPage() {
                                 display: { xs: 'none', sm: 'none', md: 'inline' }
                             }}
                         >
-                            Add Broker
+                            Thêm Broker
                         </Box>
                     </Button>
                 </Box>
@@ -444,8 +508,8 @@ export default function BrokersPage() {
                                                     size="small"
                                                     variant="outlined"
                                                     sx={{ fontWeight: 'medium' }}
-                                                />
-                                            </TableCell>                                            <TableCell sx={{
+                                                />                                            </TableCell>
+                                            <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[1], expandedView),
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
                                                 minWidth: columnConfigs[1].minWidth,
@@ -471,9 +535,8 @@ export default function BrokersPage() {
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
                                                 minWidth: columnConfigs[2].minWidth,
                                                 width: expandedView ? 'auto' : columnConfigs[2].minWidth
-                                            }}>
-                                                <Chip
-                                                    label={broker.is_active ? 'Active' : 'Inactive'}
+                                            }}>                                                <Chip
+                                                    label={broker.is_active ? 'Hoạt động' : 'Không hoạt động'}
                                                     size="small"
                                                     color={broker.is_active ? "success" : "default"}
                                                     variant={broker.is_active ? "filled" : "outlined"}
@@ -485,36 +548,34 @@ export default function BrokersPage() {
                                             </TableCell>
                                             <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[3], expandedView),
-                                                whiteSpace: expandedView ? 'nowrap' : 'normal',
-                                                minWidth: columnConfigs[3].minWidth,
+                                                whiteSpace: expandedView ? 'nowrap' : 'normal', minWidth: columnConfigs[3].minWidth,
                                                 width: expandedView ? 'auto' : columnConfigs[3].minWidth
-                                            }}>                                                <Typography sx={responsiveTypographyTokens.tableCell}>
-                                                    {(() => {
-                                                        if (!broker.created_at) return 'N/A';
-                                                        try {
-                                                            return format(parseISO(broker.created_at), 'dd/MM/yyyy');
-                                                        } catch (error) {
-                                                            return 'Invalid Date';
-                                                        }
-                                                    })()}
+                                            }}>
+                                                <Typography sx={responsiveTypographyTokens.tableCell}>                                                    {(() => {
+                                                    if (!broker.created_at) return 'N/A';
+                                                    try {
+                                                        return format(parseISO(broker.created_at), 'dd/MM/yyyy');
+                                                    } catch (error) {
+                                                        return 'Ngày không hợp lệ';
+                                                    }
+                                                })()}
                                                 </Typography>
                                             </TableCell>
                                             <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[4], expandedView),
-                                                whiteSpace: expandedView ? 'nowrap' : 'normal',
-                                                minWidth: columnConfigs[4].minWidth,
+                                                whiteSpace: expandedView ? 'nowrap' : 'normal', minWidth: columnConfigs[4].minWidth,
                                                 width: expandedView ? 'auto' : columnConfigs[4].minWidth
-                                            }}>                                                <Typography sx={responsiveTypographyTokens.tableCell}>
-                                                    {(() => {
-                                                        if (!broker.updated_at) return 'N/A';
-                                                        try {
-                                                            return format(parseISO(broker.updated_at), 'dd/MM/yyyy');
-                                                        } catch (error) {
-                                                            return 'Invalid Date';
-                                                        }
-                                                    })()}
-                                                </Typography>
-                                            </TableCell>                                            <TableCell
+                                            }}>
+                                                <Typography sx={responsiveTypographyTokens.tableCell}>                                                    {(() => {
+                                                    if (!broker.updated_at) return 'N/A';
+                                                    try {
+                                                        return format(parseISO(broker.updated_at), 'dd/MM/yyyy');
+                                                    } catch (error) {
+                                                        return 'Ngày không hợp lệ';
+                                                    }
+                                                })()}</Typography>
+                                            </TableCell>
+                                            <TableCell
                                                 sx={{
                                                     ...getResponsiveDisplayStyle(columnConfigs[5], expandedView),
                                                     position: 'sticky',
@@ -539,27 +600,26 @@ export default function BrokersPage() {
                                                 }}
                                             >
                                                 <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                                                    {broker.is_active ? (
-                                                        <Tooltip title="Revoke Broker Privileges">
-                                                            <IconButton
-                                                                size="small"
-                                                                onClick={() => handleOpenActionDialog(broker)}
-                                                                color="error"
-                                                                sx={{
-                                                                    minWidth: { xs: 32, sm: 'auto' },
-                                                                    width: { xs: 32, sm: 'auto' },
-                                                                    height: { xs: 32, sm: 'auto' }
-                                                                }}
-                                                            >
-                                                                <RevokeIcon fontSize="small" />
-                                                            </IconButton>
-                                                        </Tooltip>
+                                                    {broker.is_active ? (<Tooltip title="Thu hồi quyền">
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => handleOpenActionDialog(broker, 'revoke')}
+                                                            color="error"
+                                                            sx={{
+                                                                minWidth: { xs: 32, sm: 'auto' },
+                                                                width: { xs: 32, sm: 'auto' },
+                                                                height: { xs: 32, sm: 'auto' }
+                                                            }}
+                                                        >
+                                                            <RevokeIcon fontSize="small" />
+                                                        </IconButton>
+                                                    </Tooltip>
                                                     ) : (
-                                                        <Tooltip title="Grant Broker Privileges">
+                                                        <Tooltip title="Khôi phục quyền">
                                                             <IconButton
                                                                 size="small"
-                                                                onClick={() => handleToggleBrokerStatus(broker)}
-                                                                color="success"
+                                                                onClick={() => handleOpenActionDialog(broker, 'grant')}
+                                                                color="warning"
                                                                 sx={{
                                                                     minWidth: { xs: 32, sm: 'auto' },
                                                                     width: { xs: 32, sm: 'auto' },
@@ -585,18 +645,16 @@ export default function BrokersPage() {
                                     )}
                                 </TableBody>
                             </Table>
-                        </TableContainer>
-                        <TablePagination
-                            rowsPerPageOptions={[5, 10, 50, { label: 'All', value: 99999 }]}
+                        </TableContainer>                        <TablePagination
+                            rowsPerPageOptions={[5, 10, 50, { label: 'Tất cả', value: 99999 }]}
                             component="div"
                             count={displayTotalCount}
                             rowsPerPage={rowsPerPage}
                             page={page}
                             onPageChange={handleChangePage}
-                            onRowsPerPageChange={handleChangeRowsPerPage}
-                            labelRowsPerPage={
+                            onRowsPerPageChange={handleChangeRowsPerPage} labelRowsPerPage={
                                 <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                                    Rows per page:
+                                    Dòng mỗi trang:
                                 </Box>
                             }
                             sx={{
@@ -624,21 +682,156 @@ export default function BrokersPage() {
                         />
                     </>
                 )}
-            </Paper>            <Dialog open={openActionDialog} onClose={handleCloseActionDialog}>
-                <DialogTitle>Xác nhận thu hồi quyền môi giới</DialogTitle>
+            </Paper>            <Dialog
+                open={openActionDialog}
+                onClose={!actionLoading ? handleCloseActionDialog : undefined}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle sx={{
+                    color: actionType === 'revoke' ? 'error.main' : 'warning.main',
+                    fontWeight: 'bold'
+                }}>
+                    {actionType === 'revoke' ? '⚠️ Xác nhận thu hồi quyền môi giới' : '🔄 Xác nhận khôi phục quyền môi giới'}
+                </DialogTitle>
                 <DialogContent>
-                    <DialogContentText>
-                        Bạn có chắc chắn muốn thu hồi quyền môi giới của <strong>{brokerToAction?.broker_code}</strong> (User ID: {brokerToAction?.user_id})?
-                        Điều này sẽ đánh dấu môi giới là không hoạt động và thu hồi các quyền lợi liên quan.
-                    </DialogContentText>
+                    {/* Broker Information */}
+                    <Box sx={{
+                        p: 1.5,
+                        bgcolor: componentColors.modal.noteBackground,
+                        borderRadius: 1,
+                        mb: 2,
+                    }}>
+                        <Typography variant="body1" fontWeight="bold">
+                            Mã môi giới: {brokerToAction?.broker_code}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            {userEmails.get(brokerToAction?.user_id || '') || brokerToAction?.user_email || 'Đang tải...'}
+                        </Typography>
+                    </Box>
+
+                    {/* Warning/Information Box */}
+                    <Box sx={{
+                        mb: 3,
+                        p: 2,
+                        bgcolor: componentColors.modal.noteBackground,
+                        borderRadius: 1,
+                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '3px',
+                            bgcolor: actionType === 'revoke' ? 'error.main' : 'warning.main',
+                            borderRadius: '4px 4px 0 0'
+                        },
+                        position: 'relative'
+                    }}>
+                        <Typography
+                            variant="body2"
+                            fontWeight="bold"
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                color: actionType === 'revoke' ? 'error.main' : 'warning.main',
+                                mb: 2
+                            }}
+                        >
+                            {actionType === 'revoke' ? '⚠️ Cảnh báo quan trọng:' : 'ℹ️ Thông tin quan trọng:'}
+                        </Typography>
+
+                        {actionType === 'revoke' ? (
+                            <>
+
+                                <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                                    • Tất cả quyền lợi và chức năng môi giới sẽ bị thu hồi
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                                    • Các subscription liên quan có thể bị ảnh hưởng
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                                    • Hành động này có thể được hoàn tác bằng cách khôi phục quyền
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                                    • Mã môi giới sẽ được giữ lại để có thể khôi phục sau này
+                                </Typography>
+                            </>
+                        ) : (
+                            <>
+                                <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                                    • Môi giới sẽ được kích hoạt lại
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                                    • Tất cả quyền lợi và chức năng môi giới sẽ được khôi phục
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                                    • Môi giới có thể bắt đầu hoạt động ngay lập tức
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                                    • Các subscription và quyền lợi trước đó sẽ được khôi phục
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                                    • Mã môi giới và dữ liệu liên quan sẽ được kích hoạt lại
+                                </Typography>
+                            </>)}
+                    </Box>
+
+                    {/* Email Confirmation Field - Only for revoke action */}
+                    {actionType === 'revoke' && (
+                        <Box sx={{ mb: 3 }}>
+                            <TextField
+                                fullWidth
+                                label="Nhập địa chỉ email để xác nhận"
+                                variant="outlined"
+                                value={confirmEmail}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmEmail(e.target.value)}
+                                placeholder={userEmails.get(brokerToAction?.user_id || '') || brokerToAction?.user_email || ''}
+                                helperText="Email phải khớp chính xác với email của môi giới (không phân biệt chữ hoa thường)"
+                                disabled={actionLoading}
+                                error={!!error && (error.includes('email') || error.includes('Email'))}
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        '&.Mui-focused fieldset': {
+                                            borderColor: 'error.main'
+                                        }
+                                    }
+                                }}
+                            />
+                        </Box>
+                    )}
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseActionDialog}>Hủy</Button>
-                    <Button onClick={handleConfirmDeactivateAction} color="error">
-                        Xác nhận thu hồi quyền
+                <DialogActions sx={{ p: 3, pt: 1 }}>
+                    <Button
+                        onClick={handleCloseActionDialog}
+                        disabled={actionLoading}
+                        variant="outlined"
+                    >
+                        Hủy
+                    </Button>
+                    <Button
+                        onClick={handleConfirmAction}
+                        color={actionType === 'revoke' ? 'error' : 'warning'}
+                        variant="contained"
+                        disabled={actionLoading}
+                        startIcon={actionLoading ? <CircularProgress size={20} /> : null}
+                    >
+                        {actionLoading
+                            ? (actionType === 'revoke' ? 'Đang thu hồi...' : 'Đang khôi phục...')
+                            : (actionType === 'revoke' ? 'Xác nhận thu hồi quyền' : 'Xác nhận khôi phục quyền')
+                        }
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            <AddBrokerModal
+                open={openAddBrokerModal}
+                onClose={handleCloseAddBrokerModal}
+                onBrokerAdded={handleBrokerAdded}
+                allUsers={allUsers}
+            />
         </Box>
     );
 }

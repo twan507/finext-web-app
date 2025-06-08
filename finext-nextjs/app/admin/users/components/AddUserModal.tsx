@@ -49,11 +49,10 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
             phone_number: '',
             password: '',
             referral_code: ''
-        });
-
-    const [loading, setLoading] = useState(false);
+        }); const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [showPassword, setShowPassword] = useState(false); const handleInputChange = (field: keyof UserCreate) => (
+    const [showPassword, setShowPassword] = useState(false);
+    const [confirmPassword, setConfirmPassword] = useState(''); const handleInputChange = (field: keyof UserCreate) => (
         event: React.ChangeEvent<HTMLInputElement>
     ) => {
         const value = event.target.value;
@@ -70,6 +69,9 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
         }
         if (!formData.password || formData.password.length < 8) {
             return 'Mật khẩu phải có ít nhất 8 ký tự';
+        }
+        if (formData.password !== confirmPassword) {
+            return 'Mật khẩu xác nhận không khớp';
         }
         if (formData.phone_number && !/^[0-9+\-\s()]*$/.test(formData.phone_number)) {
             return 'Số điện thoại không hợp lệ';
@@ -135,6 +137,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
                     password: '',
                     referral_code: ''
                 });
+                setConfirmPassword('');
                 onUserAdded(); // Refresh the users list
                 onClose(); // Close modal
             } else {
@@ -156,6 +159,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
                 password: '',
                 referral_code: ''
             });
+            setConfirmPassword('');
             setError(null);
             onClose();
         }
@@ -224,7 +228,8 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
                             disabled={loading}
                             placeholder="0912345678"
                             variant="outlined"
-                        />            {/* Mật khẩu */}
+                        />
+                        {/* Mật khẩu */}
                         <TextField
                             fullWidth
                             label="Mật khẩu *"
@@ -237,21 +242,45 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
                             autoComplete="new-password"
                             inputProps={{
                                 autoComplete: 'new-password'
-                            }}
-                            InputProps={{
+                            }} InputProps={{
                                 endAdornment: (
                                     <InputAdornment position="end">
                                         <IconButton
                                             onClick={() => setShowPassword(!showPassword)}
                                             edge="end"
                                             disabled={loading}
+                                            tabIndex={-1}
                                         >
                                             {showPassword ? <VisibilityOff /> : <Visibility />}
                                         </IconButton>
                                     </InputAdornment>
                                 ),
                             }}
-                        />                        {/* Mã giới thiệu */}
+                        />
+
+                        {/* Xác nhận mật khẩu */}
+                        <TextField
+                            fullWidth
+                            label="Xác nhận mật khẩu *"
+                            type="password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            disabled={loading}
+                            placeholder="Nhập lại mật khẩu"
+                            variant="outlined"
+                            autoComplete="new-password"
+                            error={confirmPassword !== '' && formData.password !== confirmPassword}
+                            helperText={
+                                confirmPassword !== '' && formData.password !== confirmPassword
+                                    ? "Mật khẩu xác nhận không khớp"
+                                    : "Nhập lại mật khẩu để xác nhận"
+                            }
+                            inputProps={{
+                                autoComplete: 'new-password'
+                            }}
+                        />
+
+                        {/* Mã giới thiệu */}
                         <TextField
                             fullWidth
                             label="Mã giới thiệu"

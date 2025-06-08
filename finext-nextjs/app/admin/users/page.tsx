@@ -368,11 +368,10 @@ const UsersPage: React.FC = () => {
 
     return sortData(dataToSort, sortConfig, column);
   }, [users, filteredUsers, isFiltering, sortConfig, columnConfigs, subscriptions, roles]);
-
   const handleOpenDeleteDialog = (user: UserPublic) => {
     // Check if user is protected
     if (isUserProtected(user.email)) {
-      setError('Cannot delete protected user account.');
+      setError('Không thể xóa tài khoản người dùng được bảo vệ.');
       return;
     }
 
@@ -386,7 +385,7 @@ const UsersPage: React.FC = () => {
       const nonUserRoles = userRoleNames.filter(roleName =>
         roleName.toLowerCase() !== 'user'
       );
-      setError(`Cannot delete user '${user.email}' because they have additional roles: ${nonUserRoles.join(', ')}. Please revoke these roles first before deleting the user.`);
+      setError(`Không thể xóa người dùng '${user.email}' vì họ có thêm các vai trò: ${nonUserRoles.join(', ')}. Vui lòng thu hồi các vai trò này trước khi xóa người dùng.`);
       return;
     }
 
@@ -403,17 +402,13 @@ const UsersPage: React.FC = () => {
   };
 
   const handleDeleteUser = async () => {
-    if (!userToDelete) return;
-
-    // Validate email confirmation
+    if (!userToDelete) return;    // Validate email confirmation
     if (deleteConfirmEmail.trim().toLowerCase() !== userToDelete.email.toLowerCase()) {
-      setError('Email confirmation does not match. Please enter the exact email address.');
+      setError('Xác nhận email không khớp. Vui lòng nhập chính xác địa chỉ email.');
       return;
-    }
-
-    // Double check if user is protected
+    }    // Double check if user is protected
     if (isUserProtected(userToDelete.email)) {
-      setError('Cannot delete protected user account.');
+      setError('Không thể xóa tài khoản người dùng được bảo vệ.');
       return;
     }
 
@@ -430,15 +425,12 @@ const UsersPage: React.FC = () => {
         fetchUsers(); // Refresh list
         handleCloseDeleteDialog();
         // Optional: show success message
-        // setSuccess(`User ${userToDelete.full_name} has been deleted successfully.`);
-      } else {
-        setError(response.message || 'Failed to delete user.');
+        // setSuccess(`User ${userToDelete.full_name} has been deleted successfully.`);      } else {
+        setError(response.message || 'Không thể xóa người dùng.');
       }
     } catch (delError: any) {
-      console.error('Delete user error:', delError);
-
-      // Handle specific role-based validation errors with more user-friendly messages
-      let errorMessage = delError.message || 'An error occurred while deleting the user.';
+      console.error('Delete user error:', delError);      // Handle specific role-based validation errors with more user-friendly messages
+      let errorMessage = delError.message || 'Đã xảy ra lỗi khi xóa người dùng.';
 
       // Check if it's a role-based validation error (HTTP 400)
       if (delError.status === 400 && delError.message) {
@@ -583,7 +575,7 @@ const UsersPage: React.FC = () => {
                 display: { xs: 'none', sm: 'none', md: 'inline' }
               }}
             >
-              {expandedView ? 'Compact View' : 'Detailed View'}
+              {expandedView ? 'Chế độ thu gọn' : 'Chế độ chi tiết'}
             </Box>
           </Button>
           <Button
@@ -790,7 +782,7 @@ const UsersPage: React.FC = () => {
                               const formatted = format(parseISO(user.created_at), 'dd/MM/yyyy');
                               return formatted;
                             } catch (error) {
-                              return 'Invalid Date';
+                              return 'Ngày không hợp lệ';
                             }
                           })()}
                         </Typography>
@@ -810,7 +802,7 @@ const UsersPage: React.FC = () => {
                               const formatted = format(parseISO(user.updated_at), 'dd/MM/yyyy');
                               return formatted;
                             } catch (error) {
-                              return 'Invalid Date';
+                              return 'Ngày không hợp lệ';
                             }
                           })()}
                         </Typography>
@@ -865,7 +857,7 @@ const UsersPage: React.FC = () => {
                         }
                       }}>
                         <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                          <Tooltip title="Edit User">
+                          <Tooltip title="Chỉnh sửa người dùng">
                             <IconButton
                               size="small"
                               onClick={() => handleEditUser(user)}
@@ -878,7 +870,7 @@ const UsersPage: React.FC = () => {
                               <EditIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title="Delete User">
+                          <Tooltip title="Xóa người dùng">
                             <IconButton
                               size="small"
                               onClick={() => handleOpenDeleteDialog(user)}
@@ -947,9 +939,8 @@ const UsersPage: React.FC = () => {
         onClose={!deleteLoading ? handleCloseDeleteDialog : undefined}
         maxWidth="sm"
         fullWidth
-      >
-        <DialogTitle sx={{ color: 'error.main', fontWeight: 'bold' }}>
-          ⚠️ Confirm User Deletion
+      >        <DialogTitle sx={{ color: 'error.main', fontWeight: 'bold' }}>
+          ⚠️ Xác nhận xóa người dùng
         </DialogTitle>
         <DialogContent>
           <Box sx={{
@@ -997,30 +988,28 @@ const UsersPage: React.FC = () => {
                 gap: 1,
                 color: 'error.main',
                 mb: 2
-              }}
-            >
-              ⚠️ Critical Warning:
+              }}            >
+              ⚠️ Cảnh báo quan trọng:
+            </Typography>            <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+              • Hành động này không thể hoàn tác
             </Typography>
             <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
-              • This action cannot be undone
+              • Tất cả dữ liệu và lịch sử người dùng sẽ bị mất vĩnh viễn
             </Typography>
             <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
-              • All user data and history will be permanently lost
+              • Subscription của người dùng sẽ bị chấm dứt ngay lập tức
             </Typography>
             <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
-              • User subscriptions will be terminated immediately
+              • Chỉ người dùng với vai trò "user" (hoặc không có vai trò) mới có thể xóa
             </Typography>
             <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
-              • Only users with the "user" role (or no roles) can be deleted
-            </Typography>
-            <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
-              • Users with admin, broker, or other roles must have those roles revoked first
+              • Người dùng có vai trò admin, broker hoặc vai trò khác phải được thu hồi vai trò trước khi xóa
             </Typography>
           </Box>
           <TextField
             autoFocus
             fullWidth
-            label="Type email address to confirm"
+            label="Nhập địa chỉ email để xác nhận"
             placeholder={userToDelete?.email}
             value={deleteConfirmEmail}
             onChange={(e) => setDeleteConfirmEmail(e.target.value)}
@@ -1028,16 +1017,15 @@ const UsersPage: React.FC = () => {
             variant="outlined"
             size="small"
             sx={{ mt: 1 }}
-            helperText="Email must match exactly (case-insensitive)"
+            helperText="Email phải khớp chính xác (không phân biệt chữ hoa thường)"
           />
         </DialogContent>
         <DialogActions sx={{ p: 3, pt: 1 }}>
           <Button
             onClick={handleCloseDeleteDialog}
             disabled={deleteLoading}
-            variant="outlined"
-          >
-            Cancel
+            variant="outlined"          >
+            Hủy
           </Button>
           <Button
             onClick={handleDeleteUser}
@@ -1050,7 +1038,7 @@ const UsersPage: React.FC = () => {
             }
             startIcon={deleteLoading ? <CircularProgress size={20} /> : null}
           >
-            {deleteLoading ? 'Deleting...' : 'Delete User'}
+            {deleteLoading ? 'Đang xóa...' : 'Xóa người dùng'}
           </Button>
         </DialogActions>
       </Dialog>

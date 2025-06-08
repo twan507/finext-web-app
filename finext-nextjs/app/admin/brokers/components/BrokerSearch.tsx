@@ -226,11 +226,9 @@ const BrokerSearch: React.FC<BrokerSearchProps> = ({
                             {[
                                 { label: 'Active', value: 'active' },
                                 { label: 'Inactive', value: 'inactive' },
-                                { label: 'Hoạt động', value: 'hoạt động' },
-                                { label: 'Không hoạt động', value: 'không hoạt động' },
                                 { label: '2024', value: '2024' },
                                 { label: '2023', value: '2023' },
-                                { label: 'This month', value: new Date().toLocaleDateString('vi-VN').split('/').slice(1).join('/') },
+                                { label: 'Tháng này', value: new Date().toLocaleDateString('vi-VN').split('/').slice(1).join('/') },
                             ].map((filter) => (
                                 <Chip
                                     key={filter.value}

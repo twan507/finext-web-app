@@ -43,6 +43,10 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
         "name": "user:manage_roles",
         "description": "Quyền gán/thu hồi vai trò cho người dùng.",
     },
+    {
+        "name": "user:change_password_any",
+        "description": "Quyền thay đổi mật khẩu của bất kỳ người dùng nào (admin).",
+    },
     # -------------------------------------------------------------------------
     # Role Management Permissions
     # -------------------------------------------------------------------------

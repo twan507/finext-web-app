@@ -16,6 +16,7 @@ from app.crud.users import (
     get_user_by_id_db,
     revoke_roles_from_user,
     update_user_db,  # Thêm update_user_db nếu chưa có
+    update_user_password,  # Thêm import hàm cập nhật mật khẩu
     get_all_users_paginated,  # Thêm hàm mới
 )
 
@@ -24,6 +25,7 @@ import app.crud.brokers as crud_brokers
 import app.crud.subscriptions as crud_subscriptions
 
 from app.schemas.users import UserCreate, UserPublic, UserRoleModificationRequest, UserUpdate, UserInDB
+from app.schemas.auth import AdminChangePasswordRequest  # Thêm import schema mới
 from app.schemas.common import PaginatedResponse  # <<<< IMPORT SCHEMA PHÂN TRANG >>>>
 from app.utils.response_wrapper import StandardApiResponse, api_response_wrapper
 from app.utils.types import PyObjectId
@@ -352,3 +354,50 @@ async def revoke_roles_from_user_endpoint(
     if not updated_user:  # Should not happen if user was found initially
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Người dùng không tìm thấy sau khi thu hồi vai trò.")
     return UserPublic.model_validate(updated_user)
+
+
+@router.put(
+    "/{user_id}/change-password",
+    response_model=StandardApiResponse[None],
+    summary="Admin thay đổi mật khẩu cho người dùng (yêu cầu quyền user:change_password_any)",
+    dependencies=[Depends(require_permission("user", "change_password_any"))],
+    tags=["users"],
+)
+@api_response_wrapper(default_success_message="Mật khẩu đã được thay đổi thành công.")
+async def admin_change_user_password_endpoint(
+    user_id: PyObjectId,
+    password_data: AdminChangePasswordRequest,
+    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
+    current_admin: UserInDB = Depends(get_current_active_user),
+):
+    """
+    API cho admin thay đổi mật khẩu của người dùng mà không cần biết mật khẩu cũ.
+    """
+    # Kiểm tra user có tồn tại không
+    target_user = await get_user_by_id_db(db, str(user_id))
+    if not target_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User with ID {user_id} not found.")
+
+    # Kiểm tra user có đang hoạt động không
+    if not target_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot change password for inactive user '{target_user.email}'.",
+        )
+
+    # Không cho phép admin tự thay đổi mật khẩu của chính mình thông qua endpoint này
+    if str(target_user.id) == str(current_admin.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin không thể sử dụng endpoint này để thay đổi mật khẩu của chính mình. Vui lòng sử dụng endpoint 'change-password' thông thường.",
+        )
+
+    # Thực hiện cập nhật mật khẩu
+    password_updated = await update_user_password(db, user_id=str(user_id), new_password=password_data.new_password)
+
+    if not password_updated:
+        logger.error(f"Không thể cập nhật mật khẩu cho user {target_user.email} (ID: {user_id}) bởi admin {current_admin.email}.")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Không thể cập nhật mật khẩu. Vui lòng thử lại sau.")
+
+    logger.info(f"Admin {current_admin.email} đã thay đổi mật khẩu cho user {target_user.email} (ID: {user_id}).")
+    return None

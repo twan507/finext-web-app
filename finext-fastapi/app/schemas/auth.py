@@ -3,21 +3,26 @@ from pydantic import BaseModel, Field, EmailStr, field_validator
 from typing import Optional
 from app.core.config import OTP_LENGTH
 
+
 class JWTTokenResponse(BaseModel):
     """
     Schema cho response trả về khi đăng nhập/refresh thành công.
     Chỉ chứa access token. Refresh token được gửi qua cookie.
     """
+
     token_type: str = "bearer"
     access_token: str
+
 
 class TokenData(BaseModel):
     """
     Schema cho dữ liệu được mã hóa bên trong JWT (payload).
     """
+
     email: Optional[str] = None
     user_id: Optional[str] = None
     jti: Optional[str] = None
+
 
 class ResetPasswordWithOtpRequest(BaseModel):
     email: EmailStr
@@ -31,42 +36,42 @@ class ResetPasswordWithOtpRequest(BaseModel):
         return v
 
     model_config = {
-        "json_schema_extra": {
-            "example": {
-                "email": "user@example.com",
-                "otp_code": "123456",
-                "new_password": "NewStrongPassword123!"
-            }
-        }
+        "json_schema_extra": {"example": {"email": "user@example.com", "otp_code": "123456", "new_password": "NewStrongPassword123!"}}
     }
+
 
 class ChangePasswordRequest(BaseModel):
     current_password: str = Field(..., description="Mật khẩu hiện tại của người dùng.")
     new_password: str = Field(..., min_length=8, description="Mật khẩu mới, tối thiểu 8 ký tự.")
 
     model_config = {
-        "json_schema_extra": {
-            "example": {
-                "current_password": "OldSecurePassword123!",
-                "new_password": "BrandNewSecurePassword456!"
-            }
-        }
+        "json_schema_extra": {"example": {"current_password": "OldSecurePassword123!", "new_password": "BrandNewSecurePassword456!"}}
     }
+
+
+class AdminChangePasswordRequest(BaseModel):
+    new_password: str = Field(..., min_length=8, description="Mật khẩu mới, tối thiểu 8 ký tự.")
+
+    model_config = {"json_schema_extra": {"example": {"new_password": "NewAdminSetPassword123!"}}}
+
 
 # --- GOOGLE OAUTH SCHEMAS ---
 class GoogleUser(BaseModel):
     """Schema for user information obtained from Google."""
-    id: str # Google User ID
+
+    id: str  # Google User ID
     email: EmailStr
     verified_email: bool
     name: Optional[str] = None
     given_name: Optional[str] = None
     family_name: Optional[str] = None
-    picture: Optional[str] = None # URL to profile picture
+    picture: Optional[str] = None  # URL to profile picture
     locale: Optional[str] = None
+
 
 class GoogleLoginRequest(BaseModel):
     """Schema for the request body from frontend to backend after Google login."""
+
     code: str = Field(..., description="The authorization code received from Google OAuth2 flow.")
     # Frontend redirect URI phải khớp với URI đã đăng ký với Google và URI mà Google trả code về
     # Backend sẽ sử dụng redirect_uri này khi trao đổi code lấy token.
@@ -84,11 +89,8 @@ class GoogleLoginRequest(BaseModel):
     redirect_uri: Optional[str] = Field(None, description="The redirect URI used by the frontend to obtain the authorization code.")
 
     model_config = {
-        "json_schema_extra": {
-            "example": {
-                "code": "4/0AfgeXxt...",
-                "redirect_uri": "http://localhost:3000/auth/google/callback"
-            }
-        }
+        "json_schema_extra": {"example": {"code": "4/0AfgeXxt...", "redirect_uri": "http://localhost:3000/auth/google/callback"}}
     }
+
+
 # --- END GOOGLE OAUTH SCHEMAS ---

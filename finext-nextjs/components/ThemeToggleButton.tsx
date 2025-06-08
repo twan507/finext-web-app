@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useTheme as useNextTheme } from 'next-themes';
 import { IconButton, Tooltip, Skeleton } from '@mui/material';
 import {
-  DarkMode as DarkModeIcon, // Dark mode icon
+  Brightness2 as DarkModeIcon, // Dark mode icon
   LightMode as LightModeIcon, // Light mode icon
 } from '@mui/icons-material';
 

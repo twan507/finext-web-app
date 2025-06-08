@@ -12,7 +12,8 @@ import {
     PersonOff as DeactivateIcon,
     PersonAdd as ActivateIcon,
     BusinessCenter as BrokerIcon,
-    RemoveCircleOutline as RemoveBrokerIcon
+    RemoveCircleOutline as RemoveBrokerIcon,
+    LockReset as LockResetIcon
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
 import { colorTokens } from 'theme/tokens';
@@ -77,10 +78,11 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [success, setSuccess] = useState<string | null>(null);
-    const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
-    const [actionLoading, setActionLoading] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null); const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null); const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [localUser, setLocalUser] = useState<UserPublic | null>(null);
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPasswordDialog, setShowPasswordDialog] = useState(false);
 
     // Reset form khi user thay đổi
     useEffect(() => {
@@ -200,7 +202,10 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         }
     };    // Xử lý các hành động đặc biệt
     const handleSpecialAction = async (actionType: string) => {
-        if (!user || !localUser || !confirmAction) return;
+        if (!user || !localUser) return;
+
+        // For password reset, we don't need confirmAction
+        if (actionType !== 'reset_password' && !confirmAction) return;
 
         setActionLoading(actionType);
         setError(null);
@@ -247,6 +252,30 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                         method: 'DELETE'
                     });
                     successMessage = 'Xóa quyền broker thành công.';
+                    break; case 'reset_password':
+                    console.log('Reset password case reached');
+                    console.log('newPassword:', newPassword);
+                    console.log('confirmPassword:', confirmPassword);
+
+                    if (!newPassword || newPassword.length < 8) {
+                        throw new Error('Mật khẩu mới phải có ít nhất 8 ký tự');
+                    }
+
+                    if (newPassword !== confirmPassword) {
+                        throw new Error('Mật khẩu xác nhận không khớp với mật khẩu mới');
+                    }
+
+                    console.log('About to call API...');
+                    response = await apiClient({
+                        url: `/api/v1/users/${localUser.id}/change-password`,
+                        method: 'PUT',
+                        body: { new_password: newPassword }
+                    });
+                    console.log('API response:', response);
+                    successMessage = 'Đặt lại mật khẩu thành công.';
+                    setNewPassword(''); // Clear password after success
+                    setConfirmPassword(''); // Clear confirm password after success
+                    setShowPasswordDialog(false);
                     break;
 
                 default:
@@ -302,24 +331,35 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             setActionLoading(null);
             setConfirmAction(null);
         }
-    };
-
-    const openConfirmAction = (action: ConfirmAction) => {
+    }; const openConfirmAction = (action: ConfirmAction) => {
         setConfirmAction(action);
     };
 
     const closeConfirmAction = () => {
         setConfirmAction(null);
+    }; const openPasswordResetDialog = () => {
+        setShowPasswordDialog(true);
+        setNewPassword('');
+        setConfirmPassword('');
+        setError(null);
+        setSuccess(null);
     };
 
-    const handleClose = () => {
+    const closePasswordResetDialog = () => {
+        setShowPasswordDialog(false);
+        setNewPassword('');
+        setConfirmPassword('');
+    }; const handleClose = () => {
         if (!loading && !actionLoading) {
             setError(null);
             setSuccess(null);
             setConfirmAction(null);
+            setShowPasswordDialog(false);
+            setNewPassword('');
+            setConfirmPassword('');
             onClose();
         }
-    };    // Helper functions
+    };// Helper functions
     const getRoleNames = (roleIds: string[]): string[] => {
         return roleIds.map(roleId => {
             const role = roles.find(r => r.id === roleId);
@@ -424,7 +464,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
 
                         </Box>
 
-                        <Box sx={{ display: 'flex', gap: 2, mb: 3, justifyContent: 'flex-end'  }}>
+                        <Box sx={{ display: 'flex', gap: 2, mb: 3, justifyContent: 'flex-end' }}>
                             <Button
                                 onClick={handleUpdateBasicInfo}
                                 disabled={loading || Boolean(actionLoading)}
@@ -445,9 +485,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                                 label={localUser.is_active ? 'Hoạt động' : 'Không hoạt động'}
                                 color={localUser.is_active ? 'success' : 'default'}
                                 size="small"
-                            />
-                            <Chip
-                                label={localUser.google_id ? 'Google Login' : 'Credentials Login'}
+                            />                            <Chip
+                                label={localUser.google_id ? 'Đăng nhập Google' : 'Đăng nhập Email'}
                                 color={localUser.google_id ? 'info' : 'default'}
                                 size="small"
                                 variant="outlined"
@@ -530,6 +569,19 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                                 })}
                             >
                                 {isBroker ? 'Xóa quyền Broker' : 'Cấp quyền Broker'}
+                            </Button>                            {/* Reset Password */}
+                            <Button
+                                variant="outlined"
+                                color="info"
+                                startIcon={
+                                    actionLoading === 'reset_password' ?
+                                        <CircularProgress size={20} /> :
+                                        <LockResetIcon />
+                                }
+                                disabled={Boolean(actionLoading) || !localUser?.is_active}
+                                onClick={openPasswordResetDialog}
+                            >
+                                Đặt lại mật khẩu
                             </Button>
                         </Box>
 
@@ -570,6 +622,9 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                                 • Xóa quyền broker sẽ tự động chuyển subscription về Basic
                             </Typography>
                             <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                                • Đặt lại mật khẩu sẽ thay đổi mật khẩu người dùng ngay lập tức
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
                                 • Người dùng có thể tự reset mật khẩu qua tính năng "Quên mật khẩu"
                             </Typography>
                             {isAdmin && (
@@ -588,6 +643,84 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                         variant="outlined"
                     >
                         Đóng
+                    </Button>
+                </DialogActions>            </Dialog>            {/* Password Reset Dialog */}
+            <Dialog
+                open={showPasswordDialog}
+                onClose={closePasswordResetDialog}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>
+                    Đặt lại mật khẩu cho {localUser?.full_name}
+                </DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+                        Nhập mật khẩu mới cho người dùng <strong>{localUser?.email}</strong>
+                    </Typography>                    <TextField
+                        fullWidth
+                        label="Mật khẩu mới"
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        disabled={Boolean(actionLoading)}
+                        variant="outlined"
+                        sx={{ mt: 2 }}
+                        helperText="Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt"
+                        autoComplete="new-password"
+                        inputProps={{
+                            minLength: 8,
+                            pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$",
+                            autoComplete: 'new-password'
+                        }}
+                    />                    <TextField
+                        fullWidth
+                        label="Xác nhận mật khẩu mới"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        disabled={Boolean(actionLoading)}
+                        variant="outlined"
+                        sx={{ mt: 2 }}
+                        error={confirmPassword !== '' && newPassword !== confirmPassword}
+                        helperText={
+                            confirmPassword !== '' && newPassword !== confirmPassword
+                                ? "Mật khẩu xác nhận không khớp"
+                                : "Nhập lại mật khẩu mới để xác nhận"
+                        }
+                        autoComplete="new-password"
+                        inputProps={{
+                            minLength: 8,
+                            autoComplete: 'new-password'
+                        }}
+                    />
+
+                    {error && (
+                        <Alert severity="error" sx={{ mt: 2 }}>
+                            {error}
+                        </Alert>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        onClick={closePasswordResetDialog}
+                        disabled={Boolean(actionLoading)}
+                    >
+                        Hủy
+                    </Button>                    <Button
+                        onClick={() => handleSpecialAction('reset_password')}
+                        variant="contained"
+                        color="info"
+                        disabled={
+                            Boolean(actionLoading) ||
+                            !newPassword ||
+                            newPassword.length < 8 ||
+                            !confirmPassword ||
+                            newPassword !== confirmPassword
+                        }
+                        startIcon={actionLoading === 'reset_password' && <CircularProgress size={20} />}
+                    >
+                        {actionLoading === 'reset_password' ? 'Đang đặt lại...' : 'Đặt lại mật khẩu'}
                     </Button>
                 </DialogActions>
             </Dialog>
