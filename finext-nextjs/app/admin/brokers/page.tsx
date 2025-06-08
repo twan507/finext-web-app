@@ -115,16 +115,34 @@ export default function BrokersPage() {
             sortType: 'date',
             accessor: (broker: BrokerPublic) => broker.created_at,
             minWidth: 'auto',
-            responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' }
-        },
-        {
+            responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' }, format: (value: string) => {
+                try {
+                    // Parse UTC date and convert to GMT+7
+                    const utcDate = parseISO(value);
+                    const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                    return format(gmt7Date, 'dd/MM/yyyy HH:mm');
+                } catch (error) {
+                    return 'Invalid date';
+                }
+            },
+        }, {
             id: 'updated_at',
             label: 'Ngày cập nhật',
             sortable: true,
             sortType: 'date',
             accessor: (broker: BrokerPublic) => broker.updated_at,
             minWidth: 'auto',
-            responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' }
+            responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' },
+            format: (value: string) => {
+                try {
+                    // Parse UTC date and convert to GMT+7
+                    const utcDate = parseISO(value);
+                    const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                    return format(gmt7Date, 'dd/MM/yyyy HH:mm');
+                } catch (error) {
+                    return 'Invalid date';
+                }
+            },
         },
         {
             id: 'actions',
@@ -447,7 +465,7 @@ export default function BrokersPage() {
                                 display: { xs: 'none', sm: 'none', md: 'inline' }
                             }}
                         >
-                            Thêm Broker
+                            Tạo Broker
                         </Box>
                     </Button>
                 </Box>
@@ -551,30 +569,34 @@ export default function BrokersPage() {
                                                 ...getResponsiveDisplayStyle(columnConfigs[3], expandedView),
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal', minWidth: columnConfigs[3].minWidth,
                                                 width: expandedView ? 'auto' : columnConfigs[3].minWidth
-                                            }}>
-                                                <Typography sx={responsiveTypographyTokens.tableCell}>                                                    {(() => {
-                                                    if (!broker.created_at) return 'N/A';
-                                                    try {
-                                                        return format(parseISO(broker.created_at), 'dd/MM/yyyy');
-                                                    } catch (error) {
-                                                        return 'Ngày không hợp lệ';
-                                                    }
-                                                })()}
+                                            }}>                                                <Typography sx={responsiveTypographyTokens.tableCell}>                                                    {(() => {
+                                                if (!broker.created_at) return 'N/A';
+                                                try {
+                                                    // Parse UTC date and convert to GMT+7
+                                                    const utcDate = parseISO(broker.created_at);
+                                                    const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                                                    return format(gmt7Date, 'dd/MM/yyyy HH:mm');
+                                                } catch (error) {
+                                                    return 'Ngày không hợp lệ';
+                                                }
+                                            })()}
                                                 </Typography>
                                             </TableCell>
                                             <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[4], expandedView),
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal', minWidth: columnConfigs[4].minWidth,
                                                 width: expandedView ? 'auto' : columnConfigs[4].minWidth
-                                            }}>
-                                                <Typography sx={responsiveTypographyTokens.tableCell}>                                                    {(() => {
-                                                    if (!broker.updated_at) return 'N/A';
-                                                    try {
-                                                        return format(parseISO(broker.updated_at), 'dd/MM/yyyy');
-                                                    } catch (error) {
-                                                        return 'Ngày không hợp lệ';
-                                                    }
-                                                })()}</Typography>
+                                            }}>                                                <Typography sx={responsiveTypographyTokens.tableCell}>                                                    {(() => {
+                                                if (!broker.updated_at) return 'N/A';
+                                                try {
+                                                    // Parse UTC date and convert to GMT+7
+                                                    const utcDate = parseISO(broker.updated_at);
+                                                    const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                                                    return format(gmt7Date, 'dd/MM/yyyy HH:mm');
+                                                } catch (error) {
+                                                    return 'Ngày không hợp lệ';
+                                                }
+                                            })()}</Typography>
                                             </TableCell>
                                             <TableCell
                                                 sx={{
@@ -585,8 +607,8 @@ export default function BrokersPage() {
                                                     zIndex: 1,
                                                     borderLeft: '1px solid',
                                                     borderColor: 'divider',
-                                                    minWidth: expandedView ? 'auto' : 80,
-                                                    width: expandedView ? 'auto' : 80,
+                                                    minWidth: expandedView ? 'auto' : 100,
+                                                    width: 'auto',
                                                     // Ensure border visibility during scroll
                                                     '&::before': {
                                                         content: '""',

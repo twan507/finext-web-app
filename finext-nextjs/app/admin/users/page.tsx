@@ -162,7 +162,17 @@ const UsersPage: React.FC = () => {
       sortType: 'date',
       accessor: (user: UserPublic) => user.created_at,
       minWidth: expandedView ? 'auto' : 100,
-      responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' } // Only show in expanded view
+      responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' }, // Only show in expanded view
+      format: (value: string) => {
+        try {
+          // Parse UTC date and convert to GMT+7
+          const utcDate = parseISO(value);
+          const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+          return format(gmt7Date, 'dd/MM/yyyy HH:mm');
+        } catch (error) {
+          return 'Invalid date';
+        }
+      },
     },
     {
       id: 'updated_at',
@@ -171,7 +181,7 @@ const UsersPage: React.FC = () => {
       sortType: 'date',
       accessor: (user: UserPublic) => user.updated_at,
       minWidth: expandedView ? 'auto' : 100,
-      responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' } // Only show in expanded view
+      responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' }, // Only show in expanded view
     },
     {
       id: 'referral_code',
@@ -603,7 +613,7 @@ const UsersPage: React.FC = () => {
                 display: { xs: 'none', sm: 'none', md: 'inline' }
               }}
             >
-              Add User
+              Tạo User
             </Box>
           </Button>
         </Box>
@@ -710,39 +720,47 @@ const UsersPage: React.FC = () => {
                       }}>
                         {(() => {
                           const subscriptionInfo = getSubscriptionInfo(user.id);
-                          return (
-                            <Tooltip title={
-                              subscriptionInfo.loading ?
-                                'Loading subscription info...' :
-                                subscriptionInfo.details ?
-                                  `Expires: ${format(parseISO(subscriptionInfo.details.expiry_date), 'dd/MM/yyyy')}` :
-                                  'No active subscription'
-                            }>
-                              <Chip
-                                label={subscriptionInfo.loading ?
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                    <CircularProgress
-                                      size={12}
-                                      sx={{
-                                        color: 'inherit',
-                                        '& .MuiCircularProgress-svg': {
-                                          filter: (theme) => theme.palette.mode === 'dark' ? 'brightness(1.2)' : 'brightness(0.8)'
-                                        }
-                                      }}
-                                    />
-                                    <span style={{ fontSize: '0.75rem' }}>Loading...</span>
-                                  </Box> :
-                                  subscriptionInfo.status
-                                }
-                                color={subscriptionInfo.color}
-                                size="small"
-                                sx={subscriptionInfo.loading ? {
-                                  '& .MuiChip-label': {
-                                    color: (theme) => theme.palette.mode === 'dark' ? '#003768' : '#e6f7ff'
+                          return (<Tooltip title={
+                            subscriptionInfo.loading ?
+                              'Loading subscription info...' :
+                              subscriptionInfo.details ?
+                                (() => {
+                                  try {
+                                    // Parse UTC date and convert to GMT+7
+                                    const utcDate = parseISO(subscriptionInfo.details.expiry_date);
+                                    const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                                    return `Expires: ${format(gmt7Date, 'dd/MM/yyyy HH:mm')}`;
+                                  } catch (error) {
+                                    return 'Expires: Invalid date';
                                   }
-                                } : {}}
-                              />
-                            </Tooltip>);
+                                })() :
+                                'No active subscription'
+                          }>
+                            <Chip
+                              label={subscriptionInfo.loading ?
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <CircularProgress
+                                    size={12}
+                                    sx={{
+                                      color: 'inherit',
+                                      '& .MuiCircularProgress-svg': {
+                                        filter: (theme) => theme.palette.mode === 'dark' ? 'brightness(1.2)' : 'brightness(0.8)'
+                                      }
+                                    }}
+                                  />
+                                  <span style={{ fontSize: '0.75rem' }}>Loading...</span>
+                                </Box> :
+                                subscriptionInfo.status
+                              }
+                              color={subscriptionInfo.color}
+                              size="small"
+                              sx={subscriptionInfo.loading ? {
+                                '& .MuiChip-label': {
+                                  color: (theme) => theme.palette.mode === 'dark' ? '#003768' : '#e6f7ff'
+                                }
+                              } : {}}
+                            />
+                          </Tooltip>);
                         })()}
                       </TableCell>
                       <TableCell sx={{
@@ -776,14 +794,16 @@ const UsersPage: React.FC = () => {
                         whiteSpace: expandedView ? 'nowrap' : 'normal',
                         minWidth: columnConfigs[5].minWidth,
                         width: expandedView ? 'auto' : columnConfigs[5].minWidth
-                      }}>
-                        <Typography sx={responsiveTypographyTokens.tableCell}>
+                      }}>                        <Typography sx={responsiveTypographyTokens.tableCell}>
                           {(() => {
                             if (!user.created_at) {
                               return 'N/A';
                             }
                             try {
-                              const formatted = format(parseISO(user.created_at), 'dd/MM/yyyy');
+                              // Parse UTC date and convert to GMT+7
+                              const utcDate = parseISO(user.created_at);
+                              const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                              const formatted = format(gmt7Date, 'dd/MM/yyyy HH:mm');
                               return formatted;
                             } catch (error) {
                               return 'Ngày không hợp lệ';
@@ -796,14 +816,16 @@ const UsersPage: React.FC = () => {
                         whiteSpace: expandedView ? 'nowrap' : 'normal',
                         minWidth: columnConfigs[6].minWidth,
                         width: expandedView ? 'auto' : columnConfigs[6].minWidth
-                      }}>
-                        <Typography sx={responsiveTypographyTokens.tableCell}>
+                      }}>                        <Typography sx={responsiveTypographyTokens.tableCell}>
                           {(() => {
                             if (!user.updated_at) {
                               return 'N/A';
                             }
                             try {
-                              const formatted = format(parseISO(user.updated_at), 'dd/MM/yyyy');
+                              // Parse UTC date and convert to GMT+7
+                              const utcDate = parseISO(user.updated_at);
+                              const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                              const formatted = format(gmt7Date, 'dd/MM/yyyy HH:mm');
                               return formatted;
                             } catch (error) {
                               return 'Ngày không hợp lệ';
@@ -846,8 +868,7 @@ const UsersPage: React.FC = () => {
                         zIndex: 1,
                         borderLeft: '1px solid',
                         borderColor: 'divider',
-                        minWidth: expandedView ? 'auto' : 80,
-                        width: expandedView ? 'auto' : 80,
+                        width: 'auto',
                         // Ensure border visibility during scroll
                         '&::before': {
                           content: '""',

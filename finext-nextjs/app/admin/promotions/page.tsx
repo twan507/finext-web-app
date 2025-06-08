@@ -55,7 +55,7 @@ export default function PromotionsPage() {
                 limit: rowsPerPage,
             };
             if (filterIsActive !== '') queryParams.is_active = filterIsActive === 'true';
-            
+
             const response = await apiClient<PaginatedPromotionsResponse | PromotionPublic[]>({
                 url: `/api/v1/promotions/`,
                 method: 'GET',
@@ -63,19 +63,19 @@ export default function PromotionsPage() {
             });
 
             if (response.status === 200 && response.data) {
-                 if ('items' in response.data && Array.isArray(response.data.items) && typeof response.data.total === 'number') {
+                if ('items' in response.data && Array.isArray(response.data.items) && typeof response.data.total === 'number') {
                     setPromotions(response.data.items);
                     setTotalCount(response.data.total);
                 } else if (Array.isArray(response.data)) {
                     console.warn("Backend for promotions did not return total count. Pagination might be inaccurate.");
                     setPromotions(response.data as PromotionPublic[]);
-                     const currentDataLength = (response.data as PromotionPublic[]).length;
-                     if (page === 0) {
-                        setTotalCount(currentDataLength < rowsPerPage ? currentDataLength : currentDataLength + (currentDataLength === rowsPerPage ? rowsPerPage : 0) );
+                    const currentDataLength = (response.data as PromotionPublic[]).length;
+                    if (page === 0) {
+                        setTotalCount(currentDataLength < rowsPerPage ? currentDataLength : currentDataLength + (currentDataLength === rowsPerPage ? rowsPerPage : 0));
                     } else if (currentDataLength < rowsPerPage) {
                         setTotalCount(page * rowsPerPage + currentDataLength);
                     } else {
-                         setTotalCount(page * rowsPerPage + currentDataLength + rowsPerPage);
+                        setTotalCount(page * rowsPerPage + currentDataLength + rowsPerPage);
                     }
                 } else {
                     throw new Error("Unexpected data structure from API for promotions.");
@@ -113,7 +113,7 @@ export default function PromotionsPage() {
 
         try {
             if (originalStatus) { // If it was active, now deactivating
-                 await apiClient<PromotionPublic>({
+                await apiClient<PromotionPublic>({
                     url: `/api/v1/promotions/${promo.id}/deactivate`,
                     method: 'PUT',
                 });
@@ -125,7 +125,7 @@ export default function PromotionsPage() {
                 });
             }
             // fetchPromotions(); // Or rely on optimistic update
-        } catch (err:any) {
+        } catch (err: any) {
             setError(err.message || `Failed to update status for ${promo.promotion_code}.`);
             setPromotions(prev => prev.map(p => p.id === promo.id ? { ...p, is_active: originalStatus, updated_at: promo.updated_at } : p));
         }
@@ -142,7 +142,7 @@ export default function PromotionsPage() {
                     <Typography variant="h4" component="h1">Promotions</Typography>
                 </Box>
                 <Box>
-                     <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchPromotions} disabled={loading} sx={{mr: 1}}>
+                    <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchPromotions} disabled={loading} sx={{ mr: 1 }}>
                         Refresh
                     </Button>
                     <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddPromotion}>
@@ -150,10 +150,10 @@ export default function PromotionsPage() {
                     </Button>
                 </Box>
             </Box>
-             <Paper sx={{ p: 2, mb: 2, borderRadius: 2 }}>
+            <Paper sx={{ p: 2, mb: 2, borderRadius: 2 }}>
                 <Typography variant="h6" gutterBottom>Filters</Typography>
                 <Grid container spacing={2}>
-                    <Grid size = {{  xs: 12, sm: 4 }}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
                         <TextField select label="Status" value={filterIsActive} onChange={(e) => setFilterIsActive(e.target.value)} fullWidth size="small">
                             <MenuItem value=""><em>All</em></MenuItem>
                             <MenuItem value="true">Active</MenuItem>
@@ -167,8 +167,8 @@ export default function PromotionsPage() {
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
             <Paper sx={{ width: '100%', overflow: 'hidden', borderRadius: 2 }}>
-                 {loading && promotions.length === 0 ? (
-                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 3, minHeight: 300 }}>
+                {loading && promotions.length === 0 ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 3, minHeight: 300 }}>
                         <CircularProgress />
                     </Box>
                 ) : (
@@ -193,7 +193,7 @@ export default function PromotionsPage() {
                                             <TableCell><Chip label={promo.promotion_code} size="small" /></TableCell>
                                             <TableCell>
                                                 <Tooltip title={promo.description || ''}>
-                                                    <Typography variant="body2" sx={{maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                                                    <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                         {promo.description || 'N/A'}
                                                     </Typography>
                                                 </Tooltip>
@@ -203,12 +203,33 @@ export default function PromotionsPage() {
                                                     ? `${promo.discount_value}%`
                                                     : `$${promo.discount_value.toFixed(2)}`}
                                             </TableCell>
-                                            <TableCell>{promo.usage_count} / {promo.usage_limit || '∞'}</TableCell>
-                                            <TableCell>
+                                            <TableCell>{promo.usage_count} / {promo.usage_limit || '∞'}</TableCell>                                            <TableCell>
                                                 <Switch checked={promo.is_active} onChange={() => handleToggleActiveStatus(promo)} size="small" />
                                             </TableCell>
-                                            <TableCell>{promo.start_date ? format(parseISO(promo.start_date), 'dd/MM/yy') : 'N/A'}</TableCell>
-                                            <TableCell>{promo.end_date ? format(parseISO(promo.end_date), 'dd/MM/yy') : 'N/A'}</TableCell>
+                                            <TableCell>
+                                                {promo.start_date ? (() => {
+                                                    try {
+                                                        // Parse UTC date and convert to GMT+7
+                                                        const utcDate = parseISO(promo.start_date);
+                                                        const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                                                        return format(gmt7Date, 'dd/MM/yyyy HH:mm');
+                                                    } catch (error) {
+                                                        return 'Invalid date';
+                                                    }
+                                                })() : 'N/A'}
+                                            </TableCell>
+                                            <TableCell>
+                                                {promo.end_date ? (() => {
+                                                    try {
+                                                        // Parse UTC date and convert to GMT+7
+                                                        const utcDate = parseISO(promo.end_date);
+                                                        const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                                                        return format(gmt7Date, 'dd/MM/yyyy HH:mm');
+                                                    } catch (error) {
+                                                        return 'Invalid date';
+                                                    }
+                                                })() : 'N/A'}
+                                            </TableCell>
                                             <TableCell align="right">
                                                 <Tooltip title="Edit Promotion">
                                                     <IconButton size="small" onClick={() => handleEditPromotion(promo.id)}><EditIcon fontSize="small" /></IconButton>

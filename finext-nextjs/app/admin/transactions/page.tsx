@@ -1,350 +1,1076 @@
 // finext-nextjs/app/admin/transactions/page.tsx
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { apiClient } from 'services/apiClient';
 import {
-    Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
-    TableHead, TableRow, Chip, IconButton, Alert, CircularProgress,
-    TablePagination, Tooltip, Button, TextField, MenuItem, Grid
+  Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
+  TableHead, TableRow, Chip, IconButton, Alert, CircularProgress,
+  TablePagination, Tooltip, Button, TextField, MenuItem, useTheme,
+  Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle
 } from '@mui/material';
-import { ReceiptLong as TransactionIcon, Refresh as RefreshIcon, Visibility as ViewIcon, Edit as EditIcon, CheckCircleOutline as ConfirmIcon, CancelOutlined as CancelIcon } from '@mui/icons-material';
+import {
+  ReceiptLong as TransactionIcon,
+  Add as AddIcon,
+  CheckCircleOutline as ConfirmIcon,
+  History as HistoryIcon,
+  UnfoldMore as ExpandIcon,
+  UnfoldLess as CollapseIcon
+} from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
+import { colorTokens, responsiveTypographyTokens } from 'theme/tokens';
+import SortableTableHead from '../components/SortableTableHead';
+import {
+  SortConfig,
+  ColumnConfig,
+  sortData,
+  getNextSortDirection,
+  getResponsiveDisplayStyle
+} from '../components/TableSortUtils';
+import CreateTransactionModal from './components/CreateTransactionModal';
+import TransactionSearch from './components/TransactionSearch';
 
 enum PaymentStatusEnumFE {
-    PENDING = "pending",
-    SUCCEEDED = "succeeded",
-    CANCELED = "canceled",
+  PENDING = "pending",
+  SUCCEEDED = "succeeded",
+  CANCELED = "canceled",
 }
 
 enum TransactionTypeEnumFE {
-    NEW_PURCHASE = "new_purchase",
-    RENEWAL = "renewal",
+  NEW_PURCHASE = "new_purchase",
+  RENEWAL = "renewal",
 }
 interface TransactionPublic {
-    id: string;
-    buyer_user_id: string;
-    license_id: string;
-    license_key: string;
-    original_license_price: number;
-    purchased_duration_days: number;
-    promotion_code_applied?: string | null;
-    promotion_discount_amount?: number | null;
-    broker_code_applied?: string | null;
-    broker_discount_amount?: number | null;
-    total_discount_amount?: number | null;
-    transaction_amount: number;
-    payment_status: PaymentStatusEnumFE;
-    transaction_type: TransactionTypeEnumFE;
-    notes?: string | null;
-    target_subscription_id?: string | null;
-    created_at: string;
-    updated_at: string;
+  id: string;
+  buyer_user_id: string;
+  license_id: string;
+  license_key: string;
+  original_license_price: number;
+  purchased_duration_days: number;
+  promotion_code_applied?: string | null;
+  promotion_discount_amount?: number | null;
+  broker_code_applied?: string | null;
+  broker_discount_amount?: number | null;
+  total_discount_amount?: number | null;
+  transaction_amount: number;
+  payment_status: PaymentStatusEnumFE;
+  transaction_type: TransactionTypeEnumFE;
+  notes?: string | null;
+  target_subscription_id?: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 interface PaginatedTransactionsResponse {
-    items: TransactionPublic[];
-    total: number;
+  items: TransactionPublic[];
+  total: number;
 }
 
 export default function TransactionsPage() {
-    const [transactions, setTransactions] = useState<TransactionPublic[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
-    const [totalCount, setTotalCount] = useState(0);
+  const theme = useTheme();
+  const componentColors = theme.palette.mode === 'light'
+    ? colorTokens.lightComponentColors
+    : colorTokens.darkComponentColors; const [transactions, setTransactions] = useState<TransactionPublic[]>([]);
+  const [filteredTransactions, setFilteredTransactions] = useState<TransactionPublic[]>([]);
+  const [isFiltering, setIsFiltering] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);// View and sorting state
+  const [expandedView, setExpandedView] = useState(false);
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
-    const [filterPaymentStatus, setFilterPaymentStatus] = useState<PaymentStatusEnumFE | ''>('');
-    const [filterTransactionType, setFilterTransactionType] = useState<TransactionTypeEnumFE | ''>('');
-    const [filterBuyerUserId, setFilterBuyerUserId] = useState<string>('');
-    const [filterPromotionCode, setFilterPromotionCode] = useState<string>('');
-    const [filterBrokerCode, setFilterBrokerCode] = useState<string>('');
-
-    const fetchTransactions = useCallback(async () => {
-        setLoading(true);
-        setError(null);
+  // User emails mapping
+  const [userEmails, setUserEmails] = useState<Map<string, string>>(new Map());
+  const [emailsLoading, setEmailsLoading] = useState(false);    // Add Transaction Modal
+  const [openAddTransactionModal, setOpenAddTransactionModal] = useState(false);// Dialog states
+  const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+  const [openNotesDialog, setOpenNotesDialog] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<TransactionPublic | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [adminNotes, setAdminNotes] = useState<string>('');    // Column configuration for sortable table
+  const columnConfigs: ColumnConfig[] = useMemo(() => [
+    {
+      id: 'buyer_user_id',
+      label: 'Email người dùng',
+      sortable: true,
+      sortType: 'string',
+      accessor: (transaction: TransactionPublic) => transaction.buyer_user_id,
+      minWidth: expandedView ? 'auto' : 150,
+    },
+    {
+      id: 'license_key',
+      label: 'License Key',
+      sortable: true,
+      sortType: 'string',
+      accessor: (transaction: TransactionPublic) => transaction.license_key,
+      minWidth: expandedView ? 'auto' : 120,
+      responsive: { xs: 'none' }
+    },
+    {
+      id: 'purchased_duration_days',
+      label: 'Số ngày',
+      sortable: true,
+      sortType: 'number',
+      accessor: (transaction: TransactionPublic) => transaction.purchased_duration_days,
+      minWidth: expandedView ? 'auto' : 80,
+      responsive: { xs: 'none', sm: 'none' }
+    },
+    {
+      id: 'original_license_price',
+      label: 'Giá gốc',
+      sortable: true,
+      sortType: 'number',
+      accessor: (transaction: TransactionPublic) => transaction.original_license_price,
+      minWidth: expandedView ? 'auto' : 100,
+      format: (value: number) => `${value.toLocaleString('vi-VN')}`,
+      responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' }
+    },
+    {
+      id: 'total_discount_amount',
+      label: 'Tổng Giảm Giá',
+      sortable: true,
+      sortType: 'number',
+      accessor: (transaction: TransactionPublic) => transaction.total_discount_amount || 0,
+      minWidth: expandedView ? 'auto' : 100,
+      format: (value: number) => `${value.toLocaleString('vi-VN')}`,
+      responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' }
+    },
+    {
+      id: 'transaction_amount',
+      label: 'Giá Tri Giao Dịch',
+      sortable: true,
+      sortType: 'number',
+      accessor: (transaction: TransactionPublic) => transaction.transaction_amount,
+      minWidth: expandedView ? 'auto' : 110,
+      format: (value: number) => `${value.toLocaleString('vi-VN')}`,
+      responsive: { xs: 'none', sm: 'none' }
+    },
+    {
+      id: 'transaction_type',
+      label: 'Loại Giao Dịch',
+      sortable: true,
+      sortType: 'string',
+      accessor: (transaction: TransactionPublic) => transaction.transaction_type,
+      minWidth: expandedView ? 'auto' : 130,
+      responsive: { xs: 'none', sm: 'none', md: 'none' }
+    },
+    {
+      id: 'payment_status',
+      label: 'Trạng thái',
+      sortable: true,
+      sortType: 'string',
+      accessor: (transaction: TransactionPublic) => transaction.payment_status,
+      minWidth: expandedView ? 'auto' : 120
+    },
+    {
+      id: 'created_at',
+      label: 'Ngày tạo',
+      sortable: true,
+      sortType: 'date',
+      accessor: (transaction: TransactionPublic) => transaction.created_at,
+      minWidth: expandedView ? 'auto' : 120,
+      format: (value: string) => {
         try {
-            const queryParams: Record<string, any> = {
-                skip: page * rowsPerPage,
-                limit: rowsPerPage,
-            };
-            if (filterPaymentStatus) queryParams.payment_status = filterPaymentStatus;
-            if (filterTransactionType) queryParams.transaction_type = filterTransactionType;
-            if (filterBuyerUserId) queryParams.buyer_user_id = filterBuyerUserId;
-            if (filterPromotionCode) queryParams.promotion_code = filterPromotionCode;
-            if (filterBrokerCode) queryParams.broker_code_applied = filterBrokerCode;
-
-            const response = await apiClient<PaginatedTransactionsResponse | TransactionPublic[]>({
-                url: `/api/v1/transactions/admin/all`,
-                method: 'GET',
-                queryParams,
-            });
-
-            if (response.status === 200 && response.data) {
-                if ('items' in response.data && Array.isArray(response.data.items) && typeof response.data.total === 'number') {
-                    // Handles PaginatedTransactionsResponse { items: [], total: number }
-                    setTransactions(response.data.items);
-                    setTotalCount(response.data.total);
-                } else if (Array.isArray(response.data)) {
-                    // Handles direct TransactionPublic[]
-                    console.warn("Backend for transactions did not return total count. Pagination might be inaccurate.");
-                    setTransactions(response.data as TransactionPublic[]);
-                    const currentDataLength = (response.data as TransactionPublic[]).length;
-                    if (page === 0) {
-                        setTotalCount(currentDataLength < rowsPerPage ? currentDataLength : currentDataLength + (currentDataLength === rowsPerPage ? rowsPerPage : 0));
-                    } else if (currentDataLength < rowsPerPage) {
-                        setTotalCount(page * rowsPerPage + currentDataLength);
-                    } else {
-                        setTotalCount(page * rowsPerPage + currentDataLength + rowsPerPage);
-                    }
-                } else {
-                    throw new Error("Unexpected data structure from API.");
-                }
-            } else {
-                setError(response.message || 'Failed to load transactions.');
-                setTransactions([]);
-                setTotalCount(0);
-            }
-        } catch (err: any) {
-            setError(err.message || 'Connection error or unauthorized access.');
-            setTransactions([]);
-            setTotalCount(0);
-        } finally {
-            setLoading(false);
+          // Parse UTC date and convert to GMT+7
+          const utcDate = parseISO(value);
+          const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+          return format(gmt7Date, 'dd/MM/yyyy HH:mm');
+        } catch (error) {
+          return 'Invalid date';
         }
-    }, [page, rowsPerPage, filterPaymentStatus, filterTransactionType, filterBuyerUserId, filterPromotionCode, filterBrokerCode]);
+      },
+      responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' }
+    },
+    {
+      id: 'broker_code_applied',
+      label: 'Mã Broker',
+      sortable: true,
+      sortType: 'string',
+      accessor: (transaction: TransactionPublic) => transaction.broker_code_applied || '',
+      minWidth: expandedView ? 'auto' : 120,
+      responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' }
+    },
+    {
+      id: 'broker_discount_amount',
+      label: 'Giảm Giá Đối Tác',
+      sortable: true,
+      sortType: 'number',
+      accessor: (transaction: TransactionPublic) => transaction.broker_discount_amount || 0,
+      minWidth: expandedView ? 'auto' : 100,
+      format: (value: number) => `${value.toLocaleString('vi-VN')}`,
+      responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' }
+    },
+    {
+      id: 'promotion_code_applied',
+      label: 'Mã KM',
+      sortable: true,
+      sortType: 'string',
+      accessor: (transaction: TransactionPublic) => transaction.promotion_code_applied || '',
+      minWidth: expandedView ? 'auto' : 120,
+      responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' }
+    },
+    {
+      id: 'promotion_discount_amount',
+      label: 'Giảm Giá Khuyến Mại',
+      sortable: true,
+      sortType: 'number',
+      accessor: (transaction: TransactionPublic) => transaction.promotion_discount_amount || 0,
+      minWidth: expandedView ? 'auto' : 90,
+      format: (value: number) => `${value.toLocaleString('vi-VN')}`,
+      responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' }
+    },
+    {
+      id: 'notes',
+      label: 'Ghi chú',
+      sortable: false,
+      sortType: 'string',
+      accessor: () => '',
+      minWidth: expandedView ? 'auto' : 80,
+      align: 'center' as const,
+      responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' }
+    }, {
+      id: 'actions',
+      label: '',
+      sortable: false,
+      sortType: 'string',
+      accessor: () => '',
+      minWidth: expandedView ? 'auto' : 60,
+      align: 'center' as const
+    }
+  ], [expandedView]); const fetchTransactions = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const queryParams: Record<string, any> = {
+        skip: page * rowsPerPage,
+        limit: rowsPerPage,
+      };
 
-    useEffect(() => {
-        fetchTransactions();
-    }, [fetchTransactions]);
+      // Add sort parameters if sortConfig is defined
+      if (sortConfig && sortConfig.key && sortConfig.direction) {
+        queryParams.sort_by = sortConfig.key;
+        queryParams.sort_order = sortConfig.direction;
+      }
 
-    const handleChangePage = (event: unknown, newPage: number) => {
-        setPage(newPage);
-    };
+      const response = await apiClient<PaginatedTransactionsResponse | TransactionPublic[]>({
+        url: `/api/v1/transactions/admin/all`,
+        method: 'GET',
+        queryParams,
+      });
 
-    const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(0);
-    };
+      if (response.status === 200 && response.data) {
+        if ('items' in response.data && Array.isArray(response.data.items) && typeof response.data.total === 'number') {
+          // Handles PaginatedTransactionsResponse { items: [], total: number }
+          setTransactions(response.data.items);
+          setTotalCount(response.data.total);
+        } else if (Array.isArray(response.data)) {
+          // Handles direct TransactionPublic[]
+          console.warn("Backend for transactions did not return total count. Pagination might be inaccurate.");
+          setTransactions(response.data as TransactionPublic[]);
+          const currentDataLength = (response.data as TransactionPublic[]).length;
+          if (page === 0) {
+            setTotalCount(currentDataLength < rowsPerPage ? currentDataLength : currentDataLength + (currentDataLength === rowsPerPage ? rowsPerPage : 0));
+          } else if (currentDataLength < rowsPerPage) {
+            setTotalCount(page * rowsPerPage + currentDataLength);
+          } else {
+            setTotalCount(page * rowsPerPage + currentDataLength + rowsPerPage);
+          }
+        } else {
+          throw new Error("Unexpected data structure from API.");
+        }
+      } else {
+        setError(response.message || 'Failed to load transactions.');
+        setTransactions([]);
+        setTotalCount(0);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Connection error or unauthorized access.');
+      setTransactions([]);
+      setTotalCount(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, rowsPerPage, sortConfig]);
 
-    const handleViewTransaction = (transactionId: string) => {
-        console.log("View transaction (not implemented):", transactionId);
-    };
+  const fetchUserEmails = useCallback(async (userIds: string[]) => {
+    if (userIds.length === 0) return;
 
-    const handleEditPendingTransaction = (transactionId: string) => {
-        console.log("Edit pending transaction (not implemented):", transactionId);
-    };
+    setEmailsLoading(true);
+    const emailsMap = new Map<string, string>();
 
-    const handleConfirmPayment = async (transactionId: string) => {
-        const notes = prompt("Enter admin notes for payment confirmation (optional):");
-        // setLoading(true); // Consider a more specific loading state for this action
+    try {
+      // Fetch user details for each user_id to get their email
+      const emailPromises = userIds.map(async (userId) => {
         try {
-            await apiClient({
-                url: `/api/v1/transactions/admin/${transactionId}/confirm-payment`,
-                method: 'PUT',
-                body: { admin_notes: notes }
-            });
-            fetchTransactions();
-        } catch (err: any) {
-            setError(err.message || "Failed to confirm payment.");
-        } finally {
-            // setLoading(false);
-        }
-    };
+          const response = await apiClient<{
+            id: string;
+            email: string;
+            full_name: string;
+          }>({
+            url: `/api/v1/users/${userId}`,
+            method: 'GET',
+          });
 
-    const handleCancelTransaction = async (transactionId: string) => {
-        if (window.confirm("Are you sure you want to cancel this pending transaction?")) {
-            // setLoading(true);
-            try {
-                await apiClient({
-                    url: `/api/v1/transactions/admin/${transactionId}/cancel`,
-                    method: 'PUT'
-                });
-                fetchTransactions();
-            } catch (err: any) {
-                setError(err.message || "Failed to cancel transaction.");
-            } finally {
-                // setLoading(false);
-            }
+          if (response.status === 200 && response.data) {
+            return { userId, email: response.data.email };
+          }
+        } catch (err) {
+          console.warn(`Failed to load email for user ${userId}`);
         }
-    };
+        return null;
+      });
 
-    const getPaymentStatusChipColor = (status: PaymentStatusEnumFE): "success" | "warning" | "default" | "error" => {
-        switch (status) {
-            case PaymentStatusEnumFE.SUCCEEDED: return "success";
-            case PaymentStatusEnumFE.PENDING: return "warning";
-            case PaymentStatusEnumFE.CANCELED: return "error";
-            default: return "default";
+      const results = await Promise.all(emailPromises);
+
+      results.forEach(result => {
+        if (result) {
+          emailsMap.set(result.userId, result.email);
         }
-    };
+      });
 
-    return (
-        <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <TransactionIcon sx={{ mr: 1, fontSize: '24px' }} />
-                    <Typography variant="h4" component="h1">Transactions</Typography>
-                </Box>
-                <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchTransactions} disabled={loading}>
-                    Refresh
-                </Button>
+      setUserEmails(emailsMap);
+    } catch (err: any) {
+      console.error('Failed to load user emails:', err.message);
+    } finally {
+      setEmailsLoading(false);
+    }
+  }, []); useEffect(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
+
+  // Update filtered transactions when transactions change and not actively filtering
+  useEffect(() => {
+    if (!isFiltering) {
+      setFilteredTransactions(transactions);
+    }
+  }, [transactions, isFiltering]);
+
+  // Fetch user emails when transactions change
+  useEffect(() => {
+    if (transactions.length > 0) {
+      const userIds = Array.from(new Set(transactions.map(t => t.buyer_user_id)));
+      fetchUserEmails(userIds);
+    }
+  }, [transactions, fetchUserEmails]); const handleFilteredTransactions = (filtered: TransactionPublic[], isActivelyFiltering: boolean) => {
+    setFilteredTransactions(filtered);
+    setIsFiltering(isActivelyFiltering);
+    // Only reset page when actively switching between filtering states
+    if (isActivelyFiltering !== isFiltering) {
+      setPage(0);
+    }
+  };
+
+  // Sort data when sortConfig changes
+  const sortedTransactions = useMemo(() => {
+    const dataToSort = isFiltering ? filteredTransactions : transactions;
+
+    if (!sortConfig || !sortConfig.direction) {
+      return dataToSort;
+    }
+
+    const column = columnConfigs.find(col => col.id === sortConfig.key);
+    if (!column) return dataToSort;
+
+    return sortData(dataToSort, sortConfig, column);
+  }, [transactions, filteredTransactions, isFiltering, sortConfig, columnConfigs]);    // Calculate paginated transactions - use client-side pagination when sorting/filtering, server-side pagination otherwise
+  const paginatedTransactions = useMemo(() => {
+    if (isFiltering || sortConfig) {
+      // Client-side pagination for filtered/sorted results
+      if (rowsPerPage === 99999) {
+        // Show all results
+        return sortedTransactions;
+      }
+      const startIndex = page * rowsPerPage;
+      const endIndex = startIndex + rowsPerPage;
+      return sortedTransactions.slice(startIndex, endIndex);
+    } else {
+      // Server-side pagination - use transactions directly as they are already paginated
+      return transactions;
+    }
+  }, [transactions, sortedTransactions, isFiltering, sortConfig, page, rowsPerPage]);
+
+  // Calculate total count for pagination
+  const displayTotalCount = (isFiltering || sortConfig) ? sortedTransactions.length : totalCount; const handleSort = (columnKey: string) => {
+    const column = columnConfigs.find(col => col.id === columnKey);
+    if (!column?.sortable) return;
+
+    setSortConfig(prevConfig => {
+      const currentDirection = prevConfig?.key === columnKey ? prevConfig.direction : null;
+      const nextDirection = getNextSortDirection(currentDirection);
+
+      return nextDirection ? { key: columnKey, direction: nextDirection } : null;
+    });
+    setPage(0); // Reset to first page when sorting
+  };
+
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  }; const handleAddTransaction = () => {
+    setOpenAddTransactionModal(true);
+  }; const handleConfirmPayment = (transactionId: string) => {
+    const transaction = transactions.find(t => t.id === transactionId);
+    if (transaction) {
+      setSelectedTransaction(transaction);
+      setAdminNotes('');
+      setOpenConfirmDialog(true);
+    }
+  };
+
+  const handleViewNotesHistory = (transactionId: string) => {
+    const transaction = transactions.find(t => t.id === transactionId);
+    if (transaction) {
+      setSelectedTransaction(transaction);
+      setOpenNotesDialog(true);
+    }
+  };    // Dialog handlers
+  const handleCloseConfirmDialog = () => {
+    if (!confirmLoading && !cancelLoading) {
+      setOpenConfirmDialog(false);
+      setSelectedTransaction(null);
+      setAdminNotes('');
+    }
+  };
+
+  const handleCloseNotesDialog = () => {
+    setOpenNotesDialog(false);
+    setSelectedTransaction(null);
+  };
+
+  const handleConfirmPaymentSubmit = async () => {
+    if (!selectedTransaction) return;
+
+    setConfirmLoading(true);
+    setError(null);
+
+    try {
+      await apiClient({
+        url: `/api/v1/transactions/admin/${selectedTransaction.id}/confirm-payment`,
+        method: 'PUT',
+        body: { admin_notes: adminNotes.trim() || undefined }
+      });
+      fetchTransactions();
+      handleCloseConfirmDialog();
+    } catch (err: any) {
+      setError(err.message || "Failed to confirm payment.");
+    } finally {
+      setConfirmLoading(false);
+    }
+  };
+
+  const handleCancelTransactionSubmit = async () => {
+    if (!selectedTransaction) return;
+
+    setCancelLoading(true);
+    setError(null);
+
+    try {
+      await apiClient({
+        url: `/api/v1/transactions/admin/${selectedTransaction.id}/cancel`,
+        method: 'PUT',
+        body: { admin_notes: adminNotes.trim() || undefined }
+      });
+      fetchTransactions();
+      handleCloseConfirmDialog();
+    } catch (err: any) {
+      setError(err.message || "Failed to cancel transaction.");
+    } finally {
+      setCancelLoading(false);
+    }
+  }; const getPaymentStatusChipColor = (status: PaymentStatusEnumFE): "success" | "warning" | "default" | "error" => {
+    switch (status) {
+      case PaymentStatusEnumFE.SUCCEEDED: return "success";
+      case PaymentStatusEnumFE.PENDING: return "warning";
+      case PaymentStatusEnumFE.CANCELED: return "error";
+      default: return "default";
+    }
+  }; return (
+    <Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <TransactionIcon sx={{ mr: 1, fontSize: '24px' }} />
+        <Typography variant="h4" component="h1">Transactions</Typography>
+      </Box>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            startIcon={expandedView ? <CollapseIcon /> : <ExpandIcon />}
+            onClick={() => setExpandedView(!expandedView)}
+            sx={{
+              minWidth: { xs: 'auto', sm: 'auto', md: 'auto' },
+              '& .MuiButton-startIcon': {
+                margin: { xs: 0, sm: 0, md: '0 8px 0 -4px' }
+              },
+              px: { xs: 1, sm: 2 },
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center'
+            }}
+          >
+            <Box
+              component="span"
+              sx={{
+                display: { xs: 'none', sm: 'none', md: 'inline' }
+              }}
+            >
+              {expandedView ? 'Chế độ thu gọn' : 'Chế độ chi tiết'}
             </Box>
-
-            <Paper sx={{ p: 2, mb: 2, borderRadius: 2 }}>
-                <Typography variant="h6" gutterBottom>Filters</Typography>
-                <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
-                        <TextField
-                            select
-                            label="Payment Status"
-                            value={filterPaymentStatus}
-                            onChange={(e) => setFilterPaymentStatus(e.target.value as PaymentStatusEnumFE | '')}
-                            fullWidth
-                            size="small"
-                        >
-                            <MenuItem value=""><em>All</em></MenuItem>
-                            {Object.values(PaymentStatusEnumFE).map(status => (
-                                <MenuItem key={status} value={status}>{status.charAt(0).toUpperCase() + status.slice(1)}</MenuItem>
-                            ))}
-                        </TextField>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
-                        <TextField
-                            select
-                            label="Transaction Type"
-                            value={filterTransactionType}
-                            onChange={(e) => setFilterTransactionType(e.target.value as TransactionTypeEnumFE | '')}
-                            fullWidth
-                            size="small"
-                        >
-                            <MenuItem value=""><em>All</em></MenuItem>
-                            {Object.values(TransactionTypeEnumFE).map(type => (
-                                <MenuItem key={type} value={type}>{type.replace('_', ' ').toUpperCase()}</MenuItem>
-                            ))}
-                        </TextField>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
-                        <TextField
-                            label="Buyer User ID"
-                            value={filterBuyerUserId}
-                            onChange={(e) => setFilterBuyerUserId(e.target.value)}
-                            fullWidth
-                            size="small"
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
-                        <TextField
-                            label="Promotion Code"
-                            value={filterPromotionCode}
-                            onChange={(e) => setFilterPromotionCode(e.target.value)}
-                            fullWidth
-                            size="small"
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
-                        <TextField
-                            label="Broker Code Applied"
-                            value={filterBrokerCode}
-                            onChange={(e) => setFilterBrokerCode(e.target.value)}
-                            fullWidth
-                            size="small"
-                        />
-                    </Grid>
-                </Grid>
-            </Paper>
-
-            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-
-            <Paper sx={{ width: '100%', overflow: 'hidden', borderRadius: 2 }}>
-                {loading && transactions.length === 0 ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 3, minHeight: 300 }}>
-                        <CircularProgress />
-                    </Box>
-                ) : (
-                    <>
-                        <TableContainer sx={{ maxHeight: 600 }}>                            <Table stickyHeader>
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell sx={{ minWidth: 120 }}>ID</TableCell>
-                                    <TableCell sx={{ minWidth: 120 }}>User ID</TableCell>
-                                    <TableCell sx={{ minWidth: 100 }}>Amount</TableCell>
-                                    <TableCell sx={{ minWidth: 120 }}>License Key</TableCell>
-                                    <TableCell sx={{ minWidth: 130 }}>Type</TableCell>
-                                    <TableCell sx={{ minWidth: 120 }}>Status</TableCell>
-                                    <TableCell sx={{ minWidth: 150 }}>Created At</TableCell>
-                                    <TableCell sx={{ minWidth: 120 }}>Promo Code</TableCell>
-                                    <TableCell sx={{ minWidth: 120 }}>Broker Code</TableCell>
-                                    <TableCell align="right" sx={{ minWidth: 180 }}>Actions</TableCell>
-                                </TableRow>
-                            </TableHead>                                <TableBody>
-                                {Array.isArray(transactions) && transactions.map((transaction) => (
-                                    <TableRow hover key={transaction.id}>
-                                        <TableCell>
-                                            <Tooltip title={transaction.id}>
-                                                <Typography variant="body2" sx={{ maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                    ...{transaction.id.slice(-6)}
-                                                </Typography>
-                                            </Tooltip>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Tooltip title={transaction.buyer_user_id}>
-                                                <Typography variant="body2" sx={{ maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                    ...{transaction.buyer_user_id.slice(-6)}
-                                                </Typography>
-                                            </Tooltip>
-                                        </TableCell>
-                                        <TableCell>${transaction.transaction_amount.toFixed(2)}</TableCell>
-                                        <TableCell>{transaction.license_key}</TableCell>
-                                        <TableCell>
-                                            <Chip label={transaction.transaction_type.replace('_', ' ').toUpperCase()} size="small" variant="outlined" />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Chip label={transaction.payment_status} color={getPaymentStatusChipColor(transaction.payment_status)} size="small" />
-                                        </TableCell>
-                                        <TableCell>{format(parseISO(transaction.created_at), 'dd/MM/yyyy HH:mm')}</TableCell>
-                                        <TableCell>{transaction.promotion_code_applied || 'N/A'}</TableCell>
-                                        <TableCell>{transaction.broker_code_applied || 'N/A'}</TableCell>
-                                        <TableCell align="right">
-                                            <Tooltip title="View Details">
-                                                <IconButton size="small" onClick={() => handleViewTransaction(transaction.id)}><ViewIcon fontSize="small" /></IconButton>
-                                            </Tooltip>
-                                            {transaction.payment_status === PaymentStatusEnumFE.PENDING && (
-                                                <>
-                                                    <Tooltip title="Edit Pending Details">
-                                                        <IconButton size="small" onClick={() => handleEditPendingTransaction(transaction.id)} color="info"><EditIcon fontSize="small" /></IconButton>
-                                                    </Tooltip>
-                                                    <Tooltip title="Confirm Payment">
-                                                        <IconButton size="small" onClick={() => handleConfirmPayment(transaction.id)} color="success"><ConfirmIcon fontSize="small" /></IconButton>
-                                                    </Tooltip>
-                                                    <Tooltip title="Cancel Transaction">
-                                                        <IconButton size="small" onClick={() => handleCancelTransaction(transaction.id)} color="error"><CancelIcon fontSize="small" /></IconButton>
-                                                    </Tooltip>
-                                                </>
-                                            )}
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                                {Array.isArray(transactions) && transactions.length === 0 && !loading && (
-                                    <TableRow>
-                                        <TableCell colSpan={10} align="center">No transactions found matching your criteria.</TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                        </TableContainer>
-                        <TablePagination
-                            rowsPerPageOptions={[5, 10, 25, 50, 100]}
-                            component="div"
-                            count={totalCount}
-                            rowsPerPage={rowsPerPage}
-                            page={page}
-                            onPageChange={handleChangePage}
-                            onRowsPerPageChange={handleChangeRowsPerPage}
-                        />
-                    </>
-                )}
-            </Paper>
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleAddTransaction}
+            sx={{
+              minWidth: { xs: 'auto', sm: 'auto', md: 'auto' },
+              '& .MuiButton-startIcon': {
+                margin: { xs: 0, sm: 0, md: '0 8px 0 -4px' }
+              },
+              px: { xs: 1, sm: 2 },
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center'
+            }}
+          >
+            <Box
+              component="span"
+              sx={{
+                display: { xs: 'none', sm: 'none', md: 'inline' }
+              }}
+            >
+              Tạo Transaction
+            </Box>          </Button>
         </Box>
-    );
+      </Box>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      <TransactionSearch
+        transactions={transactions}
+        onFilteredTransactions={handleFilteredTransactions}
+        loading={loading}
+        userEmails={userEmails}
+      /><Paper sx={{
+        width: '100%',
+        overflow: 'hidden',
+        borderRadius: 2
+      }}>
+        {loading && transactions.length === 0 ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 3, minHeight: 300 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <>
+            <TableContainer sx={{ overflowX: 'auto' }}>
+              <Table sx={{
+                tableLayout: 'auto',
+                width: '100%'
+              }}>
+                <SortableTableHead
+                  columns={columnConfigs}
+                  sortConfig={sortConfig}
+                  onSort={handleSort}
+                  expandedView={expandedView}
+                />
+                <TableBody>
+                  {Array.isArray(paginatedTransactions) && paginatedTransactions.map((transaction) => (
+                    <TableRow hover key={transaction.id}>
+                      {/* User Email - Index 0 */}
+                      <TableCell sx={{
+                        ...getResponsiveDisplayStyle(columnConfigs[0], expandedView),
+                        whiteSpace: expandedView ? 'nowrap' : 'normal',
+                        minWidth: columnConfigs[0].minWidth,
+                        width: expandedView ? 'auto' : columnConfigs[0].minWidth
+                      }}>
+                        <Typography variant="body2" sx={responsiveTypographyTokens.tableCell}>
+                          {emailsLoading ? (
+                            <CircularProgress size={16} />
+                          ) : (
+                            userEmails.get(transaction.buyer_user_id) || transaction.buyer_user_id
+                          )}
+                        </Typography>
+                      </TableCell>
+
+                      {/* License Key - Index 1 */}
+                      <TableCell sx={{
+                        ...getResponsiveDisplayStyle(columnConfigs[1], expandedView),
+                        whiteSpace: expandedView ? 'nowrap' : 'normal',
+                        minWidth: columnConfigs[1].minWidth
+                      }}>
+                        {transaction.license_key ? (
+                          <Chip
+                            label={transaction.license_key}
+                            size="small"
+                            variant="outlined"
+                            sx={{
+                              fontSize: '0.75rem',
+                              fontFamily: 'monospace',
+                              maxWidth: expandedView ? 'none' : 200,
+                              '& .MuiChip-label': {
+                                overflow: 'hidden',
+                                textOverflow: expandedView ? 'unset' : 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }
+                            }}
+                          />
+                        ) : (
+                          <Typography sx={responsiveTypographyTokens.tableCell}>N/A</Typography>
+                        )}
+                      </TableCell>
+                      {/* Purchased Duration Days - Index 2 */}
+                      <TableCell sx={{
+                        ...getResponsiveDisplayStyle(columnConfigs[2], expandedView),
+                        whiteSpace: expandedView ? 'nowrap' : 'normal',
+                        minWidth: columnConfigs[2].minWidth
+                      }}>
+                        <Typography sx={responsiveTypographyTokens.tableCell}>
+                          {transaction.purchased_duration_days} ngày
+                        </Typography>
+                      </TableCell>
+
+                      {/* Original License Price - Index 3 */}
+                      <TableCell sx={{
+                        ...getResponsiveDisplayStyle(columnConfigs[3], expandedView),
+                        whiteSpace: expandedView ? 'nowrap' : 'normal',
+                        minWidth: columnConfigs[3].minWidth
+                      }}>
+                        <Typography sx={responsiveTypographyTokens.tableCell}>
+                          {transaction.original_license_price.toLocaleString('vi-VN')}
+                        </Typography>
+                      </TableCell>
+
+                      {/* Total Discount Amount - Index 4 */}
+                      <TableCell sx={{
+                        ...getResponsiveDisplayStyle(columnConfigs[4], expandedView),
+                        whiteSpace: expandedView ? 'nowrap' : 'normal',
+                        minWidth: columnConfigs[4].minWidth
+                      }}>
+                        <Typography sx={responsiveTypographyTokens.tableCell}>
+                          {(transaction.total_discount_amount || 0).toLocaleString('vi-VN')}
+                        </Typography>
+                      </TableCell>
+
+                      {/* Transaction Amount - Index 5 */}
+                      <TableCell sx={{
+                        ...getResponsiveDisplayStyle(columnConfigs[5], expandedView),
+                        whiteSpace: expandedView ? 'nowrap' : 'normal',
+                        minWidth: columnConfigs[5].minWidth
+                      }}>
+                        <Typography sx={responsiveTypographyTokens.tableCell}>
+                          {transaction.transaction_amount.toLocaleString('vi-VN')}
+                        </Typography>
+                      </TableCell>
+
+                      {/* Transaction Type - Index 6 */}
+                      <TableCell sx={{
+                        ...getResponsiveDisplayStyle(columnConfigs[6], expandedView),
+                        whiteSpace: expandedView ? 'nowrap' : 'normal',
+                        minWidth: columnConfigs[6].minWidth
+                      }}>
+                        <Chip
+                          label={transaction.transaction_type.replace('_', ' ').toUpperCase()}
+                          size="small"
+                          variant="outlined"
+                          sx={{
+                            textTransform: 'uppercase',
+                            fontSize: '0.75rem'
+                          }}
+                        />
+                      </TableCell>
+
+                      {/* Payment Status - Index 7 */}
+                      <TableCell sx={{
+                        ...getResponsiveDisplayStyle(columnConfigs[7], expandedView),
+                        whiteSpace: expandedView ? 'nowrap' : 'normal',
+                        minWidth: columnConfigs[7].minWidth
+                      }}>
+                        <Chip
+                          label={transaction.payment_status.toUpperCase()}
+                          size="small"
+                          color={getPaymentStatusChipColor(transaction.payment_status as PaymentStatusEnumFE)}
+                          sx={{
+                            textTransform: 'uppercase',
+                            fontSize: '0.75rem'
+                          }}
+                        />
+                      </TableCell>
+
+                      {/* Created At (GMT+7) - Index 8 */}
+                      <TableCell sx={{
+                        ...getResponsiveDisplayStyle(columnConfigs[8], expandedView),
+                        whiteSpace: expandedView ? 'nowrap' : 'normal',
+                        minWidth: columnConfigs[8].minWidth
+                      }}>
+                        <Typography sx={responsiveTypographyTokens.tableCell}>
+                          {(() => {
+                            try {
+                              // Parse UTC date and convert to GMT+7
+                              const utcDate = parseISO(transaction.created_at);
+                              const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                              return format(gmt7Date, 'dd/MM/yyyy HH:mm');
+                            } catch (error) {
+                              return 'Invalid date';
+                            }
+                          })()}
+                        </Typography>
+                      </TableCell>
+
+                      {/* Broker Code Applied - Index 9 */}
+                      <TableCell sx={{
+                        ...getResponsiveDisplayStyle(columnConfigs[9], expandedView),
+                        whiteSpace: expandedView ? 'nowrap' : 'normal',
+                        minWidth: columnConfigs[9].minWidth
+                      }}>
+                        <Typography sx={responsiveTypographyTokens.tableCell}>
+                          {transaction.broker_code_applied || '-'}
+                        </Typography>
+                      </TableCell>
+
+                      {/* Broker Discount Amount - Index 10 */}
+                      <TableCell sx={{
+                        ...getResponsiveDisplayStyle(columnConfigs[10], expandedView),
+                        whiteSpace: expandedView ? 'nowrap' : 'normal',
+                        minWidth: columnConfigs[10].minWidth
+                      }}>
+                        <Typography sx={responsiveTypographyTokens.tableCell}>
+                          {(transaction.broker_discount_amount || 0).toLocaleString('vi-VN')}
+                        </Typography>
+                      </TableCell>
+
+                      {/* Promotion Code Applied - Index 11 */}
+                      <TableCell sx={{
+                        ...getResponsiveDisplayStyle(columnConfigs[11], expandedView),
+                        whiteSpace: expandedView ? 'nowrap' : 'normal',
+                        minWidth: columnConfigs[11].minWidth
+                      }}>
+                        <Typography sx={responsiveTypographyTokens.tableCell}>
+                          {transaction.promotion_code_applied || '-'}
+                        </Typography>
+                      </TableCell>
+
+                      {/* Promotion Discount Amount - Index 12 */}
+                      <TableCell sx={{
+                        ...getResponsiveDisplayStyle(columnConfigs[12], expandedView),
+                        whiteSpace: expandedView ? 'nowrap' : 'normal',
+                        minWidth: columnConfigs[12].minWidth
+                      }}>
+                        <Typography sx={responsiveTypographyTokens.tableCell}>
+                          {(transaction.promotion_discount_amount || 0).toLocaleString('vi-VN')}
+                        </Typography>
+                      </TableCell>
+                      {/* Notes (separate column) - Index 13 */}
+                      <TableCell sx={{
+                        ...getResponsiveDisplayStyle(columnConfigs[13], expandedView),
+                        whiteSpace: expandedView ? 'nowrap' : 'normal',
+                        minWidth: columnConfigs[13].minWidth
+                      }} align="center">
+                        <Tooltip title="View Notes History">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleViewNotesHistory(transaction.id)}
+                            color="primary"
+                          >
+                            <HistoryIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                      {/* Actions (sticky column) - Index 14 */}
+                      <TableCell
+                        sx={{
+                          ...getResponsiveDisplayStyle(columnConfigs[14], expandedView),
+                          position: 'sticky',
+                          right: -1, // Slight negative to eliminate gap
+                          backgroundColor: 'background.paper',
+                          zIndex: 1,
+                          borderLeft: '1px solid',
+                          borderColor: 'divider',
+                          width: 'auto',
+                          // Ensure border visibility during scroll
+                          '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            left: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: '1px',
+                            backgroundColor: 'divider',
+                            zIndex: 1
+                          }
+                        }}
+                        align="center"
+                      >
+                        {transaction.payment_status === PaymentStatusEnumFE.PENDING && (
+                          <Tooltip title="Confirm Payment Status">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleConfirmPayment(transaction.id)}
+                              color="success"
+                            >
+                              <ConfirmIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {Array.isArray(paginatedTransactions) && paginatedTransactions.length === 0 && !loading && (
+                    <TableRow>
+                      <TableCell colSpan={columnConfigs.length} align="center">
+                        <Typography variant="body2" color="text.secondary" sx={{ py: 4 }}>
+                          {isFiltering
+                            ? "Không tìm thấy giao dịch nào phù hợp với tiêu chí tìm kiếm."
+                            : "Chưa có giao dịch nào."
+                          }
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25, 50, { label: 'Tất cả', value: 99999 }]}
+              component="div"
+              count={displayTotalCount}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              labelRowsPerPage={
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                  Dòng mỗi trang:
+                </Box>
+              }
+              sx={{
+                '& .MuiTablePagination-toolbar': {
+                  minHeight: { xs: 48, sm: 52 },
+                  px: { xs: 1, sm: 2 }
+                },
+                '& .MuiTablePagination-selectLabel': {
+                  ...responsiveTypographyTokens.tableCellSmall,
+                  margin: 0
+                },
+                '& .MuiTablePagination-displayedRows': {
+                  ...responsiveTypographyTokens.tableCellSmall,
+                  margin: 0
+                },
+                '& .MuiTablePagination-select': {
+                  ...responsiveTypographyTokens.tableCellSmall
+                },
+                '& .MuiTablePagination-actions': {
+                  '& .MuiIconButton-root': {
+                    padding: { xs: '4px', sm: '8px' }
+                  }
+                }
+              }} />
+          </>
+        )}
+      </Paper>
+      <CreateTransactionModal
+        open={openAddTransactionModal} onClose={() => setOpenAddTransactionModal(false)}
+        onTransactionAdded={fetchTransactions}
+      />
+      {/* Confirm Payment Dialog */}
+      <Dialog
+        open={openConfirmDialog}
+        onClose={!confirmLoading && !cancelLoading ? handleCloseConfirmDialog : undefined}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{
+          color: 'primary.main',
+          fontWeight: 'bold'
+        }}>
+          🔄 Cập nhật trạng thái giao dịch
+        </DialogTitle>
+        <DialogContent>
+          {/* Transaction Information */}
+          <Box sx={{
+            p: 1.5,
+            bgcolor: componentColors.modal.noteBackground,
+            borderRadius: 1,
+            mb: 2,
+          }}>
+            <Typography variant="body2" color="text.secondary">
+              User ID: {selectedTransaction?.buyer_user_id}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Số tiền: {selectedTransaction?.transaction_amount.toLocaleString('vi-VN')}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Trạng thái hiện tại:
+              <Chip
+                label={selectedTransaction?.payment_status.toUpperCase()}
+                size="small"
+                color={getPaymentStatusChipColor(selectedTransaction?.payment_status as PaymentStatusEnumFE)}
+              />
+            </Typography>
+          </Box>
+
+          {/* Warning/Information Box */}
+          <Box sx={{
+            mb: 3,
+            p: 2,
+            bgcolor: componentColors.modal.noteBackground,
+            borderRadius: 1,
+            border: `1px solid ${componentColors.modal.noteBorder}`,
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '3px',
+              bgcolor: 'primary.main',
+              borderRadius: '4px 4px 0 0'
+            },
+            position: 'relative'
+          }}>
+            <Typography
+              variant="body2"
+              fontWeight="bold"
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                color: 'primary.main',
+                mb: 2
+              }}
+            >
+              ℹ️ Chọn hành động:
+            </Typography>
+
+            <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+              • <strong>Xác nhận thanh toán:</strong> Chuyển trạng thái sang "Thành công"
+            </Typography>
+            <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+              • <strong>Hủy giao dịch:</strong> Chuyển trạng thái sang "Đã hủy"
+            </Typography>
+            <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+              • Hành động này không thể hoàn tác
+            </Typography>
+          </Box>
+
+          {/* Admin Notes Field */}
+          <Box sx={{ mb: 3 }}>
+            <TextField
+              fullWidth
+              label="Ghi chú admin (tùy chọn)"
+              variant="outlined"
+              multiline
+              rows={3}
+              value={adminNotes}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAdminNotes(e.target.value)}
+              placeholder="Nhập ghi chú về việc cập nhật trạng thái giao dịch..."
+              helperText="Ghi chú này sẽ được lưu cùng với giao dịch để tham khảo sau này"
+              disabled={confirmLoading || cancelLoading}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 1 }}>
+          <Button
+            onClick={handleCloseConfirmDialog}
+            disabled={confirmLoading || cancelLoading}
+            variant="outlined"
+          >
+            Đóng
+          </Button>
+          <Button
+            onClick={handleCancelTransactionSubmit}
+            color="error"
+            variant="outlined"
+            disabled={confirmLoading || cancelLoading}
+            startIcon={cancelLoading ? <CircularProgress size={20} /> : null}
+          >
+            {cancelLoading ? 'Đang hủy...' : 'Hủy giao dịch'}
+          </Button>
+          <Button
+            onClick={handleConfirmPaymentSubmit}
+            color="success"
+            variant="contained"
+            disabled={confirmLoading || cancelLoading}
+            startIcon={confirmLoading ? <CircularProgress size={20} /> : null}
+          >
+            {confirmLoading ? 'Đang xử lý...' : 'Xác nhận thanh toán'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* View Notes History Dialog */}
+      <Dialog
+        open={openNotesDialog}
+        onClose={handleCloseNotesDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{
+          color: 'primary.main',
+          fontWeight: 'bold'
+        }}>
+          📝 Lịch sử ghi chú giao dịch
+        </DialogTitle>
+        <DialogContent>
+          {/* Transaction Information */}
+          <Box sx={{
+            p: 1.5,
+            bgcolor: componentColors.modal.noteBackground,
+            borderRadius: 1,
+            mb: 2,
+          }}>                        <Typography variant="body1" fontWeight="bold">
+              ID Giao dịch: {selectedTransaction?.id.slice(0, 8)}...
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Số tiền: {selectedTransaction?.transaction_amount.toLocaleString('vi-VN')}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Trạng thái: <Chip
+                label={selectedTransaction?.payment_status}
+                size="small"
+                color={getPaymentStatusChipColor(selectedTransaction?.payment_status || PaymentStatusEnumFE.PENDING)}
+              />
+            </Typography>
+          </Box>
+
+          {/* Notes Content */}
+          <Box sx={{
+            p: 2,
+            bgcolor: 'background.default',
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'divider',
+            minHeight: 200
+          }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              Ghi chú:
+            </Typography>
+            {selectedTransaction?.notes ? (
+              <Typography variant="body2" sx={{
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                lineHeight: 1.6
+              }}>
+                {selectedTransaction.notes}
+              </Typography>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                Không có ghi chú nào cho giao dịch này.
+              </Typography>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 1 }}>
+          <Button
+            onClick={handleCloseNotesDialog}
+            variant="contained"
+          >
+            Đóng
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
 }

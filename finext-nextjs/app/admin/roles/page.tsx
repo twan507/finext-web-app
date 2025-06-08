@@ -155,12 +155,33 @@ const RolesPage: React.FC = () => {
                                                     {role.description || 'N/A'}
                                                 </Typography>
                                             </Tooltip>
-                                        </TableCell>
-                                        <TableCell align="center">
+                                        </TableCell>                                        <TableCell align="center">
                                             <Chip label={role.permission_ids?.length || 0} size="small" />
                                         </TableCell>
-                                        <TableCell>{format(parseISO(role.created_at), 'dd/MM/yyyy HH:mm')}</TableCell>
-                                        <TableCell>{format(parseISO(role.updated_at), 'dd/MM/yyyy HH:mm')}</TableCell>
+                                        <TableCell>
+                                            {(() => {
+                                                try {
+                                                    // Parse UTC date and convert to GMT+7
+                                                    const utcDate = parseISO(role.created_at);
+                                                    const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                                                    return format(gmt7Date, 'dd/MM/yyyy HH:mm');
+                                                } catch (error) {
+                                                    return 'Invalid date';
+                                                }
+                                            })()}
+                                        </TableCell>
+                                        <TableCell>
+                                            {(() => {
+                                                try {
+                                                    // Parse UTC date and convert to GMT+7
+                                                    const utcDate = parseISO(role.updated_at);
+                                                    const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                                                    return format(gmt7Date, 'dd/MM/yyyy HH:mm');
+                                                } catch (error) {
+                                                    return 'Invalid date';
+                                                }
+                                            })()}
+                                        </TableCell>
                                         <TableCell align="right">
                                             <Tooltip title="Edit Role">
                                                 <IconButton size="small" onClick={() => handleEditRole(role.id)}><EditIcon fontSize="small" /></IconButton>

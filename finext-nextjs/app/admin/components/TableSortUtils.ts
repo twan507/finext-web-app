@@ -143,32 +143,21 @@ export const getResponsiveDisplayStyle = (column: ColumnConfig, expandedView: bo
     if (allBreakpointsNone) {
         // Only show in detail view, hide in compact view at all breakpoints
         return { display: 'none' };
+    }    // Build responsive display object directly from column configuration
+    const responsiveDisplay: any = {};
+
+    // For each breakpoint, use the configured value or default to 'table-cell'
+    const breakpoints = ['xs', 'sm', 'md', 'lg'] as const;
+
+    for (const breakpoint of breakpoints) {
+        const configValue = column.responsive[breakpoint];
+        if (configValue !== undefined) {
+            responsiveDisplay[breakpoint] = configValue;
+        } else {
+            // If breakpoint is not configured, default to 'table-cell'
+            responsiveDisplay[breakpoint] = 'table-cell';
+        }
     }
 
-    // Build responsive display object for Material-UI
-    const responsiveStyles: any = {};
-
-    // For phone_number and is_active columns: hide from sm down (xs: none, sm: none, but md+ can show)
-    if (column.responsive.xs === 'none' && column.responsive.sm === 'none' &&
-        (!column.responsive.md || column.responsive.md === 'table-cell')) {
-        responsiveStyles.display = {
-            xs: 'none',
-            sm: 'none',
-            md: 'table-cell'
-        };
-    }
-    // For subscription column: hide only at xs (xs: none, but sm+ can show)
-    else if (column.responsive.xs === 'none' &&
-        (!column.responsive.sm || column.responsive.sm === 'table-cell')) {
-        responsiveStyles.display = {
-            xs: 'none',
-            sm: 'table-cell'
-        };
-    }
-    // Default: show column
-    else {
-        responsiveStyles.display = 'table-cell';
-    }
-
-    return responsiveStyles;
+    return { display: responsiveDisplay };
 };

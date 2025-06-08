@@ -194,10 +194,20 @@ export default function WatchlistsPage() {
                                                 <Typography variant="body2" sx={{ maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis' }}>...{watchlist.id.slice(-6)}</Typography>
                                             </Tooltip>
                                         </TableCell>
-                                        <TableCell>{watchlist.user_email || watchlist.user_id}</TableCell>
-                                        <TableCell>{watchlist.name}</TableCell>
+                                        <TableCell>{watchlist.user_email || watchlist.user_id}</TableCell>                                        <TableCell>{watchlist.name}</TableCell>
                                         <TableCell align="center"><Chip label={watchlist.stock_symbols.length} size="small" /></TableCell>
-                                        <TableCell>{format(parseISO(watchlist.created_at), 'dd/MM/yyyy')}</TableCell>
+                                        <TableCell>
+                                            {(() => {
+                                                try {
+                                                    // Parse UTC date and convert to GMT+7
+                                                    const utcDate = parseISO(watchlist.created_at);
+                                                    const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                                                    return format(gmt7Date, 'dd/MM/yyyy HH:mm');
+                                                } catch (error) {
+                                                    return 'Invalid date';
+                                                }
+                                            })()}
+                                        </TableCell>
                                         <TableCell align="right">
                                             <Tooltip title="View Details">
                                                 <IconButton size="small" onClick={() => handleViewWatchlist(watchlist.id)}><ViewIcon fontSize="small" /></IconButton>

@@ -69,19 +69,19 @@ export default function OtpsPage() {
             });
 
             if (response.status === 200 && response.data) {
-                 if ('items' in response.data && Array.isArray(response.data.items) && typeof response.data.total === 'number') {
+                if ('items' in response.data && Array.isArray(response.data.items) && typeof response.data.total === 'number') {
                     setOtps(response.data.items);
                     setTotalCount(response.data.total);
                 } else if (Array.isArray(response.data)) {
                     console.warn("Backend for OTPs did not return total count. Pagination might be inaccurate.");
                     setOtps(response.data as OtpPublicAdmin[]);
-                     const currentDataLength = (response.data as OtpPublicAdmin[]).length;
-                     if (page === 0) {
-                        setTotalCount(currentDataLength < rowsPerPage ? currentDataLength : currentDataLength + (currentDataLength === rowsPerPage ? rowsPerPage : 0) );
+                    const currentDataLength = (response.data as OtpPublicAdmin[]).length;
+                    if (page === 0) {
+                        setTotalCount(currentDataLength < rowsPerPage ? currentDataLength : currentDataLength + (currentDataLength === rowsPerPage ? rowsPerPage : 0));
                     } else if (currentDataLength < rowsPerPage) {
                         setTotalCount(page * rowsPerPage + currentDataLength);
                     } else {
-                         setTotalCount(page * rowsPerPage + currentDataLength + rowsPerPage);
+                        setTotalCount(page * rowsPerPage + currentDataLength + rowsPerPage);
                     }
                 } else {
                     throw new Error("Unexpected data structure from API for OTPs.");
@@ -118,7 +118,7 @@ export default function OtpsPage() {
             // Admin invalidating an OTP - backend needs an endpoint for this
             // e.g., PUT /api/v1/otps/admin/{otp_id}/invalidate
             console.log("Invalidate OTP (not implemented):", otpId);
-             try {
+            try {
                 // await apiClient({ url: `/api/v1/otps/admin/${otpId}/invalidate`, method: 'PUT' });
                 // fetchOtps();
                 alert("Invalidate action not yet implemented in backend.");
@@ -147,13 +147,13 @@ export default function OtpsPage() {
                     Refresh
                 </Button>
             </Box>
-             <Paper sx={{ p: 2, mb: 2, borderRadius: 2 }}>
+            <Paper sx={{ p: 2, mb: 2, borderRadius: 2 }}>
                 <Typography variant="h6" gutterBottom>Filters</Typography>
                 <Grid container spacing={2}>
-                    <Grid size = {{  xs: 12, sm: 4 }}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
                         <TextField label="User ID" value={filterUserId} onChange={(e) => setFilterUserId(e.target.value)} fullWidth size="small" />
                     </Grid>
-                    <Grid size = {{  xs: 12, sm: 4 }}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
                         <TextField select label="OTP Type" value={filterOtpType} onChange={(e) => setFilterOtpType(e.target.value as OtpTypeEnumFE | '')} fullWidth size="small">
                             <MenuItem value=""><em>All</em></MenuItem>
                             {Object.values(OtpTypeEnumFE).map(type => (
@@ -161,7 +161,7 @@ export default function OtpsPage() {
                             ))}
                         </TextField>
                     </Grid>
-                     <Grid size = {{  xs: 12, sm: 4 }}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
                         <TextField select label="Status" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as '' | 'verified' | 'pending' | 'expired')} fullWidth size="small">
                             <MenuItem value=""><em>All</em></MenuItem>
                             <MenuItem value="pending">Pending</MenuItem>
@@ -176,7 +176,7 @@ export default function OtpsPage() {
 
             <Paper sx={{ width: '100%', overflow: 'hidden', borderRadius: 2 }}>
                 {loading && otps.length === 0 ? (
-                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 3, minHeight: 300 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 3, minHeight: 300 }}>
                         <CircularProgress />
                     </Box>
                 ) : (
@@ -202,17 +202,49 @@ export default function OtpsPage() {
                                         return (
                                             <TableRow hover key={otp.id}>
                                                 <TableCell>
-                                                     <Tooltip title={otp.id}>
-                                                        <Typography variant="body2" sx={{maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis'}}>...{otp.id.slice(-6)}</Typography>
+                                                    <Tooltip title={otp.id}>
+                                                        <Typography variant="body2" sx={{ maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis' }}>...{otp.id.slice(-6)}</Typography>
                                                     </Tooltip>
                                                 </TableCell>
                                                 <TableCell>{otp.user_email || otp.user_id}</TableCell>
-                                                <TableCell><Chip label={otp.otp_type.replace('_', ' ').toUpperCase()} size="small" variant="outlined"/></TableCell>
-                                                <TableCell><Chip label={status.text} color={status.color} size="small" /></TableCell>
-                                                <TableCell align="center">{otp.attempts ?? 'N/A'}</TableCell>
-                                                <TableCell>{format(parseISO(otp.created_at), 'dd/MM/yy HH:mm')}</TableCell>
-                                                <TableCell>{format(parseISO(otp.expires_at), 'dd/MM/yy HH:mm')}</TableCell>
-                                                <TableCell>{otp.verified_at ? format(parseISO(otp.verified_at), 'dd/MM/yy HH:mm') : 'N/A'}</TableCell>
+                                                <TableCell><Chip label={otp.otp_type.replace('_', ' ').toUpperCase()} size="small" variant="outlined" /></TableCell>
+                                                <TableCell><Chip label={status.text} color={status.color} size="small" /></TableCell>                                                <TableCell align="center">{otp.attempts ?? 'N/A'}</TableCell>
+                                                <TableCell>
+                                                    {(() => {
+                                                        try {
+                                                            // Parse UTC date and convert to GMT+7
+                                                            const utcDate = parseISO(otp.created_at);
+                                                            const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                                                            return format(gmt7Date, 'dd/MM/yyyy HH:mm');
+                                                        } catch (error) {
+                                                            return 'Invalid date';
+                                                        }
+                                                    })()}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {(() => {
+                                                        try {
+                                                            // Parse UTC date and convert to GMT+7
+                                                            const utcDate = parseISO(otp.expires_at);
+                                                            const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                                                            return format(gmt7Date, 'dd/MM/yyyy HH:mm');
+                                                        } catch (error) {
+                                                            return 'Invalid date';
+                                                        }
+                                                    })()}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {otp.verified_at ? (() => {
+                                                        try {
+                                                            // Parse UTC date and convert to GMT+7
+                                                            const utcDate = parseISO(otp.verified_at);
+                                                            const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                                                            return format(gmt7Date, 'dd/MM/yyyy HH:mm');
+                                                        } catch (error) {
+                                                            return 'Invalid date';
+                                                        }
+                                                    })() : 'N/A'}
+                                                </TableCell>
                                                 <TableCell align="right">
                                                     {status.text === 'Pending' && (
                                                         <Tooltip title="Invalidate OTP">

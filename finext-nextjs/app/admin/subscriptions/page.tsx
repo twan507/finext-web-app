@@ -238,12 +238,33 @@ export default function SubscriptionsPage() {
                                                 </Tooltip>
                                             </TableCell>
                                             <TableCell>{sub.user_email}</TableCell>
-                                            <TableCell><Chip label={sub.license_key} size="small" /></TableCell>
-                                            <TableCell>
+                                            <TableCell><Chip label={sub.license_key} size="small" /></TableCell>                                            <TableCell>
                                                 <Chip label={sub.is_active ? 'Active' : 'Inactive'} color={sub.is_active ? 'success' : 'default'} size="small" />
                                             </TableCell>
-                                            <TableCell>{format(parseISO(sub.start_date), 'dd/MM/yyyy')}</TableCell>
-                                            <TableCell>{format(parseISO(sub.expiry_date), 'dd/MM/yyyy')}</TableCell>
+                                            <TableCell>
+                                                {(() => {
+                                                    try {
+                                                        // Parse UTC date and convert to GMT+7
+                                                        const utcDate = parseISO(sub.start_date);
+                                                        const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                                                        return format(gmt7Date, 'dd/MM/yyyy HH:mm');
+                                                    } catch (error) {
+                                                        return 'Invalid date';
+                                                    }
+                                                })()}
+                                            </TableCell>
+                                            <TableCell>
+                                                {(() => {
+                                                    try {
+                                                        // Parse UTC date and convert to GMT+7
+                                                        const utcDate = parseISO(sub.expiry_date);
+                                                        const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                                                        return format(gmt7Date, 'dd/MM/yyyy HH:mm');
+                                                    } catch (error) {
+                                                        return 'Invalid date';
+                                                    }
+                                                })()}
+                                            </TableCell>
                                             <TableCell align="right">
                                                 <Tooltip title="View/Edit Details">
                                                     <IconButton size="small" onClick={() => handleEditSubscription(sub.id)}><EditIcon fontSize="small" /></IconButton>

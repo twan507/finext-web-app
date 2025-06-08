@@ -43,7 +43,7 @@ const PermissionsPage: React.FC = () => {
             });
 
             if (response.status === 200 && response.data) {
-                 if ('items' in response.data && Array.isArray(response.data.items) && typeof response.data.total === 'number') {
+                if ('items' in response.data && Array.isArray(response.data.items) && typeof response.data.total === 'number') {
                     setPermissions(response.data.items);
                     setTotalCount(response.data.total);
                 } else if (Array.isArray(response.data)) {
@@ -51,11 +51,11 @@ const PermissionsPage: React.FC = () => {
                     setPermissions(response.data as PermissionSystemPublic[]);
                     const currentDataLength = (response.data as PermissionSystemPublic[]).length;
                     if (page === 0) {
-                        setTotalCount(currentDataLength < rowsPerPage ? currentDataLength : currentDataLength + (currentDataLength === rowsPerPage ? rowsPerPage : 0) );
+                        setTotalCount(currentDataLength < rowsPerPage ? currentDataLength : currentDataLength + (currentDataLength === rowsPerPage ? rowsPerPage : 0));
                     } else if (currentDataLength < rowsPerPage) {
                         setTotalCount(page * rowsPerPage + currentDataLength);
                     } else {
-                         setTotalCount(page * rowsPerPage + currentDataLength + rowsPerPage);
+                        setTotalCount(page * rowsPerPage + currentDataLength + rowsPerPage);
                     }
                 } else {
                     throw new Error("Unexpected data structure from API for permissions.");
@@ -86,7 +86,7 @@ const PermissionsPage: React.FC = () => {
         setRowsPerPage(parseInt(event.target.value, 10));
         setPage(0);
     };
-    
+
     // Permissions are usually system-defined, UI for Add/Edit/Delete might not be common
     // unless you allow dynamic permission creation through admin panel.
     const handleAddPermission = () => console.log("Add permission (not implemented - usually system defined)");
@@ -99,7 +99,7 @@ const PermissionsPage: React.FC = () => {
                     <PermissionIcon sx={{ mr: 1, fontSize: '24px' }} />
                     <Typography variant="h4" component="h1">System Permissions</Typography>
                 </Box>
-                 <Box>
+                <Box>
                     <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchPermissions} disabled={loading} sx={{ mr: 1 }}>
                         Refresh
                     </Button>
@@ -114,7 +114,7 @@ const PermissionsPage: React.FC = () => {
 
             <Paper sx={{ width: '100%', overflow: 'hidden', borderRadius: 2 }}>
                 {loading && permissions.length === 0 ? (
-                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 3, minHeight: 300 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 3, minHeight: 300 }}>
                         <CircularProgress />
                     </Box>
                 ) : (
@@ -134,9 +134,19 @@ const PermissionsPage: React.FC = () => {
                                         <TableRow hover key={permission.id || permission.name}>
                                             <TableCell>
                                                 <Typography variant="body2" fontWeight="medium">{permission.name}</Typography>
+                                            </TableCell>                                            <TableCell>{permission.description || 'N/A'}</TableCell>
+                                            <TableCell>
+                                                {permission.created_at ? (() => {
+                                                    try {
+                                                        // Parse UTC date and convert to GMT+7
+                                                        const utcDate = parseISO(permission.created_at);
+                                                        const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                                                        return format(gmt7Date, 'dd/MM/yyyy HH:mm');
+                                                    } catch (error) {
+                                                        return 'Invalid date';
+                                                    }
+                                                })() : 'N/A'}
                                             </TableCell>
-                                            <TableCell>{permission.description || 'N/A'}</TableCell>
-                                            <TableCell>{permission.created_at ? format(parseISO(permission.created_at), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
                                             {/* Actions like Edit/Delete for system permissions are rare */}
                                             {/* <TableCell align="right"></TableCell> */}
                                         </TableRow>
