@@ -194,10 +194,8 @@ async def _prepare_transaction_data(
 
     # Broker Code Application Logic
     broker_code_to_apply_str: Optional[str] = None
-    broker_discount_amount_val: float = 0.0
-
-    # Ưu tiên admin_broker_code_override nếu admin đang update giao dịch pending
-    if is_admin_update_pending and admin_broker_code_override is not None:
+    broker_discount_amount_val: float = 0.0  # Ưu tiên admin_broker_code_override nếu admin có cung cấp (tạo mới hoặc update pending)
+    if admin_broker_code_override is not None:
         if admin_broker_code_override == "":  # Admin muốn xóa broker code
             broker_code_to_apply_str = None
         else:
@@ -205,7 +203,7 @@ async def _prepare_transaction_data(
             if is_valid_override:
                 broker_code_to_apply_str = admin_broker_code_override.upper()
             else:
-                raise ValueError(f"Mã đối tác '{admin_broker_code_override}' do admin ghi đè không hợp lệ.")
+                raise ValueError(f"Mã đối tác '{admin_broker_code_override}' do admin cung cấp không hợp lệ.")
     # Tiếp theo, nếu user tự tạo order và nhập broker code
     elif not is_admin_update_pending and input_broker_code_for_user_create:
         is_valid_input = await crud_brokers.is_broker_code_valid_and_active(db, input_broker_code_for_user_create)
@@ -269,16 +267,10 @@ async def _prepare_transaction_data(
         "original_license_price": original_price_for_calc,
         "purchased_duration_days": duration_for_calc,
         "promotion_code_applied": applied_promo_code_str,
-        "promotion_discount_amount": promotion_discount_amount_val
-        if applied_promo_code_str and license_doc.key not in PROTECTED_LICENSE_KEYS
-        else None,
+        "promotion_discount_amount": promotion_discount_amount_val if applied_promo_code_str else None,
         "broker_code_applied": broker_code_to_apply_str,
-        "broker_discount_amount": broker_discount_amount_val
-        if broker_code_to_apply_str and license_doc.key not in PROTECTED_LICENSE_KEYS
-        else None,
-        "total_discount_amount": total_discount_val
-        if (broker_code_to_apply_str or applied_promo_code_str) and license_doc.key not in PROTECTED_LICENSE_KEYS
-        else None,
+        "broker_discount_amount": broker_discount_amount_val if broker_code_to_apply_str else None,
+        "total_discount_amount": total_discount_val if (broker_code_to_apply_str or applied_promo_code_str) else None,
         "transaction_amount": final_transaction_amount_calc,
         "payment_status": PaymentStatusEnum.PENDING.value,
         "transaction_type": transaction_type.value,
@@ -305,8 +297,8 @@ async def create_transaction_for_admin_db(
             subscription_id_to_renew_str=transaction_create_data.subscription_id_to_renew,
             purchased_duration_days_override=transaction_create_data.purchased_duration_days,
             input_promotion_code=transaction_create_data.promotion_code,
-            input_broker_code_for_user_create=None,  # Admin không nhập broker code khi tạo, hệ thống tự lấy từ user profile
-            admin_broker_code_override=None,  # Không có override ở bước tạo mới
+            input_broker_code_for_user_create=None,  # Admin không dùng tham số này
+            admin_broker_code_override=transaction_create_data.broker_code,  # Sử dụng broker_code từ admin
             notes=transaction_create_data.notes,
             is_admin_update_pending=False,
         )
@@ -458,15 +450,23 @@ async def confirm_transaction_payment_db(
                 f"Admin ghi đè số tiền giao dịch {transaction_id_str} từ {current_transaction_amount_in_db} thành: {confirmation_request.final_transaction_amount_override}"
             )
 
+    if confirmation_request.duration_days_override is not None:
+        if confirmation_request.duration_days_override <= 0:
+            raise ValueError("Số ngày gia hạn ghi đè phải lớn hơn 0.")
+        current_duration_days_in_db = transaction.purchased_duration_days
+        if confirmation_request.duration_days_override != current_duration_days_in_db:
+            update_fields_for_transaction["purchased_duration_days"] = confirmation_request.duration_days_override
+            logger.info(
+                f"Admin ghi đè số ngày gia hạn giao dịch {transaction_id_str} từ {current_duration_days_in_db} thành: {confirmation_request.duration_days_override}"
+            )
+
     if confirmation_request.admin_notes:
         existing_notes = transaction.notes or ""
         update_fields_for_transaction["notes"] = (
             f"{existing_notes}\n[Admin xác nhận: {dt_now.strftime('%Y-%m-%d %H:%M')}] {confirmation_request.admin_notes}".strip()
         )
 
-    newly_created_or_updated_sub_id: Optional[ObjectId] = None
-
-    # transaction.license_id đã là str từ get_transaction_by_id
+    newly_created_or_updated_sub_id: Optional[ObjectId] = None  # transaction.license_id đã là str từ get_transaction_by_id
     license_of_transaction = await crud_licenses.get_license_by_id(db, transaction.license_id)
     if not license_of_transaction or not license_of_transaction.id:
         raise ValueError(f"Không tìm thấy license (ID: {transaction.license_id}) của giao dịch {transaction.id}")
@@ -475,7 +475,7 @@ async def confirm_transaction_payment_db(
         sub_create_payload = AppSubscriptionCreateSchema(  # user_id và license_id cần là PyObjectId (str)
             user_id=transaction.buyer_user_id,
             license_key=transaction.license_key,  # Dùng license_key từ transaction
-            duration_override_days=transaction.purchased_duration_days,
+            duration_override_days=confirmation_request.duration_days_override or transaction.purchased_duration_days,
         )
         created_sub = await crud_subscriptions.create_subscription_db(db, sub_create_payload)
         if not created_sub or not created_sub.id:
@@ -513,7 +513,10 @@ async def confirm_transaction_payment_db(
         start_renewal_from = target_sub_to_renew.expiry_date
         if start_renewal_from < dt_now:  # Nếu sub đã hết hạn, bắt đầu gia hạn từ bây giờ
             start_renewal_from = dt_now
-        new_expiry_date = start_renewal_from + timedelta(days=transaction.purchased_duration_days)
+
+        # Sử dụng duration_days_override nếu có, nếu không thì dùng purchased_duration_days từ transaction
+        duration_days_to_use = confirmation_request.duration_days_override or transaction.purchased_duration_days
+        new_expiry_date = start_renewal_from + timedelta(days=duration_days_to_use)
 
         updated_sub_result = await db.subscriptions.update_one(
             {"_id": sub_obj_id_for_renewal},

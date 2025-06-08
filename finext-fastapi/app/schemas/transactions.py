@@ -69,7 +69,9 @@ class TransactionCreateForAdmin(BaseModel):
     purchased_duration_days: int = Field(..., gt=0)
     promotion_code: Optional[str] = Field(default=None, description="Mã khuyến mãi admin muốn áp dụng.")
     notes: Optional[str] = None
-    # Admin không cần nhập broker_code ở đây, sẽ tự lấy từ user nếu có
+    broker_code: Optional[str] = Field(
+        default=None, description="Mã broker admin muốn áp dụng. Nếu không nhập, sẽ tự lấy từ referral_code của user."
+    )
 
     license_id_for_new_purchase: Optional[PyObjectId] = None
     subscription_id_to_renew: Optional[PyObjectId] = None
@@ -100,6 +102,7 @@ class TransactionCreateForAdmin(BaseModel):
                 "license_id_for_new_purchase": "60d5ec49f7b4e6a0e7d5c2b2",
                 "purchased_duration_days": 30,
                 "promotion_code": "ADMINSPECIAL",
+                "broker_code": "ABCD",
                 "notes": "Admin tạo giao dịch, áp dụng KM đặc biệt.",
             }
         }
@@ -195,12 +198,18 @@ class TransactionPaymentConfirmationRequest(BaseModel):  # Schema mới cho body
         ge=0,
         description="Số tiền giao dịch cuối cùng do admin ghi đè (nếu cần thiết).",
     )
+    duration_days_override: Optional[int] = Field(
+        default=None,
+        gt=0,
+        description="Số ngày sử dụng ghi đè khi tạo/gia hạn subscription (nếu cần thiết).",
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "admin_notes": "Khách hàng đã chuyển khoản đủ.",
                 "final_transaction_amount_override": 150000.00,  # Ví dụ admin sửa lại giá cuối
+                "duration_days_override": 45,  # Ví dụ admin ghi đè thời hạn thành 45 ngày
             }
         }
     )

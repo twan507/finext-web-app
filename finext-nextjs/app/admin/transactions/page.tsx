@@ -12,7 +12,7 @@ import {
 import {
   ReceiptLong as TransactionIcon,
   Add as AddIcon,
-  CheckCircleOutline as ConfirmIcon,
+  PlaylistAddCheckCircle as ConfirmIcon,
   History as HistoryIcon,
   UnfoldMore as ExpandIcon,
   UnfoldLess as CollapseIcon
@@ -28,6 +28,7 @@ import {
   getResponsiveDisplayStyle
 } from '../components/TableSortUtils';
 import CreateTransactionModal from './components/CreateTransactionModal';
+import ConfirmTransactionModal from './components/ConfirmTransactionModal';
 import TransactionSearch from './components/TransactionSearch';
 
 enum PaymentStatusEnumFE {
@@ -83,14 +84,15 @@ export default function TransactionsPage() {
 
   // User emails mapping
   const [userEmails, setUserEmails] = useState<Map<string, string>>(new Map());
-  const [emailsLoading, setEmailsLoading] = useState(false);    // Add Transaction Modal
-  const [openAddTransactionModal, setOpenAddTransactionModal] = useState(false);// Dialog states
-  const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+  const [emailsLoading, setEmailsLoading] = useState(false);  // Add Transaction Modal
+  const [openAddTransactionModal, setOpenAddTransactionModal] = useState(false);
+
+  // Confirm Transaction Modal
+  const [openConfirmModal, setOpenConfirmModal] = useState(false);
+
+  // Dialog states
   const [openNotesDialog, setOpenNotesDialog] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState<TransactionPublic | null>(null);
-  const [confirmLoading, setConfirmLoading] = useState(false);
-  const [cancelLoading, setCancelLoading] = useState(false);
-  const [adminNotes, setAdminNotes] = useState<string>('');    // Column configuration for sortable table
+  const [selectedTransaction, setSelectedTransaction] = useState<TransactionPublic | null>(null);// Column configuration for sortable table
   const columnConfigs: ColumnConfig[] = useMemo(() => [
     {
       id: 'buyer_user_id',
@@ -419,23 +421,14 @@ export default function TransactionsPage() {
     const transaction = transactions.find(t => t.id === transactionId);
     if (transaction) {
       setSelectedTransaction(transaction);
-      setAdminNotes('');
-      setOpenConfirmDialog(true);
+      setOpenConfirmModal(true);
     }
   };
-
   const handleViewNotesHistory = (transactionId: string) => {
     const transaction = transactions.find(t => t.id === transactionId);
     if (transaction) {
       setSelectedTransaction(transaction);
       setOpenNotesDialog(true);
-    }
-  };    // Dialog handlers
-  const handleCloseConfirmDialog = () => {
-    if (!confirmLoading && !cancelLoading) {
-      setOpenConfirmDialog(false);
-      setSelectedTransaction(null);
-      setAdminNotes('');
     }
   };
 
@@ -444,47 +437,19 @@ export default function TransactionsPage() {
     setSelectedTransaction(null);
   };
 
-  const handleConfirmPaymentSubmit = async () => {
-    if (!selectedTransaction) return;
-
-    setConfirmLoading(true);
-    setError(null);
-
-    try {
-      await apiClient({
-        url: `/api/v1/transactions/admin/${selectedTransaction.id}/confirm-payment`,
-        method: 'PUT',
-        body: { admin_notes: adminNotes.trim() || undefined }
-      });
-      fetchTransactions();
-      handleCloseConfirmDialog();
-    } catch (err: any) {
-      setError(err.message || "Failed to confirm payment.");
-    } finally {
-      setConfirmLoading(false);
-    }
+  // New modal handlers
+  const handleCloseConfirmModal = () => {
+    setOpenConfirmModal(false);
+    setSelectedTransaction(null);
   };
 
-  const handleCancelTransactionSubmit = async () => {
-    if (!selectedTransaction) return;
+  const handleConfirmModalSubmit = async () => {
+    // This will be handled by the modal itself
+    fetchTransactions();
+    handleCloseConfirmModal();
+  };
 
-    setCancelLoading(true);
-    setError(null);
-
-    try {
-      await apiClient({
-        url: `/api/v1/transactions/admin/${selectedTransaction.id}/cancel`,
-        method: 'PUT',
-        body: { admin_notes: adminNotes.trim() || undefined }
-      });
-      fetchTransactions();
-      handleCloseConfirmDialog();
-    } catch (err: any) {
-      setError(err.message || "Failed to cancel transaction.");
-    } finally {
-      setCancelLoading(false);
-    }
-  }; const getPaymentStatusChipColor = (status: PaymentStatusEnumFE): "success" | "warning" | "default" | "error" => {
+  const getPaymentStatusChipColor = (status: PaymentStatusEnumFE): "success" | "warning" | "default" | "error" => {
     switch (status) {
       case PaymentStatusEnumFE.SUCCEEDED: return "success";
       case PaymentStatusEnumFE.PENDING: return "warning";
@@ -869,136 +834,17 @@ export default function TransactionsPage() {
               }} />
           </>
         )}
-      </Paper>
-      <CreateTransactionModal
+      </Paper>      <CreateTransactionModal
         open={openAddTransactionModal} onClose={() => setOpenAddTransactionModal(false)}
         onTransactionAdded={fetchTransactions}
+      />      {/* New Confirm Transaction Modal */}
+      <ConfirmTransactionModal
+        open={openConfirmModal}
+        onClose={handleCloseConfirmModal}
+        transaction={selectedTransaction}
+        onTransactionUpdated={handleConfirmModalSubmit}
+        userEmail={selectedTransaction ? userEmails.get(selectedTransaction.buyer_user_id) : undefined}
       />
-      {/* Confirm Payment Dialog */}
-      <Dialog
-        open={openConfirmDialog}
-        onClose={!confirmLoading && !cancelLoading ? handleCloseConfirmDialog : undefined}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle sx={{
-          color: 'primary.main',
-          fontWeight: 'bold'
-        }}>
-          🔄 Cập nhật trạng thái giao dịch
-        </DialogTitle>
-        <DialogContent>
-          {/* Transaction Information */}
-          <Box sx={{
-            p: 1.5,
-            bgcolor: componentColors.modal.noteBackground,
-            borderRadius: 1,
-            mb: 2,
-          }}>
-            <Typography variant="body2" color="text.secondary">
-              User ID: {selectedTransaction?.buyer_user_id}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Số tiền: {selectedTransaction?.transaction_amount.toLocaleString('vi-VN')}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Trạng thái hiện tại:
-              <Chip
-                label={selectedTransaction?.payment_status.toUpperCase()}
-                size="small"
-                color={getPaymentStatusChipColor(selectedTransaction?.payment_status as PaymentStatusEnumFE)}
-              />
-            </Typography>
-          </Box>
-
-          {/* Warning/Information Box */}
-          <Box sx={{
-            mb: 3,
-            p: 2,
-            bgcolor: componentColors.modal.noteBackground,
-            borderRadius: 1,
-            border: `1px solid ${componentColors.modal.noteBorder}`,
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '3px',
-              bgcolor: 'primary.main',
-              borderRadius: '4px 4px 0 0'
-            },
-            position: 'relative'
-          }}>
-            <Typography
-              variant="body2"
-              fontWeight="bold"
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                color: 'primary.main',
-                mb: 2
-              }}
-            >
-              ℹ️ Chọn hành động:
-            </Typography>
-
-            <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
-              • <strong>Xác nhận thanh toán:</strong> Chuyển trạng thái sang "Thành công"
-            </Typography>
-            <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
-              • <strong>Hủy giao dịch:</strong> Chuyển trạng thái sang "Đã hủy"
-            </Typography>
-            <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
-              • Hành động này không thể hoàn tác
-            </Typography>
-          </Box>
-
-          {/* Admin Notes Field */}
-          <Box sx={{ mb: 3 }}>
-            <TextField
-              fullWidth
-              label="Ghi chú admin (tùy chọn)"
-              variant="outlined"
-              multiline
-              rows={3}
-              value={adminNotes}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAdminNotes(e.target.value)}
-              placeholder="Nhập ghi chú về việc cập nhật trạng thái giao dịch..."
-              helperText="Ghi chú này sẽ được lưu cùng với giao dịch để tham khảo sau này"
-              disabled={confirmLoading || cancelLoading}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ p: 3, pt: 1 }}>
-          <Button
-            onClick={handleCloseConfirmDialog}
-            disabled={confirmLoading || cancelLoading}
-            variant="outlined"
-          >
-            Đóng
-          </Button>
-          <Button
-            onClick={handleCancelTransactionSubmit}
-            color="error"
-            variant="outlined"
-            disabled={confirmLoading || cancelLoading}
-            startIcon={cancelLoading ? <CircularProgress size={20} /> : null}
-          >
-            {cancelLoading ? 'Đang hủy...' : 'Hủy giao dịch'}
-          </Button>
-          <Button
-            onClick={handleConfirmPaymentSubmit}
-            color="success"
-            variant="contained"
-            disabled={confirmLoading || cancelLoading}
-            startIcon={confirmLoading ? <CircularProgress size={20} /> : null}
-          >
-            {confirmLoading ? 'Đang xử lý...' : 'Xác nhận thanh toán'}
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* View Notes History Dialog */}
       <Dialog
