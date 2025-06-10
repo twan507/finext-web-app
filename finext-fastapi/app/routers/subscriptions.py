@@ -211,4 +211,31 @@ async def admin_read_all_subscriptions(
     return PaginatedResponse[SubscriptionPublic](items=items, total=total)
 
 
+@router.delete(
+    "/{subscription_id}",
+    response_model=StandardApiResponse[SubscriptionPublic],
+    summary="[Admin] Xóa một subscription",
+    dependencies=[Depends(require_permission("subscription", "delete_any"))],
+    tags=["subscriptions"],
+)
+@api_response_wrapper(default_success_message="Xóa subscription thành công.")
+async def delete_subscription_endpoint(
+    subscription_id: PyObjectId,
+    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
+    current_admin: UserInDB = Depends(get_current_active_user),
+):
+    logger.info(f"Admin {current_admin.email} yêu cầu xóa subscription ID: {subscription_id}")
+
+    try:
+        deleted_sub = await crud_subscriptions.delete_subscription_db(db, subscription_id)
+        if not deleted_sub:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Subscription với ID {subscription_id} không tìm thấy hoặc không thể xóa.",
+            )
+        return SubscriptionPublic.model_validate(deleted_sub)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
+
 # <<<< KẾT THÚC PHẦN BỔ SUNG MỚI >>>>

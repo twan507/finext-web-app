@@ -308,7 +308,38 @@ async def create_subscription_db(db: AsyncIOMotorDatabase, sub_create_data: Subs
         logger.error(
             f"Cannot create subscription for user {user_id_str_from_req} with inactive license key '{sub_create_data.license_key}'."
         )
-        raise ValueError(f"License '{sub_create_data.license_key}' is not active and cannot be used to create new subscriptions.")
+        raise ValueError(
+            f"License '{sub_create_data.license_key}' is not active and cannot be used to create new subscriptions."
+        )  # Check if the license key is a protected/system license
+    if sub_create_data.license_key in PROTECTED_LICENSE_KEYS:
+        logger.error(
+            f"Cannot create subscription for user {user_id_str_from_req} with protected license key '{sub_create_data.license_key}'."
+        )
+        raise ValueError(f"License '{sub_create_data.license_key}' is a system license and cannot be used to create new subscriptions.")
+
+    # Check if user already has an active non-BASIC subscription (prevent multiple active non-BASIC subscriptions)
+    if sub_create_data.license_key != BASIC_LICENSE_KEY:
+        now = datetime.now(timezone.utc)
+        active_non_basic_sub = await db.subscriptions.find_one(
+            {
+                "user_id": user_obj_id,
+                "is_active": True,
+                "expiry_date": {"$gt": now},
+                "license_key": {"$ne": BASIC_LICENSE_KEY},
+            }
+        )
+
+        if active_non_basic_sub:
+            active_license_key = active_non_basic_sub.get("license_key", "Unknown")
+            logger.error(
+                f"Cannot create new non-BASIC subscription for user {user_id_str_from_req}. "
+                f"User already has active subscription with license '{active_license_key}'."
+            )
+            raise ValueError(
+                f"Không thể tạo subscription mới. "
+                f"Người dùng đã có subscription đang hoạt động với license '{active_license_key}' "
+                f"(không phải BASIC). Vui lòng gia hạn subscription hiện tại thay vì tạo mới."
+            )
 
     license_obj_id = ObjectId(license_template.id)
 
@@ -669,6 +700,76 @@ async def get_all_subscriptions_admin(
         results.append(SubscriptionInDB(**sub_doc))
 
     return results, total_count
+
+
+async def delete_subscription_db(
+    db: AsyncIOMotorDatabase,
+    subscription_id_str: PyObjectId,
+) -> Optional[SubscriptionInDB]:
+    """
+    Delete a subscription by ID.
+    - Cannot delete subscriptions with protected license keys (ADMIN, MANAGER, PARTNER, etc.)
+    - If deleting the user's primary subscription, assign a BASIC subscription if needed
+    """
+    if not ObjectId.is_valid(subscription_id_str):
+        logger.warning(f"Subscription ID không hợp lệ để xóa: {subscription_id_str}")
+        return None
+
+    sub_obj_id = ObjectId(subscription_id_str)
+    sub_before_delete = await db.subscriptions.find_one({"_id": sub_obj_id})
+    if not sub_before_delete:
+        logger.warning(f"Không tìm thấy subscription với ID {subscription_id_str} để xóa.")
+        return None  # Check if subscription has protected license key
+    if sub_before_delete.get("license_key") in PROTECTED_LICENSE_KEYS:
+        logger.warning(
+            f"Attempt to delete protected subscription {subscription_id_str} (License: {sub_before_delete.get('license_key')}). Denied."
+        )
+        raise ValueError(f"Không thể xóa subscription với license '{sub_before_delete.get('license_key')}' được bảo vệ.")
+
+    # Check if subscription is currently active
+    if sub_before_delete.get("is_active", False):
+        logger.warning(f"Attempt to delete active subscription {subscription_id_str}. Must deactivate first.")
+        raise ValueError(f"Không thể xóa subscription đang hoạt động. Vui lòng hủy kích hoạt subscription trước khi xóa.")
+
+    # Store subscription data before deletion
+    subscription_to_return = await get_subscription_by_id_db(db, subscription_id_str)
+    user_id_of_sub_obj = sub_before_delete.get("user_id")
+
+    # Delete the subscription
+    delete_result = await db.subscriptions.delete_one({"_id": sub_obj_id})
+
+    if delete_result.deleted_count > 0:
+        logger.info(f"Đã xóa subscription {subscription_id_str}.")
+
+        # If this was the user's primary subscription, clear it and assign BASIC if needed
+        if user_id_of_sub_obj and isinstance(user_id_of_sub_obj, ObjectId):
+            user = await db.users.find_one({"_id": user_id_of_sub_obj})
+
+            # Clear user.subscription_id if this subscription was the primary one
+            if user and user.get("subscription_id") == sub_obj_id:
+                await db.users.update_one(
+                    {"_id": user_id_of_sub_obj},
+                    {
+                        "$set": {
+                            "subscription_id": None,
+                            "updated_at": datetime.now(timezone.utc),
+                        }
+                    },
+                )
+                logger.info(
+                    f"Cleared subscription_id from user {str(user_id_of_sub_obj)} after deleting primary subscription {subscription_id_str}."
+                )
+
+            # Assign BASIC subscription if needed
+            logger.debug(
+                f"Calling assign_free_subscription_if_needed for user {user_id_of_sub_obj} after deleting subscription {subscription_id_str}."
+            )
+            await assign_free_subscription_if_needed(db, user_id_of_sub_obj)
+
+        return subscription_to_return
+    else:
+        logger.warning(f"Không thể xóa subscription {subscription_id_str} (có thể do lỗi hoặc không tìm thấy).")
+        return None
 
 
 # <<<< KẾT THÚC PHẦN BỔ SUNG MỚI >>>>

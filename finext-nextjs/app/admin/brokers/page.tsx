@@ -13,7 +13,7 @@ import {
     BusinessCenter as BrokerIcon,
     Add as AddIcon,
     BusinessCenter as GrantIcon,
-    RemoveCircleOutline as RevokeIcon,
+    DoDisturbOn as RevokeIcon,
     UnfoldMore as ExpandIcon,
     UnfoldLess as CollapseIcon
 } from '@mui/icons-material';
@@ -412,7 +412,7 @@ export default function BrokersPage() {
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <BrokerIcon sx={{ mr: 1, fontSize: '24px' }} />
                     <Typography
-                        variant="h"
+                        variant="h3"
                         component="h1"
                     >
                         Quản lý Brokers

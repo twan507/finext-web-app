@@ -13,6 +13,7 @@ import {
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
 import { colorTokens } from 'theme/tokens';
+import { filterNonSystemLicenses, isSystemLicense } from 'utils/systemLicenses';
 
 interface UserPublic {
     id: string;
@@ -124,11 +125,11 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
             const response = await apiClient<{ items: LicensePublic[]; total: number } | LicensePublic[]>({
                 url: `/api/v1/licenses/?limit=1000&include_inactive=false`, // Only active licenses
                 method: 'GET',
-            });
-
-            if (response.status === 200 && response.data) {
+            }); if (response.status === 200 && response.data) {
                 const licenses = 'items' in response.data ? response.data.items : response.data;
-                setAllLicenses(licenses.filter(license => license.is_active));
+                const activeLicenses = licenses.filter(license => license.is_active);
+                const nonSystemLicenses = filterNonSystemLicenses(activeLicenses);
+                setAllLicenses(nonSystemLicenses);
             } else {
                 setAllLicenses([]);
                 setError('Không thể tải danh sách license. Vui lòng thử lại.');
@@ -347,11 +348,18 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
         if (!formData.buyer_user_id) {
             setError('Vui lòng chọn người dùng.');
             return;
-        }
-
-        if (formData.transaction_type === 'new_purchase' && !formData.license_id_for_new_purchase) {
+        } if (formData.transaction_type === 'new_purchase' && !formData.license_id_for_new_purchase) {
             setError('Vui lòng chọn license cho giao dịch mua mới.');
             return;
+        }
+
+        // Check if selected license is a system license for new purchases
+        if (formData.transaction_type === 'new_purchase' && formData.license_id_for_new_purchase) {
+            const selectedLicense = allLicenses.find(license => license.id === formData.license_id_for_new_purchase);
+            if (selectedLicense && isSystemLicense(selectedLicense.key)) {
+                setError('Không thể tạo giao dịch với gói dịch vụ hệ thống. Vui lòng chọn gói dịch vụ khác.');
+                return;
+            }
         } if (formData.transaction_type === 'renewal' && !formData.subscription_id_to_renew) {
             setError('Vui lòng chọn subscription để gia hạn. Nếu không có subscription khả dụng, hãy chọn giao dịch "Mua mới" thay thế.');
             return;

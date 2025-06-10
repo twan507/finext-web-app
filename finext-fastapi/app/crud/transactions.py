@@ -166,10 +166,16 @@ async def _prepare_transaction_data(
         if not license_id_for_new_purchase_str:
             raise ValueError("license_id_for_new_purchase là bắt buộc khi mua mới.")
         license_doc = await crud_licenses.get_license_by_id(db, license_id_for_new_purchase_str)
+
         if not license_doc:
             raise ValueError(f"License với ID {license_id_for_new_purchase_str} không tồn tại.")
+
         if not license_doc.is_active:
             raise ValueError(f"License '{license_doc.key}' hiện không hoạt động, không thể tạo giao dịch.")
+
+        # Check if the license key is a protected/system license
+        if license_doc.key in PROTECTED_LICENSE_KEYS:
+            raise ValueError(f"License '{license_doc.key}' là gói dịch vụ hệ thống và không thể sử dụng để tạo giao dịch.")
 
         # Kiểm tra xem user đã có subscription active với license không phải BASIC hay chưa
         user_obj_id = ObjectId(buyer_user_id_str)

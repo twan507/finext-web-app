@@ -1,15 +1,34 @@
 // finext-nextjs/app/admin/subscriptions/page.tsx
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { apiClient } from 'services/apiClient';
 import {
     Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
     TableHead, TableRow, Button, Chip, IconButton, Alert, CircularProgress,
-    TablePagination, Tooltip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, TextField, MenuItem, Grid
+    TablePagination, Tooltip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, useTheme
 } from '@mui/material';
-import { Subscriptions as SubscriptionIcon, Add as AddIcon, Edit as EditIcon, CancelOutlined as DeactivateIcon, Refresh as RefreshIcon, Visibility as ViewIcon, PlayCircleOutline as ActivateIcon } from '@mui/icons-material';
+import {
+    Subscriptions as SubscriptionIcon,
+    Add as AddIcon,
+    DoDisturbOn as DeactivateIcon,
+    AddCircle as ActivateIcon,
+    Delete as DeleteIcon,
+    UnfoldMore as ExpandIcon,
+    UnfoldLess as CollapseIcon
+} from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
+import { colorTokens, responsiveTypographyTokens } from 'theme/tokens';
+import SortableTableHead from '../components/SortableTableHead';
+import SubscriptionSearch from './components/SubscriptionSearch';
+import CreateSubscriptionModal from './components/CreateSubscriptionModal';
+import {
+    SortConfig,
+    ColumnConfig,
+    sortData,
+    getNextSortDirection,
+    getResponsiveDisplayStyle
+} from '../components/TableSortUtils';
 
 // Interface matching SubscriptionPublic from backend
 interface SubscriptionPublic {
@@ -31,21 +50,155 @@ interface PaginatedSubscriptionsResponse {
 }
 
 export default function SubscriptionsPage() {
+    const theme = useTheme();
+    const componentColors = theme.palette.mode === 'light'
+        ? colorTokens.lightComponentColors
+        : colorTokens.darkComponentColors;
+
     const [subscriptions, setSubscriptions] = useState<SubscriptionPublic[]>([]);
+    const [filteredSubscriptions, setFilteredSubscriptions] = useState<SubscriptionPublic[]>([]);
+    const [isFiltering, setIsFiltering] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
-    const [totalCount, setTotalCount] = useState(0);
-
-    const [filterUserId, setFilterUserId] = useState<string>('');
-    const [filterLicenseKey, setFilterLicenseKey] = useState<string>('');
-    const [filterIsActive, setFilterIsActive] = useState<string>(''); // 'true', 'false', or ''
-
+    const [totalCount, setTotalCount] = useState(0);    // View and sorting state
+    const [expandedView, setExpandedView] = useState(false);
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);    // Action dialogs state
     const [actionSubscription, setActionSubscription] = useState<SubscriptionPublic | null>(null);
     const [openDeactivateDialog, setOpenDeactivateDialog] = useState(false);
     const [openActivateDialog, setOpenActivateDialog] = useState(false);
 
+    // Delete Subscription Dialog
+    const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+    const [subscriptionToDelete, setSubscriptionToDelete] = useState<SubscriptionPublic | null>(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+
+    // Create Subscription Modal
+    const [openCreateModal, setOpenCreateModal] = useState(false);// Helper function to calculate remaining days
+    const calculateRemainingDays = (expiryDate: string): number => {
+        try {
+            const utcExpiry = parseISO(expiryDate);
+            const gmt7Expiry = new Date(utcExpiry.getTime() + (7 * 60 * 60 * 1000));
+            const now = new Date();
+            const diffTime = gmt7Expiry.getTime() - now.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays;
+        } catch (error) {
+            return 0;
+        }
+    };
+
+    // Column configuration for sortable table
+    const columnConfigs: ColumnConfig[] = useMemo(() => [
+        {
+            id: 'user_email',
+            label: 'Email người dùng',
+            sortable: true,
+            sortType: 'string',
+            accessor: (sub: SubscriptionPublic) => sub.user_email,
+            minWidth: expandedView ? 'auto' : 200,
+        },
+        {
+            id: 'license_key',
+            label: 'License Key',
+            sortable: true,
+            sortType: 'string',
+            accessor: (sub: SubscriptionPublic) => sub.license_key,
+            minWidth: expandedView ? 'auto' : 120,
+            responsive: { xs: 'none' }
+        },
+        {
+            id: 'start_date',
+            label: 'Ngày bắt đầu',
+            sortable: true,
+            sortType: 'date',
+            accessor: (sub: SubscriptionPublic) => sub.start_date,
+            minWidth: expandedView ? 'auto' : 140,
+            responsive: { xs: 'none', sm: 'none', md: 'none' },
+            format: (value: string) => {
+                try {
+                    const utcDate = parseISO(value);
+                    const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                    return format(gmt7Date, 'dd/MM/yyyy HH:mm');
+                } catch (error) {
+                    return 'Invalid date';
+                }
+            },
+        },
+        {
+            id: 'expiry_date',
+            label: 'Ngày hết hạn',
+            sortable: true,
+            sortType: 'date',
+            accessor: (sub: SubscriptionPublic) => sub.expiry_date,
+            minWidth: expandedView ? 'auto' : 140,
+            responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none', xl: 'none' },
+            format: (value: string) => {
+                try {
+                    const utcDate = parseISO(value);
+                    const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                    return format(gmt7Date, 'dd/MM/yyyy HH:mm');
+                } catch (error) {
+                    return 'Invalid date';
+                }
+            },
+        },
+        {
+            id: 'remaining_days',
+            label: 'Số ngày còn lại',
+            sortable: true,
+            sortType: 'number',
+            accessor: (sub: SubscriptionPublic) => calculateRemainingDays(sub.expiry_date),
+            minWidth: expandedView ? 'auto' : 120,
+            responsive: { xs: 'none' },
+            format: (value: number) => {
+                if (value > 0) {
+                    return `${value} ngày`;
+                } else if (value === 0) {
+                    return 'Hết hạn hôm nay';
+                } else {
+                    return `Đã hết hạn ${Math.abs(value)} ngày`;
+                }
+            },
+        },
+        {
+            id: 'is_active',
+            label: 'Trạng thái',
+            sortable: true,
+            sortType: 'boolean',
+            accessor: (sub: SubscriptionPublic) => sub.is_active,
+            minWidth: expandedView ? 'auto' : 100,
+            responsive: { xs: 'none', sm: 'none' }
+        },
+        {
+            id: 'updated_at',
+            label: 'Ngày cập nhật',
+            sortable: true,
+            sortType: 'date',
+            accessor: (sub: SubscriptionPublic) => sub.updated_at,
+            minWidth: expandedView ? 'auto' : 140,
+            responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' },
+            format: (value: string) => {
+                try {
+                    const utcDate = parseISO(value);
+                    const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                    return format(gmt7Date, 'dd/MM/yyyy HH:mm');
+                } catch (error) {
+                    return 'Invalid date';
+                }
+            },
+        },
+        {
+            id: 'actions',
+            label: '',
+            sortable: false,
+            sortType: 'string',
+            accessor: () => '',
+            minWidth: 'auto',
+            align: 'center' as const
+        }
+    ], [expandedView]);
 
     const fetchSubscriptions = useCallback(async () => {
         setLoading(true);
@@ -55,13 +208,15 @@ export default function SubscriptionsPage() {
                 skip: page * rowsPerPage,
                 limit: rowsPerPage,
             };
-            if (filterUserId) queryParams.user_id = filterUserId;
-            if (filterLicenseKey) queryParams.license_key = filterLicenseKey;
-            if (filterIsActive !== '') queryParams.is_active = filterIsActive === 'true';
 
-            // Assuming an admin endpoint like /api/v1/subscriptions/admin/all
+            // Add sort parameters if sortConfig is defined
+            if (sortConfig && sortConfig.key && sortConfig.direction) {
+                queryParams.sort_by = sortConfig.key;
+                queryParams.sort_order = sortConfig.direction;
+            }
+
             const response = await apiClient<PaginatedSubscriptionsResponse | SubscriptionPublic[]>({
-                url: `/api/v1/subscriptions/admin/all`, // Replace if your admin endpoint is different
+                url: `/api/v1/subscriptions/admin/all`,
                 method: 'GET',
                 queryParams,
             });
@@ -96,11 +251,18 @@ export default function SubscriptionsPage() {
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage, filterUserId, filterLicenseKey, filterIsActive]);
+    }, [page, rowsPerPage, sortConfig]);
 
     useEffect(() => {
         fetchSubscriptions();
     }, [fetchSubscriptions]);
+
+    // Update filtered subscriptions when subscriptions change and not actively filtering
+    useEffect(() => {
+        if (!isFiltering) {
+            setFilteredSubscriptions(subscriptions);
+        }
+    }, [subscriptions, isFiltering]);
 
     const handleChangePage = (event: unknown, newPage: number) => {
         setPage(newPage);
@@ -111,7 +273,61 @@ export default function SubscriptionsPage() {
         setPage(0);
     };
 
-    const handleOpenDeactivateDialog = (sub: SubscriptionPublic) => {
+    const handleFilteredSubscriptions = (filtered: SubscriptionPublic[], isActivelyFiltering: boolean) => {
+        setFilteredSubscriptions(filtered);
+        setIsFiltering(isActivelyFiltering);
+        // Only reset page when actively switching between filtering states
+        if (isActivelyFiltering !== isFiltering) {
+            setPage(0);
+        }
+    };
+
+    // Handle sorting
+    const handleSort = (columnKey: string) => {
+        const column = columnConfigs.find(col => col.id === columnKey);
+        if (!column || !column.sortable) return;
+
+        const newDirection = sortConfig?.key === columnKey
+            ? getNextSortDirection(sortConfig.direction)
+            : 'asc';
+
+        setSortConfig(newDirection ? { key: columnKey, direction: newDirection } : null);
+        setPage(0); // Reset to first page when sorting
+    };
+
+    // Compute sorted data
+    const sortedSubscriptions = useMemo(() => {
+        const dataToSort = isFiltering ? filteredSubscriptions : subscriptions;
+
+        if (!sortConfig || !sortConfig.direction) {
+            return dataToSort;
+        }
+
+        const column = columnConfigs.find(col => col.id === sortConfig.key);
+        if (!column) return dataToSort;
+
+        return sortData(dataToSort, sortConfig, column);
+    }, [subscriptions, filteredSubscriptions, isFiltering, sortConfig, columnConfigs]);
+
+    // Calculate paginated subscriptions - use client-side pagination when sorting/filtering, server-side pagination otherwise
+    const paginatedSubscriptions = useMemo(() => {
+        if (isFiltering || sortConfig) {
+            // Client-side pagination for filtered/sorted results
+            if (rowsPerPage === 99999) {
+                // Show all results
+                return sortedSubscriptions;
+            }
+            const startIndex = page * rowsPerPage;
+            const endIndex = startIndex + rowsPerPage;
+            return sortedSubscriptions.slice(startIndex, endIndex);
+        } else {
+            // Server-side pagination - use subscriptions directly as they are already paginated
+            return subscriptions;
+        }
+    }, [subscriptions, sortedSubscriptions, isFiltering, sortConfig, page, rowsPerPage]);
+
+    // Calculate total count for pagination
+    const displayTotalCount = (isFiltering || sortConfig) ? sortedSubscriptions.length : totalCount; const handleOpenDeactivateDialog = (sub: SubscriptionPublic) => {
         setActionSubscription(sub);
         setOpenDeactivateDialog(true);
     };
@@ -123,7 +339,6 @@ export default function SubscriptionsPage() {
 
     const handleDeactivateSubscription = async () => {
         if (!actionSubscription) return;
-        // setLoading(true); // Use a more specific loading state if needed
         try {
             await apiClient({
                 url: `/api/v1/subscriptions/${actionSubscription.id}/deactivate`,
@@ -134,8 +349,6 @@ export default function SubscriptionsPage() {
         } catch (err: any) {
             setError(err.message || "Failed to deactivate subscription.");
             handleCloseDeactivateDialog();
-        } finally {
-            // setLoading(false);
         }
     };
 
@@ -151,149 +364,394 @@ export default function SubscriptionsPage() {
 
     const handleActivateSubscription = async () => {
         if (!actionSubscription) return;
-        // setLoading(true);
         try {
             await apiClient({
                 url: `/api/v1/subscriptions/${actionSubscription.id}/activate`,
-                method: 'POST', // As per backend router
+                method: 'POST',
             });
             fetchSubscriptions();
             handleCloseActivateDialog();
         } catch (err: any) {
             setError(err.message || "Failed to activate subscription.");
             handleCloseActivateDialog();
-        } finally {
-            // setLoading(false);
         }
     };
 
-    const handleAddSubscription = () => console.log("Add subscription (not implemented)");
-    const handleEditSubscription = (subId: string) => console.log("Edit subscription (not implemented):", subId);
+    const handleAddSubscription = () => {
+        setOpenCreateModal(true);
+    };
 
+    const handleCloseCreateModal = () => {
+        setOpenCreateModal(false);
+    }; const handleSubscriptionCreated = () => {
+        setOpenCreateModal(false);
+        fetchSubscriptions(); // Refresh the subscriptions list
+    };
+
+    // Delete Subscription Handler
+    const handleOpenDeleteDialog = (sub: SubscriptionPublic) => {
+        setSubscriptionToDelete(sub);
+        setOpenDeleteDialog(true);
+    };
+
+    const handleCloseDeleteDialog = () => {
+        setSubscriptionToDelete(null);
+        setOpenDeleteDialog(false);
+        setDeleteLoading(false);
+    };
+
+    const handleDeleteSubscription = async () => {
+        if (!subscriptionToDelete) return;
+
+        setDeleteLoading(true);
+        setError(null);
+
+        try {
+            const response = await apiClient({
+                url: `/api/v1/subscriptions/${subscriptionToDelete.id}`,
+                method: 'DELETE',
+            });
+
+            if (response.status === 200) {
+                fetchSubscriptions(); // Refresh list
+                handleCloseDeleteDialog();
+            } else {
+                setError(response.message || 'Không thể xóa subscription.');
+            }
+        } catch (delError: any) {
+            setError(delError.message || 'Lỗi khi xóa subscription. Subscription có thể đang được sử dụng hoặc có license được bảo vệ.');
+            handleCloseDeleteDialog();
+        } finally {
+            setDeleteLoading(false);
+        }
+    };
 
     return (
-        <Box>
+        <Box sx={{
+            maxWidth: '100%',
+            overflow: 'hidden'
+        }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <SubscriptionIcon sx={{ mr: 1, fontSize: '24px' }} />
-                    <Typography variant="h4" component="h1">Subscriptions</Typography>
+                    <Typography
+                        variant="h3"
+                        component="h1"
+                    >
+                        Quản lý Subscriptions
+                    </Typography>
                 </Box>
-                <Box>
-                    <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchSubscriptions} disabled={loading} sx={{ mr: 1 }}>
-                        Refresh
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                        variant="outlined"
+                        startIcon={expandedView ? <CollapseIcon /> : <ExpandIcon />}
+                        onClick={() => setExpandedView(!expandedView)}
+                        sx={{
+                            minWidth: { xs: 'auto', sm: 'auto', md: 'auto' },
+                            '& .MuiButton-startIcon': {
+                                margin: { xs: 0, sm: 0, md: '0 8px 0 -4px' }
+                            },
+                            px: { xs: 1, sm: 2 },
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center'
+                        }}
+                    >
+                        <Box
+                            component="span"
+                            sx={{
+                                display: { xs: 'none', sm: 'none', md: 'inline' }
+                            }}
+                        >
+                            {expandedView ? 'Chế độ thu gọn' : 'Chế độ chi tiết'}
+                        </Box>
                     </Button>
-                    <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddSubscription}>
-                        Add Subscription
+                    <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={handleAddSubscription}
+                        sx={{
+                            minWidth: { xs: 'auto', sm: 'auto', md: 'auto' },
+                            '& .MuiButton-startIcon': {
+                                margin: { xs: 0, sm: 0, md: '0 8px 0 -4px' }
+                            },
+                            px: { xs: 1, sm: 2 },
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center'
+                        }}
+                    >
+                        <Box
+                            component="span"
+                            sx={{
+                                display: { xs: 'none', sm: 'none', md: 'inline' }
+                            }}
+                        >
+                            Tạo Subscription
+                        </Box>
                     </Button>
                 </Box>
+            </Box>            {error && (
+                <Alert
+                    severity="error"
+                    sx={{
+                        mb: 2,
+                        ...responsiveTypographyTokens.body2,
+                        '& .MuiAlert-message': {
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                        }
+                    }}
+                >
+                    {error}
+                </Alert>
+            )}            {/* Search Component */}
+            <Box sx={{ mb: 2 }}>
+                <SubscriptionSearch
+                    subscriptions={subscriptions}
+                    onFilteredSubscriptions={handleFilteredSubscriptions}
+                />
             </Box>
 
-            <Paper sx={{ p: 2, mb: 2, borderRadius: 2 }}>
-                <Typography variant="h6" gutterBottom>Filters</Typography>
-                <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, sm: 4 }}>
-                        <TextField label="User ID" value={filterUserId} onChange={(e) => setFilterUserId(e.target.value)} fullWidth size="small" />
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 4 }}>
-                        <TextField label="License Key" value={filterLicenseKey} onChange={(e) => setFilterLicenseKey(e.target.value)} fullWidth size="small" />
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 4 }}>
-                        <TextField select label="Status" value={filterIsActive} onChange={(e) => setFilterIsActive(e.target.value)} fullWidth size="small">
-                            <MenuItem value=""><em>All</em></MenuItem>
-                            <MenuItem value="true">Active</MenuItem>
-                            <MenuItem value="false">Inactive</MenuItem>
-                        </TextField>
-                    </Grid>
-                </Grid>
-            </Paper>
-
-            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-
-            <Paper sx={{ width: '100%', overflow: 'hidden', borderRadius: 2 }}>
+            <Paper sx={{
+                width: '100%',
+                overflow: 'hidden',
+                borderRadius: 2
+            }}>
                 {loading && subscriptions.length === 0 ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 3, minHeight: 300 }}>
                         <CircularProgress />
                     </Box>
                 ) : (
                     <>
-                        <TableContainer sx={{ maxHeight: 600 }}>
-                            <Table stickyHeader>
-                                <TableHead>
-                                    <TableRow>
-                                        <TableCell>Sub ID</TableCell>
-                                        <TableCell>User Email</TableCell>
-                                        <TableCell>License Key</TableCell>
-                                        <TableCell>Status</TableCell>
-                                        <TableCell>Start Date</TableCell>
-                                        <TableCell>Expiry Date</TableCell>
-                                        <TableCell align="right">Actions</TableCell>
-                                    </TableRow>
-                                </TableHead>
+                        <TableContainer sx={{ overflowX: 'auto' }}>
+                            <Table sx={{
+                                tableLayout: 'auto',
+                                width: '100%'
+                            }}>
+                                <SortableTableHead
+                                    columns={columnConfigs}
+                                    sortConfig={sortConfig}
+                                    onSort={handleSort}
+                                    expandedView={expandedView} />
                                 <TableBody>
-                                    {Array.isArray(subscriptions) && subscriptions.map((sub) => (
+                                    {Array.isArray(paginatedSubscriptions) && paginatedSubscriptions.map((sub) => (
                                         <TableRow hover key={sub.id}>
-                                            <TableCell>
-                                                <Tooltip title={sub.id}>
-                                                    <Typography variant="body2" sx={{ maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis' }}>...{sub.id.slice(-6)}</Typography>
-                                                </Tooltip>
+                                            <TableCell sx={{
+                                                ...getResponsiveDisplayStyle(columnConfigs[0], expandedView),
+                                                whiteSpace: expandedView ? 'nowrap' : 'normal',
+                                                minWidth: columnConfigs[0].minWidth,
+                                                width: expandedView ? 'auto' : columnConfigs[0].minWidth
+                                            }}>
+                                                <Typography sx={responsiveTypographyTokens.tableCell}>
+                                                    {sub.user_email}
+                                                </Typography>                                            </TableCell>
+                                            <TableCell sx={{
+                                                ...getResponsiveDisplayStyle(columnConfigs[1], expandedView),
+                                                whiteSpace: expandedView ? 'nowrap' : 'normal',
+                                                minWidth: columnConfigs[1].minWidth,
+                                                width: expandedView ? 'auto' : columnConfigs[1].minWidth
+                                            }}>
+                                                <Chip
+                                                    label={sub.license_key}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    sx={{ fontWeight: 'medium' }} />
                                             </TableCell>
-                                            <TableCell>{sub.user_email}</TableCell>
-                                            <TableCell><Chip label={sub.license_key} size="small" /></TableCell>                                            <TableCell>
-                                                <Chip label={sub.is_active ? 'Active' : 'Inactive'} color={sub.is_active ? 'success' : 'default'} size="small" />
-                                            </TableCell>
-                                            <TableCell>
+                                            <TableCell sx={{
+                                                ...getResponsiveDisplayStyle(columnConfigs[2], expandedView),
+                                                whiteSpace: expandedView ? 'nowrap' : 'normal',
+                                                minWidth: columnConfigs[2].minWidth,
+                                                width: expandedView ? 'auto' : columnConfigs[2].minWidth
+                                            }}>
+                                                <Typography sx={responsiveTypographyTokens.tableCell}>
+                                                    {columnConfigs[2].format?.(sub.start_date)}
+                                                </Typography>                                            </TableCell>
+                                            <TableCell sx={{
+                                                ...getResponsiveDisplayStyle(columnConfigs[3], expandedView),
+                                                whiteSpace: expandedView ? 'nowrap' : 'normal',
+                                                minWidth: columnConfigs[3].minWidth,
+                                                width: expandedView ? 'auto' : columnConfigs[3].minWidth
+                                            }}>
+                                                <Typography sx={responsiveTypographyTokens.tableCell}>
+                                                    {columnConfigs[3].format?.(sub.expiry_date)}
+                                                </Typography>                                            </TableCell>
+                                            <TableCell sx={{
+                                                ...getResponsiveDisplayStyle(columnConfigs[4], expandedView),
+                                                whiteSpace: expandedView ? 'nowrap' : 'normal',
+                                                minWidth: columnConfigs[4].minWidth,
+                                                width: expandedView ? 'auto' : columnConfigs[4].minWidth
+                                            }}>
                                                 {(() => {
-                                                    try {
-                                                        // Parse UTC date and convert to GMT+7
-                                                        const utcDate = parseISO(sub.start_date);
-                                                        const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
-                                                        return format(gmt7Date, 'dd/MM/yyyy HH:mm');
-                                                    } catch (error) {
-                                                        return 'Invalid date';
+                                                    const remainingDays = calculateRemainingDays(sub.expiry_date);
+                                                    let textColor: string;
+
+                                                    if (remainingDays > 30) {
+                                                        textColor = theme.palette.success.main; // Green for > 30 days
+                                                    } else if (remainingDays > 7) {
+                                                        textColor = theme.palette.info.main; // Blue for 8-30 days
+                                                    } else if (remainingDays > 0) {
+                                                        textColor = theme.palette.warning.main; // Orange for 1-7 days
+                                                    } else if (remainingDays === 0) {
+                                                        textColor = theme.palette.error.main; // Red for expiring today
+                                                    } else {
+                                                        textColor = theme.palette.error.dark; // Dark red for expired
                                                     }
-                                                })()}
-                                            </TableCell>
-                                            <TableCell>
-                                                {(() => {
-                                                    try {
-                                                        // Parse UTC date and convert to GMT+7
-                                                        const utcDate = parseISO(sub.expiry_date);
-                                                        const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
-                                                        return format(gmt7Date, 'dd/MM/yyyy HH:mm');
-                                                    } catch (error) {
-                                                        return 'Invalid date';
+
+                                                    return (
+                                                        <Typography
+                                                            sx={{
+                                                                ...responsiveTypographyTokens.tableCell,
+                                                                color: textColor,
+                                                                fontWeight: 'medium'
+                                                            }}
+                                                        >
+                                                            {columnConfigs[4].format?.(remainingDays)}
+                                                        </Typography>
+                                                    );
+                                                })()}                                            </TableCell>
+                                            <TableCell sx={{
+                                                ...getResponsiveDisplayStyle(columnConfigs[5], expandedView),
+                                                whiteSpace: expandedView ? 'nowrap' : 'normal',
+                                                minWidth: columnConfigs[5].minWidth,
+                                                width: expandedView ? 'auto' : columnConfigs[5].minWidth
+                                            }}>
+                                                <Chip
+                                                    label={sub.is_active ? 'Hoạt động' : 'Không hoạt động'}
+                                                    color={sub.is_active ? 'success' : 'default'}
+                                                    size="small"
+                                                    variant={sub.is_active ? "filled" : "outlined"}
+                                                    sx={{
+                                                        fontWeight: 'medium',
+                                                        minWidth: '70px'
+                                                    }}
+                                                />                                            </TableCell>
+                                            <TableCell sx={{
+                                                ...getResponsiveDisplayStyle(columnConfigs[6], expandedView),
+                                                whiteSpace: expandedView ? 'nowrap' : 'normal',
+                                                minWidth: columnConfigs[6].minWidth,
+                                                width: expandedView ? 'auto' : columnConfigs[6].minWidth
+                                            }}>
+                                                <Typography sx={responsiveTypographyTokens.tableCell}>
+                                                    {columnConfigs[6].format?.(sub.updated_at)}
+                                                </Typography>                                            </TableCell>
+                                            <TableCell
+                                                sx={{
+                                                    ...getResponsiveDisplayStyle(columnConfigs[7], expandedView),
+                                                    position: 'sticky',
+                                                    right: -1,
+                                                    backgroundColor: 'background.paper',
+                                                    zIndex: 1,
+                                                    borderLeft: '1px solid',
+                                                    borderColor: 'divider',
+                                                    minWidth: expandedView ? 'auto' : 100,
+                                                    width: 'auto',
+                                                    '&::before': {
+                                                        content: '""',
+                                                        position: 'absolute',
+                                                        left: 0,
+                                                        top: 0,
+                                                        bottom: 0,
+                                                        width: '1px',
+                                                        backgroundColor: 'divider',
+                                                        zIndex: 1
                                                     }
-                                                })()}
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                <Tooltip title="View/Edit Details">
-                                                    <IconButton size="small" onClick={() => handleEditSubscription(sub.id)}><EditIcon fontSize="small" /></IconButton>
-                                                </Tooltip>
-                                                {sub.is_active ? (
-                                                    <Tooltip title="Deactivate Subscription">
-                                                        <IconButton size="small" onClick={() => handleOpenDeactivateDialog(sub)} color="error"><DeactivateIcon fontSize="small" /></IconButton>
+                                                }}
+                                            >                                                <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                                                    {sub.is_active ? (
+                                                        <Tooltip title="Deactivate Subscription">
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => handleOpenDeactivateDialog(sub)}
+                                                                color="error"
+                                                                sx={{
+                                                                    minWidth: { xs: 32, sm: 'auto' },
+                                                                    width: { xs: 32, sm: 'auto' },
+                                                                    height: { xs: 32, sm: 'auto' }
+                                                                }}
+                                                            >
+                                                                <DeactivateIcon fontSize="small" />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    ) : (
+                                                        <Tooltip title="Activate Subscription">
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => handleOpenActivateDialog(sub)}
+                                                                color="success"
+                                                                sx={{
+                                                                    minWidth: { xs: 32, sm: 'auto' },
+                                                                    width: { xs: 32, sm: 'auto' },
+                                                                    height: { xs: 32, sm: 'auto' }
+                                                                }}
+                                                            >
+                                                                <ActivateIcon fontSize="small" />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    )}                                                    <Tooltip title={sub.is_active ? "Cannot delete active subscription. Deactivate first." : "Delete Subscription"}>
+                                                        <span>
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => handleOpenDeleteDialog(sub)}
+                                                                color="error"
+                                                                disabled={sub.is_active}
+                                                                sx={{
+                                                                    minWidth: { xs: 32, sm: 'auto' },
+                                                                    width: { xs: 32, sm: 'auto' },
+                                                                    height: { xs: 32, sm: 'auto' },
+                                                                    opacity: sub.is_active ? 0.5 : 1
+                                                                }}
+                                                            >
+                                                                <DeleteIcon fontSize="small" />
+                                                            </IconButton>
+                                                        </span>
                                                     </Tooltip>
-                                                ) : (
-                                                    <Tooltip title="Activate Subscription">
-                                                        <IconButton size="small" onClick={() => handleOpenActivateDialog(sub)} color="success"><ActivateIcon fontSize="small" /></IconButton>
-                                                    </Tooltip>
-                                                )}
+                                                </Box>
                                             </TableCell>
                                         </TableRow>
                                     ))}
-                                    {Array.isArray(subscriptions) && subscriptions.length === 0 && !loading && (
-                                        <TableRow><TableCell colSpan={7} align="center">No subscriptions found.</TableCell></TableRow>
+                                    {Array.isArray(paginatedSubscriptions) && paginatedSubscriptions.length === 0 && !loading && (
+                                        <TableRow>
+                                            <TableCell colSpan={8} align="center">
+                                                <Typography variant="body2" color="text.secondary" sx={{ py: 4 }}>
+                                                    {isFiltering
+                                                        ? "Không tìm thấy subscription nào phù hợp với tiêu chí tìm kiếm."
+                                                        : "Chưa có subscription nào."
+                                                    }
+                                                </Typography>
+                                            </TableCell>
+                                        </TableRow>
                                     )}
                                 </TableBody>
                             </Table>
-                        </TableContainer>                        <TablePagination
-                            rowsPerPageOptions={[5, 10, 25, 50, { label: 'All', value: 99999 }]}
+                        </TableContainer>
+                        <TablePagination
+                            rowsPerPageOptions={[5, 10, 25, 50, { label: 'Tất cả', value: 99999 }]}
                             component="div"
-                            count={totalCount}
+                            count={displayTotalCount}
                             rowsPerPage={rowsPerPage}
                             page={page}
                             onPageChange={handleChangePage}
                             onRowsPerPageChange={handleChangeRowsPerPage}
+                            labelRowsPerPage={
+                                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                                    Dòng mỗi trang:
+                                </Box>
+                            }
+                            sx={{
+                                '& .MuiTablePagination-toolbar': {
+                                    minHeight: { xs: 48, sm: 52 },
+                                    px: { xs: 1, sm: 2 }
+                                },
+                                '& .MuiTablePagination-selectLabel': {
+                                    ...responsiveTypographyTokens.tableCellSmall,
+                                    display: { xs: 'none', sm: 'block' }
+                                },
+                                '& .MuiTablePagination-displayedRows': {
+                                    ...responsiveTypographyTokens.tableCellSmall,
+                                    margin: 0
+                                }
+                            }}
                         />
                     </>
                 )}
@@ -311,9 +769,7 @@ export default function SubscriptionsPage() {
                     <Button onClick={handleCloseDeactivateDialog}>Cancel</Button>
                     <Button onClick={handleDeactivateSubscription} color="error">Deactivate</Button>
                 </DialogActions>
-            </Dialog>
-
-            {/* Activate Confirmation Dialog */}
+            </Dialog>            {/* Activate Confirmation Dialog */}
             <Dialog open={openActivateDialog} onClose={handleCloseActivateDialog}>
                 <DialogTitle>Confirm Activation</DialogTitle>
                 <DialogContent>
@@ -326,7 +782,123 @@ export default function SubscriptionsPage() {
                     <Button onClick={handleCloseActivateDialog}>Cancel</Button>
                     <Button onClick={handleActivateSubscription} color="success">Activate</Button>
                 </DialogActions>
-            </Dialog>
+            </Dialog>            {/* Delete Confirmation Dialog */}
+            <Dialog
+                open={openDeleteDialog}
+                onClose={!deleteLoading ? handleCloseDeleteDialog : undefined}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle sx={{ color: 'error.main', fontWeight: 'bold' }}>
+                    ⚠️ Xác nhận xóa subscription
+                </DialogTitle>
+                <DialogContent>
+                    {subscriptionToDelete && (<Box sx={{
+                        p: 2,
+                        bgcolor: componentColors.modal.noteBackground,
+                        borderRadius: 1,
+                        border: '1px solid',
+                        borderColor: componentColors.modal.noteBorder,
+                        mb: 2
+                    }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                            <Box>
+
+                                <Typography variant="body2" color="text.secondary" fontWeight="bold">
+                                    Người dùng: {subscriptionToDelete.user_email}
+                                </Typography>
+                            </Box>                            <Box>
+                                <Typography variant="body2" color="text.secondary">
+                                    License: {' '}
+                                    <Chip
+                                        label={subscriptionToDelete.license_key}
+                                        size="small"
+                                        variant="outlined"
+                                        sx={{ fontSize: '0.75rem', fontFamily: 'monospace' }}
+                                    />
+                                </Typography>
+                            </Box>
+
+                            <Box>
+                                <Typography variant="body2" color="text.secondary">
+                                    Trạng thái: {' '}
+                                    <Chip
+                                        label={subscriptionToDelete.is_active ? 'Đang hoạt động' : 'Không hoạt động'}
+                                        color={subscriptionToDelete.is_active ? 'success' : 'default'}
+                                        size="small"
+                                        variant={subscriptionToDelete.is_active ? "filled" : "outlined"}
+                                        sx={{ fontWeight: 'medium' }}
+                                    />
+                                </Typography>
+                            </Box>
+                        </Box>
+                    </Box>
+                    )}                    <Box sx={{
+                        p: 2,
+                        bgcolor: componentColors.modal.noteBackground,
+                        borderRadius: 1,
+                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        mb: 2,
+                        position: 'relative',
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '3px',
+                            bgcolor: 'error.main',
+                            borderRadius: '4px 4px 0 0'
+                        }
+                    }}>
+                        <Typography
+                            variant="body2"
+                            fontWeight="bold"
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                color: 'error.main',
+                                mb: 1
+                            }}
+                        >
+                            ⚠️ Cảnh báo quan trọng:
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                            • Hành động này không thể hoàn tác
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                            • Subscription sẽ bị xóa vĩnh viễn khỏi hệ thống
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                            • Chỉ có thể xóa subscription đã được hủy kích hoạt
+                        </Typography>
+                    </Box>
+                </DialogContent>
+                <DialogActions sx={{ p: 3, pt: 1 }}>
+                    <Button
+                        onClick={handleCloseDeleteDialog}
+                        disabled={deleteLoading}
+                        variant="outlined"
+                    >
+                        Hủy
+                    </Button>
+                    <Button
+                        onClick={handleDeleteSubscription}
+                        color="error"
+                        variant="contained"
+                        disabled={deleteLoading}
+                        startIcon={deleteLoading ? <CircularProgress size={20} /> : null}
+                    >
+                        {deleteLoading ? 'Đang xóa...' : 'Xóa subscription'}
+                    </Button>
+                </DialogActions>
+            </Dialog>{/* Create Subscription Modal */}
+            <CreateSubscriptionModal
+                open={openCreateModal}
+                onClose={handleCloseCreateModal}
+                onSubscriptionCreated={handleSubscriptionCreated}
+            />
         </Box>
     );
 }
