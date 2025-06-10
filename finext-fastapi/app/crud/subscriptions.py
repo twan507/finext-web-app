@@ -409,8 +409,7 @@ async def activate_specific_subscription_for_user(
     if is_activating_basic:
         logger.info(
             f"Activating BASIC subscription {subscription_id_to_activate_str} for user {user_obj_id}. Deactivating other non-protected, non-BASIC subscriptions."
-        )
-        # Deactivate other active subscriptions, EXCLUDING other BASIC ones (though there shouldn't be multiple active BASIC)
+        )  # Deactivate other active subscriptions, EXCLUDING other BASIC ones (though there shouldn't be multiple active BASIC)
         # and protected ones. The `deactivate_basic_too=False` (default) handles this.
         await deactivate_all_active_subscriptions_for_user(
             db,
@@ -430,6 +429,7 @@ async def activate_specific_subscription_for_user(
             deactivate_basic_too=True,  # Explicitly true
         )
 
+    # Declare dt_now here so it's available for both branches
     dt_now = datetime.now(timezone.utc)
     update_fields = {"is_active": True, "updated_at": dt_now}
     if new_expiry_date:
@@ -437,7 +437,10 @@ async def activate_specific_subscription_for_user(
             new_expiry_date = new_expiry_date.replace(tzinfo=timezone.utc)
         update_fields["expiry_date"] = new_expiry_date
         # Khi admin set ngày hết hạn mới, start_date nên giữ nguyên hoặc set là now nếu sub đã hết hạn trước đó
-        if sub_to_activate_doc.get("expiry_date", dt_now) < dt_now:
+        current_expiry_date = sub_to_activate_doc.get("expiry_date", dt_now)
+        if current_expiry_date.tzinfo is None:
+            current_expiry_date = current_expiry_date.replace(tzinfo=timezone.utc)
+        if current_expiry_date < dt_now:
             update_fields["start_date"] = dt_now
         # else giữ nguyên start_date gốc
 

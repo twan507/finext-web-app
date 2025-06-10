@@ -16,8 +16,9 @@ from app.schemas.transactions import (
     TransactionCreateForAdmin,
     TransactionPublic,
     TransactionTypeEnum,
-    TransactionUpdateByAdmin,
     TransactionPaymentConfirmationRequest,
+    TransactionPriceCalculationRequest,
+    TransactionPriceCalculationResponse,
 )
 from app.schemas.users import UserInDB
 
@@ -130,23 +131,28 @@ async def admin_read_transaction_by_id(  # Đổi tên hàm
     return TransactionPublic.model_validate(transaction)
 
 
-@router.put(
-    "/admin/{transaction_id}/details",
-    response_model=StandardApiResponse[TransactionPublic],
-    summary="[Admin] Cập nhật chi tiết của một giao dịch 'pending'",
-    dependencies=[Depends(require_permission("transaction", "update_details_any"))],
+@router.delete(
+    "/admin/{transaction_id}",
+    response_model=StandardApiResponse[dict],
+    summary="[Admin] Xóa một giao dịch (chỉ được phép nếu không có subscription liên kết)",
+    dependencies=[Depends(require_permission("transaction", "delete_any"))],
 )
-@api_response_wrapper(default_success_message="Cập nhật chi tiết giao dịch thành công.")
-async def admin_update_transaction_pending_details(  # Đổi tên hàm
+@api_response_wrapper(default_success_message="Xóa giao dịch thành công.")
+async def admin_delete_transaction(
     transaction_id: PyObjectId,
-    update_data: TransactionUpdateByAdmin,
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
     try:
-        updated_transaction = await crud_transactions.update_transaction_details_db(db, transaction_id, update_data)
-        return TransactionPublic.model_validate(updated_transaction)
+        success = await crud_transactions.delete_transaction_db(db, transaction_id)
+        if success:
+            return {"message": f"Giao dịch {transaction_id} đã được xóa thành công", "deleted_transaction_id": transaction_id}
+        else:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Giao dịch không tìm thấy.")
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Unexpected error deleting transaction {transaction_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi máy chủ khi xóa giao dịch.")
 
 
 @router.put(
@@ -243,3 +249,31 @@ async def read_my_referred_transactions(
     )
     items = [TransactionPublic.model_validate(t) for t in transactions_docs]
     return PaginatedResponse[TransactionPublic](items=items, total=total_count)
+
+
+@router.post(
+    "/admin/{transaction_id}/calculate-price",
+    response_model=StandardApiResponse[TransactionPriceCalculationResponse],
+    summary="[Admin] Tính toán giá tạm thời khi thay đổi mã khuyến mãi/đối tác",
+    dependencies=[Depends(require_permission("transaction", "update_any"))],
+)
+@api_response_wrapper(default_success_message="Tính toán giá thành công.")
+async def calculate_transaction_price(
+    transaction_id: PyObjectId,
+    calculation_request: TransactionPriceCalculationRequest,
+    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
+):
+    try:
+        calculated_data = await crud_transactions.calculate_transaction_price_with_overrides(
+            db=db,
+            transaction_id_str=transaction_id,
+            promotion_code_override=calculation_request.promotion_code_override,
+            broker_code_override=calculation_request.broker_code_override,
+        )
+        return TransactionPriceCalculationResponse(**calculated_data)
+    except ValueError as ve:
+        logger.error(f"Error calculating transaction price for {transaction_id}: {ve}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Unexpected error calculating transaction price for {transaction_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi máy chủ khi tính toán giá.")

@@ -11,7 +11,9 @@ import {
     Cancel as CancelIcon,
     AttachMoney as MoneyIcon,
     CalendarToday as DaysIcon,
-    Close as CloseIcon
+    Close as CloseIcon,
+    LocalOffer as PromotionIcon,
+    Business as BrokerIcon
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
 import { colorTokens } from 'theme/tokens';
@@ -60,6 +62,18 @@ interface TransactionConfirmationRequest {
     admin_notes?: string;
     final_transaction_amount_override?: number;
     duration_days_override?: number;
+    promotion_code_override?: string;
+    broker_code_override?: string;
+}
+
+interface TransactionPriceCalculationResponse {
+    original_price: number;
+    promotion_code_applied?: string | null;
+    promotion_discount_amount?: number | null;
+    broker_code_applied?: string | null;
+    broker_discount_amount?: number | null;
+    total_discount_amount?: number | null;
+    calculated_transaction_amount: number;
 }
 
 export default function ConfirmTransactionModal({
@@ -72,29 +86,81 @@ export default function ConfirmTransactionModal({
     const theme = useTheme();
     const componentColors = theme.palette.mode === 'light'
         ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors;
-
-    // Form state
+        : colorTokens.darkComponentColors;    // Form state
     const [adminNotes, setAdminNotes] = useState('');
     const [amountOverride, setAmountOverride] = useState<string>('');
     const [durationOverride, setDurationOverride] = useState<string>('');
+    const [promotionCodeOverride, setPromotionCodeOverride] = useState<string>('');
+    const [brokerCodeOverride, setBrokerCodeOverride] = useState<string>('');
+
+    // Price calculation state
+    const [calculatedPrice, setCalculatedPrice] = useState<TransactionPriceCalculationResponse | null>(null);
+    const [isCalculatingPrice, setIsCalculatingPrice] = useState(false);
 
     // Loading states
     const [confirmLoading, setConfirmLoading] = useState(false);
     const [cancelLoading, setCancelLoading] = useState(false);
 
     // Error state
-    const [error, setError] = useState<string | null>(null);
-
-    // Reset form when modal opens/closes or transaction changes
+    const [error, setError] = useState<string | null>(null);    // Reset form when modal opens/closes or transaction changes
     useEffect(() => {
         if (open && transaction) {
             setAdminNotes('');
             setAmountOverride('');
             setDurationOverride('');
+            setPromotionCodeOverride('');
+            setBrokerCodeOverride('');
+            setCalculatedPrice(null);
             setError(null);
         }
     }, [open, transaction]);
+
+    // Function to calculate price with overrides
+    const calculatePrice = async (promotionCode?: string, brokerCode?: string) => {
+        if (!transaction) return;
+
+        setIsCalculatingPrice(true);
+        try {
+            const response = await apiClient({
+                url: `/api/v1/transactions/admin/${transaction.id}/calculate-price`,
+                method: 'POST',
+                body: {
+                    promotion_code_override: promotionCode,
+                    broker_code_override: brokerCode
+                }
+            });
+
+            setCalculatedPrice(response.data);
+
+            // Auto-fill the amount override field with calculated price
+            setAmountOverride(response.data.calculated_transaction_amount.toString());
+        } catch (err: any) {
+            console.error('Error calculating price:', err);
+            // Don't show error for calculation, just keep current values
+        } finally {
+            setIsCalculatingPrice(false);
+        }
+    };
+
+    // Effect to calculate price when promotion or broker code changes
+    useEffect(() => {
+        if (!transaction || !open) return;
+
+        const timeoutId = setTimeout(() => {
+            // Only calculate if there's actually a change from current values
+            const hasPromotionChange = promotionCodeOverride !== (transaction.promotion_code_applied || '');
+            const hasBrokerChange = brokerCodeOverride !== (transaction.broker_code_applied || '');
+
+            if (hasPromotionChange || hasBrokerChange) {
+                calculatePrice(
+                    promotionCodeOverride || undefined,
+                    brokerCodeOverride || undefined
+                );
+            }
+        }, 500); // Debounce for 500ms
+
+        return () => clearTimeout(timeoutId);
+    }, [promotionCodeOverride, brokerCodeOverride, transaction, open]);
 
     const handleClose = () => {
         if (!confirmLoading && !cancelLoading) {
@@ -118,14 +184,17 @@ export default function ConfirmTransactionModal({
             if (isNaN(amount) || amount < 0) {
                 return { isValid: false, error: 'Số tiền ghi đè phải là số không âm' };
             }
-        }
-
-        // Validate duration override
+        }        // Validate duration override
         if (durationOverride.trim() !== '') {
             const duration = parseInt(durationOverride);
             if (isNaN(duration) || duration <= 0) {
                 return { isValid: false, error: 'Số ngày ghi đè phải là số nguyên dương' };
             }
+        }
+
+        // Validate broker code format
+        if (brokerCodeOverride.trim() !== '' && brokerCodeOverride.trim().length !== 4) {
+            return { isValid: false, error: 'Mã đối tác phải có đúng 4 ký tự' };
         }
 
         return { isValid: true };
@@ -144,9 +213,7 @@ export default function ConfirmTransactionModal({
         setError(null);
 
         try {
-            const requestBody: TransactionConfirmationRequest = {};
-
-            // Add admin notes if provided
+            const requestBody: TransactionConfirmationRequest = {};            // Add admin notes if provided
             if (adminNotes.trim()) {
                 requestBody.admin_notes = adminNotes.trim();
             }
@@ -159,6 +226,16 @@ export default function ConfirmTransactionModal({
             // Add duration override if provided
             if (durationOverride.trim()) {
                 requestBody.duration_days_override = parseInt(durationOverride);
+            }
+
+            // Add promotion code override if provided
+            if (promotionCodeOverride.trim() !== '') {
+                requestBody.promotion_code_override = promotionCodeOverride.trim();
+            }
+
+            // Add broker code override if provided
+            if (brokerCodeOverride.trim() !== '') {
+                requestBody.broker_code_override = brokerCodeOverride.trim().toUpperCase();
             }
 
             await apiClient({
@@ -343,20 +420,52 @@ export default function ConfirmTransactionModal({
                                 <Typography variant="body1" fontWeight="bold" sx={{ color: transaction.total_discount_amount ? 'success.main' : 'text.secondary' }}>
                                     {transaction.total_discount_amount ? `${transaction.total_discount_amount.toLocaleString('vi-VN')} VNĐ` : '0 VNĐ'}
                                 </Typography>
-                            </Box>
-
-                            <Box>
+                            </Box>                            <Box>
                                 <Typography variant="body2" color="text.secondary">Giá hiện tại:</Typography>
                                 <Typography variant="body1" fontWeight="bold" sx={{ color: 'primary.main', fontSize: '1.1rem' }}>
                                     {transaction.transaction_amount.toLocaleString('vi-VN')} VNĐ
                                 </Typography>
                             </Box>
+
+                            {/* Calculated Price Display */}
+                            {calculatedPrice && (
+                                <Box sx={{
+                                    p: 2,
+                                    bgcolor: 'info.light',
+                                    borderRadius: 1,
+                                    border: '1px solid',
+                                    borderColor: 'info.main',
+                                    opacity: isCalculatingPrice ? 0.7 : 1
+                                }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'info.main', mb: 1 }}>
+                                        {isCalculatingPrice ? 'Đang tính toán...' : 'Giá được tính toán mới:'}
+                                    </Typography>
+                                    {!isCalculatingPrice && (
+                                        <>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Mã KM: {calculatedPrice.promotion_code_applied || 'Không có'}
+                                                {calculatedPrice.promotion_discount_amount && ` (-${calculatedPrice.promotion_discount_amount.toLocaleString('vi-VN')} VNĐ)`}
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Mã ĐT: {calculatedPrice.broker_code_applied || 'Không có'}
+                                                {calculatedPrice.broker_discount_amount && ` (-${calculatedPrice.broker_discount_amount.toLocaleString('vi-VN')} VNĐ)`}
+                                            </Typography>
+                                            <Typography variant="body1" fontWeight="bold" sx={{ color: 'info.main', fontSize: '1.1rem' }}>
+                                                Giá mới: {calculatedPrice.calculated_transaction_amount.toLocaleString('vi-VN')} VNĐ
+                                            </Typography>
+                                        </>
+                                    )}
+                                    {isCalculatingPrice && (
+                                        <CircularProgress size={20} />
+                                    )}
+                                </Box>
+                            )}
                         </Box>
                     </Box>
                 </Box>                {/* Override Fields */}
                 <Box sx={{ mb: 3 }}>
                     <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
-                        Tuỳ chỉnh ưu đãi
+                        Tuỳ chỉnh giao dịch
                     </Typography>
 
                     <Box sx={{
@@ -365,14 +474,17 @@ export default function ConfirmTransactionModal({
                         gap: 2,
                         mb: 2
                     }}>
-                        {/* Amount Override */}
-                        <TextField
+                        {/* Amount Override */}                        <TextField
                             label="Ghi đè số tiền thanh toán"
                             type="number"
                             value={amountOverride}
                             onChange={(e) => setAmountOverride(e.target.value)}
-                            placeholder={transaction.transaction_amount.toString()}
-                            helperText={`Hiện tại: ${transaction.transaction_amount.toLocaleString('vi-VN')} VNĐ`}
+                            placeholder={calculatedPrice?.calculated_transaction_amount.toString() || transaction.transaction_amount.toString()}
+                            helperText={
+                                calculatedPrice
+                                    ? `Tự động điền từ tính toán: ${calculatedPrice.calculated_transaction_amount.toLocaleString('vi-VN')} VNĐ (có thể chỉnh sửa)`
+                                    : `Hiện tại: ${transaction.transaction_amount.toLocaleString('vi-VN')} VNĐ`
+                            }
                             InputProps={{
                                 startAdornment: (
                                     <InputAdornment position="start">
@@ -385,9 +497,7 @@ export default function ConfirmTransactionModal({
                             }}
                             disabled={confirmLoading || cancelLoading}
                             inputProps={{ min: 0, step: 1000 }}
-                        />
-
-                        {/* Duration Override */}
+                        />{/* Duration Override */}
                         <TextField
                             label="Ghi đè số ngày sử dụng"
                             type="number"
@@ -409,6 +519,65 @@ export default function ConfirmTransactionModal({
                             inputProps={{ min: 1, step: 1 }}
                         />
                     </Box>
+
+                    {/* Promotion and Broker Code Overrides */}
+                    <Box sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                        gap: 2,
+                        mb: 2
+                    }}>                        {/* Promotion Code Override */}
+                        <TextField
+                            label="Ghi đè mã khuyến mãi"
+                            value={promotionCodeOverride}
+                            onChange={(e) => setPromotionCodeOverride(e.target.value)}
+                            placeholder={transaction.promotion_code_applied || "Nhập mã khuyến mãi mới hoặc để trống để xóa"}
+                            helperText={`Hiện tại: ${transaction.promotion_code_applied || 'Không có'}`}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <PromotionIcon fontSize="small" />
+                                    </InputAdornment>
+                                )
+                            }}
+                            disabled={confirmLoading || cancelLoading}
+                        />
+
+                        {/* Broker Code Override */}
+                        <TextField
+                            label="Ghi đè mã đối tác"
+                            value={brokerCodeOverride}
+                            onChange={(e) => setBrokerCodeOverride(e.target.value.toUpperCase())}
+                            placeholder={transaction.broker_code_applied || "Nhập mã đối tác mới hoặc để trống để xóa"}
+                            helperText={`Hiện tại: ${transaction.broker_code_applied || 'Không có'}`}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <BrokerIcon fontSize="small" />
+                                    </InputAdornment>
+                                )
+                            }}
+                            disabled={confirmLoading || cancelLoading}
+                            inputProps={{
+                                maxLength: 4,
+                                style: { textTransform: 'uppercase' }
+                            }} />
+                    </Box>
+
+                    {/* Reset to calculated price button */}
+                    {calculatedPrice && amountOverride !== calculatedPrice.calculated_transaction_amount.toString() && (
+                        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={() => setAmountOverride(calculatedPrice.calculated_transaction_amount.toString())}
+                                disabled={confirmLoading || cancelLoading || isCalculatingPrice}
+                                sx={{ textTransform: 'none' }}
+                            >
+                                Đặt lại về giá tính toán ({calculatedPrice.calculated_transaction_amount.toLocaleString('vi-VN')} VNĐ)
+                            </Button>
+                        </Box>
+                    )}
                 </Box>
 
                 {/* Admin Notes */}
@@ -455,8 +624,7 @@ export default function ConfirmTransactionModal({
                         }}
                     >
                         💡 Lưu ý:
-                    </Typography>
-                    <Typography
+                    </Typography>                    <Typography
                         variant="body2"
                         sx={{
                             mt: 1,
@@ -464,6 +632,14 @@ export default function ConfirmTransactionModal({
                         }}
                     >
                         • <strong>Xác nhận thanh toán:</strong> Chuyển trạng thái sang "Thành công" và tạo/gia hạn subscription
+                    </Typography>
+                    <Typography
+                        variant="body2"
+                        sx={{
+                            color: componentColors.modal.noteText
+                        }}
+                    >
+                        • <strong>Ghi đè mã khuyến mãi/đối tác:</strong> Nhập mã mới để thay đổi, để trống để xóa
                     </Typography>
                     <Typography
                         variant="body2"

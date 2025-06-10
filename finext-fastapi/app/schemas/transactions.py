@@ -191,25 +191,56 @@ class TransactionPublic(TransactionBase):
     updated_at: datetime
 
 
-class TransactionPaymentConfirmationRequest(BaseModel):  # Schema mới cho body của endpoint confirm
-    admin_notes: Optional[str] = Field(default=None, description="Ghi chú của admin khi xác nhận thanh toán.")
-    final_transaction_amount_override: Optional[float] = Field(
-        default=None,
-        ge=0,
-        description="Số tiền giao dịch cuối cùng do admin ghi đè (nếu cần thiết).",
-    )
-    duration_days_override: Optional[int] = Field(
-        default=None,
-        gt=0,
-        description="Số ngày sử dụng ghi đè khi tạo/gia hạn subscription (nếu cần thiết).",
-    )
+class TransactionPaymentConfirmationRequest(BaseModel):
+    admin_notes: Optional[str] = Field(default=None, description="Ghi chú của admin khi xác nhận/hủy giao dịch.")
+    final_transaction_amount_override: Optional[float] = Field(default=None, ge=0, description="Ghi đè số tiền giao dịch cuối cùng.")
+    duration_days_override: Optional[int] = Field(default=None, gt=0, description="Ghi đè số ngày gia hạn.")
+    promotion_code_override: Optional[str] = Field(default=None, description="Ghi đè mã khuyến mãi. Để trống để xóa mã hiện tại.")
+    broker_code_override: Optional[str] = Field(default=None, description="Ghi đè mã đối tác. Để trống để xóa mã hiện tại.")
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "admin_notes": "Khách hàng đã chuyển khoản đủ.",
-                "final_transaction_amount_override": 150000.00,  # Ví dụ admin sửa lại giá cuối
-                "duration_days_override": 45,  # Ví dụ admin ghi đè thời hạn thành 45 ngày
+                "admin_notes": "Xác nhận thanh toán cho giao dịch này.",
+                "final_transaction_amount_override": 150000,
+                "duration_days_override": 30,
+                "promotion_code_override": "NEWPROMO",
+                "broker_code_override": "BRK1",
+            }
+        }
+    )
+
+
+class TransactionPriceCalculationRequest(BaseModel):
+    """Schema cho việc tính toán giá tạm thời khi thay đổi mã khuyến mãi/đối tác"""
+
+    promotion_code_override: Optional[str] = Field(default=None, description="Mã khuyến mãi muốn áp dụng. Để trống để xóa mã hiện tại.")
+    broker_code_override: Optional[str] = Field(default=None, description="Mã đối tác muốn áp dụng. Để trống để xóa mã hiện tại.")
+
+    model_config = ConfigDict(json_schema_extra={"example": {"promotion_code_override": "NEWPROMO", "broker_code_override": "BRK1"}})
+
+
+class TransactionPriceCalculationResponse(BaseModel):
+    """Schema cho kết quả tính toán giá tạm thời"""
+
+    original_price: float = Field(..., description="Giá gốc của license")
+    promotion_code_applied: Optional[str] = Field(default=None, description="Mã khuyến mãi được áp dụng")
+    promotion_discount_amount: Optional[float] = Field(default=None, description="Số tiền giảm giá từ khuyến mãi")
+    broker_code_applied: Optional[str] = Field(default=None, description="Mã đối tác được áp dụng")
+    broker_discount_amount: Optional[float] = Field(default=None, description="Số tiền giảm giá từ đối tác")
+    total_discount_amount: Optional[float] = Field(default=None, description="Tổng số tiền giảm giá")
+    calculated_transaction_amount: float = Field(..., description="Số tiền giao dịch được tính toán")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "original_price": 200000,
+                "promotion_code_applied": "NEWPROMO",
+                "promotion_discount_amount": 20000,
+                "broker_code_applied": "BRK1",
+                "broker_discount_amount": 10000,
+                "total_discount_amount": 30000,
+                "calculated_transaction_amount": 170000,
             }
         }
     )

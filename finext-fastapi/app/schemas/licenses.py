@@ -25,7 +25,7 @@ class LicenseBase(BaseModel):
         default_factory=list,
         description="Danh sách các 'key' của features có trong gói.",
     )
-    is_active: bool = Field(default=True, description="Trạng thái hoạt động của license.") # MỚI
+    is_active: bool = Field(default=True, description="Trạng thái hoạt động của license.")  # MỚI
 
 
 class LicenseCreate(LicenseBase):
@@ -38,7 +38,7 @@ class LicenseCreate(LicenseBase):
                 "price": 49.99,
                 "duration_days": 30,
                 "feature_keys": ["view_advanced_chart", "api_access"],
-                "is_active": True, # MỚI
+                "is_active": True,  # MỚI
             }
         }
     )
@@ -63,13 +63,13 @@ class LicenseUpdate(BaseModel):
                     "api_access",
                     "sse_access",
                 ],
-                "is_active": False, # MỚI
+                "is_active": False,  # MỚI
             }
         }
     )
 
 
-class LicenseInDB(LicenseBase): # Kế thừa is_active
+class LicenseInDB(LicenseBase):  # Kế thừa is_active
     id: PyObjectId = Field(alias="_id")
     created_at: datetime
     updated_at: datetime
@@ -80,7 +80,7 @@ class LicenseInDB(LicenseBase): # Kế thừa is_active
         json_schema_extra={
             "example": {
                 "id": "60d5ec49f7b4e6a0e7d5c2b2",
-                "key": "EXAMPLE",
+                "key": "PRO",
                 "name": "Gói Chuyên Nghiệp",
                 "price": 99.99,
                 "duration_days": 365,
@@ -89,7 +89,7 @@ class LicenseInDB(LicenseBase): # Kế thừa is_active
                     "export_data",
                     "enable_pro_indicator",
                 ],
-                "is_active": True, # MỚI
+                "is_active": True,  # MỚI
                 "created_at": "2023-10-27T10:00:00Z",
                 "updated_at": "2023-10-27T10:00:00Z",
             }
@@ -97,7 +97,7 @@ class LicenseInDB(LicenseBase): # Kế thừa is_active
     )
 
 
-class LicensePublic(LicenseBase): # Kế thừa is_active
+class LicensePublic(LicenseBase):  # Kế thừa is_active
     id: PyObjectId = Field(alias="_id")
 
     model_config = ConfigDict(

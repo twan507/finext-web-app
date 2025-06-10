@@ -560,9 +560,8 @@ const UsersPage: React.FC = () => {
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <People sx={{ mr: 1, fontSize: '24px' }} />
           <Typography
-            variant="h4"
+            variant="h3"
             component="h1"
-            sx={responsiveTypographyTokens.h4Enhanced}
           >
             Quản lý Users
           </Typography>

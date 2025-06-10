@@ -15,7 +15,8 @@ import {
   PlaylistAddCheckCircle as ConfirmIcon,
   History as HistoryIcon,
   UnfoldMore as ExpandIcon,
-  UnfoldLess as CollapseIcon
+  UnfoldLess as CollapseIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 import { colorTokens, responsiveTypographyTokens } from 'theme/tokens';
@@ -89,10 +90,14 @@ export default function TransactionsPage() {
 
   // Confirm Transaction Modal
   const [openConfirmModal, setOpenConfirmModal] = useState(false);
-
   // Dialog states
   const [openNotesDialog, setOpenNotesDialog] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState<TransactionPublic | null>(null);// Column configuration for sortable table
+  const [selectedTransaction, setSelectedTransaction] = useState<TransactionPublic | null>(null);
+
+  // Delete Transaction Dialog
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState<TransactionPublic | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);// Column configuration for sortable table
   const columnConfigs: ColumnConfig[] = useMemo(() => [
     {
       id: 'buyer_user_id',
@@ -117,8 +122,8 @@ export default function TransactionsPage() {
       sortable: true,
       sortType: 'number',
       accessor: (transaction: TransactionPublic) => transaction.purchased_duration_days,
-      minWidth: expandedView ? 'auto' : 80,
-      responsive: { xs: 'none', sm: 'none' }
+      minWidth: expandedView ? 'auto' : 100,
+      responsive: { xs: 'none', sm: 'none', md: 'none' }
     },
     {
       id: 'original_license_price',
@@ -142,11 +147,11 @@ export default function TransactionsPage() {
     },
     {
       id: 'transaction_amount',
-      label: 'Giá Tri Giao Dịch',
+      label: 'Giá Trị Giao Dịch',
       sortable: true,
       sortType: 'number',
       accessor: (transaction: TransactionPublic) => transaction.transaction_amount,
-      minWidth: expandedView ? 'auto' : 110,
+      minWidth: expandedView ? 'auto' : 140,
       format: (value: number) => `${value.toLocaleString('vi-VN')}`,
       responsive: { xs: 'none', sm: 'none' }
     },
@@ -197,7 +202,7 @@ export default function TransactionsPage() {
     },
     {
       id: 'broker_discount_amount',
-      label: 'Giảm Giá Đối Tác',
+      label: 'Giảm Giá Broker',
       sortable: true,
       sortType: 'number',
       accessor: (transaction: TransactionPublic) => transaction.broker_discount_amount || 0,
@@ -207,7 +212,7 @@ export default function TransactionsPage() {
     },
     {
       id: 'promotion_code_applied',
-      label: 'Mã KM',
+      label: 'Mã Khuyến Mại',
       sortable: true,
       sortType: 'string',
       accessor: (transaction: TransactionPublic) => transaction.promotion_code_applied || '',
@@ -223,8 +228,7 @@ export default function TransactionsPage() {
       minWidth: expandedView ? 'auto' : 90,
       format: (value: number) => `${value.toLocaleString('vi-VN')}`,
       responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' }
-    },
-    {
+    }, {
       id: 'notes',
       label: 'Ghi chú',
       sortable: false,
@@ -232,8 +236,19 @@ export default function TransactionsPage() {
       accessor: () => '',
       minWidth: expandedView ? 'auto' : 80,
       align: 'center' as const,
-      responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' }
-    }, {
+      responsive: { xs: 'none', sm: 'none', md: 'none' }
+    },
+    {
+      id: 'delete',
+      label: 'Xóa',
+      sortable: false,
+      sortType: 'string',
+      accessor: () => '',
+      minWidth: expandedView ? 'auto' : 60,
+      align: 'center' as const,
+      responsive: { xs: 'none', sm: 'none', md: 'none'}
+    },
+    {
       id: 'actions',
       label: '',
       sortable: false,
@@ -442,11 +457,48 @@ export default function TransactionsPage() {
     setOpenConfirmModal(false);
     setSelectedTransaction(null);
   };
-
   const handleConfirmModalSubmit = async () => {
     // This will be handled by the modal itself
     fetchTransactions();
     handleCloseConfirmModal();
+  };
+
+  // Delete transaction handlers
+  const handleOpenDeleteDialog = (transaction: TransactionPublic) => {
+    setTransactionToDelete(transaction);
+    setOpenDeleteDialog(true);
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setTransactionToDelete(null);
+    setOpenDeleteDialog(false);
+    setDeleteLoading(false);
+  };
+
+  const handleDeleteTransaction = async () => {
+    if (!transactionToDelete) return;
+
+    setDeleteLoading(true);
+    setError(null);
+
+    try {
+      const response = await apiClient({
+        url: `/api/v1/transactions/admin/${transactionToDelete.id}`,
+        method: 'DELETE',
+      });
+
+      if (response.status === 200) {
+        fetchTransactions(); // Refresh list
+        handleCloseDeleteDialog();
+      } else {
+        setError(response.message || 'Không thể xóa giao dịch.');
+      }
+    } catch (delError: any) {
+      setError(delError.message || 'Lỗi khi xóa giao dịch. Giao dịch có thể đang được sử dụng bởi subscription đang hoạt động.');
+      handleCloseDeleteDialog();
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   const getPaymentStatusChipColor = (status: PaymentStatusEnumFE): "success" | "warning" | "default" | "error" => {
@@ -460,7 +512,7 @@ export default function TransactionsPage() {
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>        <Box sx={{ display: 'flex', alignItems: 'center' }}>
         <TransactionIcon sx={{ mr: 1, fontSize: '24px' }} />
-        <Typography variant="h4" component="h1">Transactions</Typography>
+        <Typography variant="h3" component="h1">Transactions</Typography>
       </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
@@ -743,10 +795,28 @@ export default function TransactionsPage() {
                           </IconButton>
                         </Tooltip>
                       </TableCell>
-                      {/* Actions (sticky column) - Index 14 */}
+
+                      {/* Delete (separate column) - Index 14 */}
+                      <TableCell sx={{
+                        ...getResponsiveDisplayStyle(columnConfigs[14], expandedView),
+                        whiteSpace: expandedView ? 'nowrap' : 'normal',
+                        minWidth: columnConfigs[14].minWidth
+                      }} align="center">
+                        <Tooltip title="Delete Transaction">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleOpenDeleteDialog(transaction)}
+                            color="error"
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+
+                      {/* Actions (sticky column) - Index 15 */}
                       <TableCell
                         sx={{
-                          ...getResponsiveDisplayStyle(columnConfigs[14], expandedView),
+                          ...getResponsiveDisplayStyle(columnConfigs[15], expandedView),
                           position: 'sticky',
                           right: -1, // Slight negative to eliminate gap
                           backgroundColor: 'background.paper',
@@ -889,6 +959,111 @@ export default function TransactionsPage() {
             variant="contained"
           >
             Đóng
+          </Button>        </DialogActions>
+      </Dialog>      {/* Delete Transaction Confirmation Dialog */}
+      <Dialog
+        open={openDeleteDialog}
+        onClose={!deleteLoading ? handleCloseDeleteDialog : undefined}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ color: 'error.main', fontWeight: 'bold' }}>
+          ⚠️ Xác nhận xóa giao dịch
+        </DialogTitle>
+        <DialogContent>
+          {transactionToDelete && (
+            <>              <Box sx={{
+              p: 1.5,
+              bgcolor: componentColors.modal.noteBackground,
+              borderRadius: 1,
+              mb: 2,
+            }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 'bold' }}>
+                Email: {userEmails.get(transactionToDelete.buyer_user_id) || transactionToDelete.buyer_user_id}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Số tiền: {transactionToDelete.transaction_amount.toLocaleString('vi-VN')} VND
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Trạng thái:
+                </Typography>
+                <Chip
+                  label={transactionToDelete.payment_status.toUpperCase()}
+                  size="small"
+                  color={getPaymentStatusChipColor(transactionToDelete.payment_status as PaymentStatusEnumFE)}
+                  sx={{
+                    textTransform: 'uppercase',
+                    fontSize: '0.75rem'
+                  }}
+                />
+              </Box>
+            </Box>
+
+              <Box sx={{
+                mb: 3,
+                p: 2,
+                bgcolor: componentColors.modal.noteBackground,
+                borderRadius: 1,
+                border: `1px solid ${componentColors.modal.noteBorder}`,
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '3px',
+                  bgcolor: 'error.main',
+                  borderRadius: '4px 4px 0 0'
+                },
+                position: 'relative'
+              }}>
+                <Typography
+                  variant="body2"
+                  fontWeight="bold"
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    color: 'error.main',
+                    mb: 2
+                  }}
+                >
+                  ⚠️ Cảnh báo quan trọng:
+                </Typography>
+
+                <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                  • Hành động này không thể hoàn tác
+                </Typography>
+                <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                  • Chỉ có thể xóa giao dịch không liên kết với subscription đang hoạt động
+                </Typography>
+                <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                  • Dữ liệu giao dịch sẽ bị mất vĩnh viễn
+                </Typography>
+                <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                  • Việc xóa có thể ảnh hưởng đến báo cáo và thống kê hệ thống
+                </Typography>
+              </Box>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 1 }}>
+          <Button
+            onClick={handleCloseDeleteDialog}
+            disabled={deleteLoading}
+            variant="outlined"
+          >
+            Hủy
+          </Button>
+          <Button
+            onClick={handleDeleteTransaction}
+            color="error"
+            variant="contained"
+            disabled={deleteLoading}
+            startIcon={deleteLoading ? <CircularProgress size={20} /> : null}
+          >
+            {deleteLoading ? 'Đang xóa...' : 'Xóa giao dịch'}
           </Button>
         </DialogActions>
       </Dialog>

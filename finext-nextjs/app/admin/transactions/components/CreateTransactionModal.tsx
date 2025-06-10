@@ -91,12 +91,11 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
     const [selectedLicense, setSelectedLicense] = useState<LicensePublic | null>(null);
     const [selectedSubscription, setSelectedSubscription] = useState<SubscriptionPublic | null>(null); const [loading, setLoading] = useState(false);
     const [loadingUsers, setLoadingUsers] = useState(false);
-    const [loadingLicenses, setLoadingLicenses] = useState(false);
-    const [loadingSubscriptions, setLoadingSubscriptions] = useState(false);
+    const [loadingLicenses, setLoadingLicenses] = useState(false); const [loadingSubscriptions, setLoadingSubscriptions] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [warning, setWarning] = useState<string | null>(null);
     const [brokerCodeError, setBrokerCodeError] = useState<string | null>(null);
-
-    // Fetch all users
+    const [hasActiveNonBasicSub, setHasActiveNonBasicSub] = useState(false);// Fetch all users
     const fetchUsers = async () => {
         setLoadingUsers(true);
         try {
@@ -108,15 +107,17 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
             if (response.status === 200 && response.data) {
                 const users = 'items' in response.data ? response.data.items : response.data;
                 setAllUsers(users.filter(user => user.is_active));
+            } else {
+                setAllUsers([]);
+                setError('Không thể tải danh sách người dùng. Vui lòng thử lại.');
             }
         } catch (err: any) {
-            console.error('Failed to fetch users:', err);
+            setAllUsers([]);
+            setError('Không thể tải danh sách người dùng. Vui lòng kiểm tra kết nối mạng và thử lại.');
         } finally {
             setLoadingUsers(false);
         }
-    };
-
-    // Fetch all active licenses
+    };    // Fetch all active licenses
     const fetchLicenses = async () => {
         setLoadingLicenses(true);
         try {
@@ -128,30 +129,57 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
             if (response.status === 200 && response.data) {
                 const licenses = 'items' in response.data ? response.data.items : response.data;
                 setAllLicenses(licenses.filter(license => license.is_active));
+            } else {
+                setAllLicenses([]);
+                setError('Không thể tải danh sách license. Vui lòng thử lại.');
             }
         } catch (err: any) {
-            console.error('Failed to fetch licenses:', err);
+            setAllLicenses([]);
+            setError('Không thể tải danh sách license. Vui lòng kiểm tra kết nối mạng và thử lại.');
         } finally {
             setLoadingLicenses(false);
         }
-    };
-
-    // Fetch user's active subscriptions for renewal
+    };    // Fetch user's active subscriptions for renewal
     const fetchUserSubscriptions = async (userId: string) => {
         setLoadingSubscriptions(true);
         try {
             const response = await apiClient<{ items: SubscriptionPublic[]; total: number } | SubscriptionPublic[]>({
-                url: `/api/v1/subscriptions/?user_id=${userId}&limit=1000`,
+                url: `/api/v1/subscriptions/user/${userId}?limit=1000`,
                 method: 'GET',
-            });
+            }); if (response.status === 200 && response.data) {
+                // Backend endpoint /user/{user_id} trả về List[SubscriptionPublic] trực tiếp, không có wrapper items
+                const subscriptions = Array.isArray(response.data) ? response.data : [];
+                const activeSubscriptions = subscriptions.filter(sub => sub.is_active);
 
-            if (response.status === 200 && response.data) {
-                const subscriptions = 'items' in response.data ? response.data.items : response.data;
-                setUserSubscriptions(subscriptions.filter(sub => sub.is_active));
+                // Loại bỏ gói BASIC khỏi danh sách subscription có thể gia hạn
+                const renewableSubscriptions = activeSubscriptions.filter(sub => sub.license_key !== 'BASIC');
+
+                // Kiểm tra xem có subscription active với license không phải BASIC hay không
+                const hasNonBasicActiveSub = renewableSubscriptions.length > 0;
+                setHasActiveNonBasicSub(hasNonBasicActiveSub);
+
+                setUserSubscriptions(renewableSubscriptions);                // Thông báo cụ thể khi không có subscription để gia hạn
+                if (subscriptions.length === 0) {
+                    setWarning('Người dùng này chưa có gói đăng ký nào trong hệ thống.');
+                } else if (renewableSubscriptions.length === 0) {
+                    if (activeSubscriptions.some(sub => sub.license_key === 'BASIC')) {
+                        setWarning('Người dùng này chỉ có gói BASIC đang hoạt động. Vui lòng chọn "Mua mới" để nâng cấp.');
+                    } else {
+                        setWarning('Người dùng này không có gói đăng ký nào đang hoạt động có thể gia hạn. Hãy chọn "Mua mới" thay thế.');
+                    }
+                } else if (hasNonBasicActiveSub) {
+                    // Thông báo khi user có subscription không phải BASIC đang active
+                    setWarning('Người dùng này đã có sẵn gói đăng kí đang hoạt động. Chỉ có thể chọn "Gia hạn".');
+                }
+            } else {
+                setUserSubscriptions([]);
+                setError('Không thể tải danh sách subscription của người dùng. Vui lòng thử lại.');
             }
         } catch (err: any) {
-            console.error('Failed to fetch user subscriptions:', err);
+            // Catch lỗi và hiển thị thông báo thân thiện thay vì log ra console
             setUserSubscriptions([]);
+            setHasActiveNonBasicSub(false); // Reset state khi có lỗi
+            setError('Không thể tải subscription của người dùng. Vui lòng kiểm tra kết nối mạng và thử lại.');
         } finally {
             setLoadingSubscriptions(false);
         }
@@ -163,18 +191,29 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
             fetchUsers();
             fetchLicenses();
         }
-    }, [open]);
-
-    // When user changes, fetch their subscriptions if renewal is selected
+    }, [open]);    // When user changes, fetch their subscriptions 
     useEffect(() => {
-        if (selectedUser && formData.transaction_type === 'renewal') {
+        if (selectedUser) {
             fetchUserSubscriptions(selectedUser.id);
         } else {
             setUserSubscriptions([]);
             setSelectedSubscription(null);
+            setHasActiveNonBasicSub(false);
+            setWarning(null); // Reset warning khi user thay đổi
             setFormData(prev => ({ ...prev, subscription_id_to_renew: '' }));
         }
-    }, [selectedUser, formData.transaction_type]);    // Reset form when modal opens/closes
+    }, [selectedUser]);    // Auto-switch to renewal if user has active non-basic subscription
+    useEffect(() => {
+        if (hasActiveNonBasicSub && formData.transaction_type === 'new_purchase') {
+            setFormData(prev => ({ ...prev, transaction_type: 'renewal' }));
+            setSelectedLicense(null); // Clear license selection when switching to renewal
+        }
+        // Nếu user không có subscription có thể gia hạn và đang chọn renewal, chuyển về new_purchase
+        else if (!hasActiveNonBasicSub && formData.transaction_type === 'renewal') {
+            setFormData(prev => ({ ...prev, transaction_type: 'new_purchase' }));
+            setSelectedSubscription(null); // Clear subscription selection when switching to new purchase
+        }
+    }, [hasActiveNonBasicSub, formData.transaction_type]);// Reset form when modal opens/closes
     useEffect(() => {
         if (!open) {
             setFormData({
@@ -186,12 +225,13 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
                 license_id_for_new_purchase: '',
                 subscription_id_to_renew: '',
                 broker_code: ''
-            });
-            setSelectedUser(null);
+            }); setSelectedUser(null);
             setSelectedLicense(null);
             setSelectedSubscription(null);
             setError(null);
+            setWarning(null);
             setBrokerCodeError(null);
+            setHasActiveNonBasicSub(false);
         }
     }, [open]); const handleUserChange = (user: UserPublic | null) => {
         setSelectedUser(user);
@@ -199,8 +239,11 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
             ...prev,
             buyer_user_id: user?.id || '',
             broker_code: user?.referral_code || ''
-        }));
-        setBrokerCodeError(null);
+        })); setBrokerCodeError(null);
+        setHasActiveNonBasicSub(false); // Reset state khi user thay đổi
+        setWarning(null); // Reset warning khi user thay đổi
+        // Clear error khi user thay đổi
+        setError(null);
     };
 
     const handleLicenseChange = (license: LicensePublic | null) => {
@@ -210,15 +253,29 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
             license_id_for_new_purchase: license?.id || '',
             purchased_duration_days: license?.duration_days || 30
         }));
-    };
-
-    const handleSubscriptionChange = (subscription: SubscriptionPublic | null) => {
+    }; const handleSubscriptionChange = (subscription: SubscriptionPublic | null) => {
         setSelectedSubscription(subscription);
         setFormData(prev => ({
             ...prev,
             subscription_id_to_renew: subscription?.id || ''
-        }));
+        }));        // Clear error khi subscription được chọn
+        if (subscription) {
+            setError(null);
+            setWarning(null);
+        }
     }; const handleTransactionTypeChange = (type: 'new_purchase' | 'renewal') => {
+        // Ngăn chặn việc chọn "new_purchase" nếu user đã có subscription active với license không phải BASIC
+        if (type === 'new_purchase' && hasActiveNonBasicSub) {
+            setError('Không thể tạo giao dịch mua mới. Người dùng đã có subscription đang hoạt động với license không phải BASIC. Vui lòng chọn "Gia hạn" thay thế.');
+            return;
+        }
+
+        // Ngăn chặn việc chọn "renewal" nếu user không có subscription nào có thể gia hạn (không phải BASIC)
+        if (type === 'renewal' && !hasActiveNonBasicSub) {
+            setError('Không thể tạo giao dịch gia hạn. Người dùng không có subscription nào có thể gia hạn (gói BASIC không thể gia hạn). Vui lòng chọn "Mua mới" thay thế.');
+            return;
+        }
+
         setFormData(prev => ({
             ...prev,
             transaction_type: type,
@@ -230,7 +287,9 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
             setSelectedSubscription(null);
         } else {
             setSelectedLicense(null);
-        }
+        }        // Clear error khi transaction type thay đổi (trừ khi bị ngăn chặn ở trên)
+        setError(null);
+        setWarning(null);
     };
 
     // Validate broker code
@@ -261,7 +320,7 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
                 return false;
             }
         } catch (err: any) {
-            setBrokerCodeError('Không thể xác thực mã broker. Vui lòng thử lại.');
+            setBrokerCodeError('Không thể xác thực mã broker. Vui lòng thử lại sau.');
             return false;
         }
     };
@@ -282,6 +341,7 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
         }
     }; const handleSubmit = async () => {
         setError(null);
+        setWarning(null);
 
         // Validation
         if (!formData.buyer_user_id) {
@@ -292,10 +352,8 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
         if (formData.transaction_type === 'new_purchase' && !formData.license_id_for_new_purchase) {
             setError('Vui lòng chọn license cho giao dịch mua mới.');
             return;
-        }
-
-        if (formData.transaction_type === 'renewal' && !formData.subscription_id_to_renew) {
-            setError('Vui lòng chọn subscription để gia hạn.');
+        } if (formData.transaction_type === 'renewal' && !formData.subscription_id_to_renew) {
+            setError('Vui lòng chọn subscription để gia hạn. Nếu không có subscription khả dụng, hãy chọn giao dịch "Mua mới" thay thế.');
             return;
         }
 
@@ -363,12 +421,17 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
                     component="form"
                     autoComplete="off"
                     sx={{ mt: 2 }}
-                >
-                    {error && (
-                        <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 3 }}>
-                            {error}
+                >                    {error && (
+                    <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 3 }}>
+                        {error}
+                    </Alert>
+                )}
+
+                    {warning && (
+                        <Alert severity="warning" onClose={() => setWarning(null)} sx={{ mb: 3 }}>
+                            {warning}
                         </Alert>
-                    )}                    <Box sx={{
+                    )}<Box sx={{
                         display: 'grid',
                         gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
                         gap: 3
@@ -442,7 +505,13 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
                                         {...params}
                                         label="Chọn subscription để gia hạn *"
                                         variant="outlined"
-                                        placeholder={!selectedUser ? "Vui lòng chọn người dùng trước" : "Chọn subscription cần gia hạn"}
+                                        placeholder={
+                                            !selectedUser
+                                                ? "Vui lòng chọn người dùng trước"
+                                                : userSubscriptions.length === 0
+                                                    ? "Không có subscription khả dụng để gia hạn"
+                                                    : "Chọn subscription cần gia hạn"
+                                        }
                                         InputProps={{
                                             ...params.InputProps,
                                             endAdornment: (
@@ -452,25 +521,45 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
                                                 </>
                                             ),
                                         }}
-                                        helperText={!selectedUser ? "Vui lòng chọn người dùng trước" : ""}
+                                        helperText={
+                                            !selectedUser
+                                                ? "Vui lòng chọn người dùng trước"
+                                                : selectedUser && userSubscriptions.length === 0 && !loadingSubscriptions
+                                                    ? "Không có subscription active nào để gia hạn. Hãy chọn 'Mua mới' thay thế."
+                                                    : ""
+                                        }
                                     />
                                 )}
                                 isOptionEqualToValue={(option, value) => option.id === value.id}
                             />
-                        )}
-
-                        {/* Row 2 Right: Transaction Type */}
+                        )}                        {/* Row 2 Right: Transaction Type */}
                         <FormControl fullWidth required>
                             <InputLabel>Loại giao dịch</InputLabel>
                             <Select
                                 value={formData.transaction_type}
                                 onChange={(e) => handleTransactionTypeChange(e.target.value as 'new_purchase' | 'renewal')}
                                 label="Loại giao dịch"
+                            >                                <MenuItem
+                                value="new_purchase"
+                                disabled={hasActiveNonBasicSub}
+                                sx={hasActiveNonBasicSub ? { opacity: 0.6 } : {}}
                             >
-                                <MenuItem value="new_purchase">Mua mới</MenuItem>
-                                <MenuItem value="renewal">Gia hạn</MenuItem>
+                                    Mua mới {hasActiveNonBasicSub && '(Không khả dụng - User đã có subscription active)'}
+                                </MenuItem>
+                                <MenuItem
+                                    value="renewal"
+                                    disabled={!hasActiveNonBasicSub}
+                                    sx={!hasActiveNonBasicSub ? { opacity: 0.6 } : {}}
+                                >
+                                    Gia hạn {!hasActiveNonBasicSub && '(Không khả dụng - Không có subscription có thể gia hạn)'}
+                                </MenuItem>
                             </Select>
-                        </FormControl>                        {/* Row 3 Left: Price - Auto-filled from license */}
+                            {hasActiveNonBasicSub && formData.transaction_type === 'new_purchase' && (
+                                <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                                    Người dùng đã có subscription đang hoạt động với license không phải BASIC. Chỉ có thể gia hạn.
+                                </Typography>
+                            )}
+                        </FormControl>{/* Row 3 Left: Price - Auto-filled from license */}
                         <TextField
                             label="Giá (VNĐ)"
                             type="text"

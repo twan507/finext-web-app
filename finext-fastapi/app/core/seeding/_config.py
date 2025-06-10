@@ -139,8 +139,12 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
         "description": "Quyền xem tất cả giao dịch (admin).",
     },
     {
-        "name": "transaction:update_details_any",
-        "description": "Quyền cập nhật chi tiết giao dịch đang chờ xử lý của bất kỳ ai (admin).",
+        "name": "transaction:update_any",
+        "description": "Quyền cập nhật thông tin giao dịch của bất kỳ ai (admin).",
+    },
+    {
+        "name": "transaction:delete_any",
+        "description": "Quyền xóa giao dịch của bất kỳ ai (admin).",
     },
     {
         "name": "transaction:confirm_payment_any",

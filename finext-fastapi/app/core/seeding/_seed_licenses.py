@@ -52,8 +52,8 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
             ],
         },
         {
-            "key": "EXAMPLE",
-            "name": "License Ví Dụ",
+            "key": "PRO",
+            "name": "License Chuyên Nghiệp",
             "price": 1000000,
             "duration_days": 30,
             "feature_keys": [

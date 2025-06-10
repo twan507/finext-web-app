@@ -18,7 +18,6 @@ from app.schemas.transactions import (
     TransactionCreateForAdmin,
     TransactionInDB,  # Sử dụng TransactionInDB để lấy từ DB
     TransactionTypeEnum,
-    TransactionUpdateByAdmin,
     TransactionPaymentConfirmationRequest,
 )
 from app.schemas.users import UserInDB as AppUserInDB  # Đổi tên alias để tránh nhầm lẫn
@@ -29,6 +28,7 @@ from app.core.config import (
     BROKER_DISCOUNT_PERCENTAGE,
     PROTECTED_LICENSE_KEYS,
     PROTECTED_ROLE_NAMES,
+    BASIC_LICENSE_KEY,
 )
 
 
@@ -170,6 +170,27 @@ async def _prepare_transaction_data(
             raise ValueError(f"License với ID {license_id_for_new_purchase_str} không tồn tại.")
         if not license_doc.is_active:
             raise ValueError(f"License '{license_doc.key}' hiện không hoạt động, không thể tạo giao dịch.")
+
+        # Kiểm tra xem user đã có subscription active với license không phải BASIC hay chưa
+        user_obj_id = ObjectId(buyer_user_id_str)
+        now = datetime.now(timezone.utc)
+        active_non_basic_sub = await db.subscriptions.find_one(
+            {
+                "user_id": user_obj_id,
+                "is_active": True,
+                "expiry_date": {"$gt": now},
+                "license_key": {"$ne": BASIC_LICENSE_KEY},
+            }
+        )
+
+        if active_non_basic_sub:
+            active_license_key = active_non_basic_sub.get("license_key", "Unknown")
+            raise ValueError(
+                f"Không thể tạo giao dịch mua mới. "
+                f"Người dùng đã có subscription đang hoạt động với license '{active_license_key}' "
+                f"(không phải BASIC). Vui lòng gia hạn subscription hiện tại thay vì mua mới."
+            )
+
         original_price_for_calc = license_doc.price
         duration_for_calc = purchased_duration_days_override or license_doc.duration_days
     elif transaction_type == TransactionTypeEnum.RENEWAL:
@@ -180,6 +201,14 @@ async def _prepare_transaction_data(
             raise ValueError(f"Subscription ID {subscription_id_to_renew_str} để gia hạn không tìm thấy.")
         if str(renewal_sub_doc.user_id) != str(buyer_user_id_str):  # So sánh str với str
             raise ValueError("Subscription gia hạn không thuộc về người mua này.")
+        # Ngăn chặn gia hạn gói BASIC
+        if renewal_sub_doc.license_key == BASIC_LICENSE_KEY:
+            raise ValueError(
+                "Không thể gia hạn subscription BASIC. "
+                "Gói BASIC được cung cấp miễn phí và không thể gia hạn. "
+                "Vui lòng chọn giao dịch 'Mua mới' để nâng cấp lên gói khác."
+            )
+
         license_doc = await crud_licenses.get_license_by_id(db, renewal_sub_doc.license_id)  # license_id đã là str
         if not license_doc:
             raise ValueError(f"Lỗi nội bộ: License ID {renewal_sub_doc.license_id} của subscription {renewal_sub_doc.id} không tìm thấy.")
@@ -220,7 +249,7 @@ async def _prepare_transaction_data(
     # Bước 1: Tính giảm giá broker trên giá gốc
     if broker_code_to_apply_str:
         broker_discount_amount_val = round(original_price_for_calc * (BROKER_DISCOUNT_PERCENTAGE / 100), 2)
-        print('check broker_discount_amount_val:', broker_discount_amount_val, original_price_for_calc)
+        print("check broker_discount_amount_val:", broker_discount_amount_val, original_price_for_calc)
         logger.info(
             f"Áp dụng mã đối tác '{broker_code_to_apply_str}', giảm giá: {broker_discount_amount_val} cho license '{license_doc.key}'"
         )
@@ -370,75 +399,6 @@ async def create_transaction_by_user_db(
         raise ValueError(f"Lỗi máy chủ không mong muốn khi tạo đơn hàng: {str(e)}")
 
 
-async def update_transaction_details_db(
-    db: AsyncIOMotorDatabase,
-    transaction_id_str: PyObjectId,
-    update_data_admin: TransactionUpdateByAdmin,
-) -> Optional[TransactionInDB]:
-    original_transaction = await get_transaction_by_id(db, transaction_id_str)
-    if not original_transaction:
-        raise ValueError(f"Giao dịch với ID {transaction_id_str} không tồn tại.")
-
-    if original_transaction.payment_status != PaymentStatusEnum.PENDING:
-        raise ValueError("Chỉ có thể cập nhật chi tiết các giao dịch đang chờ xử lý (pending).")
-
-    try:
-        # Sử dụng original_transaction.buyer_user_id (đã là str)
-        # Sử dụng original_transaction.license_id (đã là str)
-        # Sử dụng original_transaction.target_subscription_id (đã là str hoặc None)
-        new_prepared_data = await _prepare_transaction_data(
-            db=db,
-            buyer_user_id_str=original_transaction.buyer_user_id,
-            transaction_type=original_transaction.transaction_type,
-            license_id_for_new_purchase_str=original_transaction.license_id
-            if original_transaction.transaction_type == TransactionTypeEnum.NEW_PURCHASE
-            else None,
-            subscription_id_to_renew_str=original_transaction.target_subscription_id
-            if original_transaction.transaction_type == TransactionTypeEnum.RENEWAL
-            else None,
-            purchased_duration_days_override=update_data_admin.purchased_duration_days
-            if update_data_admin.purchased_duration_days is not None
-            else original_transaction.purchased_duration_days,
-            input_promotion_code=update_data_admin.promotion_code
-            if update_data_admin.promotion_code is not None  # Cho phép admin xóa promo bằng cách gửi ""
-            else original_transaction.promotion_code_applied,
-            input_broker_code_for_user_create=None,  # User không tạo ở bước này
-            admin_broker_code_override=update_data_admin.broker_code_applied_override,  # Admin có thể override
-            notes=update_data_admin.notes if update_data_admin.notes is not None else original_transaction.notes,
-            is_admin_update_pending=True,  # Đánh dấu đây là admin update giao dịch PENDING
-        )
-    except ValueError as ve:
-        raise ve  # Re-raise lỗi validation từ _prepare_transaction_data
-
-    # Chỉ lấy các trường cần thiết từ new_prepared_data để cập nhật
-    update_fields_for_db = {
-        "purchased_duration_days": new_prepared_data["purchased_duration_days"],
-        "original_license_price": new_prepared_data[
-            "original_license_price"
-        ],  # Giá gốc có thể thay đổi nếu license_id thay đổi (ít xảy ra)
-        "promotion_code_applied": new_prepared_data["promotion_code_applied"],
-        "promotion_discount_amount": new_prepared_data["promotion_discount_amount"],
-        "broker_code_applied": new_prepared_data["broker_code_applied"],
-        "broker_discount_amount": new_prepared_data["broker_discount_amount"],
-        "total_discount_amount": new_prepared_data["total_discount_amount"],
-        "transaction_amount": new_prepared_data["transaction_amount"],
-        "notes": new_prepared_data["notes"],
-        "updated_at": datetime.now(timezone.utc),  # Luôn cập nhật updated_at
-    }
-
-    # Không nên cho phép thay đổi license_id, license_key, buyer_user_id, transaction_type, target_subscription_id
-    # của một giao dịch PENDING thông qua endpoint này. _prepare_transaction_data sẽ lấy lại chúng.
-
-    updated_result = await db[TRANSACTIONS_COLLECTION].update_one({"_id": ObjectId(transaction_id_str)}, {"$set": update_fields_for_db})
-
-    if updated_result.matched_count > 0:
-        return await get_transaction_by_id(db, transaction_id_str)
-
-    # Nếu không match (ví dụ transaction_id không tìm thấy khi update)
-    logger.error(f"Không tìm thấy transaction {transaction_id_str} để cập nhật chi tiết bởi admin.")
-    raise ValueError(f"Không thể cập nhật giao dịch {transaction_id_str} sau khi chuẩn bị dữ liệu.")
-
-
 async def confirm_transaction_payment_db(
     db: AsyncIOMotorDatabase, transaction_id_str: PyObjectId, confirmation_request: TransactionPaymentConfirmationRequest
 ) -> Optional[TransactionInDB]:
@@ -474,6 +434,71 @@ async def confirm_transaction_payment_db(
             logger.info(
                 f"Admin ghi đè số ngày gia hạn giao dịch {transaction_id_str} từ {current_duration_days_in_db} thành: {confirmation_request.duration_days_override}"
             )
+
+    # Handle promotion code override
+    if confirmation_request.promotion_code_override is not None:
+        if confirmation_request.promotion_code_override.strip() == "":
+            # Remove promotion code
+            update_fields_for_transaction["promotion_code_applied"] = None
+            update_fields_for_transaction["promotion_discount_amount"] = None
+            logger.info(f"Admin đã xóa mã khuyến mãi khỏi giao dịch {transaction_id_str}")
+        else:
+            # Validate promotion code
+            new_promotion_code = confirmation_request.promotion_code_override.strip().upper()
+            promotion = await crud_promotions.is_promotion_code_valid_and_active(db, new_promotion_code, transaction.license_key)
+            if not promotion:
+                raise ValueError(f"Mã khuyến mãi '{new_promotion_code}' không hợp lệ hoặc không áp dụng cho license này.")
+
+            # Calculate new discount
+            original_amount = transaction.original_license_price
+            discount_amount, _ = crud_promotions.calculate_discounted_amount(original_amount, promotion)
+
+            update_fields_for_transaction["promotion_code_applied"] = new_promotion_code
+            update_fields_for_transaction["promotion_discount_amount"] = discount_amount
+            logger.info(f"Admin đã cập nhật mã khuyến mãi giao dịch {transaction_id_str} thành '{new_promotion_code}'")
+
+    # Handle broker code override
+    if confirmation_request.broker_code_override is not None:
+        if confirmation_request.broker_code_override.strip() == "":
+            # Remove broker code
+            update_fields_for_transaction["broker_code_applied"] = None
+            update_fields_for_transaction["broker_discount_amount"] = None
+            logger.info(f"Admin đã xóa mã đối tác khỏi giao dịch {transaction_id_str}")
+        else:
+            # Validate broker code
+            new_broker_code = confirmation_request.broker_code_override.strip().upper()
+            broker = await crud_brokers.get_broker_by_code(db, new_broker_code)
+            if not broker or not broker.is_active:
+                raise ValueError(f"Mã đối tác '{new_broker_code}' không hợp lệ hoặc không hoạt động.")
+
+            # Calculate broker discount
+            original_amount = transaction.original_license_price
+            broker_discount = original_amount * (BROKER_DISCOUNT_PERCENTAGE / 100)
+
+            update_fields_for_transaction["broker_code_applied"] = new_broker_code
+            update_fields_for_transaction["broker_discount_amount"] = broker_discount
+            logger.info(f"Admin đã cập nhật mã đối tác giao dịch {transaction_id_str} thành '{new_broker_code}'")
+
+    # Recalculate total discount and transaction amount if any discount codes were modified
+    if any(field in update_fields_for_transaction for field in ["promotion_discount_amount", "broker_discount_amount"]):
+        # Get current or new values
+        promotion_discount = update_fields_for_transaction.get("promotion_discount_amount", transaction.promotion_discount_amount) or 0
+        broker_discount = update_fields_for_transaction.get("broker_discount_amount", transaction.broker_discount_amount) or 0
+
+        # Calculate total discount and final amount
+        total_discount = promotion_discount + broker_discount
+        new_transaction_amount = transaction.original_license_price - total_discount
+
+        # Ensure amount is not negative
+        if new_transaction_amount < 0:
+            new_transaction_amount = 0
+
+        update_fields_for_transaction["total_discount_amount"] = total_discount if total_discount > 0 else None
+
+        # Only update transaction amount if not already overridden by final_transaction_amount_override
+        if confirmation_request.final_transaction_amount_override is None:
+            update_fields_for_transaction["transaction_amount"] = new_transaction_amount
+            logger.info(f"Tự động tính lại số tiền giao dịch {transaction_id_str}: {new_transaction_amount}")
 
     if confirmation_request.admin_notes:
         existing_notes = transaction.notes or ""
@@ -514,9 +539,7 @@ async def confirm_transaction_payment_db(
             raise ValueError(
                 f"Không thể gia hạn subscription '{target_sub_to_renew.license_key}' "
                 f"bằng giao dịch cho license '{transaction.license_key}'."
-            )
-
-        # transaction.buyer_user_id đã là str
+            )  # transaction.buyer_user_id đã là str
         user_obj_id_for_renewal = ObjectId(transaction.buyer_user_id)
         sub_obj_id_for_renewal = ObjectId(target_sub_to_renew.id)
 
@@ -526,6 +549,10 @@ async def confirm_transaction_payment_db(
             )
 
         start_renewal_from = target_sub_to_renew.expiry_date
+        # Đảm bảo start_renewal_from có timezone info để so sánh với dt_now
+        if start_renewal_from.tzinfo is None:
+            start_renewal_from = start_renewal_from.replace(tzinfo=timezone.utc)
+
         if start_renewal_from < dt_now:  # Nếu sub đã hết hạn, bắt đầu gia hạn từ bây giờ
             start_renewal_from = dt_now
 
@@ -591,3 +618,134 @@ async def cancel_transaction_db(
     if updated_result.matched_count > 0:
         return await get_transaction_by_id(db, transaction_id_str)
     return None  # Hoặc raise lỗi nếu không tìm thấy khi update
+
+
+async def calculate_transaction_price_with_overrides(
+    db: AsyncIOMotorDatabase,
+    transaction_id_str: PyObjectId,
+    promotion_code_override: Optional[str] = None,
+    broker_code_override: Optional[str] = None,
+) -> dict:
+    """Tính toán giá giao dịch với mã khuyến mãi/đối tác được ghi đè"""
+    transaction = await get_transaction_by_id(db, transaction_id_str)
+    if not transaction:
+        raise ValueError(f"Giao dịch với ID {transaction_id_str} không tồn tại.")
+
+    original_price = transaction.original_license_price
+
+    # Xử lý mã đối tác
+    broker_code_to_apply = None
+    broker_discount_amount = 0.0
+
+    if broker_code_override is not None:
+        if broker_code_override.strip() == "":
+            # Xóa mã đối tác
+            broker_code_to_apply = None
+        else:
+            # Validate mã đối tác mới
+            new_broker_code = broker_code_override.strip().upper()
+            broker = await crud_brokers.get_broker_by_code(db, new_broker_code)
+            if not broker or not broker.is_active:
+                raise ValueError(f"Mã đối tác '{new_broker_code}' không hợp lệ hoặc không hoạt động.")
+
+            broker_code_to_apply = new_broker_code
+            broker_discount_amount = original_price * (BROKER_DISCOUNT_PERCENTAGE / 100)
+    else:
+        # Giữ nguyên mã đối tác hiện tại
+        broker_code_to_apply = transaction.broker_code_applied
+        broker_discount_amount = transaction.broker_discount_amount or 0.0
+
+    # Tính giá sau khi áp dụng giảm giá broker
+    price_after_broker_discount = original_price - broker_discount_amount
+    if price_after_broker_discount < 0:
+        price_after_broker_discount = 0.0
+
+    # Xử lý mã khuyến mãi
+    promotion_code_to_apply = None
+    promotion_discount_amount = 0.0
+
+    if promotion_code_override is not None:
+        if promotion_code_override.strip() == "":
+            # Xóa mã khuyến mãi
+            promotion_code_to_apply = None
+        else:
+            # Validate mã khuyến mãi mới
+            new_promotion_code = promotion_code_override.strip().upper()
+            promotion = await crud_promotions.is_promotion_code_valid_and_active(db, new_promotion_code, transaction.license_key)
+            if not promotion:
+                raise ValueError(f"Mã khuyến mãi '{new_promotion_code}' không hợp lệ hoặc không áp dụng cho license này.")
+
+            promotion_code_to_apply = new_promotion_code
+            discount_amount, _ = crud_promotions.calculate_discounted_amount(price_after_broker_discount, promotion)
+            promotion_discount_amount = discount_amount
+    else:
+        # Giữ nguyên mã khuyến mãi hiện tại nhưng tính lại trên giá đã điều chỉnh broker
+        if transaction.promotion_code_applied:
+            promotion_code_to_apply = transaction.promotion_code_applied
+            promotion = await crud_promotions.is_promotion_code_valid_and_active(
+                db, transaction.promotion_code_applied, transaction.license_key
+            )
+            if promotion:
+                discount_amount, _ = crud_promotions.calculate_discounted_amount(price_after_broker_discount, promotion)
+                promotion_discount_amount = discount_amount
+
+    # Tính giá cuối cùng
+    calculated_transaction_amount = price_after_broker_discount - promotion_discount_amount
+    if calculated_transaction_amount < 0:
+        calculated_transaction_amount = 0.0
+        # Điều chỉnh lại promotion discount nếu quá mức
+        promotion_discount_amount = price_after_broker_discount
+
+    # Tính tổng giảm giá
+    total_discount = broker_discount_amount + promotion_discount_amount
+
+    return {
+        "original_price": original_price,
+        "promotion_code_applied": promotion_code_to_apply,
+        "promotion_discount_amount": promotion_discount_amount if promotion_discount_amount > 0 else None,
+        "broker_code_applied": broker_code_to_apply,
+        "broker_discount_amount": broker_discount_amount if broker_discount_amount > 0 else None,
+        "total_discount_amount": total_discount if total_discount > 0 else None,
+        "calculated_transaction_amount": calculated_transaction_amount,
+    }
+
+
+async def delete_transaction_db(db: AsyncIOMotorDatabase, transaction_id_str: PyObjectId) -> bool:
+    """
+    Xóa transaction, nhưng chỉ được phép xóa nếu không có subscription nào đang sử dụng transaction này.
+    Trả về True nếu xóa thành công, False nếu không tìm thấy transaction.
+    Raise ValueError nếu transaction đang được sử dụng bởi subscription.
+    """
+    transaction = await get_transaction_by_id(db, transaction_id_str)
+    if not transaction:
+        raise ValueError(f"Giao dịch với ID {transaction_id_str} không tồn tại.")
+
+    # Kiểm tra xem có subscription nào đang sử dụng transaction này không
+    if transaction.target_subscription_id:
+        # Kiểm tra subscription có tồn tại không
+        subscription = await crud_subscriptions.get_subscription_by_id_db(db, transaction.target_subscription_id)
+        if subscription:
+            raise ValueError(
+                f"Không thể xóa giao dịch {transaction_id_str} vì nó đang được sử dụng bởi subscription {subscription.id}. "
+                f"Vui lòng xóa subscription trước khi xóa giao dịch này."
+            )
+
+    # Kiểm tra xem có user nào đang có subscription_id trỏ đến subscription của transaction này không
+    if transaction.target_subscription_id:
+        user_with_subscription = await db.users.find_one({"subscription_id": ObjectId(transaction.target_subscription_id)})
+        if user_with_subscription:
+            raise ValueError(
+                f"Không thể xóa giao dịch {transaction_id_str} vì subscription liên kết "
+                f"đang được sử dụng bởi user {user_with_subscription.get('email', 'N/A')}. "
+                f"Vui lòng cập nhật user trước khi xóa."
+            )
+
+    # Thực hiện xóa transaction
+    delete_result = await db[TRANSACTIONS_COLLECTION].delete_one({"_id": ObjectId(transaction_id_str)})
+
+    if delete_result.deleted_count > 0:
+        logger.info(f"Đã xóa transaction {transaction_id_str} thành công")
+        return True
+    else:
+        logger.warning(f"Không thể xóa transaction {transaction_id_str} - không tìm thấy khi delete")
+        return False

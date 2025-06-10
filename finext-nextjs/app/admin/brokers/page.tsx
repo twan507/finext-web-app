@@ -412,9 +412,8 @@ export default function BrokersPage() {
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <BrokerIcon sx={{ mr: 1, fontSize: '24px' }} />
                     <Typography
-                        variant="h4"
+                        variant="h"
                         component="h1"
-                        sx={responsiveTypographyTokens.h4Enhanced}
                     >
                         Quản lý Brokers
                     </Typography>
