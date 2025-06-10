@@ -2,25 +2,30 @@
 
 /* 1. Khai báo box-sizing và font smoothing cơ bản cho <html> */
 html {
-  box-sizing: border-box; /* Đảm bảo padding và border không làm tăng kích thước tổng thể của phần tử.
+  box-sizing: border-box;
+  /* Đảm bảo padding và border không làm tăng kích thước tổng thể của phần tử.
                            Đây là một thực hành tốt và phổ biến. CssBaseline của MUI cũng có thể đã bao gồm điều này. */
-  -webkit-font-smoothing: antialiased; /* Cải thiện hiển thị font trên trình duyệt WebKit (Chrome, Safari). */
-  -moz-osx-font-smoothing: grayscale;  /* Cải thiện hiển thị font trên Firefox (macOS). */
-                           /* CssBaseline của MUI có thể cũng đã xử lý các thuộc tính font-smoothing này. */
+  -webkit-font-smoothing: antialiased;
+  /* Cải thiện hiển thị font trên trình duyệt WebKit (Chrome, Safari). */
+  -moz-osx-font-smoothing: grayscale;
+  /* Cải thiện hiển thị font trên Firefox (macOS). */
+  /* CssBaseline của MUI có thể cũng đã xử lý các thuộc tính font-smoothing này. */
 }
 
 /* 2. Kế thừa box-sizing cho tất cả các phần tử */
 *,
 *::before,
 *::after {
-  box-sizing: inherit; /* Tất cả các phần tử và pseudo-elements sẽ kế thừa box-sizing từ html.
+  box-sizing: inherit;
+  /* Tất cả các phần tử và pseudo-elements sẽ kế thừa box-sizing từ html.
                          Giúp quản lý kích thước phần tử dễ dàng hơn.
                          CssBaseline của MUI cũng thường bao gồm quy tắc này. */
 }
 
 /* 3. Reset margin mặc định của body */
 body {
-  margin: 0; /* Loại bỏ margin mặc định của trình duyệt cho thẻ body.
+  margin: 0;
+  /* Loại bỏ margin mặc định của trình duyệt cho thẻ body.
                 CssBaseline của MUI cũng sẽ làm điều này.
                 Font-family, background-color, color cho body sẽ được
                 CssBaseline và MuiProvider (thông qua theme) áp dụng.
@@ -32,9 +37,12 @@ body {
 img,
 video,
 svg {
-  max-width: 100%; /* Đảm bảo các media không tràn ra ngoài container cha của chúng. */
-  height: auto;   /* Giữ tỷ lệ khung hình khi max-width được áp dụng. */
-  display: block; /* Loại bỏ khoảng trắng thừa bên dưới các phần tử inline như <img>.
+  max-width: 100%;
+  /* Đảm bảo các media không tràn ra ngoài container cha của chúng. */
+  height: auto;
+  /* Giữ tỷ lệ khung hình khi max-width được áp dụng. */
+  display: block;
+  /* Loại bỏ khoảng trắng thừa bên dưới các phần tử inline như <img>.
                      Nếu bạn thường xuyên dùng MUI Image component hoặc Box để bọc img,
                      thì style này có thể không quá cần thiết. */
 }

@@ -92,10 +92,8 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
     const [selectedLicense, setSelectedLicense] = useState<LicensePublic | null>(null);
     const [selectedSubscription, setSelectedSubscription] = useState<SubscriptionPublic | null>(null); const [loading, setLoading] = useState(false);
     const [loadingUsers, setLoadingUsers] = useState(false);
-    const [loadingLicenses, setLoadingLicenses] = useState(false); const [loadingSubscriptions, setLoadingSubscriptions] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [loadingLicenses, setLoadingLicenses] = useState(false); const [loadingSubscriptions, setLoadingSubscriptions] = useState(false); const [error, setError] = useState<string | null>(null);
     const [warning, setWarning] = useState<string | null>(null);
-    const [brokerCodeError, setBrokerCodeError] = useState<string | null>(null);
     const [hasActiveNonBasicSub, setHasActiveNonBasicSub] = useState(false);// Fetch all users
     const fetchUsers = async () => {
         setLoadingUsers(true);
@@ -231,25 +229,21 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
             setSelectedSubscription(null);
             setError(null);
             setWarning(null);
-            setBrokerCodeError(null);
             setHasActiveNonBasicSub(false);
         }
     }, [open]); const handleUserChange = (user: UserPublic | null) => {
-        setSelectedUser(user);
-        setFormData(prev => ({
+        setSelectedUser(user); setFormData(prev => ({
             ...prev,
             buyer_user_id: user?.id || '',
             broker_code: user?.referral_code || ''
-        })); setBrokerCodeError(null);
+        }));
+
         setHasActiveNonBasicSub(false); // Reset state khi user thay đổi
         setWarning(null); // Reset warning khi user thay đổi
         // Clear error khi user thay đổi
         setError(null);
-    };
-
-    const handleLicenseChange = (license: LicensePublic | null) => {
-        setSelectedLicense(license);
-        setFormData(prev => ({
+    }; const handleLicenseChange = (license: LicensePublic | null) => {
+        setSelectedLicense(license); setFormData(prev => ({
             ...prev,
             license_id_for_new_purchase: license?.id || '',
             purchased_duration_days: license?.duration_days || 30
@@ -259,7 +253,9 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
         setFormData(prev => ({
             ...prev,
             subscription_id_to_renew: subscription?.id || ''
-        }));        // Clear error khi subscription được chọn
+        }));
+
+        // Clear error khi subscription được chọn
         if (subscription) {
             setError(null);
             setWarning(null);
@@ -293,54 +289,7 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
         setWarning(null);
     };
 
-    // Validate broker code
-    const validateBrokerCode = async (brokerCode: string): Promise<boolean> => {
-        if (!brokerCode.trim()) {
-            setBrokerCodeError(null);
-            return true; // Empty broker code is allowed
-        }
-
-        // Validate format
-        if (!/^[a-zA-Z0-9]{4}$/.test(brokerCode.trim())) {
-            setBrokerCodeError('Mã broker không hợp lệ. Phải là 4 ký tự chữ và số.');
-            return false;
-        }
-
-        try {
-            const brokerCodeToValidate = brokerCode.trim().toUpperCase();
-            const validationResponse = await apiClient({
-                url: `/api/v1/brokers/validate/${brokerCodeToValidate}`,
-                method: 'GET'
-            });
-
-            if (validationResponse.status === 200 && validationResponse.data?.is_valid) {
-                setBrokerCodeError(null);
-                return true;
-            } else {
-                setBrokerCodeError('Mã broker không tồn tại trong hệ thống.');
-                return false;
-            }
-        } catch (err: any) {
-            setBrokerCodeError('Không thể xác thực mã broker. Vui lòng thử lại sau.');
-            return false;
-        }
-    };
-
-    const handleBrokerCodeChange = (value: string) => {
-        const upperValue = value.toUpperCase();
-        setFormData(prev => ({
-            ...prev,
-            broker_code: upperValue
-        }));
-
-        // Clear previous error
-        setBrokerCodeError(null);
-
-        // Validate if not empty
-        if (upperValue.trim()) {
-            validateBrokerCode(upperValue);
-        }
-    }; const handleSubmit = async () => {
+    const handleSubmit = async () => {
         setError(null);
         setWarning(null);
 
@@ -363,19 +312,9 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
         } if (formData.transaction_type === 'renewal' && !formData.subscription_id_to_renew) {
             setError('Vui lòng chọn subscription để gia hạn. Nếu không có subscription khả dụng, hãy chọn giao dịch "Mua mới" thay thế.');
             return;
-        }
-
-        if (formData.purchased_duration_days <= 0) {
+        } if (formData.purchased_duration_days <= 0) {
             setError('Thời gian mua phải lớn hơn 0 ngày.');
             return;
-        }
-
-        // Validate broker code if provided
-        if (formData.broker_code?.trim()) {
-            const isValidBroker = await validateBrokerCode(formData.broker_code);
-            if (!isValidBroker) {
-                return; // Error message already set in validateBrokerCode
-            }
         }
 
         setLoading(true);
@@ -595,33 +534,36 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
                         <TextField
                             label="Mã broker"
                             value={formData.broker_code || ''}
-                            onChange={(e) => handleBrokerCodeChange(e.target.value)}
+                            onChange={(e) => setFormData(prev => ({
+                                ...prev,
+                                broker_code: e.target.value.toUpperCase()
+                            }))}
                             disabled={selectedUser?.referral_code ? true : false}
                             placeholder={selectedUser?.referral_code ? "Tự động điền từ thông tin người dùng" : "Nhập mã broker (tùy chọn)"}
                             helperText={
                                 selectedUser?.referral_code
                                     ? "Mã broker của người dùng (tự động điền)"
-                                    : brokerCodeError || "Tùy chọn - mã 4 ký tự từ đối tác"
+                                    : "Tùy chọn - mã 4 ký tự từ đối tác"
                             }
-                            error={!!brokerCodeError}
                             fullWidth
                             inputProps={{
                                 maxLength: 4,
                                 style: { textTransform: 'uppercase' }
                             }}
-                        />
-
-                        {/* Row 4 Right: Promotion Code */}
+                        />                        {/* Row 4 Right: Promotion Code */}
                         <TextField
                             label="Mã khuyến mãi"
                             value={formData.promotion_code}
                             onChange={(e) => setFormData(prev => ({
                                 ...prev,
-                                promotion_code: e.target.value
+                                promotion_code: e.target.value.toUpperCase()
                             }))}
                             placeholder="Nhập mã khuyến mãi (nếu có)"
                             helperText="Tùy chọn - mã giảm giá cho giao dịch"
                             fullWidth
+                            inputProps={{
+                                style: { textTransform: 'uppercase' }
+                            }}
                         />
 
                         {/* Row 5: Notes - Full Width */}

@@ -9,7 +9,7 @@ import {
     TablePagination, Tooltip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, useTheme
 } from '@mui/material';
 import {
-    Subscriptions as SubscriptionIcon,
+    Receipt as SubscriptionIcon,
     Add as AddIcon,
     DoDisturbOn as DeactivateIcon,
     AddCircle as ActivateIcon,

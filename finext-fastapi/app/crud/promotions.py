@@ -1,6 +1,6 @@
 # finext-fastapi/app/crud/promotions.py
 import logging
-from typing import List, Optional, Tuple # Thêm Tuple
+from typing import List, Optional, Tuple  # Thêm Tuple
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from datetime import datetime, timezone
@@ -9,7 +9,8 @@ from app.schemas.promotions import PromotionCreate, PromotionUpdate, PromotionIn
 from app.utils.types import PyObjectId
 
 logger = logging.getLogger(__name__)
-PROMOTIONS_COLLECTION = "promotions" # Định nghĩa tên collection
+PROMOTIONS_COLLECTION = "promotions"  # Định nghĩa tên collection
+
 
 async def get_promotion_by_id(db: AsyncIOMotorDatabase, promotion_id: PyObjectId) -> Optional[PromotionInDB]:
     if not ObjectId.is_valid(promotion_id):
@@ -26,16 +27,17 @@ async def get_promotion_by_code(db: AsyncIOMotorDatabase, promotion_code: str) -
         return PromotionInDB(**promo_doc)
     return None
 
+
 # <<<< PHẦN CẬP NHẬT >>>>
 async def get_promotions(
-    db: AsyncIOMotorDatabase, 
-    skip: int = 0, 
-    limit: int = 100, 
+    db: AsyncIOMotorDatabase,
+    skip: int = 0,
+    limit: int = 100,
     is_active: Optional[bool] = None,
     # Thêm các filter nếu cần cho trang admin, ví dụ:
     # promotion_code_filter: Optional[str] = None,
     # discount_type_filter: Optional[DiscountTypeEnum] = None,
-) -> Tuple[List[PromotionInDB], int]: # Trả về Tuple
+) -> Tuple[List[PromotionInDB], int]:  # Trả về Tuple
     """
     Lấy danh sách promotions với filter và phân trang, trả về cả total count.
     """
@@ -46,19 +48,23 @@ async def get_promotions(
     #     query["promotion_code"] = {"$regex": promotion_code_filter.upper(), "$options": "i"}
     # if discount_type_filter:
     #     query["discount_type"] = discount_type_filter.value
-    
+
     total_count = await db[PROMOTIONS_COLLECTION].count_documents(query)
     promos_cursor = (
-        db[PROMOTIONS_COLLECTION].find(query)
-        .sort("created_at", -1) # Sắp xếp theo ngày tạo mới nhất
+        db[PROMOTIONS_COLLECTION]
+        .find(query)
+        .sort("created_at", -1)  # Sắp xếp theo ngày tạo mới nhất
         .skip(skip)
         .limit(limit)
     )
     promos_list_docs = await promos_cursor.to_list(length=limit)
-    
+
     results = [PromotionInDB(**promo) for promo in promos_list_docs]
     return results, total_count
+
+
 # <<<< KẾT THÚC PHẦN CẬP NHẬT >>>>
+
 
 async def create_promotion(db: AsyncIOMotorDatabase, promotion_data: PromotionCreate) -> Optional[PromotionInDB]:
     promo_code_upper = promotion_data.promotion_code.upper()
@@ -86,7 +92,7 @@ async def create_promotion(db: AsyncIOMotorDatabase, promotion_data: PromotionCr
 
     promo_doc_to_insert["created_at"] = now
     promo_doc_to_insert["updated_at"] = now
-    promo_doc_to_insert["usage_count"] = 0 # Khởi tạo usage_count
+    promo_doc_to_insert["usage_count"] = 0  # Khởi tạo usage_count
 
     try:
         result = await db[PROMOTIONS_COLLECTION].insert_one(promo_doc_to_insert)
@@ -109,7 +115,7 @@ async def update_promotion(
 
     existing_promo = await get_promotion_by_id(db, promotion_id)
     if not existing_promo:
-        return None # Hoặc raise HTTPException 404 từ router
+        return None  # Hoặc raise HTTPException 404 từ router
 
     update_data = promotion_update_data.model_dump(exclude_unset=True)
     if not update_data:
@@ -135,11 +141,10 @@ async def update_promotion(
     if start_date_to_check and end_date_to_check and start_date_to_check >= end_date_to_check:
         raise ValueError("Ngày bắt đầu phải trước ngày kết thúc.")
 
-    if "promotion_code" in update_data: # Không cho phép cập nhật promotion_code
+    if "promotion_code" in update_data:  # Không cho phép cập nhật promotion_code
         del update_data["promotion_code"]
-    if "usage_count" in update_data: # Không cho phép cập nhật usage_count trực tiếp
+    if "usage_count" in update_data:  # Không cho phép cập nhật usage_count trực tiếp
         del update_data["usage_count"]
-
 
     update_data["updated_at"] = datetime.now(timezone.utc)
 
@@ -156,7 +161,7 @@ async def deactivate_promotion(db: AsyncIOMotorDatabase, promotion_id: PyObjectI
         raise ValueError(f"Không tìm thấy mã khuyến mãi với ID: {promotion_id}")
 
     if not promo.is_active:
-        return promo # Đã inactive rồi
+        return promo  # Đã inactive rồi
 
     await db[PROMOTIONS_COLLECTION].update_one(
         {"_id": ObjectId(promotion_id)}, {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc)}}
@@ -164,10 +169,43 @@ async def deactivate_promotion(db: AsyncIOMotorDatabase, promotion_id: PyObjectI
     return await get_promotion_by_id(db, promotion_id)
 
 
+async def delete_promotion(db: AsyncIOMotorDatabase, promotion_id: PyObjectId) -> Optional[PromotionInDB]:
+    """
+    Delete a promotion by ID.
+    - Cannot delete active promotions, must deactivate first
+    """
+    if not ObjectId.is_valid(promotion_id):
+        logger.warning(f"Promotion ID không hợp lệ để xóa: {promotion_id}")
+        return None
+
+    promo_obj_id = ObjectId(promotion_id)
+    promo_before_delete = await db[PROMOTIONS_COLLECTION].find_one({"_id": promo_obj_id})
+    if not promo_before_delete:
+        logger.warning(f"Không tìm thấy mã khuyến mãi với ID {promotion_id} để xóa.")
+        return None
+
+    # Check if promotion is currently active
+    if promo_before_delete.get("is_active", False):
+        logger.warning(f"Attempt to delete active promotion {promotion_id}. Must deactivate first.")
+        raise ValueError("Không thể xóa mã khuyến mãi đang hoạt động. Vui lòng vô hiệu hóa mã khuyến mãi trước khi xóa.")
+
+    # Store promotion data before deletion
+    promotion_to_return = await get_promotion_by_id(db, promotion_id)
+
+    # Delete the promotion
+    delete_result = await db[PROMOTIONS_COLLECTION].delete_one({"_id": promo_obj_id})
+
+    if delete_result.deleted_count > 0:
+        logger.info(f"Đã xóa mã khuyến mãi {promotion_id}.")
+        return promotion_to_return
+    else:
+        logger.warning(f"Không thể xóa mã khuyến mãi {promotion_id} (có thể do lỗi hoặc không tìm thấy).")
+        return None
+
+
 async def increment_promotion_usage(db: AsyncIOMotorDatabase, promotion_code: str) -> bool:
     result = await db[PROMOTIONS_COLLECTION].update_one(
-        {"promotion_code": promotion_code.upper()}, 
-        {"$inc": {"usage_count": 1}, "$set": {"updated_at": datetime.now(timezone.utc)}}
+        {"promotion_code": promotion_code.upper()}, {"$inc": {"usage_count": 1}, "$set": {"updated_at": datetime.now(timezone.utc)}}
     )
     return result.modified_count > 0
 
@@ -229,10 +267,11 @@ def calculate_discounted_amount(original_amount: float, promo: PromotionInDB) ->
 
     final_amount = original_amount - discount_applied
     if final_amount < 0:
-        final_amount = 0.0 # Giá trị không thể âm
-        discount_applied = original_amount # Giảm giá tối đa bằng giá gốc
+        final_amount = 0.0  # Giá trị không thể âm
+        discount_applied = original_amount  # Giảm giá tối đa bằng giá gốc
 
     return round(discount_applied, 2), round(final_amount, 2)
+
 
 async def run_deactivate_expired_promotions_task(db: AsyncIOMotorDatabase) -> int:
     """
@@ -240,28 +279,25 @@ async def run_deactivate_expired_promotions_task(db: AsyncIOMotorDatabase) -> in
     đã qua end_date và vẫn đang is_active.
     """
     now = datetime.now(timezone.utc)
-    query = {
-        "is_active": True,
-        "end_date": {"$lt": now}
-    }
-    
+    query = {"is_active": True, "end_date": {"$lt": now}}
+
     promos_to_deactivate_cursor = db[PROMOTIONS_COLLECTION].find(query)
     deactivated_count = 0
-    
+
     async for promo_doc in promos_to_deactivate_cursor:
         promo_id_str = str(promo_doc["_id"])
         try:
-            updated_promo = await deactivate_promotion(db, promo_id_str) # type: ignore
+            updated_promo = await deactivate_promotion(db, promo_id_str)  # type: ignore
             if updated_promo and not updated_promo.is_active:
                 logger.info(f"Cron Task: Deactivated expired promotion ID: {promo_id_str}, Code: {promo_doc.get('promotion_code')}")
                 deactivated_count += 1
-            elif updated_promo and updated_promo.is_active: # Không nên xảy ra
+            elif updated_promo and updated_promo.is_active:  # Không nên xảy ra
                 logger.warning(f"Cron Task: Attempted to deactivate promo {promo_id_str}, but it remained active.")
-        except ValueError as ve: 
+        except ValueError as ve:
             logger.warning(f"Cron Task: Skipped deactivating promotion {promo_id_str} due to: {ve}")
         except Exception as e:
             logger.error(f"Cron Task: Error deactivating promotion {promo_id_str}: {e}", exc_info=True)
-            
+
     if deactivated_count > 0:
         logger.info(f"Cron Task: Finished deactivating {deactivated_count} expired promotions.")
     else:

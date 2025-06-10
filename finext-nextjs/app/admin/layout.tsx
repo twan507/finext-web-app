@@ -26,7 +26,7 @@ import {
   VerifiedUser,
   Category,
   Campaign,
-  Subscriptions,
+  Receipt,
   ReceiptLong,
   Policy,
   BusinessCenter,
@@ -68,7 +68,7 @@ const navigationStructure: (NavItem | NavGroup)[] = [
     groupIcon: <ShoppingCart />,
     subItems: [
       { text: 'Transactions', href: '/admin/transactions', icon: <ReceiptLong /> },
-      { text: 'Subscriptions', href: '/admin/subscriptions', icon: <Subscriptions /> },
+      { text: 'Subscriptions', href: '/admin/subscriptions', icon: <Receipt /> },
       { text: 'Promotions', href: '/admin/promotions', icon: <Campaign /> },
     ],
   },

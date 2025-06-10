@@ -160,6 +160,30 @@ async def deactivate_one_promotion(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
+@router.delete(
+    "/{promotion_id}",
+    response_model=StandardApiResponse[PromotionPublic],
+    summary="[Admin] Xóa một mã khuyến mãi",
+    dependencies=[Depends(require_permission("promotion", "manage"))],
+    tags=["promotions"],
+)
+@api_response_wrapper(default_success_message="Xóa mã khuyến mãi thành công.")
+async def delete_one_promotion(
+    promotion_id: PyObjectId,
+    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
+):
+    try:
+        deleted_promo = await crud_promotions.delete_promotion(db, promotion_id)
+        if not deleted_promo:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Mã khuyến mãi với ID {promotion_id} không tìm thấy hoặc không thể xóa.",
+            )
+        return PromotionPublic.model_validate(deleted_promo)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
+
 @router.get(
     "/validate/{promotion_code_str}",
     response_model=StandardApiResponse[PromotionValidationResponse],
