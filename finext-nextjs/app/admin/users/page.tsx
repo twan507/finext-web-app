@@ -11,7 +11,7 @@ import {
   useTheme
 } from '@mui/material';
 import {
-  Add as AddIcon, Settings as EditIcon, DeleteOutline as DeleteIcon,
+  Add as AddIcon, EditSquare as EditIcon, Delete as DeleteIcon,
   UnfoldMore as ExpandIcon, UnfoldLess as CollapseIcon,
   People
 } from '@mui/icons-material';
@@ -880,24 +880,25 @@ const UsersPage: React.FC = () => {
                           zIndex: 1
                         }
                       }}>
-                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                          <Tooltip title="Chỉnh sửa người dùng">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleEditUser(user)}
-                              sx={{
-                                minWidth: { xs: 32, sm: 'auto' },
-                                width: { xs: 32, sm: 'auto' },
-                                height: { xs: 32, sm: 'auto' }
-                              }}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
+                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>                          <Tooltip title="Chỉnh sửa người dùng">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleEditUser(user)}
+                            color="primary"
+                            sx={{
+                              minWidth: { xs: 32, sm: 'auto' },
+                              width: { xs: 32, sm: 'auto' },
+                              height: { xs: 32, sm: 'auto' }
+                            }}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                           <Tooltip title="Xóa người dùng">
                             <IconButton
                               size="small"
                               onClick={() => handleOpenDeleteDialog(user)}
+                              color="error"
                               sx={{
                                 minWidth: { xs: 32, sm: 'auto' },
                                 width: { xs: 32, sm: 'auto' },

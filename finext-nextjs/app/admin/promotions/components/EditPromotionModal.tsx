@@ -17,7 +17,7 @@ import { apiClient } from 'services/apiClient';
 import { colorTokens } from 'theme/tokens';
 import { convertGMT7ToUTC, convertUTCToGMT7DateString } from 'utils/dateUtils';
 import { filterNonSystemLicenses } from 'utils/systemLicenses';
-import ModernSwitch from './ModernSwitch';
+import CustomSwitchButton from '../../../../components/CustomSwitchButton';
 
 enum DiscountTypeEnumFE {
     PERCENTAGE = "percentage",
@@ -347,17 +347,21 @@ const EditPromotionModal: React.FC<EditPromotionModalProps> = ({
                         <Box>
                             <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 'bold' }}>
                                 Cài đặt khuyến mãi
-                            </Typography>
-
-                            {/* Usage Limit */}
+                            </Typography>                            {/* Usage Limit */}
                             <Box sx={{ mb: 3 }}>
-                                <ModernSwitch
+                                <CustomSwitchButton
                                     checked={hasUsageLimit}
                                     onChange={setHasUsageLimit}
                                     label="Giới hạn số lần sử dụng"
                                     description="Đặt giới hạn tối đa số lần khuyến mãi có thể được sử dụng"
                                     disabled={loading}
                                     icon={<LimitIcon />}
+                                    variant="unified"
+                                    size="small"
+                                    showIcon={true}
+                                    fullWidth={true}
+                                    backgroundColor="subtle"
+                                    borderStyle="subtle"
                                 />
                                 {hasUsageLimit && (
                                     <TextField
@@ -373,17 +377,21 @@ const EditPromotionModal: React.FC<EditPromotionModalProps> = ({
                                         inputProps={{ min: promotion.usage_count + 1 }}
                                     />
                                 )}
-                            </Box>
-
-                            {/* Date Range */}
+                            </Box>                            {/* Date Range */}
                             <Box sx={{ mb: 3 }}>
-                                <ModernSwitch
+                                <CustomSwitchButton
                                     checked={hasDateRange}
                                     onChange={setHasDateRange}
                                     label="Thiết lập thời gian có hiệu lực"
                                     description="Đặt ngày bắt đầu và kết thúc cho khuyến mãi"
                                     disabled={loading}
                                     icon={<DateIcon />}
+                                    variant="unified"
+                                    size="small"
+                                    showIcon={true}
+                                    fullWidth={true}
+                                    backgroundColor="subtle"
+                                    borderStyle="subtle"
                                 />
                                 {hasDateRange && (
                                     <Box sx={{
@@ -415,17 +423,21 @@ const EditPromotionModal: React.FC<EditPromotionModalProps> = ({
                                         />
                                     </Box>
                                 )}
-                            </Box>
-
-                            {/* License Restriction */}
+                            </Box>                            {/* License Restriction */}
                             <Box>
-                                <ModernSwitch
+                                <CustomSwitchButton
                                     checked={hasLicenseRestriction}
                                     onChange={setHasLicenseRestriction}
                                     label="Áp dụng chỉ cho các gói license cụ thể"
                                     description="Giới hạn khuyến mãi chỉ áp dụng cho một số gói license nhất định"
                                     disabled={loading}
                                     icon={<LicenseIcon />}
+                                    variant="unified"
+                                    size="small"
+                                    showIcon={true}
+                                    fullWidth={true}
+                                    backgroundColor="subtle"
+                                    borderStyle="subtle"
                                 />
                                 {hasLicenseRestriction && (
                                     <Autocomplete

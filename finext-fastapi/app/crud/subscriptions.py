@@ -729,7 +729,7 @@ async def delete_subscription_db(
     # Check if subscription is currently active
     if sub_before_delete.get("is_active", False):
         logger.warning(f"Attempt to delete active subscription {subscription_id_str}. Must deactivate first.")
-        raise ValueError(f"Không thể xóa subscription đang hoạt động. Vui lòng hủy kích hoạt subscription trước khi xóa.")
+        raise ValueError("Không thể xóa subscription đang hoạt động. Vui lòng hủy kích hoạt subscription trước khi xóa.")
 
     # Store subscription data before deletion
     subscription_to_return = await get_subscription_by_id_db(db, subscription_id_str)

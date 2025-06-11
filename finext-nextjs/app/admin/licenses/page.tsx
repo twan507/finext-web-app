@@ -1,16 +1,37 @@
 // finext-nextjs/app/admin/licenses/page.tsx
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { apiClient } from 'services/apiClient';
 import {
     Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
     TableHead, TableRow, Button, Chip, IconButton, Alert, CircularProgress,
-    TablePagination, Tooltip, Switch, Grid, TextField, MenuItem,
-    FormControlLabel
+    TablePagination, Tooltip, useTheme, Dialog, DialogTitle,
+    DialogContent, DialogContentText, DialogActions
 } from '@mui/material';
-import { VerifiedUser as LicenseIcon, Add as AddIcon, Edit as EditIcon, ToggleOff as DeactivateIcon, Refresh as RefreshIcon, ToggleOn as ActivateIcon } from '@mui/icons-material';
-import { format, parseISO } from 'date-fns'; // Assuming created_at/updated_at might be returned
+import {
+    VerifiedUser as LicenseIcon,
+    Add as AddIcon,
+    EditSquare as EditIcon,
+    Delete as DeleteIcon,
+    UnfoldMore as ExpandIcon,
+    UnfoldLess as CollapseIcon,
+    AddCircle as ActivateIcon,
+    DoDisturbOn as DeactivateIcon
+} from '@mui/icons-material';
+import { format, parseISO } from 'date-fns';
+import { colorTokens, responsiveTypographyTokens } from 'theme/tokens';
+import SortableTableHead from '../components/SortableTableHead';
+import {
+    SortConfig,
+    ColumnConfig,
+    sortData,
+    getNextSortDirection,
+    getResponsiveDisplayStyle
+} from '../components/TableSortUtils';
+import LicenseSearch from './components/LicenseSearch';
+import CreateLicenseModal from './components/CreateLicenseModal';
+import EditLicenseModal from './components/EditLicenseModal';
 
 interface LicensePublic {
     id: string;
@@ -20,7 +41,6 @@ interface LicensePublic {
     duration_days: number;
     feature_keys: string[];
     is_active: boolean;
-    // created_at and updated_at are in LicenseInDB, check if your /api/v1/licenses/ returns them
     created_at?: string;
     updated_at?: string;
 }
@@ -32,38 +52,185 @@ interface PaginatedLicensesResponse {
 
 
 export default function LicensesPage() {
+    const theme = useTheme();
+    const componentColors = theme.palette.mode === 'light'
+        ? colorTokens.lightComponentColors
+        : colorTokens.darkComponentColors;
+
     const [licenses, setLicenses] = useState<LicensePublic[]>([]);
+    const [filteredLicenses, setFilteredLicenses] = useState<LicensePublic[]>([]);
+    const [isFiltering, setIsFiltering] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalCount, setTotalCount] = useState(0);
-    const [filterIncludeInactive, setFilterIncludeInactive] = useState(false);
 
+    // View and sorting state
+    const [expandedView, setExpandedView] = useState(false);
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
-    const fetchLicenses = useCallback(async () => {
+    // Modal state
+    const [openCreateModal, setOpenCreateModal] = useState(false);
+    const [openEditModal, setOpenEditModal] = useState(false);
+    const [selectedLicense, setSelectedLicense] = useState<LicensePublic | null>(null);
+
+    // Delete Dialog state
+    const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+    const [licenseToDelete, setLicenseToDelete] = useState<LicensePublic | null>(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+
+    // Action dialogs state
+    const [actionLicense, setActionLicense] = useState<LicensePublic | null>(null);
+    const [openActivateDialog, setOpenActivateDialog] = useState(false);
+    const [openDeactivateDialog, setOpenDeactivateDialog] = useState(false);    // Helper function to format duration days (simple format)
+    const formatDurationDays = (days: number): string => {
+        return `${days} ngày`;
+    };
+
+    // Column configuration for sortable table
+    const columnConfigs: ColumnConfig[] = useMemo(() => [
+        {
+            id: 'key',
+            label: 'License Key',
+            sortable: true,
+            sortType: 'string',
+            accessor: (license: LicensePublic) => license.key,
+            minWidth: expandedView ? 'auto' : 130,
+        },
+        {
+            id: 'name',
+            label: 'Tên gói',
+            sortable: true,
+            sortType: 'string',
+            accessor: (license: LicensePublic) => license.name,
+            minWidth: expandedView ? 'auto' : 200,
+            responsive: { xs: 'none', sm: 'none', md: 'none' }
+        },
+        {
+            id: 'price',
+            label: 'Giá tiền',
+            sortable: true,
+            sortType: 'number',
+            accessor: (license: LicensePublic) => license.price,
+            minWidth: expandedView ? 'auto' : 120,
+            responsive: { xs: 'none' },
+            format: (value: number) => `${value.toLocaleString('vi-VN')} VNĐ`
+        },
+        {
+            id: 'duration_days',
+            label: 'Thời hạn',
+            sortable: true,
+            sortType: 'number',
+            accessor: (license: LicensePublic) => license.duration_days,
+            minWidth: expandedView ? 'auto' : 120,
+            format: (value: number) => formatDurationDays(value)
+        },
+        {
+            id: 'is_active',
+            label: 'Trạng thái',
+            sortable: true,
+            sortType: 'boolean',
+            accessor: (license: LicensePublic) => license.is_active,
+            minWidth: expandedView ? 'auto' : 100,
+            responsive: { xs: 'none', sm: 'none' },
+        },
+        {
+            id: 'feature_keys',
+            label: 'Tính năng',
+            sortable: true,
+            sortType: 'number',
+            accessor: (license: LicensePublic) => license.feature_keys.length,
+            minWidth: expandedView ? 'auto' : 100,
+            responsive: { xs: 'none', sm: 'none', md: 'none' },
+            format: (value: number) => `${value} tính năng`
+        },
+        {
+            id: 'created_at',
+            label: 'Ngày tạo',
+            sortable: true,
+            sortType: 'date',
+            accessor: (license: LicensePublic) => license.created_at || '',
+            minWidth: expandedView ? 'auto' : 140,
+            responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' },
+            format: (value: string) => {
+                if (!value) return 'N/A';
+                try {
+                    const utcDate = parseISO(value);
+                    const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                    return format(gmt7Date, 'dd/MM/yyyy HH:mm');
+                } catch (error) {
+                    return 'Invalid date';
+                }
+            },
+        },
+        {
+            id: 'updated_at',
+            label: 'Ngày cập nhật',
+            sortable: true,
+            sortType: 'date',
+            accessor: (license: LicensePublic) => license.updated_at || '',
+            minWidth: expandedView ? 'auto' : 140,
+            responsive: { xs: 'none', sm: 'none', md: 'none', lg: 'none' },
+            format: (value: string) => {
+                if (!value) return 'N/A';
+                try {
+                    const utcDate = parseISO(value);
+                    const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                    return format(gmt7Date, 'dd/MM/yyyy HH:mm');
+                } catch (error) {
+                    return 'Invalid date';
+                }
+            },
+        },
+        {
+            id: 'actions',
+            label: '',
+            sortable: false,
+            sortType: 'string',
+            accessor: () => '',
+            minWidth: expandedView ? 'auto' : 60,
+            align: 'center' as const
+        }
+    ], [expandedView]); const fetchLicenses = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await apiClient<PaginatedLicensesResponse | LicensePublic[]>({
-                url: `/api/v1/licenses/?skip=${page * rowsPerPage}&limit=${rowsPerPage}&include_inactive=${filterIncludeInactive}`,
-                method: 'GET',
-            });
+            const queryParams: Record<string, any> = {
+                skip: page * rowsPerPage,
+                limit: rowsPerPage,
+                include_inactive: true, // Thêm tham số để lấy cả license không hoạt động
+                show_all: true, // Thêm tham số backup để đảm bảo lấy tất cả
+            };
 
-            if (response.status === 200 && response.data) {
+            // Add sort parameters if sortConfig is defined
+            if (sortConfig && sortConfig.key && sortConfig.direction) {
+                queryParams.sort_by = sortConfig.key;
+                queryParams.sort_order = sortConfig.direction;
+            }
+
+            const response = await apiClient<PaginatedLicensesResponse | LicensePublic[]>({
+                url: `/api/v1/licenses/`,
+                method: 'GET',
+                queryParams,
+            }); if (response.status === 200 && response.data) {
                 if ('items' in response.data && Array.isArray(response.data.items) && typeof response.data.total === 'number') {
+                    // Debug: Log để kiểm tra dữ liệu từ API
+                    console.log('License data from API:', response.data.items[0]);
                     setLicenses(response.data.items);
                     setTotalCount(response.data.total);
                 } else if (Array.isArray(response.data)) {
-                     console.warn("Backend for licenses did not return total count. Pagination might be inaccurate.");
+                    console.warn("Backend for licenses did not return total count. Pagination might be inaccurate.");
+                    // Debug: Log để kiểm tra dữ liệu từ API
+                    console.log('License data from API (array):', response.data[0]);
                     setLicenses(response.data as LicensePublic[]);
                     const currentDataLength = (response.data as LicensePublic[]).length;
-                     if (page === 0) {
-                        setTotalCount(currentDataLength < rowsPerPage ? currentDataLength : currentDataLength + (currentDataLength === rowsPerPage ? rowsPerPage : 0) );
+                    if (page === 0) {
+                        setTotalCount(currentDataLength < rowsPerPage ? currentDataLength : currentDataLength + (currentDataLength === rowsPerPage ? rowsPerPage : 0));
                     } else if (currentDataLength < rowsPerPage) {
                         setTotalCount(page * rowsPerPage + currentDataLength);
                     } else {
-                         setTotalCount(page * rowsPerPage + currentDataLength + rowsPerPage);
+                        setTotalCount(page * rowsPerPage + currentDataLength + rowsPerPage);
                     }
                 } else {
                     throw new Error("Unexpected data structure from API for licenses.");
@@ -80,11 +247,18 @@ export default function LicensesPage() {
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage, filterIncludeInactive]);
+    }, [page, rowsPerPage, sortConfig]);
 
     useEffect(() => {
         fetchLicenses();
     }, [fetchLicenses]);
+
+    // Update filtered licenses when licenses change and not actively filtering
+    useEffect(() => {
+        if (!isFiltering) {
+            setFilteredLicenses(licenses);
+        }
+    }, [licenses, isFiltering]);
 
     const handleChangePage = (event: unknown, newPage: number) => {
         setPage(newPage);
@@ -94,66 +268,269 @@ export default function LicensesPage() {
         setRowsPerPage(parseInt(event.target.value, 10));
         setPage(0);
     };
-    
-    const handleToggleActiveStatus = async (license: LicensePublic) => {
-        const originalStatus = license.is_active;
-        // Optimistic UI update
-        setLicenses(prev => prev.map(l => l.id === license.id ? { ...l, is_active: !originalStatus } : l));
 
-        try {
-            if (originalStatus) { // If it was active, now deactivating
-                await apiClient<LicensePublic>({
-                    url: `/api/v1/licenses/${license.id}/deactivate`,
-                    method: 'PUT',
-                });
-            } else { // If it was inactive, now activating (PUT to main update endpoint)
-                 await apiClient<LicensePublic>({
-                    url: `/api/v1/licenses/${license.id}`,
-                    method: 'PUT',
-                    body: { is_active: true } // Only send the field to change
-                });
-            }
-            // fetchLicenses(); // Re-fetch to confirm
-        } catch (err: any) {
-            setError(err.message || `Failed to update status for license ${license.key}.`);
-            // Revert UI on error
-            setLicenses(prev => prev.map(l => l.id === license.id ? { ...l, is_active: originalStatus } : l));
+    const handleFilteredLicenses = (filtered: LicensePublic[], isActivelyFiltering: boolean) => {
+        setFilteredLicenses(filtered);
+        setIsFiltering(isActivelyFiltering);
+        // Only reset page when actively switching between filtering states
+        if (isActivelyFiltering !== isFiltering) {
+            setPage(0);
         }
     };
 
+    // Handle sorting
+    const handleSort = (columnKey: string) => {
+        const column = columnConfigs.find(col => col.id === columnKey);
+        if (!column || !column.sortable) return;
 
-    const handleAddLicense = () => console.log("Add license (not implemented)");
-    const handleEditLicense = (licenseId: string) => console.log("Edit license (not implemented):", licenseId);
+        const newDirection = sortConfig?.key === columnKey
+            ? getNextSortDirection(sortConfig.direction)
+            : 'asc';
 
+        setSortConfig(newDirection ? { key: columnKey, direction: newDirection } : null);
+        setPage(0); // Reset to first page when sorting
+    };
 
+    // Compute sorted data
+    const sortedLicenses = useMemo(() => {
+        const dataToSort = isFiltering ? filteredLicenses : licenses;
+
+        if (!sortConfig || !sortConfig.direction) {
+            return dataToSort;
+        }
+
+        const column = columnConfigs.find(col => col.id === sortConfig.key);
+        if (!column) return dataToSort;
+
+        return sortData(dataToSort, sortConfig, column);
+    }, [licenses, filteredLicenses, isFiltering, sortConfig, columnConfigs]);
+
+    // Calculate paginated licenses - use client-side pagination when sorting/filtering, server-side pagination otherwise
+    const paginatedLicenses = useMemo(() => {
+        if (isFiltering || sortConfig) {
+            // Client-side pagination for filtered/sorted results
+            if (rowsPerPage === 99999) {
+                // Show all results
+                return sortedLicenses;
+            }
+            const startIndex = page * rowsPerPage;
+            const endIndex = startIndex + rowsPerPage;
+            return sortedLicenses.slice(startIndex, endIndex);
+        } else {
+            // Server-side pagination - use licenses directly as they are already paginated
+            return licenses;
+        }
+    }, [licenses, sortedLicenses, isFiltering, sortConfig, page, rowsPerPage]);
+
+    // Calculate total count for pagination
+    const displayTotalCount = (isFiltering || sortConfig) ? sortedLicenses.length : totalCount;
+    // Activate/Deactivate handlers
+    const handleOpenActivateDialog = (license: LicensePublic) => {
+        setActionLicense(license);
+        setOpenActivateDialog(true);
+    };
+
+    const handleCloseActivateDialog = () => {
+        setActionLicense(null);
+        setOpenActivateDialog(false);
+    }; const handleActivateLicense = async () => {
+        if (!actionLicense) return;
+        try {
+            const response = await apiClient<LicensePublic>({
+                url: `/api/v1/licenses/${actionLicense.id}/activate`,
+                method: 'PUT',
+            });
+
+            if (response.status === 200) {
+                // Cập nhật state local trước khi fetch lại để tránh flicker
+                setLicenses(prevLicenses =>
+                    prevLicenses.map(license =>
+                        license.id === actionLicense.id
+                            ? { ...license, is_active: true }
+                            : license
+                    )
+                );
+                // Sau đó fetch lại để đảm bảo dữ liệu consistency
+                await fetchLicenses();
+                handleCloseActivateDialog();
+            } else {
+                setError(response.message || "Failed to activate license.");
+                handleCloseActivateDialog();
+            }
+        } catch (err: any) {
+            setError(err.message || "Failed to activate license.");
+            handleCloseActivateDialog();
+        }
+    };
+
+    const handleOpenDeactivateDialog = (license: LicensePublic) => {
+        setActionLicense(license);
+        setOpenDeactivateDialog(true);
+    };
+
+    const handleCloseDeactivateDialog = () => {
+        setActionLicense(null);
+        setOpenDeactivateDialog(false);
+    }; const handleDeactivateLicense = async () => {
+        if (!actionLicense) return;
+        try {
+            const response = await apiClient({
+                url: `/api/v1/licenses/${actionLicense.id}/deactivate`,
+                method: 'PUT',
+            });
+
+            if (response.status === 200) {
+                // Cập nhật state local trước khi fetch lại để tránh flicker
+                setLicenses(prevLicenses =>
+                    prevLicenses.map(license =>
+                        license.id === actionLicense.id
+                            ? { ...license, is_active: false }
+                            : license
+                    )
+                );
+                // Sau đó fetch lại để đảm bảo dữ liệu consistency
+                await fetchLicenses();
+                handleCloseDeactivateDialog();
+            } else {
+                setError(response.message || "Failed to deactivate license.");
+                handleCloseDeactivateDialog();
+            }
+        } catch (err: any) {
+            setError(err.message || "Failed to deactivate license.");
+            handleCloseDeactivateDialog();
+        }
+    };
+
+    // Delete handlers
+    const handleOpenDeleteDialog = (license: LicensePublic) => {
+        setLicenseToDelete(license);
+        setOpenDeleteDialog(true);
+    };
+
+    const handleCloseDeleteDialog = () => {
+        setLicenseToDelete(null);
+        setOpenDeleteDialog(false);
+        setDeleteLoading(false);
+    };
+
+    const handleDeleteLicense = async () => {
+        if (!licenseToDelete) return;
+
+        setDeleteLoading(true);
+        setError(null);
+
+        try {
+            const response = await apiClient({
+                url: `/api/v1/licenses/${licenseToDelete.id}`,
+                method: 'DELETE',
+            });
+
+            if (response.status === 200) {
+                fetchLicenses(); // Refresh list
+                handleCloseDeleteDialog();
+            } else {
+                setError(response.message || 'Không thể xóa license.');
+            }
+        } catch (delError: any) {
+            setError(delError.message || 'Lỗi khi xóa license. License có thể đang được sử dụng.');
+            handleCloseDeleteDialog();
+        } finally {
+            setDeleteLoading(false);
+        }
+    };
+
+    const handleAddLicense = () => {
+        setOpenCreateModal(true);
+    };
+
+    const handleLicenseCreated = () => {
+        setOpenCreateModal(false);
+        fetchLicenses(); // Refresh the licenses list
+    };
+
+    const handleEditLicense = (licenseId: string) => {
+        const license = licenses.find(l => l.id === licenseId);
+        if (license) {
+            setSelectedLicense(license);
+            setOpenEditModal(true);
+        }
+    };
+
+    const handleLicenseUpdated = () => {
+        setOpenEditModal(false);
+        setSelectedLicense(null);
+        fetchLicenses(); // Refresh the licenses list
+    };
     return (
-        <Box>
+        <Box sx={{
+            maxWidth: '100%',
+            overflow: 'hidden'
+        }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <LicenseIcon sx={{ mr: 1, fontSize: '24px' }} />
-                    <Typography variant="h4" component="h1">Licenses</Typography>
+                    <Typography variant="h3" component="h1">
+                        Quản lý Licenses
+                    </Typography>
                 </Box>
-                <Box>
-                    <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchLicenses} disabled={loading} sx={{mr: 1}}>
-                        Refresh
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                        variant="outlined"
+                        startIcon={expandedView ? <CollapseIcon /> : <ExpandIcon />}
+                        onClick={() => setExpandedView(!expandedView)}
+                        sx={{
+                            minWidth: { xs: 'auto', sm: 'auto', md: 'auto' },
+                            '& .MuiButton-startIcon': {
+                                margin: { xs: 0, sm: 0, md: '0 8px 0 -4px' }
+                            },
+                            px: { xs: 1, sm: 2 },
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center'
+                        }}
+                    >
+                        <Box
+                            component="span"
+                            sx={{
+                                display: { xs: 'none', sm: 'none', md: 'inline' }
+                            }}
+                        >
+                            {expandedView ? 'Chế độ thu gọn' : 'Chế độ chi tiết'}
+                        </Box>
                     </Button>
-                    <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddLicense}>
-                        Add License
+                    <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={handleAddLicense}
+                        sx={{
+                            minWidth: { xs: 'auto', sm: 'auto', md: 'auto' },
+                            '& .MuiButton-startIcon': {
+                                margin: { xs: 0, sm: 0, md: '0 8px 0 -4px' }
+                            },
+                            px: { xs: 1, sm: 2 },
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center'
+                        }}
+                    >
+                        <Box
+                            component="span"
+                            sx={{
+                                display: { xs: 'none', sm: 'none', md: 'inline' }
+                            }}
+                        >
+                            Tạo License
+                        </Box>
                     </Button>
                 </Box>
             </Box>
 
-            <Paper sx={{ p: 2, mb: 2, borderRadius: 2 }}>
-                <Typography variant="h6" gutterBottom>Filters</Typography>
-                <Grid container spacing={2} alignItems="center">
-                    <Grid>
-                        <FormControlLabel
-                            control={<Switch checked={filterIncludeInactive} onChange={(e) => setFilterIncludeInactive(e.target.checked)} />}
-                            label="Include Inactive"
-                        />
-                    </Grid>
-                </Grid>
-            </Paper>
+            {/* Search/Filter Component */}
+            <LicenseSearch
+                licenses={licenses}
+                onFilteredLicenses={handleFilteredLicenses}
+                loading={loading}
+            />
 
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
@@ -164,61 +541,566 @@ export default function LicensesPage() {
                     </Box>
                 ) : (
                     <>
-                        <TableContainer sx={{ maxHeight: 600 }}>
-                            <Table stickyHeader>
-                                <TableHead>
-                                    <TableRow>
-                                        <TableCell>Key</TableCell>
-                                        <TableCell>Name</TableCell>
-                                        <TableCell>Price</TableCell>
-                                        <TableCell>Duration (Days)</TableCell>
-                                        <TableCell>Status</TableCell>
-                                        <TableCell>Features Count</TableCell>
-                                        <TableCell align="right">Actions</TableCell>
-                                    </TableRow>
-                                </TableHead>
+                        <TableContainer sx={{ overflowX: 'auto' }}>
+                            <Table sx={{
+                                tableLayout: 'auto',
+                                width: '100%'
+                            }}>
+                                <SortableTableHead
+                                    columns={columnConfigs}
+                                    sortConfig={sortConfig}
+                                    onSort={handleSort}
+                                    expandedView={expandedView}
+                                />
                                 <TableBody>
-                                    {Array.isArray(licenses) && licenses.map((license) => (
+                                    {Array.isArray(paginatedLicenses) && paginatedLicenses.map((license) => (
                                         <TableRow hover key={license.id}>
-                                            <TableCell><Chip label={license.key} size="small" /></TableCell>
-                                            <TableCell>{license.name}</TableCell>
-                                            <TableCell>${license.price.toFixed(2)}</TableCell>
-                                            <TableCell>{license.duration_days}</TableCell>
-                                            <TableCell>
-                                                <Switch
-                                                    checked={license.is_active}
-                                                    onChange={() => handleToggleActiveStatus(license)}
+                                            {/* License Key */}
+                                            <TableCell sx={{
+                                                ...getResponsiveDisplayStyle(columnConfigs[0], expandedView),
+                                                whiteSpace: expandedView ? 'nowrap' : 'normal',
+                                                minWidth: columnConfigs[0].minWidth,
+                                                width: expandedView ? 'auto' : columnConfigs[0].minWidth
+                                            }}>
+                                                <Chip
+                                                    label={license.key}
                                                     size="small"
-                                                    color={license.is_active ? "success" : "default"}
+                                                    variant="outlined"
+                                                    sx={{ fontWeight: 'medium' }}
                                                 />
                                             </TableCell>
-                                            <TableCell align="center">{license.feature_keys.length}</TableCell>
-                                            <TableCell align="right">
-                                                <Tooltip title="Edit License">
-                                                    <IconButton size="small" onClick={() => handleEditLicense(license.id)}><EditIcon fontSize="small" /></IconButton>
-                                                </Tooltip>
-                                                {/* Deactivate is handled by the switch now */}
+
+                                            {/* Name */}
+                                            <TableCell sx={{
+                                                ...getResponsiveDisplayStyle(columnConfigs[1], expandedView),
+                                                whiteSpace: expandedView ? 'nowrap' : 'normal',
+                                                minWidth: columnConfigs[1].minWidth
+                                            }}>
+                                                <Typography sx={responsiveTypographyTokens.tableCell}>
+                                                    {license.name}
+                                                </Typography>
+                                            </TableCell>
+
+                                            {/* Price */}
+                                            <TableCell sx={{
+                                                ...getResponsiveDisplayStyle(columnConfigs[2], expandedView),
+                                                whiteSpace: expandedView ? 'nowrap' : 'normal',
+                                                minWidth: columnConfigs[2].minWidth
+                                            }}>
+                                                <Typography sx={responsiveTypographyTokens.tableCell}>
+                                                    {columnConfigs[2].format?.(license.price)}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell sx={{
+                                                ...getResponsiveDisplayStyle(columnConfigs[3], expandedView),
+                                                whiteSpace: expandedView ? 'nowrap' : 'normal',
+                                                minWidth: columnConfigs[3].minWidth
+                                            }}>
+                                                <Typography sx={responsiveTypographyTokens.tableCell}>
+                                                    {columnConfigs[3].format?.(license.duration_days)}
+                                                </Typography>
+                                            </TableCell>
+
+                                            {/* Active Status */}
+                                            <TableCell sx={{
+                                                ...getResponsiveDisplayStyle(columnConfigs[4], expandedView),
+                                                whiteSpace: expandedView ? 'nowrap' : 'normal',
+                                                minWidth: columnConfigs[4].minWidth
+                                            }}>
+                                                <Chip
+                                                    label={license.is_active ? 'Hoạt động' : 'Không hoạt động'}
+                                                    color={license.is_active ? 'success' : 'default'}
+                                                    size="small"
+                                                    variant={license.is_active ? "filled" : "outlined"}
+                                                    sx={{
+                                                        fontWeight: 'medium',
+                                                        minWidth: '70px'
+                                                    }}
+                                                />
+                                            </TableCell>
+                                            {/* Feature Keys */}
+                                            <TableCell sx={{
+                                                ...getResponsiveDisplayStyle(columnConfigs[5], expandedView),
+                                                whiteSpace: expandedView ? 'nowrap' : 'normal',
+                                                minWidth: columnConfigs[5].minWidth
+                                            }}>
+                                                <Typography sx={responsiveTypographyTokens.tableCell}>
+                                                    {columnConfigs[5].format?.(license.feature_keys.length)}
+                                                </Typography>
+                                            </TableCell>
+
+                                            {/* Created At */}
+                                            <TableCell sx={{
+                                                ...getResponsiveDisplayStyle(columnConfigs[6], expandedView),
+                                                whiteSpace: expandedView ? 'nowrap' : 'normal',
+                                                minWidth: columnConfigs[6].minWidth
+                                            }}>
+                                                <Typography sx={responsiveTypographyTokens.tableCell}>
+                                                    {columnConfigs[6].format?.(license.created_at || '')}
+                                                </Typography>
+                                            </TableCell>
+
+                                            {/* Updated At */}
+                                            <TableCell sx={{
+                                                ...getResponsiveDisplayStyle(columnConfigs[7], expandedView),
+                                                whiteSpace: expandedView ? 'nowrap' : 'normal',
+                                                minWidth: columnConfigs[7].minWidth
+                                            }}>
+                                                <Typography sx={responsiveTypographyTokens.tableCell}>
+                                                    {columnConfigs[7].format?.(license.updated_at || '')}
+                                                </Typography>
+                                            </TableCell>
+                                            {/* Actions */}
+                                            <TableCell
+                                                sx={{
+                                                    ...getResponsiveDisplayStyle(columnConfigs[8], expandedView),
+                                                    position: 'sticky',
+                                                    right: -1,
+                                                    backgroundColor: 'background.paper',
+                                                    zIndex: 2,
+                                                    borderLeft: '1px solid',
+                                                    borderColor: 'divider',
+                                                    minWidth: columnConfigs[8].minWidth,
+                                                    width: columnConfigs[8].minWidth,
+                                                    whiteSpace: 'nowrap',
+                                                    paddingLeft: 1,
+                                                    paddingRight: 2
+                                                }}
+                                                align="center"
+                                            >
+                                                <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                                                    {license.is_active ? (
+                                                        <Tooltip title="Hủy kích hoạt license">
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => handleOpenDeactivateDialog(license)}
+                                                                color="error"
+                                                                sx={{
+                                                                    minWidth: { xs: 32, sm: 'auto' },
+                                                                    width: { xs: 32, sm: 'auto' },
+                                                                    height: { xs: 32, sm: 'auto' }
+                                                                }}
+                                                            >
+                                                                <DeactivateIcon fontSize="small" />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    ) : (
+                                                        <Tooltip title="Kích hoạt license">
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => handleOpenActivateDialog(license)}
+                                                                color="success"
+                                                                sx={{
+                                                                    minWidth: { xs: 32, sm: 'auto' },
+                                                                    width: { xs: 32, sm: 'auto' },
+                                                                    height: { xs: 32, sm: 'auto' }
+                                                                }}
+                                                            >
+                                                                <ActivateIcon fontSize="small" />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    )}
+
+                                                    <Tooltip title="Chỉnh sửa license">
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => handleEditLicense(license.id)}
+                                                            color="primary"
+                                                            sx={{
+                                                                minWidth: { xs: 32, sm: 'auto' },
+                                                                width: { xs: 32, sm: 'auto' },
+                                                                height: { xs: 32, sm: 'auto' }
+                                                            }}
+                                                        >
+                                                            <EditIcon fontSize="small" />
+                                                        </IconButton>
+                                                    </Tooltip>
+
+                                                    <Tooltip title={license.is_active ? "Không thể xóa license đang hoạt động. Hủy kích hoạt trước." : "Xóa license"}>
+                                                        <span>
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => handleOpenDeleteDialog(license)}
+                                                                color="error"
+                                                                disabled={license.is_active}
+                                                                sx={{
+                                                                    minWidth: { xs: 32, sm: 'auto' },
+                                                                    width: { xs: 32, sm: 'auto' },
+                                                                    height: { xs: 32, sm: 'auto' },
+                                                                    opacity: license.is_active ? 0.5 : 1
+                                                                }}
+                                                            >
+                                                                <DeleteIcon fontSize="small" />
+                                                            </IconButton>
+                                                        </span>
+                                                    </Tooltip>
+                                                </Box>
                                             </TableCell>
                                         </TableRow>
                                     ))}
-                                    {Array.isArray(licenses) && licenses.length === 0 && !loading && (
-                                        <TableRow><TableCell colSpan={7} align="center">No licenses found.</TableCell></TableRow>
+                                    {Array.isArray(paginatedLicenses) && paginatedLicenses.length === 0 && !loading && (
+                                        <TableRow>
+                                            <TableCell colSpan={columnConfigs.length} align="center">
+                                                <Typography variant="body2" color="text.secondary" sx={{ py: 4 }}>
+                                                    {isFiltering
+                                                        ? "Không tìm thấy license nào phù hợp với tiêu chí tìm kiếm."
+                                                        : "Chưa có license nào."
+                                                    }
+                                                </Typography>
+                                            </TableCell>
+                                        </TableRow>
                                     )}
                                 </TableBody>
                             </Table>
                         </TableContainer>
                         <TablePagination
-                            rowsPerPageOptions={[5, 10, 25, 50]}
+                            rowsPerPageOptions={[5, 10, 25, 50, { label: 'Tất cả', value: 99999 }]}
                             component="div"
-                            count={totalCount}
+                            count={displayTotalCount}
                             rowsPerPage={rowsPerPage}
                             page={page}
                             onPageChange={handleChangePage}
                             onRowsPerPageChange={handleChangeRowsPerPage}
-                        />
-                    </>
+                            labelRowsPerPage={
+                                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                                    Dòng mỗi trang:
+                                </Box>
+                            }
+                            sx={{
+                                '& .MuiTablePagination-toolbar': {
+                                    minHeight: { xs: 48, sm: 52 },
+                                    px: { xs: 1, sm: 2 }
+                                },
+                                '& .MuiTablePagination-selectLabel': {
+                                    ...responsiveTypographyTokens.tableCellSmall,
+                                    display: { xs: 'none', sm: 'block' }
+                                },
+                                '& .MuiTablePagination-displayedRows': {
+                                    ...responsiveTypographyTokens.tableCellSmall,
+                                    margin: 0
+                                }
+                            }}
+                        />                    </>
                 )}
             </Paper>
+
+            {/* Deactivate Confirmation Dialog */}
+            <Dialog
+                open={openDeactivateDialog}
+                onClose={handleCloseDeactivateDialog}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: { borderRadius: 2 }
+                }}
+            >
+                <DialogTitle>
+                    <Typography variant="h6" component="div" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
+                        <DeactivateIcon />
+                        Xác nhận hủy kích hoạt license
+                    </Typography>
+                </DialogTitle>
+                <DialogContent>
+                    <DialogContentText sx={{ mb: 2 }}>
+                        Bạn có chắc chắn muốn hủy kích hoạt license này không?
+                    </DialogContentText>
+
+                    {actionLicense && (
+                        <Box sx={{
+                            p: 2,
+                            bgcolor: componentColors.modal.noteBackground,
+                            borderRadius: 1,
+                            border: `1px solid ${componentColors.modal.noteBorder}`,
+                            mb: 2
+                        }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                <Typography variant="body2">
+                                    • <strong>License Key:</strong> {actionLicense.key}
+                                </Typography>
+                                <Typography variant="body2">
+                                    • <strong>Tên gói:</strong> {actionLicense.name}
+                                </Typography>
+                                <Typography variant="body2">
+                                    • <strong>Giá tiền:</strong> {actionLicense.price.toLocaleString('vi-VN')} VNĐ
+                                </Typography>
+                            </Box>
+                        </Box>
+                    )}
+
+                    <Box sx={{
+                        p: 2,
+                        bgcolor: componentColors.modal.noteBackground,
+                        borderRadius: 1,
+                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        mb: 2,
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '3px',
+                            bgcolor: 'warning.main',
+                            borderRadius: '4px 4px 0 0'
+                        },
+                        position: 'relative'
+                    }}>
+                        <Typography variant="body2" fontWeight="bold" sx={{ mb: 1, color: 'warning.main' }}>
+                            ⚠️ Lưu ý quan trọng:
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                            • License sẽ được đánh dấu là không hoạt động
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                            • Người dùng sẽ không thể mua license này nữa
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                            • Thao tác này có thể được hoàn tác bằng cách kích hoạt lại
+                        </Typography>
+                    </Box>
+                </DialogContent>
+                <DialogActions sx={{ p: 3, pt: 1 }}>
+                    <Button
+                        onClick={handleCloseDeactivateDialog}
+                        variant="outlined"
+                        sx={{ minWidth: 100 }}
+                    >
+                        Hủy
+                    </Button>
+                    <Button
+                        onClick={handleDeactivateLicense}
+                        color="error"
+                        variant="contained"
+                        sx={{ minWidth: 140 }}
+                    >
+                        Xác nhận hủy kích hoạt
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Activate Confirmation Dialog */}
+            <Dialog
+                open={openActivateDialog}
+                onClose={handleCloseActivateDialog}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: { borderRadius: 2 }
+                }}
+            >
+                <DialogTitle>
+                    <Typography variant="h6" component="div" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'success.main' }}>
+                        <ActivateIcon />
+                        Xác nhận kích hoạt license
+                    </Typography>
+                </DialogTitle>
+                <DialogContent>
+                    <DialogContentText sx={{ mb: 2 }}>
+                        Bạn có chắc chắn muốn kích hoạt license này không?
+                    </DialogContentText>
+
+                    {actionLicense && (
+                        <Box sx={{
+                            p: 2,
+                            bgcolor: componentColors.modal.noteBackground,
+                            borderRadius: 1,
+                            border: `1px solid ${componentColors.modal.noteBorder}`,
+                            mb: 2
+                        }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                <Typography variant="body2">
+                                    • <strong>License Key:</strong> {actionLicense.key}
+                                </Typography>
+                                <Typography variant="body2">
+                                    • <strong>Tên gói:</strong> {actionLicense.name}
+                                </Typography>
+                                <Typography variant="body2">
+                                    • <strong>Giá tiền:</strong> {actionLicense.price.toLocaleString('vi-VN')} VNĐ
+                                </Typography>
+                            </Box>
+                        </Box>
+                    )}
+
+                    <Box sx={{
+                        p: 2,
+                        bgcolor: componentColors.modal.noteBackground,
+                        borderRadius: 1,
+                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        mb: 2,
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '3px',
+                            bgcolor: 'info.main',
+                            borderRadius: '4px 4px 0 0'
+                        },
+                        position: 'relative'
+                    }}>
+                        <Typography variant="body2" fontWeight="bold" sx={{ mb: 1, color: 'info.main' }}>
+                            💡 Lưu ý quan trọng:
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                            • License sẽ được đánh dấu là đang hoạt động
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                            • Người dùng sẽ có thể mua license này
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                            • License sẽ xuất hiện trong danh sách có sẵn
+                        </Typography>
+                    </Box>
+                </DialogContent>
+                <DialogActions sx={{ p: 3, pt: 1 }}>
+                    <Button
+                        onClick={handleCloseActivateDialog}
+                        variant="outlined"
+                        sx={{ minWidth: 100 }}
+                    >
+                        Hủy
+                    </Button>
+                    <Button
+                        onClick={handleActivateLicense}
+                        color="success"
+                        variant="contained"
+                        sx={{ minWidth: 140 }}
+                    >
+                        Xác nhận kích hoạt
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog
+                open={openDeleteDialog}
+                onClose={!deleteLoading ? handleCloseDeleteDialog : undefined}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle sx={{ color: 'error.main', fontWeight: 'bold' }}>
+                    ⚠️ Xác nhận xóa license
+                </DialogTitle>
+                <DialogContent>
+                    {licenseToDelete && (
+                        <Box sx={{
+                            p: 2,
+                            bgcolor: componentColors.modal.noteBackground,
+                            borderRadius: 1,
+                            border: '1px solid',
+                            borderColor: componentColors.modal.noteBorder,
+                            mb: 2
+                        }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                <Box>
+                                    <Typography variant="body2" color="text.secondary" fontWeight="bold">
+                                        License Key: {licenseToDelete.key}
+                                    </Typography>
+                                </Box>
+                                <Box>
+                                    <Typography variant="body2" color="text.secondary">
+                                        Tên gói: {licenseToDelete.name}
+                                    </Typography>
+                                </Box>
+                                <Box>
+                                    <Typography variant="body2" color="text.secondary">
+                                        Giá: {licenseToDelete.price.toLocaleString('vi-VN')} VNĐ
+                                    </Typography>
+                                </Box>                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="body2" color="text.secondary">
+                                        Trạng thái:
+                                    </Typography>
+                                    <Chip
+                                        label={licenseToDelete.is_active ? 'Đang hoạt động' : 'Không hoạt động'}
+                                        color={licenseToDelete.is_active ? 'success' : 'default'}
+                                        size="small"
+                                        variant={licenseToDelete.is_active ? "filled" : "outlined"}
+                                        sx={{ fontWeight: 'medium' }}
+                                    />
+                                </Box>
+                            </Box>
+                        </Box>
+                    )}
+
+                    <Box sx={{
+                        p: 2,
+                        bgcolor: componentColors.modal.noteBackground,
+                        borderRadius: 1,
+                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        mb: 2,
+                        position: 'relative',
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '3px',
+                            bgcolor: 'error.main',
+                            borderRadius: '4px 4px 0 0'
+                        }
+                    }}>
+                        <Typography
+                            variant="body2"
+                            fontWeight="bold"
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                color: 'error.main',
+                                mb: 1
+                            }}
+                        >
+                            ⚠️ Cảnh báo quan trọng:
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                            • Hành động này không thể hoàn tác
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                            • License sẽ bị xóa vĩnh viễn khỏi hệ thống
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                            • Chỉ có thể xóa license đã được hủy kích hoạt
+                        </Typography>
+                    </Box>
+                </DialogContent>
+                <DialogActions sx={{ p: 3, pt: 1 }}>
+                    <Button
+                        onClick={handleCloseDeleteDialog}
+                        disabled={deleteLoading}
+                        variant="outlined"
+                    >
+                        Hủy
+                    </Button>
+                    <Button
+                        onClick={handleDeleteLicense}
+                        color="error"
+                        variant="contained"
+                        disabled={deleteLoading}
+                        startIcon={deleteLoading ? <CircularProgress size={20} /> : null}
+                    >
+                        {deleteLoading ? 'Đang xóa...' : 'Xóa license'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Create License Modal */}
+            <CreateLicenseModal
+                open={openCreateModal}
+                onClose={() => setOpenCreateModal(false)}
+                onLicenseCreated={handleLicenseCreated}
+            />
+
+            {/* Edit License Modal */}
+            {selectedLicense && (
+                <EditLicenseModal
+                    open={openEditModal}
+                    onClose={() => setOpenEditModal(false)}
+                    license={selectedLicense}
+                    onLicenseUpdated={handleLicenseUpdated}
+                />
+            )}
         </Box>
     );
 }

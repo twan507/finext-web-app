@@ -155,6 +155,32 @@ async def deactivate_existing_license(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
+@router.put(
+    "/{license_id}/activate",
+    response_model=StandardApiResponse[LicensePublic],
+    status_code=status.HTTP_200_OK,
+    summary="[Admin] Kích hoạt một license",
+    dependencies=[Depends(require_permission("license", "manage"))],
+    tags=["licenses"],
+)
+@api_response_wrapper(default_success_message="License đã được kích hoạt thành công.", success_status_code=status.HTTP_200_OK)
+async def activate_existing_license(
+    license_id: PyObjectId,
+    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
+):
+    try:
+        activated_license = await crud_licenses.activate_license_db(db, license_id=license_id)
+        # crud_licenses.activate_license_db đã raise ValueError nếu có lỗi logic
+        if not activated_license:  # Lỗi không mong muốn khác
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,  # Hoặc 404 nếu không tìm thấy sau khi check
+                detail=f"Không thể kích hoạt license với ID {license_id} sau khi kiểm tra.",
+            )
+        return LicensePublic.model_validate(activated_license)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
+
 # Endpoint DELETE một license có thể nguy hiểm nếu license đó đã được sử dụng trong các subscription
 # hoặc transaction. Thay vào đó, việc "vô hiệu hóa" (is_active=False) thường an toàn hơn.
 # Nếu bạn vẫn muốn có endpoint DELETE, cần cân nhắc kỹ các ràng buộc.

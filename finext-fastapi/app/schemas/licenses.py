@@ -99,6 +99,8 @@ class LicenseInDB(LicenseBase):  # Kế thừa is_active
 
 class LicensePublic(LicenseBase):  # Kế thừa is_active
     id: PyObjectId = Field(alias="_id")
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(
         populate_by_name=True,

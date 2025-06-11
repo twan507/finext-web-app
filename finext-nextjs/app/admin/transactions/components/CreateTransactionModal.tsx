@@ -94,6 +94,7 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
     const [loadingUsers, setLoadingUsers] = useState(false);
     const [loadingLicenses, setLoadingLicenses] = useState(false); const [loadingSubscriptions, setLoadingSubscriptions] = useState(false); const [error, setError] = useState<string | null>(null);
     const [warning, setWarning] = useState<string | null>(null);
+    const [info, setInfo] = useState<string | null>(null);
     const [hasActiveNonBasicSub, setHasActiveNonBasicSub] = useState(false);// Fetch all users
     const fetchUsers = async () => {
         setLoadingUsers(true);
@@ -159,16 +160,16 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
 
                 setUserSubscriptions(renewableSubscriptions);                // Thông báo cụ thể khi không có subscription để gia hạn
                 if (subscriptions.length === 0) {
-                    setWarning('Người dùng này chưa có gói đăng ký nào trong hệ thống.');
+                    setInfo('Người dùng này chưa có gói đăng ký nào trong hệ thống.');
                 } else if (renewableSubscriptions.length === 0) {
                     if (activeSubscriptions.some(sub => sub.license_key === 'BASIC')) {
-                        setWarning('Người dùng này chỉ có gói BASIC đang hoạt động. Vui lòng chọn "Mua mới" để nâng cấp.');
+                        setInfo('Người dùng này chỉ có gói BASIC đang hoạt động. Vui lòng chọn "Mua mới" để nâng cấp.');
                     } else {
-                        setWarning('Người dùng này không có gói đăng ký nào đang hoạt động có thể gia hạn. Hãy chọn "Mua mới" thay thế.');
+                        setInfo('Người dùng này không có gói đăng ký nào đang hoạt động có thể gia hạn. Hãy chọn "Mua mới" thay thế.');
                     }
                 } else if (hasNonBasicActiveSub) {
                     // Thông báo khi user có subscription không phải BASIC đang active
-                    setWarning('Người dùng này đã có sẵn gói đăng kí đang hoạt động. Chỉ có thể chọn "Gia hạn".');
+                    setInfo('Người dùng này đã có sẵn gói đăng kí đang hoạt động. Chỉ có thể chọn "Gia hạn".');
                 }
             } else {
                 setUserSubscriptions([]);
@@ -199,6 +200,7 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
             setSelectedSubscription(null);
             setHasActiveNonBasicSub(false);
             setWarning(null); // Reset warning khi user thay đổi
+            setInfo(null); // Reset info khi user thay đổi
             setFormData(prev => ({ ...prev, subscription_id_to_renew: '' }));
         }
     }, [selectedUser]);    // Auto-switch to renewal if user has active non-basic subscription
@@ -229,6 +231,7 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
             setSelectedSubscription(null);
             setError(null);
             setWarning(null);
+            setInfo(null);
             setHasActiveNonBasicSub(false);
         }
     }, [open]); const handleUserChange = (user: UserPublic | null) => {
@@ -236,10 +239,9 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
             ...prev,
             buyer_user_id: user?.id || '',
             broker_code: user?.referral_code || ''
-        }));
-
-        setHasActiveNonBasicSub(false); // Reset state khi user thay đổi
+        })); setHasActiveNonBasicSub(false); // Reset state khi user thay đổi
         setWarning(null); // Reset warning khi user thay đổi
+        setInfo(null); // Reset info khi user thay đổi
         // Clear error khi user thay đổi
         setError(null);
     }; const handleLicenseChange = (license: LicensePublic | null) => {
@@ -253,12 +255,11 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
         setFormData(prev => ({
             ...prev,
             subscription_id_to_renew: subscription?.id || ''
-        }));
-
-        // Clear error khi subscription được chọn
+        }));        // Clear error khi subscription được chọn
         if (subscription) {
             setError(null);
             setWarning(null);
+            setInfo(null);
         }
     }; const handleTransactionTypeChange = (type: 'new_purchase' | 'renewal') => {
         // Ngăn chặn việc chọn "new_purchase" nếu user đã có subscription active với license không phải BASIC
@@ -287,11 +288,11 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
         }        // Clear error khi transaction type thay đổi (trừ khi bị ngăn chặn ở trên)
         setError(null);
         setWarning(null);
-    };
-
-    const handleSubmit = async () => {
+        setInfo(null);
+    }; const handleSubmit = async () => {
         setError(null);
         setWarning(null);
+        setInfo(null);
 
         // Validation
         if (!formData.buyer_user_id) {
@@ -372,11 +373,15 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
                     <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 3 }}>
                         {error}
                     </Alert>
+                )}                    {warning && (
+                    <Alert severity="warning" onClose={() => setWarning(null)} sx={{ mb: 3 }}>
+                        {warning}
+                    </Alert>
                 )}
 
-                    {warning && (
-                        <Alert severity="warning" onClose={() => setWarning(null)} sx={{ mb: 3 }}>
-                            {warning}
+                    {info && (
+                        <Alert severity="info" onClose={() => setInfo(null)} sx={{ mb: 3 }}>
+                            {info}
                         </Alert>
                     )}<Box sx={{
                         display: 'grid',

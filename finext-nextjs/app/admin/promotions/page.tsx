@@ -6,16 +6,17 @@ import { apiClient } from 'services/apiClient';
 import {
     Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
     TableHead, TableRow, Button, Chip, IconButton, Alert, CircularProgress,
-    TablePagination, Tooltip, Switch, useTheme, Dialog, DialogTitle,
+    TablePagination, Tooltip, useTheme, Dialog, DialogTitle,
     DialogContent, DialogContentText, DialogActions
 } from '@mui/material';
 import {
     Campaign as PromotionIcon,
     Add as AddIcon,
-    Edit as EditIcon,
+    EditSquare as EditIcon,
     Delete as DeleteIcon,
     UnfoldMore as ExpandIcon,
-    UnfoldLess as CollapseIcon
+    UnfoldLess as CollapseIcon, AddCircle as ActivateIcon,
+    DoDisturbOn as DeactivateIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 import { colorTokens, responsiveTypographyTokens } from 'theme/tokens';
@@ -78,12 +79,15 @@ export default function PromotionsPage() {
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);    // Modal state
     const [openCreateModal, setOpenCreateModal] = useState(false);
     const [openEditModal, setOpenEditModal] = useState(false);
-    const [selectedPromotion, setSelectedPromotion] = useState<PromotionPublic | null>(null);
-
-    // Delete Dialog state
+    const [selectedPromotion, setSelectedPromotion] = useState<PromotionPublic | null>(null);    // Delete Dialog state
     const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
     const [promotionToDelete, setPromotionToDelete] = useState<PromotionPublic | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
+
+    // Action dialogs state
+    const [actionPromotion, setActionPromotion] = useState<PromotionPublic | null>(null);
+    const [openActivateDialog, setOpenActivateDialog] = useState(false);
+    const [openDeactivateDialog, setOpenDeactivateDialog] = useState(false);
 
     // Column configuration for sortable table
     const columnConfigs: ColumnConfig[] = useMemo(() => [
@@ -298,34 +302,9 @@ export default function PromotionsPage() {
 
     const handleChangePage = (event: unknown, newPage: number) => {
         setPage(newPage);
-    };
-
-    const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    }; const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
         setRowsPerPage(parseInt(event.target.value, 10));
         setPage(0);
-    };
-
-    const handleToggleActiveStatus = async (promo: PromotionPublic) => {
-        const originalStatus = promo.is_active;
-        setPromotions(prev => prev.map(p => p.id === promo.id ? { ...p, is_active: !originalStatus, updated_at: new Date().toISOString() } : p));
-
-        try {
-            if (originalStatus) { // If it was active, now deactivating
-                await apiClient<PromotionPublic>({
-                    url: `/api/v1/promotions/${promo.id}/deactivate`,
-                    method: 'PUT',
-                });
-            } else { // If it was inactive, now activating
-                await apiClient<PromotionPublic>({
-                    url: `/api/v1/promotions/${promo.id}`, // Main update endpoint for activation
-                    method: 'PUT',
-                    body: { is_active: true }
-                });
-            }
-        } catch (err: any) {
-            setError(err.message || `Failed to update status for ${promo.promotion_code}.`);
-            setPromotions(prev => prev.map(p => p.id === promo.id ? { ...p, is_active: originalStatus, updated_at: promo.updated_at } : p));
-        }
     };
 
     const handleAddPromotion = () => {
@@ -347,6 +326,58 @@ export default function PromotionsPage() {
         setOpenEditModal(false);
         setSelectedPromotion(null);
         fetchPromotions(); // Refresh the promotions list
+    };
+
+    // Activate/Deactivate handlers
+    const handleOpenActivateDialog = (promo: PromotionPublic) => {
+        setActionPromotion(promo);
+        setOpenActivateDialog(true);
+    };
+
+    const handleCloseActivateDialog = () => {
+        setActionPromotion(null);
+        setOpenActivateDialog(false);
+    };
+
+    const handleActivatePromotion = async () => {
+        if (!actionPromotion) return;
+        try {
+            await apiClient<PromotionPublic>({
+                url: `/api/v1/promotions/${actionPromotion.id}`,
+                method: 'PUT',
+                body: { is_active: true }
+            });
+            fetchPromotions();
+            handleCloseActivateDialog();
+        } catch (err: any) {
+            setError(err.message || "Failed to activate promotion.");
+            handleCloseActivateDialog();
+        }
+    };
+
+    const handleOpenDeactivateDialog = (promo: PromotionPublic) => {
+        setActionPromotion(promo);
+        setOpenDeactivateDialog(true);
+    };
+
+    const handleCloseDeactivateDialog = () => {
+        setActionPromotion(null);
+        setOpenDeactivateDialog(false);
+    };
+
+    const handleDeactivatePromotion = async () => {
+        if (!actionPromotion) return;
+        try {
+            await apiClient<PromotionPublic>({
+                url: `/api/v1/promotions/${actionPromotion.id}/deactivate`,
+                method: 'PUT',
+            });
+            fetchPromotions();
+            handleCloseDeactivateDialog();
+        } catch (err: any) {
+            setError(err.message || "Failed to deactivate promotion.");
+            handleCloseDeactivateDialog();
+        }
     };
 
     // Delete handlers
@@ -481,7 +512,6 @@ export default function PromotionsPage() {
                                 <TableBody>
                                     {Array.isArray(paginatedPromotions) && paginatedPromotions.map((promo) => (
                                         <TableRow hover key={promo.id}>
-                                            {/* Promotion Code */}
                                             <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[0], expandedView),
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
@@ -495,8 +525,6 @@ export default function PromotionsPage() {
                                                     sx={{ fontWeight: 'medium' }}
                                                 />
                                             </TableCell>
-
-                                            {/* Description */}
                                             <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[1], expandedView),
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
@@ -517,8 +545,6 @@ export default function PromotionsPage() {
                                                     </Typography>
                                                 </Tooltip>
                                             </TableCell>
-
-                                            {/* Discount Value */}
                                             <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[2], expandedView),
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
@@ -530,8 +556,6 @@ export default function PromotionsPage() {
                                                         : `${promo.discount_value.toLocaleString('vi-VN')} VND`}
                                                 </Typography>
                                             </TableCell>
-
-                                            {/* Usage */}
                                             <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[3], expandedView),
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
@@ -541,21 +565,22 @@ export default function PromotionsPage() {
                                                     {promo.usage_count} / {promo.usage_limit || '∞'}
                                                 </Typography>
                                             </TableCell>
-
-                                            {/* Active Status */}
                                             <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[4], expandedView),
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
                                                 minWidth: columnConfigs[4].minWidth
                                             }}>
-                                                <Switch
-                                                    checked={promo.is_active}
-                                                    onChange={() => handleToggleActiveStatus(promo)}
+                                                <Chip
+                                                    label={promo.is_active ? 'Hoạt động' : 'Không hoạt động'}
+                                                    color={promo.is_active ? 'success' : 'default'}
                                                     size="small"
+                                                    variant={promo.is_active ? "filled" : "outlined"}
+                                                    sx={{
+                                                        fontWeight: 'medium',
+                                                        minWidth: '70px'
+                                                    }}
                                                 />
                                             </TableCell>
-
-                                            {/* Start Date */}
                                             <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[5], expandedView),
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
@@ -565,8 +590,6 @@ export default function PromotionsPage() {
                                                     {columnConfigs[5].format ? columnConfigs[5].format!(promo.start_date) : (promo.start_date || 'N/A')}
                                                 </Typography>
                                             </TableCell>
-
-                                            {/* End Date */}
                                             <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[6], expandedView),
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
@@ -576,8 +599,6 @@ export default function PromotionsPage() {
                                                     {columnConfigs[6].format ? columnConfigs[6].format!(promo.end_date) : (promo.end_date || 'N/A')}
                                                 </Typography>
                                             </TableCell>
-
-                                            {/* Created At */}
                                             <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[7], expandedView),
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
@@ -587,8 +608,6 @@ export default function PromotionsPage() {
                                                     {columnConfigs[7].format ? columnConfigs[7].format!(promo.created_at) : promo.created_at}
                                                 </Typography>
                                             </TableCell>
-
-                                            {/* Actions */}
                                             <TableCell
                                                 sx={{
                                                     ...getResponsiveDisplayStyle(columnConfigs[8], expandedView),
@@ -604,12 +623,45 @@ export default function PromotionsPage() {
                                                     paddingLeft: 1,
                                                     paddingRight: 2
                                                 }}
-                                                align="center"                                            >
+                                                align="center"
+                                            >
                                                 <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                                                    {promo.is_active ? (
+                                                        <Tooltip title="Hủy kích hoạt khuyến mãi">
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => handleOpenDeactivateDialog(promo)}
+                                                                color="error"
+                                                                sx={{
+                                                                    minWidth: { xs: 32, sm: 'auto' },
+                                                                    width: { xs: 32, sm: 'auto' },
+                                                                    height: { xs: 32, sm: 'auto' }
+                                                                }}
+                                                            >
+                                                                <DeactivateIcon fontSize="small" />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    ) : (
+                                                        <Tooltip title="Kích hoạt khuyến mãi">
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => handleOpenActivateDialog(promo)}
+                                                                color="success"
+                                                                sx={{
+                                                                    minWidth: { xs: 32, sm: 'auto' },
+                                                                    width: { xs: 32, sm: 'auto' },
+                                                                    height: { xs: 32, sm: 'auto' }
+                                                                }}
+                                                            >
+                                                                <ActivateIcon fontSize="small" />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    )}
                                                     <Tooltip title="Chỉnh sửa khuyến mãi">
                                                         <IconButton
                                                             size="small"
                                                             onClick={() => handleEditPromotion(promo.id)}
+                                                            color="primary"
                                                         >
                                                             <EditIcon fontSize="small" />
                                                         </IconButton>
@@ -793,6 +845,201 @@ export default function PromotionsPage() {
                         startIcon={deleteLoading ? <CircularProgress size={20} /> : null}
                     >
                         {deleteLoading ? 'Đang xóa...' : 'Xóa mã khuyến mãi'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Activate Confirmation Dialog */}
+            <Dialog
+                open={openActivateDialog}
+                onClose={handleCloseActivateDialog}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: { borderRadius: 2 }
+                }}
+            >
+                <DialogTitle>
+                    <Typography variant="h6" component="div" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'success.main' }}>
+                        <ActivateIcon />
+                        Xác nhận kích hoạt khuyến mãi
+                    </Typography>
+                </DialogTitle>
+                <DialogContent>
+                    <DialogContentText sx={{ mb: 2 }}>
+                        Bạn có chắc chắn muốn kích hoạt khuyến mãi này không?
+                    </DialogContentText>
+
+                    {actionPromotion && (
+                        <Box sx={{
+                            p: 2,
+                            bgcolor: componentColors.modal.noteBackground,
+                            borderRadius: 1,
+                            border: `1px solid ${componentColors.modal.noteBorder}`,
+                            mb: 2
+                        }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                <Typography variant="body2">
+                                    • <strong>Mã:</strong> {actionPromotion.promotion_code}
+                                </Typography>
+                                <Typography variant="body2">
+                                    • <strong>Mô tả:</strong> {actionPromotion.description || 'Không có'}
+                                </Typography>
+                                <Typography variant="body2">
+                                    • <strong>Giảm giá:</strong> {actionPromotion.discount_value}{actionPromotion.discount_type === DiscountTypeEnumFE.PERCENTAGE ? '%' : ' VNĐ'}
+                                </Typography>
+                                <Typography variant="body2">
+                                    • <strong>Lượt sử dụng:</strong> {actionPromotion.usage_count} / {actionPromotion.usage_limit || '∞'}
+                                </Typography>
+                            </Box>
+                        </Box>
+                    )}
+
+                    <Box sx={{
+                        p: 2,
+                        bgcolor: componentColors.modal.noteBackground,
+                        borderRadius: 1,
+                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        mb: 2,
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '3px',
+                            bgcolor: 'info.main',
+                            borderRadius: '4px 4px 0 0'
+                        },
+                        position: 'relative'
+                    }}>
+                        <Typography variant="body2" fontWeight="bold" sx={{ mb: 1, color: 'info.main' }}>
+                            💡 Lưu ý quan trọng:
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                            • Khuyến mãi sẽ được kích hoạt và có thể được sử dụng trong hệ thống
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                            • Người dùng có thể áp dụng mã khuyến mãi này cho các giao dịch mới
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                            • Thao tác này có thể được hoàn tác bằng cách hủy kích hoạt
+                        </Typography>
+                    </Box>
+                </DialogContent>
+                <DialogActions sx={{ p: 3, pt: 1 }}>
+                    <Button
+                        onClick={handleCloseActivateDialog}
+                        variant="outlined"
+                        sx={{ minWidth: 100 }}
+                    >
+                        Hủy
+                    </Button>
+                    <Button
+                        onClick={handleActivatePromotion}
+                        color="success"
+                        variant="contained"
+                        sx={{ minWidth: 140 }}
+                    >
+                        Xác nhận kích hoạt
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Deactivate Confirmation Dialog */}
+            <Dialog
+                open={openDeactivateDialog}
+                onClose={handleCloseDeactivateDialog}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: { borderRadius: 2 }
+                }}
+            >
+                <DialogTitle>
+                    <Typography variant="h6" component="div" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
+                        <DeactivateIcon />
+                        Xác nhận hủy kích hoạt khuyến mãi
+                    </Typography>
+                </DialogTitle>
+                <DialogContent>
+                    <DialogContentText sx={{ mb: 2 }}>
+                        Bạn có chắc chắn muốn hủy kích hoạt khuyến mãi này không?
+                    </DialogContentText>
+
+                    {actionPromotion && (
+                        <Box sx={{
+                            p: 2,
+                            bgcolor: componentColors.modal.noteBackground,
+                            borderRadius: 1,
+                            border: `1px solid ${componentColors.modal.noteBorder}`,
+                            mb: 2
+                        }}>
+
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                <Typography variant="body2">
+                                    • <strong>Mã:</strong> {actionPromotion.promotion_code}
+                                </Typography>
+                                <Typography variant="body2">
+                                    • <strong>Mô tả:</strong> {actionPromotion.description || 'Không có'}
+                                </Typography>
+                                <Typography variant="body2">
+                                    • <strong>Giảm giá:</strong> {actionPromotion.discount_value}{actionPromotion.discount_type === DiscountTypeEnumFE.PERCENTAGE ? '%' : ' VNĐ'}
+                                </Typography>
+                                <Typography variant="body2">
+                                    • <strong>Lượt sử dụng:</strong> {actionPromotion.usage_count} / {actionPromotion.usage_limit || '∞'}
+                                </Typography>
+                            </Box>
+                        </Box>
+                    )}
+
+                    <Box sx={{
+                        p: 2,
+                        bgcolor: componentColors.modal.noteBackground,
+                        borderRadius: 1,
+                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        mb: 2,
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '3px',
+                            bgcolor: 'warning.main',
+                            borderRadius: '4px 4px 0 0'
+                        },
+                        position: 'relative'
+                    }}>
+                        <Typography variant="body2" fontWeight="bold" sx={{ mb: 1, color: 'warning.main' }}>
+                            ⚠️ Lưu ý quan trọng:
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                            • Khuyến mãi sẽ được hủy kích hoạt và không thể sử dụng trong hệ thống
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                            • Người dùng sẽ không thể áp dụng mã khuyến mãi này cho các giao dịch mới
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                            • Thao tác này có thể được hoàn tác bằng cách kích hoạt lại
+                        </Typography>
+                    </Box>
+                </DialogContent>
+                <DialogActions sx={{ p: 3, pt: 1 }}>
+                    <Button
+                        onClick={handleCloseDeactivateDialog}
+                        variant="outlined"
+                        sx={{ minWidth: 100 }}
+                    >
+                        Hủy
+                    </Button>
+                    <Button
+                        onClick={handleDeactivatePromotion}
+                        color="error"
+                        variant="contained"
+                        sx={{ minWidth: 140 }}
+                    >
+                        Xác nhận hủy kích hoạt
                     </Button>
                 </DialogActions>
             </Dialog>

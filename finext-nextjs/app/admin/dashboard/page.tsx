@@ -7,7 +7,7 @@ import {
   ToggleButton, ToggleButtonGroup, useTheme
 } from '@mui/material';
 import {
-  AttachMoney as RevenueIcon,
+  LocalAtm as RevenueIcon,
   PeopleOutline as AccountsIcon,
   ShoppingCartOutlined as OrdersIcon,
   TrendingUp as ConversionIcon,
@@ -50,7 +50,7 @@ const DashboardHomePage: React.FC = () => {
   // Style chung cho các card
   const cardHoverStyles = {
     transition: theme.transitions.create(['transform', 'box-shadow'], {
-        duration: theme.transitions.duration.short, // 'all 0.2s ease'
+      duration: theme.transitions.duration.short, // 'all 0.2s ease'
     }),
     '&:hover': {
       transform: 'translateY(-2px)',
@@ -132,22 +132,22 @@ const DashboardHomePage: React.FC = () => {
                     value={period}
                     aria-label={period}
                     sx={{
-                        borderRadius: '20px !important', // Ghi đè border-radius của ToggleButton
-                        px: 1.5, py: 0.5, fontSize: '0.75rem',
-                        border: 'none',
-                        textTransform: 'none',
-                        color: 'text.secondary',
-                        '&.Mui-selected': {
-                            bgcolor: theme.palette.action.selected, // Sử dụng màu action.selected của theme
-                            color: 'text.primary',
-                            fontWeight: 500,
-                            '&:hover': {
-                                bgcolor: theme.palette.action.hover, //
-                            }
-                         },
-                         '&:hover': {
-                            bgcolor: theme.palette.action.hover,
-                         }
+                      borderRadius: '20px !important', // Ghi đè border-radius của ToggleButton
+                      px: 1.5, py: 0.5, fontSize: '0.75rem',
+                      border: 'none',
+                      textTransform: 'none',
+                      color: 'text.secondary',
+                      '&.Mui-selected': {
+                        bgcolor: theme.palette.action.selected, // Sử dụng màu action.selected của theme
+                        color: 'text.primary',
+                        fontWeight: 500,
+                        '&:hover': {
+                          bgcolor: theme.palette.action.hover, //
+                        }
+                      },
+                      '&:hover': {
+                        bgcolor: theme.palette.action.hover,
+                      }
                     }}
                   >
                     {period}
@@ -156,9 +156,9 @@ const DashboardHomePage: React.FC = () => {
               </ToggleButtonGroup>
             </Box>
             <Box sx={{
-                height: 300, width: '100%',
-                bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[50] : theme.palette.grey[800], // Phù hợp với theme
-                borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled'
+              height: 300, width: '100%',
+              bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[50] : theme.palette.grey[800], // Phù hợp với theme
+              borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled'
             }}>
               Revenue chart would appear here
             </Box>
@@ -185,22 +185,22 @@ const DashboardHomePage: React.FC = () => {
                     value={period}
                     aria-label={period}
                     sx={{
-                        borderRadius: '20px !important',
-                        px: 1.5, py: 0.5, fontSize: '0.75rem',
-                        border: 'none',
-                        textTransform: 'none',
-                        color: 'text.secondary',
-                        '&.Mui-selected': {
-                            bgcolor: theme.palette.action.selected,
-                            color: 'text.primary',
-                            fontWeight: 500,
-                             '&:hover': {
-                                bgcolor: theme.palette.action.hover,
-                            }
-                         },
-                         '&:hover': {
-                            bgcolor: theme.palette.action.hover,
-                         }
+                      borderRadius: '20px !important',
+                      px: 1.5, py: 0.5, fontSize: '0.75rem',
+                      border: 'none',
+                      textTransform: 'none',
+                      color: 'text.secondary',
+                      '&.Mui-selected': {
+                        bgcolor: theme.palette.action.selected,
+                        color: 'text.primary',
+                        fontWeight: 500,
+                        '&:hover': {
+                          bgcolor: theme.palette.action.hover,
+                        }
+                      },
+                      '&:hover': {
+                        bgcolor: theme.palette.action.hover,
+                      }
                     }}
                   >
                     {period}
@@ -209,9 +209,9 @@ const DashboardHomePage: React.FC = () => {
               </ToggleButtonGroup>
             </Box>
             <Box sx={{
-                height: 300, width: '100%',
-                bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[50] : theme.palette.grey[800],
-                borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled'
+              height: 300, width: '100%',
+              bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[50] : theme.palette.grey[800],
+              borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled'
             }}>
               User growth chart would appear here
             </Box>

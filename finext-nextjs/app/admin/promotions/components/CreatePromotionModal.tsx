@@ -23,7 +23,7 @@ import { apiClient } from 'services/apiClient';
 import { colorTokens } from 'theme/tokens';
 import { convertGMT7ToUTC, convertUTCToGMT7DateString } from 'utils/dateUtils';
 import { filterNonSystemLicenses } from 'utils/systemLicenses';
-import ModernSwitch from './ModernSwitch';
+import CustomSwitchButton from '../../../../components/CustomSwitchButton';
 
 enum DiscountTypeEnumFE {
     PERCENTAGE = "percentage",
@@ -351,13 +351,19 @@ const CreatePromotionModal: React.FC<CreatePromotionModalProps> = ({
                             }}
                         />                        {/* Row 4: Active Status - Full Width */}
                         <Box sx={{ gridColumn: { xs: '1', sm: '1 / -1' } }}>
-                            <ModernSwitch
+                            <CustomSwitchButton
                                 checked={formData.is_active}
-                                onChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
+                                onChange={(checked: boolean) => setFormData(prev => ({ ...prev, is_active: checked }))}
                                 label="Kích hoạt khuyến mãi"
                                 description="Cho phép khuyến mãi có thể được sử dụng bởi người dùng"
                                 disabled={loading}
                                 icon={<ActiveIcon />}
+                                variant="unified"
+                                size="small"
+                                showIcon={true}
+                                fullWidth={true}
+                                backgroundColor="subtle"
+                                borderStyle="prominent"
                             />
                         </Box>
 
@@ -367,13 +373,19 @@ const CreatePromotionModal: React.FC<CreatePromotionModalProps> = ({
                                 Cài đặt tùy chọn
                             </Typography>                            {/* Usage Limit */}
                             <Box sx={{ mb: 3 }}>
-                                <ModernSwitch
+                                <CustomSwitchButton
                                     checked={hasUsageLimit}
                                     onChange={setHasUsageLimit}
                                     label="Giới hạn số lần sử dụng"
                                     description="Đặt giới hạn tối đa số lần khuyến mãi có thể được sử dụng"
                                     disabled={loading}
                                     icon={<LimitIcon />}
+                                    variant="unified"
+                                    size="small"
+                                    showIcon={true}
+                                    fullWidth={true}
+                                    backgroundColor="subtle"
+                                    borderStyle="subtle"
                                 />
                                 {hasUsageLimit && (
                                     <TextField
@@ -391,13 +403,19 @@ const CreatePromotionModal: React.FC<CreatePromotionModalProps> = ({
                                 )}
                             </Box>                            {/* Date Range */}
                             <Box sx={{ mb: 3 }}>
-                                <ModernSwitch
+                                <CustomSwitchButton
                                     checked={hasDateRange}
                                     onChange={setHasDateRange}
                                     label="Thiết lập thời gian có hiệu lực"
                                     description="Đặt ngày bắt đầu và kết thúc cho khuyến mãi"
                                     disabled={loading}
                                     icon={<DateIcon />}
+                                    variant="unified"
+                                    size="small"
+                                    showIcon={true}
+                                    fullWidth={true}
+                                    backgroundColor="subtle"
+                                    borderStyle="subtle"
                                 />
                                 {hasDateRange && (
                                     <Box sx={{
@@ -430,13 +448,19 @@ const CreatePromotionModal: React.FC<CreatePromotionModalProps> = ({
                                 )}
                             </Box>                            {/* License Restriction */}
                             <Box>
-                                <ModernSwitch
+                                <CustomSwitchButton
                                     checked={hasLicenseRestriction}
                                     onChange={setHasLicenseRestriction}
                                     label="Áp dụng chỉ cho các gói license cụ thể"
                                     description="Giới hạn khuyến mãi chỉ áp dụng cho một số gói license nhất định"
                                     disabled={loading}
                                     icon={<LicenseIcon />}
+                                    variant="unified"
+                                    size="small"
+                                    showIcon={true}
+                                    fullWidth={true}
+                                    backgroundColor="subtle"
+                                    borderStyle="subtle"
                                 />
                                 {hasLicenseRestriction && (
                                     <Autocomplete

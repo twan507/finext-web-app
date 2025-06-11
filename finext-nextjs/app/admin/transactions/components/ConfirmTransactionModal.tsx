@@ -9,7 +9,7 @@ import {
 import {
     PlaylistAddCheckCircle as ConfirmIcon,
     Cancel as CancelIcon,
-    AttachMoney as MoneyIcon,
+    LocalAtm as MoneyIcon,
     CalendarToday as DaysIcon,
     Close as CloseIcon,
     LocalOffer as PromotionIcon,
