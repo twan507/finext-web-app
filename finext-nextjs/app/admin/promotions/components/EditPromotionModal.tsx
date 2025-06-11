@@ -16,8 +16,8 @@ import {
 import { apiClient } from 'services/apiClient';
 import { colorTokens } from 'theme/tokens';
 import { convertGMT7ToUTC, convertUTCToGMT7DateString } from 'utils/dateUtils';
-import { filterNonSystemLicenses } from 'utils/systemLicenses';
-import CustomSwitchButton from '../../../../components/CustomSwitchButton';
+import { filterNonSystemLicenses } from 'utils/systemProtection';
+import ModernSwitchButton from '../../components/ModernSwitchButton';
 
 enum DiscountTypeEnumFE {
     PERCENTAGE = "percentage",
@@ -349,7 +349,7 @@ const EditPromotionModal: React.FC<EditPromotionModalProps> = ({
                                 Cài đặt khuyến mãi
                             </Typography>                            {/* Usage Limit */}
                             <Box sx={{ mb: 3 }}>
-                                <CustomSwitchButton
+                                <ModernSwitchButton
                                     checked={hasUsageLimit}
                                     onChange={setHasUsageLimit}
                                     label="Giới hạn số lần sử dụng"
@@ -379,7 +379,7 @@ const EditPromotionModal: React.FC<EditPromotionModalProps> = ({
                                 )}
                             </Box>                            {/* Date Range */}
                             <Box sx={{ mb: 3 }}>
-                                <CustomSwitchButton
+                                <ModernSwitchButton
                                     checked={hasDateRange}
                                     onChange={setHasDateRange}
                                     label="Thiết lập thời gian có hiệu lực"
@@ -425,7 +425,7 @@ const EditPromotionModal: React.FC<EditPromotionModalProps> = ({
                                 )}
                             </Box>                            {/* License Restriction */}
                             <Box>
-                                <CustomSwitchButton
+                                <ModernSwitchButton
                                     checked={hasLicenseRestriction}
                                     onChange={setHasLicenseRestriction}
                                     label="Áp dụng chỉ cho các gói license cụ thể"

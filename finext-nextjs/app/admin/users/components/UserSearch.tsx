@@ -16,6 +16,7 @@ import {
     Clear as ClearIcon,
     FilterList as FilterIcon
 } from '@mui/icons-material';
+import { isSystemUser } from 'utils/systemProtection';
 
 interface UserPublic {
     id: string;
@@ -118,6 +119,12 @@ const UserSearch: React.FC<UserSearchProps> = ({
             protectedEmails.includes(user.email) ? 'protected' : 'unprotected'
         ];
 
+        // Type fields (system user detection)
+        const typeFields = [
+            isSystemUser(user.email) ? 'system' : 'standard',
+            isSystemUser(user.email) ? 'hệ thống' : 'tiêu chuẩn'
+        ];
+
         // Role names
         const userRoleNames = getRoleNames(user.role_ids || []);
 
@@ -149,12 +156,11 @@ const UserSearch: React.FC<UserSearchProps> = ({
             }
         } catch (error) {
             // Skip invalid dates
-        }
-
-        // Combine all searchable fields
+        }        // Combine all searchable fields
         const allSearchableFields = [
             ...basicFields,
             ...statusFields,
+            ...typeFields,
             ...userRoleNames,
             ...subscriptionFields,
             ...dateFields
@@ -281,35 +287,35 @@ const UserSearch: React.FC<UserSearchProps> = ({
                         <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontSize: '0.6875rem' }}>
                             Bộ lọc nhanh:
                         </Typography>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                            {[
-                                { label: 'Active', value: 'active' },
-                                { label: 'Inactive', value: 'inactive' },
-                                { label: 'Basic', value: 'basic' },
-                                { label: 'Pro', value: 'pro' },
-                                { label: 'Premium', value: 'premium' },
-                                { label: 'Google', value: 'google' },
-                                { label: 'Credentials', value: 'credentials' },
-                                { label: 'Admin', value: 'admin' },
-                                { label: 'User', value: 'user' },
-                                { label: 'Broker', value: 'broker' },
-                            ].map((filter) => (
-                                <Chip
-                                    key={filter.value}
-                                    label={filter.label}
-                                    size="small"
-                                    variant={searchTerm === filter.value ? 'filled' : 'outlined'}
-                                    color={searchTerm === filter.value ? 'primary' : 'default'}
-                                    onClick={() => setSearchTerm(
-                                        searchTerm === filter.value ? '' : filter.value
-                                    )}
-                                    sx={{
-                                        cursor: 'pointer',
-                                        height: '22px',
-                                        fontSize: '0.6875rem'
-                                    }}
-                                />
-                            ))}
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>                            {[
+                            { label: 'Active', value: 'active' },
+                            { label: 'Inactive', value: 'inactive' },
+                            { label: 'Basic', value: 'basic' },
+                            { label: 'Pro', value: 'pro' },
+                            { label: 'Premium', value: 'premium' },
+                            { label: 'Google', value: 'google' },
+                            { label: 'Credentials', value: 'credentials' },
+                            { label: 'Admin', value: 'admin' },
+                            { label: 'User', value: 'user' },
+                            { label: 'Broker', value: 'broker' },
+                            { label: 'Hệ thống', value: 'hệ thống' },
+                        ].map((filter) => (
+                            <Chip
+                                key={filter.value}
+                                label={filter.label}
+                                size="small"
+                                variant={searchTerm === filter.value ? 'filled' : 'outlined'}
+                                color={searchTerm === filter.value ? 'primary' : 'default'}
+                                onClick={() => setSearchTerm(
+                                    searchTerm === filter.value ? '' : filter.value
+                                )}
+                                sx={{
+                                    cursor: 'pointer',
+                                    height: '22px',
+                                    fontSize: '0.6875rem'
+                                }}
+                            />
+                        ))}
                         </Box>
                     </Box>
                 </>

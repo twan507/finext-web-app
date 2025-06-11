@@ -14,7 +14,7 @@ import {
 import { apiClient } from 'services/apiClient';
 import { colorTokens } from 'theme/tokens';
 import { parseISO, addDays, format } from 'date-fns';
-import { filterNonSystemLicenses, isSystemLicense } from 'utils/systemLicenses';
+import { filterNonSystemLicenses, isSystemLicense } from 'utils/systemProtection';
 
 interface UserPublic {
     id: string;

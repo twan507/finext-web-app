@@ -20,7 +20,7 @@ import {
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
 import { colorTokens } from 'theme/tokens';
-import CustomSwitchButton from '../../../../components/CustomSwitchButton';
+import ModernSwitchButton from '../../components/ModernSwitchButton';
 import {
     getBasicFeatures,
     getSystemFeatures,
@@ -29,7 +29,7 @@ import {
     filterSelectableFeatures,
     ensureBasicFeaturesIncluded,
     getFeatureKeysWithBasics
-} from '../../../../utils/systemLicenses';
+} from '../../../../utils/systemProtection';
 
 interface LicenseCreateRequest {
     key: string;
@@ -480,7 +480,7 @@ const CreateLicenseModal: React.FC<CreateLicenseModalProps> = ({
                             fullWidth
                         />                        {/* Row 3: Active Status - Full Width */}
                         <Box sx={{ gridColumn: { xs: '1', sm: '1 / -1' } }}>
-                            <CustomSwitchButton
+                            <ModernSwitchButton
                                 checked={formData.is_active}
                                 onChange={(checked: boolean) => setFormData(prev => ({ ...prev, is_active: checked }))}
                                 label="Kích hoạt License"
@@ -547,7 +547,7 @@ const CreateLicenseModal: React.FC<CreateLicenseModalProps> = ({
                                                 const isSystem = isSystemFeature(feature.key);
 
                                                 return (
-                                                    <CustomSwitchButton
+                                                    <ModernSwitchButton
                                                         key={feature.id}
                                                         checked={isSelected}
                                                         onChange={() => {

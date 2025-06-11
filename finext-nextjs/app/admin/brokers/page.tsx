@@ -29,6 +29,7 @@ import {
     getNextSortDirection,
     getResponsiveDisplayStyle
 } from '../components/TableSortUtils';
+import { isSystemUser } from 'utils/systemProtection';
 
 interface BrokerPublic {
     id: string;
@@ -300,6 +301,14 @@ export default function BrokersPage() {
             setBrokers(prev => prev.map(b => b.id === broker.id ? { ...b, is_active: originalStatus, updated_at: broker.updated_at } : b));
         }
     }; const handleOpenActionDialog = (broker: BrokerPublic, action: 'revoke' | 'grant') => {
+        const brokerEmail = userEmails.get(broker.user_id) || broker.user_email || '';
+
+        // Check if broker is a system user
+        if (isSystemUser(brokerEmail)) {
+            setError(`Không thể ${action === 'revoke' ? 'thu hồi' : 'khôi phục'} quyền môi giới hệ thống.`);
+            return;
+        }
+
         setBrokerToAction(broker);
         setActionType(action);
         setOpenActionDialog(true);
@@ -620,38 +629,55 @@ export default function BrokersPage() {
                                                         zIndex: 1
                                                     }
                                                 }}
-                                            >
-                                                <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                                                    {broker.is_active ? (<Tooltip title="Thu hồi quyền">
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={() => handleOpenActionDialog(broker, 'revoke')}
-                                                            color="error"
-                                                            sx={{
-                                                                minWidth: { xs: 32, sm: 'auto' },
-                                                                width: { xs: 32, sm: 'auto' },
-                                                                height: { xs: 32, sm: 'auto' }
-                                                            }}
-                                                        >
-                                                            <RevokeIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                    ) : (
-                                                        <Tooltip title="Khôi phục quyền">
-                                                            <IconButton
-                                                                size="small"
-                                                                onClick={() => handleOpenActionDialog(broker, 'grant')}
-                                                                color="warning"
-                                                                sx={{
-                                                                    minWidth: { xs: 32, sm: 'auto' },
-                                                                    width: { xs: 32, sm: 'auto' },
-                                                                    height: { xs: 32, sm: 'auto' }
-                                                                }}
-                                                            >
-                                                                <GrantIcon fontSize="small" />
-                                                            </IconButton>
-                                                        </Tooltip>
-                                                    )}
+                                            >                                                <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                                                    {(() => {
+                                                        const brokerEmail = userEmails.get(broker.user_id) || broker.user_email || '';
+                                                        const isSystemBroker = isSystemUser(brokerEmail);
+
+                                                        if (broker.is_active) {
+                                                            return (
+                                                                <Tooltip title={isSystemBroker ? "Không thể thu hồi quyền môi giới hệ thống" : "Thu hồi quyền"}>
+                                                                    <span>
+                                                                        <IconButton
+                                                                            size="small"
+                                                                            onClick={() => handleOpenActionDialog(broker, 'revoke')}
+                                                                            color="error"
+                                                                            disabled={isSystemBroker}
+                                                                            sx={{
+                                                                                minWidth: { xs: 32, sm: 'auto' },
+                                                                                width: { xs: 32, sm: 'auto' },
+                                                                                height: { xs: 32, sm: 'auto' },
+                                                                                opacity: isSystemBroker ? 0.5 : 1
+                                                                            }}
+                                                                        >
+                                                                            <RevokeIcon fontSize="small" />
+                                                                        </IconButton>
+                                                                    </span>
+                                                                </Tooltip>
+                                                            );
+                                                        } else {
+                                                            return (
+                                                                <Tooltip title={isSystemBroker ? "Không thể khôi phục quyền môi giới hệ thống" : "Khôi phục quyền"}>
+                                                                    <span>
+                                                                        <IconButton
+                                                                            size="small"
+                                                                            onClick={() => handleOpenActionDialog(broker, 'grant')}
+                                                                            color="warning"
+                                                                            disabled={isSystemBroker}
+                                                                            sx={{
+                                                                                minWidth: { xs: 32, sm: 'auto' },
+                                                                                width: { xs: 32, sm: 'auto' },
+                                                                                height: { xs: 32, sm: 'auto' },
+                                                                                opacity: isSystemBroker ? 0.5 : 1
+                                                                            }}
+                                                                        >
+                                                                            <GrantIcon fontSize="small" />
+                                                                        </IconButton>
+                                                                    </span>
+                                                                </Tooltip>
+                                                            );
+                                                        }
+                                                    })()}
                                                 </Box>
                                             </TableCell>
                                         </TableRow>

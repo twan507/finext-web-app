@@ -28,6 +28,7 @@ import {
   getNextSortDirection,
   getResponsiveDisplayStyle
 } from '../components/TableSortUtils';
+import { isSystemUser } from 'utils/systemProtection';
 
 // Interface for User data (matching UserPublic from backend)
 interface UserPublic {
@@ -527,10 +528,9 @@ const UsersPage: React.FC = () => {
       details: subscription
     };
   };
-
   // Helper function to check if a user is protected
   const isUserProtected = (userEmail: string): boolean => {
-    return protectedEmails.includes(userEmail);
+    return protectedEmails.includes(userEmail) || isSystemUser(userEmail);
   };
   // Calculate paginated users - use server pagination when not filtering/sorting, client pagination when filtering/sorting
   const paginatedUsers = React.useMemo(() => {
@@ -879,34 +879,38 @@ const UsersPage: React.FC = () => {
                           backgroundColor: 'divider',
                           zIndex: 1
                         }
-                      }}>
-                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>                          <Tooltip title="Chỉnh sửa người dùng">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleEditUser(user)}
-                            color="primary"
-                            sx={{
-                              minWidth: { xs: 32, sm: 'auto' },
-                              width: { xs: 32, sm: 'auto' },
-                              height: { xs: 32, sm: 'auto' }
-                            }}
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                          <Tooltip title="Xóa người dùng">
+                      }}>                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                          <Tooltip title="Chỉnh sửa người dùng">
                             <IconButton
                               size="small"
-                              onClick={() => handleOpenDeleteDialog(user)}
-                              color="error"
+                              onClick={() => handleEditUser(user)}
+                              color="primary"
                               sx={{
                                 minWidth: { xs: 32, sm: 'auto' },
                                 width: { xs: 32, sm: 'auto' },
                                 height: { xs: 32, sm: 'auto' }
                               }}
                             >
-                              <DeleteIcon fontSize="small" />
+                              <EditIcon fontSize="small" />
                             </IconButton>
+                          </Tooltip>
+                          <Tooltip title={isSystemUser(user.email) ? "Không thể xóa người dùng hệ thống" : "Xóa người dùng"}>
+                            <span>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleOpenDeleteDialog(user)}
+                                color="error"
+                                disabled={isSystemUser(user.email)}
+                                sx={{
+                                  minWidth: { xs: 32, sm: 'auto' },
+                                  width: { xs: 32, sm: 'auto' },
+                                  height: { xs: 32, sm: 'auto' },
+                                  opacity: isSystemUser(user.email) ? 0.5 : 1
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </span>
                           </Tooltip>
                         </Box>
                       </TableCell>

@@ -16,73 +16,64 @@ import {
     Clear as ClearIcon,
     FilterList as FilterIcon
 } from '@mui/icons-material';
-import { isSystemUser } from 'utils/systemProtection';
+import { isSystemFeature, isBasicFeature } from 'utils/systemProtection';
 
-interface BrokerPublic {
+interface FeaturePublic {
     id: string;
-    user_id: string;
-    broker_code: string;
-    is_active: boolean;
-    created_at: string;
-    updated_at: string;
-    user_email?: string; // Optional field for future use
+    key: string;
+    name: string;
+    description?: string | null;
+    created_at?: string;
+    updated_at?: string;
 }
 
-interface BrokerSearchProps {
-    brokers: BrokerPublic[];
-    onFilteredBrokers: (filteredBrokers: BrokerPublic[], isFiltering: boolean) => void;
+interface FeatureSearchProps {
+    features: FeaturePublic[];
+    onFilteredFeatures: (filteredFeatures: FeaturePublic[], isFiltering: boolean) => void;
     loading?: boolean;
-    userEmails?: Map<string, string>;
 }
 
-const BrokerSearch: React.FC<BrokerSearchProps> = ({
-    brokers,
-    onFilteredBrokers,
-    loading = false,
-    userEmails = new Map()
+const FeatureSearch: React.FC<FeatureSearchProps> = ({
+    features,
+    onFilteredFeatures,
+    loading = false
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [showFilters, setShowFilters] = useState(false);
 
-    // Enhanced function to search in all broker fields and related data
-    const searchInBroker = (broker: BrokerPublic, term: string): boolean => {
+    // Enhanced function to search in all feature fields
+    const searchInFeature = (feature: FeaturePublic, term: string): boolean => {
         const searchLower = term.toLowerCase().trim();
-        if (!searchLower) return true;        // Basic broker fields
+        if (!searchLower) return true;        // Basic feature fields
         const basicFields = [
-            broker.broker_code,
-            broker.user_id,
-            broker.user_email,  // Include user email if available
-            userEmails.get(broker.user_id), // Include fetched email
-            broker.id
+            feature.key,
+            feature.name,
+            feature.description,
+            feature.id
         ].filter(field => field); // Remove null/undefined values
 
-        // Type fields for system users
+        // Feature type fields
         const typeFields = [];
-        const brokerEmail = userEmails.get(broker.user_id) || broker.user_email || '';
-        if (isSystemUser(brokerEmail)) {
-            typeFields.push('system', 'hệ thống', 'he thong', 'system user', 'người dùng hệ thống');
+        if (isSystemFeature(feature.key)) {
+            typeFields.push('system', 'hệ thống', 'he thong');
         }
-
-        // Status fields
-        const statusFields = [
-            broker.is_active ? 'active' : 'inactive',
-            broker.is_active ? 'hoạt động' : 'không hoạt động', // Vietnamese
-            broker.is_active ? 'kích hoạt' : 'hủy kích hoạt' // Vietnamese variations
-        ];
+        if (isBasicFeature(feature.key)) {
+            typeFields.push('basic', 'cơ bản', 'co ban');
+        }
 
         // Date fields (formatted for Vietnamese locale)
         const dateFields = [];
         try {
-            if (broker.created_at) {
-                const createdDate = new Date(broker.created_at);
+            if (feature.created_at) {
+                const createdDate = new Date(feature.created_at);
                 dateFields.push(
                     createdDate.toLocaleDateString('vi-VN'),
                     createdDate.toLocaleDateString('en-US'),
                     createdDate.getFullYear().toString()
                 );
             }
-            if (broker.updated_at) {
-                const updatedDate = new Date(broker.updated_at);
+            if (feature.updated_at) {
+                const updatedDate = new Date(feature.updated_at);
                 dateFields.push(
                     updatedDate.toLocaleDateString('vi-VN'),
                     updatedDate.toLocaleDateString('en-US'),
@@ -95,7 +86,6 @@ const BrokerSearch: React.FC<BrokerSearchProps> = ({
         const allSearchableFields = [
             ...basicFields,
             ...typeFields,
-            ...statusFields,
             ...dateFields
         ];
 
@@ -105,19 +95,19 @@ const BrokerSearch: React.FC<BrokerSearchProps> = ({
         );
     };
 
-    // Memoized filtered brokers
-    const filteredBrokers = useMemo(() => {
+    // Memoized filtered features
+    const filteredFeatures = useMemo(() => {
         if (!searchTerm.trim()) {
-            return brokers;
+            return features;
         }
-        return brokers.filter(broker => searchInBroker(broker, searchTerm));
-    }, [brokers, searchTerm, userEmails]);
+        return features.filter(feature => searchInFeature(feature, searchTerm));
+    }, [features, searchTerm]);
 
-    // Update parent component when filtered brokers change
+    // Update parent component when filtered features change
     React.useEffect(() => {
         const isActivelyFiltering = searchTerm.trim() !== '';
-        onFilteredBrokers(filteredBrokers, isActivelyFiltering);
-    }, [filteredBrokers, onFilteredBrokers, searchTerm]);
+        onFilteredFeatures(filteredFeatures, isActivelyFiltering);
+    }, [filteredFeatures, onFilteredFeatures, searchTerm]);
 
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(event.target.value);
@@ -128,8 +118,8 @@ const BrokerSearch: React.FC<BrokerSearchProps> = ({
     };
 
     const getSearchStats = () => {
-        const total = brokers.length;
-        const filtered = filteredBrokers.length;
+        const total = features.length;
+        const filtered = filteredFeatures.length;
         return { total, filtered, isFiltered: searchTerm.trim() !== '' };
     };
 
@@ -141,7 +131,7 @@ const BrokerSearch: React.FC<BrokerSearchProps> = ({
                 <TextField
                     fullWidth
                     size="small"
-                    placeholder="Tìm kiếm theo Mã môi giới, User ID, Email, Trạng thái, Ngày tạo, ..."
+                    placeholder="Tìm kiếm theo Feature Key, Tên tính năng, Mô tả, Ngày tạo, ..."
                     value={searchTerm}
                     onChange={handleSearchChange}
                     disabled={loading}
@@ -204,7 +194,7 @@ const BrokerSearch: React.FC<BrokerSearchProps> = ({
                         </>
                     ) : (
                         <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6875rem' }}>
-                            {stats.total} môi giới (trang hiện tại)
+                            {stats.total} tính năng (trang hiện tại)
                         </Typography>
                     )}
                 </Box>
@@ -228,31 +218,30 @@ const BrokerSearch: React.FC<BrokerSearchProps> = ({
                     <Box>
                         <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontSize: '0.6875rem' }}>
                             Bộ lọc nhanh:
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>                            {[
-                            { label: 'Hệ thống', value: 'hệ thống' },
-                            { label: 'Active', value: 'active' },
-                            { label: 'Inactive', value: 'inactive' },
-                            { label: '2024', value: '2024' },
-                            { label: '2023', value: '2023' },
-                            { label: 'Tháng này', value: new Date().toLocaleDateString('vi-VN').split('/').slice(1).join('/') },
-                        ].map((filter) => (
-                            <Chip
-                                key={filter.value}
-                                label={filter.label}
-                                size="small"
-                                variant={searchTerm === filter.value ? 'filled' : 'outlined'}
-                                color={searchTerm === filter.value ? 'primary' : 'default'}
-                                onClick={() => setSearchTerm(
-                                    searchTerm === filter.value ? '' : filter.value
-                                )}
-                                sx={{
-                                    cursor: 'pointer',
-                                    height: '22px',
-                                    fontSize: '0.6875rem'
-                                }}
-                            />
-                        ))}
+                        </Typography>                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {[
+                                { label: 'Hệ thống', value: 'hệ thống' },
+                                { label: 'Cơ bản', value: 'cơ bản' },
+                                { label: '2024', value: '2024' },
+                                { label: '2023', value: '2023' },
+                                { label: 'Tháng này', value: new Date().toLocaleDateString('vi-VN').split('/').slice(1).join('/') },
+                            ].map((filter) => (
+                                <Chip
+                                    key={filter.value}
+                                    label={filter.label}
+                                    size="small"
+                                    variant={searchTerm === filter.value ? 'filled' : 'outlined'}
+                                    color={searchTerm === filter.value ? 'primary' : 'default'}
+                                    onClick={() => setSearchTerm(
+                                        searchTerm === filter.value ? '' : filter.value
+                                    )}
+                                    sx={{
+                                        cursor: 'pointer',
+                                        height: '22px',
+                                        fontSize: '0.6875rem'
+                                    }}
+                                />
+                            ))}
                         </Box>
                     </Box>
                 </>
@@ -261,4 +250,4 @@ const BrokerSearch: React.FC<BrokerSearchProps> = ({
     );
 };
 
-export default BrokerSearch;
+export default FeatureSearch;

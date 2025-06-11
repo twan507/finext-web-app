@@ -35,10 +35,10 @@ export const filterNonSystemLicenses = <T extends { key: string }>(licenses: T[]
  * Get the list of basic features that should always be selected and cannot be deselected
  */
 export const getBasicFeatures = (): string[] => {
-    const basicFeaturesEnv = process.env.NEXT_PUBLIC_BASIC_FEATURES;
+    const basicFeaturesEnv = process.env.NEXT_PUBLIC_BASIC_FEATURE;
 
     if (!basicFeaturesEnv) {
-        console.warn('NEXT_PUBLIC_BASIC_FEATURES environment variable is not defined. No basic features will be enforced.');
+        console.warn('NEXT_PUBLIC_BASIC_FEATURE environment variable is not defined. No basic features will be enforced.');
         return [];
     }
 
@@ -116,4 +116,36 @@ export const getFeatureKeysWithBasics = (selectedFeatureKeys: string[]): string[
     const basicFeatures = getBasicFeatures();
     const uniqueKeys = new Set([...basicFeatures, ...selectedFeatureKeys]);
     return Array.from(uniqueKeys);
+};
+
+// === USER UTILITIES ===
+
+/**
+ * Get the list of system users that should not be deletable or deactivatable
+ */
+export const getSystemUsers = (): string[] => {
+    const systemUsersEnv = process.env.NEXT_PUBLIC_SYSTEM_USERS;
+
+    if (!systemUsersEnv) {
+        console.warn('NEXT_PUBLIC_SYSTEM_USERS environment variable is not defined. No system users will be protected.');
+        return [];
+    }
+
+    return systemUsersEnv.split(',').map(email => email.trim().toLowerCase());
+};
+
+/**
+ * Check if a user email is a system user that should be protected
+ */
+export const isSystemUser = (userEmail: string): boolean => {
+    const systemUsers = getSystemUsers();
+    return systemUsers.includes(userEmail.toLowerCase());
+};
+
+/**
+ * Filter out system users from a list of users
+ */
+export const filterNonSystemUsers = <T extends { email: string }>(users: T[]): T[] => {
+    const systemUsers = getSystemUsers();
+    return users.filter(user => !systemUsers.includes(user.email.toLowerCase()));
 };

@@ -22,8 +22,8 @@ import {
 import { apiClient } from 'services/apiClient';
 import { colorTokens } from 'theme/tokens';
 import { convertGMT7ToUTC, convertUTCToGMT7DateString } from 'utils/dateUtils';
-import { filterNonSystemLicenses } from 'utils/systemLicenses';
-import CustomSwitchButton from '../../../../components/CustomSwitchButton';
+import { filterNonSystemLicenses } from 'utils/systemProtection';
+import ModernSwitchButton from '../../components/ModernSwitchButton';
 
 enum DiscountTypeEnumFE {
     PERCENTAGE = "percentage",
@@ -351,7 +351,7 @@ const CreatePromotionModal: React.FC<CreatePromotionModalProps> = ({
                             }}
                         />                        {/* Row 4: Active Status - Full Width */}
                         <Box sx={{ gridColumn: { xs: '1', sm: '1 / -1' } }}>
-                            <CustomSwitchButton
+                            <ModernSwitchButton
                                 checked={formData.is_active}
                                 onChange={(checked: boolean) => setFormData(prev => ({ ...prev, is_active: checked }))}
                                 label="Kích hoạt khuyến mãi"
@@ -373,7 +373,7 @@ const CreatePromotionModal: React.FC<CreatePromotionModalProps> = ({
                                 Cài đặt tùy chọn
                             </Typography>                            {/* Usage Limit */}
                             <Box sx={{ mb: 3 }}>
-                                <CustomSwitchButton
+                                <ModernSwitchButton
                                     checked={hasUsageLimit}
                                     onChange={setHasUsageLimit}
                                     label="Giới hạn số lần sử dụng"
@@ -403,7 +403,7 @@ const CreatePromotionModal: React.FC<CreatePromotionModalProps> = ({
                                 )}
                             </Box>                            {/* Date Range */}
                             <Box sx={{ mb: 3 }}>
-                                <CustomSwitchButton
+                                <ModernSwitchButton
                                     checked={hasDateRange}
                                     onChange={setHasDateRange}
                                     label="Thiết lập thời gian có hiệu lực"
@@ -448,7 +448,7 @@ const CreatePromotionModal: React.FC<CreatePromotionModalProps> = ({
                                 )}
                             </Box>                            {/* License Restriction */}
                             <Box>
-                                <CustomSwitchButton
+                                <ModernSwitchButton
                                     checked={hasLicenseRestriction}
                                     onChange={setHasLicenseRestriction}
                                     label="Áp dụng chỉ cho các gói license cụ thể"

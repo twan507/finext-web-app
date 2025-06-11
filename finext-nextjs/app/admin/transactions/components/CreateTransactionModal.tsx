@@ -13,7 +13,7 @@ import {
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
 import { colorTokens } from 'theme/tokens';
-import { filterNonSystemLicenses, isSystemLicense } from 'utils/systemLicenses';
+import { filterNonSystemLicenses, isSystemLicense } from 'utils/systemProtection';
 
 interface UserPublic {
     id: string;

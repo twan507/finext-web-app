@@ -22,7 +22,7 @@ interface CustomSwitchButtonProps {
     borderStyle?: 'none' | 'subtle' | 'prominent';
 }
 
-const CustomSwitchButton: React.FC<CustomSwitchButtonProps> = ({
+const ModernSwitchButton: React.FC<CustomSwitchButtonProps> = ({
     checked,
     onChange,
     label,
@@ -455,4 +455,4 @@ const CustomSwitchButton: React.FC<CustomSwitchButtonProps> = ({
     );
 };
 
-export default CustomSwitchButton;
+export default ModernSwitchButton;
