@@ -36,6 +36,7 @@ PROTECTED_USER_EMAILS = list(
 PROTECTED_ROLE_NAMES = ["admin", "user", "broker"]
 BASIC_LICENSE_KEY = "BASIC"
 PROTECTED_LICENSE_KEYS = ["ADMIN", "MANAGER", "PARTNER","BASIC"]
+PROTECTED_FEATURES = ["basic_feature","broker_feature","admin_feature","manager_feature"]
 
 # Phần trăm giảm giá cho broker
 BROKER_DISCOUNT_PERCENTAGE = 10

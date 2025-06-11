@@ -106,13 +106,16 @@ async def update_existing_feature(  # Đổi tên hàm
     feature_data: FeatureUpdate,
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
-    updated_feature = await crud_features.update_feature(db, feature_id, feature_data)
-    if updated_feature is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Không thể cập nhật. Feature với ID {feature_id} không tồn tại.",
-        )
-    return FeaturePublic.model_validate(updated_feature)
+    try:
+        updated_feature = await crud_features.update_feature(db, feature_id, feature_data)
+        if updated_feature is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Không thể cập nhật. Feature với ID {feature_id} không tồn tại.",
+            )
+        return FeaturePublic.model_validate(updated_feature)
+    except ValueError as ve:  # Bắt lỗi từ CRUD (ví dụ: feature được bảo vệ, key trùng lặp)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
 @router.delete(

@@ -20,6 +20,15 @@ import {
 import { apiClient } from 'services/apiClient';
 import { colorTokens } from 'theme/tokens';
 import CustomSwitchButton from '../../../../components/CustomSwitchButton';
+import {
+    getBasicFeatures,
+    getSystemFeatures,
+    isBasicFeature,
+    isSystemFeature,
+    filterSelectableFeatures,
+    ensureBasicFeaturesIncluded,
+    getFeatureKeysWithBasics
+} from '../../../../utils/systemLicenses';
 
 interface LicensePublic {
     id: string;
@@ -94,8 +103,8 @@ const EditLicenseModal: React.FC<EditLicenseModalProps> = ({
                 url: `/api/v1/features/`,
                 method: 'GET',
                 queryParams: {
-                    limit: 1000,
-                    include_inactive: false
+                    skip: 0,
+                    limit: 99999
                 }
             });
 
@@ -116,43 +125,23 @@ const EditLicenseModal: React.FC<EditLicenseModalProps> = ({
                     console.log('EditModal: Found direct array features:', features.length);
                 } else {
                     console.warn('EditModal: Unexpected response format:', response.data);
-                }
+                }                // Set all features (no filtering needed since API returns all)
+                console.log(`EditModal: Loading ${features.length} total features`);
+                setAllFeatures(features);
 
-                // Filter only active features
-                const activeFeatures = features.filter(feature => feature.is_active);
-                console.log(`EditModal: Filtered ${activeFeatures.length} active features from ${features.length} total`);
-                setAllFeatures(activeFeatures);
-
-                // Auto-select features that are already assigned to the license
-                if (license?.feature_keys && activeFeatures.length > 0) {
-                    const preselectedFeatures = activeFeatures.filter(feature =>
+                // Auto-select features that are already assigned to the license, ensuring basic features are included
+                if (license?.feature_keys && features.length > 0) {
+                    const preselectedFeatures = features.filter(feature =>
                         license.feature_keys.includes(feature.key)
                     );
-                    console.log('EditModal: Pre-selecting features:', preselectedFeatures.map(f => f.key));
-                    setSelectedFeatures(preselectedFeatures);
-                }
-
-                if (activeFeatures.length === 0) {
-                    console.warn('EditModal: No active features found, adding mock data for testing');
-                    // Add mock data for testing if no features are returned
-                    const mockFeatures: FeaturePublic[] = [
-                        {
-                            id: 'mock-1',
-                            key: 'basic_feature',
-                            name: 'Tính năng cơ bản',
-                            description: 'Các tính năng cơ bản của hệ thống',
-                            is_active: true
-                        },
-                        {
-                            id: 'mock-2',
-                            key: 'advanced_feature',
-                            name: 'Tính năng nâng cao',
-                            description: 'Các tính năng nâng cao',
-                            is_active: true
-                        }
-                    ];
-                    setAllFeatures(mockFeatures);
-                    console.log('EditModal: Set mock features:', mockFeatures.length);
+                    // Ensure basic features are always included
+                    const finalSelectedFeatures = ensureBasicFeaturesIncluded(preselectedFeatures, features);
+                    console.log('EditModal: Pre-selecting features:', finalSelectedFeatures.map(f => f.key));
+                    setSelectedFeatures(finalSelectedFeatures);
+                } else if (features.length > 0) {
+                    // If no license features, at least select basic features
+                    const basicFeatures = features.filter(feature => isBasicFeature(feature.key));
+                    setSelectedFeatures(basicFeatures);
                 }
             } else {
                 console.warn('EditModal: Failed to load features, status:', response.status, 'message:', response.message);
@@ -173,7 +162,7 @@ const EditLicenseModal: React.FC<EditLicenseModalProps> = ({
                 price: license.price || 0,
                 duration_days: license.duration_days || 0,
                 is_active: license.is_active || true,
-                feature_keys: license.feature_keys || []
+                feature_keys: getFeatureKeysWithBasics(license.feature_keys || [])
             });
 
             // Fetch features when modal opens
@@ -236,13 +225,17 @@ const EditLicenseModal: React.FC<EditLicenseModalProps> = ({
         }
 
         setLoading(true);
-        setError(null);
+        setError(null); try {
+            // Ensure basic features are included in the submission
+            const finalFormData = {
+                ...formData,
+                feature_keys: getFeatureKeysWithBasics(formData.feature_keys)
+            };
 
-        try {
             const response = await apiClient({
                 url: `/api/v1/licenses/${license.id}`,
                 method: 'PUT',
-                body: formData,
+                body: finalFormData,
             });
 
             if (response.status === 200) {
@@ -529,54 +522,89 @@ const EditLicenseModal: React.FC<EditLicenseModalProps> = ({
                                 ) : allFeatures.length === 0 ? (
                                     <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
                                         Không có tính năng nào khả dụng
-                                    </Typography>
-                                ) : (
-                                    <Box sx={{
+                                    </Typography>) : (<Box sx={{
                                         display: 'grid',
                                         gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
                                         gap: 2
                                     }}>
-                                        {allFeatures.map((feature) => {
-                                            const isSelected = formData.feature_keys.includes(feature.key);
-                                            return (
-                                                <CustomSwitchButton
-                                                    key={feature.id}
-                                                    checked={isSelected}
-                                                    onChange={() => {
-                                                        if (isSelected) {
-                                                            // Remove feature
-                                                            setFormData(prev => ({
-                                                                ...prev,
-                                                                feature_keys: prev.feature_keys.filter(key => key !== feature.key)
-                                                            }));
-                                                            setSelectedFeatures(prev => prev.filter(f => f.id !== feature.id));
-                                                        } else {
-                                                            // Add feature
-                                                            setFormData(prev => ({
-                                                                ...prev,
-                                                                feature_keys: [...prev.feature_keys, feature.key]
-                                                            }));
-                                                            setSelectedFeatures(prev => [...prev, feature]);
-                                                        }
+                                        {/* Sort features: Basic first, then Regular, then System */}
+                                        {[...allFeatures]
+                                            .sort((a, b) => {
+                                                const aIsBasic = isBasicFeature(a.key);
+                                                const bIsBasic = isBasicFeature(b.key);
+                                                const aIsSystem = isSystemFeature(a.key);
+                                                const bIsSystem = isSystemFeature(b.key);
 
-                                                        // Clear error when user selects features
-                                                        if (errors.feature_keys) {
-                                                            setErrors(prev => ({ ...prev, feature_keys: undefined }));
-                                                        }
-                                                    }}
-                                                    label={feature.key}
-                                                    description={feature.name}
-                                                    disabled={loading}
-                                                    variant="unified"
-                                                    size="small"
-                                                    showIcon={false}
-                                                    fullWidth={false}
-                                                    backgroundColor="subtle"
-                                                    borderStyle="prominent"
-                                                    borderRadius={2}
-                                                />
-                                            );
-                                        })}
+                                                // Basic features first
+                                                if (aIsBasic && !bIsBasic) return -1;
+                                                if (!aIsBasic && bIsBasic) return 1;
+
+                                                // System features last
+                                                if (aIsSystem && !bIsSystem) return 1;
+                                                if (!aIsSystem && bIsSystem) return -1;
+
+                                                // Regular features in between, sort by key
+                                                return a.key.localeCompare(b.key);
+                                            })
+                                            .map((feature) => {
+                                                const isSelected = formData.feature_keys.includes(feature.key);
+                                                const isBasic = isBasicFeature(feature.key);
+                                                const isSystem = isSystemFeature(feature.key);
+
+                                                return (
+                                                    <CustomSwitchButton
+                                                        key={feature.id}
+                                                        checked={isSelected}
+                                                        onChange={() => {
+                                                            // Basic features cannot be deselected
+                                                            if (isBasic && isSelected) {
+                                                                return;
+                                                            }
+
+                                                            // System features cannot be modified
+                                                            if (isSystem) {
+                                                                return;
+                                                            }
+
+                                                            if (isSelected) {
+                                                                // Remove feature
+                                                                const newFeatureKeys = formData.feature_keys.filter(key => key !== feature.key);
+                                                                setFormData(prev => ({
+                                                                    ...prev,
+                                                                    feature_keys: getFeatureKeysWithBasics(newFeatureKeys)
+                                                                }));
+                                                                setSelectedFeatures(prev => {
+                                                                    const filtered = prev.filter(f => f.id !== feature.id);
+                                                                    return ensureBasicFeaturesIncluded(filtered, allFeatures);
+                                                                });
+                                                            } else {
+                                                                // Add feature
+                                                                const newFeatureKeys = [...formData.feature_keys, feature.key];
+                                                                setFormData(prev => ({
+                                                                    ...prev,
+                                                                    feature_keys: getFeatureKeysWithBasics(newFeatureKeys)
+                                                                }));
+                                                                setSelectedFeatures(prev => ensureBasicFeaturesIncluded([...prev, feature], allFeatures));
+                                                            }
+
+                                                            // Clear error when user selects features
+                                                            if (errors.feature_keys) {
+                                                                setErrors(prev => ({ ...prev, feature_keys: undefined }));
+                                                            }
+                                                        }}
+                                                        label={feature.key}
+                                                        description={`${feature.name}${isBasic ? ' (Bắt buộc)' : ''}${isSystem ? ' (Hệ thống)' : ''}`}
+                                                        disabled={loading || isBasic || isSystem}
+                                                        variant="unified"
+                                                        size="small"
+                                                        showIcon={false}
+                                                        fullWidth={false}
+                                                        backgroundColor="subtle"
+                                                        borderStyle="prominent"
+                                                        borderRadius={2}
+                                                    />
+                                                );
+                                            })}
                                     </Box>
                                 )}
 
@@ -645,6 +673,13 @@ const EditLicenseModal: React.FC<EditLicenseModalProps> = ({
                             }}
                         >
                             • License key không thể thay đổi sau khi tạo
+                        </Typography>                        <Typography
+                            variant="body2"
+                            sx={{
+                                color: componentColors.modal.noteText
+                            }}
+                        >
+                            • Thay đổi tính năng có thể ảnh hưởng đến người dùng hiện tại
                         </Typography>
                         <Typography
                             variant="body2"
@@ -652,7 +687,14 @@ const EditLicenseModal: React.FC<EditLicenseModalProps> = ({
                                 color: componentColors.modal.noteText
                             }}
                         >
-                            • Thay đổi tính năng có thể ảnh hưởng đến người dùng hiện tại
+                            • Tính năng cơ bản (Basic) sẽ được tự động bao gồm và không thể bỏ chọn
+                        </Typography>                        <Typography
+                            variant="body2"
+                            sx={{
+                                color: componentColors.modal.noteText
+                            }}
+                        >
+                            • Tính năng hệ thống (System) sẽ hiển thị nhưng không thể chọn hoặc bỏ chọn
                         </Typography>
                         <Typography
                             variant="body2"

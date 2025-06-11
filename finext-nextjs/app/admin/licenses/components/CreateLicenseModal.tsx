@@ -21,6 +21,15 @@ import {
 import { apiClient } from 'services/apiClient';
 import { colorTokens } from 'theme/tokens';
 import CustomSwitchButton from '../../../../components/CustomSwitchButton';
+import {
+    getBasicFeatures,
+    getSystemFeatures,
+    isBasicFeature,
+    isSystemFeature,
+    filterSelectableFeatures,
+    ensureBasicFeaturesIncluded,
+    getFeatureKeysWithBasics
+} from '../../../../utils/systemLicenses';
 
 interface LicenseCreateRequest {
     key: string;
@@ -79,19 +88,19 @@ const CreateLicenseModal: React.FC<CreateLicenseModalProps> = ({
         feature_keys?: string;
     }>({});    // Fetch all features
     const fetchFeatures = async () => {
-        console.log('Starting to fetch features...');
+        console.log('CreateModal: Starting to fetch features...');
         setLoadingFeatures(true);
         try {
             const response = await apiClient<{ items: FeaturePublic[]; total: number } | FeaturePublic[]>({
                 url: `/api/v1/features/`,
                 method: 'GET',
                 queryParams: {
-                    limit: 1000,
-                    include_inactive: false
+                    skip: 0,
+                    limit: 99999
                 }
             });
 
-            console.log('Features API response:', {
+            console.log('CreateModal: Features API response:', {
                 status: response.status,
                 data: response.data,
                 message: response.message
@@ -102,87 +111,35 @@ const CreateLicenseModal: React.FC<CreateLicenseModalProps> = ({
 
                 if ('items' in response.data && Array.isArray(response.data.items)) {
                     features = response.data.items;
-                    console.log('Found paginated features:', features.length);
+                    console.log('CreateModal: Found paginated features:', features.length);
                 } else if (Array.isArray(response.data)) {
                     features = response.data as FeaturePublic[];
-                    console.log('Found direct array features:', features.length);
+                    console.log('CreateModal: Found direct array features:', features.length);
                 } else {
-                    console.warn('Unexpected response format:', response.data);
+                    console.warn('CreateModal: Unexpected response format:', response.data);
                 }
 
-                // Filter only active features
-                const activeFeatures = features.filter(feature => feature.is_active);
-                console.log(`Filtered ${activeFeatures.length} active features from ${features.length} total`);
+                // Set all features (no filtering needed since API returns all)
+                console.log(`CreateModal: Loading ${features.length} total features`);
+                setAllFeatures(features);
 
-                setAllFeatures(activeFeatures);
-
-                if (activeFeatures.length > 0) {
-                    console.log('Sample feature:', activeFeatures[0]);
-                } else {
-                    console.warn('No active features found, adding mock data for testing');
-                    // Add mock data for testing if no features are returned
-                    const mockFeatures: FeaturePublic[] = [
-                        {
-                            id: 'mock-1',
-                            key: 'basic_feature',
-                            name: 'Tính năng cơ bản',
-                            description: 'Các tính năng cơ bản của hệ thống',
-                            is_active: true
-                        },
-                        {
-                            id: 'mock-2',
-                            key: 'advanced_feature',
-                            name: 'Tính năng nâng cao',
-                            description: 'Các tính năng nâng cao',
-                            is_active: true
-                        }
-                    ];
-                    setAllFeatures(mockFeatures);
-                    console.log('Set mock features:', mockFeatures.length);
+                // Auto-select basic features when features are loaded
+                const basicFeatures = features.filter(feature => isBasicFeature(feature.key));
+                if (basicFeatures.length > 0) {
+                    console.log('CreateModal: Auto-selecting basic features:', basicFeatures.map(f => f.key));
+                    setSelectedFeatures(basicFeatures);
+                    setFormData(prev => ({
+                        ...prev,
+                        feature_keys: getFeatureKeysWithBasics(basicFeatures.map(f => f.key))
+                    }));
                 }
             } else {
-                console.warn('Failed to load features, status:', response.status, 'message:', response.message);
-                // Set mock data as fallback
-                const mockFeatures: FeaturePublic[] = [
-                    {
-                        id: 'mock-1',
-                        key: 'basic_feature',
-                        name: 'Tính năng cơ bản',
-                        description: 'Các tính năng cơ bản của hệ thống',
-                        is_active: true
-                    },
-                    {
-                        id: 'mock-2',
-                        key: 'advanced_feature',
-                        name: 'Tính năng nâng cao',
-                        description: 'Các tính năng nâng cao',
-                        is_active: true
-                    }
-                ];
-                setAllFeatures(mockFeatures);
-                setError('Không thể tải danh sách tính năng từ server. Đang sử dụng dữ liệu mẫu.');
+                console.warn('CreateModal: Failed to load features, status:', response.status, 'message:', response.message);
+                setError('Không thể tải danh sách tính năng từ server.');
             }
         } catch (err: any) {
-            console.error('Failed to load features:', err);
-            // Set mock data as fallback for errors
-            const mockFeatures: FeaturePublic[] = [
-                {
-                    id: 'mock-1',
-                    key: 'basic_feature',
-                    name: 'Tính năng cơ bản',
-                    description: 'Các tính năng cơ bản của hệ thống',
-                    is_active: true
-                },
-                {
-                    id: 'mock-2',
-                    key: 'advanced_feature',
-                    name: 'Tính năng nâng cao',
-                    description: 'Các tính năng nâng cao',
-                    is_active: true
-                }
-            ];
-            setAllFeatures(mockFeatures);
-            setError('Lỗi khi tải danh sách tính năng: ' + err.message + '. Đang sử dụng dữ liệu mẫu.');
+            console.error('CreateModal: Failed to load features:', err);
+            setError('Lỗi khi tải danh sách tính năng: ' + err.message);
         } finally {
             setLoadingFeatures(false);
         }
@@ -249,16 +206,20 @@ const CreateLicenseModal: React.FC<CreateLicenseModalProps> = ({
     const handleSubmit = async () => {
         if (!validateForm()) {
             return;
-        }
-
-        setLoading(true);
+        } setLoading(true);
         setError(null);
 
         try {
+            // Ensure basic features are included in the submission
+            const finalFormData = {
+                ...formData,
+                feature_keys: getFeatureKeysWithBasics(formData.feature_keys)
+            };
+
             const response = await apiClient({
                 url: '/api/v1/licenses/',
                 method: 'POST',
-                body: formData,
+                body: finalFormData,
             });
 
             if (response.status === 201 || response.status === 200) {
@@ -305,16 +266,18 @@ const CreateLicenseModal: React.FC<CreateLicenseModalProps> = ({
             setErrors(prev => ({ ...prev, [field]: undefined }));
         }
     }; const handleFeatureChange = (_event: any, newValue: FeaturePublic[]) => {
-        setSelectedFeatures(newValue);
+        // Ensure basic features are always included
+        const finalSelectedFeatures = ensureBasicFeaturesIncluded(newValue, allFeatures);
+        setSelectedFeatures(finalSelectedFeatures);
         setFormData(prev => ({
             ...prev,
-            feature_keys: newValue.map(feature => feature.key)
+            feature_keys: getFeatureKeysWithBasics(finalSelectedFeatures.map(feature => feature.key))
         }));
         // Clear feature error when user selects features
         if (errors.feature_keys) {
             setErrors(prev => ({ ...prev, feature_keys: undefined }));
         }
-    };    // Common duration options
+    };// Common duration options
     const durationOptions = [
         { label: '1 tháng', value: 30 },
         { label: '3 tháng', value: 90 },
@@ -559,48 +522,81 @@ const CreateLicenseModal: React.FC<CreateLicenseModalProps> = ({
                                         display: 'grid',
                                         gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
                                         gap: 2
-                                    }}>
-                                        {allFeatures.map((feature) => {
-                                            const isSelected = formData.feature_keys.includes(feature.key);
-                                            return (
-                                                <CustomSwitchButton
-                                                    key={feature.id}
-                                                    checked={isSelected}
-                                                    onChange={() => {
-                                                        if (isSelected) {
-                                                            // Remove feature
-                                                            setFormData(prev => ({
-                                                                ...prev,
-                                                                feature_keys: prev.feature_keys.filter(key => key !== feature.key)
-                                                            }));
-                                                            setSelectedFeatures(prev => prev.filter(f => f.id !== feature.id));
-                                                        } else {
-                                                            // Add feature
-                                                            setFormData(prev => ({
-                                                                ...prev,
-                                                                feature_keys: [...prev.feature_keys, feature.key]
-                                                            }));
-                                                            setSelectedFeatures(prev => [...prev, feature]);
-                                                        }
+                                    }}>                                        {/* Sort features: Basic first, then Regular, then System */}
+                                        {[...allFeatures]
+                                            .sort((a, b) => {
+                                                const aIsBasic = isBasicFeature(a.key);
+                                                const bIsBasic = isBasicFeature(b.key);
+                                                const aIsSystem = isSystemFeature(a.key);
+                                                const bIsSystem = isSystemFeature(b.key);
 
-                                                        // Clear error when user selects features
-                                                        if (errors.feature_keys) {
-                                                            setErrors(prev => ({ ...prev, feature_keys: undefined }));
-                                                        }
-                                                    }}
-                                                    label={feature.key}
-                                                    description={feature.name}
-                                                    disabled={loading}
-                                                    variant="unified"
-                                                    size="small"
-                                                    showIcon={false}
-                                                    fullWidth={false}
-                                                    backgroundColor="subtle"
-                                                    borderStyle="prominent"
-                                                    borderRadius={2}
-                                                />
-                                            );
-                                        })}
+                                                // Basic features first
+                                                if (aIsBasic && !bIsBasic) return -1;
+                                                if (!aIsBasic && bIsBasic) return 1;
+
+                                                // System features last
+                                                if (aIsSystem && !bIsSystem) return 1;
+                                                if (!aIsSystem && bIsSystem) return -1;
+
+                                                // Regular features in between, sort by key
+                                                return a.key.localeCompare(b.key);
+                                            })
+                                            .map((feature) => {
+                                                const isSelected = formData.feature_keys.includes(feature.key);
+                                                const isBasic = isBasicFeature(feature.key);
+                                                const isSystem = isSystemFeature(feature.key);
+
+                                                return (
+                                                    <CustomSwitchButton
+                                                        key={feature.id}
+                                                        checked={isSelected}
+                                                        onChange={() => {
+                                                            // Basic features cannot be deselected
+                                                            if (isBasic && isSelected) {
+                                                                return;
+                                                            }
+
+                                                            // System features cannot be modified
+                                                            if (isSystem) {
+                                                                return;
+                                                            } if (isSelected) {
+                                                                // Remove feature
+                                                                const newFeatureKeys = formData.feature_keys.filter(key => key !== feature.key);
+                                                                setFormData(prev => ({
+                                                                    ...prev,
+                                                                    feature_keys: getFeatureKeysWithBasics(newFeatureKeys)
+                                                                }));
+                                                                setSelectedFeatures(prev => {
+                                                                    const filtered = prev.filter(f => f.id !== feature.id);
+                                                                    return ensureBasicFeaturesIncluded(filtered, allFeatures);
+                                                                });
+                                                            } else {
+                                                                // Add feature
+                                                                const newFeatureKeys = [...formData.feature_keys, feature.key];
+                                                                setFormData(prev => ({
+                                                                    ...prev,
+                                                                    feature_keys: getFeatureKeysWithBasics(newFeatureKeys)
+                                                                }));
+                                                                setSelectedFeatures(prev => ensureBasicFeaturesIncluded([...prev, feature], allFeatures));
+                                                            }
+
+                                                            // Clear error when user selects features
+                                                            if (errors.feature_keys) {
+                                                                setErrors(prev => ({ ...prev, feature_keys: undefined }));
+                                                            }
+                                                        }} label={feature.key}
+                                                        description={`${feature.name}${isBasic ? ' (Bắt buộc)' : ''}${isSystem ? ' (Hệ thống)' : ''}`}
+                                                        disabled={loading || isBasic || isSystem}
+                                                        variant="unified"
+                                                        size="small"
+                                                        showIcon={false}
+                                                        fullWidth={false}
+                                                        backgroundColor="subtle"
+                                                        borderStyle="prominent"
+                                                        borderRadius={2}
+                                                    />
+                                                );
+                                            })}
                                     </Box>
                                 )}
 
@@ -669,6 +665,13 @@ const CreateLicenseModal: React.FC<CreateLicenseModalProps> = ({
                             }}
                         >
                             • License key phải là duy nhất và chỉ chứa chữ hoa, số, dấu gạch dưới và dấu gạch ngang
+                        </Typography>                        <Typography
+                            variant="body2"
+                            sx={{
+                                color: componentColors.modal.noteText
+                            }}
+                        >
+                            • Giá và thời hạn có thể được chỉnh sửa sau khi tạo
                         </Typography>
                         <Typography
                             variant="body2"
@@ -676,7 +679,15 @@ const CreateLicenseModal: React.FC<CreateLicenseModalProps> = ({
                                 color: componentColors.modal.noteText
                             }}
                         >
-                            • Giá và thời hạn có thể được chỉnh sửa sau khi tạo
+                            • Tính năng cơ bản (Basic) sẽ được tự động bao gồm và không thể bỏ chọn
+                        </Typography>
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                color: componentColors.modal.noteText
+                            }}
+                        >
+                            • Tính năng hệ thống (System) sẽ hiển thị nhưng không thể chọn hoặc bỏ chọn
                         </Typography>
                         <Typography
                             variant="body2"
