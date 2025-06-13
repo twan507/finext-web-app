@@ -244,7 +244,6 @@ const PermissionsPage: React.FC = () => {
                             <TableBody>
                                 {Array.isArray(paginatedPermissions) && paginatedPermissions.map((permission) => (
                                     <TableRow hover key={permission.id || permission.name}>
-                                        {/* Name */}
                                         <TableCell sx={{
                                             ...getResponsiveDisplayStyle(columnConfigs[0]),
                                             minWidth: columnConfigs[0].minWidth,
@@ -256,8 +255,6 @@ const PermissionsPage: React.FC = () => {
                                                 {permission.name}
                                             </Typography>
                                         </TableCell>
-
-                                        {/* Description */}
                                         <TableCell sx={{
                                             ...getResponsiveDisplayStyle(columnConfigs[1]),
                                             minWidth: columnConfigs[1].minWidth
@@ -273,7 +270,7 @@ const PermissionsPage: React.FC = () => {
                                                     {permission.description || 'N/A'}
                                                 </Typography>
                                             </Tooltip>
-                                        </TableCell>                                        {/* Created At */}
+                                        </TableCell>
                                         <TableCell sx={{
                                             ...getResponsiveDisplayStyle(columnConfigs[2]),
                                             minWidth: columnConfigs[2].minWidth
