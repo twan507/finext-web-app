@@ -975,7 +975,8 @@ export default function SubscriptionsPage() {
 										sx={{ fontSize: '0.75rem', fontFamily: 'monospace' }}
 									/>
 								</Typography>
-							</Box>							<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+							</Box>							
+							<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
 								<Typography variant="body2" color="text.secondary">
 									Trạng thái:
 								</Typography>

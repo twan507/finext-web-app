@@ -36,13 +36,13 @@ const PermissionSearch: React.FC<PermissionSearchProps> = ({
     // Enhanced function to search in all permission fields
     const searchInPermission = (permission: PermissionSystemPublic, term: string): boolean => {
         const searchLower = term.toLowerCase().trim();
-        if (!searchLower) return true;
-
-        // Basic permission fields
+        if (!searchLower) return true;        // Basic permission fields
         const basicFields = [
             permission.name,
             permission.description,
-            permission.id
+            permission.id,
+            permission.category,
+            ...(permission.roles || [])
         ].filter(field => field); // Remove null/undefined values
 
         // Date fields (formatted for Vietnamese locale)
@@ -116,7 +116,7 @@ const PermissionSearch: React.FC<PermissionSearchProps> = ({
                 <TextField
                     fullWidth
                     size="small"
-                    placeholder="Tìm kiếm theo Tên permission, Mô tả, Ngày tạo, ..."
+                    placeholder="Tìm kiếm theo Tên permission, Mô tả, Danh mục, Vai trò, Ngày tạo, ..."
                     value={searchTerm}
                     onChange={handleSearchChange}
                     disabled={loading}
@@ -203,13 +203,16 @@ const PermissionSearch: React.FC<PermissionSearchProps> = ({
                     <Box>
                         <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontSize: '0.6875rem' }}>
                             Bộ lọc nhanh:
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        </Typography>                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                             {[
                                 { label: 'Admin', value: 'admin' },
+                                { label: 'Manager', value: 'manager' },
+                                { label: 'Broker', value: 'broker' },
                                 { label: 'User', value: 'user' },
+                                { label: 'User Management', value: 'user_management' },
+                                { label: 'Role Management', value: 'role_management' },
+                                { label: 'Admin Only', value: 'admin_only' },
                                 { label: '2024', value: '2024' },
-                                { label: '2023', value: '2023' },
                                 { label: 'Tháng này', value: new Date().toLocaleDateString('vi-VN').split('/').slice(1).join('/') },
                             ].map((filter) => (
                                 <Chip

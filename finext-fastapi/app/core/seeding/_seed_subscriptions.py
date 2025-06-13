@@ -76,7 +76,7 @@ async def seed_subscriptions(
             if (email, license_key) not in existing_subs:
                 try:
                     sub_create_payload = SubscriptionCreate(user_id=user_id_str, license_key=license_key)  # type: ignore
-                    created_sub = await crud_subscriptions.create_subscription_db(db, sub_create_payload)
+                    created_sub = await crud_subscriptions.create_subscription_db(db, sub_create_payload, allow_protected_licenses=True)
                     if created_sub:
                         logger.info(
                             f"Successfully seeded specific subscription '{license_key}' for user '{email}' (Sub ID: {created_sub.id})."

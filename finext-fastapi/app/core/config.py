@@ -33,10 +33,11 @@ ADMIN_PWD = os.getenv("ADMIN_PWD")
 PROTECTED_USER_EMAILS = list(
     filter(None, [ADMIN_EMAIL, MANAGER_EMAIL, BROKER_EMAIL_1, BROKER_EMAIL_2, USER_EMAIL_1, USER_EMAIL_2, USER_EMAIL_3])
 )
-PROTECTED_ROLE_NAMES = ["admin", "user", "broker"]
+# Protected Roles (cannot be deleted)
+PROTECTED_ROLE_NAMES = ["admin", "manager", "broker", "user"]
 BASIC_LICENSE_KEY = "BASIC"
-PROTECTED_LICENSE_KEYS = ["ADMIN", "MANAGER", "PARTNER","BASIC"]
-PROTECTED_FEATURES = ["basic_feature","broker_feature","admin_feature","manager_feature"]
+PROTECTED_LICENSE_KEYS = ["ADMIN", "MANAGER", "PARTNER", "BASIC"]
+PROTECTED_FEATURES = ["basic_feature", "broker_feature", "admin_feature", "manager_feature"]
 
 # Phần trăm giảm giá cho broker
 BROKER_DISCOUNT_PERCENTAGE = 10

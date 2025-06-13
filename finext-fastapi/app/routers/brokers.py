@@ -130,7 +130,7 @@ async def create_or_reactivate_broker_endpoint(
                     license_key="PARTNER",
                     duration_override_days=None,
                 )
-                partner_sub = await crud_subscriptions.create_subscription_db(db, partner_license_sub_create)
+                partner_sub = await crud_subscriptions.create_subscription_db(db, partner_license_sub_create, allow_protected_licenses=True)
                 if partner_sub:
                     logger.info(f"Đã tạo mới PARTNER subscription (ID: {partner_sub.id}) cho user ID: {user_id_for_broker}.")
 
@@ -384,7 +384,7 @@ async def deactivate_and_revoke_broker(  # Đổi tên hàm cho rõ nghĩa
                     license_key="BASIC",
                     duration_override_days=None,
                 )
-                basic_sub = await crud_subscriptions.create_subscription_db(db, basic_license_sub_create)
+                basic_sub = await crud_subscriptions.create_subscription_db(db, basic_license_sub_create, allow_protected_licenses=True)
                 if basic_sub:
                     logger.info(
                         f"Đã tạo mới BASIC subscription (ID: {basic_sub.id}) cho user ID: {user_id_of_broker_str} sau khi remove broker."

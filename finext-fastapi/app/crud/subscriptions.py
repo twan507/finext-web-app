@@ -143,13 +143,12 @@ async def assign_free_subscription_if_needed(db: AsyncIOMotorDatabase, user_id_o
     user_doc = await db.users.find_one({"_id": user_id_obj})
     if not user_doc:
         logger.error(f"Cannot assign/create BASIC subscription: User {user_id_obj} not found.")
-        return None
-
-    # Re-fetch basic_license in case it wasn't fetched or to ensure it's up-to-date
+        return None  # Re-fetch basic_license in case it wasn't fetched or to ensure it's up-to-date
     basic_license_for_creation = await crud_licenses.get_license_by_key(db, BASIC_LICENSE_KEY)
     if not basic_license_for_creation or not basic_license_for_creation.id:
         logger.error(f"Cannot create BASIC subscription: License with key '{BASIC_LICENSE_KEY}' not found for user {user_id_obj}.")
         return None
+
     if not basic_license_for_creation.is_active:
         logger.error(f"Cannot create BASIC subscription: License '{BASIC_LICENSE_KEY}' is not active for user {user_id_obj}.")
         return None
@@ -160,7 +159,7 @@ async def assign_free_subscription_if_needed(db: AsyncIOMotorDatabase, user_id_o
         duration_override_days=basic_license_for_creation.duration_days if basic_license_for_creation.duration_days else None,
     )
     try:
-        created_free_sub = await create_subscription_db(db, free_sub_create_payload)
+        created_free_sub = await create_subscription_db(db, free_sub_create_payload, allow_protected_licenses=True)
         if created_free_sub:
             logger.info(f"Successfully created and assigned new BASIC subscription (ID: {created_free_sub.id}) to user {user_id_obj}.")
             return created_free_sub
@@ -287,7 +286,9 @@ async def deactivate_all_active_subscriptions_for_user(
     return update_result.modified_count
 
 
-async def create_subscription_db(db: AsyncIOMotorDatabase, sub_create_data: SubscriptionCreate) -> Optional[SubscriptionInDB]:
+async def create_subscription_db(
+    db: AsyncIOMotorDatabase, sub_create_data: SubscriptionCreate, allow_protected_licenses: bool = False
+) -> Optional[SubscriptionInDB]:
     user_id_str_from_req = str(sub_create_data.user_id)
     if not ObjectId.is_valid(user_id_str_from_req):
         logger.error(f"User ID không hợp lệ khi tạo subscription: {user_id_str_from_req}")
@@ -308,10 +309,10 @@ async def create_subscription_db(db: AsyncIOMotorDatabase, sub_create_data: Subs
         logger.error(
             f"Cannot create subscription for user {user_id_str_from_req} with inactive license key '{sub_create_data.license_key}'."
         )
-        raise ValueError(
-            f"License '{sub_create_data.license_key}' is not active and cannot be used to create new subscriptions."
-        )  # Check if the license key is a protected/system license
-    if sub_create_data.license_key in PROTECTED_LICENSE_KEYS:
+        raise ValueError(f"License '{sub_create_data.license_key}' is not active and cannot be used to create new subscriptions.")
+
+    # Check if the license key is a protected/system license (unless explicitly allowed)
+    if not allow_protected_licenses and sub_create_data.license_key in PROTECTED_LICENSE_KEYS:
         logger.error(
             f"Cannot create subscription for user {user_id_str_from_req} with protected license key '{sub_create_data.license_key}'."
         )
