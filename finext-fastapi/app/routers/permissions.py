@@ -60,10 +60,12 @@ async def read_my_permissions(
 async def admin_read_all_permission_definitions(
     skip: int = Query(0, ge=0, description="Số bản ghi bỏ qua"),
     limit: int = Query(100, ge=1, le=99999, description="Số bản ghi tối đa mỗi trang (99999 cho 'All')"),
+    sort_by: str = Query("name", description="Trường để sắp xếp (name, description, created_at, updated_at)"),
+    sort_order: str = Query("asc", regex="^(asc|desc)$", description="Thứ tự sắp xếp (asc hoặc desc)"),
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
     # crud_permissions.get_permissions đã được cập nhật để trả về (docs, total_count)
-    permission_docs, total = await crud_permissions.get_permissions(db, skip=skip, limit=limit)
+    permission_docs, total = await crud_permissions.get_permissions(db, skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order)
 
     # Frontend admin page cần id, created_at, updated_at nên chúng ta dùng PermissionInDB
     items = [PermissionInDB.model_validate(p) for p in permission_docs]
