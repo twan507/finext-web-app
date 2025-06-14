@@ -32,13 +32,13 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
         "name": "session:list_any",
         "description": "Quyền xem danh sách tất cả các session đang hoạt động của mọi người dùng.",
         "roles": ["admin"],
-        "category": "session_management",
+        "category": "others",
     },
     {
         "name": "session:delete_any",
         "description": "Quyền xóa bất kỳ session nào đang hoạt động.",
         "roles": ["admin"],
-        "category": "session_management",
+        "category": "others",
     },
     # Broker Management (Admin Only)
     {"name": "broker:create", "description": "Quyền tạo Đối tác mới.", "roles": ["admin"], "category": "broker_management"},
@@ -48,49 +48,53 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
         "roles": ["admin"],
         "category": "broker_management",
     },
-    {"name": "broker:delete_any", "description": "Quyền xóa Đối tác.", "roles": ["admin"], "category": "broker_management"},
-    # System Monitoring & Control (Admin Only)
+    {
+        "name": "broker:delete_any",
+        "description": "Quyền xóa Đối tác.",
+        "roles": ["admin"],
+        "category": "broker_management",
+    },  # System Monitoring & Control (Admin Only)
     {
         "name": "permission:list_all_definitions",
         "description": "Quyền xem danh sách tất cả các permission được định nghĩa trong hệ thống.",
         "roles": ["admin"],
-        "category": "admin_only",
+        "category": "admin_system",
     },
     {
         "name": "permission:create",
         "description": "Quyền tạo permission mới trong hệ thống.",
         "roles": ["admin"],
-        "category": "admin_only",
+        "category": "admin_system",
     },
     {
         "name": "permission:read_any",
         "description": "Quyền xem chi tiết bất kỳ permission nào trong hệ thống.",
         "roles": ["admin"],
-        "category": "admin_only",
+        "category": "admin_system",
     },
     {
         "name": "permission:update_any",
         "description": "Quyền cập nhật bất kỳ permission nào trong hệ thống.",
         "roles": ["admin"],
-        "category": "admin_only",
+        "category": "admin_system",
     },
     {
         "name": "permission:delete_any",
         "description": "Quyền xóa bất kỳ permission nào trong hệ thống.",
         "roles": ["admin"],
-        "category": "admin_only",
+        "category": "admin_system",
     },
     {
         "name": "otp:read_any",
         "description": "Quyền xem tất cả các bản ghi OTP của mọi người dùng.",
         "roles": ["admin"],
-        "category": "admin_only",
+        "category": "admin_system",
     },
     {
         "name": "otp:invalidate_any",
         "description": "Quyền vô hiệu hóa OTP của bất kỳ người dùng nào.",
         "roles": ["admin"],
-        "category": "admin_only",
+        "category": "admin_system",
     },
     # =========================================================================
     # ADMIN & MANAGER PERMISSIONS (Management Level)
@@ -123,19 +127,23 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
     },
     # Role Management (View Only for Manager)
     {"name": "role:list", "description": "Quyền xem danh sách vai trò.", "roles": ["admin", "manager"], "category": "role_management"},
-    {"name": "role:read_any", "description": "Quyền xem chi tiết vai trò.", "roles": ["admin", "manager"], "category": "role_management"},
-    # System Features & Licenses
+    {
+        "name": "role:read_any",
+        "description": "Quyền xem chi tiết vai trò.",
+        "roles": ["admin", "manager"],
+        "category": "role_management",
+    },  # System Features & Licenses
     {
         "name": "feature:manage",
         "description": "Quyền quản lý (CRUD) các features.",
         "roles": ["admin", "manager"],
-        "category": "feature_license_management",
+        "category": "others",
     },
     {
         "name": "license:manage",
         "description": "Quyền quản lý (CRUD) các licenses.",
         "roles": ["admin", "manager"],
-        "category": "feature_license_management",
+        "category": "others",
     },
     # Subscription Management
     {
@@ -212,13 +220,12 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
         "description": "Quyền xem chi tiết Đối tác bất kỳ.",
         "roles": ["admin", "manager"],
         "category": "broker_management",
-    },
-    # Promotion Management
+    },  # Promotion Management
     {
         "name": "promotion:manage",
         "description": "Quyền quản lý (CRUD) các mã khuyến mãi.",
         "roles": ["admin", "manager"],
-        "category": "promotion_management",
+        "category": "others",
     },
     # Watchlist Management
     {
@@ -263,13 +270,13 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
         "name": "session:list_own",
         "description": "Quyền xem danh sách các session đang hoạt động của chính mình.",
         "roles": ["admin", "manager", "broker", "user"],
-        "category": "session_management",
+        "category": "others",
     },
     {
         "name": "session:delete_own",
         "description": "Quyền tự xóa một session đang hoạt động của mình.",
         "roles": ["admin", "manager", "broker", "user"],
-        "category": "session_management",
+        "category": "others",
     },
     # Subscription (Personal)
     {
@@ -327,13 +334,13 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
         "name": "promotion:validate",
         "description": "Quyền kiểm tra tính hợp lệ của một mã khuyến mãi.",
         "roles": ["admin", "manager", "broker", "user"],
-        "category": "promotion_management",
+        "category": "others",
     },
     {
         "name": "upload:create",
         "description": "Quyền upload file/image cho chính mình.",
         "roles": ["admin", "manager", "broker", "user"],
-        "category": "file_management",
+        "category": "others",
     },
 ]
 
@@ -349,17 +356,14 @@ AVAILABLE_ROLES: Set[str] = {"admin", "manager", "broker", "user"}
 
 # Permission categories organized by functional areas
 PERMISSION_CATEGORIES: Set[str] = {
-    "user_management",  # User account operations
-    "role_management",  # Role and permission management
-    "session_management",  # Session and authentication
-    "feature_license_management",  # System features and licensing
-    "subscription_management",  # User subscriptions
-    "transaction_management",  # Financial transactions
-    "broker_management",  # Partner/broker operations
-    "promotion_management",  # Promotional codes and campaigns
-    "watchlist_management",  # Stock watchlists
-    "file_management",  # File uploads and storage
-    "admin_only",  # System administration only
+    "user_management",  # User account operations (8 quyền)
+    "transaction_management",  # Financial transactions (9 quyền)
+    "broker_management",  # Partner/broker operations (7 quyền)
+    "watchlist_management",  # Stock watchlists (6 quyền)
+    "subscription_management",  # User subscriptions (6 quyền)
+    "admin_system",  # System administration (7 quyền)
+    "role_management",  # Role and permission management (5 quyền)
+    "others",  # Other features (9 quyền: sessions, features, licenses, promotions, files)
 }
 
 # Role hierarchy (higher index = more privileges)

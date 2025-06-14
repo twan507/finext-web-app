@@ -280,22 +280,21 @@ const PermissionsPage: React.FC = () => {
             setSelectedPermission(permission);
             setEditModalOpen(true);
         }
-    };
-
-    const handleDeletePermission = (permissionId: string) => {
+    }; const handleDeletePermission = (permissionId: string) => {
         const permission = permissions.find(p => p.id === permissionId);
         if (permission) {
+            if (!canDeletePermission(permission)) {
+                return; // Không làm gì nếu không thể xóa
+            }
             setSelectedPermission(permission);
             setDeleteDialogOpen(true);
         }
     };
 
     const handleConfirmDelete = async () => {
-        if (!selectedPermission) return;
-
-        try {
+        if (!selectedPermission) return; try {
             const response = await apiClient({
-                url: `/api/v1/permissions/admin/definitions/${selectedPermission.id}`,
+                url: `/api/v1/permissions/${selectedPermission.id}`,
                 method: 'DELETE'
             });
 
@@ -316,15 +315,20 @@ const PermissionsPage: React.FC = () => {
         fetchPermissions(); // Refresh the list
     }; const handlePermissionUpdated = () => {
         fetchPermissions(); // Refresh the list
-    };
-
-    // Helper functions for permission management
+    };    // Helper functions for permission management
     const canDeletePermission = (permission: PermissionSystemPublic): boolean => {
+        // Không thể xóa permission nếu đang được sử dụng bởi roles
+        if (permission.roles && permission.roles.length > 0) {
+            return false;
+        }
         // System permissions typically shouldn't be deleted
         return !permission.name.includes('admin_only') && !permission.name.includes('system');
     };
 
     const getDeleteTooltipMessage = (permission: PermissionSystemPublic): string => {
+        if (permission.roles && permission.roles.length > 0) {
+            return `Không thể xóa permission này vì đang được sử dụng bởi ${permission.roles.length} vai trò: ${permission.roles.join(', ')}`;
+        }
         if (!canDeletePermission(permission)) {
             return "Không thể xóa permission hệ thống";
         }
@@ -451,9 +455,8 @@ const PermissionsPage: React.FC = () => {
                                             ...getResponsiveDisplayStyle(columnConfigs[2], expandedView),
                                             whiteSpace: 'nowrap',
                                             minWidth: columnConfigs[2].minWidth
-                                        }}>
-                                            <Chip
-                                                label={permission.category.replace(/_/g, ' ')}
+                                        }}>                                            <Chip
+                                                label={permission.category}
                                                 size="small"
                                                 variant="filled"
                                                 sx={{

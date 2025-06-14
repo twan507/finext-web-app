@@ -49,6 +49,9 @@ async def create_permission(db: AsyncIOMotorDatabase, permission: PermissionCrea
     permission_dict["created_at"] = datetime.now()
     permission_dict["updated_at"] = datetime.now()
 
+    # Đảm bảo field roles luôn là mảng rỗng khi tạo mới (sẽ được cập nhật từ roles API)
+    permission_dict["roles"] = []
+
     result = await db[PERMISSIONS_COLLECTION].insert_one(permission_dict)
     permission_dict["_id"] = result.inserted_id
 

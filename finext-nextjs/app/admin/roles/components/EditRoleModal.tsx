@@ -32,8 +32,10 @@ interface PermissionPublic {
     id: string;
     name: string;
     description?: string;
-    resource: string;
-    action: string;
+    category: string;
+    roles: string[];
+    created_at?: string;
+    updated_at?: string;
 }
 
 interface RolePublic {
@@ -85,11 +87,37 @@ const EditRoleModal: React.FC<EditRoleModalProps> = ({
         name?: string;
         description?: string;
         permission_ids?: string;
-    }>({});
-
-    // Get category names sorted
+    }>({});    // Get category names sorted by priority
     const categoryNames = useMemo(() => {
-        return categories.sort();
+        const priorityOrder = [
+            'admin_system',
+            'role_management',
+            'user_management',
+            'broker_management',
+            'transaction_management',
+            'subscription_management',
+            'watchlist_management',
+            'others'
+        ];
+
+        return categories.sort((a, b) => {
+            const indexA = priorityOrder.indexOf(a);
+            const indexB = priorityOrder.indexOf(b);
+
+            // If both categories are in priority list, sort by their index
+            if (indexA !== -1 && indexB !== -1) {
+                return indexA - indexB;
+            }
+
+            // If only A is in priority list, A comes first
+            if (indexA !== -1) return -1;
+
+            // If only B is in priority list, B comes first
+            if (indexB !== -1) return 1;
+
+            // If neither is in priority list, sort alphabetically
+            return a.localeCompare(b);
+        });
     }, [categories]);
 
     // Fetch all permissions and group by category
@@ -98,7 +126,7 @@ const EditRoleModal: React.FC<EditRoleModalProps> = ({
         setLoadingPermissions(true);
         try {
             const response = await apiClient<{ items: PermissionPublic[]; total: number } | PermissionPublic[]>({
-                url: `/api/v1/permissions/`,
+                url: `/api/v1/permissions/admin/definitions`,
                 method: 'GET',
                 queryParams: {
                     skip: 0,
@@ -134,20 +162,18 @@ const EditRoleModal: React.FC<EditRoleModalProps> = ({
 
                 permissions.forEach(permission => {
                     // Use category field if available, otherwise fall back to resource
-                    const category = (permission as any).category || permission.resource;
+                    const category = permission.category;
                     if (!grouped[category]) {
                         grouped[category] = [];
                     }
                     grouped[category].push(permission);
                     foundCategories.add(category);
-                });
-
-                // Sort permissions within each category by action
+                });                // Sort permissions within each category by name
                 Object.keys(grouped).forEach(category => {
                     grouped[category].sort((a, b) => {
-                        const actionA = a.action || '';
-                        const actionB = b.action || '';
-                        return actionA.localeCompare(actionB);
+                        const nameA = a.name || '';
+                        const nameB = b.name || '';
+                        return nameA.localeCompare(nameB);
                     });
                 });
 
@@ -540,7 +566,7 @@ const EditRoleModal: React.FC<EditRoleModalProps> = ({
                                                                 fontSize="0.875rem"
                                                                 sx={{ transition: 'color 0.2s' }}
                                                             >
-                                                                {category.charAt(0).toUpperCase() + category.slice(1)}
+                                                                {category}
                                                             </Typography>
                                                             <Chip
                                                                 label={`${selectedCount}/${totalCount}`}
@@ -597,9 +623,8 @@ const EditRoleModal: React.FC<EditRoleModalProps> = ({
                                                                     <ModernSwitchButton
                                                                         key={permission.id}
                                                                         checked={isSelected}
-                                                                        onChange={() => handlePermissionToggle(permission)}
-                                                                        label={permission.action}
-                                                                        description={permission.name || permission.description || `${permission.resource}:${permission.action}`}
+                                                                        onChange={() => handlePermissionToggle(permission)} label={permission.name}
+                                                                        description={permission.description || permission.name}
                                                                         disabled={loading}
                                                                         variant="unified"
                                                                         size="small"
@@ -628,7 +653,7 @@ const EditRoleModal: React.FC<EditRoleModalProps> = ({
                                             {selectedPermissions.map((permission) => (
                                                 <Chip
                                                     key={permission.id}
-                                                    label={permission.name || `${permission.resource || 'Unknown'}:${permission.action || 'Unknown'}`}
+                                                    label={permission.name || 'Unknown'}
                                                     size="small"
                                                     color="primary"
                                                     variant="outlined"

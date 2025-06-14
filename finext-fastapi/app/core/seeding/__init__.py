@@ -2,7 +2,7 @@
 import logging
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from ._seed_permissions import seed_permissions
+from ._seed_permissions import seed_permissions, sync_permission_roles
 from ._seed_features import seed_features
 from ._seed_roles import seed_roles
 from ._seed_licenses import seed_licenses
@@ -20,13 +20,14 @@ async def seed_initial_data(db: AsyncIOMotorDatabase):
         permission_ids_map = await seed_permissions(db)
         await seed_features(db)
         license_ids_map = await seed_licenses(db)  # This now includes "FREE"
-        await seed_promotions(db)
-
-        # Bước 2: Seeding Roles (phụ thuộc permissions)
+        await seed_promotions(db)  # Bước 2: Seeding Roles (phụ thuộc permissions)
         role_ids_map = await seed_roles(db, permission_ids_map)
         if role_ids_map is None:
             logger.error("Không thể seeding các bước tiếp theo do lỗi ở seeding roles (role_ids_map is None).")
             return
+
+        # Bước 2.1: Đồng bộ field roles trong permissions sau khi seed roles
+        await sync_permission_roles(db)
 
         # Bước 3: Seeding Users (phụ thuộc roles)
         user_ids_map = await seed_users(db, role_ids_map)

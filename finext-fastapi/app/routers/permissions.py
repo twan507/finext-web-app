@@ -156,6 +156,15 @@ async def delete_permission(
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
     """Xóa permission khỏi hệ thống"""
+    # Kiểm tra xem permission có đang được sử dụng bởi roles không
+    roles_using_permission = await db.roles.find({"permission_ids": permission_id}).to_list(None)
+
+    if roles_using_permission:
+        role_names = [role.get("name", "Unknown") for role in roles_using_permission]
+        raise HTTPException(
+            status_code=400, detail=f"Không thể xóa permission này vì đang được sử dụng bởi các vai trò: {', '.join(role_names)}"
+        )
+
     success = await crud_permissions.delete_permission(db, permission_id)
     if not success:
         raise HTTPException(status_code=404, detail="Permission not found")

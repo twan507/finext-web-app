@@ -18,7 +18,6 @@ import { colorTokens } from 'theme/tokens';
 interface PermissionUpdate {
     name: string;
     description?: string;
-    roles: string[];
     category: string;
 }
 
@@ -38,32 +37,6 @@ interface EditPermissionModalProps {
     onPermissionUpdated: () => void; permission: PermissionSystemPublic | null;
 }
 
-// Interface for API responses
-interface RolePublic {
-    id: string;
-    name: string;
-    description?: string;
-}
-
-interface PaginatedRolesResponse {
-    items: RolePublic[];
-    total: number;
-}
-
-// Predefined categories as fallback
-const DEFAULT_CATEGORIES = [
-    'user_management',
-    'system_administration',
-    'data_access',
-    'financial_operations',
-    'content_management',
-    'security',
-    'analytics',
-    'integration',
-    'workflow',
-    'other'
-];
-
 const EditPermissionModal: React.FC<EditPermissionModalProps> = ({
     open,
     onClose,
@@ -73,42 +46,25 @@ const EditPermissionModal: React.FC<EditPermissionModalProps> = ({
     const theme = useTheme();
     const componentColors = theme.palette.mode === 'light'
         ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors;
-
-    const [formData, setFormData] = useState<PermissionUpdate>({
-        name: '',
-        description: '',
-        roles: [],
-        category: ''
-    }); const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    // Data state for dropdowns
-    const [availableRoles, setAvailableRoles] = useState<string[]>([]);
-    const [availableCategories, setAvailableCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+        : colorTokens.darkComponentColors; const [formData, setFormData] = useState<PermissionUpdate>({
+            name: '',
+            description: '',
+            category: ''
+        }); const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);    // Data state for dropdowns
+    const [availableCategories, setAvailableCategories] = useState<string[]>([]);
     const [loadingData, setLoadingData] = useState(true);
+    const [categoryError, setCategoryError] = useState<string | null>(null);
 
-    // Fetch roles and categories when modal opens
+    // Fetch categories when modal opens
     useEffect(() => {
         if (open) {
             fetchAvailableData();
         }
-    }, [open]);
-
-    const fetchAvailableData = async () => {
+    }, [open]); const fetchAvailableData = async () => {
         setLoadingData(true);
+        setCategoryError(null);
         try {
-            // Fetch roles
-            const rolesResponse = await apiClient<PaginatedRolesResponse>({
-                url: '/api/v1/roles/?limit=99999',
-                method: 'GET'
-            });
-
-            if (rolesResponse.status === 200 && rolesResponse.data) {
-                const roleNames = rolesResponse.data.items.map(role => role.name);
-                setAvailableRoles(roleNames);
-            }
-
             // Fetch existing categories from permissions
             const permissionsResponse = await apiClient<{ items: { category: string }[] }>({
                 url: '/api/v1/permissions/admin/definitions?limit=99999',
@@ -117,15 +73,19 @@ const EditPermissionModal: React.FC<EditPermissionModalProps> = ({
 
             if (permissionsResponse.status === 200 && permissionsResponse.data) {
                 const categoriesSet = new Set(permissionsResponse.data.items.map(p => p.category));
-                const existingCategories = Array.from(categoriesSet);
-                const combinedCategories = DEFAULT_CATEGORIES.concat(existingCategories);
-                const allCategoriesSet = new Set(combinedCategories);
-                const allCategories = Array.from(allCategoriesSet);
-                setAvailableCategories(allCategories);
+                const existingCategories = Array.from(categoriesSet).filter(cat => cat && cat.trim()).sort();
+
+                if (existingCategories.length > 0) {
+                    setAvailableCategories(existingCategories);
+                } else {
+                    setCategoryError('Không tìm thấy danh mục nào. Vui lòng tạo ít nhất một permission với danh mục trước.');
+                }
+            } else {
+                setCategoryError('Không thể tải danh sách danh mục. Vui lòng thử lại.');
             }
         } catch (err) {
-            console.error('Error fetching dropdown data:', err);
-            // Keep default values if API fails
+            console.error('Error fetching categories:', err);
+            setCategoryError('Lỗi khi tải danh sách danh mục. Vui lòng kiểm tra kết nối mạng.');
         } finally {
             setLoadingData(false);
         }
@@ -137,32 +97,44 @@ const EditPermissionModal: React.FC<EditPermissionModalProps> = ({
             setFormData({
                 name: permission.name,
                 description: permission.description || '',
-                roles: permission.roles,
                 category: permission.category
             });
             setError(null);
         }
-    }, [permission]);
-
-    const validateForm = (): string | null => {
+    }, [permission]); const validateForm = (): string | null => {
         if (!formData.name.trim()) {
             return 'Tên permission là bắt buộc';
         }
 
+        // Validate format: abcd:efgh
+        const permissionNameRegex = /^[a-z]+:[a-z_]+$/;
+        if (!permissionNameRegex.test(formData.name.trim())) {
+            return 'Tên permission phải có định dạng "resource:action_name" trong đó resource chỉ chứa chữ thường, action_name chứa chữ thường và dấu gạch dưới';
+        }
+
+        // Kiểm tra có đúng 3 thành phần (resource:action)
+        const parts = formData.name.trim().split(':');
+        if (parts.length !== 2) {
+            return 'Tên permission phải có đúng một dấu hai chấm (:) phân cách resource và action_name';
+        }
+
+        const [resource, action] = parts;
+        if (!resource || !action) {
+            return 'Cả resource và action đều là bắt buộc (định dạng: resource:action_name)';
+        }
+
         if (formData.name.length < 3 || formData.name.length > 100) {
             return 'Tên permission phải từ 3-100 ký tự';
-        }
-
-        if (!/^[a-zA-Z_]+$/.test(formData.name)) {
-            return 'Tên permission chỉ được chứa chữ cái và dấu gạch dưới';
-        }
-
-        if (!formData.category.trim()) {
+        } if (!formData.category.trim()) {
             return 'Danh mục là bắt buộc';
         }
 
-        if (formData.roles.length === 0) {
-            return 'Phải chọn ít nhất một vai trò';
+        if (categoryError) {
+            return categoryError;
+        }
+
+        if (availableCategories.length === 0 && !categoryError) {
+            return 'Không có danh mục khả dụng. Vui lòng thử tải lại.';
         }
 
         if (formData.description && formData.description.length > 500) {
@@ -187,13 +159,10 @@ const EditPermissionModal: React.FC<EditPermissionModalProps> = ({
         try {
             const requestData: PermissionUpdate = {
                 name: formData.name.trim(),
-                roles: formData.roles,
                 category: formData.category,
                 ...(formData.description?.trim() && { description: formData.description.trim() })
-            };
-
-            const response = await apiClient({
-                url: `/api/v1/permissions/admin/definitions/${permission.id}`,
+            }; const response = await apiClient({
+                url: `/api/v1/permissions/${permission.id}`,
                 method: 'PUT',
                 body: requestData
             });
@@ -294,44 +263,20 @@ const EditPermissionModal: React.FC<EditPermissionModalProps> = ({
                             <TextField
                                 {...params}
                                 label="Danh mục *"
-                                placeholder="Chọn danh mục"
+                                placeholder={categoryError ? "Không có danh mục khả dụng" : "Chọn danh mục"}
+                                error={!!categoryError}
+                                helperText={categoryError}
                             />
                         )}
-                        getOptionLabel={(option) => option.replace(/_/g, ' ')}
-                        disabled={loading || loadingData}
+                        getOptionLabel={(option) => option}
+                        disabled={loading || loadingData || !!categoryError}
                     />
 
-                    <Autocomplete
-                        multiple
-                        options={availableRoles}
-                        value={formData.roles}
-                        onChange={(_, newValue) => setFormData(prev => ({ ...prev, roles: newValue }))}
-                        renderInput={(params) => (
-                            <TextField
-                                {...params}
-                                label="Vai trò *"
-                                placeholder="Chọn các vai trò có thể sử dụng permission này"
-                            />
-                        )} renderTags={(value, getTagProps) =>
-                            value.map((option, index) => {
-                                const { key, ...chipProps } = getTagProps({ index });
-                                return (
-                                    <Chip
-                                        key={key}
-                                        label={option}
-                                        {...chipProps}
-                                        size="small"
-                                        sx={{
-                                            backgroundColor: componentColors.chip.successBackground,
-                                            color: componentColors.chip.successColor,
-                                            fontWeight: 'medium'
-                                        }}
-                                    />
-                                );
-                            })
-                        }
-                        disabled={loading || loadingData}
-                    />
+                    {categoryError && (
+                        <Alert severity="warning" sx={{ mt: 1 }}>
+                            {categoryError}
+                        </Alert>
+                    )}
 
                     {/* Permission info */}
                     {permission && (
@@ -345,7 +290,8 @@ const EditPermissionModal: React.FC<EditPermissionModalProps> = ({
                             <Typography variant="body2" color={componentColors.modal.noteText}>
                                 <strong>ID:</strong> {permission.id}<br />
                                 <strong>Tạo lúc:</strong> {new Date(permission.created_at).toLocaleString('vi-VN')}<br />
-                                <strong>Cập nhật lúc:</strong> {new Date(permission.updated_at).toLocaleString('vi-VN')}
+                                <strong>Cập nhật lúc:</strong> {new Date(permission.updated_at).toLocaleString('vi-VN')}<br />
+                                <strong>Roles hiện tại:</strong> {permission.roles.length > 0 ? permission.roles.join(', ') : 'Chưa có role nào sử dụng'}
                             </Typography>
                         </Box>
                     )}

@@ -32,8 +32,10 @@ interface PermissionPublic {
     id: string;
     name: string;
     description?: string;
-    resource: string;
-    action: string;
+    category: string;
+    roles: string[];
+    created_at?: string;
+    updated_at?: string;
 }
 
 interface CreateRoleModalProps {
@@ -71,16 +73,44 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
         name?: string;
         description?: string;
         permission_ids?: string;
-    }>({});    // Get category names sorted
+    }>({});    // Get category names sorted by priority
     const categoryNames = useMemo(() => {
-        return categories.sort();
-    }, [categories]);    // Fetch all permissions and group by category
+        const priorityOrder = [
+            'admin_system',
+            'role_management',
+            'user_management',
+            'broker_management',
+            'transaction_management',
+            'subscription_management',
+            'watchlist_management',
+            'others'
+        ];
+
+        return categories.sort((a, b) => {
+            const indexA = priorityOrder.indexOf(a);
+            const indexB = priorityOrder.indexOf(b);
+
+            // If both categories are in priority list, sort by their index
+            if (indexA !== -1 && indexB !== -1) {
+                return indexA - indexB;
+            }
+
+            // If only A is in priority list, A comes first
+            if (indexA !== -1) return -1;
+
+            // If only B is in priority list, B comes first
+            if (indexB !== -1) return 1;
+
+            // If neither is in priority list, sort alphabetically
+            return a.localeCompare(b);
+        });
+    }, [categories]);// Fetch all permissions and group by category
     const fetchPermissions = async () => {
         console.log('CreateRoleModal: Starting to fetch permissions...');
         setLoadingPermissions(true);
         try {
             const response = await apiClient<{ items: PermissionPublic[]; total: number } | PermissionPublic[]>({
-                url: `/api/v1/permissions/`,
+                url: `/api/v1/permissions/admin/definitions`,
                 method: 'GET',
                 queryParams: {
                     skip: 0,
@@ -105,34 +135,46 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
                     console.log('CreateRoleModal: Found direct array permissions:', permissions.length);
                 } else {
                     console.warn('CreateRoleModal: Unexpected response format:', response.data);
-                }
-
-                console.log(`CreateRoleModal: Loading ${permissions.length} total permissions`);
+                } console.log(`CreateRoleModal: Loading ${permissions.length} total permissions`);
                 setAllPermissions(permissions);
 
                 // Group permissions by category (using resource as fallback)
                 const grouped: Record<string, PermissionPublic[]> = {};
                 const foundCategories: Set<string> = new Set();
+                let processedCount = 0;
+                let skippedPermissions: PermissionPublic[] = []; permissions.forEach(permission => {
+                    // Use category field
+                    const category = permission.category;
 
-                permissions.forEach(permission => {
-                    // Use category field if available, otherwise fall back to resource
-                    const category = (permission as any).category || permission.resource;
+                    if (!category) {
+                        console.warn('CreateRoleModal: Permission without category:', permission);
+                        skippedPermissions.push(permission);
+                        return;
+                    }
+
                     if (!grouped[category]) {
                         grouped[category] = [];
                     }
                     grouped[category].push(permission);
                     foundCategories.add(category);
+                    processedCount++;
                 });
 
-                // Sort permissions within each category by action
+                console.log(`CreateRoleModal: Processed ${processedCount}/${permissions.length} permissions`);
+                if (skippedPermissions.length > 0) {
+                    console.warn('CreateRoleModal: Skipped permissions:', skippedPermissions);
+                }                // Sort permissions within each category by name
                 Object.keys(grouped).forEach(category => {
                     grouped[category].sort((a, b) => {
-                        const actionA = a.action || '';
-                        const actionB = b.action || '';
-                        return actionA.localeCompare(actionB);
+                        const nameA = a.name || '';
+                        const nameB = b.name || '';
+                        return nameA.localeCompare(nameB);
                     });
                 });
 
+                // Count total permissions in groups for verification
+                const totalInGroups = Object.values(grouped).reduce((sum, perms) => sum + perms.length, 0);
+                console.log(`CreateRoleModal: Total permissions in groups: ${totalInGroups}`);
                 console.log(`CreateRoleModal: Grouped permissions into ${Object.keys(grouped).length} categories:`, Object.keys(grouped));
                 setCategories(Array.from(foundCategories).sort());
                 setPermissionsByCategory(grouped);
@@ -489,7 +531,7 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
                                                                 fontSize="0.875rem"
                                                                 sx={{ transition: 'color 0.2s' }}
                                                             >
-                                                                {category.charAt(0).toUpperCase() + category.slice(1)}
+                                                                {category}
                                                             </Typography>
                                                             <Chip
                                                                 label={`${selectedCount}/${totalCount}`}
@@ -545,9 +587,8 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
                                                                     <ModernSwitchButton
                                                                         key={permission.id}
                                                                         checked={isSelected}
-                                                                        onChange={() => handlePermissionToggle(permission)}
-                                                                        label={permission.action}
-                                                                        description={permission.name || permission.description || `${permission.resource}:${permission.action}`}
+                                                                        onChange={() => handlePermissionToggle(permission)} label={permission.name}
+                                                                        description={permission.description || permission.name}
                                                                         disabled={loading}
                                                                         variant="unified"
                                                                         size="small"
@@ -574,7 +615,7 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
                                             {selectedPermissions.map((permission) => (
                                                 <Chip
                                                     key={permission.id}
-                                                    label={permission.name || `${permission.resource || 'Unknown'}:${permission.action || 'Unknown'}`}
+                                                    label={permission.name || 'Unknown'}
                                                     size="small"
                                                     color="primary"
                                                     variant="outlined"
