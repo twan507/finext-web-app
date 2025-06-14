@@ -91,12 +91,10 @@ const EditRoleModal: React.FC<EditRoleModalProps> = ({
     const categoryNames = useMemo(() => {
         const priorityOrder = [
             'admin_system',
-            'role_management',
             'user_management',
             'broker_management',
             'transaction_management',
             'subscription_management',
-            'watchlist_management',
             'others'
         ];
 

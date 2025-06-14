@@ -210,10 +210,11 @@ const PermissionSearch: React.FC<PermissionSearchProps> = ({
                                 { label: 'Broker', value: 'broker' },
                                 { label: 'User', value: 'user' },
                                 { label: 'User Management', value: 'user_management' },
-                                { label: 'Role Management', value: 'role_management' },
-                                { label: 'Admin Only', value: 'admin_only' },
-                                { label: '2024', value: '2024' },
-                                { label: 'Tháng này', value: new Date().toLocaleDateString('vi-VN').split('/').slice(1).join('/') },
+                                { label: 'Transaction Management', value: 'transaction_management' },
+                                { label: 'Broker Management', value: 'broker_management' },
+                                { label: 'Subscription Management', value: 'subscription_management' },
+                                { label: 'Admin System', value: 'admin_system' },
+                                { label: 'Others', value: 'others' },
                             ].map((filter) => (
                                 <Chip
                                     key={filter.value}

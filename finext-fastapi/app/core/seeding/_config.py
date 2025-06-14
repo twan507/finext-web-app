@@ -22,21 +22,16 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
         "description": "Quyền gán/thu hồi vai trò cho người dùng.",
         "roles": ["admin"],
         "category": "user_management",
-    },
-    # Role Management (Admin Only)
-    {"name": "role:create", "description": "Quyền tạo vai trò mới.", "roles": ["admin"], "category": "role_management"},
-    {"name": "role:update_any", "description": "Quyền cập nhật vai trò.", "roles": ["admin"], "category": "role_management"},
-    {"name": "role:delete_any", "description": "Quyền xóa vai trò.", "roles": ["admin"], "category": "role_management"},
-    # Session Management (Admin Only)
+    },  # Role Management (Admin Only)
     {
-        "name": "session:list_any",
-        "description": "Quyền xem danh sách tất cả các session đang hoạt động của mọi người dùng.",
+        "name": "role:manage",
+        "description": "Quyền quản lý (CRUD) tất cả vai trò trong hệ thống.",
         "roles": ["admin"],
-        "category": "others",
-    },
+        "category": "admin_system",
+    },  # Session Management (Admin Only)
     {
-        "name": "session:delete_any",
-        "description": "Quyền xóa bất kỳ session nào đang hoạt động.",
+        "name": "session:manage_any",
+        "description": "Quyền quản lý (xem, xóa) tất cả các session đang hoạt động của mọi người dùng.",
         "roles": ["admin"],
         "category": "others",
     },
@@ -55,44 +50,14 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
         "category": "broker_management",
     },  # System Monitoring & Control (Admin Only)
     {
-        "name": "permission:list_all_definitions",
-        "description": "Quyền xem danh sách tất cả các permission được định nghĩa trong hệ thống.",
+        "name": "permission:manage",
+        "description": "Quyền quản lý (CRUD) tất cả các permission trong hệ thống.",
         "roles": ["admin"],
         "category": "admin_system",
     },
     {
-        "name": "permission:create",
-        "description": "Quyền tạo permission mới trong hệ thống.",
-        "roles": ["admin"],
-        "category": "admin_system",
-    },
-    {
-        "name": "permission:read_any",
-        "description": "Quyền xem chi tiết bất kỳ permission nào trong hệ thống.",
-        "roles": ["admin"],
-        "category": "admin_system",
-    },
-    {
-        "name": "permission:update_any",
-        "description": "Quyền cập nhật bất kỳ permission nào trong hệ thống.",
-        "roles": ["admin"],
-        "category": "admin_system",
-    },
-    {
-        "name": "permission:delete_any",
-        "description": "Quyền xóa bất kỳ permission nào trong hệ thống.",
-        "roles": ["admin"],
-        "category": "admin_system",
-    },
-    {
-        "name": "otp:read_any",
-        "description": "Quyền xem tất cả các bản ghi OTP của mọi người dùng.",
-        "roles": ["admin"],
-        "category": "admin_system",
-    },
-    {
-        "name": "otp:invalidate_any",
-        "description": "Quyền vô hiệu hóa OTP của bất kỳ người dùng nào.",
+        "name": "otp:manage",
+        "description": "Quyền quản lý (xem, vô hiệu hóa) tất cả các bản ghi OTP của mọi người dùng.",
         "roles": ["admin"],
         "category": "admin_system",
     },
@@ -124,14 +89,6 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
         "description": "Quyền thay đổi mật khẩu của bất kỳ người dùng nào.",
         "roles": ["admin", "manager"],
         "category": "user_management",
-    },
-    # Role Management (View Only for Manager)
-    {"name": "role:list", "description": "Quyền xem danh sách vai trò.", "roles": ["admin", "manager"], "category": "role_management"},
-    {
-        "name": "role:read_any",
-        "description": "Quyền xem chi tiết vai trò.",
-        "roles": ["admin", "manager"],
-        "category": "role_management",
     },  # System Features & Licenses
     {
         "name": "feature:manage",
@@ -226,19 +183,12 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
         "description": "Quyền quản lý (CRUD) các mã khuyến mãi.",
         "roles": ["admin", "manager"],
         "category": "others",
-    },
-    # Watchlist Management
+    },  # Watchlist Management
     {
-        "name": "watchlist:read_any",
-        "description": "Quyền xem tất cả watchlists của mọi người dùng.",
+        "name": "watchlist:manage_any",
+        "description": "Quyền quản lý (CRUD) watchlists của bất kỳ người dùng nào.",
         "roles": ["admin", "manager"],
-        "category": "watchlist_management",
-    },
-    {
-        "name": "watchlist:delete_any",
-        "description": "Quyền xóa watchlist của bất kỳ người dùng nào.",
-        "roles": ["admin", "manager"],
-        "category": "watchlist_management",
+        "category": "others",
     },
     # =========================================================================
     # BROKER-SPECIFIC PERMISSIONS
@@ -264,17 +214,10 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
         "description": "Quyền tự cập nhật thông tin cá nhân của mình.",
         "roles": ["admin", "manager", "broker", "user"],
         "category": "user_management",
-    },
-    # Session Management (Personal)
+    },  # Session Management (Personal)
     {
-        "name": "session:list_own",
-        "description": "Quyền xem danh sách các session đang hoạt động của chính mình.",
-        "roles": ["admin", "manager", "broker", "user"],
-        "category": "others",
-    },
-    {
-        "name": "session:delete_own",
-        "description": "Quyền tự xóa một session đang hoạt động của mình.",
+        "name": "session:manage_own",
+        "description": "Quyền quản lý (xem, xóa) các session đang hoạt động của chính mình.",
         "roles": ["admin", "manager", "broker", "user"],
         "category": "others",
     },
@@ -297,31 +240,12 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
         "description": "Quyền xem lịch sử giao dịch của chính mình.",
         "roles": ["admin", "manager", "broker", "user"],
         "category": "transaction_management",
-    },
-    # Watchlist Management (Personal)
+    },  # Watchlist Management (Personal)
     {
-        "name": "watchlist:create_own",
-        "description": "Quyền tự tạo danh sách theo dõi cổ phiếu mới.",
+        "name": "watchlist:manage_own",
+        "description": "Quyền quản lý (CRUD) danh sách theo dõi cổ phiếu của chính mình.",
         "roles": ["admin", "manager", "broker", "user"],
-        "category": "watchlist_management",
-    },
-    {
-        "name": "watchlist:read_own",
-        "description": "Quyền xem các danh sách theo dõi cổ phiếu của chính mình.",
-        "roles": ["admin", "manager", "broker", "user"],
-        "category": "watchlist_management",
-    },
-    {
-        "name": "watchlist:update_own",
-        "description": "Quyền tự cập nhật (thêm/xóa cổ phiếu, đổi tên) danh sách theo dõi của mình.",
-        "roles": ["admin", "manager", "broker", "user"],
-        "category": "watchlist_management",
-    },
-    {
-        "name": "watchlist:delete_own",
-        "description": "Quyền tự xóa danh sách theo dõi của mình.",
-        "roles": ["admin", "manager", "broker", "user"],
-        "category": "watchlist_management",
+        "category": "others",
     },
     # Public/Common Features
     {
@@ -359,11 +283,9 @@ PERMISSION_CATEGORIES: Set[str] = {
     "user_management",  # User account operations (8 quyền)
     "transaction_management",  # Financial transactions (9 quyền)
     "broker_management",  # Partner/broker operations (7 quyền)
-    "watchlist_management",  # Stock watchlists (6 quyền)
     "subscription_management",  # User subscriptions (6 quyền)
-    "admin_system",  # System administration (7 quyền)
-    "role_management",  # Role and permission management (5 quyền)
-    "others",  # Other features (9 quyền: sessions, features, licenses, promotions, files)
+    "admin_system",  # System administration (4 quyền: permission, otp, role)
+    "others",  # Other features (8 quyền: sessions, features, licenses, promotions, files, watchlists)
 }
 
 # Role hierarchy (higher index = more privileges)

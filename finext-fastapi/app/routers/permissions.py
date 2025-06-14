@@ -52,7 +52,7 @@ async def read_my_permissions(
     "/admin/definitions",
     response_model=StandardApiResponse[PaginatedResponse[PermissionInDB]],
     summary="[Admin] Lấy danh sách tất cả các permission được định nghĩa trong hệ thống",
-    dependencies=[Depends(require_permission("permission", "list_all_definitions"))],  # Cần permission này
+    dependencies=[Depends(require_permission("permission", "manage"))],  # Cần permission này
     tags=["permissions"],
 )
 @api_response_wrapper(default_success_message="Lấy danh sách định nghĩa permission thành công.")
@@ -76,7 +76,7 @@ async def admin_read_all_permission_definitions(
     "/",
     response_model=StandardApiResponse[PermissionPublic],
     summary="[Admin] Tạo permission mới",
-    dependencies=[Depends(require_permission("permission", "create"))],
+    dependencies=[Depends(require_permission("permission", "manage"))],
     tags=["permissions"],
     status_code=201,
 )
@@ -100,7 +100,7 @@ async def create_permission(
     "/{permission_id}",
     response_model=StandardApiResponse[PermissionPublic],
     summary="[Admin] Lấy chi tiết permission theo ID",
-    dependencies=[Depends(require_permission("permission", "read_any"))],
+    dependencies=[Depends(require_permission("permission", "manage"))],
     tags=["permissions"],
 )
 @api_response_wrapper(default_success_message="Lấy thông tin permission thành công.")
@@ -120,7 +120,7 @@ async def get_permission_by_id(
     "/{permission_id}",
     response_model=StandardApiResponse[PermissionPublic],
     summary="[Admin] Cập nhật permission",
-    dependencies=[Depends(require_permission("permission", "update_any"))],
+    dependencies=[Depends(require_permission("permission", "manage"))],
     tags=["permissions"],
 )
 @api_response_wrapper(default_success_message="Cập nhật permission thành công.")
@@ -147,7 +147,7 @@ async def update_permission(
     "/{permission_id}",
     response_model=StandardApiResponse[dict],
     summary="[Admin] Xóa permission",
-    dependencies=[Depends(require_permission("permission", "delete_any"))],
+    dependencies=[Depends(require_permission("permission", "manage"))],
     tags=["permissions"],
 )
 @api_response_wrapper(default_success_message="Xóa permission thành công.")
@@ -177,7 +177,7 @@ async def delete_permission(
     "/categories/{category}",
     response_model=StandardApiResponse[List[PermissionPublic]],
     summary="[Admin] Lấy danh sách permission theo category",
-    dependencies=[Depends(require_permission("permission", "list_all_definitions"))],
+    dependencies=[Depends(require_permission("permission", "manage"))],
     tags=["permissions"],
 )
 @api_response_wrapper(default_success_message="Lấy danh sách permission theo category thành công.")
@@ -199,7 +199,7 @@ async def get_permissions_by_category(
     "/validate/{permission_name}",
     response_model=StandardApiResponse[dict],
     summary="[Admin] Kiểm tra tính hợp lệ của permission name",
-    dependencies=[Depends(require_permission("permission", "list_all_definitions"))],
+    dependencies=[Depends(require_permission("permission", "manage"))],
     tags=["permissions"],
 )
 @api_response_wrapper(default_success_message="Kiểm tra permission thành công.")

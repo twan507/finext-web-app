@@ -25,7 +25,7 @@ router = APIRouter()  # Prefix và tags sẽ được đặt ở main.py
     response_model=StandardApiResponse[RolePublic],
     status_code=status.HTTP_201_CREATED,
     summary="Tạo một vai trò mới",
-    dependencies=[Depends(require_permission("role", "create"))],
+    dependencies=[Depends(require_permission("role", "manage"))],
     tags=["roles"],  # Thêm tags ở đây
 )
 @api_response_wrapper(
@@ -55,7 +55,7 @@ async def create_new_role(
     "/",
     response_model=StandardApiResponse[PaginatedResponse[RolePublic]],  # SỬA RESPONSE MODEL
     summary="Lấy danh sách các vai trò",
-    dependencies=[Depends(require_permission("role", "list"))],
+    dependencies=[Depends(require_permission("role", "manage"))],
     tags=["roles"],
 )
 @api_response_wrapper(default_success_message="Lấy danh sách vai trò thành công.")
@@ -84,7 +84,7 @@ async def read_all_roles(
     "/{role_id}",
     response_model=StandardApiResponse[RolePublic],
     summary="Lấy thông tin chi tiết một vai trò theo ID",
-    dependencies=[Depends(require_permission("role", "read_any"))],
+    dependencies=[Depends(require_permission("role", "manage"))],
     tags=["roles"],
 )
 @api_response_wrapper(default_success_message="Lấy thông tin vai trò thành công.")
@@ -105,7 +105,7 @@ async def read_role_by_id_endpoint(  # Đổi tên hàm
     "/{role_id}",
     response_model=StandardApiResponse[RolePublic],
     summary="Cập nhật thông tin một vai trò",
-    dependencies=[Depends(require_permission("role", "update_any"))],
+    dependencies=[Depends(require_permission("role", "manage"))],
     tags=["roles"],
 )
 @api_response_wrapper(default_success_message="Cập nhật vai trò thành công.")
@@ -132,7 +132,7 @@ async def update_existing_role(  # Đổi tên hàm
     response_model=StandardApiResponse[None],
     status_code=status.HTTP_200_OK,
     summary="Xóa một vai trò",
-    dependencies=[Depends(require_permission("role", "delete_any"))],
+    dependencies=[Depends(require_permission("role", "manage"))],
     tags=["roles"],
 )
 @api_response_wrapper(default_success_message="Vai trò đã được xóa thành công.", success_status_code=status.HTTP_200_OK)

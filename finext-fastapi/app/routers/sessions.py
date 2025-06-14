@@ -29,7 +29,7 @@ router = APIRouter()  # Prefix và tags sẽ được đặt ở main.py
     "/me",
     response_model=StandardApiResponse[List[SessionPublic]],
     summary="Lấy danh sách các session đang hoạt động của người dùng hiện tại",
-    dependencies=[Depends(require_permission("session", "list_own"))],
+    dependencies=[Depends(require_permission("session", "manage_own"))],
     tags=["sessions"],
 )
 @api_response_wrapper(default_success_message="Lấy danh sách session của bạn thành công.")
@@ -47,7 +47,7 @@ async def read_my_sessions(
     "/all",
     response_model=StandardApiResponse[PaginatedResponse[SessionPublic]],  # SỬA RESPONSE MODEL
     summary="[Admin] Lấy danh sách tất cả các session đang hoạt động trong hệ thống",
-    dependencies=[Depends(require_permission("session", "list_any"))],
+    dependencies=[Depends(require_permission("session", "manage_any"))],
     tags=["sessions"],
 )
 @api_response_wrapper(default_success_message="Lấy danh sách tất cả session thành công.")
@@ -78,7 +78,7 @@ async def read_all_system_sessions(
     "/me/{session_id}",
     response_model=StandardApiResponse[None],
     summary="Người dùng tự xóa một session cụ thể của mình",
-    dependencies=[Depends(require_permission("session", "delete_own"))],
+    dependencies=[Depends(require_permission("session", "manage_own"))],
     tags=["sessions"],
 )
 @api_response_wrapper(default_success_message="Đăng xuất session thành công.")  # Giữ nguyên message
@@ -113,7 +113,7 @@ async def delete_my_specific_session(
     "/{session_id}",  # Endpoint này cho admin xóa session bất kỳ
     response_model=StandardApiResponse[None],
     summary="[Admin] Xóa bất kỳ session nào trong hệ thống bằng ID của session",
-    dependencies=[Depends(require_permission("session", "delete_any"))],
+    dependencies=[Depends(require_permission("session", "manage_any"))],
     tags=["sessions"],
 )
 @api_response_wrapper(default_success_message="Session đã được xóa thành công bởi Admin.")

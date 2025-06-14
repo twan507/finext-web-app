@@ -36,7 +36,7 @@ router = APIRouter()  # Prefix và tags sẽ được thêm ở main.py
     "/admin/all",
     response_model=StandardApiResponse[PaginatedResponse[OtpPublic]],  # Trả về OtpPublic cho admin
     summary="[Admin] Lấy danh sách tất cả các bản ghi OTP",
-    dependencies=[Depends(require_permission("otp", "read_any"))],  # Cần permission mới
+    dependencies=[Depends(require_permission("otp", "manage"))],  # Chỉ admin có quyền này
     tags=["otps_admin"],  # Có thể dùng tag riêng cho admin
 )
 @api_response_wrapper(default_success_message="Lấy danh sách OTP records thành công.")
@@ -66,7 +66,7 @@ async def admin_read_all_otps(
     "/admin/{otp_id}/invalidate",
     response_model=StandardApiResponse[OtpPublic],  # Trả về OtpPublic sau khi invalidate
     summary="[Admin] Vô hiệu hóa một OTP cụ thể",
-    dependencies=[Depends(require_permission("otp", "invalidate_any"))],  # Cần permission mới
+    dependencies=[Depends(require_permission("otp", "manage"))],  # Chỉ admin có quyền này
     tags=["otps_admin"],
 )
 @api_response_wrapper(default_success_message="OTP đã được vô hiệu hóa thành công.")

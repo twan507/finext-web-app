@@ -8,7 +8,7 @@ from app.utils.types import PyObjectId
 class PermissionBase(BaseModel):
     name: str = Field(..., min_length=3, max_length=100, description="Ví dụ: user:create, user:manage_roles")
     description: Optional[str] = Field(default=None, description="Mô tả chi tiết cho quyền này.")
-    category: str = Field(..., description="Danh mục/nhóm của quyền (ví dụ: user_management, role_management)")
+    category: str = Field(..., description="Danh mục/nhóm của quyền (ví dụ: user_management)")
 
 
 class PermissionCreate(PermissionBase):

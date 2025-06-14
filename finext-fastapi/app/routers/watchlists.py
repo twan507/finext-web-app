@@ -27,7 +27,7 @@ router = APIRouter()  # Prefix và tags sẽ được thêm ở main.py
     response_model=StandardApiResponse[WatchlistPublic],
     status_code=status.HTTP_201_CREATED,
     summary="[User] Tạo một danh sách theo dõi mới",
-    dependencies=[Depends(require_permission("watchlist", "create_own"))],
+    dependencies=[Depends(require_permission("watchlist", "manage_own"))],
     tags=["watchlists"],  # Thêm tags ở đây để Swagger UI nhóm lại
 )
 @api_response_wrapper(
@@ -56,7 +56,7 @@ async def create_new_watchlist(  # Đổi tên hàm cho rõ ràng
     "/me",
     response_model=StandardApiResponse[List[WatchlistPublic]],
     summary="[User] Lấy tất cả danh sách theo dõi của người dùng hiện tại",
-    dependencies=[Depends(require_permission("watchlist", "read_own"))],
+    dependencies=[Depends(require_permission("watchlist", "manage_own"))],
     tags=["watchlists"],
 )
 @api_response_wrapper(default_success_message="Lấy danh sách theo dõi thành công.")
@@ -74,7 +74,7 @@ async def read_my_watchlists(
     "/{watchlist_id}",
     response_model=StandardApiResponse[WatchlistPublic],
     summary="[User] Lấy chi tiết một danh sách theo dõi theo ID",
-    dependencies=[Depends(require_permission("watchlist", "read_own"))],
+    dependencies=[Depends(require_permission("watchlist", "manage_own"))],
     tags=["watchlists"],
 )
 @api_response_wrapper(default_success_message="Lấy thông tin danh sách theo dõi thành công.")
@@ -96,7 +96,7 @@ async def read_my_watchlist_by_id(  # Đổi tên hàm
     "/{watchlist_id}",
     response_model=StandardApiResponse[WatchlistPublic],
     summary="[User] Cập nhật một danh sách theo dõi",
-    dependencies=[Depends(require_permission("watchlist", "update_own"))],
+    dependencies=[Depends(require_permission("watchlist", "manage_own"))],
     tags=["watchlists"],
 )
 @api_response_wrapper(default_success_message="Cập nhật danh sách theo dõi thành công.")
@@ -129,7 +129,7 @@ async def update_my_watchlist(  # Đổi tên hàm
     response_model=StandardApiResponse[None],
     status_code=status.HTTP_200_OK,
     summary="[User] Xóa một danh sách theo dõi",
-    dependencies=[Depends(require_permission("watchlist", "delete_own"))],
+    dependencies=[Depends(require_permission("watchlist", "manage_own"))],
     tags=["watchlists"],
 )
 @api_response_wrapper(default_success_message="Danh sách theo dõi đã được xóa thành công.", success_status_code=status.HTTP_200_OK)
@@ -152,7 +152,7 @@ async def delete_my_watchlist(  # Đổi tên hàm
     "/admin/all",
     response_model=StandardApiResponse[PaginatedResponse[WatchlistPublic]],
     summary="[Admin] Lấy danh sách tất cả watchlists của mọi user",
-    dependencies=[Depends(require_permission("watchlist", "read_any"))],  # Cần permission mới
+    dependencies=[Depends(require_permission("watchlist", "manage_any"))],  # Admin có thể xem tất cả
     tags=["watchlists_admin"],  # Có thể dùng tag riêng cho admin
 )
 @api_response_wrapper(default_success_message="Lấy danh sách tất cả watchlists thành công.")
@@ -182,7 +182,7 @@ async def admin_read_all_watchlists(
     response_model=StandardApiResponse[None],
     status_code=status.HTTP_200_OK,
     summary="[Admin] Xóa một watchlist bất kỳ theo ID",
-    dependencies=[Depends(require_permission("watchlist", "delete_any"))],  # Cần permission mới
+    dependencies=[Depends(require_permission("watchlist", "manage_any"))],  # Admin có thể xóa tất cả
     tags=["watchlists_admin"],
 )
 @api_response_wrapper(default_success_message="Watchlist đã được xóa thành công bởi Admin.", success_status_code=status.HTTP_200_OK)
