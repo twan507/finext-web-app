@@ -153,7 +153,7 @@ async def delete_my_watchlist(  # Đổi tên hàm
     response_model=StandardApiResponse[PaginatedResponse[WatchlistPublic]],
     summary="[Admin] Lấy danh sách tất cả watchlists của mọi user",
     dependencies=[Depends(require_permission("watchlist", "manage_any"))],  # Admin có thể xem tất cả
-    tags=["watchlists_admin"],  # Có thể dùng tag riêng cho admin
+    tags=["watchlists"],  # Có thể dùng tag riêng cho admin
 )
 @api_response_wrapper(default_success_message="Lấy danh sách tất cả watchlists thành công.")
 async def admin_read_all_watchlists(
@@ -183,7 +183,7 @@ async def admin_read_all_watchlists(
     status_code=status.HTTP_200_OK,
     summary="[Admin] Xóa một watchlist bất kỳ theo ID",
     dependencies=[Depends(require_permission("watchlist", "manage_any"))],  # Admin có thể xóa tất cả
-    tags=["watchlists_admin"],
+    tags=["watchlists"],
 )
 @api_response_wrapper(default_success_message="Watchlist đã được xóa thành công bởi Admin.", success_status_code=status.HTTP_200_OK)
 async def admin_delete_watchlist(

@@ -177,13 +177,12 @@ def require_permission(resource: str, action: str):
             permission_to_check = f"upload:{action}"  # VD: upload:create
             allowed = permission_to_check in user_permissions
 
-        # <<<< PHẦN BỔ SUNG MỚI >>>>
-        # ---- WATCHLIST RESOURCE (Admin context) ----
+        # <<<< PHẦN BỔ SUNG MỚI >>>>        # ---- WATCHLIST RESOURCE (Admin context) ----
         elif resource == "watchlist":
-            if action in ["read_any", "delete_any"]:  # Admin actions
+            if action in ["read_any", "delete_any", "manage_any"]:  # Admin actions
                 permission_to_check = f"watchlist:{action}"
                 allowed = permission_to_check in user_permissions
-            elif action in ["create_own", "read_own", "update_own", "delete_own"]:  # User's own actions
+            elif action in ["create_own", "read_own", "update_own", "delete_own", "manage_own"]:  # User's own actions
                 permission_to_check = f"watchlist:{action}"
                 if permission_to_check in user_permissions:
                     if action in ["update_own", "delete_own", "read_own"]:  # "read_own" cho /watchlist/{id}
@@ -201,7 +200,7 @@ def require_permission(resource: str, action: str):
                             allowed = True
                         else:  # update_own, delete_own cần watchlist_id
                             required_permission_context = f"{permission_to_check} (failed: missing watchlist_id)"
-                    elif action == "create_own":
+                    elif action in ["create_own", "manage_own"]:
                         allowed = True
             else:
                 logger.warning(f"Unknown action '{action}' for watchlist resource in permission check.")
