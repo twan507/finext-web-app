@@ -88,53 +88,90 @@ def require_permission(resource: str, action: str):
                 if target_user_id_str and not is_own_operation and "user:delete_any" in user_permissions:
                     allowed = True
                 required_permission_context = "user:delete_any (for others)"
+            elif action == "change_password_any":  # user:change_password_any
+                allowed = "user:change_password_any" in user_permissions
             elif action == "manage_roles":  # user:manage_roles
                 allowed = "user:manage_roles" in user_permissions
             else:
                 logger.error(f"Unknown action '{action}' for resource 'user' in permission check.")
 
         # ---- ROLE RESOURCE ----
-        elif resource == "role":  # Các action: create, list, read_any, update_any, delete_any
-            permission_to_check = f"role:{action}"
-            allowed = permission_to_check in user_permissions
+        elif resource == "role":
+            if action == "manage":  # role:manage (CRUD tất cả vai trò)
+                allowed = "role:manage" in user_permissions
+            else:
+                # Fallback cho các action cụ thể nếu có (create, list, read_any, update_any, delete_any)
+                permission_to_check = f"role:{action}"
+                allowed = permission_to_check in user_permissions or "role:manage" in user_permissions
 
         # ---- PERMISSION RESOURCE ----
         elif resource == "permission":
             if action == "read_own":  # Endpoint GET /permissions/ (lấy quyền của user hiện tại)
                 allowed = True  # Chỉ cần user đăng nhập
                 required_permission_context = "authenticated_user (for listing own permissions)"
+            elif action == "manage":  # permission:manage (CRUD tất cả permissions)
+                allowed = "permission:manage" in user_permissions
             elif action == "list_all_definitions":  # Endpoint GET /permissions/admin/definitions
-                permission_to_check = "permission:list_all_definitions"
-                allowed = permission_to_check in user_permissions
-                required_permission_context = permission_to_check
+                # Cho phép cả permission:manage hoặc quyền cụ thể này
+                allowed = "permission:manage" in user_permissions or "permission:list_all_definitions" in user_permissions
+                required_permission_context = "permission:manage or permission:list_all_definitions"
             else:  # Các action khác cho permission (nếu có)
                 permission_to_check = f"permission:{action}"
-                allowed = permission_to_check in user_permissions
+                allowed = permission_to_check in user_permissions or "permission:manage" in user_permissions
 
         # ---- SESSION RESOURCE ----
-        elif resource == "session":  # list_own, list_any, delete_own, delete_any
-            permission_to_check = f"session:{action}"
-            if permission_to_check in user_permissions:
-                if action == "delete_own":
+        elif resource == "session":
+            if action == "manage_own":  # session:manage_own (xem, xóa session của chính mình)
+                allowed = "session:manage_own" in user_permissions
+                if allowed:
                     target_session_id_str = request.path_params.get("session_id")
                     if target_session_id_str and ObjectId.is_valid(target_session_id_str):
                         session_doc = await db.sessions.find_one({"_id": ObjectId(target_session_id_str)})
                         if session_doc and session_doc.get("user_id") == ObjectId(str(current_user.id)):
                             allowed = True
-                        else:  # Session không tồn tại hoặc không thuộc user
-                            required_permission_context = "session:delete_own (failed: session not found or not owned)"
-                    else:  # Path param không hợp lệ
-                        required_permission_context = "session:delete_own (failed: invalid or missing session_id)"
-                else:  # list_own, list_any, delete_any
-                    allowed = True
+                        else:
+                            allowed = False
+                            required_permission_context = "session:manage_own (failed: session not found or not owned)"
+                    else:
+                        # Cho phép list sessions của mình mà không cần session_id
+                        allowed = True
+            elif action == "manage_any":  # session:manage_any (xem, xóa session của bất kỳ ai)
+                allowed = "session:manage_any" in user_permissions
+            elif action in ["list_own", "delete_own"]:  # Backward compatibility
+                base_permission = "session:manage_own"
+                allowed = base_permission in user_permissions
+                if allowed and action == "delete_own":
+                    target_session_id_str = request.path_params.get("session_id")
+                    if target_session_id_str and ObjectId.is_valid(target_session_id_str):
+                        session_doc = await db.sessions.find_one({"_id": ObjectId(target_session_id_str)})
+                        if session_doc and session_doc.get("user_id") == ObjectId(str(current_user.id)):
+                            allowed = True
+                        else:
+                            allowed = False
+                            required_permission_context = f"{base_permission} (failed: session not found or not owned)"
+                    else:
+                        allowed = False
+                        required_permission_context = f"{base_permission} (failed: invalid or missing session_id)"
+            elif action in ["list_any", "delete_any"]:  # Backward compatibility
+                base_permission = "session:manage_any"
+                allowed = base_permission in user_permissions
+            else:
+                permission_to_check = f"session:{action}"
+                allowed = permission_to_check in user_permissions
 
         # ---- SUBSCRIPTION RESOURCE ----
-        elif resource == "subscription":  # create, read_own, read_any, update_any, deactivate_any
+        elif resource == "subscription":
             permission_to_check = f"subscription:{action}"
             if permission_to_check in user_permissions:
                 # Logic kiểm tra ownership cho read_own đã được xử lý ở router
                 # Các action *_any và create chỉ cần user có quyền là được
                 allowed = True
+            else:
+                # Kiểm tra thêm các action cụ thể
+                if action == "delete_any":  # subscription:delete_any
+                    allowed = "subscription:delete_any" in user_permissions
+                    required_permission_context = "subscription:delete_any"
+
         # ---- TRANSACTION RESOURCE ----
         elif resource == "transaction":
             # create_any, create_own, read_any, update_any, delete_any, confirm_payment_any, cancel_any, read_own, read_referred
@@ -151,33 +188,49 @@ def require_permission(resource: str, action: str):
         # ---- BROKER RESOURCE ----
         elif resource == "broker":
             # create, list, read_any, read_own, update_any, delete_any (deactivate), validate
-            permission_to_check = f"broker:{action}"
-            if permission_to_check in user_permissions:
-                if action == "read_own":
+            if action == "validate":  # broker:validate (kiểm tra tính hợp lệ broker_code)
+                allowed = "broker:validate" in user_permissions
+            elif action == "read_own":  # broker:read_own
+                allowed = "broker:read_own" in user_permissions
+                if allowed:
                     broker_details = await crud_brokers.get_broker_by_user_id(db, current_user.id)  # type: ignore
                     allowed = bool(broker_details)  # Không cần active, chỉ cần là broker
                     if not allowed:
                         required_permission_context = "broker:read_own (failed: user is not a broker record)"
-                else:  # Các action khác (validate, create, list, read_any, update_any, delete_any)
-                    allowed = True
+            else:  # Các action khác (create, list, read_any, update_any, delete_any)
+                permission_to_check = f"broker:{action}"
+                allowed = permission_to_check in user_permissions
 
         # ---- PROMOTION RESOURCE ----
-        elif resource == "promotion":  # manage, validate
-            permission_to_check = f"promotion:{action}"
-            allowed = permission_to_check in user_permissions
+        elif resource == "promotion":
+            if action == "manage":  # promotion:manage (CRUD mã khuyến mãi)
+                allowed = "promotion:manage" in user_permissions
+            elif action == "validate":  # promotion:validate (kiểm tra tính hợp lệ mã khuyến mãi)
+                allowed = "promotion:validate" in user_permissions
+            else:
+                permission_to_check = f"promotion:{action}"
+                allowed = permission_to_check in user_permissions
 
-        # ---- LICENSE & FEATURE RESOURCE (sử dụng chung "manage") ----
-        elif resource == "license" or resource == "feature":  # manage
-            permission_to_check = f"{resource}:manage"
-            allowed = permission_to_check in user_permissions
-            required_permission_context = permission_to_check
+        # ---- LICENSE & FEATURE RESOURCE ----
+        elif resource == "license" or resource == "feature":
+            if action == "manage":  # license:manage hoặc feature:manage
+                permission_to_check = f"{resource}:manage"
+                allowed = permission_to_check in user_permissions
+                required_permission_context = permission_to_check
+            else:
+                permission_to_check = f"{resource}:{action}"
+                allowed = permission_to_check in user_permissions
+                required_permission_context = permission_to_check
 
         # ---- UPLOAD RESOURCE ----
-        elif resource == "upload":  # create
-            permission_to_check = f"upload:{action}"  # VD: upload:create
-            allowed = permission_to_check in user_permissions
+        elif resource == "upload":
+            if action == "create":  # upload:create
+                allowed = "upload:create" in user_permissions
+            else:
+                permission_to_check = f"upload:{action}"
+                allowed = permission_to_check in user_permissions
 
-        # <<<< PHẦN BỔ SUNG MỚI >>>>        # ---- WATCHLIST RESOURCE (Admin context) ----
+        # ---- WATCHLIST RESOURCE ----
         elif resource == "watchlist":
             if action in ["read_any", "delete_any", "manage_any"]:  # Admin actions
                 permission_to_check = f"watchlist:{action}"
@@ -205,14 +258,19 @@ def require_permission(resource: str, action: str):
             else:
                 logger.warning(f"Unknown action '{action}' for watchlist resource in permission check.")
 
-        # ---- OTP RESOURCE (Admin context) ----
+        # ---- OTP RESOURCE ----
         elif resource == "otp":
-            if action in ["read_any", "invalidate_any"]:  # Admin actions
-                permission_to_check = f"otp:{action}"
-                allowed = permission_to_check in user_permissions
+            if action == "manage":  # otp:manage (quản lý tất cả OTP)
+                allowed = "otp:manage" in user_permissions
+            elif action in ["read_any", "invalidate_any"]:  # Backward compatibility
+                base_permission = "otp:manage"
+                allowed = base_permission in user_permissions
+                if not allowed:
+                    # Fallback cho các quyền cụ thể nếu có
+                    permission_to_check = f"otp:{action}"
+                    allowed = permission_to_check in user_permissions
             else:  # Các action khác cho OTP (nếu có trong tương lai)
                 logger.warning(f"Unknown action '{action}' for otp resource in permission check.")
-        # <<<< KẾT THÚC PHẦN BỔ SUNG MỚI >>>>
 
         # --- FINAL CHECK ---
         if not allowed:
