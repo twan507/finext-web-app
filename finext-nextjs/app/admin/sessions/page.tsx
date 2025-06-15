@@ -48,8 +48,7 @@ const SessionsPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
-    const [totalCount, setTotalCount] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(10); const [totalCount, setTotalCount] = useState(0);
 
     // Delete confirmation dialog state
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -59,25 +58,16 @@ const SessionsPage: React.FC = () => {
     // View and sorting state
     const [expandedView, setExpandedView] = useState(false);
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
-
-    // Column configuration for sortable table
+    const [userEmails, setUserEmails] = useState<Map<string, string>>(new Map());
+    const [emailsLoading, setEmailsLoading] = useState(false);    // Column configuration for sortable table
     const columnConfigs: ColumnConfig[] = useMemo(() => [
         {
             id: 'user_email',
             label: 'Người dùng',
             sortable: true,
             sortType: 'string',
-            accessor: (session: SessionPublicAdmin) => session.user_email || session.user_id,
+            accessor: (session: SessionPublicAdmin) => userEmails.get(session.user_id) || session.user_email || session.user_id,
             minWidth: expandedView ? 250 : 200,
-        },
-        {
-            id: 'jti',
-            label: 'JWT ID',
-            sortable: true,
-            sortType: 'string',
-            accessor: (session: SessionPublicAdmin) => session.jti,
-            minWidth: expandedView ? 200 : 150,
-            responsive: expandedView ? undefined : { xs: 'none', sm: 'none' }
         },
         {
             id: 'device_info',
@@ -131,11 +121,53 @@ const SessionsPage: React.FC = () => {
             label: '',
             sortable: false,
             sortType: 'string',
-            accessor: () => '',
-            minWidth: expandedView ? 100 : 60,
+            accessor: () => '', minWidth: expandedView ? 100 : 60,
             align: 'center' as const
+        }], [expandedView, userEmails]);
+
+    const fetchUserEmails = useCallback(async (userIds: string[]) => {
+        if (userIds.length === 0) return;
+
+        setEmailsLoading(true);
+        const emailsMap = new Map<string, string>();
+
+        try {
+            // Fetch user details for each user_id to get their email
+            const emailPromises = userIds.map(async (userId) => {
+                try {
+                    const response = await apiClient<{
+                        id: string;
+                        email: string;
+                        full_name: string;
+                    }>({
+                        url: `/api/v1/users/${userId}`,
+                        method: 'GET',
+                    });
+
+                    if (response.status === 200 && response.data) {
+                        return { userId, email: response.data.email };
+                    }
+                } catch (err) {
+                    console.warn(`Failed to load email for user ${userId}`);
+                }
+                return null;
+            });
+
+            const results = await Promise.all(emailPromises);
+
+            results.forEach(result => {
+                if (result) {
+                    emailsMap.set(result.userId, result.email);
+                }
+            });
+
+            setUserEmails(emailsMap);
+        } catch (err: any) {
+            console.error('Failed to load user emails:', err.message);
+        } finally {
+            setEmailsLoading(false);
         }
-    ], [expandedView]);
+    }, []);
 
     const fetchSessions = useCallback(async () => {
         setLoading(true);
@@ -185,10 +217,17 @@ const SessionsPage: React.FC = () => {
             setLoading(false);
         }
     }, [page, rowsPerPage, sortConfig]);
-
     useEffect(() => {
         fetchSessions();
     }, [fetchSessions]);
+
+    // Fetch user emails when sessions change
+    useEffect(() => {
+        const userIds = sessions.map(session => session.user_id);
+        if (userIds.length > 0) {
+            fetchUserEmails(userIds);
+        }
+    }, [sessions, fetchUserEmails]);
 
     // Update filtered sessions when sessions change and not actively filtering
     useEffect(() => {
@@ -407,42 +446,22 @@ const SessionsPage: React.FC = () => {
                                                 ...getResponsiveDisplayStyle(columnConfigs[0], expandedView),
                                                 whiteSpace: expandedView ? 'normal' : 'nowrap',
                                                 minWidth: columnConfigs[0].minWidth,
-                                            }}>
-                                                <Tooltip title={session.user_email || session.user_id}>
+                                            }}>                                                <Tooltip title={userEmails.get(session.user_id) || session.user_email || session.user_id}>
                                                     <Typography sx={{
                                                         ...responsiveTypographyTokens.tableCell,
-                                                        fontWeight: 'medium',
                                                         maxWidth: expandedView ? 'none' : 200,
                                                         overflow: 'hidden',
                                                         textOverflow: 'ellipsis',
                                                         whiteSpace: expandedView ? 'normal' : 'nowrap'
                                                     }}>
-                                                        {session.user_email || session.user_id}
+                                                        {userEmails.get(session.user_id) || session.user_email || session.user_id}
                                                     </Typography>
                                                 </Tooltip>
                                             </TableCell>
                                             <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[1], expandedView),
-                                                whiteSpace: 'nowrap',
-                                                minWidth: columnConfigs[1].minWidth
-                                            }}>
-                                                <Tooltip title={session.jti}>
-                                                    <Typography sx={{
-                                                        ...responsiveTypographyTokens.tableCell,
-                                                        fontFamily: 'monospace',
-                                                        fontSize: '0.75rem',
-                                                        maxWidth: expandedView ? 'none' : 120,
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis'
-                                                    }}>
-                                                        {session.jti}
-                                                    </Typography>
-                                                </Tooltip>
-                                            </TableCell>
-                                            <TableCell sx={{
-                                                ...getResponsiveDisplayStyle(columnConfigs[2], expandedView),
                                                 whiteSpace: expandedView ? 'normal' : 'nowrap',
-                                                minWidth: columnConfigs[2].minWidth
+                                                minWidth: columnConfigs[1].minWidth
                                             }}>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                     {getDeviceIcon(session.device_info)}
@@ -460,24 +479,24 @@ const SessionsPage: React.FC = () => {
                                                 </Box>
                                             </TableCell>
                                             <TableCell sx={{
-                                                ...getResponsiveDisplayStyle(columnConfigs[3], expandedView),
+                                                ...getResponsiveDisplayStyle(columnConfigs[2], expandedView),
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
-                                                minWidth: columnConfigs[3].minWidth
+                                                minWidth: columnConfigs[2].minWidth
                                             }}>
                                                 <Typography sx={responsiveTypographyTokens.tableCell}>
-                                                    {columnConfigs[3].format?.(session.created_at || '')}
+                                                    {columnConfigs[2].format?.(session.created_at || '')}
                                                 </Typography>
                                             </TableCell>
                                             <TableCell sx={{
-                                                ...getResponsiveDisplayStyle(columnConfigs[4], expandedView),
+                                                ...getResponsiveDisplayStyle(columnConfigs[3], expandedView),
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
-                                                minWidth: columnConfigs[4].minWidth
+                                                minWidth: columnConfigs[3].minWidth
                                             }}>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                     <TimerIcon fontSize="small" color="action" />
                                                     <Box>
                                                         <Typography sx={responsiveTypographyTokens.tableCell}>
-                                                            {columnConfigs[4].format?.(session.last_active_at || '')}
+                                                            {columnConfigs[3].format?.(session.last_active_at || '')}
                                                         </Typography>
                                                         <Typography sx={{
                                                             fontSize: '0.7rem',
@@ -490,15 +509,15 @@ const SessionsPage: React.FC = () => {
                                                 </Box>
                                             </TableCell>
                                             <TableCell sx={{
-                                                ...getResponsiveDisplayStyle(columnConfigs[5], expandedView),
+                                                ...getResponsiveDisplayStyle(columnConfigs[4], expandedView),
                                                 position: 'sticky',
                                                 right: 0,
                                                 backgroundColor: theme.palette.background.paper,
                                                 zIndex: 2,
                                                 borderLeft: '1px solid',
                                                 borderColor: 'divider',
-                                                minWidth: columnConfigs[5].minWidth,
-                                                width: columnConfigs[5].minWidth,
+                                                minWidth: columnConfigs[4].minWidth,
+                                                width: columnConfigs[4].minWidth,
                                                 whiteSpace: 'nowrap',
                                                 paddingLeft: 1,
                                                 paddingRight: 2
