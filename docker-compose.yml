@@ -20,7 +20,7 @@ services:
       - nextjs
     # THÊM: env_file để Nginx có thể đọc được DOMAIN_NAME
     env_file:
-      - ./.env.production
+      - .env
     # THÊM: Command để chạy envsubst và khởi động Nginx
     command: /bin/sh -c "envsubst '$$DOMAIN_NAME' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
 
@@ -32,7 +32,7 @@ services:
     networks:
       - web-proxy
     env_file:
-      - ./.env.production
+      - .env
 
   nextjs:
     build:
@@ -40,11 +40,16 @@ services:
       dockerfile: Dockerfile
       args:
         - NEXT_PUBLIC_API_URL_ARG=${NEXT_PUBLIC_API_URL}
+        - NEXT_PUBLIC_GOOGLE_CLIENT_ID_ARG=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+        - NEXT_PUBLIC_SYSTEM_LICENSE_KEYS_ARG=${NEXT_PUBLIC_SYSTEM_LICENSE_KEYS}
+        - NEXT_PUBLIC_BASIC_FEATURE_ARG=${NEXT_PUBLIC_BASIC_FEATURE}
+        - NEXT_PUBLIC_SYSTEM_FEATURES_ARG=${NEXT_PUBLIC_SYSTEM_FEATURES}
+        - NEXT_PUBLIC_SYSTEM_USERS_ARG=${NEXT_PUBLIC_SYSTEM_USERS}
     restart: always
     networks:
       - web-proxy
     env_file:
-      - ./.env.production
+      - .env
     depends_on:
       - fastapi
 

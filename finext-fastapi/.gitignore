@@ -135,7 +135,7 @@ Thumbs.db
 
 # Environment variables
 .env
-.env.development
+.env.dev
 
 # Virtual environment
 venv/

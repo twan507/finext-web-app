@@ -44,7 +44,7 @@ Dự án Finext là một ứng dụng web full-stack với backend được xâ
 
     - Chạy ứng dụng
     ```bash
-    uvicorn app.main:app --reload --env-file .\.env.development
+    uvicorn app.main:app --reload --env-file .\.env.dev
     ```
 
     - Thoát môi trường ảo
@@ -85,10 +85,10 @@ Dự án Finext là một ứng dụng web full-stack với backend được xâ
     Ứng dụng chạy tại `http://localhost:3000`.
 
 ### Docker (Tùy chọn)
-1.  **Cấu hình biến môi trường:** Tạo file `.env.production` ở thư mục gốc của dự án (nơi chứa `docker-compose.yml`).
+1.  **Cấu hình biến môi trường:** Tạo file `.env` ở thư mục gốc của dự án (nơi chứa `docker-compose.yml`).
 2.  **Build và chạy container:**
     ```bash
-    docker-compose up --build
+    docker compose up -d --build
     ```
    
 
