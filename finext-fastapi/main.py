@@ -25,11 +25,11 @@ def run_fastapi_server():
         print("💡 Hãy tạo môi trường ảo bằng lệnh: python -m venv finext-fastapi/venv")
         return
 
-    # Kiểm tra file .env.dev
-    env_file = fastapi_dir / ".env.dev"
+    # Kiểm tra file .env.development
+    env_file = fastapi_dir / ".env.development"
     if not env_file.exists():
         print(f"❌ Không tìm thấy file môi trường: {env_file}")
-        print("💡 Hãy tạo file .env.dev trong thư mục finext-fastapi")
+        print("💡 Hãy tạo file .env.development trong thư mục finext-fastapi")
         return
 
     print("🚀 Đang khởi động Finext FastAPI server...")
@@ -49,7 +49,7 @@ def run_fastapi_server():
             "app.main:app",
             "--reload",
             "--env-file",
-            ".env.dev",
+            ".env.development",
             "--host",
             "127.0.0.1",
             "--port",

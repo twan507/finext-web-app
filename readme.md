@@ -44,7 +44,7 @@ Dự án Finext là một ứng dụng web full-stack với backend được xâ
 
     - Chạy ứng dụng
     ```bash
-    uvicorn app.main:app --reload --env-file .\.env.dev
+    uvicorn app.main:app --reload --env-file .\.env.development
     ```
 
     - Thoát môi trường ảo
