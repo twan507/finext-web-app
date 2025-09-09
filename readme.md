@@ -58,7 +58,7 @@ Dự án Finext là một ứng dụng web full-stack với backend được xâ
     pip freeze > requirements.txt
     ```
    
-3.  **Cấu hình biến môi trường:** Sao chép `finext-fastapi/.env.example` thành `finext-fastapi/.env` và cập nhật.
+3.  **Cấu hình biến môi trường:** Sao chép `finext-fastapi/.env.example` thành `finext-fastapi/.env` và cập nhật. Đối với production, sử dụng `.env.production`.
 
 4.  **Chạy server (Từ lần thứ 2 trở đi):**
     ```bash
@@ -76,7 +76,7 @@ Dự án Finext là một ứng dụng web full-stack với backend được xâ
     npm install
     ```
    
-2.  **Cấu hình biến môi trường:** Tạo `finext-nextjs/.env` với `NEXT_PUBLIC_API_URL=http://127.0.0.1:8000`.
+2.  **Cấu hình biến môi trường:** Tạo `finext-nextjs/.env` với `NEXT_PUBLIC_API_URL=http://127.0.0.1:8000`. Đối với production, sử dụng `.env.production`.
 3.  **Chạy server development:**
     ```bash
     npm run dev
@@ -84,13 +84,18 @@ Dự án Finext là một ứng dụng web full-stack với backend được xâ
    
     Ứng dụng chạy tại `http://localhost:3000`.
 
-### Docker (Tùy chọn)
-1.  **Cấu hình biến môi trường:** Tạo file `.env` ở thư mục gốc của dự án (nơi chứa `docker-compose.yml`).
+### Docker (Production)
+1.  **Cấu hình biến môi trường:** 
+    - Sao chép `.env.example` thành `.env.production` ở thư mục gốc của dự án (nơi chứa `docker-compose.yml`)
+    - Cập nhật các giá trị trong `.env.production` phù hợp với môi trường production
 2.  **Build và chạy container:**
     ```bash
     docker compose up -d --build
     ```
-   
+
+### Development vs Production
+- **Development**: Sử dụng các file `.env` riêng lẻ trong từng service
+- **Production**: Sử dụng file `.env.production` chung cho toàn bộ hệ thống thông qua Docker Compose
 
 ---
 ## Tài Liệu API (Backend)

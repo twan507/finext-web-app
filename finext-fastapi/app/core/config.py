@@ -1,8 +1,58 @@
 # finext-fastapi/app/core/config.py
 import os
+import logging
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# Setup logger
+logger = logging.getLogger(__name__)
+
+# Xác định đường dẫn tới file .env.development
+current_dir = Path(__file__).parent.parent.parent  # Lên 3 cấp từ app/core/config.py
+env_development_path = current_dir / ".env.development"
+env_production_path = current_dir.parent / ".env.production"  # File production ở thư mục gốc
+
+# Ưu tiên load .env.development trước, sau đó mới đến .env.production
+env_loaded = False
+
+if env_development_path.exists():
+    load_dotenv(env_development_path)
+    logger.info(f"Đã load file môi trường development: {env_development_path}")
+    env_loaded = True
+elif env_production_path.exists():
+    load_dotenv(env_production_path)
+    logger.info(f"Đã load file môi trường production: {env_production_path}")
+    env_loaded = True
+else:
+    # Fallback: thử load .env mặc định
+    load_dotenv()
+    logger.info("Đang sử dụng biến môi trường hệ thống (không tìm thấy file .env)")
+
+if not env_loaded:
+    logger.warning("Không thể load được file môi trường cụ thể, sử dụng biến hệ thống")
+
+
+# Function để validate các biến môi trường quan trọng
+def validate_critical_env_vars():
+    """Kiểm tra các biến môi trường quan trọng và log kết quả"""
+    critical_vars = ["MONGODB_CONNECTION_STRING", "SECRET_KEY", "ADMIN_EMAIL"]
+
+    missing_vars = []
+    for var in critical_vars:
+        value = os.getenv(var)
+        if not value:
+            missing_vars.append(var)
+
+    if missing_vars:
+        logger.error(f"Thiếu các biến môi trường quan trọng: {', '.join(missing_vars)}")
+        return False
+    else:
+        logger.info("Tất cả biến môi trường quan trọng đã được cấu hình")
+        return True
+
+
+# Thực hiện validation
+ENV_VALIDATION_SUCCESS = validate_critical_env_vars()
 
 # MongoDB
 MONGODB_CONNECTION_STRING = os.getenv("MONGODB_CONNECTION_STRING")
@@ -79,38 +129,6 @@ R2_PUBLIC_URL_BASE = os.getenv("R2_PUBLIC_URL_BASE")
 # ---------------------------------
 
 
-if not MONGODB_CONNECTION_STRING:
-    print("CẢNH BÁO: Biến môi trường MONGODB_CONNECTION_STRING chưa được thiết lập.")
-
-if not SECRET_KEY:
-    print("CẢNH BÁO: Biến môi trường SECRET_KEY chưa được thiết lập.")
-
-# Kiểm tra các biến email quan trọng
-if not MAIL_USERNAME:
-    print("CẢNH BÁO: Biến môi trường MAIL_USERNAME chưa được thiết lập cho việc gửi email.")
-if not MAIL_PASSWORD:
-    print("CẢNH BÁO: Biến môi trường MAIL_PASSWORD chưa được thiết lập cho việc gửi email.")
-if not MAIL_FROM:
-    print("CẢNH BÁO: Biến môi trường MAIL_FROM chưa được thiết lập cho việc gửi email.")
-if not MAIL_SERVER:
-    print("CẢNH BÁO: Biến môi trường MAIL_SERVER chưa được thiết lập cho việc gửi email.")
-
-# Kiểm tra các biến R2 quan trọng
-if not R2_ENDPOINT_URL:
-    print("CẢNH BÁO: Biến môi trường R2_ENDPOINT_URL chưa được thiết lập.")
-if not R2_ACCESS_KEY_ID:
-    print("CẢNH BÁO: Biến môi trường R2_ACCESS_KEY_ID chưa được thiết lập.")
-if not R2_SECRET_ACCESS_KEY:
-    print("CẢNH BÁO: Biến môi trường R2_SECRET_ACCESS_KEY chưa được thiết lập.")
-if not R2_BUCKET_NAME:
-    print("CẢNH BÁO: Biến môi trường R2_BUCKET_NAME chưa được thiết lập.")
-if not R2_PUBLIC_URL_BASE:
-    print("CẢNH BÁO: Biến môi trường R2_PUBLIC_URL_BASE chưa được thiết lập.")
-
-# THÊM: Kiểm tra biến Google OAuth
-if not GOOGLE_CLIENT_ID:
-    print("CẢNH BÁO: Biến môi trường GOOGLE_CLIENT_ID chưa được thiết lập cho Google OAuth.")
-if not GOOGLE_CLIENT_SECRET:
-    print("CẢNH BÁO: Biến môi trường GOOGLE_CLIENT_SECRET chưa được thiết lập cho Google OAuth.")
-if not GOOGLE_REDIRECT_URI:
-    print("CẢNH BÁO: Biến môi trường GOOGLE_REDIRECT_URI chưa được thiết lập cho Google OAuth.")
+# Validation đã được thực hiện ở trên thông qua validate_critical_env_vars()
+# Chỉ log thông tin khởi động
+logger.info("Cấu hình môi trường đã được tải hoàn tất")
