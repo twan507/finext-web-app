@@ -60,6 +60,18 @@ export const colorTokens = {
       800: '#5b21b6',
       900: '#4c1d95',
     },
+    royalPurple: {
+      50: '#f6f0ff',
+      100: '#eddbfe',
+      200: '#d6bef9',
+      300: '#bd93f5',
+      400: '#a368f1',
+      500: '#8a3ee8',
+      600: '#7928d4',
+      700: '#6721b7',
+      800: '#551c96',
+      900: '#46157a',
+    },
     violetBerry: '#7E22CE',
   },  // Component-specific color definitions
   lightComponentColors: {

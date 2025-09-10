@@ -9,7 +9,7 @@ import {
   AppBar, Box, CssBaseline, Drawer, Toolbar, List, ListItem, ListItemButton,
   ListItemIcon, ListItemText, Typography, CircularProgress, useTheme,
   IconButton as MuiIconButton, Tooltip, useMediaQuery, Breadcrumbs,
-  alpha, Popover,
+  alpha, Popover, Collapse, Divider, ListSubheader
 } from '@mui/material';
 import MuiLink from '@mui/material/Link';
 import { SvgIconProps } from '@mui/material/SvgIcon';
@@ -19,7 +19,8 @@ import {
   Logout as LogoutIcon,
   Menu as MenuIcon,
   ChevronRight as ChevronRightIcon,
-  DiamondOutlined as LogoIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
   AdminPanelSettings,
   Security,
   Gavel,
@@ -89,7 +90,7 @@ const navigationStructure: (NavItem | NavGroup)[] = [
     ],
   },
   {
-    groupText: "User Data",
+    groupText: 'User Data',
     groupIcon: <ContactPage />,
     subItems: [
       { text: 'Watchlists', href: '/admin/watchlists', icon: <ListAlt /> },
@@ -104,15 +105,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const currentPathname = usePathname();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  const lgUp = useMediaQuery(theme.breakpoints.up('lg'));
+  const mdUp = useMediaQuery(theme.breakpoints.up('md'));
+  const smDown = useMediaQuery(theme.breakpoints.down('sm'));
 
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [pinnedExpanded, setPinnedExpanded] = useState<boolean | null>(null); // null => follow responsive default
+
+  // Popover state for icon-only mode
   const [popoverAnchorEl, setPopoverAnchorEl] = useState<null | HTMLElement>(null);
   const [openPopoverGroupId, setOpenPopoverGroupId] = useState<null | string>(null);
   const [isTooltipDisabled, setIsTooltipDisabled] = useState(false);
-
   const popoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const drawerWidth = layoutTokens.compactDrawerWidth;
+
+  // Collapse state for expanded mode groups
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+
+  // Drawer widths
+  const EXPANDED_WIDTH = 256;
+  // No collapsed mode: always expanded (desktop/tablet) + mobile off-canvas
+  const isMobile = smDown;
+  const isExpanded = true;
+  const drawerWidth = EXPANDED_WIDTH;
 
   useEffect(() => {
     if (!authLoading && !session) {
@@ -131,7 +146,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setOpenPopoverGroupId(groupId);
     setIsTooltipDisabled(true);
   };
-
   const handlePopoverClose = () => {
     if (popoverTimeoutRef.current) clearTimeout(popoverTimeoutRef.current);
     popoverTimeoutRef.current = setTimeout(() => {
@@ -140,7 +154,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       setIsTooltipDisabled(false);
     }, 100);
   };
-
   const handlePopoverMouseEnter = () => {
     if (popoverTimeoutRef.current) {
       clearTimeout(popoverTimeoutRef.current);
@@ -155,22 +168,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </Box>
     );
   }
+
   const drawerLinkStyles = (isActive: boolean, isSubItem: boolean = false) => ({
-    p: theme.spacing(isSubItem ? 1.25 : 1.5),
+    my: 0.6,                // ← NEW: tạo khoảng cách dọc 4px giữa các item
+    px: isExpanded ? theme.spacing(1.25) : theme.spacing(0),
+    py: theme.spacing(isSubItem ? 1 : 1.25),
+    minHeight: isSubItem ? 36 : 44,
     borderRadius: '8px',
-    width: isSubItem ? '100%' : 40,
-    height: isSubItem ? 'auto' : 40,
+    width: '100%',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: isSubItem ? 'flex-start' : 'center',
+    justifyContent: 'flex-start',
     color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
     backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
     '&:hover': {
-      transform: isSubItem ? 'none' : 'scale(1.1)',
       backgroundColor: alpha(theme.palette.primary.main, isActive ? 0.12 : 0.04),
       color: isActive ? theme.palette.primary.dark : theme.palette.primary.main,
     },
-    transition: theme.transitions.create(['transform', 'background-color', 'color'], {
+    transition: theme.transitions.create(['background-color', 'color'], {
       duration: theme.transitions.duration.shortest,
     }),
   });
@@ -198,191 +213,436 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return { bestMatch, bestMatchGroup };
   };
 
-  const drawerContent = (
+  const renderExpandedGroup = (group: NavGroup) => {
+    const isGroupActive = group.subItems.some(sub => currentPathname.startsWith(sub.href));
+    const isOpen = openGroups[group.groupText] ?? isGroupActive; // auto-open active group
+
+    return (
+      <React.Fragment key={group.groupText}>
+        <ListItemButton
+          onClick={() => setOpenGroups(prev => ({ ...prev, [group.groupText]: !isOpen }))}
+          selected={isGroupActive}
+          sx={{
+            ...drawerLinkStyles(isGroupActive),
+            px: 1.25,
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 32, color: 'inherit' }}>
+            {React.cloneElement(group.groupIcon, { sx: { fontSize: 20 } })}
+          </ListItemIcon>
+          <ListItemText
+            primary={group.groupText}
+            primaryTypographyProps={{ variant: 'body2', fontWeight: isGroupActive ? 600 : 500 }}
+          />
+          {isOpen ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+        </ListItemButton>
+        <Collapse in={isOpen} unmountOnExit>
+          <List disablePadding>
+            {group.subItems.map(subItem => {
+              const isSubActive = currentPathname.startsWith(subItem.href);
+              return (
+                <ListItem key={subItem.text} disablePadding>
+                  <Link href={subItem.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
+                    <ListItemButton selected={isSubActive} sx={{ ...drawerLinkStyles(isSubActive, true), pl: 5 }}>
+                      <ListItemIcon sx={{ minWidth: 32, color: 'inherit' }}>
+                        {React.cloneElement(subItem.icon, { sx: { fontSize: 18 } })}
+                      </ListItemIcon>
+                      <ListItemText primary={subItem.text} primaryTypographyProps={{ variant: 'body2' }} />
+                    </ListItemButton>
+                  </Link>
+                </ListItem>
+              );
+            })}
+          </List>
+        </Collapse>
+      </React.Fragment>
+    );
+  };
+
+  const renderIconOnlyGroup = (group: NavGroup) => {
+    const isGroupActive = group.subItems.some(sub => currentPathname.startsWith(sub.href));
+    const isOpen = openPopoverGroupId === group.groupText;
+
+    return (
+      <ListItem
+        key={group.groupText}
+        disablePadding
+        sx={{ width: 'auto', my: theme.spacing(0.75) }}
+        onMouseEnter={(e) => handlePopoverOpen(e, group.groupText)}
+        onMouseLeave={handlePopoverClose}
+      >
+        <Tooltip title={group.groupText} placement="right" disableHoverListener={true}>
+          <ListItemButton selected={isGroupActive && !isOpen} sx={{
+            p: 1.25,
+            borderRadius: '8px',
+            width: 40,
+            height: 40,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: isGroupActive ? theme.palette.primary.main : theme.palette.text.secondary,
+            backgroundColor: isGroupActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+            '&:hover': {
+              backgroundColor: alpha(theme.palette.primary.main, isGroupActive ? 0.12 : 0.04),
+              color: isGroupActive ? theme.palette.primary.dark : theme.palette.primary.main,
+            },
+          }}>
+            <ListItemIcon sx={{ minWidth: 'auto', color: 'inherit' }}>
+              {React.cloneElement(group.groupIcon, { sx: { fontSize: 18 } })}
+            </ListItemIcon>
+          </ListItemButton>
+        </Tooltip>
+
+        <Popover
+          open={isOpen}
+          anchorEl={popoverAnchorEl}
+          onClose={handlePopoverClose}
+          anchorOrigin={{ vertical: 'center', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'center', horizontal: 'left' }}
+          slotProps={{
+            paper: {
+              onMouseEnter: handlePopoverMouseEnter,
+              onMouseLeave: handlePopoverClose,
+              sx: {
+                ml: 1, p: 1, minWidth: 220, bgcolor: 'background.paper',
+                backgroundImage: 'none', boxShadow: theme.shadows[6], borderRadius: '8px',
+                pointerEvents: 'auto',
+              }
+            }
+          }}
+          disableRestoreFocus
+          sx={{ pointerEvents: 'none' }}
+        >
+          <Typography color="text.primary" variant="caption" sx={{ px: 1, py: 1, display: 'block', fontWeight: 'bold' }}>
+            {group.groupText}
+          </Typography>
+          <List disablePadding>
+            {group.subItems.map((subItem) => {
+              const isSubActive = currentPathname.startsWith(subItem.href);
+              return (
+                <ListItem key={subItem.text} disablePadding sx={{ my: 0.5 }}>
+                  <Link href={subItem.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
+                    <ListItemButton
+                      selected={isSubActive}
+                      sx={{
+                        p: 1.25,
+                        borderRadius: '8px',
+                        color: isSubActive ? theme.palette.primary.main : theme.palette.text.secondary,
+                        '&:hover': { backgroundColor: alpha(theme.palette.primary.main, isSubActive ? 0.12 : 0.04) }
+                      }}
+                      onClick={() => { handlePopoverClose(); }}
+                    >
+                      <ListItemIcon sx={{ minWidth: 32, color: 'inherit', mr: 1 }}>
+                        {React.cloneElement(subItem.icon, { sx: { fontSize: 16 } })}
+                      </ListItemIcon>
+                      <ListItemText primary={subItem.text} primaryTypographyProps={{ variant: 'body2' }} />
+                    </ListItemButton>
+                  </Link>
+                </ListItem>
+              );
+            })}
+          </List>
+        </Popover>
+      </ListItem>
+    );
+  };
+
+  const DesktopDrawerContent = (
     <>
-      <Box sx={{ p: theme.spacing(2), display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <Link href="/admin/dashboard">
+      {/* Header (logo + brand) */}
+      <Box
+        sx={{
+          px: 2.5,
+          display: 'flex',
+          alignItems: 'center',
+          paddingTop: '4px',
+          minHeight: layoutTokens.appBarHeight,     // 56–60 đều ổn
+          borderBottom: `1px solid ${theme.palette.divider}`,
+          bgcolor: 'transparent',
+        }}
+      >
+        <Link
+          href="/admin/dashboard"
+          style={{
+            textDecoration: 'none',
+            color: 'inherit',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
           <Image
             src="/finext-icon-trans.png"
             alt="Finext Logo"
-            width={20} // Intrinsic width of the image if known, or desired display width
-            height={20} // Intrinsic height for aspect ratio, or desired display height
-            style={{ height: '30px', width: 'auto', marginTop: theme.spacing(1) }} // Style for rendered size
+            width={24}
+            height={24}
+            style={{ display: 'block' }}   // tránh lệch baseline
           />
+          <Typography
+            variant="h5"
+            sx={{ fontWeight: 600, letterSpacing: 0.5 }}
+          >
+            Finext
+          </Typography>
         </Link>
       </Box>
-      <List sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', py: theme.spacing(1), width: '100%' }}>
-        {navigationStructure.map((item) => {
-          if ('href' in item) { // NavItem
-            const isActive = item.href === '/' ? currentPathname === '/' : currentPathname.startsWith(item.href);
-            return (
-              <ListItem key={item.text} disablePadding sx={{ width: 'auto', my: theme.spacing(0.75) }}>
-                <Tooltip title={item.text} placement="right" disableHoverListener={isTooltipDisabled && openPopoverGroupId !== null}>
-                  <Link href={item.href} passHref style={{ textDecoration: 'none' }}>
-                    <ListItemButton selected={isActive} sx={drawerLinkStyles(isActive)}>
-                      <ListItemIcon sx={{ minWidth: 'auto', color: 'inherit' }}>
-                        {React.cloneElement(item.icon, { sx: { ...item.icon.props.sx, fontSize: '18px' } })}
+
+      {/* Navigation */}
+      <Box sx={{
+        flex: 1, overflowY: 'auto', px: 1.25,   // ← thêm padding ngang (≈10px)
+        scrollbarWidth: 'thin',
+        '&::-webkit-scrollbar': { width: 2 },
+        '&::-webkit-scrollbar-thumb': { backgroundColor: alpha(theme.palette.text.primary, 0.15), borderRadius: 8 },
+        '&:hover::-webkit-scrollbar-thumb': { backgroundColor: alpha(theme.palette.text.primary, 0.25) }
+      }}>
+        <List sx={{ py: 1, width: '100%' }}>
+          {navigationStructure.map((item) => {
+            if ('href' in item) {
+              const isActive = item.href === '/' ? currentPathname === '/' : currentPathname.startsWith(item.href);
+              return isExpanded ? (
+                <ListItem key={item.text} disablePadding>
+                  <Link href={item.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
+                    <ListItemButton selected={isActive} sx={{ ...drawerLinkStyles(isActive), pl: 1.25 }}>
+                      <ListItemIcon sx={{ minWidth: 32, color: 'inherit' }}>
+                        {React.cloneElement(item.icon, { sx: { fontSize: 20 } })}
                       </ListItemIcon>
+                      <ListItemText primary={item.text} primaryTypographyProps={{ variant: 'body2' }} />
                     </ListItemButton>
                   </Link>
-                </Tooltip>
+                </ListItem>
+              ) : (
+                <ListItem key={item.text} disablePadding sx={{ width: 'auto', my: 0.75, justifyContent: 'center' }}>
+                  <Tooltip title={item.text} placement="right" disableHoverListener={isTooltipDisabled && openPopoverGroupId !== null}>
+                    <Link href={item.href} passHref style={{ textDecoration: 'none' }}>
+                      <ListItemButton selected={isActive} sx={{
+                        p: 1.25,
+                        borderRadius: '8px',
+                        width: 40,
+                        height: 40,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
+                        backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                        '&:hover': {
+                          backgroundColor: alpha(theme.palette.primary.main, isActive ? 0.12 : 0.04),
+                          color: isActive ? theme.palette.primary.dark : theme.palette.primary.main,
+                        },
+                      }}>
+                        <ListItemIcon sx={{ minWidth: 'auto', color: 'inherit' }}>
+                          {React.cloneElement(item.icon, { sx: { fontSize: 18 } })}
+                        </ListItemIcon>
+                      </ListItemButton>
+                    </Link>
+                  </Tooltip>
+                </ListItem>
+              );
+            } else {
+              return isExpanded ? renderExpandedGroup(item) : renderIconOnlyGroup(item);
+            }
+          })}
+        </List>
+      </Box>
+
+      <Divider sx={{ my: 0.5 }} />
+
+      {/* Logout row */}
+      <Box sx={{ pb: 1, px: isExpanded ? 1.25 : 0, display: 'flex', flexDirection: 'column', alignItems: isExpanded ? 'stretch' : 'center', width: '100%' }}>
+        {isExpanded ? (
+          <ListItem disablePadding>
+            <ListItemButton onClick={logout} sx={{ ...drawerLinkStyles(false), pl: 1.25 }}>
+              <ListItemIcon sx={{ minWidth: 32, color: 'inherit' }}>
+                <LogoutIcon sx={{ fontSize: 20 }} />
+              </ListItemIcon>
+              <ListItemText primary="Logout" primaryTypographyProps={{ variant: 'body2' }} />
+            </ListItemButton>
+          </ListItem>
+        ) : (
+          <Tooltip title="Logout" placement="right" disableHoverListener={isTooltipDisabled && openPopoverGroupId !== null}>
+            <ListItemButton onClick={logout} sx={{
+              p: 1.25,
+              borderRadius: '8px',
+              width: 40,
+              height: 40,
+              alignSelf: 'center',
+              color: 'text.secondary',
+              '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.06), color: 'primary.main' }
+            }}>
+              <ListItemIcon sx={{ minWidth: 'auto', color: 'inherit' }}>
+                <LogoutIcon sx={{ fontSize: 18 }} />
+              </ListItemIcon>
+            </ListItemButton>
+          </Tooltip>
+        )}
+      </Box>
+    </>
+  );
+
+  const MobileDrawerContent = (
+    <>
+      <Box
+        sx={{
+          px: 3,
+          py: 1.25,
+          paddingTop: '10px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          borderBottom: `1px solid ${theme.palette.divider}`,
+        }}
+      >
+        <Link
+          href="/"
+          style={{
+            textDecoration: 'none',
+            color: 'inherit',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <Image
+            src="/finext-icon-trans.png"
+            alt="Finext Logo"
+            width={24}
+            height={24}
+            style={{ display: 'block' }}
+          />
+          <Typography variant="h6" sx={{ fontWeight: 'bold', letterSpacing: 0.15 }}>
+            Finext
+          </Typography>
+        </Link>
+      </Box>
+
+      <List sx={{
+        flexGrow: 1,
+        overflowY: 'auto',
+        scrollbarWidth: 'thin',
+        '&::-webkit-scrollbar': { width: 2 },
+        '&::-webkit-scrollbar-thumb': { backgroundColor: alpha(theme.palette.text.primary, 0.15), borderRadius: 8 },
+        '&:hover::-webkit-scrollbar-thumb': { backgroundColor: alpha(theme.palette.text.primary, 0.25) }
+      }}>
+        {navigationStructure.map((itemOrGroup) => {
+          if ('href' in itemOrGroup) {
+            const isActive = currentPathname.startsWith(itemOrGroup.href);
+            return (
+              <ListItem key={itemOrGroup.text} disablePadding>
+                <Link href={itemOrGroup.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
+                  <ListItemButton
+                    selected={isActive}
+                    onClick={handleDrawerToggle}
+                    sx={{
+                      color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
+                      '&:hover': {
+                        backgroundColor: alpha(theme.palette.primary.main, isActive ? 0.12 : 0.04),
+                        color: isActive ? theme.palette.primary.dark : theme.palette.primary.main,
+                      },
+                    }}
+                  >
+                    <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>
+                      {itemOrGroup.icon}
+                    </ListItemIcon>
+                    <ListItemText primary={itemOrGroup.text} />
+                  </ListItemButton>
+                </Link>
               </ListItem>
             );
-          } else { // NavGroup
-            const isGroupActive = item.subItems.some(sub => currentPathname.startsWith(sub.href));
-            const isOpen = openPopoverGroupId === item.groupText;
+          } else {
             return (
-              <ListItem
-                key={item.groupText}
-                disablePadding
-                sx={{ width: 'auto', my: theme.spacing(0.75) }}
-                onMouseEnter={(e) => handlePopoverOpen(e, item.groupText)}
-                onMouseLeave={handlePopoverClose}
-              >
-                <Tooltip title={item.groupText} placement="right" disableHoverListener={true}>
-                  <ListItemButton
-                    selected={isGroupActive && !isOpen}
-                    sx={drawerLinkStyles(isGroupActive || isOpen)}
-                  >
-                    <ListItemIcon sx={{ minWidth: 'auto', color: 'inherit' }}>
-                      {React.cloneElement(item.groupIcon, { sx: { ...item.groupIcon.props.sx, fontSize: '18px' } })}
-                    </ListItemIcon>
-                  </ListItemButton>
-                </Tooltip>
-                <Popover
-                  open={isOpen}
-                  anchorEl={popoverAnchorEl}
-                  onClose={handlePopoverClose}
-                  anchorOrigin={{ vertical: 'center', horizontal: 'right' }}
-                  transformOrigin={{ vertical: 'center', horizontal: 'left' }} slotProps={{
-                    paper: {
-                      onMouseEnter: handlePopoverMouseEnter,
-                      onMouseLeave: handlePopoverClose,
-                      sx: {
-                        ml: 1, p: 1, minWidth: 200, bgcolor: 'background.paper',
-                        backgroundImage: 'none', boxShadow: theme.shadows[6], borderRadius: '8px',
-                        pointerEvents: 'auto',
-                      }
-                    }
-                  }}
-                  disableRestoreFocus
-                  sx={{ pointerEvents: 'none' }}
-                >
-                  <Typography color="text.primary" variant="caption" sx={{ px: 1, py: 1, display: 'block', fontWeight: 'bold' }}>
-                    {item.groupText}
+              <React.Fragment key={itemOrGroup.groupText}>
+                <ListItem sx={{ pt: 2, pb: 1, mt: 1 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'medium', textTransform: 'uppercase', pl: 1 }}>
+                    {itemOrGroup.groupText}
                   </Typography>
-                  <List disablePadding>
-                    {item.subItems.map((subItem) => {
-                      const isSubActive = currentPathname.startsWith(subItem.href);
-                      return (
-                        <ListItem key={subItem.text} disablePadding sx={{ my: 0.5 }}>
-                          <Link href={subItem.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
-                            <ListItemButton
-                              selected={isSubActive}
-                              sx={drawerLinkStyles(isSubActive, true)}
-                              onClick={() => {
-                                handlePopoverClose();
-                              }}
-                            >
-                              <ListItemIcon sx={{ minWidth: 32, color: 'inherit', mr: 1 }}>
-                                {React.cloneElement(subItem.icon, { sx: { ...subItem.icon.props.sx, fontSize: '16px' } })}
-                              </ListItemIcon>
-                              <ListItemText primary={subItem.text} slotProps={{ primary: { variant: 'body2', fontWeight: isSubActive ? 'medium' : 'normal' } }} />
-                            </ListItemButton>
-                          </Link>
-                        </ListItem>
-                      );
-                    })}
-                  </List>
-                </Popover>
-              </ListItem>
+                </ListItem>
+                {itemOrGroup.subItems.map(subItem => {
+                  const isActive = currentPathname.startsWith(subItem.href);
+                  return (
+                    <ListItem key={subItem.text} disablePadding sx={{ pl: 1.5 }}>
+                      <Link href={subItem.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
+                        <ListItemButton
+                          selected={isActive}
+                          onClick={handleDrawerToggle}
+                          sx={{
+                            color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
+                            '&:hover': {
+                              backgroundColor: alpha(theme.palette.primary.main, isActive ? 0.12 : 0.04),
+                              color: isActive ? theme.palette.primary.dark : theme.palette.primary.main,
+                            },
+                          }}
+                        >
+                          <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>
+                            {subItem.icon}
+                          </ListItemIcon>
+                          <ListItemText primary={subItem.text} />
+                        </ListItemButton>
+                      </Link>
+                    </ListItem>
+                  );
+                })}
+              </React.Fragment>
             );
           }
         })}
       </List>
-      <Box sx={{ pb: theme.spacing(2), display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-        <ListItem disablePadding sx={{ width: 'auto', my: theme.spacing(0.75) }}>
-          <Tooltip title="Logout" placement="right" disableHoverListener={isTooltipDisabled && openPopoverGroupId !== null}>
-            <ListItemButton onClick={logout} sx={drawerLinkStyles(false)}>
-              <ListItemIcon sx={{ minWidth: 'auto', color: 'inherit' }}>
-                <LogoutIcon sx={{ fontSize: '18px' }} />
-              </ListItemIcon>
-            </ListItemButton>
-          </Tooltip>
+      <Box sx={{ p: 1, mt: 'auto', borderTop: `1px solid ${theme.palette.divider}` }}>
+        <ListItem disablePadding>
+          <ListItemButton
+            onClick={() => { logout(); handleDrawerToggle(); }}
+            sx={{
+              color: theme.palette.text.secondary,
+              '&:hover': {
+                backgroundColor: alpha(theme.palette.primary.main, 0.04),
+                color: theme.palette.primary.main,
+              },
+            }}
+          >
+            <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>
+              <LogoutIcon />
+            </ListItemIcon>
+            <ListItemText primary="Logout" />
+          </ListItemButton>
         </ListItem>
       </Box>
     </>
   );
+
   const generateBreadcrumbs = () => {
     const { bestMatch, bestMatchGroup } = findBestMatch();
 
-    let currentPageTitle = "Page";
-    let currentPageIcon = <ChevronRightIcon sx={{ mr: 0.5, fontSize: "inherit" }} />;
+    let currentPageTitle = 'Page';
+    let currentPageIcon = <ChevronRightIcon sx={{ mr: 0.5, fontSize: 'inherit' }} />;
     let currentGroupText: string | null = null;
     let currentGroupIcon: React.ReactElement<SvgIconProps> | null = null;
 
     if (bestMatch) {
       currentPageTitle = bestMatch.text;
-      currentPageIcon = React.cloneElement(bestMatch.icon, { sx: { mr: 0.5, fontSize: "inherit" } });
+      currentPageIcon = React.cloneElement(bestMatch.icon, { sx: { mr: 0.5, fontSize: 'inherit' } });
 
       if (bestMatchGroup) {
         currentGroupText = bestMatchGroup.groupText;
-        currentGroupIcon = React.cloneElement(bestMatchGroup.groupIcon, { sx: { mr: 0.5, fontSize: "inherit" } });
+        currentGroupIcon = React.cloneElement(bestMatchGroup.groupIcon, { sx: { mr: 0.5, fontSize: 'inherit' } });
       }
-    } return (
+    }
+
+    return (
       <Breadcrumbs
         aria-label="breadcrumb"
-        sx={{
-          color: 'text.secondary',
-          '& .MuiBreadcrumbs-ol': {
-            alignItems: 'center',
-          },
-          '& .MuiBreadcrumbs-li': {
-            display: 'flex',
-            alignItems: 'center',
-          }
-        }}
+        sx={{ color: 'text.secondary', '& .MuiBreadcrumbs-ol': { alignItems: 'center' }, '& .MuiBreadcrumbs-li': { display: 'flex', alignItems: 'center' } }}
       >
-        <MuiLink
-          component={Link}
-          underline="hover"
-          color="inherit"
-          href="/admin/dashboard"
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            textDecoration: 'none',
-            '&:hover': {
-              textDecoration: 'underline'
-            }
-          }}
-        >
-          <DashboardIcon sx={{ mr: 0.5, fontSize: "1rem" }} />
+        <MuiLink component={Link} underline="hover" color="inherit" href="/admin/dashboard" sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
+          <DashboardIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
           Dashboard
-        </MuiLink>        {currentGroupText && currentGroupIcon && (
-          <Typography
-            color="text.secondary"
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              fontSize: '0.875rem'
-            }}
-          >
-            {React.cloneElement(currentGroupIcon, { sx: { mr: 0.5, fontSize: "1rem" } })}
+        </MuiLink>
+        {currentGroupText && currentGroupIcon && (
+          <Typography color="text.secondary" sx={{ display: 'flex', alignItems: 'center', fontSize: '0.875rem' }}>
+            {React.cloneElement(currentGroupIcon, { sx: { mr: 0.5, fontSize: '1rem' } })}
             {currentGroupText}
           </Typography>
         )}
         {currentPathname !== '/admin/dashboard' && bestMatch && (
-          <Typography
-            color="text.primary"
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              fontSize: '0.875rem',
-              fontWeight: 500
-            }}
-          >
-            {React.cloneElement(currentPageIcon, { sx: { mr: 0.5, fontSize: "1rem" } })}
+          <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center', fontSize: '0.875rem', fontWeight: 500 }}>
+            {React.cloneElement(currentPageIcon, { sx: { mr: 0.5, fontSize: '1rem' } })}
             {currentPageTitle}
           </Typography>
         )}
@@ -392,193 +652,56 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: theme.palette.background.default }}>
-      <CssBaseline />      <AppBar
+      <CssBaseline />
+
+      {/* APP BAR */}
+      <AppBar
         position="fixed"
-        elevation={0} // Style can be controlled via MuiProvider if needed
-        sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-          height: layoutTokens.appBarHeight,
-          // bgcolor and borderBottom are now primarily controlled by MuiProvider's styleOverrides
-        }}
-      >        <Toolbar sx={{
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        px: { xs: theme.spacing(2), sm: theme.spacing(3) },
-        minHeight: `${layoutTokens.toolbarMinHeight}px !important`,
-        height: layoutTokens.appBarHeight,
-        maxHeight: layoutTokens.appBarHeight,
-      }}>
+        elevation={0}
+        sx={{ width: { sm: `calc(100% - ${drawerWidth}px)` }, ml: { sm: `${drawerWidth}px` }, height: layoutTokens.appBarHeight }}
+      >
+        <Toolbar sx={{ justifyContent: 'space-between', alignItems: 'center', px: { xs: 2, sm: 3 }, minHeight: `${layoutTokens.toolbarMinHeight}px !important`, height: layoutTokens.appBarHeight, maxHeight: layoutTokens.appBarHeight }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            {isMobile && ( // isMobile is true for 'xs' screens
-              <MuiIconButton
-                color="inherit"
-                aria-label="open drawer"
-                edge="start"
-                onClick={handleDrawerToggle}
-                sx={{ mr: 2, display: { sm: 'none' }, color: 'text.primary' }} // Correctly shows on xs, hidden on sm+
-              >
+            {isMobile && (
+              <MuiIconButton color="inherit" aria-label="open drawer" edge="start" onClick={handleDrawerToggle} sx={{ mr: 2, display: { sm: 'none' }, color: 'text.primary' }}>
                 <MenuIcon />
               </MuiIconButton>
             )}
-            {/* Corrected logic for breadcrumbs or mobile dashboard link */}            {isMobile ? ( // If on 'xs' screen (mobile)
-              currentPathname !== '/admin/dashboard' && ( // And not on the dashboard page itself
-                <MuiLink
-                  component={Link}
-                  underline="hover"
-                  color="inherit"
-                  href="/admin/dashboard"
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    color: 'text.primary',
-                    textDecoration: 'none',
-                    fontSize: '0.875rem',
-                    '&:hover': {
-                      textDecoration: 'underline'
-                    }
-                  }}
-                >
-                  <DashboardIcon sx={{ mr: 0.5, fontSize: "1rem" }} />
-                  Dashboard
-                </MuiLink>
-              )
-              // If on mobile AND on dashboard page, this part renders null, so only menu icon shows.
-            ) : ( // Else (if on 'sm' screen or larger - desktop)
-              generateBreadcrumbs() // Show full breadcrumbs
-            )}
-          </Box>          <Box sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: { xs: theme.spacing(1), sm: theme.spacing(1.5), md: theme.spacing(2) }
-          }}>
+            {generateBreadcrumbs()}
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <ThemeToggleButton />
             <UserMenu />
           </Box>
         </Toolbar>
       </AppBar>
 
-      <Box
-        component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-        aria-label="sidebar"
-      >
-        {/* Mobile Drawer */}
+      {/* NAV DRAWERS */}
+      <Box component="nav" sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }} aria-label="sidebar">
+        {/* Mobile Drawer (overlay) */}
         <Drawer
           variant="temporary"
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{ keepMounted: true }}
-          elevation={0} // Consistent with desktop
-          sx={{
-            display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': {
-              width: layoutTokens.drawerWidth, // full drawer width for mobile
-              // bgcolor & borderRight will be inherited from MuiProvider styles
-            },
-          }}        >
-          <Box sx={{ p: theme.spacing(2), display: 'flex', alignItems: 'center', borderBottom: `1px solid ${theme.palette.divider}` }}>
-            <Link href="/" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
-              <Image
-                src="/finext-icon-trans.png"
-                alt="Finext Logo"
-                width={20}
-                height={20}
-                style={{ height: '24px', width: 'auto', marginRight: theme.spacing(1) }}
-              />
-              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Finext</Typography>
-            </Link>
-          </Box>
-          <List sx={{ flexGrow: 1, overflowY: 'auto' }}>
-            {navigationStructure.map((itemOrGroup) => {
-              if ('href' in itemOrGroup) {
-                const isActive = currentPathname.startsWith(itemOrGroup.href);
-                return (
-                  <ListItem key={itemOrGroup.text} disablePadding>
-                    <Link href={itemOrGroup.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
-                      <ListItemButton selected={isActive} onClick={handleDrawerToggle}>
-                        <ListItemIcon sx={{ color: isActive ? 'primary.main' : 'text.secondary', minWidth: 40 }}>
-                          {itemOrGroup.icon}
-                        </ListItemIcon>
-                        <ListItemText primary={itemOrGroup.text} />
-                      </ListItemButton>
-                    </Link>
-                  </ListItem>
-                );
-              } else {
-                return (
-                  <React.Fragment key={itemOrGroup.groupText}>
-                    <ListItem sx={{ pt: 2, pb: 1, mt: 1 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'medium', textTransform: 'uppercase', pl: 1 }}>
-                        {itemOrGroup.groupText}
-                      </Typography>
-                    </ListItem>
-                    {itemOrGroup.subItems.map(subItem => {
-                      const isActive = currentPathname.startsWith(subItem.href);
-                      return (
-                        <ListItem key={subItem.text} disablePadding sx={{ pl: 1.5 }}>
-                          <Link href={subItem.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
-                            <ListItemButton selected={isActive} onClick={handleDrawerToggle}>
-                              <ListItemIcon sx={{ color: isActive ? 'primary.main' : 'text.secondary', minWidth: 40 }}>
-                                {subItem.icon}
-                              </ListItemIcon>
-                              <ListItemText primary={subItem.text} />
-                            </ListItemButton>
-                          </Link>
-                        </ListItem>
-                      );
-                    })}
-                  </React.Fragment>
-                );
-              }
-            })}
-          </List>
-          <Box sx={{ p: theme.spacing(1), mt: 'auto', borderTop: `1px solid ${theme.palette.divider}` }}>
-            <ListItem disablePadding>
-              <ListItemButton onClick={() => { logout(); handleDrawerToggle(); }}>
-                <ListItemIcon sx={{ color: 'text.secondary', minWidth: 40 }}>
-                  <LogoutIcon />
-                </ListItemIcon>
-                <ListItemText primary="Logout" />
-              </ListItemButton>
-            </ListItem>
-          </Box>
+          elevation={0}
+          sx={{ display: { xs: 'block', sm: 'none' }, '& .MuiDrawer-paper': { width: layoutTokens.drawerWidth || 280 } }}
+        >
+          {MobileDrawerContent}
         </Drawer>
 
-        {/* Desktop Drawer (Compact with Popovers on Hover) */}
+        {/* Desktop Drawer (expanded ↔ icon-only) */}
         <Drawer
           variant="permanent"
-          sx={{
-            display: { xs: 'none', sm: 'flex' },
-            flexDirection: 'column',
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-              height: '100vh',
-              display: 'flex',
-              flexDirection: 'column',
-              // bgcolor and borderRight are now primarily controlled by MuiProvider's styleOverrides
-              // Removed: bgcolor: 'background.paper',
-              // Removed: borderRight: `1px solid ${theme.palette.divider}`,
-            },
-          }}
+          sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, height: '100vh', display: 'flex', flexDirection: 'column' } }}
           open
         >
-          {drawerContent}
+          {DesktopDrawerContent}
         </Drawer>
-      </Box>      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: theme.spacing(3),
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          height: '100vh',
-          mt: `${layoutTokens.appBarHeight}px`, // Updated AppBar height
-          maxHeight: `calc(100vh - ${layoutTokens.appBarHeight}px)`,
-          overflowY: 'auto',
-          bgcolor: theme.palette.mode === 'light' ? alpha(theme.palette.grey[500], 0.04) : theme.palette.background.default,
-        }}
-      >
+      </Box>
+
+      {/* MAIN */}
+      <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` }, height: '100vh', mt: `${layoutTokens.appBarHeight}px`, maxHeight: `calc(100vh - ${layoutTokens.appBarHeight}px)`, overflowY: 'auto', bgcolor: theme.palette.mode === 'light' ? alpha(theme.palette.grey[500], 0.04) : theme.palette.background.default }}>
         {children}
       </Box>
     </Box>
