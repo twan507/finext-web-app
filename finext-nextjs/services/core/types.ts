@@ -27,8 +27,8 @@ export interface ApiErrorResponse {
 }
 
 export interface LoginResponse {
-    access_token: string;
-    token_type: string;
+  access_token: string;
+  token_type: string;
 }
 
 // Định nghĩa User type để dùng chung
@@ -38,10 +38,14 @@ export interface UserSchema {
   role_ids: string[]; // List[PyObjectId] -> List[string]
   full_name: string;
   email: string;
-  phone_number: string;
+  phone_number?: string | null; // Optional như trong backend
+  avatar_url?: string | null; // Thêm avatar_url property
+  referral_code?: string | null; // Thêm referral_code property
+  google_id?: string | null; // Thêm google_id property
   subscription_id?: string | null; // THAY ĐỔI: từ license_info sang subscription_id
   is_active?: boolean; // Thêm nếu backend trả về
   created_at?: string; // Thêm nếu backend trả về
+  updated_at?: string; // Thêm updated_at property
 }
 
 

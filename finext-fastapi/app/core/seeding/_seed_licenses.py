@@ -22,6 +22,7 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
             "price": 0,
             "duration_days": 99999,
             "feature_keys": list(ALL_DEFAULT_FEATURE_KEYS),
+            "color": "#D32F2F",  # 🔴 Đỏ đậm - Quyền cao nhất, mạnh mẽ, cảnh báo
         },
         {
             "key": "MANAGER",
@@ -29,6 +30,7 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
             "price": 0,
             "duration_days": 99999,
             "feature_keys": [fkey for fkey in ALL_DEFAULT_FEATURE_KEYS if fkey != "admin_feature"],
+            "color": "#FB8C00",  # 🟠 Cam - Quản lý, điều phối, nổi bật nhưng thấp hơn Admin
         },
         {
             "key": "PARTNER",
@@ -40,6 +42,7 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
                 "broker_feature",
                 "advanced_feature",
             ],
+            "color": "#7B1FA2",  # 🟣 Tím - Hợp tác, tin cậy, khác biệt với nội bộ
         },
         {
             "key": "BASIC",
@@ -50,6 +53,7 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
                 "basic_feature",
                 "advanced_feature",
             ],
+            "color": "#1976D2",  # 🔵 Xanh dương - Phổ biến, thân thiện, mặc định
         },
         {
             "key": "PRO",
@@ -59,6 +63,7 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
             "feature_keys": [
                 "basic_feature",
             ],
+            "color": "#C2185B",  # 💜🌸 Tím hồng - Cao cấp, sang trọng, nhấn mạnh "pro"
         },
     ]
     existing_license_keys: Set[str] = set()
@@ -84,6 +89,7 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
                 price=lic_data["price"],
                 duration_days=lic_data["duration_days"],
                 feature_keys=valid_feature_keys_for_license,
+                color=lic_data["color"],
             )
             dt_now = datetime.now(timezone.utc)
             result = await licenses_collection.insert_one(

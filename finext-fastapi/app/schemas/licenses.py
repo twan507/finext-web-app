@@ -25,6 +25,11 @@ class LicenseBase(BaseModel):
         default_factory=list,
         description="Danh sách các 'key' của features có trong gói.",
     )
+    color: str = Field(
+        default="#1976D2",
+        pattern=r"^#[0-9A-Fa-f]{6}$",
+        description="Mã màu hex cho license (ví dụ: #1976D2).",
+    )
     is_active: bool = Field(default=True, description="Trạng thái hoạt động của license.")  # MỚI
 
 
@@ -38,6 +43,7 @@ class LicenseCreate(LicenseBase):
                 "price": 49.99,
                 "duration_days": 30,
                 "feature_keys": ["view_advanced_chart", "api_access"],
+                "color": "#C2185B",
                 "is_active": True,  # MỚI
             }
         }
@@ -49,6 +55,12 @@ class LicenseUpdate(BaseModel):
     price: Optional[float] = Field(None, ge=0)
     duration_days: Optional[int] = Field(None, gt=0)
     feature_keys: Optional[List[str]] = Field(None)
+    color: Optional[str] = Field(
+        None,
+        pattern=r"^#[0-9A-Fa-f]{6}$",
+        description="Mã màu hex cho license (ví dụ: #1976d2).",
+    )
+    is_active: Optional[bool] = Field(None)
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -63,6 +75,7 @@ class LicenseUpdate(BaseModel):
                     "api_access",
                     "sse_access",
                 ],
+                "color": "#FB8C00",
                 "is_active": False,  # MỚI
             }
         }
@@ -89,6 +102,7 @@ class LicenseInDB(LicenseBase):  # Kế thừa is_active
                     "export_data",
                     "enable_pro_indicator",
                 ],
+                "color": "#1976D2",
                 "is_active": True,  # MỚI
                 "created_at": "2023-10-27T10:00:00Z",
                 "updated_at": "2023-10-27T10:00:00Z",
