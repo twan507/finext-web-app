@@ -169,8 +169,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  const drawerLinkStyles = (isActive: boolean, isSubItem: boolean = false) => ({
-    my: 0.6,                // ← NEW: tạo khoảng cách dọc 4px giữa các item
+  const drawerLinkStyles = (
+    isActive: boolean,
+    isSubItem: boolean = false,
+    applyBgOnActive: boolean = true // <-- Đảm bảo có tham số này
+  ) => ({
+    my: 0.6,
     px: isExpanded ? theme.spacing(1.25) : theme.spacing(0),
     py: theme.spacing(isSubItem ? 1 : 1.25),
     minHeight: isSubItem ? 36 : 44,
@@ -180,9 +184,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     alignItems: 'center',
     justifyContent: 'flex-start',
     color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
-    backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+    backgroundColor: isActive && applyBgOnActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent', // <-- Logic kiểm tra
     '&:hover': {
-      backgroundColor: alpha(theme.palette.primary.main, isActive ? 0.12 : 0.04),
+      backgroundColor: alpha(theme.palette.primary.main, isActive && applyBgOnActive ? 0.12 : 0.04),
       color: isActive ? theme.palette.primary.dark : theme.palette.primary.main,
     },
     transition: theme.transitions.create(['background-color', 'color'], {
@@ -221,9 +225,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <React.Fragment key={group.groupText}>
         <ListItemButton
           onClick={() => setOpenGroups(prev => ({ ...prev, [group.groupText]: !isOpen }))}
-          selected={isGroupActive}
           sx={{
-            ...drawerLinkStyles(isGroupActive),
+            ...drawerLinkStyles(isGroupActive, false, false),
             px: 1.25,
           }}
         >
@@ -449,30 +452,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Logout row */}
       <Box sx={{ pb: 1, px: isExpanded ? 1.25 : 0, display: 'flex', flexDirection: 'column', alignItems: isExpanded ? 'stretch' : 'center', width: '100%' }}>
         {isExpanded ? (
-          <ListItem disablePadding>
-            <ListItemButton onClick={logout} sx={{ ...drawerLinkStyles(false), pl: 1.25 }}>
-              <ListItemIcon sx={{ minWidth: 32, color: 'inherit' }}>
-                <LogoutIcon sx={{ fontSize: 20 }} />
-              </ListItemIcon>
-              <ListItemText primary="Logout" primaryTypographyProps={{ variant: 'body2' }} />
-            </ListItemButton>
-          </ListItem>
+          <ThemeToggleButton variant="full" />
         ) : (
-          <Tooltip title="Logout" placement="right" disableHoverListener={isTooltipDisabled && openPopoverGroupId !== null}>
-            <ListItemButton onClick={logout} sx={{
-              p: 1.25,
-              borderRadius: '8px',
-              width: 40,
-              height: 40,
-              alignSelf: 'center',
-              color: 'text.secondary',
-              '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.06), color: 'primary.main' }
-            }}>
-              <ListItemIcon sx={{ minWidth: 'auto', color: 'inherit' }}>
-                <LogoutIcon sx={{ fontSize: 18 }} />
-              </ListItemIcon>
-            </ListItemButton>
-          </Tooltip>
+          <ThemeToggleButton variant="icon" />
         )}
       </Box>
     </>
@@ -587,21 +569,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </List>
       <Box sx={{ p: 1, mt: 'auto', borderTop: `1px solid ${theme.palette.divider}` }}>
         <ListItem disablePadding>
-          <ListItemButton
-            onClick={() => { logout(); handleDrawerToggle(); }}
-            sx={{
-              color: theme.palette.text.secondary,
-              '&:hover': {
-                backgroundColor: alpha(theme.palette.primary.main, 0.04),
-                color: theme.palette.primary.main,
-              },
-            }}
-          >
-            <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>
-              <LogoutIcon />
-            </ListItemIcon>
-            <ListItemText primary="Logout" />
-          </ListItemButton>
+          <ThemeToggleButton variant="full" />
         </ListItem>
       </Box>
     </>
@@ -670,7 +638,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {generateBreadcrumbs()}
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <ThemeToggleButton />
             <UserMenu />
           </Box>
         </Toolbar>
