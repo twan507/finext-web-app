@@ -92,6 +92,7 @@ function UserAvatarWithSubscription({
                         fontWeight: 'bold',
                         lineHeight: '1.4',
                         textTransform: 'uppercase',
+                        borderRadius: '6px',
                         boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                         whiteSpace: 'nowrap',
                         border: '1px solid',
@@ -115,7 +116,7 @@ const UserMenu: React.FC = () => {
     const open = Boolean(anchorEl);
     const [mounted, setMounted] = useState(false);
     const [licenseKey, setLicenseKey] = useState<string | null>(null);
-    const [licenseColor, setLicenseColor] = useState<string>("#1976D2");
+    const [licenseColor, setLicenseColor] = useState<string>("#1565c0");
     const [isLoading, setIsLoading] = useState<boolean>(true);
 
     useEffect(() => {
@@ -146,18 +147,18 @@ const UserMenu: React.FC = () => {
                         }
                     } else {
                         setLicenseKey('BASIC');
-                        setLicenseColor('#1976D2');
+                        setLicenseColor('#1565c0');
                     }
                 } catch (error) {
                     console.error("Error fetching subscription:", error);
                     setLicenseKey('BASIC');
-                    setLicenseColor('#1976D2');
+                    setLicenseColor('#1565c0');
                 } finally {
                     setIsLoading(false);
                 }
             } else {
                 setLicenseKey('BASIC');
-                setLicenseColor('#1976D2');
+                setLicenseColor('#1565c0');
                 setIsLoading(false);
             }
         };

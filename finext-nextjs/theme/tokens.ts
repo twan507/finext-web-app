@@ -11,9 +11,9 @@ export const colorTokens = {
     white: '#ffffff',
   },
   primary: {
-    main: '#1976d2',
-    light: '#63a4ff',
-    dark: '#004ba0',
+    main: '#1565c0',
+    light: '#5e92f3',
+    dark: '#003c8f',
     contrastText: '#ffffff',
   },
   secondary: {
@@ -35,9 +35,9 @@ export const colorTokens = {
     contrastText: '#ffffff',
   },
   info: {
-    main: '#0288d1',
-    light: '#03a9f4',
-    dark: '#01579b',
+    main: '#0277bd',
+    light: '#58a5f0',
+    dark: '#004c8c',
     contrastText: '#ffffff',
   },
   success: {
@@ -77,17 +77,17 @@ export const colorTokens = {
   lightComponentColors: {
     appBar: {
       background: '#ffffff',
-      text: 'rgba(0, 0, 0, 0.87)',
+      text: 'rgba(0, 0, 0, 0.95)',
     },
     drawer: {
       background: '#ffffff',
       border: '#f0f0f0',
     }, tableHead: {
       background: '#fafafa',
-      text: 'rgba(0, 0, 0, 0.87)',
-      sortActive: '#1976d2', // Primary color for active sort
-      sortHover: '#1976d2',  // Primary color for hover
-      sortIcon: 'rgba(0, 0, 0, 0.54)',
+      text: 'rgba(0, 0, 0, 0.95)',
+      sortActive: '#1565c0', // Primary color for active sort
+      sortHover: '#1565c0',  // Primary color for hover
+      sortIcon: 'rgba(0, 0, 0, 0.65)',
     },
     tableRow: {
       background: '#ffffff',
@@ -95,16 +95,16 @@ export const colorTokens = {
       selected: '#e3f2fd',
     },
     chip: {
-      successBackground: '#e6f7ff', // Example for light mode success chip
-      successColor: '#1890ff',      // Example for light mode success chip text
+      successBackground: '#e3f2fd', // Light blue background for success chip
+      successColor: '#1565c0',      // Darker blue for success chip text
       defaultBackground: '#f5f5f5',
-      defaultColor: '#595959',
+      defaultColor: '#333333',
     },
     modal: {
       background: '#ffffff',
       noteBackground: '#f8f9fa', // Nền xám nhạt cho phần lưu ý
       noteBorder: '#e9ecef',
-      noteText: '#6c757d',
+      noteText: '#495057',
     }
   }, darkComponentColors: {
     appBar: {
@@ -144,7 +144,12 @@ export const colorTokens = {
 // Light Theme Palette (Strictly PaletteOptions)
 export const lightThemePalette: PaletteOptions = {
   mode: 'light',
-  primary: colorTokens.primary,
+  primary: {
+    main: '#1565c0',
+    light: '#5e92f3',
+    dark: '#003c8f',
+    contrastText: '#ffffff',
+  },
   secondary: colorTokens.secondary,
   error: colorTokens.error,
   warning: colorTokens.warning,
@@ -155,8 +160,8 @@ export const lightThemePalette: PaletteOptions = {
     paper: '#ffffff',
   },
   text: {
-    primary: 'rgba(0, 0, 0, 0.87)',
-    secondary: 'rgba(0, 0, 0, 0.6)',
+    primary: 'rgba(0, 0, 0, 0.95)',
+    secondary: 'rgba(0, 0, 0, 0.75)',
     disabled: 'rgba(0, 0, 0, 0.38)',
   },
   divider: 'rgba(0, 0, 0, 0.12)',

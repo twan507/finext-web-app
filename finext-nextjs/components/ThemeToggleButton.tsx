@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTheme as useNextTheme } from 'next-themes';
-import { 
-    IconButton, 
-    Tooltip, 
-    Skeleton, 
-    ListItemButton, // Thêm import
-    ListItemIcon,   // Thêm import
-    ListItemText    // Thêm import
+import {
+  IconButton,
+  Tooltip,
+  Skeleton,
+  ListItemButton, // Thêm import
+  ListItemIcon,   // Thêm import
+  ListItemText    // Thêm import
 } from '@mui/material';
 import styles from './ThemeToggleButton.module.css';
 
@@ -59,21 +59,22 @@ const ThemeToggleButton: React.FC<ThemeToggleButtonProps> = ({ variant = 'icon' 
   }
 
   const isCurrentlyDark = resolvedTheme === 'dark';
-  const tooltipText = isCurrentlyDark ? 'Chế độ sáng' : 'Chế độ tối';
+  const tooltipText = isCurrentlyDark ? 'Chuyển chế độ sáng' : 'Chuyển chế độ tối';
 
   // Dạng nút dài, có cấu trúc ListItemButton hoàn chỉnh
   if (variant === 'full') {
     return (
-      <ListItemButton 
-        onClick={handleThemeChange} 
-        sx={{ 
-          px: 1.25, 
-          py: 1.25, 
-          borderRadius: '8px', 
-          color: 'text.secondary', 
-          '&:hover': { 
-            backgroundColor: (theme) => `${theme.palette.action.hover}`
-          } 
+      <ListItemButton
+        onClick={handleThemeChange}
+        sx={{
+          px: 1.25,
+          py: 1.25,
+          borderRadius: '8px',
+          color: 'text.secondary',
+          '&:hover': {
+            backgroundColor: (theme) => theme.palette.action.hover,
+            color: 'text.primary'
+          }
         }}
       >
         <ListItemIcon sx={{ minWidth: 32, color: 'inherit' }}>

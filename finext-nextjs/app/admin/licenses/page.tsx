@@ -42,6 +42,7 @@ interface LicensePublic {
     duration_days: number;
     feature_keys: string[];
     is_active: boolean;
+    color?: string;
     created_at?: string;
     updated_at?: string;
 }
@@ -467,10 +468,10 @@ export default function LicensesPage() {
             maxWidth: '100%',
             overflow: 'hidden'
         }}>
-      {/* Breadcrumb */}
-      <AdminBreadcrumb />
-      
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+            {/* Breadcrumb */}
+            <AdminBreadcrumb />
+
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <LicenseIcon sx={{ mr: 1, fontSize: '24px' }} />
                     <Typography variant="h3" component="h1">
@@ -570,7 +571,18 @@ export default function LicensesPage() {
                                                     label={license.key}
                                                     size="small"
                                                     variant="outlined"
-                                                    sx={{ fontWeight: 'medium' }}
+                                                    sx={{
+                                                        fontWeight: 'medium',
+                                                        ...(license.color && {
+                                                            backgroundColor: license.color,
+                                                            color: 'white',
+                                                            borderColor: license.color,
+                                                            '&:hover': {
+                                                                backgroundColor: license.color,
+                                                                opacity: 0.8
+                                                            }
+                                                        })
+                                                    }}
                                                 />
                                             </TableCell>
 
