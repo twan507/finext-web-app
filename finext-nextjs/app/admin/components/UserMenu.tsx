@@ -88,7 +88,6 @@ function UserAvatarWithSubscription({
                         color: 'white',
                         px: 0.6,
                         py: 0.1,
-                        borderRadius: '6px',
                         fontSize: '0.6rem',
                         fontWeight: 'bold',
                         lineHeight: '1.4',
@@ -121,7 +120,7 @@ const UserMenu: React.FC = () => {
 
     useEffect(() => {
         setMounted(true);
-        
+
         const fetchSubscriptionDetails = async () => {
             if (session?.user?.subscription_id) {
                 try {
@@ -185,7 +184,7 @@ const UserMenu: React.FC = () => {
     };
 
     if (!mounted || isLoading) {
-        return <Skeleton variant="rectangular" width="100%" height={56} sx={{ borderRadius: '8px' }} />;
+        return <Skeleton variant="rectangular" width="100%" height={56} />;
     }
 
     if (!session) {
@@ -217,9 +216,9 @@ const UserMenu: React.FC = () => {
                 aria-haspopup="true"
                 aria-expanded={open ? 'true' : undefined}
             >
-                <Box sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
+                <Box sx={{
+                    display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'center',
                     mt: -1,
                     mr: 1.5
@@ -233,7 +232,7 @@ const UserMenu: React.FC = () => {
                         {userInitial}
                     </UserAvatarWithSubscription>
                 </Box>
-                
+
                 <Box sx={{ minWidth: 0 }}>
                     <Typography variant="subtitle2" fontWeight="bold" noWrap>
                         {session.user.full_name || 'User'}

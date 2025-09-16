@@ -8,8 +8,8 @@ import { useAuth } from 'components/AuthProvider';
 import {
   AppBar, Box, CssBaseline, Drawer, Toolbar, List, ListItem, ListItemButton,
   ListItemIcon, ListItemText, Typography, CircularProgress, useTheme,
-  IconButton as MuiIconButton, Tooltip, useMediaQuery, Breadcrumbs,
-  alpha, Popover, Collapse, Divider, ListSubheader
+  IconButton as MuiIconButton, useMediaQuery, Breadcrumbs,
+  alpha, Collapse
 } from '@mui/material';
 import MuiLink from '@mui/material/Link';
 import { SvgIconProps } from '@mui/material/SvgIcon';
@@ -108,25 +108,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const lgUp = useMediaQuery(theme.breakpoints.up('lg'));
   const mdUp = useMediaQuery(theme.breakpoints.up('md'));
-  const smDown = useMediaQuery(theme.breakpoints.down('sm'));
+  const lgDown = useMediaQuery(theme.breakpoints.down('lg'));
 
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [pinnedExpanded, setPinnedExpanded] = useState<boolean | null>(null); // null => follow responsive default
-
-  // Popover state for icon-only mode
-  const [popoverAnchorEl, setPopoverAnchorEl] = useState<null | HTMLElement>(null);
-  const [openPopoverGroupId, setOpenPopoverGroupId] = useState<null | string>(null);
-  const [isTooltipDisabled, setIsTooltipDisabled] = useState(false);
-  const popoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Collapse state for expanded mode groups
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   // Drawer widths
   const EXPANDED_WIDTH = 256;
-  // No collapsed mode: always expanded (desktop/tablet) + mobile off-canvas
-  const isMobile = smDown;
-  const isExpanded = true;
+  // Chỉ có 2 trạng thái: desktop (permanent sidebar) + mobile (hamburger menu)
+  const isMobile = lgDown; // Thay đổi từ smDown thành lgDown
   const drawerWidth = EXPANDED_WIDTH;
 
   useEffect(() => {
@@ -136,30 +128,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [session, authLoading, router]);
 
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
-
-  const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>, groupId: string) => {
-    if (popoverTimeoutRef.current) {
-      clearTimeout(popoverTimeoutRef.current);
-      popoverTimeoutRef.current = null;
-    }
-    setPopoverAnchorEl(event.currentTarget);
-    setOpenPopoverGroupId(groupId);
-    setIsTooltipDisabled(true);
-  };
-  const handlePopoverClose = () => {
-    if (popoverTimeoutRef.current) clearTimeout(popoverTimeoutRef.current);
-    popoverTimeoutRef.current = setTimeout(() => {
-      setPopoverAnchorEl(null);
-      setOpenPopoverGroupId(null);
-      setIsTooltipDisabled(false);
-    }, 100);
-  };
-  const handlePopoverMouseEnter = () => {
-    if (popoverTimeoutRef.current) {
-      clearTimeout(popoverTimeoutRef.current);
-      popoverTimeoutRef.current = null;
-    }
-  };
 
   if (authLoading || !session) {
     return (
@@ -202,10 +170,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const drawerLinkStyles = (
     isActive: boolean,
     isSubItem: boolean = false,
-    applyBgOnActive: boolean = true // <-- Đảm bảo có tham số này
+    applyBgOnActive: boolean = true
   ) => ({
     my: 0.6,
-    px: isExpanded ? theme.spacing(1.25) : theme.spacing(0),
+    px: theme.spacing(1.25), // Desktop sidebar luôn expanded
     py: theme.spacing(isSubItem ? 1 : 1.25),
     minHeight: isSubItem ? 36 : 44,
     borderRadius: '8px',
@@ -214,7 +182,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     alignItems: 'center',
     justifyContent: 'flex-start',
     color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
-    backgroundColor: isActive && applyBgOnActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent', // <-- Logic kiểm tra
+    backgroundColor: isActive && applyBgOnActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
     '&:hover': {
       backgroundColor: alpha(theme.palette.primary.main, isActive && applyBgOnActive ? 0.12 : 0.04),
       color: isActive ? theme.palette.primary.dark : theme.palette.primary.main,
@@ -292,94 +260,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   };
 
-  const renderIconOnlyGroup = (group: NavGroup) => {
-    const isGroupActive = group.subItems.some(sub => currentPathname.startsWith(sub.href));
-    const isOpen = openPopoverGroupId === group.groupText;
-
-    return (
-      <ListItem
-        key={group.groupText}
-        disablePadding
-        sx={{ width: 'auto', my: theme.spacing(0.75) }}
-        onMouseEnter={(e) => handlePopoverOpen(e, group.groupText)}
-        onMouseLeave={handlePopoverClose}
-      >
-        <Tooltip title={group.groupText} placement="right" disableHoverListener={true}>
-          <ListItemButton selected={isGroupActive && !isOpen} sx={{
-            p: 1.25,
-            borderRadius: '8px',
-            width: 40,
-            height: 40,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: isGroupActive ? theme.palette.primary.main : theme.palette.text.secondary,
-            backgroundColor: isGroupActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
-            '&:hover': {
-              backgroundColor: alpha(theme.palette.primary.main, isGroupActive ? 0.12 : 0.04),
-              color: isGroupActive ? theme.palette.primary.dark : theme.palette.primary.main,
-            },
-          }}>
-            <ListItemIcon sx={{ minWidth: 'auto', color: 'inherit' }}>
-              {React.cloneElement(group.groupIcon, { sx: { fontSize: 18 } })}
-            </ListItemIcon>
-          </ListItemButton>
-        </Tooltip>
-
-        <Popover
-          open={isOpen}
-          anchorEl={popoverAnchorEl}
-          onClose={handlePopoverClose}
-          anchorOrigin={{ vertical: 'center', horizontal: 'right' }}
-          transformOrigin={{ vertical: 'center', horizontal: 'left' }}
-          slotProps={{
-            paper: {
-              onMouseEnter: handlePopoverMouseEnter,
-              onMouseLeave: handlePopoverClose,
-              sx: {
-                ml: 1, p: 1, minWidth: 220, bgcolor: 'background.paper',
-                backgroundImage: 'none', boxShadow: theme.shadows[6], borderRadius: '8px',
-                pointerEvents: 'auto',
-              }
-            }
-          }}
-          disableRestoreFocus
-          sx={{ pointerEvents: 'none' }}
-        >
-          <Typography color="text.primary" variant="caption" sx={{ px: 1, py: 1, display: 'block', fontWeight: 'bold' }}>
-            {group.groupText}
-          </Typography>
-          <List disablePadding>
-            {group.subItems.map((subItem) => {
-              const isSubActive = currentPathname.startsWith(subItem.href);
-              return (
-                <ListItem key={subItem.text} disablePadding sx={{ my: 0.5 }}>
-                  <Link href={subItem.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
-                    <ListItemButton
-                      selected={isSubActive}
-                      sx={{
-                        p: 1.25,
-                        borderRadius: '8px',
-                        color: isSubActive ? theme.palette.primary.main : theme.palette.text.secondary,
-                        '&:hover': { backgroundColor: alpha(theme.palette.primary.main, isSubActive ? 0.12 : 0.04) }
-                      }}
-                      onClick={() => { handlePopoverClose(); }}
-                    >
-                      <ListItemIcon sx={{ minWidth: 32, color: 'inherit', mr: 1 }}>
-                        {React.cloneElement(subItem.icon, { sx: { fontSize: 16 } })}
-                      </ListItemIcon>
-                      <ListItemText primary={subItem.text} primaryTypographyProps={{ variant: 'body2' }} />
-                    </ListItemButton>
-                  </Link>
-                </ListItem>
-              );
-            })}
-          </List>
-        </Popover>
-      </ListItem>
-    );
-  };
-
   const DesktopDrawerContent = (
     <>
       {/* Header (UserMenu thay vì logo) */}
@@ -389,9 +269,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           alignItems: 'center',
           justifyContent: 'flex-start', // Căn trái thay vì căn giữa
           height: layoutTokens.appBarHeight, // Sử dụng height thay vì minHeight để đảm bảo chính xác
-          px: 1.25, // Thêm padding để căn chỉnh với navigation
           bgcolor: 'transparent',
-          // Bỏ borderBottom
+          // Bỏ borderBottom và padding
         }}
       >
         <UserMenu />
@@ -409,7 +288,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {navigationStructure.map((item) => {
             if ('href' in item) {
               const isActive = item.href === '/' ? currentPathname === '/' : currentPathname.startsWith(item.href);
-              return isExpanded ? (
+              return (
                 <ListItem key={item.text} disablePadding>
                   <Link href={item.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
                     <ListItemButton selected={isActive} sx={{ ...drawerLinkStyles(isActive), pl: 1.25 }}>
@@ -420,47 +299,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </ListItemButton>
                   </Link>
                 </ListItem>
-              ) : (
-                <ListItem key={item.text} disablePadding sx={{ width: 'auto', my: 0.75, justifyContent: 'center' }}>
-                  <Tooltip title={item.text} placement="right" disableHoverListener={isTooltipDisabled && openPopoverGroupId !== null}>
-                    <Link href={item.href} passHref style={{ textDecoration: 'none' }}>
-                      <ListItemButton selected={isActive} sx={{
-                        p: 1.25,
-                        borderRadius: '8px',
-                        width: 40,
-                        height: 40,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
-                        backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
-                        '&:hover': {
-                          backgroundColor: alpha(theme.palette.primary.main, isActive ? 0.12 : 0.04),
-                          color: isActive ? theme.palette.primary.dark : theme.palette.primary.main,
-                        },
-                      }}>
-                        <ListItemIcon sx={{ minWidth: 'auto', color: 'inherit' }}>
-                          {React.cloneElement(item.icon, { sx: { fontSize: 18 } })}
-                        </ListItemIcon>
-                      </ListItemButton>
-                    </Link>
-                  </Tooltip>
-                </ListItem>
               );
             } else {
-              return isExpanded ? renderExpandedGroup(item) : renderIconOnlyGroup(item);
+              return renderExpandedGroup(item); // Desktop sidebar luôn expanded
             }
           })}
         </List>
       </Box>
 
-      {/* Logout row */}
-      <Box sx={{ pb: 1, px: isExpanded ? 1.25 : 0, display: 'flex', flexDirection: 'column', alignItems: isExpanded ? 'stretch' : 'center', width: '100%' }}>
-        {isExpanded ? (
-          <ThemeToggleButton variant="full" />
-        ) : (
-          <ThemeToggleButton variant="icon" />
-        )}
+      {/* Theme Toggle Footer */}
+      <Box sx={{ pb: 1, px: 1.25, display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%' }}>
+        <ThemeToggleButton variant="full" />
       </Box>
     </>
   );
@@ -473,9 +322,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           alignItems: 'center',
           justifyContent: 'flex-start', // Căn trái
           height: layoutTokens.appBarHeight, // Đảm bảo chiều cao chính xác
-          px: 1.25, // Thêm padding để căn chỉnh
           gap: 1,
-          // Bỏ borderBottom
+          // Bỏ borderBottom và padding
         }}
       >
         <UserMenu />
@@ -611,16 +459,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <AppBar
         position="fixed"
         elevation={0}
-        sx={{ width: { sm: `calc(100% - ${drawerWidth}px)` }, ml: { sm: `${drawerWidth}px` }, height: layoutTokens.appBarHeight }}
+        sx={{ width: { lg: `calc(100% - ${drawerWidth}px)` }, ml: { lg: `${drawerWidth}px` }, height: layoutTokens.appBarHeight }}
       >
 
-        <Toolbar sx={{ justifyContent: 'space-between', alignItems: 'center', px: { xs: 2, sm: 3 }, minHeight: `${layoutTokens.toolbarMinHeight}px !important`, height: layoutTokens.appBarHeight, maxHeight: layoutTokens.appBarHeight }}>
+        <Toolbar sx={{ justifyContent: 'space-between', alignItems: 'center', px: { xs: 2, lg: 3 }, minHeight: `${layoutTokens.toolbarMinHeight}px !important`, height: layoutTokens.appBarHeight, maxHeight: layoutTokens.appBarHeight }}>
           {/* Container bên trái, sẽ chứa logo và nút menu mobile */}
           <Box sx={{
             flex: 1, // Chiếm toàn bộ không gian còn lại
             display: 'flex',
             alignItems: 'center',
-            justifyContent: { xs: 'center', sm: 'flex-start' }, // Căn giữa trên mobile, căn trái trên desktop
+            justifyContent: { xs: 'center', lg: 'flex-start' }, // Căn giữa dưới lg, căn trái từ lg trở lên
             position: 'relative', // Làm mốc cho nút menu
           }}>
             {isMobile && (
@@ -653,7 +501,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </AppBar>
 
       {/* NAV DRAWERS */}
-      <Box component="nav" sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }} aria-label="sidebar">
+      <Box component="nav" sx={{ width: { lg: drawerWidth }, flexShrink: { lg: 0 } }} aria-label="sidebar">
         {/* Mobile Drawer (overlay) */}
         <Drawer
           variant="temporary"
@@ -661,7 +509,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           onClose={handleDrawerToggle}
           ModalProps={{ keepMounted: true }}
           elevation={0}
-          sx={{ display: { xs: 'block', sm: 'none' }, '& .MuiDrawer-paper': { width: layoutTokens.drawerWidth || 280 } }}
+          sx={{ display: { xs: 'block', lg: 'none' }, '& .MuiDrawer-paper': { width: layoutTokens.drawerWidth || 280 } }}
         >
           {MobileDrawerContent}
         </Drawer>
@@ -669,7 +517,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Desktop Drawer (expanded ↔ icon-only) */}
         <Drawer
           variant="permanent"
-          sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, height: '100vh', display: 'flex', flexDirection: 'column' } }}
+          sx={{ display: { xs: 'none', lg: 'flex' }, flexDirection: 'column', '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, height: '100vh', display: 'flex', flexDirection: 'column' } }}
           open
         >
           {DesktopDrawerContent}
@@ -677,7 +525,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </Box>
 
       {/* MAIN */}
-      <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` }, height: '100vh', mt: `${layoutTokens.appBarHeight}px`, maxHeight: `calc(100vh - ${layoutTokens.appBarHeight}px)`, overflowY: 'auto', bgcolor: theme.palette.mode === 'light' ? alpha(theme.palette.grey[500], 0.04) : theme.palette.background.default }}>
+      <Box component="main" sx={{ flexGrow: 1, p: 3, width: { lg: `calc(100% - ${drawerWidth}px)` }, height: '100vh', mt: `${layoutTokens.appBarHeight}px`, maxHeight: `calc(100vh - ${layoutTokens.appBarHeight}px)`, overflowY: 'auto', bgcolor: theme.palette.mode === 'light' ? alpha(theme.palette.grey[500], 0.04) : theme.palette.background.default }}>
         {children}
       </Box>
     </Box>

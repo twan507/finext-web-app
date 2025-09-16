@@ -16,6 +16,10 @@ import {
   PersonAddAlt1Outlined as NewUserIcon,
   MailOutline as SupportTicketIcon,
   ReceiptLongOutlined as InvoicePaidIcon,
+  AttachMoney as ProfitIcon,
+  Inventory as ProductsIcon,
+  Support as SupportIcon,
+  Assessment as ReportsIcon,
 } from '@mui/icons-material';
 
 // Dummy Data (Giữ nguyên)
@@ -24,6 +28,14 @@ const kpiData = [
   { title: "Total Accounts", value: "1,842", change: "+8.2%", changeColorKey: "success.main", icon: <AccountsIcon /> },
   { title: "New Orders", value: "327", change: "+3.1%", changeColorKey: "success.main", icon: <OrdersIcon /> },
   { title: "Conversion Rate", value: "3.6%", change: "-0.8%", changeColorKey: "error.main", icon: <ConversionIcon /> },
+];
+
+// Thêm 4 thẻ số nữa cho hàng thứ 2
+const kpiDataSecond = [
+  { title: "Net Profit", value: "$8,420", change: "+15.3%", changeColorKey: "success.main", icon: <ProfitIcon /> },
+  { title: "Active Products", value: "156", change: "+5.7%", changeColorKey: "success.main", icon: <ProductsIcon /> },
+  { title: "Support Tickets", value: "23", change: "-2.1%", changeColorKey: "success.main", icon: <SupportIcon /> },
+  { title: "Monthly Reports", value: "42", change: "+18.9%", changeColorKey: "success.main", icon: <ReportsIcon /> },
 ];
 
 const recentActivityData = [
@@ -71,7 +83,7 @@ const DashboardHomePage: React.FC = () => {
         </Typography>
       </Box>
 
-      {/* KPI Cards */}
+      {/* KPI Cards - Hàng 1 */}
       <Grid container spacing={2.5} sx={{ mb: 3 }}> {/* Tăng spacing một chút giữa các thẻ */}
         {kpiData.map((kpi, index) => (
           <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
@@ -86,6 +98,49 @@ const DashboardHomePage: React.FC = () => {
                 flexDirection: 'column',
                 justifyContent: 'space-between',
                 ...cardHoverStyles, // Áp dụng hiệu ứng hover
+              }}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                <Box>
+                  <Typography sx={{ color: 'text.secondary', fontSize: '0.875rem', fontWeight: 500 }}>
+                    {kpi.title}
+                  </Typography>
+                  <Typography variant="h5" component="h3" sx={{ fontWeight: 700, mt: 0.5, color: 'text.primary' }}>
+                    {kpi.value}
+                  </Typography>
+                </Box>
+                <Avatar sx={{ bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[100] : theme.palette.grey[800], color: 'text.secondary' }}>
+                  {kpi.icon}
+                </Avatar>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography sx={{ color: kpi.changeColorKey, fontSize: '0.875rem', fontWeight: 500 }}>
+                  {kpi.change}
+                </Typography>
+                <Typography sx={{ color: 'text.disabled', fontSize: '0.75rem', ml: 1 }}>
+                  vs last month
+                </Typography>
+              </Box>
+            </Paper>
+          </Grid>
+        ))}
+      </Grid>
+
+      {/* KPI Cards - Hàng 2 */}
+      <Grid container spacing={2.5} sx={{ mb: 3 }}>
+        {kpiDataSecond.map((kpi, index) => (
+          <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 2.5,
+                borderRadius: theme.shape.borderRadius,
+                borderColor: theme.palette.divider,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                ...cardHoverStyles,
               }}
             >
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -160,7 +215,7 @@ const DashboardHomePage: React.FC = () => {
               </ToggleButtonGroup>
             </Box>
             <Box sx={{
-              height: 300, width: '100%',
+              height: 380, width: '100%',
               bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[50] : theme.palette.grey[800], // Phù hợp với theme
               borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled'
             }}>
@@ -213,7 +268,7 @@ const DashboardHomePage: React.FC = () => {
               </ToggleButtonGroup>
             </Box>
             <Box sx={{
-              height: 300, width: '100%',
+              height: 380, width: '100%',
               bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[50] : theme.palette.grey[800],
               borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled'
             }}>
