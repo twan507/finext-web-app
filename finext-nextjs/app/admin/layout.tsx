@@ -169,6 +169,36 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
+  const BrandLogo = () => (
+    <Link
+      href="/admin/dashboard"
+      style={{
+        textDecoration: 'none',
+        color: 'inherit',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+      }}
+    >
+      <Image
+        src="/finext-icon-trans.png"
+        alt="Finext Logo"
+        width={30}
+        height={30}
+        style={{ display: 'block' }} // tránh lệch baseline
+      />
+      <Typography
+        variant="h3"
+        sx={{
+          fontWeight: 600,
+          letterSpacing: 0.5,
+        }}
+      >
+        Finext
+      </Typography>
+    </Link>
+  );
+
   const drawerLinkStyles = (
     isActive: boolean,
     isSubItem: boolean = false,
@@ -352,42 +382,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const DesktopDrawerContent = (
     <>
-      {/* Header (logo + brand) */}
+      {/* Header (UserMenu thay vì logo) */}
       <Box
         sx={{
-          px: 2.5,
           display: 'flex',
           alignItems: 'center',
-          paddingTop: '4px',
-          minHeight: layoutTokens.appBarHeight,     // 56–60 đều ổn
-          borderBottom: `1px solid ${theme.palette.divider}`,
+          justifyContent: 'flex-start', // Căn trái thay vì căn giữa
+          height: layoutTokens.appBarHeight, // Sử dụng height thay vì minHeight để đảm bảo chính xác
+          px: 1.25, // Thêm padding để căn chỉnh với navigation
           bgcolor: 'transparent',
+          // Bỏ borderBottom
         }}
       >
-        <Link
-          href="/admin/dashboard"
-          style={{
-            textDecoration: 'none',
-            color: 'inherit',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-          }}
-        >
-          <Image
-            src="/finext-icon-trans.png"
-            alt="Finext Logo"
-            width={24}
-            height={24}
-            style={{ display: 'block' }}   // tránh lệch baseline
-          />
-          <Typography
-            variant="h5"
-            sx={{ fontWeight: 600, letterSpacing: 0.5 }}
-          >
-            Finext
-          </Typography>
-        </Link>
+        <UserMenu />
       </Box>
 
       {/* Navigation */}
@@ -447,8 +454,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </List>
       </Box>
 
-      <Divider sx={{ my: 0.5 }} />
-
       {/* Logout row */}
       <Box sx={{ pb: 1, px: isExpanded ? 1.25 : 0, display: 'flex', flexDirection: 'column', alignItems: isExpanded ? 'stretch' : 'center', width: '100%' }}>
         {isExpanded ? (
@@ -464,36 +469,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <>
       <Box
         sx={{
-          px: 3,
-          py: 1.25,
-          paddingTop: '10px',
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'flex-start', // Căn trái
+          height: layoutTokens.appBarHeight, // Đảm bảo chiều cao chính xác
+          px: 1.25, // Thêm padding để căn chỉnh
           gap: 1,
-          borderBottom: `1px solid ${theme.palette.divider}`,
+          // Bỏ borderBottom
         }}
       >
-        <Link
-          href="/"
-          style={{
-            textDecoration: 'none',
-            color: 'inherit',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-          }}
-        >
-          <Image
-            src="/finext-icon-trans.png"
-            alt="Finext Logo"
-            width={24}
-            height={24}
-            style={{ display: 'block' }}
-          />
-          <Typography variant="h6" sx={{ fontWeight: 'bold', letterSpacing: 0.15 }}>
-            Finext
-          </Typography>
-        </Link>
+        <UserMenu />
       </Box>
 
       <List sx={{
@@ -567,7 +552,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }
         })}
       </List>
-      <Box sx={{ p: 1, mt: 'auto', borderTop: `1px solid ${theme.palette.divider}` }}>
+      <Box sx={{ p: 1, mt: 'auto' }}>
         <ListItem disablePadding>
           <ThemeToggleButton variant="full" />
         </ListItem>
@@ -628,17 +613,41 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         elevation={0}
         sx={{ width: { sm: `calc(100% - ${drawerWidth}px)` }, ml: { sm: `${drawerWidth}px` }, height: layoutTokens.appBarHeight }}
       >
+
         <Toolbar sx={{ justifyContent: 'space-between', alignItems: 'center', px: { xs: 2, sm: 3 }, minHeight: `${layoutTokens.toolbarMinHeight}px !important`, height: layoutTokens.appBarHeight, maxHeight: layoutTokens.appBarHeight }}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          {/* Container bên trái, sẽ chứa logo và nút menu mobile */}
+          <Box sx={{
+            flex: 1, // Chiếm toàn bộ không gian còn lại
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: { xs: 'center', sm: 'flex-start' }, // Căn giữa trên mobile, căn trái trên desktop
+            position: 'relative', // Làm mốc cho nút menu
+          }}>
             {isMobile && (
-              <MuiIconButton color="inherit" aria-label="open drawer" edge="start" onClick={handleDrawerToggle} sx={{ mr: 2, display: { sm: 'none' }, color: 'text.primary' }}>
+              <MuiIconButton
+                color="inherit"
+                aria-label="open drawer"
+                edge="start"
+                onClick={handleDrawerToggle}
+                sx={{
+                  // Đặt nút menu ở góc trái tuyệt đối để không ảnh hưởng đến việc căn giữa logo
+                  position: 'absolute',
+                  left: 0,
+                  color: 'text.primary'
+                }}
+              >
                 <MenuIcon />
               </MuiIconButton>
             )}
-            {generateBreadcrumbs()}
+
+            {/* Comment out Breadcrumbs và thay bằng Logo */}
+            <BrandLogo />
+            {/* {generateBreadcrumbs()} */}
           </Box>
+
+          {/* Container bên phải - đã bỏ UserMenu */}
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <UserMenu />
+            {/* UserMenu đã được chuyển vào sidebar */}
           </Box>
         </Toolbar>
       </AppBar>

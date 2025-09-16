@@ -5,10 +5,9 @@ import { useAuth } from 'components/AuthProvider';
 import { apiClient } from 'services/apiClient';
 
 import {
-    Avatar, IconButton, Menu, MenuItem, ListItemIcon, Typography, Divider, Box, Skeleton
+    Avatar, Menu, MenuItem, ListItemIcon, Typography, Box, Skeleton
 } from '@mui/material';
 import {
-    PersonOutline as PersonOutlineIcon,
     Logout as LogoutIcon,
 } from '@mui/icons-material';
 
@@ -26,7 +25,7 @@ interface ILicense {
 }
 
 // ======================================================================
-// COMPONENT: AVATAR VỚI HUY HIỆU (ĐÃ SỬA ĐỔI)
+// COMPONENT: AVATAR VỚI HUY HIỆU (Sẽ được sửa ở file dưới)
 // ======================================================================
 interface UserAvatarWithSubscriptionProps {
     badgeText: string;
@@ -44,18 +43,15 @@ function UserAvatarWithSubscription({
     children
 }: UserAvatarWithSubscriptionProps) {
 
-    // Kích thước của vòng bao quanh, lớn hơn avatar 2px mỗi bên
-    const ringSize = size + 4; return (
+    const ringSize = size + 4;
+    return (
         <Box
             sx={{
                 position: 'relative',
                 width: ringSize,
                 height: ringSize,
-                // Tăng margin bottom để có đủ không gian cho badge
-                mb: '10px',
             }}
         >
-            {/* Box này đóng vai trò là vòng bao (ring) màu */}
             <Box
                 sx={{
                     width: ringSize,
@@ -73,7 +69,6 @@ function UserAvatarWithSubscription({
                     sx={{
                         width: size,
                         height: size,
-                        // Thêm viền nhỏ màu nền để tách biệt avatar khỏi vòng màu
                         border: '2px solid',
                         borderColor: 'background.paper',
                     }}
@@ -86,22 +81,20 @@ function UserAvatarWithSubscription({
                 <Box
                     sx={{
                         position: 'absolute',
-                        // Đẩy badge xuống dưới nhiều hơn để ít che avatar
-                        bottom: -8,
+                        bottom: -9,
                         left: '50%',
                         transform: 'translateX(-50%)',
                         backgroundColor: badgeColor,
                         color: 'white',
-                        px: 0.75,
+                        px: 0.6,
                         py: 0.1,
                         borderRadius: '6px',
                         fontSize: '0.6rem',
                         fontWeight: 'bold',
                         lineHeight: '1.4',
                         textTransform: 'uppercase',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)', // Thêm shadow nhẹ
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                         whiteSpace: 'nowrap',
-                        // Thêm viền nhỏ để tạo hiệu ứng liền mạch hơn
                         border: '1px solid',
                         borderColor: 'background.paper'
                     }}
@@ -115,7 +108,7 @@ function UserAvatarWithSubscription({
 
 
 // ======================================================================
-// COMPONENT CHÍNH: USER MENU (Không thay đổi logic)
+// COMPONENT CHÍNH: USER MENU
 // ======================================================================
 const UserMenu: React.FC = () => {
     const { session, logout } = useAuth();
@@ -123,12 +116,12 @@ const UserMenu: React.FC = () => {
     const open = Boolean(anchorEl);
     const [mounted, setMounted] = useState(false);
     const [licenseKey, setLicenseKey] = useState<string | null>(null);
-    const [licenseColor, setLicenseColor] = useState<string>("#1976D2"); // Default blue
+    const [licenseColor, setLicenseColor] = useState<string>("#1976D2");
     const [isLoading, setIsLoading] = useState<boolean>(true);
 
     useEffect(() => {
         setMounted(true);
-
+        
         const fetchSubscriptionDetails = async () => {
             if (session?.user?.subscription_id) {
                 try {
@@ -139,38 +132,33 @@ const UserMenu: React.FC = () => {
 
                     if (response.data?.license_key) {
                         setLicenseKey(response.data.license_key);
-
-                        // Fetch license details to get color
                         if (response.data.license_id) {
                             try {
                                 const licenseResponse = await apiClient<ILicense>({
                                     url: `/api/v1/licenses/${response.data.license_id}`,
                                     method: 'GET',
                                 });
-
                                 if (licenseResponse.data?.color) {
                                     setLicenseColor(licenseResponse.data.color);
                                 }
                             } catch (licenseError) {
                                 console.error("Error fetching license details:", licenseError);
-                                // Keep default color if license fetch fails
                             }
                         }
                     } else {
                         setLicenseKey('BASIC');
-                        setLicenseColor('#1976D2'); // Default blue for BASIC
+                        setLicenseColor('#1976D2');
                     }
-
                 } catch (error) {
                     console.error("Error fetching subscription:", error);
                     setLicenseKey('BASIC');
-                    setLicenseColor('#1976D2'); // Default blue for BASIC
+                    setLicenseColor('#1976D2');
                 } finally {
                     setIsLoading(false);
                 }
             } else {
                 setLicenseKey('BASIC');
-                setLicenseColor('#1976D2'); // Default blue for BASIC
+                setLicenseColor('#1976D2');
                 setIsLoading(false);
             }
         };
@@ -196,23 +184,12 @@ const UserMenu: React.FC = () => {
         logout();
     };
 
-    const handleViewProfile = () => {
-        handleClose();
-        console.log("Xem thông tin người dùng (chưa triển khai)");
-    };
-
-    const renderPlaceholder = () => (
-        <Box sx={{ display: 'flex', alignItems: 'center', height: 48 }}>
-            <Skeleton variant="circular" width={32} height={32} sx={{ ml: 2 }} />
-        </Box>
-    );
-
     if (!mounted || isLoading) {
-        return renderPlaceholder();
+        return <Skeleton variant="rectangular" width="100%" height={56} sx={{ borderRadius: '8px' }} />;
     }
 
     if (!session) {
-        return null; // Hoặc một UI đăng nhập
+        return null;
     }
 
     const userInitial = session.user?.full_name
@@ -223,24 +200,51 @@ const UserMenu: React.FC = () => {
 
     return (
         <>
-            <IconButton
+            {/* THẺ USER */}
+            <Box
                 onClick={handleClick}
-                size="small"
-                // Điều chỉnh sx để IconButton không bị quá lớn
-                sx={{ ml: 2, p: 0, width: 40, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                sx={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-start',
+                    p: 2,
+                    px: 2.5,
+                    cursor: 'pointer',
+                }}
                 aria-controls={open ? 'account-menu' : undefined}
                 aria-haspopup="true"
                 aria-expanded={open ? 'true' : undefined}
             >
-                <UserAvatarWithSubscription
-                    size={32}
-                    badgeText={licenseKey || '...'}
-                    badgeColor={licenseColor}
-                    avatarSrc={avatarUrl}
-                >
-                    {userInitial}
-                </UserAvatarWithSubscription>
-            </IconButton>
+                <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    mt: -1,
+                    mr: 1.5
+                }}>
+                    <UserAvatarWithSubscription
+                        size={32}
+                        badgeText={licenseKey || '...'}
+                        badgeColor={licenseColor}
+                        avatarSrc={avatarUrl}
+                    >
+                        {userInitial}
+                    </UserAvatarWithSubscription>
+                </Box>
+                
+                <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="subtitle2" fontWeight="bold" noWrap>
+                        {session.user.full_name || 'User'}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" noWrap>
+                        {session.user.email}
+                    </Typography>
+                </Box>
+            </Box>
+
+            {/* MENU ĐĂNG XUẤT */}
             <Menu
                 anchorEl={anchorEl}
                 id="account-menu"
@@ -252,14 +256,8 @@ const UserMenu: React.FC = () => {
                         overflow: 'visible',
                         filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.15))',
                         mt: 1.5,
-                        minWidth: 200,
+                        minWidth: 180,
                         bgcolor: 'background.paper',
-                        '& .MuiAvatar-root': {
-                            width: 32,
-                            height: 32,
-                            ml: -0.5,
-                            mr: 1,
-                        },
                         '&::before': {
                             content: '""',
                             display: 'block',
@@ -277,22 +275,6 @@ const UserMenu: React.FC = () => {
                 transformOrigin={{ horizontal: 'right', vertical: 'top' }}
                 anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
             >
-                <Box sx={{ px: 2, py: 1 }}>
-                    <Typography variant="subtitle1" noWrap>
-                        {session.user.full_name || 'User'}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" noWrap>
-                        {session.user.email}
-                    </Typography>
-                </Box>
-                <Divider />
-                <MenuItem onClick={handleViewProfile} disabled>
-                    <ListItemIcon>
-                        <PersonOutlineIcon fontSize="small" />
-                    </ListItemIcon>
-                    Xem thông tin
-                </MenuItem>
-                <Divider />
                 <MenuItem onClick={handleLogout}>
                     <ListItemIcon>
                         <LogoutIcon fontSize="small" />

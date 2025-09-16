@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { apiClient } from 'services/apiClient';
+import AdminBreadcrumb from '../components/AdminBreadcrumb';
 import {
   Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Chip, IconButton, Alert, CircularProgress,
@@ -246,7 +247,7 @@ export default function TransactionsPage() {
       accessor: () => '',
       minWidth: expandedView ? 'auto' : 60,
       align: 'center' as const,
-      responsive: { xs: 'none', sm: 'none', md: 'none'}
+      responsive: { xs: 'none', sm: 'none', md: 'none' }
     },
     {
       id: 'actions',
@@ -508,12 +509,18 @@ export default function TransactionsPage() {
       case PaymentStatusEnumFE.CANCELED: return "error";
       default: return "default";
     }
-  }; return (
+  };
+
+  return (
     <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-        <TransactionIcon sx={{ mr: 1, fontSize: '24px' }} />
-        <Typography variant="h3" component="h1">Transactions</Typography>
-      </Box>
+      {/* Breadcrumb */}
+      <AdminBreadcrumb />
+
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <TransactionIcon sx={{ mr: 1, fontSize: '24px' }} />
+          <Typography variant="h3" component="h1">Transactions</Typography>
+        </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
             variant="outlined"

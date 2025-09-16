@@ -6,6 +6,7 @@ import {
   Box, Typography, Paper, Grid, Link as MuiLink, Avatar, List, ListItem, ListItemAvatar, ListItemText,
   ToggleButton, ToggleButtonGroup, useTheme
 } from '@mui/material';
+import AdminBreadcrumb from '../components/AdminBreadcrumb';
 import {
   LocalAtm as RevenueIcon,
   PeopleOutline as AccountsIcon,
@@ -60,6 +61,9 @@ const DashboardHomePage: React.FC = () => {
 
   return (
     <Box>
+      {/* Breadcrumb */}
+      <AdminBreadcrumb />
+
       {/* Page Header */}
       <Box sx={{ mb: theme.spacing(3) }}>
         <Typography variant="h4" component="h1" sx={{ fontWeight: 600, mb: 0.5, color: 'text.primary' }}>

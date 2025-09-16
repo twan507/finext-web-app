@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { apiClient } from 'services/apiClient';
+import AdminBreadcrumb from '../components/AdminBreadcrumb';
 import {
     Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
     TableHead, TableRow, Button, Chip, IconButton, Alert, CircularProgress,
@@ -412,11 +413,16 @@ export default function BrokersPage() {
     }, [brokers, sortedBrokers, isFiltering, sortConfig, page, rowsPerPage]);
 
     // Calculate total count for pagination
-    const displayTotalCount = (isFiltering || sortConfig) ? sortedBrokers.length : totalCount; return (
+    const displayTotalCount = (isFiltering || sortConfig) ? sortedBrokers.length : totalCount;
+
+    return (
         <Box sx={{
             maxWidth: '100%',
             overflow: 'hidden'
         }}>
+            {/* Breadcrumb */}
+            <AdminBreadcrumb />
+
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <BrokerIcon sx={{ mr: 1, fontSize: '24px' }} />

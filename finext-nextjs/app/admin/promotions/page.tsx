@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { apiClient } from 'services/apiClient';
+import AdminBreadcrumb from '../components/AdminBreadcrumb';
 import {
     Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
     TableHead, TableRow, Button, Chip, IconButton, Alert, CircularProgress,
@@ -423,7 +424,10 @@ export default function PromotionsPage() {
             maxWidth: '100%',
             overflow: 'hidden'
         }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+      {/* Breadcrumb */}
+      <AdminBreadcrumb />
+      
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <PromotionIcon sx={{ mr: 1, fontSize: '24px' }} />
                     <Typography variant="h3" component="h1">
