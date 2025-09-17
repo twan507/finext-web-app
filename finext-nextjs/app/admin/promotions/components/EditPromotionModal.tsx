@@ -271,7 +271,7 @@ const EditPromotionModal: React.FC<EditPromotionModalProps> = ({
             }}
         >
             <DialogTitle>
-                <Typography variant="h5" component="div" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="h5" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <EditIcon color="primary" />
                     Chỉnh sửa khuyến mãi: {promotion.promotion_code}
                 </Typography>
@@ -505,6 +505,7 @@ const EditPromotionModal: React.FC<EditPromotionModalProps> = ({
                             variant="body2"
                             fontWeight="bold"
                             sx={{
+                                fontWeight: 'bold',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 1,

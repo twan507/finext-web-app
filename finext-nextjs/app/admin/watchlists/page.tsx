@@ -295,12 +295,12 @@ const WatchlistsPage: React.FC = () => {
 
     return (
         <Box sx={{ maxWidth: '100%', overflow: 'hidden' }}>
-      {/* Breadcrumb */}
-      <AdminBreadcrumb />
-      
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+            {/* Breadcrumb */}
+            <AdminBreadcrumb />
+
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <WatchlistIcon sx={{ mr: 1, fontSize: '24px' }} />
+                    <WatchlistIcon sx={{ mr: 1 }} />
                     <Typography variant="h3" component="h1">
                         Quản lý Watchlists
                     </Typography>
@@ -419,7 +419,6 @@ const WatchlistsPage: React.FC = () => {
                                                                             size="small"
                                                                             variant="outlined"
                                                                             sx={{
-                                                                                fontSize: '0.65rem',
                                                                                 height: 20,
                                                                                 backgroundColor: 'primary.main',
                                                                                 color: 'primary.contrastText',
@@ -471,9 +470,7 @@ const WatchlistsPage: React.FC = () => {
                                                         sx={{
                                                             backgroundColor: componentColors.chip.defaultBackground,
                                                             color: componentColors.chip.defaultColor,
-                                                            fontSize: '0.75rem',
                                                             height: 24,
-                                                            fontWeight: 'medium',
                                                             cursor: 'pointer',
                                                             '&:hover': {
                                                                 backgroundColor: 'primary.main',

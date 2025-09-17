@@ -140,7 +140,7 @@ const CreateFeatureModal: React.FC<CreateFeatureModalProps> = ({
             }}
         >
             <DialogTitle>
-                <Typography variant="h5" component="div" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="h5" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <FeatureIcon color="primary" />
                     Tạo tính năng mới
                 </Typography>
@@ -245,8 +245,8 @@ const CreateFeatureModal: React.FC<CreateFeatureModalProps> = ({
                     }}>
                         <Typography
                             variant="body2"
-                            fontWeight="bold"
                             sx={{
+                                fontWeight: 'bold',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 1,

@@ -432,10 +432,10 @@ export default function SubscriptionsPage() {
 			maxWidth: '100%',
 			overflow: 'hidden'
 		}}>
-      {/* Breadcrumb */}
-      <AdminBreadcrumb />
-      
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+			{/* Breadcrumb */}
+			<AdminBreadcrumb />
+
+			<Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
 				<Box sx={{ display: 'flex', alignItems: 'center' }}>
 					<SubscriptionIcon sx={{ mr: 1, fontSize: '24px' }} />
 					<Typography
@@ -760,8 +760,8 @@ export default function SubscriptionsPage() {
 					</>
 				)}
 			</Paper>			{/* Deactivate Confirmation Dialog */}
-			<Dialog 
-				open={openDeactivateDialog} 
+			<Dialog
+				open={openDeactivateDialog}
 				onClose={handleCloseDeactivateDialog}
 				maxWidth="sm"
 				fullWidth
@@ -779,7 +779,7 @@ export default function SubscriptionsPage() {
 					<DialogContentText sx={{ mb: 2 }}>
 						Bạn có chắc chắn muốn hủy kích hoạt subscription này không?
 					</DialogContentText>
-							{actionSubscription && (
+					{actionSubscription && (
 						<Box sx={{
 							p: 2,
 							bgcolor: componentColors.modal.noteBackground,
@@ -841,8 +841,8 @@ export default function SubscriptionsPage() {
 					>
 						Hủy
 					</Button>
-					<Button 
-						onClick={handleDeactivateSubscription} 
+					<Button
+						onClick={handleDeactivateSubscription}
 						color="error"
 						variant="contained"
 						sx={{ minWidth: 140 }}
@@ -853,8 +853,8 @@ export default function SubscriptionsPage() {
 			</Dialog>
 
 			{/* Activate Confirmation Dialog */}
-			<Dialog 
-				open={openActivateDialog} 
+			<Dialog
+				open={openActivateDialog}
 				onClose={handleCloseActivateDialog}
 				maxWidth="sm"
 				fullWidth
@@ -872,7 +872,7 @@ export default function SubscriptionsPage() {
 					<DialogContentText sx={{ mb: 2 }}>
 						Bạn có chắc chắn muốn kích hoạt subscription này không?
 					</DialogContentText>
-							{actionSubscription && (
+					{actionSubscription && (
 						<Box sx={{
 							p: 2,
 							bgcolor: componentColors.modal.noteBackground,
@@ -934,8 +934,8 @@ export default function SubscriptionsPage() {
 					>
 						Hủy
 					</Button>
-					<Button 
-						onClick={handleActivateSubscription} 
+					<Button
+						onClick={handleActivateSubscription}
 						color="success"
 						variant="contained"
 						sx={{ minWidth: 140 }}
@@ -976,10 +976,10 @@ export default function SubscriptionsPage() {
 										label={subscriptionToDelete.license_key}
 										size="small"
 										variant="outlined"
-										sx={{ fontSize: '0.75rem', fontFamily: 'monospace' }}
+										sx={{ fontFamily: 'monospace' }}
 									/>
 								</Typography>
-							</Box>							
+							</Box>
 							<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
 								<Typography variant="body2" color="text.secondary">
 									Trạng thái:

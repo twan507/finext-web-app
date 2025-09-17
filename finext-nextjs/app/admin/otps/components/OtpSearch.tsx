@@ -194,7 +194,6 @@ const OtpSearch: React.FC<OtpSearchProps> = ({
                     }}
                     sx={{
                         '& .MuiOutlinedInput-root': {
-                            fontSize: '0.8125rem',
                             height: '36px',
                         }
                     }}
@@ -225,14 +224,14 @@ const OtpSearch: React.FC<OtpSearchProps> = ({
                                 size="small"
                                 color="primary"
                                 variant="outlined"
-                                sx={{ height: '20px', fontSize: '0.6875rem' }}
+                                sx={{ height: '20px' }}
                             />
-                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6875rem' }}>
+                            <Typography variant="caption" color="text.secondary">
                                 (trang hiện tại)
                             </Typography>
                         </>
                     ) : (
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6875rem' }}>
+                        <Typography variant="caption" color="text.secondary">
                             {stats.total} OTPs (trang hiện tại)
                         </Typography>
                     )}
@@ -245,7 +244,7 @@ const OtpSearch: React.FC<OtpSearchProps> = ({
                         onDelete={handleClearSearch}
                         color="default"
                         variant="outlined"
-                        sx={{ height: '20px', fontSize: '0.6875rem', maxWidth: '120px' }}
+                        sx={{ height: '20px', maxWidth: '120px' }}
                     />
                 )}
             </Box>
@@ -255,7 +254,7 @@ const OtpSearch: React.FC<OtpSearchProps> = ({
                 <>
                     <Divider sx={{ my: 1 }} />
                     <Box>
-                        <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontSize: '0.6875rem' }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
                             Bộ lọc nhanh:
                         </Typography>
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
@@ -278,8 +277,7 @@ const OtpSearch: React.FC<OtpSearchProps> = ({
                                     )}
                                     sx={{
                                         cursor: 'pointer',
-                                        height: '22px',
-                                        fontSize: '0.6875rem'
+                                        height: '22px'
                                     }}
                                 />
                             ))}

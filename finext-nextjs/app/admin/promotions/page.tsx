@@ -424,12 +424,12 @@ export default function PromotionsPage() {
             maxWidth: '100%',
             overflow: 'hidden'
         }}>
-      {/* Breadcrumb */}
-      <AdminBreadcrumb />
-      
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+            {/* Breadcrumb */}
+            <AdminBreadcrumb />
+
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <PromotionIcon sx={{ mr: 1, fontSize: '24px' }} />
+                    <PromotionIcon sx={{ mr: 1 }} />
                     <Typography variant="h3" component="h1">
                         Quản lý Khuyến mãi
                     </Typography>
@@ -749,7 +749,7 @@ export default function PromotionsPage() {
                 maxWidth="sm"
                 fullWidth
             >
-                <DialogTitle sx={{ color: 'error.main', fontWeight: 'bold' }}>
+                <DialogTitle sx={{ color: 'error.main' }}>
                     ⚠️ Xác nhận xóa mã khuyến mãi
                 </DialogTitle>
                 <DialogContent>
@@ -761,7 +761,7 @@ export default function PromotionsPage() {
                                 borderRadius: 1,
                                 mb: 2,
                             }}>
-                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 'bold' }}>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                                     Mã: {promotionToDelete.promotion_code}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -778,9 +778,6 @@ export default function PromotionsPage() {
                                         label={`${promotionToDelete.usage_count} / ${promotionToDelete.usage_limit || '∞'}`}
                                         size="small"
                                         color={promotionToDelete.usage_count > 0 ? "warning" : "default"}
-                                        sx={{
-                                            fontSize: '0.75rem'
-                                        }}
                                     />
                                 </Box>
                             </Box>
@@ -805,8 +802,8 @@ export default function PromotionsPage() {
                             }}>
                                 <Typography
                                     variant="body2"
-                                    fontWeight="bold"
                                     sx={{
+                                        fontWeight: 'bold',
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: 1,
@@ -864,7 +861,7 @@ export default function PromotionsPage() {
                 }}
             >
                 <DialogTitle>
-                    <Typography variant="h6" component="div" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'success.main' }}>
+                    <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'success.main' }}>
                         <ActivateIcon />
                         Xác nhận kích hoạt khuyến mãi
                     </Typography>

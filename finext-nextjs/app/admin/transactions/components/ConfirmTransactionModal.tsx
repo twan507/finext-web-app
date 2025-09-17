@@ -342,7 +342,7 @@ export default function ConfirmTransactionModal({
                                     label={transaction.payment_status.toUpperCase()}
                                     size="small"
                                     color={getPaymentStatusChipColor(transaction.payment_status)}
-                                    sx={{ textTransform: 'uppercase', fontSize: '0.75rem' }}
+                                    sx={{ textTransform: 'uppercase' }}
                                 />
                             </Box>
 
@@ -352,7 +352,6 @@ export default function ConfirmTransactionModal({
                                     label={transaction.transaction_type === 'new_purchase' ? 'Mua mới' : 'Gia hạn'}
                                     size="small"
                                     variant="outlined"
-                                    sx={{ fontSize: '0.75rem' }}
                                 />
                             </Box>
 
@@ -362,7 +361,7 @@ export default function ConfirmTransactionModal({
                                     label={transaction.license_key}
                                     size="small"
                                     variant="outlined"
-                                    sx={{ fontSize: '0.75rem', fontFamily: 'monospace' }}
+                                    sx={{ fontFamily: 'monospace' }}
                                 />
                             </Box>
 
@@ -422,7 +421,7 @@ export default function ConfirmTransactionModal({
                                 </Typography>
                             </Box>                            <Box>
                                 <Typography variant="body2" color="text.secondary">Giá hiện tại:</Typography>
-                                <Typography variant="body1" fontWeight="bold" sx={{ color: 'primary.main', fontSize: '1.1rem' }}>
+                                <Typography variant="body1" fontWeight="bold" sx={{ color: 'primary.main' }}>
                                     {transaction.transaction_amount.toLocaleString('vi-VN')} VNĐ
                                 </Typography>
                             </Box>
@@ -450,7 +449,7 @@ export default function ConfirmTransactionModal({
                                                 Mã ĐT: {calculatedPrice.broker_code_applied || 'Không có'}
                                                 {calculatedPrice.broker_discount_amount && ` (-${calculatedPrice.broker_discount_amount.toLocaleString('vi-VN')} VNĐ)`}
                                             </Typography>
-                                            <Typography variant="body1" fontWeight="bold" sx={{ color: 'info.main', fontSize: '1.1rem' }}>
+                                            <Typography variant="body1" fontWeight="bold" sx={{ color: 'info.main' }}>
                                                 Giá mới: {calculatedPrice.calculated_transaction_amount.toLocaleString('vi-VN')} VNĐ
                                             </Typography>
                                         </>

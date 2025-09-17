@@ -247,7 +247,7 @@ const CreatePromotionModal: React.FC<CreatePromotionModalProps> = ({
             }}
         >
             <DialogTitle>
-                <Typography variant="h5" component="div" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="h5" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <PromotionIcon color="primary" />
                     Tạo khuyến mãi mới
                 </Typography>
@@ -526,8 +526,8 @@ const CreatePromotionModal: React.FC<CreatePromotionModalProps> = ({
                     }}>
                         <Typography
                             variant="body2"
-                            fontWeight="bold"
                             sx={{
+                                fontWeight: 'bold',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 1,

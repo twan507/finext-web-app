@@ -169,7 +169,6 @@ const SessionSearch: React.FC<SessionSearchProps> = ({
                     }}
                     sx={{
                         '& .MuiOutlinedInput-root': {
-                            fontSize: '0.8125rem',
                             height: '36px',
                         }
                     }}
@@ -200,15 +199,15 @@ const SessionSearch: React.FC<SessionSearchProps> = ({
                                 size="small"
                                 color="primary"
                                 variant="outlined"
-                                sx={{ height: '20px', fontSize: '0.6875rem' }}
+                                sx={{ height: '20px' }}
                             />
-                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6875rem' }}>
+                            <Typography variant="caption" color="text.secondary">
                                 (trang hiện tại)
                             </Typography>
                         </>
                     ) : (
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6875rem' }}>
-                            {stats.total} sessions (trang hiện tại)
+                        <Typography variant="caption" color="text.secondary">
+                            {filteredSessions.length} phiên tìm thấy
                         </Typography>
                     )}
                 </Box>
@@ -220,7 +219,7 @@ const SessionSearch: React.FC<SessionSearchProps> = ({
                         onDelete={handleClearSearch}
                         color="default"
                         variant="outlined"
-                        sx={{ height: '20px', fontSize: '0.6875rem', maxWidth: '120px' }}
+                        sx={{ height: '20px', maxWidth: '120px' }}
                     />
                 )}
             </Box>
@@ -230,7 +229,7 @@ const SessionSearch: React.FC<SessionSearchProps> = ({
                 <>
                     <Divider sx={{ my: 1 }} />
                     <Box>
-                        <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontSize: '0.6875rem' }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
                             Bộ lọc nhanh:
                         </Typography>
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
@@ -254,8 +253,7 @@ const SessionSearch: React.FC<SessionSearchProps> = ({
                                     )}
                                     sx={{
                                         cursor: 'pointer',
-                                        height: '22px',
-                                        fontSize: '0.6875rem'
+                                        height: '22px'
                                     }} />
                             ))}
                         </Box>

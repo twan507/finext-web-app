@@ -1,6 +1,25 @@
 // finext-nextjs/theme/tokens.ts
 import { PaletteMode, PaletteOptions, ThemeOptions } from '@mui/material';
 
+// Extend MUI Typography to include custom variants
+declare module '@mui/material/styles' {
+  interface TypographyVariants {
+    logo: React.CSSProperties;
+  }
+
+  // Allow configuration using 'logo' variant
+  interface TypographyVariantsOptions {
+    logo?: React.CSSProperties;
+  }
+}
+
+// Update the Typography's variant prop options
+declare module '@mui/material/Typography' {
+  interface TypographyPropsVariantOverrides {
+    logo: true;
+  }
+}
+
 // --------------------
 // COLOR TOKENS
 // --------------------
@@ -8,43 +27,43 @@ import { PaletteMode, PaletteOptions, ThemeOptions } from '@mui/material';
 export const colorTokens = {
   common: {
     black: '#000000',
-    white: '#ffffff',
+    white: '#fafbfc', // Xám rất nhẹ thay vì trắng tinh
   },
   primary: {
     main: '#1565c0',
     light: '#5e92f3',
     dark: '#003c8f',
-    contrastText: '#ffffff',
+    contrastText: '#fafbfc', // Xám rất nhẹ
   },
   secondary: {
     main: '#dc004e',
     light: '#ff5983',
     dark: '#a00026',
-    contrastText: '#ffffff',
+    contrastText: '#fafbfc', // Xám rất nhẹ
   },
   error: {
     main: '#d32f2f',
     light: '#ef5350',
     dark: '#c62828',
-    contrastText: '#ffffff',
+    contrastText: '#fafbfc', // Xám rất nhẹ
   },
   warning: {
     main: '#ed6c02',
     light: '#ff9800',
     dark: '#e65100',
-    contrastText: '#ffffff',
+    contrastText: '#fafbfc', // Xám rất nhẹ
   },
   info: {
     main: '#0277bd',
     light: '#58a5f0',
     dark: '#004c8c',
-    contrastText: '#ffffff',
+    contrastText: '#fafbfc', // Xám rất nhẹ
   },
   success: {
     main: '#2e7d32',
     light: '#4caf50',
     dark: '#1b5e20',
-    contrastText: '#ffffff',
+    contrastText: '#fafbfc', // Xám rất nhẹ
   },
   // Specific App Colors (examples)
   finext: {
@@ -76,11 +95,11 @@ export const colorTokens = {
   },  // Component-specific color definitions
   lightComponentColors: {
     appBar: {
-      background: '#ffffff',
+      background: '#fafbfc', // Xám rất nhẹ thay vì trắng
       text: 'rgba(0, 0, 0, 0.95)',
     },
     drawer: {
-      background: '#ffffff',
+      background: '#fafbfc', // Xám rất nhẹ thay vì trắng
       border: '#f0f0f0',
     }, tableHead: {
       background: '#fafafa',
@@ -90,7 +109,7 @@ export const colorTokens = {
       sortIcon: 'rgba(0, 0, 0, 0.65)',
     },
     tableRow: {
-      background: '#ffffff',
+      background: '#fafbfc', // Xám rất nhẹ thay vì trắng
       hover: '#f5f5f5',
       selected: '#e3f2fd',
     },
@@ -101,7 +120,7 @@ export const colorTokens = {
       defaultColor: '#333333',
     },
     modal: {
-      background: '#ffffff',
+      background: '#fafbfc', // Xám rất nhẹ thay vì trắng
       noteBackground: '#f8f9fa', // Nền xám nhạt cho phần lưu ý
       noteBorder: '#e9ecef',
       noteText: '#495057',
@@ -109,14 +128,14 @@ export const colorTokens = {
   }, darkComponentColors: {
     appBar: {
       background: '#1a1a1a',
-      text: '#ffffff',
+      text: '#f0f0f0', // Xám nhẹ thay vì trắng tinh
     },
     drawer: {
       background: '#1a1a1a',
       border: '#303030',
     }, tableHead: {
       background: '#1a1a1a',
-      text: '#ffffff',
+      text: '#f0f0f0', // Xám nhẹ thay vì trắng tinh
       sortActive: '#90caf9', // Light blue for active sort in dark mode
       sortHover: '#90caf9',  // Light blue for hover in dark mode
       sortIcon: 'rgba(255, 255, 255, 0.7)',
@@ -148,7 +167,7 @@ export const lightThemePalette: PaletteOptions = {
     main: '#1565c0',
     light: '#5e92f3',
     dark: '#003c8f',
-    contrastText: '#ffffff',
+    contrastText: '#fafbfc', // Xám rất nhẹ thay vì trắng
   },
   secondary: colorTokens.secondary,
   error: colorTokens.error,
@@ -157,7 +176,7 @@ export const lightThemePalette: PaletteOptions = {
   success: colorTokens.success,
   background: {
     default: '#f5f5f5',
-    paper: '#ffffff',
+    paper: '#fafbfc', // Xám rất nhẹ thay vì trắng
   },
   text: {
     primary: 'rgba(0, 0, 0, 0.95)',
@@ -190,9 +209,9 @@ export const darkThemePalette: PaletteOptions = {
     paper: '#1a1a1a', // Sử dụng màu tối hơn cho modal
   },
   text: {
-    primary: '#ffffff',
-    secondary: 'rgba(255, 255, 255, 0.7)',
-    disabled: 'rgba(255, 255, 255, 0.5)',
+    primary: '#f0f0f0', // Xám nhẹ thay vì trắng tinh
+    secondary: 'rgba(240, 240, 240, 0.7)', // Xám nhẹ với opacity
+    disabled: 'rgba(240, 240, 240, 0.5)', // Xám nhẹ với opacity
   },
   divider: 'rgba(255, 255, 255, 0.12)',
 };
@@ -207,6 +226,7 @@ export const getMuiPaletteOptions = (mode: PaletteMode): PaletteOptions => {
 // --------------------
 const baseFontSizes = {
   // Headers
+  logo: { xs: '1.5rem', sm: '1.625rem', md: '1.75rem' },
   h1: { xs: '2rem', sm: '2.25rem', md: '2.5rem' },
   h2: { xs: '1.75rem', sm: '1.875rem', md: '2rem' },
   h3: { xs: '1.5rem', sm: '1.625rem', md: '1.75rem' },
@@ -215,17 +235,17 @@ const baseFontSizes = {
   h6: { xs: '1rem', sm: '1.1rem', md: '1.25rem' },
 
   // Content text
-  subtitle1: { xs: '0.875rem', sm: '0.9375rem' },
-  subtitle2: { xs: '0.8125rem', sm: '0.875rem' },
-  body1: { xs: '0.8125rem', sm: '0.875rem' }, // Cỡ chữ chính
-  body2: { xs: '0.75rem', sm: '0.8125rem' }, // Cỡ chữ phụ
-  button: { xs: '0.75rem', sm: '0.875rem' },
-  caption: { xs: '0.6875rem', sm: '0.75rem' }, // Cỡ chữ nhỏ nhất
-  overline: { xs: '0.6875rem', sm: '0.75rem' },
+  subtitle1: { xs: '0.75rem', sm: '0.8125rem' },
+  subtitle2: { xs: '0.6875rem', sm: '0.75rem' },
+  body1: { xs: '0.6875rem', sm: '0.75rem' }, // Cỡ chữ chính
+  body2: { xs: '0.625rem', sm: '0.6875rem' }, // Cỡ chữ phụ
+  button: { xs: '0.625rem', sm: '0.75rem' },
+  caption: { xs: '0.5625rem', sm: '0.625rem' }, // Cỡ chữ nhỏ nhất
+  overline: { xs: '0.5625rem', sm: '0.625rem' },
 
   // Custom variants
-  tableCell: { xs: '0.75rem', sm: '0.875rem' },
-  tableCellSmall: { xs: '0.6875rem', sm: '0.75rem' },
+  tableCell: { xs: '0.625rem', sm: '0.75rem' },
+  tableCellSmall: { xs: '0.5625rem', sm: '0.625rem' },
 
   // Enhanced responsive variants
   h4Enhanced: { xs: '1.5rem', sm: '2rem', md: '2.125rem' }, // Cho page headers
@@ -237,6 +257,11 @@ const baseFontSizes = {
 // --------------------
 export const typographyTokens: ThemeOptions['typography'] = {
   fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+  logo: {
+    fontSize: baseFontSizes.logo.md,
+    fontWeight: 550,
+    fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif'
+  },
   h1: { fontSize: baseFontSizes.h1.md, fontWeight: 700 },
   h2: { fontSize: baseFontSizes.h2.md, fontWeight: 700 },
   h3: { fontSize: baseFontSizes.h3.md, fontWeight: 700 },
@@ -256,6 +281,9 @@ export const typographyTokens: ThemeOptions['typography'] = {
 // RESPONSIVE TYPOGRAPHY TOKENS
 // --------------------
 export const responsiveTypographyTokens = {
+  // Logo variant with Poppins - larger than H1
+  logo: { fontSize: baseFontSizes.logo },
+
   // Headers - using base sizes
   h1: { fontSize: baseFontSizes.h1 },
   h2: { fontSize: baseFontSizes.h2 },

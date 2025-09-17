@@ -378,10 +378,10 @@ const SessionsPage: React.FC = () => {
 
     return (
         <Box sx={{ maxWidth: '100%', overflow: 'hidden' }}>
-      {/* Breadcrumb */}
-      <AdminBreadcrumb />
-      
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+            {/* Breadcrumb */}
+            <AdminBreadcrumb />
+
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <SessionIcon sx={{ mr: 1, fontSize: '24px' }} />
                     <Typography variant="h3" component="h1">
@@ -503,7 +503,6 @@ const SessionsPage: React.FC = () => {
                                                             {columnConfigs[3].format?.(session.last_active_at || '')}
                                                         </Typography>
                                                         <Typography sx={{
-                                                            fontSize: '0.7rem',
                                                             color: 'text.secondary',
                                                             fontStyle: 'italic'
                                                         }}>

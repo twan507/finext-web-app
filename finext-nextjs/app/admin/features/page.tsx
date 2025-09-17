@@ -362,12 +362,12 @@ export default function FeaturesPage() {
             maxWidth: '100%',
             overflow: 'hidden'
         }}>
-      {/* Breadcrumb */}
-      <AdminBreadcrumb />
-      
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+            {/* Breadcrumb */}
+            <AdminBreadcrumb />
+
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <FeatureIcon sx={{ mr: 1, fontSize: '24px' }} />
+                    <FeatureIcon sx={{ mr: 1 }} />
                     <Typography variant="h3" component="h1">
                         Quản lý Tính năng
                     </Typography>
@@ -465,7 +465,6 @@ export default function FeaturesPage() {
                                                     label={feature.key}
                                                     size="small"
                                                     variant="outlined"
-                                                    sx={{ fontWeight: 'medium' }}
                                                 />
                                             </TableCell>
 
@@ -634,7 +633,7 @@ export default function FeaturesPage() {
                 }}
             >
                 <DialogTitle>
-                    <Typography variant="h6" component="div" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
+                    <Typography variant="h6" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
                         <DeleteIcon />
                         Xác nhận xóa tính năng
                     </Typography>
@@ -643,7 +642,7 @@ export default function FeaturesPage() {
                     <DialogContentText>
                         Bạn có chắc chắn muốn xóa tính năng <strong>{featureToDelete?.name}</strong> (Key: {featureToDelete?.key})?
                         <br />
-                        <Typography component="span" color="error.main" fontWeight="medium">
+                        <Typography component="span" color="error.main">
                             Hành động này có thể ảnh hưởng đến các licenses đang sử dụng tính năng này.
                         </Typography>
                     </DialogContentText>

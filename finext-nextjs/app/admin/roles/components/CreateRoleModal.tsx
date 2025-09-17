@@ -526,7 +526,6 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
                                                                 className="category-title"
                                                                 variant="body1"
                                                                 fontWeight="500"
-                                                                fontSize="0.875rem"
                                                                 sx={{ transition: 'color 0.2s' }}
                                                             >
                                                                 {category}

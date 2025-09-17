@@ -78,7 +78,7 @@ const DashboardHomePage: React.FC = () => {
 
       {/* Page Header */}
       <Box sx={{ mb: theme.spacing(3) }}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 600, mb: 0.5, color: 'text.primary' }}>
+        <Typography variant="h4" component="h1" sx={{ mb: 0.5, color: 'text.primary' }}>
           Dashboard Overview
         </Typography>
       </Box>
@@ -102,10 +102,10 @@ const DashboardHomePage: React.FC = () => {
             >
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                 <Box>
-                  <Typography sx={{ color: 'text.secondary', fontSize: '0.875rem', fontWeight: 500 }}>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                     {kpi.title}
                   </Typography>
-                  <Typography variant="h5" component="h3" sx={{ fontWeight: 700, mt: 0.5, color: 'text.primary' }}>
+                  <Typography variant="h5" component="h3" sx={{ mt: 0.5, color: 'text.primary' }}>
                     {kpi.value}
                   </Typography>
                 </Box>
@@ -114,10 +114,10 @@ const DashboardHomePage: React.FC = () => {
                 </Avatar>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Typography sx={{ color: kpi.changeColorKey, fontSize: '0.875rem', fontWeight: 500 }}>
+                <Typography variant="body2" sx={{ color: kpi.changeColorKey }}>
                   {kpi.change}
                 </Typography>
-                <Typography sx={{ color: 'text.disabled', fontSize: '0.75rem', ml: 1 }}>
+                <Typography variant="caption" sx={{ color: 'text.disabled', ml: 1 }}>
                   vs last month
                 </Typography>
               </Box>
@@ -145,10 +145,10 @@ const DashboardHomePage: React.FC = () => {
             >
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                 <Box>
-                  <Typography sx={{ color: 'text.secondary', fontSize: '0.875rem', fontWeight: 500 }}>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                     {kpi.title}
                   </Typography>
-                  <Typography variant="h5" component="h3" sx={{ fontWeight: 700, mt: 0.5, color: 'text.primary' }}>
+                  <Typography variant="h5" component="h3" sx={{ mt: 0.5, color: 'text.primary' }}>
                     {kpi.value}
                   </Typography>
                 </Box>
@@ -157,10 +157,10 @@ const DashboardHomePage: React.FC = () => {
                 </Avatar>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Typography sx={{ color: kpi.changeColorKey, fontSize: '0.875rem', fontWeight: 500 }}>
+                <Typography variant="body2" sx={{ color: kpi.changeColorKey }}>
                   {kpi.change}
                 </Typography>
-                <Typography sx={{ color: 'text.disabled', fontSize: '0.75rem', ml: 1 }}>
+                <Typography variant="caption" sx={{ color: 'text.disabled', ml: 1 }}>
                   vs last month
                 </Typography>
               </Box>
@@ -175,7 +175,7 @@ const DashboardHomePage: React.FC = () => {
         <Grid size={{ xs: 12, lg: 6 }}> {/* lg={6} để chiếm 50% trên màn hình lớn */}
           <Paper variant="outlined" sx={{ p: 2.5, borderRadius: theme.shape.borderRadius, borderColor: theme.palette.divider, ...cardHoverStyles }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6" component="h3" sx={{ fontWeight: 600, color: 'text.primary' }}>
+              <Typography variant="h6" component="h3" sx={{ color: 'text.primary' }}>
                 Revenue Overview
               </Typography>
               <ToggleButtonGroup
@@ -192,14 +192,13 @@ const DashboardHomePage: React.FC = () => {
                     aria-label={period}
                     sx={{
                       borderRadius: '20px !important', // Ghi đè border-radius của ToggleButton
-                      px: 1.5, py: 0.5, fontSize: '0.75rem',
+                      px: 1.5, py: 0.5,
                       border: 'none',
                       textTransform: 'none',
                       color: 'text.secondary',
                       '&.Mui-selected': {
                         bgcolor: theme.palette.action.selected, // Sử dụng màu action.selected của theme
                         color: 'text.primary',
-                        fontWeight: 500,
                         '&:hover': {
                           bgcolor: theme.palette.action.hover, //
                         }
@@ -228,7 +227,7 @@ const DashboardHomePage: React.FC = () => {
         <Grid size={{ xs: 12, lg: 6 }}> {/* lg={6} để chiếm 50% trên màn hình lớn */}
           <Paper variant="outlined" sx={{ p: 2.5, borderRadius: theme.shape.borderRadius, borderColor: theme.palette.divider, ...cardHoverStyles }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6" component="h3" sx={{ fontWeight: 600, color: 'text.primary' }}>
+              <Typography variant="h6" component="h3" sx={{ color: 'text.primary' }}>
                 User Growth
               </Typography>
               <ToggleButtonGroup
@@ -245,14 +244,13 @@ const DashboardHomePage: React.FC = () => {
                     aria-label={period}
                     sx={{
                       borderRadius: '20px !important',
-                      px: 1.5, py: 0.5, fontSize: '0.75rem',
+                      px: 1.5, py: 0.5,
                       border: 'none',
                       textTransform: 'none',
                       color: 'text.secondary',
                       '&.Mui-selected': {
                         bgcolor: theme.palette.action.selected,
                         color: 'text.primary',
-                        fontWeight: 500,
                         '&:hover': {
                           bgcolor: theme.palette.action.hover,
                         }

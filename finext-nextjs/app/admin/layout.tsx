@@ -41,7 +41,7 @@ import {
 
 import UserMenu from './components/UserMenu';
 import ThemeToggleButton from 'components/ThemeToggleButton';
-import { layoutTokens } from '../../theme/tokens';
+import { layoutTokens, responsiveTypographyTokens } from '../../theme/tokens';
 
 interface NavItem {
   text: string;
@@ -151,14 +151,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Image
         src="/finext-icon-trans.png"
         alt="Finext Logo"
-        width={30}
-        height={30}
+        width={28}
+        height={28}
         style={{ display: 'block' }} // tránh lệch baseline
       />
       <Typography
-        variant="h3"
+        variant="logo"
         sx={{
-          fontWeight: 600,
           letterSpacing: 0.5,
         }}
       >
@@ -233,7 +232,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </ListItemIcon>
           <ListItemText
             primary={group.groupText}
-            primaryTypographyProps={{ variant: 'body2', fontWeight: isGroupActive ? 600 : 500 }}
+            primaryTypographyProps={{
+              variant: 'body2',
+              fontWeight: isGroupActive ? 'medium' : 'normal'
+            }}
           />
           {isOpen ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
         </ListItemButton>
@@ -366,7 +368,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             return (
               <React.Fragment key={itemOrGroup.groupText}>
                 <ListItem sx={{ pt: 2, pb: 1, mt: 1 }}>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'medium', textTransform: 'uppercase', pl: 1 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', pl: 1 }}>
                     {itemOrGroup.groupText}
                   </Typography>
                 </ListItem>
@@ -436,13 +438,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           Dashboard
         </MuiLink>
         {currentGroupText && currentGroupIcon && (
-          <Typography color="text.secondary" sx={{ display: 'flex', alignItems: 'center', fontSize: '0.875rem' }}>
+          <Typography color="text.secondary" sx={{ display: 'flex', alignItems: 'center' }} variant="body2">
             {React.cloneElement(currentGroupIcon, { sx: { mr: 0.5, fontSize: '1rem' } })}
             {currentGroupText}
           </Typography>
         )}
         {currentPathname !== '/admin/dashboard' && bestMatch && (
-          <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center', fontSize: '0.875rem', fontWeight: 500 }}>
+          <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center' }} variant="body2">
             {React.cloneElement(currentPageIcon, { sx: { mr: 0.5, fontSize: '1rem' } })}
             {currentPageTitle}
           </Typography>

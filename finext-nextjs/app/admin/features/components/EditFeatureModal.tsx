@@ -149,7 +149,7 @@ const EditFeatureModal: React.FC<EditFeatureModalProps> = ({
             }}
         >
             <DialogTitle>
-                <Typography variant="h5" component="div" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="h5" component="div" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <EditIcon color="primary" />
                     Chỉnh sửa tính năng
                 </Typography>
@@ -161,7 +161,6 @@ const EditFeatureModal: React.FC<EditFeatureModalProps> = ({
                         label={feature.key}
                         size="small"
                         variant="outlined"
-                        sx={{ fontWeight: 'medium' }}
                     />
                 </Box>
             </DialogTitle>
@@ -241,8 +240,8 @@ const EditFeatureModal: React.FC<EditFeatureModalProps> = ({
                     }}>
                         <Typography
                             variant="body2"
-                            fontWeight="bold"
                             sx={{
+                                fontWeight: 'bold',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 1,

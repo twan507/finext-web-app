@@ -562,7 +562,7 @@ const UsersPage: React.FC = () => {
 
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <People sx={{ mr: 1, fontSize: '24px' }} />
+          <People sx={{ mr: 1 }} />
           <Typography
             variant="h3"
             component="h1"
@@ -751,7 +751,7 @@ const UsersPage: React.FC = () => {
                                       }
                                     }}
                                   />
-                                  <span style={{ fontSize: '0.75rem' }}>Loading...</span>
+                                  <Typography variant="caption">Loading...</Typography>
                                 </Box> :
                                 subscriptionInfo.status
                               }
@@ -1016,6 +1016,7 @@ const UsersPage: React.FC = () => {
               variant="body2"
               fontWeight="bold"
               sx={{
+                fontWeight: 'bold',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1,

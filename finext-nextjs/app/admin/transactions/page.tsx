@@ -631,7 +631,6 @@ export default function TransactionsPage() {
                             size="small"
                             variant="outlined"
                             sx={{
-                              fontSize: '0.75rem',
                               fontFamily: 'monospace',
                               maxWidth: expandedView ? 'none' : 200,
                               '& .MuiChip-label': {
@@ -700,8 +699,7 @@ export default function TransactionsPage() {
                           size="small"
                           variant="outlined"
                           sx={{
-                            textTransform: 'uppercase',
-                            fontSize: '0.75rem'
+                            textTransform: 'uppercase'
                           }}
                         />
                       </TableCell>
@@ -717,8 +715,7 @@ export default function TransactionsPage() {
                           size="small"
                           color={getPaymentStatusChipColor(transaction.payment_status as PaymentStatusEnumFE)}
                           sx={{
-                            textTransform: 'uppercase',
-                            fontSize: '0.75rem'
+                            textTransform: 'uppercase'
                           }}
                         />
                       </TableCell>
@@ -1000,8 +997,7 @@ export default function TransactionsPage() {
                   size="small"
                   color={getPaymentStatusChipColor(transactionToDelete.payment_status as PaymentStatusEnumFE)}
                   sx={{
-                    textTransform: 'uppercase',
-                    fontSize: '0.75rem'
+                    textTransform: 'uppercase'
                   }}
                 />
               </Box>

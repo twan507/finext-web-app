@@ -446,10 +446,10 @@ const OtpsPage: React.FC = () => {
 
     return (
         <Box sx={{ maxWidth: '100%', overflow: 'hidden' }}>
-      {/* Breadcrumb */}
-      <AdminBreadcrumb />
-      
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+            {/* Breadcrumb */}
+            <AdminBreadcrumb />
+
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <OtpIcon sx={{ mr: 1, fontSize: '24px' }} />
                     <Typography variant="h3" component="h1">
@@ -549,7 +549,6 @@ const OtpsPage: React.FC = () => {
                                                     sx={{
                                                         backgroundColor: componentColors.chip.defaultBackground,
                                                         color: componentColors.chip.defaultColor,
-                                                        fontSize: '0.75rem',
                                                         height: 24,
                                                         fontWeight: 'medium'
                                                     }}
@@ -566,7 +565,6 @@ const OtpsPage: React.FC = () => {
                                                     size="small"
                                                     icon={getStatusDisplay(otp).icon}
                                                     sx={{
-                                                        fontSize: '0.75rem',
                                                         height: 24,
                                                         fontWeight: 'medium'
                                                     }} />
@@ -599,7 +597,6 @@ const OtpsPage: React.FC = () => {
                                                         {columnConfigs[5].format?.(otp.expires_at || '')}
                                                     </Typography>
                                                     <Typography sx={{
-                                                        fontSize: '0.7rem',
                                                         color: 'text.secondary',
                                                         fontStyle: 'italic'
                                                     }}>

@@ -155,7 +155,6 @@ const FeatureSearch: React.FC<FeatureSearchProps> = ({
                     }}
                     sx={{
                         '& .MuiOutlinedInput-root': {
-                            fontSize: '0.8125rem',
                             height: '36px',
                         }
                     }}
@@ -186,14 +185,14 @@ const FeatureSearch: React.FC<FeatureSearchProps> = ({
                                 size="small"
                                 color="primary"
                                 variant="outlined"
-                                sx={{ height: '20px', fontSize: '0.6875rem' }}
+                                sx={{ height: '20px' }}
                             />
-                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6875rem' }}>
+                            <Typography variant="caption" color="text.secondary">
                                 (trang hiện tại)
                             </Typography>
                         </>
                     ) : (
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6875rem' }}>
+                        <Typography variant="caption" color="text.secondary">
                             {stats.total} tính năng (trang hiện tại)
                         </Typography>
                     )}
@@ -206,7 +205,7 @@ const FeatureSearch: React.FC<FeatureSearchProps> = ({
                         onDelete={handleClearSearch}
                         color="default"
                         variant="outlined"
-                        sx={{ height: '20px', fontSize: '0.6875rem', maxWidth: '120px' }}
+                        sx={{ height: '20px', maxWidth: '120px' }}
                     />
                 )}
             </Box>
@@ -216,7 +215,7 @@ const FeatureSearch: React.FC<FeatureSearchProps> = ({
                 <>
                     <Divider sx={{ my: 1 }} />
                     <Box>
-                        <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontSize: '0.6875rem' }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
                             Bộ lọc nhanh:
                         </Typography>                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                             {[
@@ -238,7 +237,6 @@ const FeatureSearch: React.FC<FeatureSearchProps> = ({
                                     sx={{
                                         cursor: 'pointer',
                                         height: '22px',
-                                        fontSize: '0.6875rem'
                                     }}
                                 />
                             ))}
