@@ -337,10 +337,10 @@ export default function RolesPage() {
             maxWidth: '100%',
             overflow: 'hidden'
         }}>
-      {/* Breadcrumb */}
-      <AdminBreadcrumb />
-      
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+            {/* Breadcrumb */}
+            <AdminBreadcrumb />
+
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <RolesIcon sx={{ mr: 1, fontSize: '24px' }} />
                     <Typography variant="h3" component="h1">
@@ -427,7 +427,15 @@ export default function RolesPage() {
                                 />
                                 <TableBody>
                                     {Array.isArray(paginatedRoles) && paginatedRoles.map((role) => (
-                                        <TableRow hover key={role.id}>
+                                        <TableRow
+                                            hover
+                                            key={role.id}
+                                            sx={{
+                                                '&:hover': {
+                                                    backgroundColor: componentColors.tableRow.hover
+                                                }
+                                            }}
+                                        >
                                             {/* Role Name */}
                                             <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[0], expandedView),
@@ -505,14 +513,27 @@ export default function RolesPage() {
                                                     position: 'sticky',
                                                     right: -1,
                                                     backgroundColor: 'background.paper',
-                                                    zIndex: 2,
-                                                    borderLeft: '1px solid',
-                                                    borderColor: 'divider',
+                                                    zIndex: 1,
                                                     minWidth: columnConfigs[5].minWidth,
                                                     width: columnConfigs[5].minWidth,
                                                     whiteSpace: 'nowrap',
                                                     paddingLeft: 1,
-                                                    paddingRight: 2
+                                                    paddingRight: 2,
+                                                    // Ensure border visibility during scroll
+                                                    '&::before': {
+                                                        content: '""',
+                                                        position: 'absolute',
+                                                        left: 0,
+                                                        top: 0,
+                                                        bottom: 0,
+                                                        width: '1px',
+                                                        backgroundColor: 'divider',
+                                                        zIndex: 1
+                                                    },
+                                                    // Apply hover effect when parent row is hovered - synchronized with table row hover color
+                                                    'tr:hover &': {
+                                                        backgroundColor: componentColors.tableRow.hover
+                                                    }
                                                 }}
                                                 align="center"
                                             >

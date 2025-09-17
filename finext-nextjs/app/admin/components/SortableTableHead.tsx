@@ -56,13 +56,10 @@ const SortableTableHead: React.FC<SortableTableHeadProps> = ({
                                 right: -1, // Slight negative to eliminate gap
                                 backgroundColor: 'background.paper',
                                 zIndex: 2,
-                                borderLeft: '1px solid',
-                                borderColor: 'divider',
                                 minWidth: expandedView ? 'auto' : 60,
                                 width: expandedView ? 'auto' : 60,
                                 marginRight: -1, // Pull column to the right
                                 paddingRight: 2, // Add padding to compensate
-                                boxShadow: '-1px 0 0 0 rgba(0, 0, 0, 0.12)',
                                 // Ensure border visibility during scroll
                                 '&::before': {
                                     content: '""',

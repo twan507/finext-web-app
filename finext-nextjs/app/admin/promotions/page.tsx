@@ -515,7 +515,15 @@ export default function PromotionsPage() {
                                 />
                                 <TableBody>
                                     {Array.isArray(paginatedPromotions) && paginatedPromotions.map((promo) => (
-                                        <TableRow hover key={promo.id}>
+                                        <TableRow
+                                            hover
+                                            key={promo.id}
+                                            sx={{
+                                                '&:hover': {
+                                                    backgroundColor: componentColors.tableRow.hover
+                                                }
+                                            }}
+                                        >
                                             <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[0], expandedView),
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
@@ -618,14 +626,27 @@ export default function PromotionsPage() {
                                                     position: 'sticky',
                                                     right: -1,
                                                     backgroundColor: 'background.paper',
-                                                    zIndex: 2,
-                                                    borderLeft: '1px solid',
-                                                    borderColor: 'divider',
+                                                    zIndex: 1,
                                                     minWidth: columnConfigs[8].minWidth,
                                                     width: columnConfigs[8].minWidth,
                                                     whiteSpace: 'nowrap',
                                                     paddingLeft: 1,
-                                                    paddingRight: 2
+                                                    paddingRight: 2,
+                                                    // Ensure border visibility during scroll
+                                                    '&::before': {
+                                                        content: '""',
+                                                        position: 'absolute',
+                                                        left: 0,
+                                                        top: 0,
+                                                        bottom: 0,
+                                                        width: '1px',
+                                                        backgroundColor: 'divider',
+                                                        zIndex: 1
+                                                    },
+                                                    // Apply hover effect when parent row is hovered - synchronized with table row hover color
+                                                    'tr:hover &': {
+                                                        backgroundColor: componentColors.tableRow.hover
+                                                    }
                                                 }}
                                                 align="center"
                                             >

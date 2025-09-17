@@ -445,7 +445,15 @@ const SessionsPage: React.FC = () => {
                                 />
                                 <TableBody>
                                     {Array.isArray(paginatedSessions) && paginatedSessions.map((session) => (
-                                        <TableRow hover key={session.id}>
+                                        <TableRow
+                                            hover
+                                            key={session.id}
+                                            sx={{
+                                                '&:hover': {
+                                                    backgroundColor: componentColors.tableRow.hover
+                                                }
+                                            }}
+                                        >
                                             <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[0], expandedView),
                                                 whiteSpace: expandedView ? 'normal' : 'nowrap',
@@ -514,16 +522,29 @@ const SessionsPage: React.FC = () => {
                                             <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[4], expandedView),
                                                 position: 'sticky',
-                                                right: 0,
-                                                backgroundColor: theme.palette.background.paper,
-                                                zIndex: 2,
-                                                borderLeft: '1px solid',
-                                                borderColor: 'divider',
+                                                right: -1,
+                                                backgroundColor: 'background.paper',
+                                                zIndex: 1,
                                                 minWidth: columnConfigs[4].minWidth,
                                                 width: columnConfigs[4].minWidth,
                                                 whiteSpace: 'nowrap',
                                                 paddingLeft: 1,
-                                                paddingRight: 2
+                                                paddingRight: 2,
+                                                // Ensure border visibility during scroll
+                                                '&::before': {
+                                                    content: '""',
+                                                    position: 'absolute',
+                                                    left: 0,
+                                                    top: 0,
+                                                    bottom: 0,
+                                                    width: '1px',
+                                                    backgroundColor: 'divider',
+                                                    zIndex: 1
+                                                },
+                                                // Apply hover effect when parent row is hovered - synchronized with table row hover color
+                                                'tr:hover &': {
+                                                    backgroundColor: componentColors.tableRow.hover
+                                                }
                                             }} align="center">
                                                 <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
                                                     <Tooltip title="Xóa session (đăng xuất)">

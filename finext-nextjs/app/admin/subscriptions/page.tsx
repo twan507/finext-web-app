@@ -540,7 +540,15 @@ export default function SubscriptionsPage() {
 									expandedView={expandedView} />
 								<TableBody>
 									{Array.isArray(paginatedSubscriptions) && paginatedSubscriptions.map((sub) => (
-										<TableRow hover key={sub.id}>
+										<TableRow
+											hover
+											key={sub.id}
+											sx={{
+												'&:hover': {
+													backgroundColor: componentColors.tableRow.hover
+												}
+											}}
+										>
 											<TableCell sx={{
 												...getResponsiveDisplayStyle(columnConfigs[0], expandedView),
 												whiteSpace: expandedView ? 'nowrap' : 'normal',
@@ -646,8 +654,6 @@ export default function SubscriptionsPage() {
 													right: -1,
 													backgroundColor: 'background.paper',
 													zIndex: 1,
-													borderLeft: '1px solid',
-													borderColor: 'divider',
 													minWidth: expandedView ? 'auto' : 100,
 													width: 'auto',
 													'&::before': {
@@ -659,6 +665,10 @@ export default function SubscriptionsPage() {
 														width: '1px',
 														backgroundColor: 'divider',
 														zIndex: 1
+													},
+													// Apply hover effect when parent row is hovered - synchronized with table row hover color
+													'tr:hover &': {
+														backgroundColor: componentColors.tableRow.hover
 													}
 												}}
 											>                                                <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>

@@ -453,7 +453,15 @@ export default function FeaturesPage() {
                                 />
                                 <TableBody>
                                     {Array.isArray(paginatedFeatures) && paginatedFeatures.map((feature) => (
-                                        <TableRow hover key={feature.id}>
+                                        <TableRow
+                                            hover
+                                            key={feature.id}
+                                            sx={{
+                                                '&:hover': {
+                                                    backgroundColor: componentColors.tableRow.hover
+                                                }
+                                            }}
+                                        >
                                             {/* Feature Key */}
                                             <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[0], expandedView),
@@ -527,14 +535,27 @@ export default function FeaturesPage() {
                                                     position: 'sticky',
                                                     right: -1,
                                                     backgroundColor: 'background.paper',
-                                                    zIndex: 2,
-                                                    borderLeft: '1px solid',
-                                                    borderColor: 'divider',
+                                                    zIndex: 1,
                                                     minWidth: columnConfigs[5].minWidth,
                                                     width: columnConfigs[5].minWidth,
                                                     whiteSpace: 'nowrap',
                                                     paddingLeft: 1,
-                                                    paddingRight: 2
+                                                    paddingRight: 2,
+                                                    // Ensure border visibility during scroll
+                                                    '&::before': {
+                                                        content: '""',
+                                                        position: 'absolute',
+                                                        left: 0,
+                                                        top: 0,
+                                                        bottom: 0,
+                                                        width: '1px',
+                                                        backgroundColor: 'divider',
+                                                        zIndex: 1
+                                                    },
+                                                    // Apply hover effect when parent row is hovered - synchronized with table row hover color
+                                                    'tr:hover &': {
+                                                        backgroundColor: componentColors.tableRow.hover
+                                                    }
                                                 }}
                                                 align="center"
                                             >                                                <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>

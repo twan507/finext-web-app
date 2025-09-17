@@ -110,7 +110,7 @@ export const colorTokens = {
     },
     tableRow: {
       background: '#fafbfc', // Xám rất nhẹ thay vì trắng
-      hover: '#f5f5f5',
+      hover: '#f2f3f4',
       selected: '#e3f2fd',
     },
     chip: {
@@ -142,7 +142,7 @@ export const colorTokens = {
     },
     tableRow: {
       background: '#1e1e1e',
-      hover: '#2a2a2a',
+      hover: '#313131',
       selected: '#1976d2',
     },
     chip: {
@@ -235,17 +235,17 @@ const baseFontSizes = {
   h6: { xs: '1rem', sm: '1.1rem', md: '1.25rem' },
 
   // Content text
-  subtitle1: { xs: '0.75rem', sm: '0.8125rem' },
-  subtitle2: { xs: '0.6875rem', sm: '0.75rem' },
-  body1: { xs: '0.6875rem', sm: '0.75rem' }, // Cỡ chữ chính
-  body2: { xs: '0.625rem', sm: '0.6875rem' }, // Cỡ chữ phụ
-  button: { xs: '0.625rem', sm: '0.75rem' },
-  caption: { xs: '0.5625rem', sm: '0.625rem' }, // Cỡ chữ nhỏ nhất
-  overline: { xs: '0.5625rem', sm: '0.625rem' },
+  subtitle1: { xs: '0.8125rem', sm: '0.875rem' },
+  subtitle2: { xs: '0.75rem', sm: '0.8125rem' },
+  body1: { xs: '0.75rem', sm: '0.8125rem' }, // Cỡ chữ chính
+  body2: { xs: '0.6875rem', sm: '0.75rem' }, // Cỡ chữ phụ
+  button: { xs: '0.6875rem', sm: '0.8125rem' },
+  caption: { xs: '0.625rem', sm: '0.6875rem' }, // Cỡ chữ nhỏ nhất
+  overline: { xs: '0.625rem', sm: '0.6875rem' },
 
   // Custom variants
-  tableCell: { xs: '0.625rem', sm: '0.75rem' },
-  tableCellSmall: { xs: '0.5625rem', sm: '0.625rem' },
+  tableCell: { xs: '0.6875rem', sm: '0.8125rem' },
+  tableCellSmall: { xs: '0.625rem', sm: '0.6875rem' },
 
   // Enhanced responsive variants
   h4Enhanced: { xs: '1.5rem', sm: '2rem', md: '2.125rem' }, // Cho page headers

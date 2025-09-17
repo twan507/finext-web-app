@@ -529,7 +529,15 @@ export default function BrokersPage() {
                                 />
                                 <TableBody>
                                     {Array.isArray(paginatedBrokers) && paginatedBrokers.map((broker) => (
-                                        <TableRow hover key={broker.id}>
+                                        <TableRow
+                                            hover
+                                            key={broker.id}
+                                            sx={{
+                                                '&:hover': {
+                                                    backgroundColor: componentColors.tableRow.hover
+                                                }
+                                            }}
+                                        >
                                             <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[0], expandedView),
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
@@ -619,8 +627,6 @@ export default function BrokersPage() {
                                                     right: -1, // Slight negative to eliminate gap
                                                     backgroundColor: 'background.paper',
                                                     zIndex: 1,
-                                                    borderLeft: '1px solid',
-                                                    borderColor: 'divider',
                                                     minWidth: expandedView ? 'auto' : 100,
                                                     width: 'auto',
                                                     // Ensure border visibility during scroll
@@ -633,6 +639,10 @@ export default function BrokersPage() {
                                                         width: '1px',
                                                         backgroundColor: 'divider',
                                                         zIndex: 1
+                                                    },
+                                                    // Apply hover effect when parent row is hovered - synchronized with table row hover color
+                                                    'tr:hover &': {
+                                                        backgroundColor: componentColors.tableRow.hover
                                                     }
                                                 }}
                                             >                                                <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>

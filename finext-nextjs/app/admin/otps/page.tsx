@@ -519,7 +519,15 @@ const OtpsPage: React.FC = () => {
                                 />
                                 <TableBody>
                                     {Array.isArray(paginatedOtps) && paginatedOtps.map((otp) => (
-                                        <TableRow hover key={otp.id}>
+                                        <TableRow
+                                            hover
+                                            key={otp.id}
+                                            sx={{
+                                                '&:hover': {
+                                                    backgroundColor: componentColors.tableRow.hover
+                                                }
+                                            }}
+                                        >
                                             <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[0], expandedView),
                                                 whiteSpace: expandedView ? 'normal' : 'nowrap',
@@ -607,16 +615,29 @@ const OtpsPage: React.FC = () => {
                                             <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[6], expandedView),
                                                 position: 'sticky',
-                                                right: 0,
-                                                backgroundColor: theme.palette.background.paper,
-                                                zIndex: 2,
-                                                borderLeft: '1px solid',
-                                                borderColor: 'divider',
+                                                right: -1,
+                                                backgroundColor: 'background.paper',
+                                                zIndex: 1,
                                                 minWidth: columnConfigs[6].minWidth,
                                                 width: columnConfigs[6].minWidth,
                                                 whiteSpace: 'nowrap',
                                                 paddingLeft: 1,
-                                                paddingRight: 2
+                                                paddingRight: 2,
+                                                // Ensure border visibility during scroll
+                                                '&::before': {
+                                                    content: '""',
+                                                    position: 'absolute',
+                                                    left: 0,
+                                                    top: 0,
+                                                    bottom: 0,
+                                                    width: '1px',
+                                                    backgroundColor: 'divider',
+                                                    zIndex: 1
+                                                },
+                                                // Apply hover effect when parent row is hovered - synchronized with table row hover color
+                                                'tr:hover &': {
+                                                    backgroundColor: componentColors.tableRow.hover
+                                                }
                                             }} align="center">
                                                 <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
                                                     <Tooltip title="Vô hiệu hóa OTP">

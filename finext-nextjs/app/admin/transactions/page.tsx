@@ -602,7 +602,15 @@ export default function TransactionsPage() {
                 />
                 <TableBody>
                   {Array.isArray(paginatedTransactions) && paginatedTransactions.map((transaction) => (
-                    <TableRow hover key={transaction.id}>
+                    <TableRow
+                      hover
+                      key={transaction.id}
+                      sx={{
+                        '&:hover': {
+                          backgroundColor: componentColors.tableRow.hover
+                        }
+                      }}
+                    >
                       {/* User Email - Index 0 */}
                       <TableCell sx={{
                         ...getResponsiveDisplayStyle(columnConfigs[0], expandedView),
@@ -825,8 +833,6 @@ export default function TransactionsPage() {
                           right: -1, // Slight negative to eliminate gap
                           backgroundColor: 'background.paper',
                           zIndex: 1,
-                          borderLeft: '1px solid',
-                          borderColor: 'divider',
                           width: 'auto',
                           // Ensure border visibility during scroll
                           '&::before': {
@@ -838,6 +844,10 @@ export default function TransactionsPage() {
                             width: '1px',
                             backgroundColor: 'divider',
                             zIndex: 1
+                          },
+                          // Apply hover effect when parent row is hovered - synchronized with table row hover color
+                          'tr:hover &': {
+                            backgroundColor: componentColors.tableRow.hover
                           }
                         }}
                         align="center"

@@ -337,10 +337,10 @@ const PermissionsPage: React.FC = () => {
     };
     return (
         <Box sx={{ maxWidth: '100%', overflow: 'hidden' }}>
-      {/* Breadcrumb */}
-      <AdminBreadcrumb />
-      
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+            {/* Breadcrumb */}
+            <AdminBreadcrumb />
+
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <PermissionIcon sx={{ mr: 1, fontSize: '24px' }} />
                     <Typography variant="h3" component="h1">
@@ -424,7 +424,15 @@ const PermissionsPage: React.FC = () => {
                                     onSort={handleSort}
                                 />
                                 <TableBody>
-                                    {Array.isArray(paginatedPermissions) && paginatedPermissions.map((permission) => (<TableRow hover key={permission.id || permission.name}>
+                                    {Array.isArray(paginatedPermissions) && paginatedPermissions.map((permission) => (<TableRow
+                                        hover
+                                        key={permission.id || permission.name}
+                                        sx={{
+                                            '&:hover': {
+                                                backgroundColor: componentColors.tableRow.hover
+                                            }
+                                        }}
+                                    >
                                         <TableCell sx={{
                                             ...getResponsiveDisplayStyle(columnConfigs[0], expandedView),
                                             whiteSpace: expandedView ? 'nowrap' : 'normal',
@@ -541,14 +549,27 @@ const PermissionsPage: React.FC = () => {
                                                 position: 'sticky',
                                                 right: -1,
                                                 backgroundColor: 'background.paper',
-                                                zIndex: 2,
-                                                borderLeft: '1px solid',
-                                                borderColor: 'divider',
+                                                zIndex: 1,
                                                 minWidth: columnConfigs[6].minWidth,
                                                 width: columnConfigs[6].minWidth,
                                                 whiteSpace: 'nowrap',
                                                 paddingLeft: 1,
-                                                paddingRight: 2
+                                                paddingRight: 2,
+                                                // Ensure border visibility during scroll
+                                                '&::before': {
+                                                    content: '""',
+                                                    position: 'absolute',
+                                                    left: 0,
+                                                    top: 0,
+                                                    bottom: 0,
+                                                    width: '1px',
+                                                    backgroundColor: 'divider',
+                                                    zIndex: 1
+                                                },
+                                                // Apply hover effect when parent row is hovered - synchronized with table row hover color
+                                                'tr:hover &': {
+                                                    backgroundColor: componentColors.tableRow.hover
+                                                }
                                             }}
                                             align="center"
                                         >
