@@ -18,9 +18,9 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
 
   const layers = isDark
     ? {
-        // ===== DARK MODE =====
-        base: "linear-gradient(180deg, #0B0718 0%, #120A28 40%, #160D33 100%)",
-        before: `
+      // ===== DARK MODE =====
+      base: "linear-gradient(180deg, #0B0718 0%, #120A28 40%, #160D33 100%)",
+      before: `
           radial-gradient(
             circle at ${centerX} ${centerY},
             rgba(178,130,255,0.70) 0%,
@@ -33,7 +33,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
             rgba(14,9,36,0.00) 58%
           )
         `,
-        after: `
+      after: `
           radial-gradient(
             circle at ${centerX} ${centerY},
             rgba(0,0,0,0) 45%,
@@ -46,12 +46,12 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
             rgba(110,70,220,0.00) 60%
           )
         `,
-        blurPx: 36,
-      }
+      blurPx: 36,
+    }
     : {
-        // ===== LIGHT MODE (tím đậm hơn) =====
-        base: "linear-gradient(180deg, #ECE9FF 0%, #E5E0FF 40%, #DCD6FF 100%)",
-        before: `
+      // ===== LIGHT MODE (tím đậm hơn) =====
+      base: "linear-gradient(180deg, #ECE9FF 0%, #E5E0FF 40%, #DCD6FF 100%)",
+      before: `
           radial-gradient(
             circle at ${centerX} ${centerY},
             rgba(150, 90, 245, 0.55) 0%,
@@ -64,7 +64,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
             rgba(50, 35, 120, 0.00) 66%
           )
         `,
-        after: `
+      after: `
           radial-gradient(
             circle at ${centerX} ${centerY},
             rgba(0,0,0,0) 55%,
@@ -77,8 +77,8 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
             rgba(100,60,200,0.00) 60%
           )
         `,
-        blurPx: 28,
-      };
+      blurPx: 28,
+    };
 
   return (
     <Box
@@ -87,10 +87,6 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         width: "100%",
         position: "relative",
         overflow: "hidden",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        p: 2,
 
         // Nền chính
         background: layers.base,
@@ -119,10 +115,9 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
     >
       <Box
         sx={{
-          width: "100%",
-          maxWidth: 400,
           position: "relative",
           zIndex: 2,
+          minHeight: "100vh",
         }}
       >
         {children}

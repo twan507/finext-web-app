@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, FormEvent, useEffect } from 'react';
+import React, { useState, FormEvent, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient } from 'services/apiClient';
 import { useAuth } from 'components/AuthProvider';
 
 // MUI
-import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import CssBaseline from '@mui/material/CssBaseline';
 import TextField from '@mui/material/TextField';
@@ -14,28 +13,45 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import Divider from '@mui/material/Divider';
 import Link from '@mui/material/Link';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import IconButton from '@mui/material/IconButton';
+import InputAdornment from '@mui/material/InputAdornment';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 // Google OAuth
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 
 import ThemeToggleButton from 'components/ThemeToggleButton';
+import BrandLogo from 'components/BrandLogo';
 import { LoginResponse, UserSchema } from 'services/core/types';
+import { responsiveTypographyTokens, iconSizeTokens, layoutTokens } from 'theme/tokens';
 
-interface UserInfoFromAuth extends UserSchema {}
+interface UserInfoFromAuth extends UserSchema { }
 
 /* ---------------- Google Colored Icon (SVG chuẩn) ---------------- */
-function GoogleColoredIcon({ size = 20 }: { size?: number }) {
+function GoogleColoredIcon({ size = iconSizeTokens.medium }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
-      <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.651 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.957 3.043l5.657-5.657C33.64 6.053 29.062 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.651-.389-3.917z"/>
-      <path fill="#FF3D00" d="M6.306 14.691l6.571 4.818C14.42 16.186 18.879 12 24 12c3.059 0 5.842 1.154 7.957 3.043l5.657-5.657C33.64 6.053 29.062 4 24 4c-7.778 0-14.426 4.426-17.694 10.691z"/>
-      <path fill="#4CAF50" d="M24 44c5.176 0 9.802-1.988 13.313-5.219l-6.146-5.201C29.081 35.907 26.671 37 24 37c-5.205 0-9.62-3.317-11.283-7.955l-6.54 5.04C9.41 39.47 16.115 44 24 44z"/>
-      <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.79 2.23-2.26 4.154-4.189 5.58l.003-.002 6.146 5.201C39.803 36.968 44 31.999 44 24c0-1.341-.138-2.651-.389-3.917z"/>
+      <path
+        fill="#FFC107"
+        d="M43.611 20.083H42V20H24v8h11.303c-1.651 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.957 3.043l5.657-5.657C33.64 6.053 29.062 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.651-.389-3.917z"
+      />
+      <path
+        fill="#FF3D00"
+        d="M6.306 14.691l6.571 4.818C14.42 16.186 18.879 12 24 12c3.059 0 5.842 1.154 7.957 3.043l5.657-5.657C33.64 6.053 29.062 4 24 4c-7.778 0-14.426 4.426-17.694 10.691z"
+      />
+      <path
+        fill="#4CAF50"
+        d="M24 44c5.176 0 9.802-1.988 13.313-5.219l-6.146-5.201C29.081 35.907 26.671 37 24 37c-5.205 0-9.62-3.317-11.283-7.955l-6.54 5.04C9.41 39.47 16.115 44 24 44z"
+      />
+      <path
+        fill="#1976D2"
+        d="M43.611 20.083H42V20H24v8h11.303c-.79 2.23-2.26 4.154-4.189 5.58l.003-.002 6.146 5.201C39.803 36.968 44 31.999 44 24c0-1.341-.138-2.651-.389-3.917z"
+      />
     </svg>
   );
 }
@@ -58,9 +74,8 @@ function GoogleButton({
       disabled={disabled}
       fullWidth={fullWidth}
       variant="outlined"
-      startIcon={<GoogleColoredIcon size={18} />}
       sx={(t) => ({
-        height: 44,
+        height: layoutTokens.buttonHeight,
         borderRadius: 999,
         px: 2,
         textTransform: 'none',
@@ -68,14 +83,36 @@ function GoogleButton({
         letterSpacing: 0.2,
         bgcolor: 'transparent',
         color: t.palette.mode === 'dark' ? '#FFFFFF' : '#1F1A2E',
-        borderColor: t.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(40,30,80,0.6)',
+        borderColor:
+          t.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(40,30,80,0.6)',
         '&:hover': {
-          borderColor: t.palette.mode === 'dark' ? '#FFFFFF' : 'rgba(40,30,80,0.9)',
-          backgroundColor: t.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(40,30,80,0.06)',
+          borderColor:
+            t.palette.mode === 'dark' ? '#FFFFFF' : 'rgba(40,30,80,0.9)',
+          backgroundColor:
+            t.palette.mode === 'dark'
+              ? 'rgba(255,255,255,0.06)'
+              : 'rgba(40,30,80,0.06)',
         },
       })}
     >
-      {loading ? <CircularProgress size={20} /> : 'Đăng nhập/Đăng ký bằng Google'}
+      {loading ? (
+        <CircularProgress size={iconSizeTokens.progressSmall} />
+      ) : (
+        <>
+          <GoogleColoredIcon size={iconSizeTokens.googleIcon} />
+          <Typography
+            component="span"
+            sx={{
+              ml: 1,
+              fontSize: responsiveTypographyTokens.body1.fontSize,
+              fontWeight: 600,
+              letterSpacing: 0.2
+            }}
+          >
+            Đăng nhập/Đăng ký bằng Google
+          </Typography>
+        </>
+      )}
     </Button>
   );
 }
@@ -84,6 +121,7 @@ function GoogleButton({
 function SignInForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -92,6 +130,12 @@ function SignInForm() {
   const router = useRouter();
   const { login, session, loading: authLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
+
+  const handleClickShowPassword = () => setShowPassword((show) => !show);
+
+  const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -117,7 +161,10 @@ function SignInForm() {
         requireAuth: false,
         withCredentials: true,
       });
-      if (loginStandardResponse.status === 200 && loginStandardResponse.data?.access_token) {
+      if (
+        loginStandardResponse.status === 200 &&
+        loginStandardResponse.data?.access_token
+      ) {
         const { access_token } = loginStandardResponse.data;
         const tempHeaders = { Authorization: `Bearer ${access_token}` };
 
@@ -132,7 +179,11 @@ function SignInForm() {
           headers: tempHeaders,
         });
 
-        if (userResponse.status === 200 && userResponse.data && featuresResponse.status === 200) {
+        if (
+          userResponse.status === 200 &&
+          userResponse.data &&
+          featuresResponse.status === 200
+        ) {
           const sessionData = {
             user: userResponse.data,
             accessToken: access_token,
@@ -143,14 +194,19 @@ function SignInForm() {
         } else {
           setError(
             (userResponse.message || 'Lỗi lấy thông tin user.') +
-              (featuresResponse.message || ' Lỗi lấy features.')
+            (featuresResponse.message || ' Lỗi lấy features.'),
           );
         }
       } else {
-        setError(loginStandardResponse.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
+        setError(
+          loginStandardResponse.message ||
+          'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.',
+        );
       }
     } catch (err: any) {
-      setError(err.message || 'Lỗi kết nối hoặc có lỗi xảy ra trong quá trình đăng nhập.');
+      setError(
+        err.message || 'Lỗi kết nối hoặc có lỗi xảy ra trong quá trình đăng nhập.',
+      );
     } finally {
       setLoading(false);
     }
@@ -169,7 +225,9 @@ function SignInForm() {
 
   if (!mounted || authLoading || (!authLoading && session)) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <Box
+        sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}
+      >
         <CircularProgress />
       </Box>
     );
@@ -179,21 +237,76 @@ function SignInForm() {
     <Box
       sx={(t) => ({
         width: '100%',
-        maxWidth: 380,
+        maxWidth: layoutTokens.authFormMaxWidth,
         p: { xs: 2.5, md: 3 },
         borderRadius: 3,
-        bgcolor: t.palette.mode === 'dark' ? 'rgba(20,14,40,0.55)' : 'rgba(255,255,255,0.7)',
-        backdropFilter: 'blur(10px)',
+        // Enhanced glassmorphism effect
+        bgcolor: t.palette.mode === 'dark'
+          ? 'rgba(15, 10, 35, 0.4)' // Darker, more transparent for dark mode
+          : 'rgba(255, 255, 255, 0.05)', // Even more transparent for light mode
+        backdropFilter: 'blur(20px) saturate(150%)', // Stronger blur with saturation
+        WebkitBackdropFilter: 'blur(20px) saturate(150%)', // Safari support
+        // Enhanced shadow system
         boxShadow: t.palette.mode === 'dark'
-          ? '0 10px 30px rgba(0,0,0,0.45)'
-          : '0 10px 30px rgba(60,40,120,0.18)',
+          ? [
+            '0 8px 32px rgba(0, 0, 0, 0.6)', // Primary shadow
+            '0 2px 8px rgba(139, 92, 246, 0.1)', // Purple accent shadow
+            'inset 0 1px 0 rgba(255, 255, 255, 0.1)', // Top highlight
+          ].join(', ')
+          : [
+            '0 8px 32px rgba(107, 70, 193, 0.15)', // Purple-tinted shadow for light mode
+            '0 4px 16px rgba(0, 0, 0, 0.1)', // Subtle black shadow
+            'inset 0 1px 0 rgba(255, 255, 255, 0.4)', // Stronger top highlight
+          ].join(', '),
+        // Enhanced border system
         border: t.palette.mode === 'dark'
-          ? '1px solid rgba(255,255,255,0.06)'
-          : '1px solid rgba(60,40,120,0.10)',
+          ? '1px solid rgba(255, 255, 255, 0.1)' // Subtle white border for dark mode
+          : '1px solid rgba(107, 70, 193, 0.15)', // Purple-tinted border for light mode
+        // Add subtle gradient overlay
+        position: 'relative',
+        overflow: 'hidden',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: t.palette.mode === 'dark'
+            ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(124, 58, 237, 0.02) 100%)'
+            : 'linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 100%)',
+          pointerEvents: 'none',
+          zIndex: -1,
+        },
       })}
     >
-      {/* Header nhỏ */}
-      <Typography variant="subtitle1" sx={{ fontWeight: 700, textAlign: 'center', mb: 1 }}>
+      {/* Brand Logo with theme-responsive color overlay */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1.5 }}>
+        <BrandLogo
+          href="/"
+          imageSize={iconSizeTokens.brandImage}
+          textSize={responsiveTypographyTokens.logo.fontSize.md}
+          gap={layoutTokens.dotSize.small}
+          useColorOverlay={true}
+        />
+      </Box>
+
+      <Typography
+        sx={(theme) => ({
+          textAlign: 'center',
+          mb: 1,
+          fontSize: responsiveTypographyTokens.subtitle1.fontSize.md,
+          background: theme.palette.mode === 'dark'
+            ? 'linear-gradient(135deg, #FFFFFF 0%, #E0E7FF 25%, #C4B5FD 50%, #A78BFA 75%, #8B5CF6 100%)'
+            : 'linear-gradient(135deg, #1F2937 0%, #4C1D95 25%, #6B46C1 50%, #7C3AED 75%, #8B5CF6 100%)',
+          backgroundClip: 'text',
+          WebkitBackgroundClip: 'text',
+          color: 'transparent',
+          WebkitTextFillColor: 'transparent',
+          fontWeight: 600,
+          letterSpacing: '0.5px',
+        })}
+      >
         Đăng nhập ngay!
       </Typography>
 
@@ -223,24 +336,57 @@ function SignInForm() {
           disabled={loading || googleLoading || !!successMessage}
           size="small"
         />
-        <TextField
-          margin="dense"
-          required
-          fullWidth
-          name="password"
-          label="Mật khẩu"
-          type="password"
-          id="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          disabled={loading || googleLoading || !!successMessage}
-          size="small"
-        />
+        <Box sx={{ position: 'relative' }}>
+          <TextField
+            margin="dense"
+            required
+            fullWidth
+            name="password"
+            label="Mật khẩu"
+            type={showPassword ? 'text' : 'password'}
+            id="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={loading || googleLoading || !!successMessage}
+            size="small"
+          />
+          <IconButton
+            aria-label="toggle password visibility"
+            onClick={handleClickShowPassword}
+            onMouseDown={handleMouseDownPassword}
+            disabled={loading || googleLoading || !!successMessage}
+            sx={{
+              position: 'absolute',
+              right: 6,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              marginTop: '4px', // Điều chỉnh để căn giữa với input field
+              p: 0.25,
+              minWidth: '24px',
+              height: '24px',
+              zIndex: 1,
+              '&:hover': {
+                backgroundColor: 'action.hover',
+              },
+              '& .MuiSvgIcon-root': {
+                fontSize: responsiveTypographyTokens.body2.fontSize.sm,
+                opacity: 0.6,
+                '&:hover': {
+                  opacity: 0.8,
+                },
+              },
+            }}
+          >
+            {showPassword ? <VisibilityOff /> : <Visibility />}
+          </IconButton>
+        </Box>
 
-        <Box sx={{ mt: 0.5, mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <FormControlLabel control={<Checkbox size="small" />} label="Duy trì đăng nhập" sx={{ m: 0 }} />
-          <Link href="/forgot-password" underline="hover" sx={{ fontSize: 13 }}>
+        <Box
+          sx={{ mt: 0.5, mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+        >
+          <FormControlLabel control={<Checkbox size="small" />} label="Duy trì đăng nhập" />
+          <Link href="/forgot-password" underline="hover" sx={{ fontSize: responsiveTypographyTokens.body2.fontSize.md, mt: 0.6 }}>
             Quên mật khẩu?
           </Link>
         </Box>
@@ -252,7 +398,7 @@ function SignInForm() {
           sx={{ mt: 0.5, mb: 1.5, py: 1, borderRadius: 2 }}
           disabled={loading || googleLoading || !!successMessage}
         >
-          {loading ? <CircularProgress size={22} color="inherit" /> : 'Đăng nhập'}
+          {loading ? <CircularProgress size={iconSizeTokens.progressMedium} color="inherit" /> : 'Đăng nhập'}
         </Button>
 
         <Divider sx={{ my: 1.5 }}>hoặc</Divider>
@@ -272,7 +418,7 @@ function SignInForm() {
           loading={googleLoading}
         />
 
-        <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
+        <Typography variant="body2" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
           Bạn chưa có tài khoản? <Link href="/register">Đăng ký</Link>
         </Typography>
       </Box>
@@ -280,61 +426,141 @@ function SignInForm() {
   );
 }
 
+interface Slide {
+  overline: string;
+  headline: string;
+  description: string;
+}
+
+const gallerySlides: Slide[] = [
+  {
+    overline: 'THẤU HIỂU DỮ LIỆU · CHINH PHỤC THỊ TRƯỜNG',
+    headline: 'Insight đầu tư theo ngành',
+    description:
+      'Thông qua hệ thống các chỉ báo chuyên sâu, Findicator mang đến góc nhìn của những chuyên gia đầu ngành, giúp nhà đầu tư có thể tìm kiếm các cơ hội và ý tưởng đầu tư chất lượng.',
+  },
+  {
+    overline: 'PHÂN TÍCH CHUYÊN SÂU · QUYẾT ĐỊNH ĐỘT PHÁ',
+    headline: 'Báo cáo thị trường độc quyền',
+    description:
+      'Nhận các báo cáo phân tích chuyên sâu về từng ngành, xu hướng thị trường, và các yếu tố vĩ mô ảnh hưởng đến danh mục đầu tư của bạn. Luôn đi trước một bước với thông tin chi tiết.',
+  },
+  {
+    overline: 'CÔNG CỤ HỖ TRỢ · TỐI ƯU HÓA LỢI NHUẬN',
+    headline: 'Danh mục đầu tư thông minh',
+    description:
+      'Sử dụng các công cụ mạnh mẽ để xây dựng và quản lý danh mục đầu tư cá nhân hóa. Tối ưu hóa lợi nhuận và giảm thiểu rủi ro với các khuyến nghị được hỗ trợ bởi AI.',
+  },
+];
+
 /* ---------------- PAGE (Căn giữa, không trôi phải) ---------------- */
 export default function SignInPage() {
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [animationStyle, setAnimationStyle] = useState({
+    opacity: 1,
+    transform: 'translateX(0px)',
+  });
+
+  const triggerSlideChange = useCallback((nextIndex: number) => {
+    if (nextIndex === currentSlide) return;
+
+    // Bắt đầu hiệu ứng trượt ra (biến mất sang trái)
+    setAnimationStyle({
+      opacity: 0,
+      transform: 'translateX(-40px)',
+    });
+
+    // Đợi hiệu ứng kết thúc rồi mới đổi nội dung
+    setTimeout(() => {
+      setCurrentSlide(nextIndex);
+      // Đặt sẵn nội dung mới ở bên phải (vẫn đang ẩn)
+      setAnimationStyle({
+        opacity: 0,
+        transform: 'translateX(40px)',
+      });
+
+      // Dùng một timeout nhỏ để đảm bảo trình duyệt đã render xong trạng thái trên
+      setTimeout(() => {
+        // Bắt đầu hiệu ứng trượt vào (xuất hiện từ phải sang)
+        setAnimationStyle({
+          opacity: 1,
+          transform: 'translateX(0px)',
+        });
+      }, 20);
+    }, 400); // khớp với transition duration
+  }, [currentSlide]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const nextIndex = (currentSlide + 1) % gallerySlides.length;
+      triggerSlideChange(nextIndex);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [currentSlide, triggerSlideChange]);
+
+  const slide = gallerySlides[currentSlide];
 
   return (
     <>
       <CssBaseline />
-
-      {/* Khung trung tâm: chống “trôi” sang phải */}
       <Box
         sx={{
           minHeight: '100vh',
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: 'minmax(0,1fr) 420px' },
+          gridTemplateColumns: { xs: '1fr', lg: 'minmax(0,1fr) 420px' },
           alignItems: 'center',
-          // Khống chế bề rộng & căn giữa toàn bộ grid
           width: 'min(1400px, 100%)',
           mx: 'auto',
-          // Padding hai bên để hero không dính sát lề
-          px: { xs: 2.5, md: 6, lg: 8 },
-          columnGap: { md: 6, lg: 8 },
+          px: { xs: 2.5, lg: 6 },
+          columnGap: { lg: 6 },
         }}
       >
-        {/* HERO LEFT */}
-        <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-          <Box sx={{ maxWidth: 720 }}>
-            <Typography
-              variant="overline"
-              sx={{ letterSpacing: 0.6, opacity: 0.7, fontWeight: 700 }}
-            >
-              THẤU HIỂU DỮ LIỆU · CHINH PHỤC THỊ TRƯỜNG
-            </Typography>
-
-            <Typography
-              component="h1"
-              sx={{ fontSize: { md: 46 }, fontWeight: 800, lineHeight: 1.15, mt: 0.5 }}
-            >
-              Insight đầu tư theo<br />ngành
-            </Typography>
-
-            <Typography sx={{ mt: 1.2, mb: 2.5, maxWidth: 560, opacity: 0.78 }}>
-              Thông qua hệ thống các chỉ báo chuyên sâu, Findicator mang đến góc nhìn của những
-              chuyên gia đầu ngành, giúp nhà đầu tư có thể tìm kiếm các cơ hội và ý tưởng đầu tư
-              chất lượng.
-            </Typography>
-
-            {/* Khung “chart” giả */}
+        <Box sx={{ display: { xs: 'none', lg: 'block' }, maxWidth: layoutTokens.authGalleryMaxWidth, position: 'relative' }}>
+          <Box
+            sx={{
+              transition: 'opacity 500ms ease-in-out, transform 500ms ease-in-out',
+              ...animationStyle,
+            }}
+          >
+            <Box sx={{ ml: 1 }}>
+              <Typography
+                variant="overline"
+                sx={{ fontWeight: 'bold', opacity: 0.7 }}
+              >
+                {slide.overline}
+              </Typography>
+              <Typography
+                variant="h1"
+                sx={(theme) => ({
+                  mb: 1,
+                  background: theme.palette.mode === 'dark'
+                    ? 'linear-gradient(135deg, #FFFFFF 0%, #E0E7FF 25%, #C4B5FD 50%, #A78BFA 75%, #8B5CF6 100%)'
+                    : 'linear-gradient(135deg, #1F2937 0%, #4C1D95 25%, #6B46C1 50%, #7C3AED 75%, #8B5CF6 100%)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  color: 'transparent',
+                  WebkitTextFillColor: 'transparent',
+                  fontWeight: 700,
+                  letterSpacing: '-0.02em',
+                  textShadow: theme.palette.mode === 'dark'
+                    ? '0 2px 8px rgba(139, 92, 246, 0.3)'
+                    : '0 2px 8px rgba(107, 70, 193, 0.2)',
+                })}
+              >
+                {slide.headline}
+              </Typography>
+              <Typography variant="body2" sx={{ minHeight: '3.75rem' }}>
+                {slide.description}
+              </Typography>
+            </Box>
             <Box
               sx={{
                 position: 'relative',
-                width: { md: 560 },
-                height: { md: 320 },
+                width: { md: '100%' },
+                height: { md: layoutTokens.authGalleryHeight },
                 borderRadius: 2,
-                background:
-                  'linear-gradient(180deg, rgba(10,8,20,0.86) 0%, rgba(12,10,28,0.92) 100%)',
+                background: 'linear-gradient(180deg, rgba(10,8,20,0.86) 0%, rgba(12,10,28,0.92) 100%)',
                 border: '1px solid rgba(255,255,255,0.08)',
                 boxShadow: '0 20px 60px rgba(0,0,0,0.45)',
                 overflow: 'hidden',
@@ -348,60 +574,67 @@ export default function SignInPage() {
                     'radial-gradient(circle at 20% 60%, rgba(140,90,255,0.18), transparent 40%), radial-gradient(circle at 70% 30%, rgba(80,140,255,0.16), transparent 45%)',
                 }}
               />
-              <Box
-                sx={{
-                  position: 'absolute',
-                  right: 18,
-                  bottom: 18,
-                  bgcolor: 'rgba(120,100,200,0.18)',
-                  border: '1px solid rgba(255,255,255,0.22)',
-                  px: 1.25,
-                  py: 0.75,
-                  borderRadius: 1.5,
-                  backdropFilter: 'blur(6px)',
-                  fontSize: 12,
-                  lineHeight: 1.4,
-                }}
-              >
-                <div>Ngày 21-06-2024</div>
-                <div>Khối lượng OMO phát hành mới: ~ 3,900 tỷ đồng</div>
-                <div>Khối lượng OMO cỡ lớn: ~ 2,131 tỷ đồng</div>
-                <div>Khối lượng bơm (ròng) trong ngày: ~ 11,031 tỷ đồng</div>
-              </Box>
             </Box>
+          </Box>
 
-            {/* Dots */}
-            <Box sx={{ display: 'flex', gap: 1.2, mt: 2.5, pl: 0.5 }}>
-              {[0, 1, 2].map((i) => (
-                <Box
-                  key={i}
-                  sx={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: '50%',
-                    backgroundColor: i === 1 ? 'primary.main' : 'rgba(255,255,255,0.65)',
-                    opacity: i === 1 ? 1 : 0.6,
-                  }}
-                />
-              ))}
-            </Box>
+          {/* Các nút điều khiển được đặt bên ngoài để không bị ảnh hưởng bởi animation */}
+          <Box sx={{ display: 'flex', gap: 1.8, mt: 2, pl: 0.5 }}>
+            {gallerySlides.map((_, i) => (
+              <Box
+                key={i}
+                sx={(theme) => ({
+                  width: i === currentSlide ? layoutTokens.dotSize.large : layoutTokens.dotSize.small,
+                  height: layoutTokens.dotSize.small,
+                  borderRadius: 999,
+                  backgroundColor: i === currentSlide
+                    ? theme.palette.mode === 'dark'
+                      ? '#8C5AFF'
+                      : '#6B46C1'
+                    : theme.palette.mode === 'dark'
+                      ? 'rgba(140,90,255,0.6)'
+                      : 'rgba(80,60,140,0.3)',
+                  cursor: 'pointer',
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  position: 'relative',
+                  '&:hover': {
+                    backgroundColor: i === currentSlide
+                      ? theme.palette.mode === 'dark'
+                        ? '#9966FF'
+                        : '#7C3AED'
+                      : theme.palette.mode === 'dark'
+                        ? 'rgba(140,90,255,0.4)'
+                        : 'rgba(80,60,140,0.5)',
+                    transform: 'scale(1.1)',
+                  },
+                  '&::before': i === currentSlide ? {
+                    content: '""',
+                    position: 'absolute',
+                    inset: -3,
+                    borderRadius: 999,
+                    background: 'linear-gradient(45deg, rgba(140,90,255,0.4), rgba(124,58,237,0.3))',
+                    zIndex: -1,
+                    opacity: 0.7,
+                  } : {},
+                })}
+                onClick={() => triggerSlideChange(i)}
+              />
+            ))}
           </Box>
         </Box>
 
-        {/* AUTH RIGHT */}
+        {/* Cột phải giữ nguyên */}
         <Box
           sx={{
             display: 'flex',
-            justifyContent: { xs: 'center', md: 'flex-end' },
+            justifyContent: 'center',
             alignItems: 'center',
-            py: { xs: 6, md: 0 },
+            py: { xs: 6, lg: 0 },
           }}
         >
           <Box sx={{ position: 'fixed', top: 16, right: 16 }}>
             <ThemeToggleButton />
           </Box>
-
-          <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-end' }}>
+          <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
             {googleClientId ? (
               <GoogleOAuthProvider clientId={googleClientId}>
                 <SignInForm />

@@ -77,7 +77,10 @@ const ThemeToggleButton: React.FC<ThemeToggleButtonProps> = ({ variant = 'icon' 
           }
         }}
       >
-        <ListItemIcon sx={{ minWidth: 32, color: 'inherit' }}>
+        <ListItemIcon sx={{
+          minWidth: 32,
+          color: isCurrentlyDark ? 'text.primary' : 'text.secondary'
+        }}>
           <SunMoonIcon isDark={isCurrentlyDark} />
         </ListItemIcon>
         <ListItemText
@@ -91,7 +94,13 @@ const ThemeToggleButton: React.FC<ThemeToggleButtonProps> = ({ variant = 'icon' 
   // Dạng chỉ có icon (mặc định)
   return (
     <Tooltip title={tooltipText}>
-      <IconButton onClick={handleThemeChange} color="inherit" sx={{ mr: 1 }}>
+      <IconButton
+        onClick={handleThemeChange}
+        sx={{
+          mr: 1,
+          color: isCurrentlyDark ? 'text.primary' : 'text.secondary'
+        }}
+      >
         <SunMoonIcon isDark={isCurrentlyDark} />
       </IconButton>
     </Tooltip>

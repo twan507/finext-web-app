@@ -1,8 +1,10 @@
 /* A clone from joshwcomeau.com but this version runs on pure CSS, adapted for React */
 
 .themeToggle {
-  color: #bbb;
-  width: 24px; /* Giảm kích thước để vừa với IconButton */
+  color: currentColor;
+  /* Sử dụng currentColor để nhận màu từ parent */
+  width: 24px;
+  /* Giảm kích thước để vừa với IconButton */
   height: 24px;
   display: flex;
   align-items: center;
@@ -36,7 +38,7 @@
   transform: scale(0);
 }
 
-.sunMoonContainer svg mask > circle {
+.sunMoonContainer svg mask>circle {
   transition: transform 0.64s cubic-bezier(0.41, 0.64, 0.32, 1.575);
   transform: translate(0px, 0px);
 }
@@ -44,15 +46,19 @@
 .sunMoonContainer .sunRay2 {
   animation-delay: 0.05s !important;
 }
+
 .sunMoonContainer .sunRay3 {
   animation-delay: 0.1s !important;
 }
+
 .sunMoonContainer .sunRay4 {
   animation-delay: 0.17s !important;
 }
+
 .sunMoonContainer .sunRay5 {
   animation-delay: 0.25s !important;
 }
+
 .sunMoonContainer .sunRay6 {
   animation-delay: 0.29s !important;
 }
@@ -61,12 +67,15 @@
 .isDark svg {
   transform: rotate(90deg);
 }
-.isDark svg mask > circle {
+
+.isDark svg mask>circle {
   transform: translate(16px, -3px);
 }
+
 .isDark svg .sunMoon {
   transform: scale(0.55);
 }
+
 .isDark svg .sunRay {
   animation: showRay1832 0.4s ease 0s 1 forwards;
 }
@@ -75,6 +84,7 @@
   0% {
     transform: scale(0);
   }
+
   100% {
     transform: scale(1);
   }

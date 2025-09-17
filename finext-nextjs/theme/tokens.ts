@@ -30,9 +30,9 @@ export const colorTokens = {
     white: '#fafbfc', // Xám rất nhẹ thay vì trắng tinh
   },
   primary: {
-    main: '#1565c0',
-    light: '#5e92f3',
-    dark: '#003c8f',
+    main: '#7c3aed',
+    light: '#a78bfa',
+    dark: '#5b21b6',
     contrastText: '#fafbfc', // Xám rất nhẹ
   },
   secondary: {
@@ -104,18 +104,18 @@ export const colorTokens = {
     }, tableHead: {
       background: '#fafafa',
       text: 'rgba(0, 0, 0, 0.95)',
-      sortActive: '#1565c0', // Primary color for active sort
-      sortHover: '#1565c0',  // Primary color for hover
+      sortActive: '#7c3aed', // Purple color for active sort
+      sortHover: '#7c3aed',  // Purple color for hover
       sortIcon: 'rgba(0, 0, 0, 0.65)',
     },
     tableRow: {
       background: '#fafbfc', // Xám rất nhẹ thay vì trắng
       hover: '#f2f3f4',
-      selected: '#e3f2fd',
+      selected: '#f3e8ff', // Light purple background for selected state
     },
     chip: {
-      successBackground: '#e3f2fd', // Light blue background for success chip
-      successColor: '#1565c0',      // Darker blue for success chip text
+      successBackground: '#f3e8ff', // Light purple background for success chip
+      successColor: '#7c3aed',      // Purple for success chip text
       defaultBackground: '#f5f5f5',
       defaultColor: '#333333',
     },
@@ -136,18 +136,18 @@ export const colorTokens = {
     }, tableHead: {
       background: '#1a1a1a',
       text: '#f0f0f0', // Xám nhẹ thay vì trắng tinh
-      sortActive: '#90caf9', // Light blue for active sort in dark mode
-      sortHover: '#90caf9',  // Light blue for hover in dark mode
+      sortActive: '#c4b5fd', // Lighter purple for active sort in dark mode
+      sortHover: '#c4b5fd',  // Lighter purple for hover in dark mode
       sortIcon: 'rgba(255, 255, 255, 0.7)',
     },
     tableRow: {
       background: '#1e1e1e',
       hover: '#313131',
-      selected: '#1976d2',
+      selected: '#4c1d95', // Dark purple for selected state - matching chip background
     },
     chip: {
-      successBackground: '#003768', // Example for dark mode success chip
-      successColor: '#90caf9',      // Example for dark mode success chip text
+      successBackground: '#4c1d95', // Dark purple for dark mode success chip
+      successColor: '#c4b5fd',      // Lighter purple for dark mode success chip text
       defaultBackground: '#303030',
       defaultColor: '#bdbdbd',
     },
@@ -164,9 +164,9 @@ export const colorTokens = {
 export const lightThemePalette: PaletteOptions = {
   mode: 'light',
   primary: {
-    main: '#1565c0',
-    light: '#5e92f3',
-    dark: '#003c8f',
+    main: '#7c3aed',
+    light: '#a78bfa',
+    dark: '#5b21b6',
     contrastText: '#fafbfc', // Xám rất nhẹ thay vì trắng
   },
   secondary: colorTokens.secondary,
@@ -190,9 +190,9 @@ export const lightThemePalette: PaletteOptions = {
 export const darkThemePalette: PaletteOptions = {
   mode: 'dark',
   primary: {
-    main: '#90caf9',
-    light: '#e3f2fd',
-    dark: '#42a5f5',
+    main: '#c4b5fd',
+    light: '#ddd6fe',
+    dark: '#a78bfa',
     contrastText: 'rgba(0, 0, 0, 0.87)',
   },
   secondary: {
@@ -235,17 +235,17 @@ const baseFontSizes = {
   h6: { xs: '1rem', sm: '1.1rem', md: '1.25rem' },
 
   // Content text
-  subtitle1: { xs: '0.8125rem', sm: '0.875rem' },
-  subtitle2: { xs: '0.75rem', sm: '0.8125rem' },
-  body1: { xs: '0.75rem', sm: '0.8125rem' }, // Cỡ chữ chính
-  body2: { xs: '0.6875rem', sm: '0.75rem' }, // Cỡ chữ phụ
-  button: { xs: '0.6875rem', sm: '0.8125rem' },
-  caption: { xs: '0.625rem', sm: '0.6875rem' }, // Cỡ chữ nhỏ nhất
-  overline: { xs: '0.625rem', sm: '0.6875rem' },
+  subtitle1: { xs: '0.8125rem', sm: '0.875rem', md: '0.9375rem' },
+  subtitle2: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' },
+  body1: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' }, // Cỡ chữ chính
+  body2: { xs: '0.6875rem', sm: '0.75rem', md: '0.8125rem' }, // Cỡ chữ phụ
+  button: { xs: '0.6875rem', sm: '0.8125rem', md: '0.875rem' },
+  caption: { xs: '0.625rem', sm: '0.6875rem', md: '0.75rem' }, // Cỡ chữ nhỏ nhất
+  overline: { xs: '0.625rem', sm: '0.6875rem', md: '0.75rem' },
 
   // Custom variants
-  tableCell: { xs: '0.6875rem', sm: '0.8125rem' },
-  tableCellSmall: { xs: '0.625rem', sm: '0.6875rem' },
+  tableCell: { xs: '0.6875rem', sm: '0.8125rem', md: '0.875rem' },
+  tableCellSmall: { xs: '0.625rem', sm: '0.6875rem', md: '0.75rem' },
 
   // Enhanced responsive variants
   h4Enhanced: { xs: '1.5rem', sm: '2rem', md: '2.125rem' }, // Cho page headers
@@ -311,6 +311,20 @@ export const responsiveTypographyTokens = {
 };
 
 // --------------------
+// ICON SIZE TOKENS
+// --------------------
+export const iconSizeTokens = {
+  small: 16,
+  medium: 20,
+  large: 24,
+  // Special cases
+  googleIcon: 18,
+  progressSmall: 20,
+  progressMedium: 22,
+  brandImage: 26,
+};
+
+// --------------------
 // SPACING TOKEN
 // --------------------
 export const spacingTokens = {
@@ -345,4 +359,14 @@ export const layoutTokens = {
   compactDrawerWidth: 64, // Chiều rộng drawer mới (chỉ icon, tương đương w-16)
   appBarHeight: 64, // Chiều cao AppBar tiêu chuẩn
   toolbarMinHeight: 56, // Chiều cao tối thiểu của Toolbar
+  // Form and auth layout
+  authFormMaxWidth: 380, // Max width cho form đăng nhập/đăng ký
+  authGalleryMaxWidth: 720, // Max width cho gallery section
+  authGalleryHeight: 320, // Height cho gallery image
+  buttonHeight: 44, // Standard button height
+  // Indicator dots
+  dotSize: {
+    small: 8,
+    large: 20,
+  },
 };

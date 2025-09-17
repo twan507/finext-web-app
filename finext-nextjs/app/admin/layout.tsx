@@ -41,6 +41,7 @@ import {
 
 import UserMenu from './components/UserMenu';
 import ThemeToggleButton from 'components/ThemeToggleButton';
+import BrandLogo from 'components/BrandLogo';
 import { layoutTokens, responsiveTypographyTokens } from '../../theme/tokens';
 
 interface NavItem {
@@ -136,35 +137,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </Box>
     );
   }
-
-  const BrandLogo = () => (
-    <Link
-      href="/admin/dashboard"
-      style={{
-        textDecoration: 'none',
-        color: 'inherit',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-      }}
-    >
-      <Image
-        src="/finext-icon-trans.png"
-        alt="Finext Logo"
-        width={28}
-        height={28}
-        style={{ display: 'block' }} // tránh lệch baseline
-      />
-      <Typography
-        variant="logo"
-        sx={{
-          letterSpacing: 0.5,
-        }}
-      >
-        Finext
-      </Typography>
-    </Link>
-  );
 
   const drawerLinkStyles = (
     isActive: boolean,
@@ -491,7 +463,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             )}
 
             {/* Comment out Breadcrumbs và thay bằng Logo */}
-            <BrandLogo />
+            <BrandLogo href="/" />
             {/* {generateBreadcrumbs()} */}
           </Box>
 
