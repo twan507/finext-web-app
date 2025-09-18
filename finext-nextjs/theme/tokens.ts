@@ -175,8 +175,8 @@ export const lightThemePalette: PaletteOptions = {
   info: colorTokens.info,
   success: colorTokens.success,
   background: {
-    default: '#f5f5f5',
-    paper: '#fafbfc', // Xám rất nhẹ thay vì trắng
+    default: '#fafbfc',// Xám rất nhẹ thay vì trắng
+    paper: '#f5f5f5', 
   },
   text: {
     primary: 'rgba(0, 0, 0, 0.95)',

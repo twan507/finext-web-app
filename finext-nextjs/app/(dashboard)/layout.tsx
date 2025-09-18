@@ -499,7 +499,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </Box>
 
       {/* MAIN */}
-      <Box component="main" sx={{ flexGrow: 1, p: 3, width: { lg: `calc(100% - ${drawerWidth}px)` }, height: '100vh', mt: `${layoutTokens.appBarHeight}px`, maxHeight: `calc(100vh - ${layoutTokens.appBarHeight}px)`, overflowY: 'auto', bgcolor: theme.palette.mode === 'light' ? alpha(theme.palette.grey[500], 0.04) : theme.palette.background.default }}>
+      <Box component="main" sx={{ flexGrow: 1, width: { lg: `calc(100% - ${drawerWidth}px)` }, height: '100vh', mt: `${layoutTokens.appBarHeight}px`, maxHeight: `calc(100vh - ${layoutTokens.appBarHeight}px)`, overflowY: 'auto', bgcolor: theme.palette.mode === 'light' ? alpha(theme.palette.grey[500], 0.04) : theme.palette.background.default }}>
         {children}
       </Box>
     </Box>

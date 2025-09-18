@@ -385,6 +385,7 @@ export default function SignInForm() {
                         onClick={handleClickShowPassword}
                         onMouseDown={handleMouseDownPassword}
                         disabled={loading || googleLoading || !!successMessage}
+                        tabIndex={-1}
                         sx={{
                             position: 'absolute',
                             right: 6,
@@ -397,15 +398,17 @@ export default function SignInForm() {
                             zIndex: 1,
                         }}
                     >
-                        {showPassword ? <Visibility fontSize='small' /> : <VisibilityOff fontSize='small' />}
+                        {showPassword ?
+                            <Visibility fontSize='small' sx={(theme) => ({ color: theme.palette.text.secondary })} /> :
+                            <VisibilityOff fontSize='small' sx={(theme) => ({ color: theme.palette.text.secondary })} />}
                     </IconButton>
                 </Box>
 
                 <Box
                     sx={{ mt: 0.5, mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                 >
-                    <FormControlLabel control={<Checkbox size="small" />} label="Duy trì đăng nhập" />
-                    <Link href="/forgot-password" underline="hover" sx={{ fontSize: responsiveTypographyTokens.body2.fontSize.md, mt: 0.6 }}>
+                    <FormControlLabel control={<Checkbox size="small" tabIndex={-1} />} label="Duy trì đăng nhập" />
+                    <Link href="/forgot-password" underline="hover" tabIndex={-1} sx={{ fontSize: responsiveTypographyTokens.body2.fontSize.md, mt: 0.6 }}>
                         Quên mật khẩu?
                     </Link>
                 </Box>
@@ -443,7 +446,7 @@ export default function SignInForm() {
 
 
                 <Typography variant="body2" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
-                    Bạn chưa có tài khoản? <Link href="/register">Đăng ký</Link>
+                    Bạn chưa có tài khoản? <Link href="/register" tabIndex={-1}>Đăng ký</Link>
                 </Typography>
             </Box>
         </Box>

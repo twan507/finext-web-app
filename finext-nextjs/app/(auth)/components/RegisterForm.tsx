@@ -396,13 +396,14 @@ export default function RegisterForm() {
                         onChange={(e) => setPassword(e.target.value)}
                         disabled={loading || googleLoading || !!successMessage}
                         size="small"
-                        // helperText="Tối thiểu 8 ký tự"
+                    // helperText="Tối thiểu 8 ký tự"
                     />
                     <IconButton
                         aria-label="toggle password visibility"
                         onClick={handleClickShowPassword}
                         onMouseDown={handleMouseDownPassword}
                         disabled={loading || googleLoading || !!successMessage}
+                        tabIndex={-1}
                         sx={{
                             position: 'absolute',
                             right: 6,
@@ -452,6 +453,7 @@ export default function RegisterForm() {
                         onClick={handleClickShowConfirmPassword}
                         onMouseDown={handleMouseDownPassword}
                         disabled={loading || googleLoading || !!successMessage}
+                        tabIndex={-1}
                         sx={{
                             position: 'absolute',
                             right: 6,
@@ -467,7 +469,6 @@ export default function RegisterForm() {
                             <Visibility
                                 fontSize='small'
                                 sx={(theme) => ({
-                                    fontWeight: 400,
                                     color: theme.palette.text.secondary
                                 })}
                             />
@@ -475,7 +476,6 @@ export default function RegisterForm() {
                             <VisibilityOff
                                 fontSize='small'
                                 sx={(theme) => ({
-                                    fontWeight: 400,
                                     color: theme.palette.text.secondary
                                 })}
                             />
@@ -502,11 +502,12 @@ export default function RegisterForm() {
                             checked={agreeTerms}
                             onChange={(e) => setAgreeTerms(e.target.checked)}
                             disabled={loading || googleLoading || !!successMessage}
+                            tabIndex={-1}
                         />
                     }
                     label={
-                        <Typography variant="body2" sx={{mt: 0.5}}>
-                            Tôi đã đọc và đồng ý với <Link href="/terms" underline="hover">Điều khoản sử dụng</Link> <br></br> và <Link href="/privacy" underline="hover">Chính sách bảo mật</Link>
+                        <Typography variant="body2" sx={{ mt: 0.5 }}>
+                            Tôi đã đọc và đồng ý với <Link href="/terms" underline="hover" tabIndex={-1}>Điều khoản sử dụng</Link> <br></br> và <Link href="/privacy" underline="hover" tabIndex={-1}>Chính sách bảo mật</Link>
                         </Typography>
                     }
                     sx={{ mt: 2, mb: 2, alignItems: 'flex-start' }}
@@ -542,7 +543,7 @@ export default function RegisterForm() {
                 )}
 
                 <Typography variant="body2" sx={{ display: 'block', textAlign: 'center', mt: 2 }}>
-                    Đã có tài khoản? <Link href="/login">Đăng nhập</Link>
+                    Đã có tài khoản? <Link href="/login" tabIndex={-1}>Đăng nhập</Link>
                 </Typography>
             </Box>
         </Box>

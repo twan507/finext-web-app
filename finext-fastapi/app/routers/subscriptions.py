@@ -97,21 +97,38 @@ async def activate_subscription_endpoint(
     "/{subscription_id}",
     response_model=StandardApiResponse[SubscriptionPublic],
     summary="Lấy chi tiết subscription theo ID",
-    dependencies=[Depends(require_permission("subscription", "read_any"))],
     tags=["subscriptions"],
 )
 @api_response_wrapper(default_success_message="Lấy thông tin subscription thành công.")
 async def read_subscription_by_id(  # Đổi tên hàm nếu bị trùng
     subscription_id: PyObjectId,
+    current_user: UserInDB = Depends(get_current_active_user),
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
-    # current_user: UserInDB = Depends(get_current_active_user), # Bỏ nếu không dùng trực tiếp current_user
 ):
+    # Lấy thông tin subscription từ database
     sub = await crud_subscriptions.get_subscription_by_id_db(db, subscription_id)
     if sub is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Subscription với ID {subscription_id} không tìm thấy.",
         )
+
+    # Kiểm tra permissions - lấy permissions của user hiện tại
+    from app.auth.access import _get_user_permissions
+
+    user_permissions = await _get_user_permissions(db, str(current_user.id))
+
+    # Kiểm tra quyền truy cập
+    has_read_any = "subscription:read_any" in user_permissions
+    has_read_own = "subscription:read_own" in user_permissions
+    is_owner = str(sub.user_id) == str(current_user.id)
+
+    if not has_read_any and not (has_read_own and is_owner):
+        if has_read_own and not is_owner:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Bạn chỉ có thể xem subscription của chính mình.")
+        else:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Bạn không có quyền truy cập thông tin subscription này.")
+
     return SubscriptionPublic.model_validate(sub)
 
 

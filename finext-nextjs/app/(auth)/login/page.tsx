@@ -3,7 +3,7 @@
 import React from 'react';
 import Box from '@mui/material/Box';
 
-import SignInForm from '../components/SignInForm';
+import SignInForm from '../components/LoginForm';
 
 export default function SignInPage() {
   return (

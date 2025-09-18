@@ -6,7 +6,7 @@ import { useAuth } from 'components/AuthProvider';
 // MUI
 import Dialog from '@mui/material/Dialog';
 
-import SignInForm from './SignInForm';
+import SignInForm from './LoginForm';
 
 interface SignInModalProps {
     open: boolean;

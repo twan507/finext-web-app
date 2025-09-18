@@ -97,6 +97,12 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
         "category": "others",
     },
     {
+        "name": "license:read",
+        "description": "Quyền xem thông tin licenses.",
+        "roles": ["admin", "manager", "user"],
+        "category": "others",
+    },
+    {
         "name": "license:manage",
         "description": "Quyền quản lý (CRUD) các licenses.",
         "roles": ["admin", "manager"],

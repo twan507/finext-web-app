@@ -5,6 +5,8 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.database import get_database
 from app.schemas.licenses import LicenseCreate, LicensePublic, LicenseUpdate  # Thêm LicenseInDB
+from app.schemas.users import UserInDB  # Thêm import này
+from app.auth.dependencies import get_current_active_user  # Thêm import này
 
 # <<<< PHẦN CẬP NHẬT IMPORT >>>>
 from app.schemas.common import PaginatedResponse  # Import schema phân trang
@@ -86,15 +88,23 @@ async def read_all_licenses(
 @router.get(
     "/{license_id}",
     response_model=StandardApiResponse[LicensePublic],
-    summary="[Admin] Lấy thông tin chi tiết một license theo ID",
-    dependencies=[Depends(require_permission("license", "manage"))],
+    summary="Lấy thông tin chi tiết một license theo ID",
     tags=["licenses"],
 )
 @api_response_wrapper(default_success_message="Lấy thông tin license thành công.")
 async def read_license_by_id_endpoint(
     license_id: PyObjectId,
+    current_user: UserInDB = Depends(get_current_active_user),
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
+    # Kiểm tra permissions - cần có license:read hoặc license:manage
+    from app.auth.access import _get_user_permissions
+
+    user_permissions = await _get_user_permissions(db, str(current_user.id))
+
+    if not ("license:read" in user_permissions or "license:manage" in user_permissions):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Bạn không có quyền truy cập thông tin license này.")
+
     license_obj = await crud_licenses.get_license_by_id(db, license_id=license_id)
     if license_obj is None:
         raise HTTPException(
