@@ -1,6 +1,14 @@
 'use client';
 import React from 'react';
 
+// Import MUI Icons
+import PsychologyIcon from '@mui/icons-material/Psychology';
+import BoltIcon from '@mui/icons-material/Bolt';
+import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
+import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
+import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
+import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
+
 const FadeInWrapper = ({ children }: { children: React.ReactNode }) => {
   const ref = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
@@ -18,11 +26,11 @@ const FadeInWrapper = ({ children }: { children: React.ReactNode }) => {
   return <div ref={ref} className="fade-in">{children}</div>;
 };
 
-const FeatureCard = ({ icon, title, description, children, customClass }: { icon: string; title: string; description: string; children?: React.ReactNode, customClass?: string }) => (
+const FeatureCard = ({ icon, title, description, children }: { icon: React.ReactNode; title: string; description: string; children?: React.ReactNode }) => (
   <FadeInWrapper>
-    <div className={`feature-item-card card-hover ${customClass || ''}`}>
+    <div className="feature-item-card card-hover">
       <div className="card-icon-area">
-        <i className={icon}></i>
+        {icon}
       </div>
       <h3 className="card-main-title">{title}</h3>
       <p className="card-description-text">{description}</p>
@@ -47,7 +55,7 @@ const FeaturesSection = () => {
         </FadeInWrapper>
         <div className="features-grid-layout">
           <FeatureCard
-            icon="fas fa-brain"
+            icon={<PsychologyIcon />}
             title="AI Forecasting"
             description="Proprietary machine learning models predict price movements with 87.4% accuracy. Our multi-modal AI approach combines technical indicators, fundamental analysis, sentiment scoring, and macroeconomic data to generate highly reliable forecasts."
           >
@@ -63,7 +71,7 @@ const FeaturesSection = () => {
           </FeatureCard>
 
           <FeatureCard
-            icon="fas fa-bolt"
+            icon={<BoltIcon />}
             title="Real-Time Analytics"
             description="Our ultra-low latency platform delivers market updates with sub-millisecond precision across 64 global exchanges. Real-time portfolio stress testing alerts you to potential risks before they impact your investments."
           >
@@ -80,7 +88,7 @@ const FeaturesSection = () => {
           </FeatureCard>
 
           <FeatureCard
-            icon="fas fa-project-diagram" // Original was chart-network, project-diagram is more common for connections
+            icon={<AccountTreeOutlinedIcon />}
             title="Market Correlation"
             description="Our platform uncovers hidden relationships between assets to optimize your portfolio strategy. Finext's correlation matrix tracks over 50,000 asset pairs across multiple asset classes, detecting emerging relationships before they become mainstream knowledge."
           >
@@ -94,14 +102,14 @@ const FeaturesSection = () => {
                 <div className="correlation-asset-pair">GOLD/BTC</div>
               </div>
               <div className="correlation-item-block">
-                <div className="correlation-value neutral">0.42</div> {/* Assuming neutral is yellow from vars */}
+                <div className="correlation-value neutral">0.42</div>
                 <div className="correlation-asset-pair">TSLA/NVDA</div>
               </div>
             </div>
           </FeatureCard>
 
           <FeatureCard
-            icon="fas fa-shield-alt"
+            icon={<SecurityOutlinedIcon />}
             title="Risk Management"
             description="Advanced scenario modeling simulates market shocks to quantify potential portfolio impacts. Our conditional stop-loss algorithm dynamically adjusts to market volatility to better protect your assets during turbulent periods."
           >
@@ -117,7 +125,7 @@ const FeaturesSection = () => {
           </FeatureCard>
 
           <FeatureCard
-            icon="fas fa-robot"
+            icon={<SmartToyOutlinedIcon />}
             title="Automated Trading"
             description="Finext's strategy builder requires no coding skills while offering the flexibility for sophisticated algorithmic implementations. Our cloud-based backtesting engine can simulate 10 years of market history in under 30 seconds for accurate strategy validation."
           >
@@ -134,7 +142,7 @@ const FeaturesSection = () => {
           </FeatureCard>
 
           <FeatureCard
-            icon="fas fa-graduation-cap"
+            icon={<SchoolOutlinedIcon />}
             title="Educational Resources"
             description="Our comprehensive learning center features daily live webinars, interactive tutorials, and real-time market analysis. Case studies deconstruct successful trades while strategy guides translate complex market concepts into actionable insights."
           >

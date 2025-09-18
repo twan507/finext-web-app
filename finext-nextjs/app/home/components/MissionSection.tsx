@@ -1,10 +1,12 @@
 'use client';
 import React from 'react';
 
+// Import MUI Icons
+import LockOpenIcon from '@mui/icons-material/LockOpen';
+import PsychologyIcon from '@mui/icons-material/Psychology';
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
+
 const FadeInWrapper = ({ children }: { children: React.ReactNode }) => {
-  // Giả sử FadeInWrapper được định nghĩa ở đâu đó hoặc bạn copy từ AIDashboardSection.tsx
-  // Hoặc, nếu toàn bộ section fade-in một lần, bọc ngoài cùng.
-  // "use client"; // Chỉ cần nếu FadeInWrapper là client component và được định nghĩa ở đây.
   const ref = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     const element = ref.current;
@@ -24,9 +26,9 @@ const FadeInWrapper = ({ children }: { children: React.ReactNode }) => {
 
 const MissionSection = () => {
   const missions = [
-    { icon: "fas fa-unlock-alt", title: "Accessible Intelligence", text: "We transform complex financial data into actionable insights accessible to investors at all levels, without requiring financial expertise." },
-    { icon: "fas fa-brain", title: "AI Innovation", text: "Our continuous research and development push the boundaries of what's possible in predictive market analysis and portfolio optimization." },
-    { icon: "fas fa-hand-holding-heart", title: "Ethical Approach", text: "We maintain transparency in our algorithms and uphold the highest ethical standards in financial technology development." }
+    { icon: <LockOpenIcon />, title: "Accessible Intelligence", text: "We transform complex financial data into actionable insights accessible to investors at all levels, without requiring financial expertise." },
+    { icon: <PsychologyIcon />, title: "AI Innovation", text: "Our continuous research and development push the boundaries of what's possible in predictive market analysis and portfolio optimization." },
+    { icon: <FavoriteBorderIcon />, title: "Ethical Approach", text: "We maintain transparency in our algorithms and uphold the highest ethical standards in financial technology development." }
   ];
 
   return (
@@ -48,7 +50,7 @@ const MissionSection = () => {
             <FadeInWrapper key={index}>
                 <div className="mission-card-item card-hover">
                     <div className="card-icon">
-                        <i className={mission.icon}></i>
+                        {mission.icon}
                     </div>
                     <h3 className="card-title">{mission.title}</h3>
                     <p className="card-text">{mission.text}</p>

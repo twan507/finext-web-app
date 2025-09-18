@@ -1,11 +1,10 @@
 'use client';
 import React from 'react';
 import HeroChart from './HeroChart';
+import ShowChartIcon from '@mui/icons-material/ShowChart';
+import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 
 const HeroSection = () => {
-  // Logic for fade-in can be handled by a custom hook or a parent client component
-  // For simplicity, assuming CSS handles initial fade-in setup and a global script/hook handles 'visible' class
-
   return (
     <section className="gradient-bg">
       <div className="hero-section-container">
@@ -23,10 +22,10 @@ const HeroSection = () => {
             </p>
             <div className="hero-buttons-group">
               <button className="hero-button hero-button-primary btn-glow">
-                <i className="fas fa-chart-line"></i> Explore Platform
+                <ShowChartIcon sx={{ mr: 1 }} /> Explore Platform
               </button>
               <button className="hero-button hero-button-secondary">
-                <i className="fas fa-play-circle"></i> Watch Demo
+                <PlayCircleOutlineIcon sx={{ mr: 1 }} /> Watch Demo
               </button>
             </div>
           </div>
