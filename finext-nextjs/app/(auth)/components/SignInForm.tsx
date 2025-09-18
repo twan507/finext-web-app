@@ -17,11 +17,11 @@ import Link from '@mui/material/Link';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
-import Visibility from '@mui/icons-material/Visibility';
-import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import Visibility from '@mui/icons-material/VisibilityOutlined';
+import VisibilityOff from '@mui/icons-material/VisibilityOffOutlined';
 
-// Google OAuth
-import { useGoogleLogin } from '@react-oauth/google';
+// Google OAuth - Import thêm GoogleOAuthProvider
+import { useGoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 
 import BrandLogo from 'components/BrandLogo';
 import { LoginResponse, UserSchema } from 'services/core/types';
@@ -33,6 +33,7 @@ interface UserInfoFromAuth extends UserSchema { }
 function GoogleColoredIcon({ size = iconSizeTokens.medium }: { size?: number }) {
     return (
         <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
+            {/* SVG paths... */}
             <path
                 fill="#FFC107"
                 d="M43.611 20.083H42V20H24v8h11.303c-1.651 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.957 3.043l5.657-5.657C33.64 6.053 29.062 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.651-.389-3.917z"
@@ -65,6 +66,7 @@ function GoogleButton({
     loading?: boolean;
     fullWidth?: boolean;
 }) {
+    // ... (Giữ nguyên không đổi)
     return (
         <Button
             onClick={onClick}
@@ -114,6 +116,48 @@ function GoogleButton({
     );
 }
 
+// Component con để sử dụng hook useGoogleLogin (cần nằm trong Provider)
+function GoogleLoginComponent({
+    setGoogleLoading,
+    setError,
+    disabled,
+    loading
+}: {
+    setGoogleLoading: (loading: boolean) => void;
+    setError: (error: string | null) => void;
+    disabled?: boolean;
+    loading?: boolean;
+}) {
+    const frontendGoogleRedirectUri =
+        typeof window !== 'undefined'
+            ? window.location.origin + '/auth/google/callback'
+            : 'http://localhost:3000/auth/google/callback';
+
+    const initiateGoogleLogin = useGoogleLogin({
+        flow: 'auth-code',
+        redirect_uri: frontendGoogleRedirectUri,
+        ux_mode: 'redirect',
+    });
+
+    return (
+        <GoogleButton
+            onClick={() => {
+                setGoogleLoading(true);
+                setError(null);
+                try {
+                    initiateGoogleLogin();
+                } catch (e: any) {
+                    setError(e.message || 'Không thể bắt đầu đăng nhập Google. Vui lòng thử lại.');
+                    setGoogleLoading(false);
+                }
+            }}
+            disabled={disabled}
+            loading={loading}
+        />
+    );
+}
+
+
 export default function SignInForm() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -126,6 +170,9 @@ export default function SignInForm() {
     const router = useRouter();
     const { login, session, loading: authLoading } = useAuth();
     const [mounted, setMounted] = useState(false);
+
+    // Lấy Client ID từ environment variables
+    const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
     const handleClickShowPassword = () => setShowPassword((show) => !show);
 
@@ -208,17 +255,6 @@ export default function SignInForm() {
         }
     };
 
-    const frontendGoogleRedirectUri =
-        typeof window !== 'undefined'
-            ? window.location.origin + '/auth/google/callback'
-            : 'http://localhost:3000/auth/google/callback';
-
-    const initiateGoogleLogin = useGoogleLogin({
-        flow: 'auth-code',
-        redirect_uri: frontendGoogleRedirectUri,
-        ux_mode: 'redirect',
-    });
-
     if (!mounted || authLoading || (!authLoading && session)) {
         return (
             <Box
@@ -236,29 +272,26 @@ export default function SignInForm() {
                 maxWidth: layoutTokens.authFormMaxWidth,
                 p: { xs: 2.5, md: 3 },
                 borderRadius: 3,
-                // Enhanced glassmorphism effect
+                // ... (Giữ nguyên các styles glassmorphism)
                 bgcolor: t.palette.mode === 'dark'
-                    ? 'rgba(15, 10, 35, 0.4)' // Darker, more transparent for dark mode
-                    : 'rgba(255, 255, 255, 0.05)', // Even more transparent for light mode
-                backdropFilter: 'blur(20px) saturate(150%)', // Stronger blur with saturation
-                WebkitBackdropFilter: 'blur(20px) saturate(150%)', // Safari support
-                // Enhanced shadow system
+                    ? 'rgba(15, 10, 35, 0.4)'
+                    : 'rgba(255, 255, 255, 0.05)',
+                backdropFilter: 'blur(20px) saturate(150%)',
+                WebkitBackdropFilter: 'blur(20px) saturate(150%)',
                 boxShadow: t.palette.mode === 'dark'
                     ? [
-                        '0 8px 32px rgba(0, 0, 0, 0.6)', // Primary shadow
-                        '0 2px 8px rgba(139, 92, 246, 0.1)', // Purple accent shadow
-                        'inset 0 1px 0 rgba(255, 255, 255, 0.1)', // Top highlight
+                        '0 8px 32px rgba(0, 0, 0, 0.6)',
+                        '0 2px 8px rgba(139, 92, 246, 0.1)',
+                        'inset 0 1px 0 rgba(255, 255, 255, 0.1)',
                     ].join(', ')
                     : [
-                        '0 8px 32px rgba(107, 70, 193, 0.15)', // Purple-tinted shadow for light mode
-                        '0 4px 16px rgba(0, 0, 0, 0.1)', // Subtle black shadow
-                        'inset 0 1px 0 rgba(255, 255, 255, 0.4)', // Stronger top highlight
+                        '0 8px 32px rgba(107, 70, 193, 0.15)',
+                        '0 4px 16px rgba(0, 0, 0, 0.1)',
+                        'inset 0 1px 0 rgba(255, 255, 255, 0.4)',
                     ].join(', '),
-                // Enhanced border system
                 border: t.palette.mode === 'dark'
-                    ? '1px solid rgba(255, 255, 255, 0.1)' // Subtle white border for dark mode
-                    : '1px solid rgba(107, 70, 193, 0.15)', // Purple-tinted border for light mode
-                // Add subtle gradient overlay
+                    ? '1px solid rgba(255, 255, 255, 0.1)'
+                    : '1px solid rgba(107, 70, 193, 0.15)',
                 position: 'relative',
                 overflow: 'hidden',
                 '&::before': {
@@ -276,7 +309,7 @@ export default function SignInForm() {
                 },
             })}
         >
-            {/* Brand Logo with theme-responsive color overlay */}
+            {/* ... (Giữ nguyên BrandLogo và Typography) */}
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1.5 }}>
                 <BrandLogo
                     href="/"
@@ -357,24 +390,14 @@ export default function SignInForm() {
                             right: 6,
                             top: '50%',
                             transform: 'translateY(-50%)',
-                            marginTop: '4px', // Điều chỉnh để căn giữa với input field
+                            marginTop: '4px',
                             p: 0.25,
                             minWidth: '24px',
                             height: '24px',
                             zIndex: 1,
-                            '&:hover': {
-                                backgroundColor: 'action.hover',
-                            },
-                            '& .MuiSvgIcon-root': {
-                                fontSize: responsiveTypographyTokens.body2.fontSize.sm,
-                                opacity: 0.6,
-                                '&:hover': {
-                                    opacity: 0.8,
-                                },
-                            },
                         }}
                     >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                        {showPassword ? <Visibility fontSize='small' /> : <VisibilityOff fontSize='small' />}
                     </IconButton>
                 </Box>
 
@@ -399,20 +422,25 @@ export default function SignInForm() {
 
                 <Divider sx={{ my: 1.5 }}>hoặc</Divider>
 
-                <GoogleButton
-                    onClick={() => {
-                        setGoogleLoading(true);
-                        setError(null);
-                        try {
-                            initiateGoogleLogin();
-                        } catch (e: any) {
-                            setError(e.message || 'Không thể bắt đầu đăng nhập Google. Vui lòng thử lại.');
-                            setGoogleLoading(false);
-                        }
-                    }}
-                    disabled={loading || googleLoading || !!successMessage}
-                    loading={googleLoading}
-                />
+                {/* Sửa đổi ở đây */}
+                {googleClientId ? (
+                    <GoogleOAuthProvider clientId={googleClientId}>
+                        <GoogleLoginComponent
+                            setGoogleLoading={setGoogleLoading}
+                            setError={setError}
+                            disabled={loading || googleLoading || !!successMessage}
+                            loading={googleLoading}
+                        />
+                    </GoogleOAuthProvider>
+                ) : (
+                    // Optional: Hiển thị một nút bị vô hiệu hóa hoặc thông báo nếu không có Client ID
+                    <GoogleButton
+                        onClick={() => { }}
+                        disabled={true}
+                        fullWidth={true}
+                    />
+                )}
+
 
                 <Typography variant="body2" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
                     Bạn chưa có tài khoản? <Link href="/register">Đăng ký</Link>
