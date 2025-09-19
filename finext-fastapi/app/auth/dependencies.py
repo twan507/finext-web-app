@@ -4,7 +4,7 @@ import logging
 from app.auth.jwt_handler import verify_token_and_get_payload
 from app.core.database import get_database
 from app.crud.users import get_user_by_id_db
-from app.crud.sessions import get_session_by_jti, update_last_active  # THÊM IMPORT
+from app.crud.sessions import get_session_by_access_jti, update_last_active_by_access_jti  # UPDATE IMPORTS
 from app.schemas.auth import TokenData
 from app.schemas.users import UserInDB
 from fastapi import Depends, HTTPException, status
@@ -29,11 +29,9 @@ async def verify_active_session(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    session = await get_session_by_jti(db, payload.jti)
+    session = await get_session_by_access_jti(db, payload.jti)
     if not session:
-        logger.warning(
-            f"Session check failed: JTI {payload.jti} not found in active sessions."
-        )
+        logger.warning(f"Session check failed: JTI {payload.jti} not found in active sessions.")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session not found or invalid",
@@ -41,7 +39,7 @@ async def verify_active_session(
         )
 
     # Cập nhật thời gian hoạt động cuối cùng của session
-    await update_last_active(db, payload.jti)
+    await update_last_active_by_access_jti(db, payload.jti)
 
     # Trả về payload nếu session hợp lệ
     return payload
@@ -56,23 +54,15 @@ async def get_current_active_user(
     Dependency để lấy người dùng hiện tại, ĐÃ bao gồm kiểm tra session.
     """
     if payload.user_id is None:
-        logger.warning(
-            "Attempt to get current active user with no user_id in token payload."
-        )
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid user ID in token"
-        )
+        logger.warning("Attempt to get current active user with no user_id in token payload.")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid user ID in token")
 
     user = await get_user_by_id_db(db, user_id=payload.user_id)
 
     if user is None:
         logger.warning(f"User with ID {payload.user_id} from token not found in DB.")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found from token"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found from token")
     if not user.is_active:
         logger.warning(f"User {user.email} (ID: {user.id}) is inactive.")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
     return user

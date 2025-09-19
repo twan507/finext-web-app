@@ -10,6 +10,7 @@ import { logoutApi } from 'services/authService';
 // UserSchema cũng cần được import nếu bạn dùng nó trực tiếp ở đây
 import { LoginResponse, UserSchema } from 'services/core/types';
 import { useNotification } from './NotificationProvider';
+import { formatErrorForUser, logError, isAuthError } from 'utils/errorHandler';
 
 
 interface AuthContextType {
@@ -59,60 +60,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(userResponse.message || featuresResponse.message || "Failed to fetch user/features data.");
       }
     } catch (error: any) {
-      // Xử lý các lỗi session hết hạn một cách thân thiện
-      if (error?.message?.includes('Session không tồn tại') ||
-        error?.message?.includes('session not found') ||
-        error?.message?.includes('Session không hoạt động')) {
-        console.info("Phiên đăng nhập đã hết hạn, đang làm mới...");
-        // Không hiển thị thông báo lỗi cho user ở đây, sẽ xử lý qua refresh token
-      } else {
-        console.error("Error fetching session data:", error);
-      }
+      // Xử lý lỗi bằng utility function
+      const errorInfo = formatErrorForUser(error);
+      logError(error, 'AuthProvider.fetchAndSetSessionData');
 
-      // Nếu lỗi là 401 và không phải lỗi từ refresh-token
-      if (error?.statusCode === 401 && !error.message?.includes('refresh-token')) {
+      // Nếu lỗi là 401 và không phải lỗi từ refresh-token, thử refresh
+      if (isAuthError(error) && !error.message?.includes('refresh-token')) {
         try {
           const refreshTokenResponse = await apiClient<LoginResponse>({
             url: '/api/v1/auth/refresh-token',
             method: 'POST',
-            requireAuth: false, // Không yêu cầu access token
-            withCredentials: true, // Gửi cookie
+            requireAuth: false,
+            withCredentials: true,
           });
 
           if (refreshTokenResponse.data?.access_token) {
             updateAccessToken(refreshTokenResponse.data.access_token);
-            // Gọi lại fetchAndSetSessionData với token mới
             await fetchAndSetSessionData(refreshTokenResponse.data.access_token);
-            return; // Thoát sớm để tránh setLoading(false) hai lần
+            return;
           } else {
-            // Refresh thất bại, xóa session
-            showNotification('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 'warning');
             clearSession();
             setSession(null);
             setFeatures([]);
-            // Không redirect ở đây, để useEffect xử lý
           }
         } catch (refreshError: any) {
-          console.error("Refresh token failed during session data fetch:", refreshError);
-
-          // Kiểm tra lỗi cụ thể từ refresh endpoint
-          if (refreshError?.message?.includes('Session không tồn tại') ||
-            refreshError?.message?.includes('session not found')) {
-            showNotification('Phiên đăng nhập đã bị xóa từ thiết bị khác. Vui lòng đăng nhập lại.', 'info');
-          } else {
-            showNotification('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 'warning');
-          }
-
+          logError(refreshError, 'AuthProvider.refreshToken');
           clearSession();
           setSession(null);
           setFeatures([]);
         }
-      } else if (error?.statusCode !== 401) { // Chỉ xóa session nếu lỗi không phải 401 (401 đã được xử lý bằng refresh)
-        // Có thể chỉ là lỗi mạng, không nên xóa session vội
-        // clearSession();
-        // setSession(null);
-        // setFeatures([]);
-        console.warn("Non-401 error during session fetch, session not cleared:", error.message)
+      } else if (!isAuthError(error)) {
+        // Lỗi không phải authentication, có thể là network, không xóa session
+        console.warn("Non-auth error during session fetch, session retained:", errorInfo.userMessage);
       }
     } finally {
       setLoading(false);

@@ -88,12 +88,12 @@ async def delete_my_specific_session(
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
     session_info = await db.sessions.find_one({"_id": ObjectId(session_id)})
-    jti_to_log = session_info.get("jti", "N/A") if session_info else "N/A"
+    access_jti_to_log = session_info.get("access_jti", "N/A") if session_info else "N/A"
 
     # Kiểm tra lại session có thuộc user không (dù require_permission đã làm)
     if not session_info or str(session_info.get("user_id")) != str(current_user.id):
         logger.warning(
-            f"User {current_user.email} attempted to delete session ID {session_id} not belonging to them or not found (JTI: {jti_to_log})."
+            f"User {current_user.email} attempted to delete session ID {session_id} not belonging to them or not found (Access JTI: {access_jti_to_log})."
         )
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Không thể xóa session này.")
 
@@ -101,11 +101,11 @@ async def delete_my_specific_session(
 
     if not deleted:
         logger.warning(
-            f"User {current_user.email} tried to delete session ID {session_id} (JTI: {jti_to_log}) but it was not found or failed to delete."
+            f"User {current_user.email} tried to delete session ID {session_id} (Access JTI: {access_jti_to_log}) but it was not found or failed to delete."
         )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session không tìm thấy hoặc không thể xóa.")
 
-    logger.info(f"User {current_user.email} self-deleted session ID {session_id} (JTI: {jti_to_log}).")
+    logger.info(f"User {current_user.email} self-deleted session ID {session_id} (Access JTI: {access_jti_to_log}).")
     return None
 
 
@@ -127,7 +127,8 @@ async def admin_delete_any_session(  # Đổi tên hàm
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session không tồn tại để xóa.")
 
     user_id_of_session = str(session_to_delete.get("user_id"))
-    jti_of_session = session_to_delete.get("jti", "N/A")
+    access_jti_of_session = session_to_delete.get("access_jti", "N/A")
+    refresh_jti_of_session = session_to_delete.get("refresh_jti", "N/A")
 
     # Admin không nên tự xóa session đang dùng của chính mình qua endpoint này
     # (Họ nên dùng /logout hoặc /me/{session_id} của chính họ)
@@ -142,10 +143,12 @@ async def admin_delete_any_session(  # Đổi tên hàm
 
     if not deleted:
         logger.error(
-            f"Admin {current_admin.email} failed to delete session ID {session_id} (JTI: {jti_of_session}, UserID: {user_id_of_session})."
+            f"Admin {current_admin.email} failed to delete session ID {session_id} (Access JTI: {access_jti_of_session}, Refresh JTI: {refresh_jti_of_session}, UserID: {user_id_of_session})."
         )
         # Lỗi này không nên xảy ra nếu session_to_delete được tìm thấy trước đó
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Không thể xóa session.")
 
-    logger.info(f"Admin {current_admin.email} deleted session ID {session_id} (JTI: {jti_of_session}, UserID: {user_id_of_session}).")
+    logger.info(
+        f"Admin {current_admin.email} deleted session ID {session_id} (Access JTI: {access_jti_of_session}, Refresh JTI: {refresh_jti_of_session}, UserID: {user_id_of_session})."
+    )
     return None

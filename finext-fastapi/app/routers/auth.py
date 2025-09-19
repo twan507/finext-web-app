@@ -32,8 +32,11 @@ from app.crud.sessions import (
     count_sessions_by_user_id,
     find_and_delete_oldest_session,
     create_session,
-    delete_session_by_jti,
+    delete_session_by_access_jti,
     delete_sessions_for_user_except_jti,
+    get_session_by_refresh_jti,
+    update_session_jtis,
+    delete_session_by_id,
 )
 import app.crud.licenses as crud_licenses  # Giữ lại nếu cần
 import app.crud.subscriptions as crud_subscriptions  # Giữ lại nếu cần
@@ -212,12 +215,14 @@ async def logout(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    deleted = await delete_session_by_jti(db, jti_to_delete)
+    deleted = await delete_session_by_access_jti(db, jti_to_delete)
     if deleted:
-        logger.info(f"User {payload.email} logged out successfully (JTI: {jti_to_delete}).")
+        logger.info(f"User {payload.email} logged out successfully (Access JTI: {jti_to_delete}).")
     else:
         # Vẫn trả về thành công cho client để đảm bảo logout, dù session có thể đã bị xóa trước đó
-        logger.warning(f"Logout attempt for JTI {jti_to_delete}, but session not found in DB (possibly already deleted or never existed).")
+        logger.warning(
+            f"Logout attempt for Access JTI {jti_to_delete}, but session not found in DB (possibly already deleted or never existed)."
+        )
 
     # Trả về tuple cho wrapper để xóa cookie
     return None, None, [REFRESH_TOKEN_COOKIE_NAME]
@@ -225,17 +230,21 @@ async def logout(
 
 @router.post("/refresh-token", response_model=JWTTokenResponse)
 async def refresh_access_token(
-    request: Request,  # Giữ lại Request nếu cần thông tin user-agent, client.host
+    request: Request,
     refresh_token_str: str = Depends(get_refresh_token_from_cookie),
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
-) -> JSONResponse:  # Trả về JSONResponse để set cookie
+) -> JSONResponse:
+    """
+    NEW LOGIC: Refresh token với device validation và session lookup bằng refresh_jti
+    """
+    # Decode refresh token
     try:
-        payload = decode_refresh_token(refresh_token_str)
-        user_id: str = payload["user_id"]
-        # refresh_jti: str = payload["jti"] # JTI của refresh token
-    except Exception as e:  # Bắt lỗi chung từ decode_refresh_token
-        logger.error(f"Lỗi khi xử lý refresh token: {e}", exc_info=True)
-        # Xóa cookie lỗi nếu có thể
+        refresh_payload = decode_refresh_token(refresh_token_str)
+        user_id: str = refresh_payload["user_id"]
+        refresh_jti: str = refresh_payload["jti"]
+    except Exception as e:
+        logger.error(f"Lỗi khi decode refresh token: {e}", exc_info=True)
+        # Xóa cookie lỗi
         response = JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED, content={"detail": "Could not validate refresh token. Please log in again."}
         )
@@ -250,67 +259,97 @@ async def refresh_access_token(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate refresh token. Please log in again.",
-            headers={"WWW-Authenticate": 'Bearer error="invalid_token"'},
         )
 
-    user = await get_user_by_id_db(db, user_id=user_id)
-    if user is None or not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Người dùng không tồn tại hoặc không hoạt động.",
-        )
-
-    # Không cần xóa JTI của refresh token khỏi DB vì chúng ta không lưu JTI của refresh token
-    # Chúng ta chỉ lưu JTI của access token.
-
-    # Tạo access token mới và refresh token mới
-    new_token_data_payload = {"sub": user.email, "user_id": str(user.id)}
-    new_access_token = create_access_token(data=new_token_data_payload)
-    new_refresh_token_str, new_refresh_expires = create_refresh_token(data=new_token_data_payload)
-
-    # Tạo session mới cho access token mới
-    try:
-        new_access_payload = jwt.decode(new_access_token, SECRET_KEY, algorithms=[ALGORITHM])  # type: ignore
-        new_access_jti = new_access_payload.get("jti")
-        if not new_access_jti:
-            logger.error("JTI không tìm thấy trong access token mới sau khi refresh.")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi tạo định danh session (JTI) khi làm mới.")
-    except JWTError as e:
-        logger.error(f"Lỗi khi giải mã token mới (refresh) để lấy JTI: {e}", exc_info=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi xử lý token mới khi làm mới.")
-
-    # Quản lý số lượng session
-    current_session_count = await count_sessions_by_user_id(db, str(user.id))
-    if current_session_count >= MAX_SESSIONS_PER_USER:
-        deleted_oldest = await find_and_delete_oldest_session(db, str(user.id))
-        if deleted_oldest:
-            logger.info(f"Đã xóa session cũ nhất cho user {user.email} do đạt giới hạn {MAX_SESSIONS_PER_USER} sessions khi refresh token.")
-        else:
-            logger.warning(f"Không thể xóa session cũ nhất cho user {user.email} dù đã đạt giới hạn.")
-
+    # Lấy device info hiện tại
     user_agent = request.headers.get("user-agent", "Unknown (Refresh)")
     client_host = request.client.host if request.client else "Unknown (Refresh)"
-    device_info = f"{user_agent} ({client_host})"
+    current_device_info = f"{user_agent} ({client_host})"
 
-    await create_session(db, SessionCreate(user_id=str(user.id), jti=new_access_jti, device_info=device_info))  # type: ignore
+    # TÌM SESSION bằng refresh_jti (CORE LOGIC CHANGE)
+    session = await get_session_by_refresh_jti(db, refresh_jti)
+    if not session:
+        logger.warning(f"Refresh token JTI {refresh_jti} not found in sessions")
+        response = JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content={"detail": "Invalid refresh token session"})
+        response.delete_cookie(
+            REFRESH_TOKEN_COOKIE_NAME,
+            domain=COOKIE_DOMAIN,
+            path="/",
+            secure=COOKIE_SECURE,
+            httponly=True,
+            samesite=cast(Literal["lax", "none", "strict"], COOKIE_SAMESITE),
+        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token session")
 
-    response_content_data = JWTTokenResponse(access_token=new_access_token)
-    actual_response = JSONResponse(content=response_content_data.model_dump())
+    # VALIDATE DEVICE INFO (NEW SECURITY FEATURE)
+    stored_device_info = session.device_info
+    if stored_device_info != current_device_info:
+        # Device changed = XÓA SESSION + FORCE LOGOUT
+        await delete_session_by_id(db, str(session.id))
+        logger.warning(
+            f"Device changed for user {user_id}. Session deleted. Stored: {stored_device_info} vs Current: {current_device_info}"
+        )
 
-    # Gửi refresh token mới qua cookie
-    new_cookie_params = {
-        "key": REFRESH_TOKEN_COOKIE_NAME,
-        "value": new_refresh_token_str,
-        "httponly": True,
-        "secure": COOKIE_SECURE,  # True nếu HTTPS
-        "samesite": cast(Literal["lax", "none", "strict"], COOKIE_SAMESITE),  # "lax" hoặc "strict"
-        "domain": COOKIE_DOMAIN,  # None cho localhost, domain cụ thể cho production
-        "max_age": int(new_refresh_expires.total_seconds()),
-        "path": "/",
-    }
-    actual_response.set_cookie(**new_cookie_params)
-    logger.info(f"Tokens refreshed successfully for user: {user.email}")
-    return actual_response
+        # XÓA REFRESH TOKEN COOKIE
+        response = JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content={"detail": "Device changed. Please login again."})
+        response.delete_cookie(
+            REFRESH_TOKEN_COOKIE_NAME,
+            domain=COOKIE_DOMAIN,
+            path="/",
+            secure=COOKIE_SECURE,
+            httponly=True,
+            samesite=cast(Literal["lax", "none", "strict"], COOKIE_SAMESITE),
+        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Device changed. Please login again.")
+
+    # Validate user
+    user = await get_user_by_id_db(db, user_id=user_id)
+    if not user or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User inactive or not found")
+
+    # Tạo tokens mới
+    new_token_data = {"sub": user.email, "user_id": str(user.id)}
+    new_access_token = create_access_token(data=new_token_data)
+    new_refresh_token, new_refresh_expires = create_refresh_token(data=new_token_data)
+
+    # Lấy JTIs mới
+    try:
+        new_access_payload = jwt.decode(new_access_token, SECRET_KEY, algorithms=[ALGORITHM])
+        new_refresh_payload = jwt.decode(new_refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
+
+        new_access_jti = new_access_payload.get("jti")
+        new_refresh_jti = new_refresh_payload.get("jti")
+
+        if not new_access_jti or not new_refresh_jti:
+            logger.error("JTI không tìm thấy trong tokens mới sau refresh")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi tạo JTI")
+    except JWTError as e:
+        logger.error(f"Lỗi decode tokens mới: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi xử lý token")
+
+    # UPDATE SESSION với JTIs mới (giữ nguyên device_info)
+    updated = await update_session_jtis(db, str(session.id), new_access_jti, new_refresh_jti)
+    if not updated:
+        logger.error(f"Không thể update session {session.id} với JTIs mới")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi cập nhật session")
+
+    # Return new tokens with cookie
+    response_data = JWTTokenResponse(access_token=new_access_token)
+    response = JSONResponse(content=response_data.model_dump())
+
+    response.set_cookie(
+        key=REFRESH_TOKEN_COOKIE_NAME,
+        value=new_refresh_token,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite=cast(Literal["lax", "none", "strict"], COOKIE_SAMESITE),
+        domain=COOKIE_DOMAIN,
+        max_age=int(new_refresh_expires.total_seconds()),
+        path="/",
+    )
+
+    logger.info(f"Tokens refreshed successfully for user: {user.email} with device validation")
+    return response
 
 
 @router.post("/login", response_model=JWTTokenResponse)  # response_model này chỉ mô tả JSON body
@@ -346,22 +385,35 @@ async def login_for_access_token(
     access_token_str = create_access_token(data=token_data_payload)
     refresh_token_str, refresh_expires_delta = create_refresh_token(data=token_data_payload)
 
-    # Tạo session cho access_token
+    # Tạo session cho cả access_token và refresh_token
     try:
         access_payload = jwt.decode(access_token_str, SECRET_KEY, algorithms=[ALGORITHM])  # type: ignore
-        jti = access_payload.get("jti")
-        if not jti:
-            logger.error("JTI không tìm thấy trong access token mới khi đăng nhập.")
+        refresh_payload = jwt.decode(refresh_token_str, SECRET_KEY, algorithms=[ALGORITHM])  # type: ignore
+
+        access_jti = access_payload.get("jti")
+        refresh_jti = refresh_payload.get("jti")
+
+        if not access_jti or not refresh_jti:
+            logger.error("JTI không tìm thấy trong tokens khi đăng nhập.")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi tạo định danh session (JTI).")
     except JWTError as e:
-        logger.error(f"Lỗi giải mã access token để lấy JTI: {e}", exc_info=True)
+        logger.error(f"Lỗi giải mã tokens để lấy JTI: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi xử lý token.")
 
     user_agent = request.headers.get("user-agent", "Unknown")
     client_host = request.client.host if request.client else "Unknown"
     device_info = f"{user_agent} ({client_host})"
 
-    await create_session(db, SessionCreate(user_id=user_id_str, jti=jti, device_info=device_info))  # type: ignore
+    logger.info(f"🔄 Creating session for user {user.email} with access_jti: {access_jti}")
+    session_result = await create_session(
+        db, SessionCreate(user_id=user_id_str, access_jti=access_jti, refresh_jti=refresh_jti, device_info=device_info)
+    )
+
+    if not session_result:
+        logger.error(f"❌ Failed to create session for user {user.email}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Không thể tạo session đăng nhập.")
+
+    logger.info(f"✅ Login successful for user {user.email} with session ID: {session_result.id}")
 
     response_content_data = JWTTokenResponse(access_token=access_token_str)
     actual_response = JSONResponse(content=response_content_data.model_dump())
@@ -432,18 +484,22 @@ async def login_with_otp(
 
     try:
         access_payload = jwt.decode(access_token_str, SECRET_KEY, algorithms=[ALGORITHM])  # type: ignore
-        jti = access_payload.get("jti")
-        if not jti:
-            logger.error("JTI không tìm thấy trong access token mới khi login OTP.")
+        refresh_payload = jwt.decode(refresh_token_str, SECRET_KEY, algorithms=[ALGORITHM])  # type: ignore
+
+        access_jti = access_payload.get("jti")
+        refresh_jti = refresh_payload.get("jti")
+
+        if not access_jti or not refresh_jti:
+            logger.error("JTI không tìm thấy trong tokens khi login OTP.")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi tạo định danh session (JTI).")
     except JWTError as e:
-        logger.error(f"Lỗi giải mã access token để lấy JTI khi login OTP: {e}", exc_info=True)
+        logger.error(f"Lỗi giải mã tokens để lấy JTI khi login OTP: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi xử lý token.")
 
     user_agent = request.headers.get("user-agent", "Unknown")
     client_host = request.client.host if request.client else "Unknown"
     device_info = f"{user_agent} ({client_host})"
-    await create_session(db, SessionCreate(user_id=user_id_str, jti=jti, device_info=device_info))  # type: ignore
+    await create_session(db, SessionCreate(user_id=user_id_str, access_jti=access_jti, refresh_jti=refresh_jti, device_info=device_info))
 
     response_content_data = JWTTokenResponse(access_token=access_token_str)
     actual_response = JSONResponse(content=response_content_data.model_dump())
@@ -684,18 +740,22 @@ async def google_oauth_callback(
 
     try:
         access_payload = jwt.decode(access_token_str, SECRET_KEY, algorithms=[ALGORITHM])  # type: ignore
-        jti = access_payload.get("jti")
-        if not jti:
-            logger.error("JTI không tìm thấy trong access token mới khi login Google.")
+        refresh_payload = jwt.decode(refresh_token_str, SECRET_KEY, algorithms=[ALGORITHM])  # type: ignore
+
+        access_jti = access_payload.get("jti")
+        refresh_jti = refresh_payload.get("jti")
+
+        if not access_jti or not refresh_jti:
+            logger.error("JTI không tìm thấy trong tokens khi login Google.")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi tạo định danh session (JTI).")
     except JWTError as e:
-        logger.error(f"Lỗi giải mã access token để lấy JTI khi login Google: {e}", exc_info=True)
+        logger.error(f"Lỗi giải mã tokens để lấy JTI khi login Google: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi xử lý token.")
 
     user_agent = request.headers.get("user-agent", "Unknown (Google Login)")
     client_host = request.client.host if request.client else "Unknown (Google Login)"
     device_info = f"{user_agent} ({client_host})"
-    await create_session(db, SessionCreate(user_id=user_id_str, jti=jti, device_info=device_info))  # type: ignore
+    await create_session(db, SessionCreate(user_id=user_id_str, access_jti=access_jti, refresh_jti=refresh_jti, device_info=device_info))
 
     response_content_data = JWTTokenResponse(access_token=access_token_str)
     actual_response = JSONResponse(content=response_content_data.model_dump())

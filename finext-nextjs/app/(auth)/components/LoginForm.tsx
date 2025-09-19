@@ -215,11 +215,13 @@ export default function SignInForm() {
                     url: '/api/v1/auth/me',
                     method: 'GET',
                     headers: tempHeaders,
+                    requireAuth: false, // Bypass auto-refresh during login flow
                 });
                 const featuresResponse = await apiClient<string[]>({
                     url: '/api/v1/auth/me/features',
                     method: 'GET',
                     headers: tempHeaders,
+                    requireAuth: false, // Bypass auto-refresh during login flow
                 });
 
                 if (
