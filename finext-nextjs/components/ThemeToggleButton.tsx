@@ -13,16 +13,16 @@ import {
 import styles from './ThemeToggleButton.module.css';
 
 // Tách SVG ra một component riêng và cho phép nhận prop `isDark` để quản lý animation
-const SunMoonIcon = ({ isDark }: { isDark: boolean }) => (
+const SunMoonIcon = ({ isDark, uniqueId }: { isDark: boolean; uniqueId: string }) => (
   <div className={`${styles.themeToggle} ${isDark ? styles.isDark : ''}`}>
     <div className={styles.sunMoonContainer}>
-      {/* SVG content không đổi, bạn giữ nguyên SVG của mình ở đây */}
+      {/* SVG content với unique mask ID */}
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <mask id="moon-mask">
+        <mask id={`moon-mask-${uniqueId}`}>
           <rect x="0" y="0" width="100%" height="100%" fill="white"></rect>
           <circle cx="16" cy="5" r="8" fill="black"></circle>
         </mask>
-        <circle className={styles.sunMoon} cx="12" cy="12" r="8" mask="url(#moon-mask)" fill="currentColor"></circle>
+        <circle className={styles.sunMoon} cx="12" cy="12" r="8" mask={`url(#moon-mask-${uniqueId})`} fill="currentColor"></circle>
         <g>
           <path className={styles.sunRay} stroke="currentColor" strokeWidth="2" d="M12 2V4"></path>
           <path className={`${styles.sunRay} ${styles.sunRay2}`} stroke="currentColor" strokeWidth="2" d="M19.07 4.93L17.66 6.34"></path>
@@ -45,6 +45,9 @@ interface ThemeToggleButtonProps {
 const ThemeToggleButton: React.FC<ThemeToggleButtonProps> = ({ variant = 'icon' }) => {
   const { theme, setTheme, resolvedTheme } = useNextTheme();
   const [mounted, setMounted] = useState(false);
+
+  // Tạo unique ID cho mỗi instance của component
+  const [uniqueId] = useState(() => Math.random().toString(36).substr(2, 9));
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -81,7 +84,7 @@ const ThemeToggleButton: React.FC<ThemeToggleButtonProps> = ({ variant = 'icon' 
           minWidth: 32,
           color: isCurrentlyDark ? 'text.primary' : 'text.secondary'
         }}>
-          <SunMoonIcon isDark={isCurrentlyDark} />
+          <SunMoonIcon isDark={isCurrentlyDark} uniqueId={uniqueId} />
         </ListItemIcon>
         <ListItemText
           primary={tooltipText}
@@ -101,7 +104,7 @@ const ThemeToggleButton: React.FC<ThemeToggleButtonProps> = ({ variant = 'icon' 
           color: isCurrentlyDark ? 'text.primary' : 'text.secondary'
         }}
       >
-        <SunMoonIcon isDark={isCurrentlyDark} />
+        <SunMoonIcon isDark={isCurrentlyDark} uniqueId={uniqueId} />
       </IconButton>
     </Tooltip>
   );

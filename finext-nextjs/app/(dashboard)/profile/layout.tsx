@@ -35,7 +35,7 @@ export default function ProfileLayout({ children }: ProfileLayoutProps) {
         height: '100%', // Sử dụng 100% thay vì 100vh
         width: '100%',
         display: 'grid',
-        gridTemplateColumns: { xs: '1fr', md: '280px minmax(0, 1fr)' },
+        gridTemplateColumns: { xs: '64px minmax(0, 1fr)', md: '280px minmax(0, 1fr)' },
         bgcolor: 'background.default', // Sử dụng màu nền mặc định của theme
         overflow: 'hidden', // Ngăn overflow
       }}
@@ -44,12 +44,12 @@ export default function ProfileLayout({ children }: ProfileLayoutProps) {
       <Box
         component="aside"
         sx={{
-          display: { xs: 'none', md: 'flex' }, // Ẩn trên mobile
+          display: 'flex', // Luôn hiển thị sidebar
           flexDirection: 'column',
           height: '100%', // Sử dụng 100% thay vì 100vh
-          bgcolor: 'background.paper',
+          bgcolor: 'background.default',
           borderRight: (theme) => `1px solid ${theme.palette.divider}`,
-          px: 2,
+          px: { xs: 1, md: 2 }, // Giảm padding trên mobile
           py: 2,
           overflow: 'hidden', // Ngăn overflow cho sidebar
         }}
@@ -62,6 +62,9 @@ export default function ProfileLayout({ children }: ProfileLayoutProps) {
                 onClick={() => router.push(item.href)}
                 sx={{
                   borderRadius: 2,
+                  minHeight: 48, // Đảm bảo chiều cao tối thiểu
+                  justifyContent: { xs: 'center', md: 'flex-start' }, // Center icon trên mobile
+                  px: { xs: 0, md: 2 }, // Không padding horizontal trên mobile
                   '&.Mui-selected': {
                     backgroundColor: (theme) =>
                       theme.palette.mode === 'dark'
@@ -84,13 +87,15 @@ export default function ProfileLayout({ children }: ProfileLayoutProps) {
               >
                 <ListItemIcon sx={{
                   color: 'text.secondary',
-                  minWidth: 40
+                  minWidth: { xs: 'unset', md: 40 }, // Không minWidth trên mobile
+                  justifyContent: 'center'
                 }}>
                   {item.icon}
                 </ListItemIcon>
                 <ListItemText
                   primary={item.text}
                   sx={{
+                    display: { xs: 'none', md: 'block' }, // Ẩn text trên mobile
                     color: 'text.primary',
                     '& .MuiListItemText-primary': {
                       fontSize: '0.875rem',
@@ -108,25 +113,31 @@ export default function ProfileLayout({ children }: ProfileLayoutProps) {
             startIcon={<LogoutOutlined />}
             onClick={handleLogout}
             sx={{
-              justifyContent: 'flex-start',
+              justifyContent: { xs: 'center', md: 'flex-start' }, // Center trên mobile
               textTransform: 'none',
               color: (theme) =>
                 theme.palette.mode === 'dark'
                   ? '#FF5555'  // Bright red for dark
                   : '#dc004e', // Darker red for light mode
-              p: '12px 16px',
+              p: { xs: '12px 8px', md: '12px 16px' }, // Giảm padding trên mobile
               borderRadius: 2,
               fontSize: '0.875rem',
               fontWeight: 500,
+              minWidth: { xs: 48, md: 'auto' }, // Đảm bảo chiều rộng tối thiểu trên mobile
               '&:hover': {
                 backgroundColor: (theme) =>
                   theme.palette.mode === 'dark'
                     ? 'rgba(255, 85, 85, 0.1)'
                     : 'rgba(220, 0, 78, 0.1)', // Darker red tint for light mode
               },
+              '& .MuiButton-startIcon': {
+                margin: { xs: 0, md: '0 8px 0 0' }, // Không margin trên mobile
+              },
             }}
           >
-            Đăng xuất
+            <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+              Đăng xuất
+            </Box>
           </Button>
         </Box>
       </Box>
@@ -139,7 +150,7 @@ export default function ProfileLayout({ children }: ProfileLayoutProps) {
           p: { xs: 2, sm: 3, md: 4 },
           overflowY: 'auto',
           height: '100%', // Sử dụng 100% thay vì 100vh
-          bgcolor: 'background.defult',
+          bgcolor: 'background.paper',
         }}
       >
         {children}

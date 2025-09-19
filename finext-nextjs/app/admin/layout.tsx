@@ -39,10 +39,10 @@ import {
   ContactPage
 } from '@mui/icons-material';
 
-import UserMenu from './components/UserMenu';
 import ThemeToggleButton from 'components/ThemeToggleButton';
 import BrandLogo from 'components/BrandLogo';
 import { layoutTokens, responsiveTypographyTokens } from '../../theme/tokens';
+import UserAvatar from '@/components/UserAvatar';
 
 interface NavItem {
   text: string;
@@ -236,7 +236,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const DesktopDrawerContent = (
     <>
-      {/* Header (UserMenu thay vì logo) */}
+      {/* Header (UserAvatar thay vì logo) */}
       <Box
         sx={{
           display: 'flex',
@@ -247,7 +247,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           // Bỏ borderBottom và padding
         }}
       >
-        <UserMenu />
+        <UserAvatar variant="full" />
       </Box>
 
       {/* Navigation */}
@@ -300,7 +300,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           // Bỏ borderBottom và padding
         }}
       >
-        <UserMenu />
+        <UserAvatar variant="full" />
       </Box>
 
       <List sx={{
@@ -433,7 +433,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <AppBar
         position="fixed"
         elevation={0}
-        sx={{ width: { lg: `calc(100% - ${drawerWidth}px)` }, ml: { lg: `${drawerWidth}px` }, height: layoutTokens.appBarHeight }}
+        sx={{
+          width: { lg: `calc(100% - ${drawerWidth}px)` },
+          ml: { lg: `${drawerWidth}px` },
+          height: layoutTokens.appBarHeight,
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)', // Thêm đổ bóng viền dưới
+          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.12)}`, // Thêm viền mỏng
+          backdropFilter: 'blur(8px)', // Thêm hiệu ứng blur
+        }}
       >
 
         <Toolbar sx={{ justifyContent: 'space-between', alignItems: 'center', px: { xs: 2, lg: 3 }, minHeight: `${layoutTokens.toolbarMinHeight}px !important`, height: layoutTokens.appBarHeight, maxHeight: layoutTokens.appBarHeight }}>
@@ -467,9 +474,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* {generateBreadcrumbs()} */}
           </Box>
 
-          {/* Container bên phải - đã bỏ UserMenu */}
+          {/* Container bên phải - đã bỏ UserAvatar */}
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            {/* UserMenu đã được chuyển vào sidebar */}
+            {/* UserAvatar đã được chuyển vào sidebar */}
           </Box>
         </Toolbar>
       </AppBar>
@@ -483,7 +490,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           onClose={handleDrawerToggle}
           ModalProps={{ keepMounted: true }}
           elevation={0}
-          sx={{ display: { xs: 'block', lg: 'none' }, '& .MuiDrawer-paper': { width: layoutTokens.drawerWidth || 280 } }}
+          sx={{
+            display: { xs: 'block', lg: 'none' },
+            '& .MuiDrawer-paper': {
+              width: layoutTokens.drawerWidth || 280,
+              boxShadow: '4px 0 16px rgba(0, 0, 0, 0.15)', // Thêm đổ bóng mạnh hơn cho mobile overlay
+              backdropFilter: 'blur(12px)', // Hiệu ứng blur mạnh hơn cho mobile
+            }
+          }}
         >
           {MobileDrawerContent}
         </Drawer>
@@ -491,7 +505,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Desktop Drawer (expanded ↔ icon-only) */}
         <Drawer
           variant="permanent"
-          sx={{ display: { xs: 'none', lg: 'flex' }, flexDirection: 'column', '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, height: '100vh', display: 'flex', flexDirection: 'column' } }}
+          sx={{
+            display: { xs: 'none', lg: 'flex' },
+            flexDirection: 'column',
+            '& .MuiDrawer-paper': {
+              boxSizing: 'border-box',
+              width: drawerWidth,
+              height: '100vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '2px 0 8px rgba(0, 0, 0, 0.08)', // Thêm đổ bóng viền phải
+              borderRight: `1px solid ${alpha(theme.palette.divider, 0.12)}`, // Thêm viền mỏng
+              backdropFilter: 'blur(8px)', // Thêm hiệu ứng blur
+            }
+          }}
           open
         >
           {DesktopDrawerContent}
