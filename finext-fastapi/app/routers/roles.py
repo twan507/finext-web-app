@@ -84,7 +84,7 @@ async def read_all_roles(
     "/{role_id}",
     response_model=StandardApiResponse[RolePublic],
     summary="Lấy thông tin chi tiết một vai trò theo ID",
-    dependencies=[Depends(require_permission("role", "manage"))],
+    dependencies=[Depends(require_permission("role", "read"))],
     tags=["roles"],
 )
 @api_response_wrapper(default_success_message="Lấy thông tin vai trò thành công.")

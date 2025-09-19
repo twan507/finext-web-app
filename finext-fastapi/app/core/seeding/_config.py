@@ -28,6 +28,12 @@ DEFAULT_PERMISSIONS_DATA: List[Dict[str, Any]] = [
         "description": "Quyền quản lý (CRUD) tất cả vai trò trong hệ thống.",
         "roles": ["admin"],
         "category": "admin_system",
+    },
+    {
+        "name": "role:read",
+        "description": "Quyền đọc thông tin vai trò.",
+        "roles": ["admin", "manager", "user"],
+        "category": "user_management",
     },  # Session Management (Admin Only)
     {
         "name": "session:manage_any",

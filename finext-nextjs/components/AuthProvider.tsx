@@ -9,6 +9,7 @@ import { apiClient } from 'services/apiClient';
 import { logoutApi } from 'services/authService';
 // UserSchema cũng cần được import nếu bạn dùng nó trực tiếp ở đây
 import { LoginResponse, UserSchema } from 'services/core/types';
+import { useNotification } from './NotificationProvider';
 
 
 interface AuthContextType {
@@ -29,6 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [features, setFeatures] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const { showNotification } = useNotification();
 
   const fetchAndSetSessionData = useCallback(async (existingToken?: string | null) => {
     setLoading(true);
@@ -36,7 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Nếu không có token hiện tại, thử lấy từ session storage
       const tokenToUse = existingToken || getAccessToken();
       if (!tokenToUse) {
-          throw new Error("No access token available for fetching session data.");
+        throw new Error("No access token available for fetching session data.");
       }
 
       // API Client đã tự động thêm token vào header nếu có
@@ -57,7 +59,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(userResponse.message || featuresResponse.message || "Failed to fetch user/features data.");
       }
     } catch (error: any) {
-      console.error("Error fetching session data:", error);
+      // Xử lý các lỗi session hết hạn một cách thân thiện
+      if (error?.message?.includes('Session không tồn tại') ||
+        error?.message?.includes('session not found') ||
+        error?.message?.includes('Session không hoạt động')) {
+        console.info("Phiên đăng nhập đã hết hạn, đang làm mới...");
+        // Không hiển thị thông báo lỗi cho user ở đây, sẽ xử lý qua refresh token
+      } else {
+        console.error("Error fetching session data:", error);
+      }
+
       // Nếu lỗi là 401 và không phải lỗi từ refresh-token
       if (error?.statusCode === 401 && !error.message?.includes('refresh-token')) {
         try {
@@ -75,13 +86,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return; // Thoát sớm để tránh setLoading(false) hai lần
           } else {
             // Refresh thất bại, xóa session
+            showNotification('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 'warning');
             clearSession();
             setSession(null);
             setFeatures([]);
             // Không redirect ở đây, để useEffect xử lý
           }
-        } catch (refreshError) {
+        } catch (refreshError: any) {
           console.error("Refresh token failed during session data fetch:", refreshError);
+
+          // Kiểm tra lỗi cụ thể từ refresh endpoint
+          if (refreshError?.message?.includes('Session không tồn tại') ||
+            refreshError?.message?.includes('session not found')) {
+            showNotification('Phiên đăng nhập đã bị xóa từ thiết bị khác. Vui lòng đăng nhập lại.', 'info');
+          } else {
+            showNotification('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 'warning');
+          }
+
           clearSession();
           setSession(null);
           setFeatures([]);
@@ -91,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // clearSession();
         // setSession(null);
         // setFeatures([]);
-         console.warn("Non-401 error during session fetch, session not cleared:", error.message)
+        console.warn("Non-401 error during session fetch, session not cleared:", error.message)
       }
     } finally {
       setLoading(false);
@@ -100,21 +121,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 
   const refreshSessionData = useCallback(async () => {
-      await fetchAndSetSessionData();
+    await fetchAndSetSessionData();
   }, [fetchAndSetSessionData]);
 
 
   useEffect(() => {
     const initialCheck = async () => {
-        const savedSession = getSession();
-        if (savedSession && savedSession.accessToken) {
-            // Thay vì chỉ setSession, gọi fetchAndSetSessionData để xác thực và lấy dữ liệu mới nhất
-            await fetchAndSetSessionData(savedSession.accessToken);
-        } else {
-            setSession(null);
-            setFeatures([]);
-            setLoading(false); // Quan trọng: set loading false nếu không có session
-        }
+      const savedSession = getSession();
+      if (savedSession && savedSession.accessToken) {
+        // Thay vì chỉ setSession, gọi fetchAndSetSessionData để xác thực và lấy dữ liệu mới nhất
+        await fetchAndSetSessionData(savedSession.accessToken);
+      } else {
+        setSession(null);
+        setFeatures([]);
+        setLoading(false); // Quan trọng: set loading false nếu không có session
+      }
     };
     initialCheck();
   }, [fetchAndSetSessionData]); // fetchAndSetSessionData là dependency
@@ -138,7 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   const hasFeature = useCallback((featureKey: string): boolean => {
-      return features.includes(featureKey);
+    return features.includes(featureKey);
   }, [features]);
 
   return (

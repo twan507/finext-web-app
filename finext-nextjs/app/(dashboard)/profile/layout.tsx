@@ -9,6 +9,7 @@ import {
   DevicesOutlined,
   LogoutOutlined
 } from '@mui/icons-material';
+import { logoutApi } from 'services/authService';
 
 interface ProfileLayoutProps {
   children: React.ReactNode;
@@ -24,20 +25,25 @@ export default function ProfileLayout({ children }: ProfileLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const handleLogout = () => {
-    console.log('Đăng xuất...');
-    router.push('/login');
+  const handleLogout = async () => {
+    try {
+      console.log('Đang đăng xuất...');
+      await logoutApi(); // Gọi API logout để xóa cookie và session
+    } catch (error) {
+      console.error('Lỗi khi đăng xuất:', error);
+      // Vẫn redirect về login nếu có lỗi
+      router.push('/login');
+    }
   };
 
   return (
     <Box
       sx={{
-        height: '100%', // Sử dụng 100% thay vì 100vh
+        height: '100%',
         width: '100%',
         display: 'grid',
         gridTemplateColumns: { xs: '64px minmax(0, 1fr)', md: '280px minmax(0, 1fr)' },
         bgcolor: 'background.default', // Sử dụng màu nền mặc định của theme
-        overflow: 'hidden', // Ngăn overflow
       }}
     >
       {/* ===== SIDEBAR CODE STARTS HERE ===== */}
@@ -46,7 +52,6 @@ export default function ProfileLayout({ children }: ProfileLayoutProps) {
         sx={{
           display: 'flex', // Luôn hiển thị sidebar
           flexDirection: 'column',
-          height: '100%', // Sử dụng 100% thay vì 100vh
           bgcolor: 'background.default',
           borderRight: (theme) => `1px solid ${theme.palette.divider}`,
           px: { xs: 1, md: 2 }, // Giảm padding trên mobile
@@ -148,8 +153,6 @@ export default function ProfileLayout({ children }: ProfileLayoutProps) {
         component="main"
         sx={{
           p: { xs: 2, sm: 3, md: 4 },
-          overflowY: 'auto',
-          height: '100%', // Sử dụng 100% thay vì 100vh
           bgcolor: 'background.paper',
         }}
       >

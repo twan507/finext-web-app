@@ -2,6 +2,7 @@
 import { AuthProvider } from 'components/AuthProvider';
 import { MuiProvider } from 'components/MuiProvider';
 import { NextThemesProvider } from 'components/NextThemesProvider';
+import { NotificationProvider } from 'components/NotificationProvider';
 import './globals.css';
 
 // Import Roboto font
@@ -36,11 +37,13 @@ export default function RootLayout({
         {/* BỌC BÊN NGOÀI MuiProvider */}
         <AppRouterCacheProvider options={{ key: 'css' }}>
           <NextThemesProvider>
-            <AuthProvider>
-              <MuiProvider>
-                {children}
-              </MuiProvider>
-            </AuthProvider>
+            <NotificationProvider>
+              <AuthProvider>
+                <MuiProvider>
+                  {children}
+                </MuiProvider>
+              </AuthProvider>
+            </NotificationProvider>
           </NextThemesProvider>
         </AppRouterCacheProvider>
       </body>

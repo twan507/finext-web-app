@@ -101,7 +101,7 @@ function UserAvatarWithSubscription({
                 <Box
                     sx={{
                         position: 'absolute',
-                        bottom: -6,
+                        bottom: -4,
                         left: '50%',
                         transform: 'translateX(-50%)',
                         backgroundColor: badgeColor,

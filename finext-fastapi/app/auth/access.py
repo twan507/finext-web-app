@@ -99,8 +99,11 @@ def require_permission(resource: str, action: str):
         elif resource == "role":
             if action == "manage":  # role:manage (CRUD tất cả vai trò)
                 allowed = "role:manage" in user_permissions
+            elif action == "read":  # role:read (đọc thông tin role - ai cũng có thể)
+                allowed = "role:read" in user_permissions
+                required_permission_context = "role:read"
             else:
-                # Fallback cho các action cụ thể nếu có (create, list, read_any, update_any, delete_any)
+                # Fallback cho các action cụ thể nếu có (create, list, update_any, delete_any)
                 permission_to_check = f"role:{action}"
                 allowed = permission_to_check in user_permissions or "role:manage" in user_permissions
 
