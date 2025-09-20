@@ -7,6 +7,7 @@ import {
   PersonOutline,
   LockResetOutlined,
   DevicesOutlined,
+  CardMembership,
   LogoutOutlined
 } from '@mui/icons-material';
 import { logoutApi } from 'services/authService';
@@ -19,6 +20,7 @@ const menuItems = [
   { text: 'Thông tin cơ bản', icon: <PersonOutline />, href: '/profile/information' },
   { text: 'Đổi mật khẩu', icon: <LockResetOutlined />, href: '/profile/change-password' },
   { text: 'Session đăng nhập', icon: <DevicesOutlined />, href: '/profile/login-sessions' },
+  { text: 'Gói đăng ký', icon: <CardMembership />, href: '/profile/subscriptions' },
 ];
 
 export default function ProfileLayout({ children }: ProfileLayoutProps) {

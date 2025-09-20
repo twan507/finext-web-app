@@ -17,13 +17,15 @@ import {
 import {
     DevicesOutlined,
     DeleteOutline,
-    Computer,
-    Smartphone,
-    Tablet,
     MoreHoriz,
     Schedule,
     Today,
     RadioButtonChecked,
+    Android,
+    Apple,
+    Window,
+    Laptop,
+    Computer,
 } from '@mui/icons-material';
 import { apiClient } from '../../../../services/apiClient';
 import { useAuth } from '../../../../components/AuthProvider';
@@ -72,17 +74,17 @@ export default function LoginSessionsPage() {
     const handleDeleteSession = async (sessionId: string) => {
         // Check if this is current session by comparing ID or other available fields
         const sessionToDelete = sessions.find(s => s.id === sessionId);
-        
+
         // Since we can't compare JTI directly, we'll warn for the most recent session
-        const sortedSessions = [...sessions].sort((a, b) => 
+        const sortedSessions = [...sessions].sort((a, b) =>
             new Date(b.last_active_at).getTime() - new Date(a.last_active_at).getTime()
         );
         const isLikelyCurrentSession = sortedSessions[0]?.id === sessionId;
-        
-        const confirmMessage = isLikelyCurrentSession 
-            ? 'Đây có thể là session hiện tại của bạn (hoạt động gần nhất). Xóa có thể đăng xuất bạn. Bạn có chắc chắn?' 
+
+        const confirmMessage = isLikelyCurrentSession
+            ? 'Đây có thể là session hiện tại của bạn (hoạt động gần nhất). Xóa có thể đăng xuất bạn. Bạn có chắc chắn?'
             : 'Bạn có chắc chắn muốn đăng xuất khỏi session này?';
-            
+
         if (!confirm(confirmMessage)) {
             return;
         }
@@ -90,7 +92,7 @@ export default function LoginSessionsPage() {
         console.log('Deleting session ID:', sessionId);
         console.log('Is likely current session:', isLikelyCurrentSession);
         console.log('Session to delete:', sessionToDelete);
-        
+
         try {
             setDeletingSessionId(sessionId);
             const response = await apiClient({
@@ -106,7 +108,7 @@ export default function LoginSessionsPage() {
                 console.log('Sessions after delete:', newSessions);
                 return newSessions;
             });
-            
+
             setMessage({
                 type: 'success',
                 text: 'Đã đăng xuất khỏi session thành công',
@@ -136,12 +138,33 @@ export default function LoginSessionsPage() {
         if (!deviceInfo) return <MoreHoriz />;
 
         const info = deviceInfo.toLowerCase();
-        if (info.includes('mobile') || info.includes('android') || info.includes('iphone')) {
-            return <Smartphone />;
+
+        // Hệ điều hành Android (bao gồm cả mobile và tablet)
+        if (info.includes('android')) {
+            return <Android />;
         }
-        if (info.includes('tablet') || info.includes('ipad')) {
-            return <Tablet />;
+
+        // Hệ điều hành iOS (iPhone và iPad)
+        if (info.includes('iphone') || info.includes('ipad') || info.includes('ios')) {
+            return <Apple />;
         }
+
+        // Hệ điều hành macOS
+        if (info.includes('mac') || info.includes('macos')) {
+            return <Laptop />; // Sử dụng Laptop cho MacOS
+        }
+
+        // Hệ điều hành Windows
+        if (info.includes('windows')) {
+            return <Window />;
+        }
+
+        // Hệ điều hành Linux
+        if (info.includes('linux')) {
+            return <Laptop />;
+        }
+
+        // Default cho các hệ điều hành khác
         return <Computer />;
     };
 
@@ -149,17 +172,40 @@ export default function LoginSessionsPage() {
         if (!deviceInfo) return 'Thiết bị không xác định';
 
         const info = deviceInfo.toLowerCase();
-        if (info.includes('mobile') || info.includes('android') || info.includes('iphone')) {
+
+        // Kiểm tra iPad trước iPhone vì iPad cũng có thể chứa "iphone" trong user agent
+        if (info.includes('ipad')) {
+            return 'iPad';
+        }
+        if (info.includes('iphone')) {
+            return 'iPhone';
+        }
+        if (info.includes('android') && info.includes('tablet')) {
+            return 'Android Tablet';
+        }
+        if (info.includes('android')) {
+            return 'Android';
+        }
+        if (info.includes('mobile')) {
             return 'Điện thoại';
         }
-        if (info.includes('tablet') || info.includes('ipad')) {
+        if (info.includes('tablet')) {
             return 'Máy tính bảng';
+        }
+        if (info.includes('windows nt 10.0')) {
+            return 'Windows 10/11';
+        }
+        if (info.includes('windows nt 6.3')) {
+            return 'Windows 8.1';
+        }
+        if (info.includes('windows nt 6.1')) {
+            return 'Windows 7';
         }
         if (info.includes('windows')) {
             return 'Windows PC';
         }
         if (info.includes('mac')) {
-            return 'Mac';
+            return 'MacOS';
         }
         if (info.includes('linux')) {
             return 'Linux';
@@ -171,36 +217,94 @@ export default function LoginSessionsPage() {
         if (!deviceInfo) return 'Trình duyệt không xác định';
 
         const info = deviceInfo.toLowerCase();
-        if (info.includes('chrome')) return 'Chrome';
+        // Kiểm tra các trình duyệt dựa trên Chromium trước, Chrome cuối cùng
+        if (info.includes('edg/') || info.includes('edge/')) return 'Edge';
+        if (info.includes('opera') || info.includes('opr/')) return 'Opera';
         if (info.includes('firefox')) return 'Firefox';
-        if (info.includes('safari')) return 'Safari';
-        if (info.includes('edge')) return 'Edge';
-        if (info.includes('opera')) return 'Opera';
+        if (info.includes('safari') && !info.includes('chrome')) return 'Safari';
+        if (info.includes('chrome')) return 'Chrome';
         return 'Trình duyệt khác';
     };
 
+    // Function để tách IP từ device_info
+    const extractIP = (deviceInfo?: string) => {
+        if (!deviceInfo) return 'Không xác định';
+
+        // Tìm IP trong dấu ngoặc đơn cuối cùng
+        const ipMatch = deviceInfo.match(/\(([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})\)$/);
+        return ipMatch ? ipMatch[1] : 'Không xác định';
+    };
+
+    // Function để tạo user agent thân thiện
+    const getFriendlyUserAgent = (deviceInfo?: string) => {
+        if (!deviceInfo) return 'Không có thông tin thiết bị';
+
+        // Loại bỏ IP khỏi cuối string (nếu có)
+        const cleanUserAgent = deviceInfo.replace(/\s*\([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\)$/, '');
+
+        // Tạo mô tả ngắn gọn
+        const info = cleanUserAgent.toLowerCase();
+        let description = '';
+
+        // Xác định browser
+        if (info.includes('chrome')) description += 'Chrome ';
+        else if (info.includes('firefox')) description += 'Firefox ';
+        else if (info.includes('safari') && !info.includes('chrome')) description += 'Safari ';
+        else if (info.includes('edge')) description += 'Edge ';
+        else if (info.includes('opera')) description += 'Opera ';
+        else description += 'Trình duyệt khác ';
+
+        // Xác định OS
+        if (info.includes('windows nt 10.0')) description += 'trên Windows 10/11';
+        else if (info.includes('windows nt 6.3')) description += 'trên Windows 8.1';
+        else if (info.includes('windows nt 6.1')) description += 'trên Windows 7';
+        else if (info.includes('windows')) description += 'trên Windows';
+        else if (info.includes('mac os x') || info.includes('macos')) description += 'trên macOS';
+        else if (info.includes('linux')) description += 'trên Linux';
+        else if (info.includes('android')) description += 'trên Android';
+        else if (info.includes('iphone') || info.includes('ipad')) description += 'trên iOS';
+        else description += 'trên hệ điều hành không xác định';
+
+        return description.trim();
+    };
+
     const formatDate = (dateString: string) => {
-        // Parse UTC time từ database
-        const utcDate = new Date(dateString);
-        // Chuyển sang múi giờ Việt Nam (UTC+7)
-        const vietnamTime = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+        // Nếu dateString không có timezone indicator, coi nó là UTC
+        let dbTime;
+        if (dateString.includes('Z') || dateString.includes('+') || dateString.includes('T') && dateString.lastIndexOf('-') > 10) {
+            // Đã có timezone indicator
+            dbTime = new Date(dateString);
+        } else {
+            // Không có timezone indicator, coi là UTC
+            dbTime = new Date(dateString + 'Z');
+        }
 
-        // Thời gian hiện tại ở Việt Nam
-        const nowUtc = new Date();
-        const nowVietnam = new Date(nowUtc.getTime() + (7 * 60 * 60 * 1000));
+        const now = new Date();
 
-        const diffMs = nowVietnam.getTime() - vietnamTime.getTime();
-        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        // Tính khoảng cách thời gian bằng milliseconds
+        const diffMs = now.getTime() - dbTime.getTime();
         const diffMinutes = Math.floor(diffMs / (1000 * 60));
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+        // Debug log để kiểm tra
+        console.log('formatDate debug:', {
+            dateString,
+            dbTime: dbTime.toISOString(),
+            now: now.toISOString(),
+            diffMs,
+            diffMinutes,
+            diffHours,
+            diffDays
+        });
 
         if (diffMinutes < 1) return 'Vừa xong';
         if (diffMinutes < 60) return `${diffMinutes} phút trước`;
         if (diffHours < 24) return `${diffHours} giờ trước`;
         if (diffDays < 7) return `${diffDays} ngày trước`;
 
-        // Hiển thị ngày theo múi giờ Việt Nam
-        return vietnamTime.toLocaleDateString('vi-VN', {
+        // Hiển thị ngày theo múi giờ địa phương
+        return dbTime.toLocaleDateString('vi-VN', {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric',
@@ -223,21 +327,6 @@ export default function LoginSessionsPage() {
         <Box sx={{ maxWidth: 700, color: 'text.primary' }}>
             {/* Header */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
-                <Box
-                    sx={{
-                        width: 64,
-                        height: 64,
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        bgcolor: 'primary.main',
-                        color: 'white',
-                        mr: 2
-                    }}
-                >
-                    <DevicesOutlined sx={{ fontSize: '1.8rem' }} />
-                </Box>
                 <Box>
                     <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
                         Session đăng nhập
@@ -276,95 +365,167 @@ export default function LoginSessionsPage() {
                         .map((session, index) => {
                             const isLikelyCurrentSession = index === 0; // Most recently active
                             return (
-                        <Card key={session.id} sx={{ 
-                            position: 'relative',
-                            border: isLikelyCurrentSession ? '2px solid' : '1px solid',
-                            borderColor: isLikelyCurrentSession ? 'primary.main' : 'divider',
-                        }}>
-                            {isLikelyCurrentSession && (
-                                <Chip
-                                    icon={<RadioButtonChecked />}
-                                    label="Session hiện tại"
-                                    size="small"
-                                    color="primary"
-                                    sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}
-                                />
-                            )}
-                            <CardContent sx={{ p: 3 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                                    <Box sx={{ display: 'flex', flex: 1 }}>
-                                        <Box sx={{ mr: 2, mt: 0.5 }}>
-                                            {getDeviceIcon(session.device_info)}
-                                        </Box>
-                                        <Box sx={{ flex: 1 }}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                                <Typography variant="h6" sx={{ fontWeight: 'bold', mr: 2 }}>
-                                                    {getDeviceType(session.device_info)}
-                                                </Typography>
-                                                <Chip
-                                                    label={getBrowserInfo(session.device_info)}
-                                                    size="small"
-                                                    variant="outlined"
-                                                />
+                                <Card key={session.id} sx={{
+                                    position: 'relative',
+                                    border: isLikelyCurrentSession ? '2px solid' : '1px solid',
+                                    borderColor: isLikelyCurrentSession ? 'primary.main' : 'divider',
+                                    borderRadius: 3,
+                                    boxShadow: isLikelyCurrentSession ? '0 8px 32px rgba(0,0,0,0.12)' : '0 2px 16px rgba(0,0,0,0.08)',
+                                    background: isLikelyCurrentSession
+                                        ? 'linear-gradient(135deg, rgba(25, 118, 210, 0.03) 0%, rgba(25, 118, 210, 0.08) 100%)'
+                                        : 'background.paper',
+                                }}>
+                                    <CardContent sx={{ p: 3, pb: isLikelyCurrentSession ? 5 : 3 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                                            <Box sx={{ display: 'flex', flex: 1 }}>
+                                                <Box sx={{
+                                                    mr: 3,
+                                                    mt: 0.5,
+                                                    p: 1.5,
+                                                    borderRadius: 2,
+                                                    bgcolor: isLikelyCurrentSession ? 'primary.main' : 'action.hover',
+                                                    color: isLikelyCurrentSession ? 'primary.contrastText' : 'text.primary',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                }}>
+                                                    {getDeviceIcon(session.device_info)}
+                                                </Box>
+                                                <Box sx={{ flex: 1 }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                                                        <Typography variant="h6" sx={{
+                                                            fontWeight: 'bold',
+                                                            mr: 2,
+                                                            color: isLikelyCurrentSession ? 'primary.main' : 'text.primary'
+                                                        }}>
+                                                            {getDeviceType(session.device_info)}
+                                                        </Typography>
+                                                        <Chip
+                                                            label={getBrowserInfo(session.device_info)}
+                                                            size="small"
+                                                            variant="outlined"
+                                                            sx={{
+                                                                borderColor: isLikelyCurrentSession ? 'primary.main' : 'divider',
+                                                                color: isLikelyCurrentSession ? 'primary.main' : 'text.secondary',
+                                                            }}
+                                                        />
+                                                    </Box>
+
+                                                    {/* Device info with ID and IP */}
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 2 }}>
+                                                        <Box sx={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            px: 1,
+                                                            py: 0.5,
+                                                            borderRadius: 1,
+                                                            bgcolor: 'action.hover',
+                                                        }}>
+                                                            <Typography variant="caption" color="text.disabled" sx={{ mr: 0.5 }}>
+                                                                ID:
+                                                            </Typography>
+                                                            <Typography variant="caption" sx={{ fontWeight: 'medium', fontFamily: 'monospace' }}>
+                                                                {session.id.slice(-6).toUpperCase()}
+                                                            </Typography>
+                                                        </Box>
+                                                        <Box sx={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            px: 1,
+                                                            py: 0.5,
+                                                            borderRadius: 1,
+                                                            bgcolor: 'action.hover',
+                                                        }}>
+                                                            <Typography variant="caption" color="text.disabled" sx={{ mr: 0.5 }}>
+                                                                IP:
+                                                            </Typography>
+                                                            <Typography variant="caption" sx={{ fontWeight: 'medium', fontFamily: 'monospace' }}>
+                                                                {extractIP(session.device_info)}
+                                                            </Typography>
+                                                        </Box>
+                                                    </Box>
+
+                                                    <Box sx={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: 4,
+                                                        flexWrap: 'wrap'
+                                                    }}>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                            <Today sx={{
+                                                                fontSize: '1.1rem',
+                                                                mr: 1,
+                                                                color: isLikelyCurrentSession ? 'primary.main' : 'text.secondary'
+                                                            }} />
+                                                            <Box>
+                                                                <Typography variant="caption" color="text.disabled" sx={{ display: 'block' }}>
+                                                                    Đăng nhập
+                                                                </Typography>
+                                                                <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                                                                    {formatDate(session.created_at)}
+                                                                </Typography>
+                                                            </Box>
+                                                        </Box>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                            <Schedule sx={{
+                                                                fontSize: '1.1rem',
+                                                                mr: 1,
+                                                                color: isLikelyCurrentSession ? 'primary.main' : 'text.secondary'
+                                                            }} />
+                                                            <Box>
+                                                                <Typography variant="caption" color="text.disabled" sx={{ display: 'block' }}>
+                                                                    Hoạt động
+                                                                </Typography>
+                                                                <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                                                                    {formatDate(session.last_active_at)}
+                                                                </Typography>
+                                                            </Box>
+                                                        </Box>
+                                                    </Box>
+                                                </Box>
                                             </Box>
 
-                                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                                {session.device_info || 'Không có thông tin thiết bị'}
-                                            </Typography>
-
-                                            {/* Debug info */}
-                                            <Typography variant="caption" color="text.disabled" sx={{ mb: 1, display: 'block' }}>
-                                                ID: {session.id} | JTI: {session.jti}
-                                            </Typography>
-
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                                    <Today sx={{ fontSize: '1rem', mr: 0.5, color: 'text.secondary' }} />
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        Đăng nhập: {formatDate(session.created_at)}
-                                                    </Typography>
-                                                </Box>
-                                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                                    <Schedule sx={{ fontSize: '1rem', mr: 0.5, color: 'text.secondary' }} />
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        Hoạt động: {formatDate(session.last_active_at)}
-                                                    </Typography>
-                                                </Box>
-                                            </Box>
+                                            <IconButton
+                                                onClick={() => handleDeleteSession(session.id)}
+                                                disabled={deletingSessionId === session.id}
+                                                sx={{
+                                                    color: 'error.main',
+                                                    '&:hover': {
+                                                        backgroundColor: 'error.main',
+                                                        color: 'white',
+                                                    },
+                                                }}
+                                            >
+                                                {deletingSessionId === session.id ? (
+                                                    <CircularProgress size={20} />
+                                                ) : (
+                                                    <DeleteOutline />
+                                                )}
+                                            </IconButton>
                                         </Box>
-                                    </Box>
 
-                                    <IconButton
-                                        onClick={() => handleDeleteSession(session.id)}
-                                        disabled={deletingSessionId === session.id}
-                                        sx={{
-                                            color: 'error.main',
-                                            '&:hover': {
-                                                backgroundColor: 'error.main',
-                                                color: 'white',
-                                            },
-                                        }}
-                                    >
-                                        {deletingSessionId === session.id ? (
-                                            <CircularProgress size={20} />
-                                        ) : (
-                                            <DeleteOutline />
+                                        {/* Current session chip - moved to bottom right */}
+                                        {isLikelyCurrentSession && (
+                                            <Chip
+                                                icon={<RadioButtonChecked />}
+                                                label="Session hiện tại"
+                                                size="small"
+                                                color="primary"
+                                                sx={{
+                                                    position: 'absolute',
+                                                    bottom: 12,
+                                                    right: 12,
+                                                    zIndex: 1,
+                                                    fontWeight: 'bold',
+                                                    boxShadow: '0 2px 8px rgba(25, 118, 210, 0.3)',
+                                                }}
+                                            />
                                         )}
-                                    </IconButton>
-                                </Box>
-                            </CardContent>
-                        </Card>
-                    );
-                })}
+                                    </CardContent>
+                                </Card>
+                            );
+                        })}
                 </Stack>
-            )}
-
-            {sessions.length > 0 && (
-                <Box sx={{ mt: 3, p: 2, bgcolor: 'action.hover', borderRadius: 2 }}>
-                    <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
-                        💡 Mẹo: Nếu bạn thấy session không quen thuộc, hãy đăng xuất ngay để bảo vệ tài khoản
-                    </Typography>
-                </Box>
             )}
         </Box>
     );
