@@ -31,7 +31,8 @@ import {
   Timeline,
   PieChart,
   BarChart,
-  ShowChart
+  ShowChart,
+  AccountCircleOutlined as AccountCircleOutlinedIcon
 } from '@mui/icons-material';
 
 import UserAvatar from '../../components/UserAvatar';
@@ -72,14 +73,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isMobile = lgDown;
 
   useEffect(() => {
-    if (!authLoading && !session) {
-      router.push('/login');
-    }
+    // Main pages can be accessed without authentication for public viewing
+    // Remove redirect to login for public access
   }, [session, authLoading, router]);
 
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
 
-  if (authLoading || !session) {
+  // Show loading only while checking auth, but don't block access
+  if (authLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: 'background.default' }}>
         <CircularProgress />
@@ -113,7 +114,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           bgcolor: 'transparent',
         }}
       >
-        <UserAvatar variant="icon" />
+        {session ? (
+          <UserAvatar variant="icon" />
+        ) : (
+          <Box
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: '50%',
+              bgcolor: theme.palette.grey[700],
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <AccountCircleOutlinedIcon
+              sx={{
+                color: theme.palette.grey[400],
+                fontSize: 24
+              }}
+            />
+          </Box>
+        )}
       </Box>
 
       {/* Navigation */}
@@ -185,9 +207,36 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           justifyContent: 'flex-start',
           height: layoutTokens.appBarHeight,
           gap: 1,
+          px: 2,
         }}
       >
-        <UserAvatar variant="full" />
+        {session ? (
+          <UserAvatar variant="full" />
+        ) : (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                bgcolor: theme.palette.grey[700],
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <AccountCircleOutlinedIcon
+                sx={{
+                  color: theme.palette.grey[400],
+                  fontSize: 24
+                }}
+              />
+            </Box>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              Guest
+            </Typography>
+          </Box>
+        )}
       </Box>
 
       <List sx={{
@@ -288,7 +337,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           height: layoutTokens.appBarHeight,
           maxHeight: layoutTokens.appBarHeight,
           width: '100%',
-          maxWidth: 1200,
+          maxWidth: 1400,
           mx: 'auto',
         }}>
           {/* Container bên trái, sẽ chứa logo và nút menu mobile */}
@@ -379,7 +428,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         display: 'flex',
         justifyContent: 'center',
       }}>
-        <Box sx={{ width: '100%', maxWidth: 1200, mx: 'auto', minHeight: '100%' }}>
+        <Box sx={{ width: '100%', maxWidth: 1400, mx: 'auto', minHeight: '100%' }}>
           {children}
         </Box>
       </Box>
