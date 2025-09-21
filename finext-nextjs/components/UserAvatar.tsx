@@ -4,10 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from 'components/AuthProvider';
 import { apiClient } from 'services/apiClient';
 import { useRouter } from 'next/navigation';
+import { useSignInModal } from 'hooks/useSignInModal';
 
 import {
     Avatar, Typography, Box, Skeleton, useTheme
 } from '@mui/material';
+import { Person as PersonIcon } from '@mui/icons-material';
+import SignInModal from 'app/(auth)/components/LoginModal';
 
 interface ISubscription {
     _id: string;
@@ -136,10 +139,20 @@ const UserAvatar: React.FC<UserMenuProps> = ({ variant = 'icon' }) => {
     const { session, logout } = useAuth();
     const router = useRouter();
     const theme = useTheme();
+    const { isOpen: isSignInOpen, openModal: openSignInModal, closeModal: closeSignInModal } = useSignInModal();
     const [mounted, setMounted] = useState(false);
     const [licenseKey, setLicenseKey] = useState<string | null>(null);
     const [licenseColor, setLicenseColor] = useState<string>("#1565c0");
     const [isLoading, setIsLoading] = useState<boolean>(true);
+
+    const handleOpenSignInModal = () => {
+        openSignInModal();
+    };
+
+    const handleSignInSuccess = () => {
+        console.log('Đăng nhập thành công từ modal!');
+        closeSignInModal();
+    };
 
     useEffect(() => {
         setMounted(true);
@@ -367,8 +380,117 @@ const UserAvatar: React.FC<UserMenuProps> = ({ variant = 'icon' }) => {
         }
     }
 
+    // Dummy avatar cho trường hợp không có session
     if (!session) {
-        return null;
+        if (variant === 'icon') {
+            return (
+                <>
+                    <SignInModal
+                        open={isSignInOpen}
+                        onClose={closeSignInModal}
+                        onSuccess={handleSignInSuccess}
+                    />
+                    <Box
+                        onClick={handleOpenSignInModal}
+                        sx={{
+                            width: '100%',
+                            height: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            p: 1,
+                            cursor: 'pointer',
+                            '&:hover': {
+                                opacity: 0.8,
+                            },
+                        }}
+                    >
+                        <Box
+                            sx={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: '50%',
+                                bgcolor: theme.palette.mode === 'dark'
+                                    ? 'rgba(255, 255, 255, 0.12)'
+                                    : 'rgba(0, 0, 0, 0.08)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mt: 0.5,
+                            }}
+                        >
+                            <PersonIcon
+                                sx={{
+                                    color: theme.palette.mode === 'dark'
+                                        ? 'rgba(255, 255, 255, 0.35)'
+                                        : 'rgba(0, 0, 0, 0.45)',
+                                    fontSize: 24
+                                }}
+                            />
+                        </Box>
+                    </Box>
+                </>
+            );
+        } else {
+            return (
+                <>
+                    <SignInModal
+                        open={isSignInOpen}
+                        onClose={closeSignInModal}
+                        onSuccess={handleSignInSuccess}
+                    />
+                    <Box
+                        onClick={handleOpenSignInModal}
+                        sx={{
+                            width: '100%',
+                            height: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'flex-start',
+                            p: 2,
+                            px: 2.5,
+                            cursor: 'pointer',
+                            '&:hover': {
+                                opacity: 0.8,
+                            },
+                        }}
+                    >
+                        <Box
+                            sx={{
+                                width: 38,
+                                height: 38,
+                                borderRadius: '50%',
+                                bgcolor: theme.palette.mode === 'dark'
+                                    ? 'rgba(255, 255, 255, 0.12)'
+                                    : 'rgba(0, 0, 0, 0.08)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mr: 1.5,
+                                mt: 0.5,
+                            }}
+                        >
+                            <PersonIcon
+                                sx={{
+                                    color: theme.palette.mode === 'dark'
+                                        ? 'rgba(255, 255, 255, 0.35)'
+                                        : 'rgba(0, 0, 0, 0.45)',
+                                    fontSize: 22
+                                }}
+                            />
+                        </Box>
+                        <Box sx={{ minWidth: 0 }}>
+                            <Typography variant="subtitle2" fontWeight="bold" noWrap sx={{ color: 'text.secondary' }}>
+                                Chưa đăng nhập
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" noWrap>
+                                Nhấn để đăng nhập
+                            </Typography>
+                        </Box>
+                    </Box>
+                </>
+            );
+        }
     }
 
     const userInitial = session.user?.full_name
@@ -380,6 +502,50 @@ const UserAvatar: React.FC<UserMenuProps> = ({ variant = 'icon' }) => {
     // Icon variant: chỉ hiển thị avatar
     if (variant === 'icon') {
         return (
+            <>
+                <SignInModal
+                    open={isSignInOpen}
+                    onClose={closeSignInModal}
+                    onSuccess={handleSignInSuccess}
+                />
+                <Box
+                    onClick={handleClick}
+                    sx={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        p: 1,
+                        cursor: 'pointer',
+                        '&:hover': {
+                            opacity: 0.8,
+                        },
+                    }}
+                    title={`${session.user.full_name || 'User'} (${session.user.email})`} // Tooltip hiển thị thông tin user
+                >
+                    <UserAvatarWithSubscription
+                        size={40}
+                        badgeText={licenseKey || '...'}
+                        badgeColor={licenseColor}
+                        avatarSrc={avatarUrl}
+                        userId={session.user.id}
+                    >
+                        {userInitial}
+                    </UserAvatarWithSubscription>
+                </Box>
+            </>
+        );
+    }
+
+    // Full variant: hiển thị đầy đủ thông tin
+    return (
+        <>
+            <SignInModal
+                open={isSignInOpen}
+                onClose={closeSignInModal}
+                onSuccess={handleSignInSuccess}
+            />
             <Box
                 onClick={handleClick}
                 sx={{
@@ -387,73 +553,44 @@ const UserAvatar: React.FC<UserMenuProps> = ({ variant = 'icon' }) => {
                     height: '100%',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    p: 1,
+                    justifyContent: 'flex-start',
+                    p: 2,
+                    px: 2.5,
                     cursor: 'pointer',
                     '&:hover': {
                         opacity: 0.8,
                     },
                 }}
-                title={`${session.user.full_name || 'User'} (${session.user.email})`} // Tooltip hiển thị thông tin user
             >
-                <UserAvatarWithSubscription
-                    size={40}
-                    badgeText={licenseKey || '...'}
-                    badgeColor={licenseColor}
-                    avatarSrc={avatarUrl}
-                    userId={session.user.id}
-                >
-                    {userInitial}
-                </UserAvatarWithSubscription>
-            </Box>
-        );
-    }
+                <Box sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-start',
+                    mt: -1,
+                    mr: 1.5
+                }}>
+                    <UserAvatarWithSubscription
+                        size={38}
+                        badgeText={licenseKey || '...'}
+                        badgeColor={licenseColor}
+                        avatarSrc={avatarUrl}
+                        userId={session.user.id}
+                    >
+                        {userInitial}
+                    </UserAvatarWithSubscription>
+                </Box>
 
-    // Full variant: hiển thị đầy đủ thông tin
-    return (
-        <Box
-            onClick={handleClick}
-            sx={{
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-start',
-                p: 2,
-                px: 2.5,
-                cursor: 'pointer',
-                '&:hover': {
-                    opacity: 0.8,
-                },
-            }}
-        >
-            <Box sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                mt: -1,
-                mr: 1.5
-            }}>
-                <UserAvatarWithSubscription
-                    size={38}
-                    badgeText={licenseKey || '...'}
-                    badgeColor={licenseColor}
-                    avatarSrc={avatarUrl}
-                    userId={session.user.id}
-                >
-                    {userInitial}
-                </UserAvatarWithSubscription>
+                <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="subtitle2" fontWeight="bold" noWrap>
+                        {session.user.full_name || 'User'}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" noWrap>
+                        {session.user.email}
+                    </Typography>
+                </Box>
             </Box>
+        </>
 
-            <Box sx={{ minWidth: 0 }}>
-                <Typography variant="subtitle2" fontWeight="bold" noWrap>
-                    {session.user.full_name || 'User'}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" noWrap>
-                    {session.user.email}
-                </Typography>
-            </Box>
-        </Box>
     );
 };
 

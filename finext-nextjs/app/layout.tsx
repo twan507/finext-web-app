@@ -33,14 +33,16 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
       </head>
-      <body>
+      <body style={{ margin: 0, height: '100vh', overflow: 'auto' }}>
         {/* BỌC BÊN NGOÀI MuiProvider */}
         <AppRouterCacheProvider options={{ key: 'css' }}>
           <NextThemesProvider>
             <NotificationProvider>
               <AuthProvider>
                 <MuiProvider>
-                  {children}
+                  <div style={{ minHeight: '100vh' }}>
+                    {children}
+                  </div>
                 </MuiProvider>
               </AuthProvider>
             </NotificationProvider>

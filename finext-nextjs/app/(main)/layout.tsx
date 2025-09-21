@@ -31,13 +31,14 @@ import {
   Timeline,
   PieChart,
   BarChart,
-  ShowChart,
-  AccountCircleOutlined as AccountCircleOutlinedIcon
+  ShowChart
 } from '@mui/icons-material';
 
 import UserAvatar from '../../components/UserAvatar';
 import ThemeToggleButton from 'components/ThemeToggleButton';
 import BrandLogo from 'components/BrandLogo';
+import SearchBar from '../../components/SearchBar';
+import AuthButtons from '../../components/AuthButtons';
 import { layoutTokens, responsiveTypographyTokens } from '../../theme/tokens';
 
 interface NavItem {
@@ -114,39 +115,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           bgcolor: 'transparent',
         }}
       >
-        {session ? (
-          <UserAvatar variant="icon" />
-        ) : (
-          <Box
-            sx={{
-              width: 40,
-              height: 40,
-              borderRadius: '50%',
-              bgcolor: theme.palette.grey[700],
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <AccountCircleOutlinedIcon
-              sx={{
-                color: theme.palette.grey[400],
-                fontSize: 24
-              }}
-            />
-          </Box>
-        )}
+        <UserAvatar variant="icon" />
       </Box>
 
       {/* Navigation */}
       <Box sx={{
         flex: 1,
-        overflowY: 'auto',
         px: 1,
-        scrollbarWidth: 'thin',
-        '&::-webkit-scrollbar': { width: 2 },
-        '&::-webkit-scrollbar-thumb': { backgroundColor: alpha(theme.palette.text.primary, 0.15), borderRadius: 8 },
-        '&:hover::-webkit-scrollbar-thumb': { backgroundColor: alpha(theme.palette.text.primary, 0.25) }
       }}>
         <List sx={{ py: 1, width: '100%' }}>
           {navigationStructure.map((item) => {
@@ -207,45 +182,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           justifyContent: 'flex-start',
           height: layoutTokens.appBarHeight,
           gap: 1,
-          px: 2,
         }}
       >
-        {session ? (
-          <UserAvatar variant="full" />
-        ) : (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Box
-              sx={{
-                width: 40,
-                height: 40,
-                borderRadius: '50%',
-                bgcolor: theme.palette.grey[700],
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <AccountCircleOutlinedIcon
-                sx={{
-                  color: theme.palette.grey[400],
-                  fontSize: 24
-                }}
-              />
-            </Box>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Guest
-            </Typography>
-          </Box>
-        )}
+        <UserAvatar variant="full" />
       </Box>
 
       <List sx={{
         flexGrow: 1,
-        overflowY: 'auto',
-        scrollbarWidth: 'thin',
-        '&::-webkit-scrollbar': { width: 2 },
-        '&::-webkit-scrollbar-thumb': { backgroundColor: alpha(theme.palette.text.primary, 0.15), borderRadius: 8 },
-        '&:hover::-webkit-scrollbar-thumb': { backgroundColor: alpha(theme.palette.text.primary, 0.25) }
       }}>
         {navigationStructure.map((item) => {
           const isActive = currentPathname.startsWith(item.href);
@@ -312,7 +255,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: theme.palette.background.default }}>
+    <Box sx={{ display: 'flex', height: '100vh', bgcolor: theme.palette.background.default }}>
       <CssBaseline />
 
       {/* APP BAR */}
@@ -330,6 +273,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       >
 
         <Toolbar sx={{
+          display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           px: { xs: 2, lg: 3 },
@@ -337,8 +281,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           height: layoutTokens.appBarHeight,
           maxHeight: layoutTokens.appBarHeight,
           width: '100%',
-          maxWidth: 1400,
+          maxWidth: 1430,
           mx: 'auto',
+          gap: 2,
         }}>
           {/* Container bên trái, sẽ chứa logo và nút menu mobile */}
           <Box sx={{
@@ -366,8 +311,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <BrandLogo href="/" />
             {/* {generateBreadcrumbs()} */}
           </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            {/* UserAvatar đã được chuyển vào sidebar */}
+
+          {/* Container bên phải cho thanh tìm kiếm và auth buttons */}
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            gap: 1.5,
+            mr: -1.1
+          }}>
+            {/* Thanh tìm kiếm luôn hiển thị */}
+            <SearchBar variant="compact" />
+
+            {/* Nút đăng nhập/đăng ký chỉ hiển thị khi chưa đăng nhập và không phải mobile */}
+            {!session && !lgDown && (
+              <AuthButtons variant="full" />
+            )}
           </Box>
         </Toolbar>
       </AppBar>
@@ -423,12 +382,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         height: '100vh',
         mt: `${layoutTokens.appBarHeight}px`,
         maxHeight: `calc(100vh - ${layoutTokens.appBarHeight}px)`,
-        overflowY: 'auto',
         bgcolor: theme.palette.background.default,
         display: 'flex',
         justifyContent: 'center',
       }}>
-        <Box sx={{ width: '100%', maxWidth: 1400, mx: 'auto', minHeight: '100%' }}>
+        <Box sx={{ width: '100%', maxWidth: 1400, minHeight: '100%' }}>
           {children}
         </Box>
       </Box>

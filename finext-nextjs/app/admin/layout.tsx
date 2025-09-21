@@ -241,10 +241,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         sx={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'flex-start', // Căn trái thay vì căn giữa
-          height: layoutTokens.appBarHeight, // Sử dụng height thay vì minHeight để đảm bảo chính xác
+          justifyContent: 'flex-start',
+          height: layoutTokens.appBarHeight,
           bgcolor: 'transparent',
-          // Bỏ borderBottom và padding
         }}
       >
         <UserAvatar variant="full" />
@@ -252,7 +251,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Navigation */}
       <Box sx={{
-        flex: 1, overflowY: 'auto', px: 1.25,   // ← thêm padding ngang (≈10px)
+        flex: 1, px: 1.25,   // ← thêm padding ngang (≈10px)
         scrollbarWidth: 'thin',
         '&::-webkit-scrollbar': { width: 2 },
         '&::-webkit-scrollbar-thumb': { backgroundColor: alpha(theme.palette.text.primary, 0.15), borderRadius: 8 },
@@ -297,7 +296,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           justifyContent: 'flex-start', // Căn trái
           height: layoutTokens.appBarHeight, // Đảm bảo chiều cao chính xác
           gap: 1,
-          // Bỏ borderBottom và padding
         }}
       >
         <UserAvatar variant="full" />
@@ -305,11 +303,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <List sx={{
         flexGrow: 1,
-        overflowY: 'auto',
-        scrollbarWidth: 'thin',
-        '&::-webkit-scrollbar': { width: 2 },
-        '&::-webkit-scrollbar-thumb': { backgroundColor: alpha(theme.palette.text.primary, 0.15), borderRadius: 8 },
-        '&:hover::-webkit-scrollbar-thumb': { backgroundColor: alpha(theme.palette.text.primary, 0.25) }
       }}>
         {navigationStructure.map((itemOrGroup) => {
           if ('href' in itemOrGroup) {
@@ -426,7 +419,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: theme.palette.background.default }}>
+    <Box sx={{ display: 'flex', height: '100vh', bgcolor: theme.palette.background.default }}>
       <CssBaseline />
 
       {/* APP BAR */}
@@ -526,7 +519,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </Box>
 
       {/* MAIN */}
-      <Box component="main" sx={{ flexGrow: 1, p: 3, width: { lg: `calc(100% - ${drawerWidth}px)` }, height: '100vh', mt: `${layoutTokens.appBarHeight}px`, maxHeight: `calc(100vh - ${layoutTokens.appBarHeight}px)`, overflowY: 'auto', bgcolor: theme.palette.mode === 'light' ? alpha(theme.palette.grey[500], 0.04) : theme.palette.background.default }}>
+      <Box component="main" sx={{ flexGrow: 1, p: 3, width: { lg: `calc(100% - ${drawerWidth}px)` }, height: '100vh', mt: `${layoutTokens.appBarHeight}px`, maxHeight: `calc(100vh - ${layoutTokens.appBarHeight}px)`, bgcolor: theme.palette.mode === 'light' ? alpha(theme.palette.grey[500], 0.04) : theme.palette.background.default }}>
         {children}
       </Box>
     </Box>

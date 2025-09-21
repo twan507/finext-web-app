@@ -83,7 +83,11 @@ export function formatErrorForUser(error: any): ErrorInfo {
     if (errorMessage.includes('Non-Error promise rejection captured') ||
         errorMessage.includes('ResizeObserver') ||
         errorMessage.includes('Script error') ||
-        errorMessage.includes('ChunkLoadError')) {
+        errorMessage.includes('ChunkLoadError') ||
+        errorMessage.includes('empty') ||
+        errorMessage === '' ||
+        errorMessage === 'undefined' ||
+        errorMessage === 'null') {
         return {
             userMessage: '',
             severity: 'info',
@@ -102,17 +106,31 @@ export function formatErrorForUser(error: any): ErrorInfo {
 }
 
 /**
- * Logs error with appropriate level
+ * Checks if an error is meaningful (not empty or null)
+ */
+export function isValidError(error: any): boolean {
+    if (!error) return false;
+    if (typeof error === 'object' && Object.keys(error).length === 0) return false;
+    if (error === 'undefined' || error === 'null' || error === '') return false;
+    return true;
+}
+
+/**
+ * Logs error with appropriate level, with better handling for empty errors
  */
 export function logError(error: any, context?: string) {
-    const errorInfo = formatErrorForUser(error);
     const prefix = context ? `[${context}]` : '';
 
-    // Handle empty error objects
-    if (!error || (typeof error === 'object' && Object.keys(error).length === 0)) {
-        console.error(`${prefix} Empty error object encountered`);
+    // Handle empty error objects more gracefully
+    if (!isValidError(error)) {
+        // Only log in development and with lower severity
+        if (process.env.NODE_ENV === 'development') {
+            console.warn(`${prefix} Empty or invalid error object encountered - this might indicate a promise rejection with no actual error`);
+        }
         return;
     }
+
+    const errorInfo = formatErrorForUser(error);
 
     switch (errorInfo.logLevel) {
         case 'error':
@@ -138,6 +156,25 @@ export function logError(error: any, context?: string) {
             });
             break;
     }
+}
+
+/**
+ * Safely logs error only if it's meaningful and should be logged
+ */
+export function safeLogError(error: any, context?: string): boolean {
+    if (!isValidError(error)) {
+        return false;
+    }
+
+    const errorInfo = formatErrorForUser(error);
+
+    // Don't log silent errors that shouldn't be shown to user
+    if (!errorInfo.shouldShowToUser && errorInfo.logLevel === 'info') {
+        return false;
+    }
+
+    logError(error, context);
+    return true;
 }
 
 /**

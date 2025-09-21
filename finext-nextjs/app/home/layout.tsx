@@ -5,12 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from 'components/AuthProvider';
 import {
     AppBar, Box, CssBaseline, Toolbar, CircularProgress, useTheme,
-    alpha
+    alpha, useMediaQuery
 } from '@mui/material';
 
 
 import BrandLogo from 'components/BrandLogo';
-import UserAvatar from 'components/UserAvatar';
+import AuthButtons from 'components/AuthButtons';
 import { layoutTokens } from '../../theme/tokens';
 import ThemeToggleButton from '@/components/ThemeToggleButton';
 
@@ -20,6 +20,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const { session, loading: authLoading } = useAuth();
     const router = useRouter();
     const theme = useTheme();
+
+    // Responsive breakpoints
+    const lgDown = useMediaQuery(theme.breakpoints.down('lg'));
 
     const isDark = theme.palette.mode === "dark";
     const centerX = "42%";
@@ -56,7 +59,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <Box sx={{
             display: 'flex',
             height: '100vh',
-            overflow: 'hidden',
             position: "relative",
             background: layers.base,
             "&::before": {
@@ -122,15 +124,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             <BrandLogo href="/" />
                         </Box>
 
-                        {/* Container bên phải, chứa UserAvatar */}
-                        {session && (
-                            <Box sx={{
-                                display: 'flex',
-                                alignItems: 'center'
-                            }}>
-                                <UserAvatar />
-                            </Box>
-                        )}
+                        {/* Container bên phải, chứa AuthButtons hoặc UserAvatar */}
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.5,
+                        }}>
+                            {/* Nút đăng nhập/đăng ký hiển thị khi chưa đăng nhập */}
+                            {!session && (
+                                <AuthButtons variant={lgDown ? 'compact' : 'full'} />
+                            )}
+
+                            {/* UserAvatar hiển thị khi đã đăng nhập */}
+                            {session && (
+                                "Nghĩ xem có nên ghi gì ko"
+                            )}
+                        </Box>
                     </Toolbar>
                 </Box>
             </AppBar>
@@ -142,7 +151,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 height: '100vh',
                 mt: `${layoutTokens.appBarHeight}px`,
                 maxHeight: `calc(100vh - ${layoutTokens.appBarHeight}px)`,
-                overflowY: 'auto',
                 display: 'flex',
                 justifyContent: 'center',
                 position: 'relative',

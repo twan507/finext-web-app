@@ -10,7 +10,7 @@ import { logoutApi } from 'services/authService';
 // UserSchema cũng cần được import nếu bạn dùng nó trực tiếp ở đây
 import { LoginResponse, UserSchema } from 'services/core/types';
 import { useNotification } from './NotificationProvider';
-import { formatErrorForUser, logError, isAuthError } from 'utils/errorHandler';
+import { formatErrorForUser, logError, isAuthError, isValidError, safeLogError } from 'utils/errorHandler';
 
 
 interface AuthContextType {
@@ -60,12 +60,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(userResponse.message || featuresResponse.message || "Failed to fetch user/features data.");
       }
     } catch (error: any) {
+      // Only process and log meaningful errors
+      if (!isValidError(error)) {
+        // For empty errors, just silently continue without logging
+        return;
+      }
+
       // Xử lý lỗi bằng utility function
       const errorInfo = formatErrorForUser(error);
 
-      // Log error nhưng không để rò rỉ ra console
+      // Safe logging - only logs meaningful errors
       if (process.env.NODE_ENV === 'development') {
-        logError(error, 'AuthProvider.fetchAndSetSessionData');
+        safeLogError(error, 'AuthProvider.fetchAndSetSessionData');
       }
 
       // Nếu lỗi là 401 và không phải lỗi từ refresh-token, thử refresh
@@ -90,15 +96,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             showNotification(errorInfo.userMessage, errorInfo.severity);
           }
         } catch (refreshError: any) {
-          const refreshErrorInfo = formatErrorForUser(refreshError);
-          if (process.env.NODE_ENV === 'development') {
-            logError(refreshError, 'AuthProvider.refreshToken');
+          // Only process meaningful refresh errors
+          if (isValidError(refreshError)) {
+            const refreshErrorInfo = formatErrorForUser(refreshError);
+            if (process.env.NODE_ENV === 'development') {
+              safeLogError(refreshError, 'AuthProvider.refreshToken');
+            }
+            clearSession();
+            setSession(null);
+            setFeatures([]);
+            // Hiển thị thông báo lỗi refresh token
+            showNotification(refreshErrorInfo.userMessage, refreshErrorInfo.severity);
+          } else {
+            // For empty refresh errors, just clear session silently
+            clearSession();
+            setSession(null);
+            setFeatures([]);
           }
-          clearSession();
-          setSession(null);
-          setFeatures([]);
-          // Hiển thị thông báo lỗi refresh token
-          showNotification(refreshErrorInfo.userMessage, refreshErrorInfo.severity);
         }
       } else if (isAuthError(error)) {
         // Lỗi authentication khác, hiển thị notification

@@ -83,7 +83,6 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         minHeight: "100vh",
         width: "100%",
         position: "relative",
-        overflow: "hidden",
         background: layers.base,
         "&::before": {
           content: '""',
