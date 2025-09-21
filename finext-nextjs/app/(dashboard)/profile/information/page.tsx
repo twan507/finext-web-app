@@ -153,13 +153,23 @@ export default function InformationPage() {
         }
     };
 
-    const formatExpiryDate = (dateString: string): string => {
+    const formatExpiryDate = (dateString: string): { text: string; isUrgent: boolean } => {
         const date = new Date(dateString);
-        return date.toLocaleDateString('vi-VN', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
+        const now = new Date();
+        const diffMs = date.getTime() - now.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+        if (diffDays < 0) {
+            return { text: 'Đã hết hạn', isUrgent: true };
+        } else if (diffDays === 0) {
+            return { text: 'Hết hạn hôm nay', isUrgent: true };
+        } else if (diffDays === 1) {
+            return { text: 'Còn lại 1 ngày', isUrgent: true };
+        } else if (diffDays < 7) {
+            return { text: `Còn lại ${diffDays} ngày`, isUrgent: true };
+        } else {
+            return { text: `Còn lại ${diffDays} ngày`, isUrgent: false };
+        }
     };
 
     if (isLoading) {
@@ -253,70 +263,80 @@ export default function InformationPage() {
                     <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
                         {session.user.full_name || 'User'}
                     </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, mt: 0.5, alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', gap: 1, mt: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
+                        {/* License Badge */}
                         <Box
                             sx={{
                                 backgroundColor: licenseColor,
                                 color: 'white',
                                 px: 0.8,
                                 py: 0.2,
-                                fontSize: '0.75rem',
                                 fontWeight: 'bold',
-                                lineHeight: '1.4',
                                 textTransform: 'uppercase',
                                 borderRadius: '4px',
-                                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                                whiteSpace: 'nowrap',
+                                alignItems: 'center',
                             }}
                         >
                             {licenseKey || '...'}
                         </Box>
-                        {licenseKey === 'BASIC' ? (
-                            <Typography variant="body2" sx={{
-                                color: theme.palette.mode === 'dark' ? '#A0A0A0' : '#6B7280',
-                                display: 'flex',
-                                alignItems: 'center'
-                            }}>
-                                <Box component="span" sx={{
-                                    width: 6,
-                                    height: 6,
-                                    borderRadius: '50%',
-                                    bgcolor: theme.palette.mode === 'dark' ? '#A0A0A0' : '#6B7280',
-                                    mr: 1
-                                }} />
-                                Chưa kích hoạt
-                            </Typography>
-                        ) : finalIsSpecialRole ? (
-                            <Typography variant="body2" sx={{
-                                color: theme.palette.mode === 'dark' ? '#C084FC' : '#7C3AED',
-                                display: 'flex',
-                                alignItems: 'center'
-                            }}>
-                                <Box component="span" sx={{
-                                    width: 6,
-                                    height: 6,
-                                    borderRadius: '50%',
-                                    bgcolor: theme.palette.mode === 'dark' ? '#C084FC' : '#7C3AED',
-                                    mr: 1
-                                }} />
-                                Hiệu lực vĩnh viễn
-                            </Typography>
-                        ) : expiryDate && (
-                            <Typography variant="body2" sx={{
-                                color: theme.palette.mode === 'dark' ? '#F87171' : '#DC2626',
-                                display: 'flex',
-                                alignItems: 'center'
-                            }}>
-                                <Box component="span" sx={{
-                                    width: 6,
-                                    height: 6,
-                                    borderRadius: '50%',
-                                    bgcolor: theme.palette.mode === 'dark' ? '#F87171' : '#DC2626',
-                                    mr: 1
-                                }} />
-                                Hết hạn: {formatExpiryDate(expiryDate)}
-                            </Typography>
-                        )}
+
+                        {/* Status Text */}
+                        {(() => {
+                            const getStatusInfo = () => {
+                                if (licenseKey === 'BASIC') {
+                                    return {
+                                        text: 'Chưa kích hoạt',
+                                        color: theme.palette.mode === 'dark' ? '#A0A0A0' : '#6B7280'
+                                    };
+                                }
+
+                                if (finalIsSpecialRole) {
+                                    return {
+                                        text: 'Hiệu lực vĩnh viễn',
+                                        color: theme.palette.mode === 'dark' ? '#3894f7ff' : '#256af5ff'
+                                    };
+                                }
+
+                                if (expiryDate) {
+                                    const expiryInfo = formatExpiryDate(expiryDate);
+                                    return {
+                                        text: expiryInfo.text,
+                                        color: expiryInfo.isUrgent
+                                            ? (theme.palette.mode === 'dark' ? '#DC2626' : '#B91C1C')
+                                            : (theme.palette.mode === 'dark' ? '#3894f7ff' : '#256af5ff'),
+                                        isUrgent: expiryInfo.isUrgent
+                                    };
+                                }
+
+                                return null;
+                            };
+
+                            const statusInfo = getStatusInfo();
+                            if (!statusInfo) return null;
+
+                            return (
+                                <Typography variant="body2" sx={{
+                                    color: statusInfo.color,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    lineHeight: 1.4,
+                                    mt: 0.2
+                                }}>
+                                    <Box component="span" sx={{
+                                        width: 6,
+                                        height: 6,
+                                        borderRadius: '50%',
+                                        bgcolor: statusInfo.color,
+                                        mr: 1,
+                                    }} />
+                                    <Box component="span" sx={{
+                                        fontWeight: statusInfo.isUrgent ? 'bold' : 'normal'
+                                    }}>
+                                        {statusInfo.text}
+                                    </Box>
+                                </Typography>
+                            );
+                        })()}
                     </Box>
                 </Box>
             </Box>

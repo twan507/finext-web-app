@@ -13,8 +13,28 @@ export interface ErrorInfo {
  * Formats error messages in a user-friendly way
  */
 export function formatErrorForUser(error: any): ErrorInfo {
+    // Handle empty error objects or null/undefined
+    if (!error || (typeof error === 'object' && Object.keys(error).length === 0)) {
+        return {
+            userMessage: 'Đã có lỗi không xác định xảy ra. Vui lòng thử lại sau.',
+            severity: 'error',
+            shouldShowToUser: true,
+            logLevel: 'error'
+        };
+    }
+
     const errorMessage = error?.message || error?.detail || String(error);
     const statusCode = error?.statusCode || error?.status;
+
+    // Handle empty or meaningless error messages
+    if (!errorMessage || errorMessage === '[object Object]' || errorMessage === 'undefined' || errorMessage === 'null') {
+        return {
+            userMessage: 'Đã có lỗi không xác định xảy ra. Vui lòng thử lại sau.',
+            severity: 'error',
+            shouldShowToUser: true,
+            logLevel: 'error'
+        };
+    }
 
     // Authentication/Authorization errors
     if (statusCode === 401 ||
@@ -88,15 +108,34 @@ export function logError(error: any, context?: string) {
     const errorInfo = formatErrorForUser(error);
     const prefix = context ? `[${context}]` : '';
 
+    // Handle empty error objects
+    if (!error || (typeof error === 'object' && Object.keys(error).length === 0)) {
+        console.error(`${prefix} Empty error object encountered`);
+        return;
+    }
+
     switch (errorInfo.logLevel) {
         case 'error':
-            console.error(`${prefix} Error:`, error);
+            console.error(`${prefix} Error:`, {
+                message: error?.message || 'No message',
+                status: error?.status || error?.statusCode || 'No status',
+                stack: error?.stack || 'No stack',
+                fullError: error
+            });
             break;
         case 'warn':
-            console.warn(`${prefix} Warning:`, error);
+            console.warn(`${prefix} Warning:`, {
+                message: error?.message || 'No message',
+                status: error?.status || error?.statusCode || 'No status',
+                fullError: error
+            });
             break;
         case 'info':
-            console.info(`${prefix} Info:`, error);
+            console.info(`${prefix} Info:`, {
+                message: error?.message || 'No message',
+                status: error?.status || error?.statusCode || 'No status',
+                fullError: error
+            });
             break;
     }
 }

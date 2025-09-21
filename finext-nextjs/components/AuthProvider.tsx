@@ -62,7 +62,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error: any) {
       // Xử lý lỗi bằng utility function
       const errorInfo = formatErrorForUser(error);
-      logError(error, 'AuthProvider.fetchAndSetSessionData');
+
+      // Log error nhưng không để rò rỉ ra console
+      if (process.env.NODE_ENV === 'development') {
+        logError(error, 'AuthProvider.fetchAndSetSessionData');
+      }
 
       // Nếu lỗi là 401 và không phải lỗi từ refresh-token, thử refresh
       if (isAuthError(error) && !error.message?.includes('refresh-token')) {
@@ -82,16 +86,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             clearSession();
             setSession(null);
             setFeatures([]);
+            // Hiển thị thông báo session hết hạn
+            showNotification(errorInfo.userMessage, errorInfo.severity);
           }
         } catch (refreshError: any) {
-          logError(refreshError, 'AuthProvider.refreshToken');
+          const refreshErrorInfo = formatErrorForUser(refreshError);
+          if (process.env.NODE_ENV === 'development') {
+            logError(refreshError, 'AuthProvider.refreshToken');
+          }
           clearSession();
           setSession(null);
           setFeatures([]);
+          // Hiển thị thông báo lỗi refresh token
+          showNotification(refreshErrorInfo.userMessage, refreshErrorInfo.severity);
         }
-      } else if (!isAuthError(error)) {
-        // Lỗi không phải authentication, có thể là network, không xóa session
-        console.warn("Non-auth error during session fetch, session retained:", errorInfo.userMessage);
+      } else if (isAuthError(error)) {
+        // Lỗi authentication khác, hiển thị notification
+        showNotification(errorInfo.userMessage, errorInfo.severity);
+      } else if (errorInfo.shouldShowToUser) {
+        // Lỗi khác cần hiển thị cho user (network, etc.)
+        showNotification(errorInfo.userMessage, errorInfo.severity);
       }
     } finally {
       setLoading(false);
