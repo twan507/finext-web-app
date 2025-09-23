@@ -31,11 +31,10 @@ const HeroSection = () => {
           </div>
           <div className="hero-chart-column">
             <div className="hero-chart-visual floating purple-glow">
-              <HeroChart />
               <div className="hero-chart-info-text">
-                <span>Prev Close: $168.24</span>
-                <span>Last Price: $170.42 <span className="stock-up">+1.29%</span></span>
+                <span style={{ marginLeft: 10 }} className="finext-flow-title">Finext Index</span>
               </div>
+              <HeroChart />
             </div>
             <div className="hero-blur-deco-1"></div>
             <div className="hero-blur-deco-2"></div>

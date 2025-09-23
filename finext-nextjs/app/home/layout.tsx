@@ -59,16 +59,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <Box sx={{
             display: 'flex',
             height: '100vh',
+            width: '100vw',
             position: "relative",
+            overflow: 'hidden', // Prevent overflow
             background: layers.base,
             "&::before": {
                 content: '""',
                 position: "absolute",
-                inset: "-15%",
+                inset: 0, // Changed from "-15%" to prevent overflow
                 pointerEvents: "none",
                 background: layers.before,
                 filter: `blur(${layers.blurPx}px)`,
                 zIndex: -2,
+                transform: 'scale(1.2)', // Add scale to maintain blur effect without overflow
             },
             "&::after": {
                 content: '""',
@@ -82,7 +85,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <CssBaseline />
 
             {/* Theme Toggle Button */}
-            <Box sx={{ position: 'fixed', bottom: 10, right: 14, zIndex: 1000 }}>
+            <Box sx={{ position: 'fixed', bottom: 16, right: 10, zIndex: 1000 }}>
                 <ThemeToggleButton />
             </Box>
 
@@ -151,12 +154,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 height: '100vh',
                 mt: `${layoutTokens.appBarHeight}px`,
                 maxHeight: `calc(100vh - ${layoutTokens.appBarHeight}px)`,
+                overflow: 'hidden', // Prevent main content overflow
                 display: 'flex',
                 justifyContent: 'center',
                 position: 'relative',
                 zIndex: 1, // Main content above background but below AppBar
             }}>
-                <Box sx={{ width: '100%', mx: 'auto', minHeight: '100%' }}>
+                <Box sx={{
+                    width: '100%',
+                    height: '100%',
+                    mx: 'auto',
+                    overflow: 'auto', // Allow scrolling within content area only
+                    maxWidth: '100%', // Prevent horizontal overflow
+                }}>
                     {children}
                 </Box>
             </Box>

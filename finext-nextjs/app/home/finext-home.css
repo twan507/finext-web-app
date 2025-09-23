@@ -53,18 +53,21 @@ body {
 /* Animations & Effects */
 @keyframes float {
 
-    0%,
-    100% {
-        transform: translateY(0);
+    0% {
+        transform: translateY(0) translateX(0) scale(1);
     }
 
     50% {
-        transform: translateY(-12px);
+        transform: translateY(-8px) translateX(10px) scale(1.01);
+    }
+
+    100% {
+        transform: translateY(0) translateX(0) scale(1);
     }
 }
 
 .floating {
-    animation: float 5s ease-in-out infinite;
+    animation: float 6s ease-in-out infinite;
 }
 
 .fade-in {
@@ -347,15 +350,28 @@ body {
 .hero-chart-visual {
     background-image: linear-gradient(to bottom right, var(--deepPurple-700), var(--deepPurple-900));
     border-radius: 1rem;
-    padding: 1.5rem;
+    padding: 0.2rem 0.4rem 1rem 1rem;
 }
 
 .hero-chart-info-text {
     display: flex;
     justify-content: space-between;
-    margin-top: 1rem;
-    font-size: 0.875rem;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0.75rem 0;
+}
+
+.finext-flow-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.774);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.finext-flow-subtitle {
+    font-size: 0.75rem;
     color: var(--deepPurple-200);
+    opacity: 0.9;
 }
 
 .hero-blur-deco-1 {
