@@ -9,8 +9,8 @@ import { apiClient } from 'services/apiClient';
 import { logoutApi } from 'services/authService';
 // UserSchema cũng cần được import nếu bạn dùng nó trực tiếp ở đây
 import { LoginResponse, UserSchema } from 'services/core/types';
+import { formatErrorForUser, safeLogError, isAuthError, safeHandleError, shouldLogError } from 'utils/errorHandler';
 import { useNotification } from './NotificationProvider';
-import { formatErrorForUser, logError, isAuthError, isValidError, safeLogError } from 'utils/errorHandler';
 
 
 interface AuthContextType {
@@ -60,16 +60,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(userResponse.message || featuresResponse.message || "Failed to fetch user/features data.");
       }
     } catch (error: any) {
-      // Only process and log meaningful errors
-      if (!isValidError(error)) {
-        // For empty errors, just silently continue without logging
-        return;
-      }
+      // Use safe error handler to prevent empty error object issues
+      const errorInfo = safeHandleError(error, 'AuthProvider.fetchAndSetSessionData', 'Authentication check failed');
 
-      // Xử lý lỗi bằng utility function
-      const errorInfo = formatErrorForUser(error);
-
-      // Safe logging - only logs meaningful errors
+      // Use safe log error to prevent logging empty error objects
       if (process.env.NODE_ENV === 'development') {
         safeLogError(error, 'AuthProvider.fetchAndSetSessionData');
       }
@@ -96,23 +90,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             showNotification(errorInfo.userMessage, errorInfo.severity);
           }
         } catch (refreshError: any) {
-          // Only process meaningful refresh errors
-          if (isValidError(refreshError)) {
-            const refreshErrorInfo = formatErrorForUser(refreshError);
-            if (process.env.NODE_ENV === 'development') {
-              safeLogError(refreshError, 'AuthProvider.refreshToken');
-            }
-            clearSession();
-            setSession(null);
-            setFeatures([]);
-            // Hiển thị thông báo lỗi refresh token
-            showNotification(refreshErrorInfo.userMessage, refreshErrorInfo.severity);
-          } else {
-            // For empty refresh errors, just clear session silently
-            clearSession();
-            setSession(null);
-            setFeatures([]);
+          // Use safe error handler for refresh token errors too
+          const refreshErrorInfo = safeHandleError(refreshError, 'AuthProvider.refreshToken', 'Token refresh failed');
+
+          // Use safe log error to prevent logging empty error objects
+          if (process.env.NODE_ENV === 'development') {
+            safeLogError(refreshError, 'AuthProvider.refreshToken');
           }
+
+          clearSession();
+          setSession(null);
+          setFeatures([]);
+          // Hiển thị thông báo lỗi refresh token
+          showNotification(refreshErrorInfo.userMessage, refreshErrorInfo.severity);
         }
       } else if (isAuthError(error)) {
         // Lỗi authentication khác, hiển thị notification

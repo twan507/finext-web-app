@@ -22,7 +22,7 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
             "price": 0,
             "duration_days": 99999,
             "feature_keys": list(ALL_DEFAULT_FEATURE_KEYS),
-            "color": "#D32F2F",  # 🔴 Đỏ đậm - Quyền cao nhất, mạnh mẽ, cảnh báo
+            "color": "#D32F2F",  
         },
         {
             "key": "MANAGER",
@@ -30,7 +30,7 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
             "price": 0,
             "duration_days": 99999,
             "feature_keys": [fkey for fkey in ALL_DEFAULT_FEATURE_KEYS if fkey != "admin_feature"],
-            "color": "#FB8C00",  # 🟠 Cam - Quản lý, điều phối, nổi bật nhưng thấp hơn Admin
+            "color": "#DA7901",  
         },
         {
             "key": "PARTNER",
@@ -42,7 +42,7 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
                 "broker_feature",
                 "advanced_feature",
             ],
-            "color": "#7B1FA2",  # 🟣 Tím - Hợp tác, tin cậy, khác biệt với nội bộ
+            "color": "#8E1FCE", 
         },
         {
             "key": "BASIC",
@@ -53,17 +53,17 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
                 "basic_feature",
                 "advanced_feature",
             ],
-            "color": "#1976D2",  # 🔵 Xanh dương - Phổ biến, thân thiện, mặc định
+            "color": "#666666",
         },
         {
             "key": "PRO",
             "name": "License Chuyên Nghiệp",
-            "price": 1000000,
+            "price": 10000000,
             "duration_days": 30,
             "feature_keys": [
                 "basic_feature",
             ],
-            "color": "#C2185B",  # 💜🌸 Tím hồng - Cao cấp, sang trọng, nhấn mạnh "pro"
+            "color": "#C21884",
         },
     ]
     existing_license_keys: Set[str] = set()

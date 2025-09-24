@@ -83,11 +83,7 @@ export function formatErrorForUser(error: any): ErrorInfo {
     if (errorMessage.includes('Non-Error promise rejection captured') ||
         errorMessage.includes('ResizeObserver') ||
         errorMessage.includes('Script error') ||
-        errorMessage.includes('ChunkLoadError') ||
-        errorMessage.includes('empty') ||
-        errorMessage === '' ||
-        errorMessage === 'undefined' ||
-        errorMessage === 'null') {
+        errorMessage.includes('ChunkLoadError')) {
         return {
             userMessage: '',
             severity: 'info',
@@ -106,31 +102,20 @@ export function formatErrorForUser(error: any): ErrorInfo {
 }
 
 /**
- * Checks if an error is meaningful (not empty or null)
- */
-export function isValidError(error: any): boolean {
-    if (!error) return false;
-    if (typeof error === 'object' && Object.keys(error).length === 0) return false;
-    if (error === 'undefined' || error === 'null' || error === '') return false;
-    return true;
-}
-
-/**
- * Logs error with appropriate level, with better handling for empty errors
+ * Logs error with appropriate level
  */
 export function logError(error: any, context?: string) {
+    const errorInfo = formatErrorForUser(error);
     const prefix = context ? `[${context}]` : '';
 
-    // Handle empty error objects more gracefully
-    if (!isValidError(error)) {
-        // Only log in development and with lower severity
+    // Handle empty error objects
+    if (!error || (typeof error === 'object' && Object.keys(error).length === 0)) {
         if (process.env.NODE_ENV === 'development') {
-            console.warn(`${prefix} Empty or invalid error object encountered - this might indicate a promise rejection with no actual error`);
+            console.warn(`${prefix} Empty error object encountered - this may indicate an issue with error handling in the calling code`);
+            console.trace('Stack trace for empty error object:');
         }
         return;
     }
-
-    const errorInfo = formatErrorForUser(error);
 
     switch (errorInfo.logLevel) {
         case 'error':
@@ -156,25 +141,6 @@ export function logError(error: any, context?: string) {
             });
             break;
     }
-}
-
-/**
- * Safely logs error only if it's meaningful and should be logged
- */
-export function safeLogError(error: any, context?: string): boolean {
-    if (!isValidError(error)) {
-        return false;
-    }
-
-    const errorInfo = formatErrorForUser(error);
-
-    // Don't log silent errors that shouldn't be shown to user
-    if (!errorInfo.shouldShowToUser && errorInfo.logLevel === 'info') {
-        return false;
-    }
-
-    logError(error, context);
-    return true;
 }
 
 /**
@@ -204,4 +170,54 @@ export function isNetworkError(error: any): boolean {
         errorMessage.includes('fetch') ||
         errorMessage.includes('ERR_NETWORK') ||
         errorMessage.includes('ERR_INTERNET_DISCONNECTED');
+}
+
+/**
+ * Safe error handler that prevents empty error objects from causing issues
+ */
+export function safeHandleError(error: any, context?: string, fallbackMessage?: string): ErrorInfo {
+    // Handle empty error objects
+    if (!error || (typeof error === 'object' && Object.keys(error).length === 0)) {
+        const meaningfulError = new Error(fallbackMessage || 'Unknown error occurred');
+
+        if (process.env.NODE_ENV === 'development') {
+            console.warn(`[${context || 'SafeErrorHandler'}] Empty error object replaced with meaningful error`);
+        }
+
+        return {
+            userMessage: fallbackMessage || 'An unexpected error occurred',
+            severity: 'warning' as const,
+            shouldShowToUser: true,
+            logLevel: 'warn' as const
+        };
+    }
+
+    return formatErrorForUser(error);
+}
+
+/**
+ * Check if an error should be logged (not empty or meaningless)
+ */
+export function shouldLogError(error: any): boolean {
+    // Don't log if error is null, undefined
+    if (!error) return false;
+
+    // Don't log if error is empty object
+    if (typeof error === 'object' && Object.keys(error).length === 0) return false;
+
+    // Don't log if error is empty string
+    if (typeof error === 'string' && error.trim() === '') return false;
+
+    return true;
+}
+
+/**
+ * Safe log error function that checks if error should be logged
+ */
+export function safeLogError(error: any, context: string = 'Unknown context'): void {
+    if (shouldLogError(error)) {
+        logError(error, context);
+    } else if (process.env.NODE_ENV === 'development') {
+        console.warn(`[${context}] Empty or invalid error object detected:`, error);
+    }
 }

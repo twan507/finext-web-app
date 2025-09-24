@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import Snackbar from '@mui/material/Snackbar';
 import Alert, { AlertColor } from '@mui/material/Alert';
-import { formatErrorForUser, logError } from 'utils/errorHandler';
+import { formatErrorForUser, safeLogError, safeHandleError } from 'utils/errorHandler';
 
 interface NotificationContextType {
     showNotification: (message: string, severity?: AlertColor) => void;
@@ -41,9 +41,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     useEffect(() => {
         const handleError = (event: ErrorEvent) => {
             const error = event.error || { message: event.message };
-            const errorInfo = formatErrorForUser(error);
 
-            logError(error, 'GlobalErrorHandler');
+            // Use safe error handler to prevent empty error object issues
+            const errorInfo = safeHandleError(error, 'GlobalErrorHandler', 'A global error occurred');
+
+            // Safe log the error
+            safeLogError(error, 'GlobalErrorHandler');
 
             if (errorInfo.shouldShowToUser) {
                 showNotification(errorInfo.userMessage, errorInfo.severity);
@@ -52,9 +55,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
         const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
             const error = event.reason;
-            const errorInfo = formatErrorForUser(error);
 
-            logError(error, 'UnhandledRejection');
+            // Use safe error handler to prevent empty error object issues
+            const errorInfo = safeHandleError(error, 'UnhandledRejection', 'An unhandled promise rejection occurred');
+
+            // Safe log the error
+            safeLogError(error, 'UnhandledRejection');
 
             if (errorInfo.shouldShowToUser) {
                 showNotification(errorInfo.userMessage, errorInfo.severity);
