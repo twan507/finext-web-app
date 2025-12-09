@@ -19,7 +19,7 @@ import ArrowBack from '@mui/icons-material/ArrowBackIosNew';
 import AccessTime from '@mui/icons-material/AccessTime';
 
 import BrandLogo from 'components/BrandLogo';
-import { responsiveTypographyTokens, iconSizeTokens, layoutTokens } from 'theme/tokens';
+import {  responsiveTypographyTokens, iconSizeTokens, layoutTokens  } from 'theme/tokens';
 
 interface OtpRequestResponse {
     message: string;

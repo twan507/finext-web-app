@@ -20,85 +20,78 @@ declare module '@mui/material/Typography' {
   }
 }
 
-// --------------------
-// COLOR TOKENS
-// --------------------
+// Extend MUI Palette to include component colors
+declare module '@mui/material/styles' {
+  interface Palette {
+    component: {
+      appBar: {
+        background: string;
+        text: string;
+      };
+      drawer: {
+        border: string;
+      };
+      tableHead: {
+        background: string;
+        sortIcon: string;
+      };
+      tableRow: {
+        background: string;
+        hover: string;
+        selected: string;
+      };
+      chip: {
+        successBackground: string;
+        successColor: string;
+        defaultBackground: string;
+        defaultColor: string;
+      };
+      modal: {
+        background: string;
+        noteBackground: string;
+        noteBorder: string;
+        noteText: string;
+      };
+    };
+  }
 
-export const colorTokens = {
-  common: {
-    black: '#000000',
-    white: '#fafbfc', // Xám rất nhẹ thay vì trắng tinh
-  },
-  primary: {
-    main: '#7c3aed',
-    light: '#a78bfa',
-    dark: '#5b21b6',
-    contrastText: '#fafbfc', // Xám rất nhẹ
-  },
-  secondary: {
-    main: '#dc004e',
-    light: '#ff5983',
-    dark: '#a00026',
-    contrastText: '#fafbfc', // Xám rất nhẹ
-  },
-  error: {
-    main: '#d32f2f',
-    light: '#ef5350',
-    dark: '#c62828',
-    contrastText: '#fafbfc', // Xám rất nhẹ
-  },
-  warning: {
-    main: '#ed6c02',
-    light: '#ff9800',
-    dark: '#e65100',
-    contrastText: '#fafbfc', // Xám rất nhẹ
-  },
-  info: {
-    main: '#0277bd',
-    light: '#58a5f0',
-    dark: '#004c8c',
-    contrastText: '#fafbfc', // Xám rất nhẹ
-  },
-  success: {
-    main: '#2e7d32',
-    light: '#4caf50',
-    dark: '#1b5e20',
-    contrastText: '#fafbfc', // Xám rất nhẹ
-  },
+  interface PaletteOptions {
+    component?: {
+      appBar?: {
+        background?: string;
+        text?: string;
+      };
+      drawer?: {
+        border?: string;
+      };
+      tableHead?: {
+        background?: string;
+        sortIcon?: string;
+      };
+      tableRow?: {
+        background?: string;
+        hover?: string;
+        selected?: string;
+      };
+      chip?: {
+        successBackground?: string;
+        successColor?: string;
+        defaultBackground?: string;
+        defaultColor?: string;
+      };
+      modal?: {
+        background?: string;
+        noteBackground?: string;
+        noteBorder?: string;
+        noteText?: string;
+      };
+    };
+  }
+}
 
-  // Specific App Colors (examples)
-  finext: {
-    deepPurple: {
-      50: '#f5f3ff',
-      100: '#ede9fe',
-      200: '#ddd6fe',
-      300: '#c4b5fd',
-      400: '#a78bfa',
-      500: '#8b5cf6',
-      600: '#7c3aed',
-      700: '#6d28d9',
-      800: '#5b21b6',
-      900: '#4c1d95',
-    },
-    royalPurple: {
-      50: '#f6f0ff',
-      100: '#eddbfe',
-      200: '#d6bef9',
-      300: '#bd93f5',
-      400: '#a368f1',
-      500: '#8a3ee8',
-      600: '#7928d4',
-      700: '#6721b7',
-      800: '#551c96',
-      900: '#46157a',
-    },
-    violetBerry: '#7E22CE',
-  },
-  
-  // Component colors will be assigned after palette definitions
-  lightComponentColors: {} as any,
-  darkComponentColors: {} as any,
-};
+// --------------------
+// PALETTE TOKENS
+// --------------------
 
 // Light Theme Palette (Strictly PaletteOptions)
 export const lightThemePalette: PaletteOptions = {
@@ -109,11 +102,36 @@ export const lightThemePalette: PaletteOptions = {
     dark: '#5b21b6',
     contrastText: '#fafbfc',
   },
-  secondary: colorTokens.secondary,
-  error: colorTokens.error,
-  warning: colorTokens.warning,
-  info: colorTokens.info,
-  success: colorTokens.success,
+  secondary: {
+    main: '#dc004e',
+    light: '#ff5983',
+    dark: '#a00026',
+    contrastText: '#fafbfc',
+  },
+  error: {
+    main: '#d32f2f',
+    light: '#ef5350',
+    dark: '#c62828',
+    contrastText: '#fafbfc',
+  },
+  warning: {
+    main: '#ed6c02',
+    light: '#ff9800',
+    dark: '#e65100',
+    contrastText: '#fafbfc',
+  },
+  info: {
+    main: '#0277bd',
+    light: '#58a5f0',
+    dark: '#004c8c',
+    contrastText: '#fafbfc',
+  },
+  success: {
+    main: '#2e7d32',
+    light: '#4caf50',
+    dark: '#1b5e20',
+    contrastText: '#fafbfc',
+  },
   background: {
     default: '#fafbfc',
     paper: '#f5f5f5',
@@ -124,6 +142,36 @@ export const lightThemePalette: PaletteOptions = {
     disabled: 'rgba(0, 0, 0, 0.38)',
   },
   divider: 'rgba(0, 0, 0, 0.12)',
+  component: {
+    appBar: {
+      background: '#fafbfc',
+      text: 'rgba(0, 0, 0, 0.95)',
+    },
+    drawer: {
+      border: '#f0f0f0',
+    },
+    tableHead: {
+      background: '#fafafa',
+      sortIcon: 'rgba(0, 0, 0, 0.65)',
+    },
+    tableRow: {
+      background: '#fafbfc',
+      hover: '#f2f3f4',
+      selected: '#f3e8ff',
+    },
+    chip: {
+      successBackground: '#f3e8ff',
+      successColor: '#7c3aed',
+      defaultBackground: '#f5f5f5',
+      defaultColor: '#333333',
+    },
+    modal: {
+      background: '#fafbfc',
+      noteBackground: '#f8f9fa',
+      noteBorder: '#e9ecef',
+      noteText: '#495057',
+    },
+  },
 };
 
 // Dark Theme Palette (Strictly PaletteOptions)
@@ -141,10 +189,30 @@ export const darkThemePalette: PaletteOptions = {
     dark: '#f06292',
     contrastText: 'rgba(0, 0, 0, 0.87)',
   },
-  error: colorTokens.error,
-  warning: colorTokens.warning,
-  info: colorTokens.info,
-  success: colorTokens.success,
+  error: {
+    main: '#d32f2f',
+    light: '#ef5350',
+    dark: '#c62828',
+    contrastText: '#fafbfc',
+  },
+  warning: {
+    main: '#ed6c02',
+    light: '#ff9800',
+    dark: '#e65100',
+    contrastText: '#fafbfc',
+  },
+  info: {
+    main: '#0277bd',
+    light: '#58a5f0',
+    dark: '#004c8c',
+    contrastText: '#fafbfc',
+  },
+  success: {
+    main: '#2e7d32',
+    light: '#4caf50',
+    dark: '#1b5e20',
+    contrastText: '#fafbfc',
+  },
   background: {
     default: '#121212',
     paper: '#1e1e1e',
@@ -155,77 +223,36 @@ export const darkThemePalette: PaletteOptions = {
     disabled: 'rgba(240, 240, 240, 0.5)',
   },
   divider: 'rgba(255, 255, 255, 0.12)',
-};
-
-// Component-specific colors - Tham chiếu từ palette
-colorTokens.lightComponentColors = {
-  appBar: {
-    background: lightThemePalette.background!.default as string,
-    text: lightThemePalette.text!.primary as string,
+  component: {
+    appBar: {
+      background: '#121212',
+      text: '#f0f0f0',
+    },
+    drawer: {
+      border: '#303030',
+    },
+    tableHead: {
+      background: '#1e1e1e',
+      sortIcon: 'rgba(255, 255, 255, 0.7)',
+    },
+    tableRow: {
+      background: '#1e1e1e',
+      hover: '#313131',
+      selected: '#4c1d95',
+    },
+    chip: {
+      successBackground: '#4c1d95',
+      successColor: '#c4b5fd',
+      defaultBackground: '#303030',
+      defaultColor: '#bdbdbd',
+    },
+    modal: {
+      background: '#1e1e1e',
+      noteBackground: '#2d2d2d',
+      noteBorder: '#404040',
+      noteText: '#b0b0b0',
+    },
   },
-  drawer: {
-    background: lightThemePalette.background!.default as string,
-    border: '#f0f0f0',
-  },
-  tableHead: {
-    background: '#fafafa',
-    text: lightThemePalette.text!.primary as string,
-    sortActive: (lightThemePalette.primary as any).main,
-    sortHover: (lightThemePalette.primary as any).main,
-    sortIcon: 'rgba(0, 0, 0, 0.65)',
-  },
-  tableRow: {
-    background: lightThemePalette.background!.default as string,
-    hover: '#f2f3f4',
-    selected: '#f3e8ff',
-  },
-  chip: {
-    successBackground: '#f3e8ff',
-    successColor: (lightThemePalette.primary as any).main,
-    defaultBackground: lightThemePalette.background!.paper as string,
-    defaultColor: '#333333',
-  },
-  modal: {
-    background: lightThemePalette.background!.default as string,
-    noteBackground: '#f8f9fa',
-    noteBorder: '#e9ecef',
-    noteText: '#495057',
-  }
-};
-
-colorTokens.darkComponentColors = {
-  appBar: {
-    background: darkThemePalette.background!.default as string,
-    text: darkThemePalette.text!.primary as string,
-  },
-  drawer: {
-    background: darkThemePalette.background!.default as string,
-    border: '#303030',
-  },
-  tableHead: {
-    background: darkThemePalette.background!.paper as string,
-    text: darkThemePalette.text!.primary as string,
-    sortActive: (darkThemePalette.primary as any).main,
-    sortHover: (darkThemePalette.primary as any).main,
-    sortIcon: 'rgba(255, 255, 255, 0.7)',
-  },
-  tableRow: {
-    background: darkThemePalette.background!.paper as string,
-    hover: '#313131',
-    selected: '#4c1d95',
-  },
-  chip: {
-    successBackground: '#4c1d95',
-    successColor: (darkThemePalette.primary as any).main,
-    defaultBackground: '#303030',
-    defaultColor: '#bdbdbd',
-  },
-  modal: {
-    background: darkThemePalette.background!.paper as string,
-    noteBackground: '#2d2d2d',
-    noteBorder: '#404040',
-    noteText: '#b0b0b0',
-  }
 };
 
 // Helper function to get palette options based on mode

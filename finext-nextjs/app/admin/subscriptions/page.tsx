@@ -19,7 +19,7 @@ import {
 	UnfoldLess as CollapseIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { colorTokens, responsiveTypographyTokens } from 'theme/tokens';
+import { responsiveTypographyTokens  } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import SubscriptionSearch from './components/SubscriptionSearch';
 import CreateSubscriptionModal from './components/CreateSubscriptionModal';
@@ -52,9 +52,7 @@ interface PaginatedSubscriptionsResponse {
 
 export default function SubscriptionsPage() {
 	const theme = useTheme();
-	const componentColors = theme.palette.mode === 'light'
-		? colorTokens.lightComponentColors
-		: colorTokens.darkComponentColors;
+	
 
 	const [subscriptions, setSubscriptions] = useState<SubscriptionPublic[]>([]);
 	const [filteredSubscriptions, setFilteredSubscriptions] = useState<SubscriptionPublic[]>([]);
@@ -545,7 +543,7 @@ export default function SubscriptionsPage() {
 											key={sub.id}
 											sx={{
 												'&:hover': {
-													backgroundColor: componentColors.tableRow.hover
+													backgroundColor: theme.palette.component.tableRow.hover
 												}
 											}}
 										>
@@ -668,7 +666,7 @@ export default function SubscriptionsPage() {
 													},
 													// Apply hover effect when parent row is hovered - synchronized with table row hover color
 													'tr:hover &': {
-														backgroundColor: componentColors.tableRow.hover
+														backgroundColor: theme.palette.component.tableRow.hover
 													}
 												}}
 											>                                                <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
@@ -792,9 +790,9 @@ export default function SubscriptionsPage() {
 					{actionSubscription && (
 						<Box sx={{
 							p: 2,
-							bgcolor: componentColors.modal.noteBackground,
+							bgcolor: theme.palette.component.modal.noteBackground,
 							borderRadius: 1,
-							border: `1px solid ${componentColors.modal.noteBorder}`,
+							border: `1px solid ${theme.palette.component.modal.noteBorder}`,
 							mb: 2
 						}}>
 							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
@@ -813,9 +811,9 @@ export default function SubscriptionsPage() {
 
 					<Box sx={{
 						p: 2,
-						bgcolor: componentColors.modal.noteBackground,
+						bgcolor: theme.palette.component.modal.noteBackground,
 						borderRadius: 1,
-						border: `1px solid ${componentColors.modal.noteBorder}`,
+						border: `1px solid ${theme.palette.component.modal.noteBorder}`,
 						mb: 2,
 						'&::before': {
 							content: '""',
@@ -832,13 +830,13 @@ export default function SubscriptionsPage() {
 						<Typography variant="body2" fontWeight="bold" sx={{ mb: 1, color: 'warning.main' }}>
 							⚠️ Lưu ý quan trọng:
 						</Typography>
-						<Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+						<Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
 							• Subscription sẽ được đánh dấu là không hoạt động
 						</Typography>
-						<Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+						<Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
 							• Người dùng sẽ mất quyền truy cập vào các tính năng của license này
 						</Typography>
-						<Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+						<Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
 							• Thao tác này có thể được hoàn tác bằng cách kích hoạt lại
 						</Typography>
 					</Box>
@@ -885,9 +883,9 @@ export default function SubscriptionsPage() {
 					{actionSubscription && (
 						<Box sx={{
 							p: 2,
-							bgcolor: componentColors.modal.noteBackground,
+							bgcolor: theme.palette.component.modal.noteBackground,
 							borderRadius: 1,
-							border: `1px solid ${componentColors.modal.noteBorder}`,
+							border: `1px solid ${theme.palette.component.modal.noteBorder}`,
 							mb: 2
 						}}>
 							<Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
@@ -906,9 +904,9 @@ export default function SubscriptionsPage() {
 
 					<Box sx={{
 						p: 2,
-						bgcolor: componentColors.modal.noteBackground,
+						bgcolor: theme.palette.component.modal.noteBackground,
 						borderRadius: 1,
-						border: `1px solid ${componentColors.modal.noteBorder}`,
+						border: `1px solid ${theme.palette.component.modal.noteBorder}`,
 						mb: 2,
 						'&::before': {
 							content: '""',
@@ -925,13 +923,13 @@ export default function SubscriptionsPage() {
 						<Typography variant="body2" fontWeight="bold" sx={{ mb: 1, color: 'info.main' }}>
 							💡 Lưu ý quan trọng:
 						</Typography>
-						<Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+						<Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
 							• Subscription sẽ được đánh dấu là đang hoạt động
 						</Typography>
-						<Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+						<Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
 							• Người dùng sẽ có quyền truy cập vào các tính năng của license
 						</Typography>
-						<Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+						<Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
 							• Thao tác này có thể hủy kích hoạt các subscription khác của người dùng
 						</Typography>
 					</Box>
@@ -967,10 +965,10 @@ export default function SubscriptionsPage() {
 				<DialogContent>
 					{subscriptionToDelete && (<Box sx={{
 						p: 2,
-						bgcolor: componentColors.modal.noteBackground,
+						bgcolor: theme.palette.component.modal.noteBackground,
 						borderRadius: 1,
 						border: '1px solid',
-						borderColor: componentColors.modal.noteBorder,
+						borderColor: theme.palette.component.modal.noteBorder,
 						mb: 2
 					}}>
 						<Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -1007,9 +1005,9 @@ export default function SubscriptionsPage() {
 					)}
 					<Box sx={{
 						p: 2,
-						bgcolor: componentColors.modal.noteBackground,
+						bgcolor: theme.palette.component.modal.noteBackground,
 						borderRadius: 1,
-						border: `1px solid ${componentColors.modal.noteBorder}`,
+						border: `1px solid ${theme.palette.component.modal.noteBorder}`,
 						mb: 2,
 						position: 'relative',
 						'&::before': {
@@ -1036,13 +1034,13 @@ export default function SubscriptionsPage() {
 						>
 							⚠️ Cảnh báo quan trọng:
 						</Typography>
-						<Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+						<Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText, mb: 1 }}>
 							• Hành động này không thể hoàn tác
 						</Typography>
-						<Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+						<Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText, mb: 1 }}>
 							• Subscription sẽ bị xóa vĩnh viễn khỏi hệ thống
 						</Typography>
-						<Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+						<Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText, mb: 1 }}>
 							• Chỉ có thể xóa subscription đã được hủy kích hoạt
 						</Typography>
 					</Box>

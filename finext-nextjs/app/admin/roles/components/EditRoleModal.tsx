@@ -19,7 +19,6 @@ import {
     ToggleOn as ToggleOnIcon
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
-import { colorTokens } from 'theme/tokens';
 import ModernSwitchButton from '../../components/ModernSwitchButton';
 
 interface RoleUpdateRequest {
@@ -61,9 +60,7 @@ const EditRoleModal: React.FC<EditRoleModalProps> = ({
     onRoleUpdated
 }) => {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors;
+    
 
     const [allPermissions, setAllPermissions] = useState<PermissionPublic[]>([]);
     const [categories, setCategories] = useState<string[]>([]);
@@ -671,9 +668,9 @@ const EditRoleModal: React.FC<EditRoleModalProps> = ({
                     <Box sx={{
                         mt: 3,
                         p: 2,
-                        bgcolor: componentColors.modal.noteBackground,
+                        bgcolor: theme.palette.component.modal.noteBackground,
                         borderRadius: 1,
-                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                         '&::before': {
                             content: '""',
                             position: 'absolute',
@@ -702,7 +699,7 @@ const EditRoleModal: React.FC<EditRoleModalProps> = ({
                             variant="body2"
                             sx={{
                                 mt: 1,
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Tên vai trò phải là duy nhất và mô tả ý nghĩa của vai trò
@@ -710,7 +707,7 @@ const EditRoleModal: React.FC<EditRoleModalProps> = ({
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Các quyền đã có sẽ được tự động chọn khi mở modal
@@ -718,7 +715,7 @@ const EditRoleModal: React.FC<EditRoleModalProps> = ({
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Thay đổi quyền hạn sẽ ảnh hưởng đến tất cả người dùng có vai trò này
@@ -726,7 +723,7 @@ const EditRoleModal: React.FC<EditRoleModalProps> = ({
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Vai trò được bảo vệ (admin, user, broker) không thể xóa

@@ -19,7 +19,6 @@ import {
     Assignment as FeatureIcon
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
-import { colorTokens } from 'theme/tokens';
 import ModernSwitchButton from '../../components/ModernSwitchButton';
 import {
     getBasicFeatures,
@@ -60,9 +59,7 @@ const CreateLicenseModal: React.FC<CreateLicenseModalProps> = ({
     onLicenseCreated
 }) => {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors;
+    
 
     const [allFeatures, setAllFeatures] = useState<FeaturePublic[]>([]); const [formData, setFormData] = useState<LicenseCreateRequest>({
         key: '',
@@ -630,9 +627,9 @@ const CreateLicenseModal: React.FC<CreateLicenseModalProps> = ({
                     <Box sx={{
                         mt: 3,
                         p: 2,
-                        bgcolor: componentColors.modal.noteBackground,
+                        bgcolor: theme.palette.component.modal.noteBackground,
                         borderRadius: 1,
-                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                         '&::before': {
                             content: '""',
                             position: 'absolute',
@@ -661,14 +658,14 @@ const CreateLicenseModal: React.FC<CreateLicenseModalProps> = ({
                             variant="body2"
                             sx={{
                                 mt: 1,
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • License key phải là duy nhất và chỉ chứa chữ hoa, số, dấu gạch dưới và dấu gạch ngang
                         </Typography>                        <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Giá và thời hạn có thể được chỉnh sửa sau khi tạo
@@ -676,7 +673,7 @@ const CreateLicenseModal: React.FC<CreateLicenseModalProps> = ({
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Tính năng cơ bản (Basic) sẽ được tự động bao gồm và không thể bỏ chọn
@@ -684,7 +681,7 @@ const CreateLicenseModal: React.FC<CreateLicenseModalProps> = ({
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Tính năng hệ thống (System) sẽ hiển thị nhưng không thể chọn hoặc bỏ chọn
@@ -692,7 +689,7 @@ const CreateLicenseModal: React.FC<CreateLicenseModalProps> = ({
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Tính năng đã chọn sẽ định nghĩa quyền truy cập của license này

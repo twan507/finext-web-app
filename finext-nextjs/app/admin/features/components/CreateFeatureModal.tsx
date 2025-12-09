@@ -13,8 +13,6 @@ import {
     Close as CloseIcon
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
-import { colorTokens } from 'theme/tokens';
-
 interface FeatureCreate {
     key: string;
     name: string;
@@ -33,9 +31,7 @@ const CreateFeatureModal: React.FC<CreateFeatureModalProps> = ({
     onFeatureCreated
 }) => {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors;
+    
 
     const [formData, setFormData] = useState<FeatureCreate>({
         key: '',
@@ -228,9 +224,9 @@ const CreateFeatureModal: React.FC<CreateFeatureModalProps> = ({
                     <Box sx={{
                         mt: 3,
                         p: 2,
-                        bgcolor: componentColors.modal.noteBackground,
+                        bgcolor: theme.palette.component.modal.noteBackground,
                         borderRadius: 1,
-                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                         '&::before': {
                             content: '""',
                             position: 'absolute',
@@ -259,7 +255,7 @@ const CreateFeatureModal: React.FC<CreateFeatureModalProps> = ({
                             variant="body2"
                             sx={{
                                 mt: 1,
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Key tính năng phải là duy nhất và không thể thay đổi sau khi tạo
@@ -267,7 +263,7 @@ const CreateFeatureModal: React.FC<CreateFeatureModalProps> = ({
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Tính năng mới sẽ cần được gán vào các license để có hiệu lực
@@ -275,7 +271,7 @@ const CreateFeatureModal: React.FC<CreateFeatureModalProps> = ({
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Chỉ có thể chỉnh sửa tên và mô tả sau khi tạo

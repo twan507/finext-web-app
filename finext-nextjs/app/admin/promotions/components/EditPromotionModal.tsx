@@ -14,7 +14,6 @@ import {
     DateRange as DateIcon
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
-import { colorTokens } from 'theme/tokens';
 import { convertGMT7ToUTC, convertUTCToGMT7DateString } from 'utils/dateUtils';
 import { filterNonSystemLicenses } from 'utils/systemProtection';
 import ModernSwitchButton from '../../components/ModernSwitchButton';
@@ -72,9 +71,7 @@ const EditPromotionModal: React.FC<EditPromotionModalProps> = ({
     onPromotionUpdated
 }) => {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors;
+    
 
     const [allLicenses, setAllLicenses] = useState<LicensePublic[]>([]);
 
@@ -292,9 +289,9 @@ const EditPromotionModal: React.FC<EditPromotionModalProps> = ({
                     {/* Current Promotion Info */}
                     <Box sx={{
                         p: 2,
-                        bgcolor: componentColors.modal.noteBackground,
+                        bgcolor: theme.palette.component.modal.noteBackground,
                         borderRadius: 1,
-                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                         mb: 3
                     }}>
                         <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1 }}>
@@ -486,9 +483,9 @@ const EditPromotionModal: React.FC<EditPromotionModalProps> = ({
                     <Box sx={{
                         mt: 3,
                         p: 2,
-                        bgcolor: componentColors.modal.noteBackground,
+                        bgcolor: theme.palette.component.modal.noteBackground,
                         borderRadius: 1,
-                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                         '&::before': {
                             content: '""',
                             position: 'absolute',
@@ -518,7 +515,7 @@ const EditPromotionModal: React.FC<EditPromotionModalProps> = ({
                             variant="body2"
                             sx={{
                                 mt: 1,
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Không thể thay đổi mã khuyến mãi, loại giảm giá và giá trị giảm giá
@@ -526,7 +523,7 @@ const EditPromotionModal: React.FC<EditPromotionModalProps> = ({
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Số lần sử dụng tối đa phải lớn hơn số lần đã sử dụng ({promotion.usage_count})
@@ -534,7 +531,7 @@ const EditPromotionModal: React.FC<EditPromotionModalProps> = ({
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Thay đổi sẽ có hiệu lực ngay lập tức đối với các giao dịch mới

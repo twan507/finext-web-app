@@ -19,7 +19,6 @@ import {
     ToggleOn as ToggleOnIcon
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
-import { colorTokens } from 'theme/tokens';
 import ModernSwitchButton from '../../components/ModernSwitchButton';
 
 interface RoleCreateRequest {
@@ -49,9 +48,7 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
     onClose,
     onRoleCreated
 }) => {
-    const theme = useTheme(); const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors; const [allPermissions, setAllPermissions] = useState<PermissionPublic[]>([]);
+    const theme = useTheme();  const [allPermissions, setAllPermissions] = useState<PermissionPublic[]>([]);
     const [categories, setCategories] = useState<string[]>([]);
     const [permissionsByCategory, setPermissionsByCategory] = useState<Record<string, PermissionPublic[]>>({});
 
@@ -633,9 +630,9 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
                     <Box sx={{
                         mt: 3,
                         p: 2,
-                        bgcolor: componentColors.modal.noteBackground,
+                        bgcolor: theme.palette.component.modal.noteBackground,
                         borderRadius: 1,
-                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                         '&::before': {
                             content: '""',
                             position: 'absolute',
@@ -664,7 +661,7 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
                             variant="body2"
                             sx={{
                                 mt: 1,
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Tên vai trò phải là duy nhất và mô tả ý nghĩa của vai trò
@@ -672,7 +669,7 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Mô tả giúp người dùng hiểu rõ chức năng của vai trò này
@@ -680,7 +677,7 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Quyền hạn đã chọn sẽ định nghĩa những gì người dùng có thể làm
@@ -688,7 +685,7 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Có thể chỉnh sửa quyền hạn sau khi tạo vai trò
@@ -696,7 +693,7 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Vai trò được bảo vệ (admin, user, broker) không thể xóa

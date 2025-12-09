@@ -13,7 +13,6 @@ import {
     Close as CloseIcon
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
-import { colorTokens } from 'theme/tokens';
 
 interface PermissionCreate {
     name: string;
@@ -33,13 +32,11 @@ const CreatePermissionModal: React.FC<CreatePermissionModalProps> = ({
     onPermissionCreated
 }) => {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors; const [formData, setFormData] = useState<PermissionCreate>({
-            name: '',
-            description: '',
-            category: ''
-        });
+    const [formData, setFormData] = useState<PermissionCreate>({
+        name: '',
+        description: '',
+        category: ''
+    });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);    // Data state for dropdowns
     const [availableCategories, setAvailableCategories] = useState<string[]>([]);
@@ -183,7 +180,7 @@ const CreatePermissionModal: React.FC<CreatePermissionModalProps> = ({
             fullWidth
             PaperProps={{
                 sx: {
-                    backgroundColor: componentColors.modal.background,
+                    backgroundColor: theme.palette.component.modal.background,
                     borderRadius: 2
                 }
             }}
@@ -254,12 +251,12 @@ const CreatePermissionModal: React.FC<CreatePermissionModalProps> = ({
                     {/* Note about permissions */}
                     <Box sx={{
                         p: 2,
-                        backgroundColor: componentColors.modal.noteBackground,
+                        backgroundColor: theme.palette.component.modal.noteBackground,
                         border: '1px solid',
-                        borderColor: componentColors.modal.noteBorder,
+                        borderColor: theme.palette.component.modal.noteBorder,
                         borderRadius: 1
                     }}>
-                        <Typography variant="body2" color={componentColors.modal.noteText}>
+                        <Typography variant="body2" color={theme.palette.component.modal.noteText}>
                             <strong>Lưu ý:</strong> Permission được tạo sẽ tự động được gán vào các role thông qua giao diện quản lý roles.
                             Hãy đảm bảo tên permission rõ ràng và theo định dạng category:action.
                         </Typography>

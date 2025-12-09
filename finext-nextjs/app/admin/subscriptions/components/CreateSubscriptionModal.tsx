@@ -12,7 +12,6 @@ import {
     Close as CloseIcon
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
-import { colorTokens } from 'theme/tokens';
 import { parseISO, addDays, format } from 'date-fns';
 import { filterNonSystemLicenses, isSystemLicense } from 'utils/systemProtection';
 
@@ -67,9 +66,7 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
     onSubscriptionCreated
 }) => {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors; const [allUsers, setAllUsers] = useState<UserPublic[]>([]);
+     const [allUsers, setAllUsers] = useState<UserPublic[]>([]);
     const [allLicenses, setAllLicenses] = useState<LicensePublic[]>([]);
     const [userActiveSubscription, setUserActiveSubscription] = useState<SubscriptionPublic | null>(null);
     const [hasActiveNonBasicSub, setHasActiveNonBasicSub] = useState(false);
@@ -370,9 +367,9 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
                                 <Box sx={{
                                     mt: 2,
                                     p: 2,
-                                    bgcolor: componentColors.modal.noteBackground,
+                                    bgcolor: theme.palette.component.modal.noteBackground,
                                     borderRadius: 1,
-                                    border: `1px solid ${componentColors.modal.noteBorder}`,
+                                    border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                                     '&::before': {
                                         content: '""',
                                         position: 'absolute',
@@ -401,14 +398,14 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
                                         variant="body2"
                                         sx={{
                                             mt: 1,
-                                            color: componentColors.modal.noteText
+                                            color: theme.palette.component.modal.noteText
                                         }}
                                     >
                                         • License: <strong>{userActiveSubscription.license_key}</strong>
                                     </Typography>                                    <Typography
                                         variant="body2"
                                         sx={{
-                                            color: componentColors.modal.noteText
+                                            color: theme.palette.component.modal.noteText
                                         }}
                                     >
                                         • Hết hạn: <strong>{new Date(userActiveSubscription.expiry_date).toLocaleDateString('vi-VN')}</strong>
@@ -417,7 +414,7 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
                                         <Typography
                                             variant="body2"
                                             sx={{
-                                                color: componentColors.modal.noteText
+                                                color: theme.palette.component.modal.noteText
                                             }}
                                         >
                                             • Trạng thái:
@@ -483,9 +480,9 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
                                     <Box sx={{ gridColumn: { xs: '1', sm: '1 / -1' } }}>
                                         <Box sx={{
                                             p: 2,
-                                            bgcolor: componentColors.modal.noteBackground,
+                                            bgcolor: theme.palette.component.modal.noteBackground,
                                             borderRadius: 1,
-                                            border: `1px solid ${componentColors.modal.noteBorder}`
+                                            border: `1px solid ${theme.palette.component.modal.noteBorder}`
                                         }}>
                                             <Typography variant="subtitle2" color="primary.main" sx={{ mb: 1, fontWeight: 'bold' }}>
                                                 Thông tin gói đã chọn:
@@ -514,9 +511,9 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
                         <Box sx={{
                             mt: 3,
                             p: 2,
-                            bgcolor: componentColors.modal.noteBackground,
+                            bgcolor: theme.palette.component.modal.noteBackground,
                             borderRadius: 1,
-                            border: `1px solid ${componentColors.modal.noteBorder}`,
+                            border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                             '&::before': {
                                 content: '""',
                                 position: 'absolute',
@@ -545,7 +542,7 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
                                 variant="body2"
                                 sx={{
                                     mt: 1,
-                                    color: componentColors.modal.noteText
+                                    color: theme.palette.component.modal.noteText
                                 }}
                             >
                                 • Subscription sẽ được tạo với trạng thái hoạt động ngay lập tức
@@ -553,7 +550,7 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
                             <Typography
                                 variant="body2"
                                 sx={{
-                                    color: componentColors.modal.noteText
+                                    color: theme.palette.component.modal.noteText
                                 }}
                             >
                                 • Thời gian bắt đầu là thời điểm hiện tại
@@ -561,7 +558,7 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
                             <Typography
                                 variant="body2"
                                 sx={{
-                                    color: componentColors.modal.noteText
+                                    color: theme.palette.component.modal.noteText
                                 }}
                             >
                                 • Ghi đè thời gian sẽ thay thế thời gian mặc định của gói dịch vụ
@@ -569,7 +566,7 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
                             <Typography
                                 variant="body2"
                                 sx={{
-                                    color: componentColors.modal.noteText
+                                    color: theme.palette.component.modal.noteText
                                 }}
                             >
                                 • Kiểm tra kỹ thông tin trước khi tạo subscription

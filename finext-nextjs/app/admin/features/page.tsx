@@ -19,7 +19,7 @@ import {
     UnfoldLess as CollapseIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { colorTokens, responsiveTypographyTokens } from 'theme/tokens';
+import { responsiveTypographyTokens  } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
     SortConfig,
@@ -51,9 +51,7 @@ interface PaginatedFeaturesResponse {
 
 export default function FeaturesPage() {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors;
+    
 
     const [features, setFeatures] = useState<FeaturePublic[]>([]);
     const [filteredFeatures, setFilteredFeatures] = useState<FeaturePublic[]>([]);
@@ -458,7 +456,7 @@ export default function FeaturesPage() {
                                             key={feature.id}
                                             sx={{
                                                 '&:hover': {
-                                                    backgroundColor: componentColors.tableRow.hover
+                                                    backgroundColor: theme.palette.component.tableRow.hover
                                                 }
                                             }}
                                         >
@@ -554,7 +552,7 @@ export default function FeaturesPage() {
                                                     },
                                                     // Apply hover effect when parent row is hovered - synchronized with table row hover color
                                                     'tr:hover &': {
-                                                        backgroundColor: componentColors.tableRow.hover
+                                                        backgroundColor: theme.palette.component.tableRow.hover
                                                     }
                                                 }}
                                                 align="center"

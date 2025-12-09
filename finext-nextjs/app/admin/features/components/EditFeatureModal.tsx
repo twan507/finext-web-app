@@ -12,8 +12,6 @@ import {
     Close as CloseIcon
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
-import { colorTokens } from 'theme/tokens';
-
 interface FeaturePublic {
     id: string;
     key: string;
@@ -40,9 +38,7 @@ const EditFeatureModal: React.FC<EditFeatureModalProps> = ({
     onFeatureUpdated
 }) => {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors;
+    
 
     const [formData, setFormData] = useState({
         name: '',
@@ -223,9 +219,9 @@ const EditFeatureModal: React.FC<EditFeatureModalProps> = ({
                     <Box sx={{
                         mt: 3,
                         p: 2,
-                        bgcolor: componentColors.modal.noteBackground,
+                        bgcolor: theme.palette.component.modal.noteBackground,
                         borderRadius: 1,
-                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                         '&::before': {
                             content: '""',
                             position: 'absolute',
@@ -254,7 +250,7 @@ const EditFeatureModal: React.FC<EditFeatureModalProps> = ({
                             variant="body2"
                             sx={{
                                 mt: 1,
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Key tính năng không thể thay đổi
@@ -262,7 +258,7 @@ const EditFeatureModal: React.FC<EditFeatureModalProps> = ({
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Thay đổi có thể ảnh hưởng đến các license đang sử dụng tính năng này
@@ -270,7 +266,7 @@ const EditFeatureModal: React.FC<EditFeatureModalProps> = ({
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Cập nhật sẽ có hiệu lực ngay lập tức

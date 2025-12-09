@@ -20,7 +20,7 @@ import {
   Delete as DeleteIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { colorTokens, responsiveTypographyTokens } from 'theme/tokens';
+import { responsiveTypographyTokens  } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
   SortConfig,
@@ -71,9 +71,7 @@ interface PaginatedTransactionsResponse {
 
 export default function TransactionsPage() {
   const theme = useTheme();
-  const componentColors = theme.palette.mode === 'light'
-    ? colorTokens.lightComponentColors
-    : colorTokens.darkComponentColors; const [transactions, setTransactions] = useState<TransactionPublic[]>([]);
+   const [transactions, setTransactions] = useState<TransactionPublic[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<TransactionPublic[]>([]);
   const [isFiltering, setIsFiltering] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -607,7 +605,7 @@ export default function TransactionsPage() {
                       key={transaction.id}
                       sx={{
                         '&:hover': {
-                          backgroundColor: componentColors.tableRow.hover
+                          backgroundColor: theme.palette.component.tableRow.hover
                         }
                       }}
                     >
@@ -847,7 +845,7 @@ export default function TransactionsPage() {
                           },
                           // Apply hover effect when parent row is hovered - synchronized with table row hover color
                           'tr:hover &': {
-                            backgroundColor: componentColors.tableRow.hover
+                            backgroundColor: theme.palette.component.tableRow.hover
                           }
                         }}
                         align="center"
@@ -988,7 +986,7 @@ export default function TransactionsPage() {
           {transactionToDelete && (
             <>              <Box sx={{
               p: 1.5,
-              bgcolor: componentColors.modal.noteBackground,
+              bgcolor: theme.palette.component.modal.noteBackground,
               borderRadius: 1,
               mb: 2,
             }}>
@@ -1016,9 +1014,9 @@ export default function TransactionsPage() {
               <Box sx={{
                 mb: 3,
                 p: 2,
-                bgcolor: componentColors.modal.noteBackground,
+                bgcolor: theme.palette.component.modal.noteBackground,
                 borderRadius: 1,
-                border: `1px solid ${componentColors.modal.noteBorder}`,
+                border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                 '&::before': {
                   content: '""',
                   position: 'absolute',
@@ -1045,16 +1043,16 @@ export default function TransactionsPage() {
                   ⚠️ Cảnh báo quan trọng:
                 </Typography>
 
-                <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                   • Hành động này không thể hoàn tác
                 </Typography>
-                <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                   • Chỉ có thể xóa giao dịch không liên kết với subscription đang hoạt động
                 </Typography>
-                <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                   • Dữ liệu giao dịch sẽ bị mất vĩnh viễn
                 </Typography>
-                <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                   • Việc xóa có thể ảnh hưởng đến báo cáo và thống kê hệ thống
                 </Typography>
               </Box>

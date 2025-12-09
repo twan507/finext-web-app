@@ -12,7 +12,6 @@ import {
     Payment as TransactionIcon
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
-import { colorTokens } from 'theme/tokens';
 import { filterNonSystemLicenses, isSystemLicense } from 'utils/systemProtection';
 
 interface UserPublic {
@@ -71,9 +70,7 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
     onTransactionAdded
 }) => {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors;
+    
 
     const [allUsers, setAllUsers] = useState<UserPublic[]>([]);
     const [allLicenses, setAllLicenses] = useState<LicensePublic[]>([]);
@@ -593,9 +590,9 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
                     <Box sx={{
                         mt: 3,
                         p: 2,
-                        bgcolor: componentColors.modal.noteBackground,
+                        bgcolor: theme.palette.component.modal.noteBackground,
                         borderRadius: 1,
-                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                         '&::before': {
                             content: '""',
                             position: 'absolute',
@@ -624,7 +621,7 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
                             variant="body2"
                             sx={{
                                 mt: 1,
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Giao dịch mua mới: Tạo subscription mới cho người dùng với license đã chọn
@@ -632,7 +629,7 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Giao dịch gia hạn: Mở rộng thời gian của subscription hiện tại
@@ -640,7 +637,7 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Thời gian mua sẽ được cộng vào ngày bắt đầu/hết hạn tương ứng

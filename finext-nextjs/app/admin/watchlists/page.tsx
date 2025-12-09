@@ -17,7 +17,7 @@ import {
     Delete as DeleteIcon
 } from '@mui/icons-material';
 import { format as formatDate, parseISO } from 'date-fns';
-import { colorTokens, responsiveTypographyTokens } from 'theme/tokens';
+import { responsiveTypographyTokens  } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
     SortConfig,
@@ -45,9 +45,7 @@ interface PaginatedWatchlistsResponse {
 
 const WatchlistsPage: React.FC = () => {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors; const [watchlists, setWatchlists] = useState<WatchlistPublicAdmin[]>([]);
+     const [watchlists, setWatchlists] = useState<WatchlistPublicAdmin[]>([]);
     const [filteredWatchlists, setFilteredWatchlists] = useState<WatchlistPublicAdmin[]>([]);
     const [isFiltering, setIsFiltering] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -366,7 +364,7 @@ const WatchlistsPage: React.FC = () => {
                                             key={watchlist.id}
                                             sx={{
                                                 '&:hover': {
-                                                    backgroundColor: componentColors.tableRow.hover
+                                                    backgroundColor: theme.palette.component.tableRow.hover
                                                 }
                                             }}
                                         >
@@ -476,8 +474,8 @@ const WatchlistsPage: React.FC = () => {
                                                         size="small"
                                                         variant="filled"
                                                         sx={{
-                                                            backgroundColor: componentColors.chip.defaultBackground,
-                                                            color: componentColors.chip.defaultColor,
+                                                            backgroundColor: theme.palette.component.chip.defaultBackground,
+                                                            color: theme.palette.component.chip.defaultColor,
                                                             height: 24,
                                                             cursor: 'pointer',
                                                             '&:hover': {
@@ -532,7 +530,7 @@ const WatchlistsPage: React.FC = () => {
                                                 },
                                                 // Apply hover effect when parent row is hovered - synchronized with table row hover color
                                                 'tr:hover &': {
-                                                    backgroundColor: componentColors.tableRow.hover
+                                                    backgroundColor: theme.palette.component.tableRow.hover
                                                 }
                                             }} align="center">
                                                 <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>

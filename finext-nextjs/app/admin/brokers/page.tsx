@@ -19,7 +19,7 @@ import {
     UnfoldLess as CollapseIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { colorTokens, responsiveTypographyTokens } from 'theme/tokens';
+import { responsiveTypographyTokens  } from 'theme/tokens';
 import BrokerSearch from './components/BrokerSearch';
 import SortableTableHead from '../components/SortableTableHead';
 import AddBrokerModal from './components/AddBrokerModal';
@@ -59,9 +59,7 @@ interface UserPublic {
 
 export default function BrokersPage() {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors;
+    
 
     const [brokers, setBrokers] = useState<BrokerPublic[]>([]);
     const [filteredBrokers, setFilteredBrokers] = useState<BrokerPublic[]>([]);
@@ -534,7 +532,7 @@ export default function BrokersPage() {
                                             key={broker.id}
                                             sx={{
                                                 '&:hover': {
-                                                    backgroundColor: componentColors.tableRow.hover
+                                                    backgroundColor: theme.palette.component.tableRow.hover
                                                 }
                                             }}
                                         >
@@ -642,7 +640,7 @@ export default function BrokersPage() {
                                                     },
                                                     // Apply hover effect when parent row is hovered - synchronized with table row hover color
                                                     'tr:hover &': {
-                                                        backgroundColor: componentColors.tableRow.hover
+                                                        backgroundColor: theme.palette.component.tableRow.hover
                                                     }
                                                 }}
                                             >                                                <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
@@ -762,7 +760,7 @@ export default function BrokersPage() {
                     {/* Broker Information */}
                     <Box sx={{
                         p: 1.5,
-                        bgcolor: componentColors.modal.noteBackground,
+                        bgcolor: theme.palette.component.modal.noteBackground,
                         borderRadius: 1,
                         mb: 2,
                     }}>
@@ -778,9 +776,9 @@ export default function BrokersPage() {
                     <Box sx={{
                         mb: 3,
                         p: 2,
-                        bgcolor: componentColors.modal.noteBackground,
+                        bgcolor: theme.palette.component.modal.noteBackground,
                         borderRadius: 1,
-                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                         '&::before': {
                             content: '""',
                             position: 'absolute',
@@ -810,34 +808,34 @@ export default function BrokersPage() {
                         {actionType === 'revoke' ? (
                             <>
 
-                                <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                                <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText, mb: 1 }}>
                                     • Tất cả quyền lợi và chức năng môi giới sẽ bị thu hồi
                                 </Typography>
-                                <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                                <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText, mb: 1 }}>
                                     • Các subscription liên quan có thể bị ảnh hưởng
                                 </Typography>
-                                <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                                <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText, mb: 1 }}>
                                     • Hành động này có thể được hoàn tác bằng cách khôi phục quyền
                                 </Typography>
-                                <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                                <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                                     • Mã môi giới sẽ được giữ lại để có thể khôi phục sau này
                                 </Typography>
                             </>
                         ) : (
                             <>
-                                <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                                <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText, mb: 1 }}>
                                     • Môi giới sẽ được kích hoạt lại
                                 </Typography>
-                                <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                                <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText, mb: 1 }}>
                                     • Tất cả quyền lợi và chức năng môi giới sẽ được khôi phục
                                 </Typography>
-                                <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                                <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText, mb: 1 }}>
                                     • Môi giới có thể bắt đầu hoạt động ngay lập tức
                                 </Typography>
-                                <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                                <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText, mb: 1 }}>
                                     • Các subscription và quyền lợi trước đó sẽ được khôi phục
                                 </Typography>
-                                <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                                <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                                     • Mã môi giới và dữ liệu liên quan sẽ được kích hoạt lại
                                 </Typography>
                             </>)}

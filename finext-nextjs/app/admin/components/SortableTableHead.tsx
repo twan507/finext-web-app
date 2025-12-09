@@ -11,7 +11,6 @@ import {
     useTheme
 } from '@mui/material';
 import { SortDirection, ColumnConfig, getResponsiveDisplayStyle } from './TableSortUtils';
-import { colorTokens } from '../../../theme/tokens';
 
 interface SortableTableHeadProps {
     columns: ColumnConfig[];
@@ -27,9 +26,6 @@ const SortableTableHead: React.FC<SortableTableHeadProps> = ({
     expandedView = false
 }) => {
     const theme = useTheme();
-    const colors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors;
 
     const createSortHandler = (columnKey: string) => () => {
         onSort(columnKey);
@@ -77,32 +73,31 @@ const SortableTableHead: React.FC<SortableTableHeadProps> = ({
                         active={isActive && direction !== null}
                         direction={direction === 'asc' ? 'asc' : direction === 'desc' ? 'desc' : undefined}
                         onClick={createSortHandler(column.id)}
-                        sx={{
-                            // Use default text color, override only when active or hover
-                            color: (isActive && direction !== null) ? colors.tableHead.sortActive : colors.tableHead.text,
+                        sx={{                            // Use default text color, override only when active or hover
+                            color: (isActive && direction !== null) ? theme.palette.primary.main : theme.palette.text.primary,
                             '& .MuiTableSortLabel-icon': {
                                 fontSize: '0.875rem',
                                 opacity: isActive && direction ? 1 : 0,
                                 transition: 'opacity 0.15s ease-in-out',
                                 marginLeft: '4px',
-                                color: colors.tableHead.sortIcon,
+                                color: theme.palette.component.tableHead.sortIcon,
                             },
                             '&:hover': {
-                                color: colors.tableHead.sortHover,
+                                color: theme.palette.primary.main,
                                 '& .MuiTableSortLabel-icon': {
                                     opacity: 0.6
                                 }
                             },
                             '&.Mui-active': {
-                                color: colors.tableHead.sortActive,
+                                color: theme.palette.primary.main,
                                 '& .MuiTableSortLabel-icon': {
-                                    color: colors.tableHead.sortActive,
+                                    color: theme.palette.primary.main,
                                     opacity: 1
                                 }
                             },
                             // Ensure color resets properly when not active
                             '&:not(.Mui-active)': {
-                                color: colors.tableHead.text
+                                color: theme.palette.text.primary
                             }
                         }}
                     >                                <Typography
@@ -122,7 +117,7 @@ const SortableTableHead: React.FC<SortableTableHeadProps> = ({
                             variant="subtitle2"
                             sx={{
                                 fontWeight: 600,
-                                color: colors.tableHead.text
+                                color: theme.palette.text.primary
                             }}
                         >
                             {column.label}

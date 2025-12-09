@@ -20,7 +20,7 @@ import {
     DoDisturbOn as DeactivateIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { colorTokens, responsiveTypographyTokens } from 'theme/tokens';
+import { responsiveTypographyTokens  } from 'theme/tokens';
 import { formatUTCToGMT7 } from 'utils/dateUtils';
 import SortableTableHead from '../components/SortableTableHead';
 import {
@@ -62,9 +62,7 @@ interface PaginatedPromotionsResponse {
 
 export default function PromotionsPage() {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors;
+    
 
     const [promotions, setPromotions] = useState<PromotionPublic[]>([]);
     const [filteredPromotions, setFilteredPromotions] = useState<PromotionPublic[]>([]);
@@ -520,7 +518,7 @@ export default function PromotionsPage() {
                                             key={promo.id}
                                             sx={{
                                                 '&:hover': {
-                                                    backgroundColor: componentColors.tableRow.hover
+                                                    backgroundColor: theme.palette.component.tableRow.hover
                                                 }
                                             }}
                                         >
@@ -645,7 +643,7 @@ export default function PromotionsPage() {
                                                     },
                                                     // Apply hover effect when parent row is hovered - synchronized with table row hover color
                                                     'tr:hover &': {
-                                                        backgroundColor: componentColors.tableRow.hover
+                                                        backgroundColor: theme.palette.component.tableRow.hover
                                                     }
                                                 }}
                                                 align="center"
@@ -778,7 +776,7 @@ export default function PromotionsPage() {
                         <>
                             <Box sx={{
                                 p: 1.5,
-                                bgcolor: componentColors.modal.noteBackground,
+                                bgcolor: theme.palette.component.modal.noteBackground,
                                 borderRadius: 1,
                                 mb: 2,
                             }}>
@@ -806,9 +804,9 @@ export default function PromotionsPage() {
                             <Box sx={{
                                 mb: 3,
                                 p: 2,
-                                bgcolor: componentColors.modal.noteBackground,
+                                bgcolor: theme.palette.component.modal.noteBackground,
                                 borderRadius: 1,
-                                border: `1px solid ${componentColors.modal.noteBorder}`,
+                                border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                                 '&::before': {
                                     content: '""',
                                     position: 'absolute',
@@ -835,16 +833,16 @@ export default function PromotionsPage() {
                                     ⚠️ Cảnh báo quan trọng:
                                 </Typography>
 
-                                <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                                <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                                     • Hành động này không thể hoàn tác
                                 </Typography>
-                                <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                                <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                                     • Chỉ có thể xóa mã khuyến mãi đã được vô hiệu hóa
                                 </Typography>
-                                <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                                <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                                     • Dữ liệu mã khuyến mãi sẽ bị mất vĩnh viễn
                                 </Typography>
-                                <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                                <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                                     • Việc xóa có thể ảnh hưởng đến báo cáo và thống kê hệ thống
                                 </Typography>
                             </Box>
@@ -895,9 +893,9 @@ export default function PromotionsPage() {
                     {actionPromotion && (
                         <Box sx={{
                             p: 2,
-                            bgcolor: componentColors.modal.noteBackground,
+                            bgcolor: theme.palette.component.modal.noteBackground,
                             borderRadius: 1,
-                            border: `1px solid ${componentColors.modal.noteBorder}`,
+                            border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                             mb: 2
                         }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
@@ -919,9 +917,9 @@ export default function PromotionsPage() {
 
                     <Box sx={{
                         p: 2,
-                        bgcolor: componentColors.modal.noteBackground,
+                        bgcolor: theme.palette.component.modal.noteBackground,
                         borderRadius: 1,
-                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                         mb: 2,
                         '&::before': {
                             content: '""',
@@ -938,13 +936,13 @@ export default function PromotionsPage() {
                         <Typography variant="body2" fontWeight="bold" sx={{ mb: 1, color: 'info.main' }}>
                             💡 Lưu ý quan trọng:
                         </Typography>
-                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                             • Khuyến mãi sẽ được kích hoạt và có thể được sử dụng trong hệ thống
                         </Typography>
-                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                             • Người dùng có thể áp dụng mã khuyến mãi này cho các giao dịch mới
                         </Typography>
-                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                             • Thao tác này có thể được hoàn tác bằng cách hủy kích hoạt
                         </Typography>
                     </Box>
@@ -992,9 +990,9 @@ export default function PromotionsPage() {
                     {actionPromotion && (
                         <Box sx={{
                             p: 2,
-                            bgcolor: componentColors.modal.noteBackground,
+                            bgcolor: theme.palette.component.modal.noteBackground,
                             borderRadius: 1,
-                            border: `1px solid ${componentColors.modal.noteBorder}`,
+                            border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                             mb: 2
                         }}>
 
@@ -1017,9 +1015,9 @@ export default function PromotionsPage() {
 
                     <Box sx={{
                         p: 2,
-                        bgcolor: componentColors.modal.noteBackground,
+                        bgcolor: theme.palette.component.modal.noteBackground,
                         borderRadius: 1,
-                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                         mb: 2,
                         '&::before': {
                             content: '""',
@@ -1036,13 +1034,13 @@ export default function PromotionsPage() {
                         <Typography variant="body2" fontWeight="bold" sx={{ mb: 1, color: 'warning.main' }}>
                             ⚠️ Lưu ý quan trọng:
                         </Typography>
-                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                             • Khuyến mãi sẽ được hủy kích hoạt và không thể sử dụng trong hệ thống
                         </Typography>
-                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                             • Người dùng sẽ không thể áp dụng mã khuyến mãi này cho các giao dịch mới
                         </Typography>
-                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                             • Thao tác này có thể được hoàn tác bằng cách kích hoạt lại
                         </Typography>
                     </Box>

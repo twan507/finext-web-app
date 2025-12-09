@@ -13,7 +13,6 @@ import {
     Close as CloseIcon
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
-import { colorTokens } from 'theme/tokens';
 
 interface PermissionUpdate {
     name: string;
@@ -44,13 +43,11 @@ const EditPermissionModal: React.FC<EditPermissionModalProps> = ({
     permission
 }) => {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors; const [formData, setFormData] = useState<PermissionUpdate>({
-            name: '',
-            description: '',
-            category: ''
-        }); const [loading, setLoading] = useState(false);
+    const [formData, setFormData] = useState<PermissionUpdate>({
+        name: '',
+        description: '',
+        category: ''
+    }); const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);    // Data state for dropdowns
     const [availableCategories, setAvailableCategories] = useState<string[]>([]);
     const [loadingData, setLoadingData] = useState(true);
@@ -203,7 +200,7 @@ const EditPermissionModal: React.FC<EditPermissionModalProps> = ({
             fullWidth
             PaperProps={{
                 sx: {
-                    backgroundColor: componentColors.modal.background,
+                    backgroundColor: theme.palette.component.modal.background,
                     borderRadius: 2
                 }
             }}
@@ -282,12 +279,12 @@ const EditPermissionModal: React.FC<EditPermissionModalProps> = ({
                     {permission && (
                         <Box sx={{
                             p: 2,
-                            backgroundColor: componentColors.modal.noteBackground,
+                            backgroundColor: theme.palette.component.modal.noteBackground,
                             border: '1px solid',
-                            borderColor: componentColors.modal.noteBorder,
+                            borderColor: theme.palette.component.modal.noteBorder,
                             borderRadius: 1
                         }}>
-                            <Typography variant="body2" color={componentColors.modal.noteText}>
+                            <Typography variant="body2" color={theme.palette.component.modal.noteText}>
                                 <strong>ID:</strong> {permission.id}<br />
                                 <strong>Tạo lúc:</strong> {new Date(permission.created_at).toLocaleString('vi-VN')}<br />
                                 <strong>Cập nhật lúc:</strong> {new Date(permission.updated_at).toLocaleString('vi-VN')}<br />

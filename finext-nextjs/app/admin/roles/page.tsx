@@ -21,7 +21,7 @@ import {
     DoDisturbOn as DeactivateIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { colorTokens, responsiveTypographyTokens } from 'theme/tokens';
+import { responsiveTypographyTokens  } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
     SortConfig,
@@ -50,9 +50,7 @@ interface PaginatedRolesResponse {
 
 export default function RolesPage() {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors;
+    
 
     const [roles, setRoles] = useState<RolePublic[]>([]);
     const [filteredRoles, setFilteredRoles] = useState<RolePublic[]>([]);
@@ -432,7 +430,7 @@ export default function RolesPage() {
                                             key={role.id}
                                             sx={{
                                                 '&:hover': {
-                                                    backgroundColor: componentColors.tableRow.hover
+                                                    backgroundColor: theme.palette.component.tableRow.hover
                                                 }
                                             }}
                                         >
@@ -532,7 +530,7 @@ export default function RolesPage() {
                                                     },
                                                     // Apply hover effect when parent row is hovered - synchronized with table row hover color
                                                     'tr:hover &': {
-                                                        backgroundColor: componentColors.tableRow.hover
+                                                        backgroundColor: theme.palette.component.tableRow.hover
                                                     }
                                                 }}
                                                 align="center"
@@ -633,10 +631,10 @@ export default function RolesPage() {
                     {roleToDelete && (
                         <Box sx={{
                             p: 2,
-                            bgcolor: componentColors.modal.noteBackground,
+                            bgcolor: theme.palette.component.modal.noteBackground,
                             borderRadius: 1,
                             border: '1px solid',
-                            borderColor: componentColors.modal.noteBorder,
+                            borderColor: theme.palette.component.modal.noteBorder,
                             mb: 2
                         }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -661,9 +659,9 @@ export default function RolesPage() {
 
                     <Box sx={{
                         p: 2,
-                        bgcolor: componentColors.modal.noteBackground,
+                        bgcolor: theme.palette.component.modal.noteBackground,
                         borderRadius: 1,
-                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                         mb: 2,
                         position: 'relative',
                         '&::before': {
@@ -690,16 +688,16 @@ export default function RolesPage() {
                         >
                             ⚠️ Cảnh báo quan trọng:
                         </Typography>
-                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText, mb: 1 }}>
                             • Hành động này không thể hoàn tác
                         </Typography>
-                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText, mb: 1 }}>
                             • Vai trò sẽ bị xóa vĩnh viễn khỏi hệ thống
                         </Typography>
-                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText, mb: 1 }}>
                             • Người dùng đang có vai trò này có thể bị ảnh hưởng
                         </Typography>
-                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                             • Vai trò được bảo vệ (admin, user, broker) không thể xóa
                         </Typography>
                     </Box>

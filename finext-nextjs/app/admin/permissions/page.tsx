@@ -19,7 +19,7 @@ import {
     UnfoldLess as CollapseIcon
 } from '@mui/icons-material';
 import { format as formatDate, parseISO } from 'date-fns';
-import { colorTokens, responsiveTypographyTokens } from 'theme/tokens';
+import { responsiveTypographyTokens  } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
     SortConfig,
@@ -50,9 +50,7 @@ interface PaginatedPermissionsResponse {
 
 const PermissionsPage: React.FC = () => {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors;
+
 
     const [permissions, setPermissions] = useState<PermissionSystemPublic[]>([]);
     const [filteredPermissions, setFilteredPermissions] = useState<PermissionSystemPublic[]>([]);
@@ -429,7 +427,7 @@ const PermissionsPage: React.FC = () => {
                                         key={permission.id || permission.name}
                                         sx={{
                                             '&:hover': {
-                                                backgroundColor: componentColors.tableRow.hover
+                                                backgroundColor: theme.palette.component.tableRow.hover
                                             }
                                         }}
                                     >
@@ -472,8 +470,8 @@ const PermissionsPage: React.FC = () => {
                                                 size="small"
                                                 variant="filled"
                                                 sx={{
-                                                    backgroundColor: componentColors.chip.defaultBackground,
-                                                    color: componentColors.chip.defaultColor,
+                                                    backgroundColor: theme.palette.component.chip.defaultBackground,
+                                                    color: theme.palette.component.chip.defaultColor,
                                                     fontSize: '0.75rem',
                                                     height: 24,
                                                     textTransform: 'capitalize',
@@ -513,8 +511,8 @@ const PermissionsPage: React.FC = () => {
                                                         size="small"
                                                         variant="filled"
                                                         sx={{
-                                                            backgroundColor: componentColors.chip.successBackground,
-                                                            color: componentColors.chip.successColor,
+                                                            backgroundColor: theme.palette.component.chip.successBackground,
+                                                            color: theme.palette.component.chip.successColor,
                                                             fontSize: '0.7rem',
                                                             height: 20,
                                                             textTransform: 'capitalize',
@@ -568,7 +566,7 @@ const PermissionsPage: React.FC = () => {
                                                 },
                                                 // Apply hover effect when parent row is hovered - synchronized with table row hover color
                                                 'tr:hover &': {
-                                                    backgroundColor: componentColors.tableRow.hover
+                                                    backgroundColor: theme.palette.component.tableRow.hover
                                                 }
                                             }}
                                             align="center"

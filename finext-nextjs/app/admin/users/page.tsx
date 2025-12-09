@@ -17,7 +17,7 @@ import {
   People
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { colorTokens, responsiveTypographyTokens } from 'theme/tokens';
+import { responsiveTypographyTokens  } from 'theme/tokens';
 import UserSearch from './components/UserSearch';
 import AddUserModal from './components/AddUserModal';
 import EditUserModal from './components/EditUserModal';
@@ -79,9 +79,7 @@ interface PaginatedUsersResponse {
 
 const UsersPage: React.FC = () => {
   const theme = useTheme();
-  const componentColors = theme.palette.mode === 'light'
-    ? colorTokens.lightComponentColors
-    : colorTokens.darkComponentColors;
+  
 
   const [users, setUsers] = useState<UserPublic[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserPublic[]>([]);
@@ -674,7 +672,7 @@ const UsersPage: React.FC = () => {
                       key={user.id}
                       sx={{
                         '&:hover': {
-                          backgroundColor: componentColors.tableRow.hover
+                          backgroundColor: theme.palette.component.tableRow.hover
                         }
                       }}
                     >
@@ -891,7 +889,7 @@ const UsersPage: React.FC = () => {
                         },
                         // Apply hover effect when parent row is hovered - synchronized with table row hover color
                         'tr:hover &': {
-                          backgroundColor: componentColors.tableRow.hover
+                          backgroundColor: theme.palette.component.tableRow.hover
                         }
                       }}>                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
                           <Tooltip title="Chỉnh sửa người dùng">
@@ -988,7 +986,7 @@ const UsersPage: React.FC = () => {
         <DialogContent>
           <Box sx={{
             p: 1.5,
-            bgcolor: componentColors.modal.noteBackground,
+            bgcolor: theme.palette.component.modal.noteBackground,
             borderRadius: 1,
             mb: 2,
           }}>
@@ -1007,9 +1005,9 @@ const UsersPage: React.FC = () => {
           <Box sx={{
             mb: 3,
             p: 2,
-            bgcolor: componentColors.modal.noteBackground,
+            bgcolor: theme.palette.component.modal.noteBackground,
             borderRadius: 1,
-            border: `1px solid ${componentColors.modal.noteBorder}`,
+            border: `1px solid ${theme.palette.component.modal.noteBorder}`,
             '&::before': {
               content: '""',
               position: 'absolute',
@@ -1034,19 +1032,19 @@ const UsersPage: React.FC = () => {
                 mb: 2
               }}            >
               ⚠️ Cảnh báo quan trọng:
-            </Typography>            <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+            </Typography>            <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
               • Hành động này không thể hoàn tác
             </Typography>
-            <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+            <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
               • Tất cả dữ liệu và lịch sử người dùng sẽ bị mất vĩnh viễn
             </Typography>
-            <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+            <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
               • Subscription của người dùng sẽ bị chấm dứt ngay lập tức
             </Typography>
-            <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+            <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
               • Chỉ người dùng với vai trò "user" (hoặc không có vai trò) mới có thể xóa
             </Typography>
-            <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+            <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
               • Người dùng có vai trò admin, broker hoặc vai trò khác phải được thu hồi vai trò trước khi xóa
             </Typography>
           </Box>

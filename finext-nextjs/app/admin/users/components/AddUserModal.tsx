@@ -11,8 +11,6 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
-import { colorTokens } from 'theme/tokens';
-
 interface RolePublic {
     id: string;
     name: string;
@@ -41,9 +39,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
     roles
 }) => {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors; const [formData, setFormData] = useState<UserCreate>({
+     const [formData, setFormData] = useState<UserCreate>({
             full_name: '',
             email: '',
             phone_number: '',
@@ -298,9 +294,9 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
                     </Box>                    <Box sx={{
                         mt: 3,
                         p: 2,
-                        bgcolor: componentColors.modal.noteBackground,
+                        bgcolor: theme.palette.component.modal.noteBackground,
                         borderRadius: 1,
-                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                         '&::before': {
                             content: '""',
                             position: 'absolute',
@@ -327,20 +323,20 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
                             variant="body2"
                             sx={{
                                 mt: 1,
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >                            • Người dùng mới sẽ được gán vai trò "user" mặc định
                         </Typography>
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >                            • Tài khoản sẽ được kích hoạt ngay lập tức
                         </Typography>                        <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Người dùng có thể đăng nhập ngay bằng email và mật khẩu

@@ -16,8 +16,6 @@ import {
     LockReset as LockResetIcon
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
-import { colorTokens } from 'theme/tokens';
-
 interface UserPublic {
     id: string;
     role_ids: string[];
@@ -66,9 +64,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     onUserUpdated
 }) => {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors;
+    
 
     const [formData, setFormData] = useState({
         full_name: '',
@@ -589,9 +585,9 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                         <Box sx={{
                             mt: 3,
                             p: 2,
-                            bgcolor: componentColors.modal.noteBackground,
+                            bgcolor: theme.palette.component.modal.noteBackground,
                             borderRadius: 1,
-                            border: `1px solid ${componentColors.modal.noteBorder}`,
+                            border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                             '&::before': {
                                 content: '""',
                                 position: 'absolute',
@@ -615,16 +611,16 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                                 }}
                             >
                                 ⚠️ Lưu ý quan trọng:
-                            </Typography>                            <Typography variant="body2" sx={{ mt: 1, color: componentColors.modal.noteText }}>
+                            </Typography>                            <Typography variant="body2" sx={{ mt: 1, color: theme.palette.component.modal.noteText }}>
                                 • Các hành động đặc biệt không thể hoàn tác
                             </Typography>
-                            <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                            <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                                 • Xóa quyền broker sẽ tự động chuyển subscription về Basic
                             </Typography>
-                            <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                            <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                                 • Đặt lại mật khẩu sẽ thay đổi mật khẩu người dùng ngay lập tức
                             </Typography>
-                            <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                            <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                                 • Người dùng có thể tự reset mật khẩu qua tính năng "Quên mật khẩu"
                             </Typography>
                             {isAdmin && (

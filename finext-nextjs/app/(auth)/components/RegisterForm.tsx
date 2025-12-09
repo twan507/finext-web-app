@@ -23,7 +23,7 @@ import VisibilityOff from '@mui/icons-material/VisibilityOffOutlined';
 import { useGoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 
 import BrandLogo from 'components/BrandLogo';
-import { responsiveTypographyTokens, iconSizeTokens, layoutTokens } from 'theme/tokens';
+import {  responsiveTypographyTokens, iconSizeTokens, layoutTokens  } from 'theme/tokens';
 
 interface MessageResponse {
     message: string;

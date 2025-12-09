@@ -21,7 +21,7 @@ import {
     DoDisturbOn as DeactivateIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { colorTokens, responsiveTypographyTokens } from 'theme/tokens';
+import { responsiveTypographyTokens  } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
     SortConfig,
@@ -55,9 +55,7 @@ interface PaginatedLicensesResponse {
 
 export default function LicensesPage() {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors;
+    
 
     const [licenses, setLicenses] = useState<LicensePublic[]>([]);
     const [filteredLicenses, setFilteredLicenses] = useState<LicensePublic[]>([]);
@@ -564,7 +562,7 @@ export default function LicensesPage() {
                                             key={license.id}
                                             sx={{
                                                 '&:hover': {
-                                                    backgroundColor: componentColors.tableRow.hover
+                                                    backgroundColor: theme.palette.component.tableRow.hover
                                                 }
                                             }}
                                         >
@@ -700,7 +698,7 @@ export default function LicensesPage() {
                                                     },
                                                     // Apply hover effect when parent row is hovered - synchronized with table row hover color
                                                     'tr:hover &': {
-                                                        backgroundColor: componentColors.tableRow.hover
+                                                        backgroundColor: theme.palette.component.tableRow.hover
                                                     }
                                                 }}
                                                 align="center"
@@ -845,9 +843,9 @@ export default function LicensesPage() {
                     {actionLicense && (
                         <Box sx={{
                             p: 2,
-                            bgcolor: componentColors.modal.noteBackground,
+                            bgcolor: theme.palette.component.modal.noteBackground,
                             borderRadius: 1,
-                            border: `1px solid ${componentColors.modal.noteBorder}`,
+                            border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                             mb: 2
                         }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
@@ -866,9 +864,9 @@ export default function LicensesPage() {
 
                     <Box sx={{
                         p: 2,
-                        bgcolor: componentColors.modal.noteBackground,
+                        bgcolor: theme.palette.component.modal.noteBackground,
                         borderRadius: 1,
-                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                         mb: 2,
                         '&::before': {
                             content: '""',
@@ -885,13 +883,13 @@ export default function LicensesPage() {
                         <Typography variant="body2" fontWeight="bold" sx={{ mb: 1, color: 'warning.main' }}>
                             ⚠️ Lưu ý quan trọng:
                         </Typography>
-                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                             • License sẽ được đánh dấu là không hoạt động
                         </Typography>
-                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                             • Người dùng sẽ không thể mua license này nữa
                         </Typography>
-                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                             • Thao tác này có thể được hoàn tác bằng cách kích hoạt lại
                         </Typography>
                     </Box>
@@ -939,9 +937,9 @@ export default function LicensesPage() {
                     {actionLicense && (
                         <Box sx={{
                             p: 2,
-                            bgcolor: componentColors.modal.noteBackground,
+                            bgcolor: theme.palette.component.modal.noteBackground,
                             borderRadius: 1,
-                            border: `1px solid ${componentColors.modal.noteBorder}`,
+                            border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                             mb: 2
                         }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
@@ -960,9 +958,9 @@ export default function LicensesPage() {
 
                     <Box sx={{
                         p: 2,
-                        bgcolor: componentColors.modal.noteBackground,
+                        bgcolor: theme.palette.component.modal.noteBackground,
                         borderRadius: 1,
-                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                         mb: 2,
                         '&::before': {
                             content: '""',
@@ -979,13 +977,13 @@ export default function LicensesPage() {
                         <Typography variant="body2" fontWeight="bold" sx={{ mb: 1, color: 'info.main' }}>
                             💡 Lưu ý quan trọng:
                         </Typography>
-                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                             • License sẽ được đánh dấu là đang hoạt động
                         </Typography>
-                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                             • Người dùng sẽ có thể mua license này
                         </Typography>
-                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
                             • License sẽ xuất hiện trong danh sách có sẵn
                         </Typography>
                     </Box>
@@ -1023,10 +1021,10 @@ export default function LicensesPage() {
                     {licenseToDelete && (
                         <Box sx={{
                             p: 2,
-                            bgcolor: componentColors.modal.noteBackground,
+                            bgcolor: theme.palette.component.modal.noteBackground,
                             borderRadius: 1,
                             border: '1px solid',
-                            borderColor: componentColors.modal.noteBorder,
+                            borderColor: theme.palette.component.modal.noteBorder,
                             mb: 2
                         }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -1062,9 +1060,9 @@ export default function LicensesPage() {
 
                     <Box sx={{
                         p: 2,
-                        bgcolor: componentColors.modal.noteBackground,
+                        bgcolor: theme.palette.component.modal.noteBackground,
                         borderRadius: 1,
-                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                         mb: 2,
                         position: 'relative',
                         '&::before': {
@@ -1091,13 +1089,13 @@ export default function LicensesPage() {
                         >
                             ⚠️ Cảnh báo quan trọng:
                         </Typography>
-                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText, mb: 1 }}>
                             • Hành động này không thể hoàn tác
                         </Typography>
-                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText, mb: 1 }}>
                             • License sẽ bị xóa vĩnh viễn khỏi hệ thống
                         </Typography>
-                        <Typography variant="body2" sx={{ color: componentColors.modal.noteText, mb: 1 }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText, mb: 1 }}>
                             • Chỉ có thể xóa license đã được hủy kích hoạt
                         </Typography>
                     </Box>

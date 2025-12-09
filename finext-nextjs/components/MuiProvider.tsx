@@ -7,13 +7,12 @@ import { ThemeProvider as MuiThemeProvider, createTheme, PaletteMode, ThemeOptio
 import CssBaseline from '@mui/material/CssBaseline';
 
 import {
-  colorTokens, // For component specific colors if needed directly
   getMuiPaletteOptions,
   typographyTokens,
   shapeTokens,
   spacingTokens,
   breakpointTokens,
-} from 'theme/tokens'; // Adjust path if necessary
+} from 'theme/tokens';
 
 export function MuiProvider({ children }: { children: React.ReactNode }) {
   const { resolvedTheme } = useNextTheme();
@@ -26,7 +25,6 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
   const muiTheme = React.useMemo(() => {
     const mode = (mounted && resolvedTheme ? resolvedTheme : 'light') as PaletteMode;
     const currentPalette = getMuiPaletteOptions(mode);
-    const currentComponentColors = mode === 'light' ? colorTokens.lightComponentColors : colorTokens.darkComponentColors;
 
     const themeOptions: ThemeOptions = {
       palette: currentPalette,
@@ -37,9 +35,9 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
       components: {
         MuiAppBar: {
           styleOverrides: {
-            root: ({ theme }) => ({ // theme here is the partially built theme
-              backgroundColor: currentComponentColors.appBar.background,
-              color: currentComponentColors.appBar.text,
+            root: ({ theme }) => ({
+              backgroundColor: theme.palette.component.appBar.background,
+              color: theme.palette.component.appBar.text,
               borderBottom: `1px solid ${theme.palette.divider}`,
             }),
           },
@@ -47,24 +45,26 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
         MuiDrawer: {
           styleOverrides: {
             paper: ({ theme }) => ({
-              backgroundColor: currentComponentColors.drawer.background,
-              borderRight: `1px solid ${theme.palette.divider}`, // Use theme.palette.divider for consistency
+              backgroundColor: theme.palette.background.default,
+              borderRight: `1px solid ${theme.palette.divider}`,
             }),
           },
-        }, MuiTableHead: {
+        },
+        MuiTableHead: {
           styleOverrides: {
-            root: { // No need for ({ theme }) if directly using imported tokens
-              backgroundColor: currentComponentColors.tableHead.background,
-            },
+            root: ({ theme }) => ({
+              backgroundColor: theme.palette.component.tableHead.background,
+            }),
           },
-        }, MuiTableCell: {
+        },
+        MuiTableCell: {
           styleOverrides: {
-            head: {
-              backgroundColor: currentComponentColors.tableHead.background,
+            head: ({ theme }) => ({
+              backgroundColor: theme.palette.component.tableHead.background,
               fontWeight: 600,
-              padding: '8px 12px', // Giảm padding từ mặc định 16px
-              fontSize: '0.875rem', // Tăng từ 0.8125rem lên 0.875rem (+1px)
-            },
+              padding: '8px 12px',
+              fontSize: '0.875rem',
+            }),
             body: {
               padding: '6px 12px', // Giảm padding cho body cells
               fontSize: '0.875rem', // Tăng từ 0.8125rem lên 0.875rem (+1px)
@@ -75,48 +75,52 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
         MuiTableRow: {
           styleOverrides: {
             root: ({ theme }) => ({
-              backgroundColor: currentComponentColors.tableRow.background,
+              backgroundColor: theme.palette.component.tableRow.background,
               '&:hover': {
-                backgroundColor: currentComponentColors.tableRow.hover,
+                backgroundColor: theme.palette.component.tableRow.hover,
               },
               '&.Mui-selected': {
-                backgroundColor: currentComponentColors.tableRow.selected,
+                backgroundColor: theme.palette.component.tableRow.selected,
                 '&:hover': {
-                  backgroundColor: currentComponentColors.tableRow.selected,
+                  backgroundColor: theme.palette.component.tableRow.selected,
                 },
               },
             }),
           },
-        }, MuiChip: {
+        },
+        MuiChip: {
           styleOverrides: {
             root: ({ theme, ownerState }) => ({
-              height: '22px', // Giảm chiều cao từ mặc định 32px
-              fontSize: '0.8125rem', // Tăng từ 0.75rem lên 0.8125rem (+1px)
+              height: '22px',
+              fontSize: '0.8125rem',
               ...(ownerState.color === 'success' && {
-                backgroundColor: currentComponentColors.chip.successBackground,
-                color: currentComponentColors.chip.successColor,
+                backgroundColor: theme.palette.component.chip.successBackground,
+                color: theme.palette.component.chip.successColor,
               }),
               ...(ownerState.color === 'default' && {
-                backgroundColor: currentComponentColors.chip.defaultBackground,
-                color: currentComponentColors.chip.defaultColor,
+                backgroundColor: theme.palette.component.chip.defaultBackground,
+                color: theme.palette.component.chip.defaultColor,
               })
             })
           }
-        }, MuiPaper: {
+        },
+        MuiPaper: {
           styleOverrides: {
             root: {
               // boxShadow: 'none',
             }
           }
-        }, MuiDialog: {
+        },
+        MuiDialog: {
           styleOverrides: {
-            paper: {
-              backgroundColor: currentComponentColors.modal.background,
-              backgroundImage: 'none', // Tắt gradient mặc định của Material-UI
-              boxShadow: mode === 'dark' ? '0px 4px 20px rgba(0, 0, 0, 0.5)' : '0px 4px 20px rgba(0, 0, 0, 0.15)',
-            }
+            paper: ({ theme }) => ({
+              backgroundColor: theme.palette.component.modal.background,
+              backgroundImage: 'none',
+              boxShadow: theme.palette.mode === 'dark' ? '0px 4px 20px rgba(0, 0, 0, 0.5)' : '0px 4px 20px rgba(0, 0, 0, 0.15)',
+            })
           }
-        }, MuiAvatar: {
+        },
+        MuiAvatar: {
           styleOverrides: {
             root: {
               width: 28, // Giảm từ 30px xuống 28px
@@ -243,34 +247,34 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
         },
         MuiTablePagination: {
           styleOverrides: {
-            root: {
-              backgroundColor: currentComponentColors.tableRow.background,
-              color: mode === 'dark' ? '#ffffff' : 'rgba(0, 0, 0, 0.87)',
+            root: ({ theme }) => ({
+              backgroundColor: theme.palette.component.tableRow.background,
+              color: theme.palette.mode === 'dark' ? '#ffffff' : 'rgba(0, 0, 0, 0.87)',
               fontSize: '0.875rem',
-            },
-            toolbar: {
-              backgroundColor: currentComponentColors.tableRow.background,
+            }),
+            toolbar: ({ theme }) => ({
+              backgroundColor: theme.palette.component.tableRow.background,
               minHeight: '52px',
               paddingLeft: '16px',
               paddingRight: '8px',
-            },
-            selectLabel: {
+            }),
+            selectLabel: ({ theme }) => ({
               fontSize: '0.8125rem',
-              color: mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
-            },
-            displayedRows: {
+              color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+            }),
+            displayedRows: ({ theme }) => ({
               fontSize: '0.8125rem',
-              color: mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
-            },
+              color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+            }),
             select: {
               fontSize: '0.8125rem',
             },
-            actions: {
+            actions: ({ theme }) => ({
               '& .MuiIconButton-root': {
-                color: mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.54)',
+                color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.54)',
                 padding: '8px',
               }
-            }
+            })
           }
         }
       },

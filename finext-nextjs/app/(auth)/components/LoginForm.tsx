@@ -25,7 +25,7 @@ import { useGoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 
 import BrandLogo from 'components/BrandLogo';
 import { LoginResponse, UserSchema } from 'services/core/types';
-import { responsiveTypographyTokens, iconSizeTokens, layoutTokens } from 'theme/tokens';
+import {  responsiveTypographyTokens, iconSizeTokens, layoutTokens  } from 'theme/tokens';
 
 interface UserInfoFromAuth extends UserSchema { }
 

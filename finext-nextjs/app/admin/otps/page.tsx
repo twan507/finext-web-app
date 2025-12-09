@@ -20,7 +20,7 @@ import {
     Block as InvalidIcon
 } from '@mui/icons-material';
 import { format as formatDate, parseISO } from 'date-fns';
-import { colorTokens, responsiveTypographyTokens } from 'theme/tokens';
+import { responsiveTypographyTokens  } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
     SortConfig,
@@ -37,9 +37,7 @@ interface PaginatedOtpsResponse {
 
 const OtpsPage: React.FC = () => {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors;
+    
 
     const [otps, setOtps] = useState<OtpPublicAdmin[]>([]);
     const [filteredOtps, setFilteredOtps] = useState<OtpPublicAdmin[]>([]);
@@ -524,7 +522,7 @@ const OtpsPage: React.FC = () => {
                                             key={otp.id}
                                             sx={{
                                                 '&:hover': {
-                                                    backgroundColor: componentColors.tableRow.hover
+                                                    backgroundColor: theme.palette.component.tableRow.hover
                                                 }
                                             }}
                                         >
@@ -555,8 +553,8 @@ const OtpsPage: React.FC = () => {
                                                     size="small"
                                                     variant="filled"
                                                     sx={{
-                                                        backgroundColor: componentColors.chip.defaultBackground,
-                                                        color: componentColors.chip.defaultColor,
+                                                        backgroundColor: theme.palette.component.chip.defaultBackground,
+                                                        color: theme.palette.component.chip.defaultColor,
                                                         height: 24,
                                                         fontWeight: 'medium'
                                                     }}
@@ -636,7 +634,7 @@ const OtpsPage: React.FC = () => {
                                                 },
                                                 // Apply hover effect when parent row is hovered - synchronized with table row hover color
                                                 'tr:hover &': {
-                                                    backgroundColor: componentColors.tableRow.hover
+                                                    backgroundColor: theme.palette.component.tableRow.hover
                                                 }
                                             }} align="center">
                                                 <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>

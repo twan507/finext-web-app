@@ -11,15 +11,15 @@ import {
     DialogContent, DialogContentText, DialogActions
 } from '@mui/material';
 import {
-    AccountTree as SessionIcon,
     UnfoldMore as ExpandIcon,
     UnfoldLess as CollapseIcon,
     Delete as DeleteIcon,
     Devices as DeviceIcon,
-    Timer as TimerIcon
+    Timer as TimerIcon,
+    Devices
 } from '@mui/icons-material';
 import { format as formatDate, parseISO } from 'date-fns';
-import { colorTokens, responsiveTypographyTokens } from 'theme/tokens';
+import { responsiveTypographyTokens  } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
     SortConfig,
@@ -39,9 +39,7 @@ interface PaginatedSessionsResponse {
 
 const SessionsPage: React.FC = () => {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors;
+    
 
     const [sessions, setSessions] = useState<SessionPublicAdmin[]>([]);
     const [filteredSessions, setFilteredSessions] = useState<SessionPublicAdmin[]>([]);
@@ -383,7 +381,7 @@ const SessionsPage: React.FC = () => {
 
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <SessionIcon sx={{ mr: 1, fontSize: '24px' }} />
+                    <Devices sx={{ mr: 1, fontSize: '24px' }} />
                     <Typography variant="h3" component="h1">
                         Quản lý Sessions
                     </Typography>
@@ -450,7 +448,7 @@ const SessionsPage: React.FC = () => {
                                             key={session.id}
                                             sx={{
                                                 '&:hover': {
-                                                    backgroundColor: componentColors.tableRow.hover
+                                                    backgroundColor: theme.palette.component.tableRow.hover
                                                 }
                                             }}
                                         >
@@ -543,7 +541,7 @@ const SessionsPage: React.FC = () => {
                                                 },
                                                 // Apply hover effect when parent row is hovered - synchronized with table row hover color
                                                 'tr:hover &': {
-                                                    backgroundColor: componentColors.tableRow.hover
+                                                    backgroundColor: theme.palette.component.tableRow.hover
                                                 }
                                             }} align="center">
                                                 <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>

@@ -19,7 +19,6 @@ import {
     Assignment as FeatureIcon,
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
-import { colorTokens } from 'theme/tokens';
 import ModernSwitchButton from '../../components/ModernSwitchButton';
 import ColorPicker from '../../../../components/ColorPicker';
 import {
@@ -77,9 +76,7 @@ const EditLicenseModal: React.FC<EditLicenseModalProps> = ({
     onLicenseUpdated
 }) => {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors;
+    
 
     const [allFeatures, setAllFeatures] = useState<FeaturePublic[]>([]);
     const [formData, setFormData] = useState<LicenseUpdateRequest>({
@@ -623,9 +620,9 @@ const EditLicenseModal: React.FC<EditLicenseModalProps> = ({
                         <Box sx={{
                             mt: 3,
                             p: 2,
-                            bgcolor: componentColors.modal.noteBackground,
+                            bgcolor: theme.palette.component.modal.noteBackground,
                             borderRadius: 1,
-                            border: `1px solid ${componentColors.modal.noteBorder}`,
+                            border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                             '&::before': {
                                 content: '""',
                                 position: 'absolute',
@@ -652,31 +649,31 @@ const EditLicenseModal: React.FC<EditLicenseModalProps> = ({
                             </Typography>
                             <Typography
                                 variant="body2"
-                                sx={{ mt: 1, color: componentColors.modal.noteText }}
+                                sx={{ mt: 1, color: theme.palette.component.modal.noteText }}
                             >
                                 • License key không thể thay đổi sau khi tạo
                             </Typography>
                             <Typography
                                 variant="body2"
-                                sx={{ color: componentColors.modal.noteText }}
+                                sx={{ color: theme.palette.component.modal.noteText }}
                             >
                                 • Thay đổi tính năng có thể ảnh hưởng đến người dùng hiện tại
                             </Typography>
                             <Typography
                                 variant="body2"
-                                sx={{ color: componentColors.modal.noteText }}
+                                sx={{ color: theme.palette.component.modal.noteText }}
                             >
                                 • Tính năng cơ bản (Basic) sẽ được tự động bao gồm và không thể bỏ chọn
                             </Typography>
                             <Typography
                                 variant="body2"
-                                sx={{ color: componentColors.modal.noteText }}
+                                sx={{ color: theme.palette.component.modal.noteText }}
                             >
                                 • Tính năng hệ thống (System) sẽ hiển thị nhưng không thể chọn hoặc bỏ chọn
                             </Typography>
                             <Typography
                                 variant="body2"
-                                sx={{ color: componentColors.modal.noteText }}
+                                sx={{ color: theme.palette.component.modal.noteText }}
                             >
                                 • Thay đổi trạng thái hoặc giá có thể ảnh hưởng đến các subscription đang hoạt động
                             </Typography>

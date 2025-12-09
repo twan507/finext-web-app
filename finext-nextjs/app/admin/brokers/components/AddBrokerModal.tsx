@@ -11,8 +11,6 @@ import {
     BusinessCenter as BrokerIcon
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
-import { colorTokens } from 'theme/tokens';
-
 interface UserPublic {
     id: string;
     full_name: string;
@@ -37,9 +35,7 @@ const AddBrokerModal: React.FC<AddBrokerModalProps> = ({
     allUsers
 }) => {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors;
+    
 
     const [selectedUser, setSelectedUser] = useState<UserPublic | null>(null);
     const [loading, setLoading] = useState(false);
@@ -213,9 +209,9 @@ const AddBrokerModal: React.FC<AddBrokerModalProps> = ({
                     <Box sx={{
                         mt: 3,
                         p: 2,
-                        bgcolor: componentColors.modal.noteBackground,
+                        bgcolor: theme.palette.component.modal.noteBackground,
                         borderRadius: 1,
-                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                         '&::before': {
                             content: '""',
                             position: 'absolute',
@@ -244,7 +240,7 @@ const AddBrokerModal: React.FC<AddBrokerModalProps> = ({
                             variant="body2"
                             sx={{
                                 mt: 1,
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Người dùng sẽ được cấp vai trò "broker" và mã broker duy nhất
@@ -252,7 +248,7 @@ const AddBrokerModal: React.FC<AddBrokerModalProps> = ({
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Subscription sẽ được tự động nâng cấp lên "PARTNER"
@@ -260,7 +256,7 @@ const AddBrokerModal: React.FC<AddBrokerModalProps> = ({
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Mã broker sẽ được gán làm referral_code cho người dùng
@@ -268,7 +264,7 @@ const AddBrokerModal: React.FC<AddBrokerModalProps> = ({
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Hành động này không thể hoàn tác tự động

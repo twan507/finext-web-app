@@ -16,8 +16,6 @@ import {
     Business as BrokerIcon
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
-import { colorTokens } from 'theme/tokens';
-
 enum PaymentStatusEnumFE {
     PENDING = "pending",
     SUCCEEDED = "succeeded",
@@ -84,9 +82,7 @@ export default function ConfirmTransactionModal({
     userEmail
 }: ConfirmTransactionModalProps) {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors;    // Form state
+        // Form state
     const [adminNotes, setAdminNotes] = useState('');
     const [amountOverride, setAmountOverride] = useState<string>('');
     const [durationOverride, setDurationOverride] = useState<string>('');
@@ -315,7 +311,7 @@ export default function ConfirmTransactionModal({
                 )}                {/* Transaction Information - Responsive Layout */}
                 <Box sx={{
                     p: 2,
-                    bgcolor: componentColors.modal.noteBackground,
+                    bgcolor: theme.palette.component.modal.noteBackground,
                     borderRadius: 1,
                     mb: 3,
                 }}>                    <Box sx={{
@@ -596,9 +592,9 @@ export default function ConfirmTransactionModal({
                 </Box>                {/* Action Information */}
                 <Box sx={{
                     p: 2,
-                    bgcolor: componentColors.modal.noteBackground,
+                    bgcolor: theme.palette.component.modal.noteBackground,
                     borderRadius: 1,
-                    border: `1px solid ${componentColors.modal.noteBorder}`,
+                    border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                     mb: 2,
                     position: 'relative',
                     '&::before': {
@@ -627,7 +623,7 @@ export default function ConfirmTransactionModal({
                         variant="body2"
                         sx={{
                             mt: 1,
-                            color: componentColors.modal.noteText
+                            color: theme.palette.component.modal.noteText
                         }}
                     >
                         • <strong>Xác nhận thanh toán:</strong> Chuyển trạng thái sang "Thành công" và tạo/gia hạn subscription
@@ -635,7 +631,7 @@ export default function ConfirmTransactionModal({
                     <Typography
                         variant="body2"
                         sx={{
-                            color: componentColors.modal.noteText
+                            color: theme.palette.component.modal.noteText
                         }}
                     >
                         • <strong>Ghi đè mã khuyến mãi/đối tác:</strong> Nhập mã mới để thay đổi, để trống để xóa
@@ -643,7 +639,7 @@ export default function ConfirmTransactionModal({
                     <Typography
                         variant="body2"
                         sx={{
-                            color: componentColors.modal.noteText
+                            color: theme.palette.component.modal.noteText
                         }}
                     >
                         • <strong>Hủy giao dịch:</strong> Chuyển trạng thái sang "Đã hủy"
@@ -652,7 +648,7 @@ export default function ConfirmTransactionModal({
                         variant="body2"
                         sx={{
                             fontWeight: 'bold',
-                            color: componentColors.modal.noteText
+                            color: theme.palette.component.modal.noteText
                         }}
                     >
                         • Hành động này không thể hoàn tác

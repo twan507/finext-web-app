@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Typography } from '@mui/material';
-import { layoutTokens } from 'theme/tokens';
+import {  layoutTokens  } from 'theme/tokens';
 
 export interface Slide {
     overline: string;

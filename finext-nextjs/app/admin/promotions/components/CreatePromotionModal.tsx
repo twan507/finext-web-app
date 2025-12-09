@@ -20,7 +20,6 @@ import {
     Assignment as LicenseIcon
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
-import { colorTokens } from 'theme/tokens';
 import { convertGMT7ToUTC, convertUTCToGMT7DateString } from 'utils/dateUtils';
 import { filterNonSystemLicenses } from 'utils/systemProtection';
 import ModernSwitchButton from '../../components/ModernSwitchButton';
@@ -64,9 +63,7 @@ const CreatePromotionModal: React.FC<CreatePromotionModalProps> = ({
     onPromotionCreated
 }) => {
     const theme = useTheme();
-    const componentColors = theme.palette.mode === 'light'
-        ? colorTokens.lightComponentColors
-        : colorTokens.darkComponentColors;
+    
 
     const [allLicenses, setAllLicenses] = useState<LicensePublic[]>([]);
 
@@ -509,9 +506,9 @@ const CreatePromotionModal: React.FC<CreatePromotionModalProps> = ({
                     <Box sx={{
                         mt: 3,
                         p: 2,
-                        bgcolor: componentColors.modal.noteBackground,
+                        bgcolor: theme.palette.component.modal.noteBackground,
                         borderRadius: 1,
-                        border: `1px solid ${componentColors.modal.noteBorder}`,
+                        border: `1px solid ${theme.palette.component.modal.noteBorder}`,
                         '&::before': {
                             content: '""',
                             position: 'absolute',
@@ -540,7 +537,7 @@ const CreatePromotionModal: React.FC<CreatePromotionModalProps> = ({
                             variant="body2"
                             sx={{
                                 mt: 1,
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Mã khuyến mãi sẽ được kích hoạt ngay sau khi tạo (nếu chọn kích hoạt)
@@ -548,7 +545,7 @@ const CreatePromotionModal: React.FC<CreatePromotionModalProps> = ({
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Các cài đặt tùy chọn có thể được thay đổi sau khi tạo
@@ -556,7 +553,7 @@ const CreatePromotionModal: React.FC<CreatePromotionModalProps> = ({
                         <Typography
                             variant="body2"
                             sx={{
-                                color: componentColors.modal.noteText
+                                color: theme.palette.component.modal.noteText
                             }}
                         >
                             • Khuyến mãi sẽ áp dụng cho tất cả gói license nếu không chọn hạn chế cụ thể
