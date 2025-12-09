@@ -21,7 +21,7 @@ const StockStreamPage: React.FC = () => {
     const [data, setData] = useState<StreamedData[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [isConnected, setIsConnected] = useState(false);
-    const [collectionName, setCollectionName] = useState('eod_index');
+    const [collectionName, setCollectionName] = useState('today_index');
     const [filterName, setFilterName] = useState('only_spot');
 
     // --- THAY THẾ eventSourceRef BẰNG sseConnectionRef ---

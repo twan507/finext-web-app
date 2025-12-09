@@ -222,11 +222,11 @@ const UserAvatar: React.FC<UserMenuProps> = ({ variant = 'icon' }) => {
                     justifyContent: 'center',
                     p: 1,
                 }}>
-                    <Box sx={{ position: 'relative', width: 40, height: 40 }}>
+                    <Box sx={{ position: 'relative', width: 32, height: 32 }}>
                         <Skeleton
                             variant="circular"
-                            width={40}
-                            height={40}
+                            width={32}
+                            height={32}
                             sx={{
                                 bgcolor: theme.palette.mode === 'dark'
                                     ? 'rgba(255, 255, 255, 0.1)'
@@ -407,8 +407,8 @@ const UserAvatar: React.FC<UserMenuProps> = ({ variant = 'icon' }) => {
                     >
                         <Box
                             sx={{
-                                width: 40,
-                                height: 40,
+                                width: 32,
+                                height: 32,
                                 borderRadius: '50%',
                                 bgcolor: theme.palette.mode === 'dark'
                                     ? 'rgba(255, 255, 255, 0.12)'
@@ -424,7 +424,7 @@ const UserAvatar: React.FC<UserMenuProps> = ({ variant = 'icon' }) => {
                                     color: theme.palette.mode === 'dark'
                                         ? 'rgba(255, 255, 255, 0.35)'
                                         : 'rgba(0, 0, 0, 0.45)',
-                                    fontSize: 24
+                                    fontSize: 20
                                 }}
                             />
                         </Box>
@@ -525,7 +525,7 @@ const UserAvatar: React.FC<UserMenuProps> = ({ variant = 'icon' }) => {
                     title={`${session.user.full_name || 'User'} (${session.user.email})`} // Tooltip hiển thị thông tin user
                 >
                     <UserAvatarWithSubscription
-                        size={40}
+                        size={32}
                         badgeText={licenseKey || '...'}
                         badgeColor={licenseColor}
                         avatarSrc={avatarUrl}

@@ -213,12 +213,12 @@ export default function SearchBar({
                                             '& .MuiOutlinedInput-notchedOutline': {
                                                 border: 'none', // Bỏ border
                                             },
-                                            backgroundColor: theme.palette.mode === 'light' ? '#ecececc7' : '#2a2a2a',
+                                            backgroundColor: theme.palette.background.paper,
                                             '&:hover': {
-                                                backgroundColor: theme.palette.mode === 'light' ? '#ecececc7' : '#2a2a2a',
+                                                backgroundColor: theme.palette.background.paper,
                                             },
                                             '&.Mui-focused': {
-                                                backgroundColor: theme.palette.mode === 'light' ? '#ecececc7' : '#2a2a2a',
+                                                backgroundColor: theme.palette.background.paper,
                                                 boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`,
                                             },
                                         },
@@ -318,7 +318,7 @@ export default function SearchBar({
                     ),
                     sx: {
                         borderRadius: '50px',
-                        backgroundColor: theme.palette.mode === 'light' ? '#ecececc7' : '#2a2a2a',
+                        backgroundColor: theme.palette.background.paper,
                         backdropFilter: 'blur(8px)',
                         transition: theme.transitions.create([
                             'background-color',
@@ -328,18 +328,19 @@ export default function SearchBar({
                             border: 'none', // Bỏ border
                         },
                         '&:hover': {
-                            backgroundColor: theme.palette.mode === 'light' ? '#ecececc7' : '#2a2a2a',
+                            backgroundColor: theme.palette.background.paper,
                         },
                         '&.Mui-focused': {
-                            backgroundColor: theme.palette.mode === 'light' ? '#ecececc7' : '#2a2a2a',
+                            backgroundColor: theme.palette.background.paper,
                             boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`,
                         },
                     },
                 }}
                 sx={{
                     '& .MuiInputBase-input': {
-                        fontSize: '0.875rem',
+                        fontSize: '0.8rem',
                         fontWeight: 400,
+                        padding: '6px 0',
                         '&::placeholder': {
                             color: theme.palette.text.secondary,
                             opacity: 0.7,

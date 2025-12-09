@@ -33,6 +33,7 @@ import {
   BarChart,
   ShowChart
 } from '@mui/icons-material';
+import { Tabs, Tab } from '@mui/material';
 
 import UserAvatar from '../../components/UserAvatar';
 import ThemeToggleButton from 'components/ThemeToggleButton';
@@ -56,6 +57,14 @@ const navigationStructure: NavItem[] = [
   { text: 'Watchlist', href: '/watchlist', icon: <Timeline /> },
 ];
 
+// Top navigation tabs (like in Simplize)
+const topNavTabs = [
+  { label: 'Thị trường', href: '/markets' },
+  { label: 'Biểu đồ kỹ thuật', href: '/charts' },
+  { label: 'Ý tưởng đầu tư', href: '/ideas' },
+  { label: 'Cộng cụ', href: '/tools' },
+];
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { session, loading: authLoading, logout } = useAuth();
   const router = useRouter();
@@ -69,7 +78,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Drawer widths  
-  const ICON_ONLY_WIDTH = 64;
+  const ICON_ONLY_WIDTH = 50;
   const drawerWidth = ICON_ONLY_WIDTH;
   const isMobile = lgDown;
 
@@ -128,7 +137,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             const isActive = item.href === '/' ? currentPathname === '/' : currentPathname.startsWith(item.href);
             return (
               <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
-                <Tooltip title={item.text} placement="right" arrow>
+                <Tooltip
+                  title={item.text}
+                  placement="right"
+                  arrow
+                  slotProps={{
+                    tooltip: {
+                      sx: {
+                        bgcolor: theme.palette.background.paper,
+                        color: theme.palette.text.primary,
+                        '& .MuiTooltip-arrow': {
+                          color: theme.palette.background.paper,
+                        },
+                      },
+                    },
+                  }}
+                >
                   <Box sx={{ width: '100%' }}>
                     <Link href={item.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
                       <ListItemButton
@@ -292,6 +316,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             alignItems: 'center',
             justifyContent: { xs: 'center', lg: 'flex-start' },
             position: 'relative',
+            gap: 3,
           }}>
             {isMobile && (
               <MuiIconButton
@@ -309,6 +334,43 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </MuiIconButton>
             )}
             <BrandLogo href="/" />
+
+            {/* Top Navigation Tabs - Only visible on desktop */}
+            {!isMobile && (
+              <Box sx={{ display: 'flex', gap: 0.5 }}>
+                {topNavTabs.map((tab) => {
+                  const isActive = currentPathname.startsWith(tab.href);
+                  return (
+                    <Link
+                      key={tab.href}
+                      href={tab.href}
+                      passHref
+                      style={{ textDecoration: 'none' }}
+                    >
+                      <Box
+                        sx={{
+                          px: 2,
+                          py: 1,
+                          fontSize: '0.9rem',
+                          fontWeight: isActive ? 600 : 500,
+                          color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
+                          textTransform: 'none',
+                          transition: 'all 0.2s ease',
+                          cursor: 'pointer',
+                          borderRadius: '6px',
+                          '&:hover': {
+                            color: theme.palette.primary.main,
+                            backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                          },
+                        }}
+                      >
+                        {tab.label}
+                      </Box>
+                    </Link>
+                  );
+                })}
+              </Box>
+            )}
             {/* {generateBreadcrumbs()} */}
           </Box>
 
@@ -325,7 +387,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             {/* Nút đăng nhập/đăng ký chỉ hiển thị khi chưa đăng nhập và không phải mobile */}
             {!session && !lgDown && (
-              <AuthButtons variant="full" />
+              <AuthButtons />
             )}
           </Box>
         </Toolbar>

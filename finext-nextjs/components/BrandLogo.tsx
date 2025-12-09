@@ -26,7 +26,7 @@ const BrandLogo: React.FC<BrandLogoProps> = ({
     className,
     useColorOverlay = false,
     overlayColor,
-    size = 28, // fallback for legacy compatibility
+    size = 24, // fallback for legacy compatibility
 }) => {
     const theme = useTheme();
     // Use imageSize if provided, otherwise fall back to size prop

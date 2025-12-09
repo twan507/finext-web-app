@@ -65,6 +65,7 @@ export const colorTokens = {
     dark: '#1b5e20',
     contrastText: '#fafbfc', // Xám rất nhẹ
   },
+
   // Specific App Colors (examples)
   finext: {
     deepPurple: {
@@ -92,72 +93,11 @@ export const colorTokens = {
       900: '#46157a',
     },
     violetBerry: '#7E22CE',
-  },  // Component-specific color definitions
-  lightComponentColors: {
-    appBar: {
-      background: '#fafbfc', // Xám rất nhẹ thay vì trắng
-      text: 'rgba(0, 0, 0, 0.95)',
-    },
-    drawer: {
-      background: '#fafbfc', // Xám rất nhẹ thay vì trắng
-      border: '#f0f0f0',
-    }, tableHead: {
-      background: '#fafafa',
-      text: 'rgba(0, 0, 0, 0.95)',
-      sortActive: '#7c3aed', // Purple color for active sort
-      sortHover: '#7c3aed',  // Purple color for hover
-      sortIcon: 'rgba(0, 0, 0, 0.65)',
-    },
-    tableRow: {
-      background: '#fafbfc', // Xám rất nhẹ thay vì trắng
-      hover: '#f2f3f4',
-      selected: '#f3e8ff', // Light purple background for selected state
-    },
-    chip: {
-      successBackground: '#f3e8ff', // Light purple background for success chip
-      successColor: '#7c3aed',      // Purple for success chip text
-      defaultBackground: '#f5f5f5',
-      defaultColor: '#333333',
-    },
-    modal: {
-      background: '#fafbfc', // Xám rất nhẹ thay vì trắng
-      noteBackground: '#f8f9fa', // Nền xám nhạt cho phần lưu ý
-      noteBorder: '#e9ecef',
-      noteText: '#495057',
-    }
-  }, darkComponentColors: {
-    appBar: {
-      background: '#1a1a1a',
-      text: '#f0f0f0', // Xám nhẹ thay vì trắng tinh
-    },
-    drawer: {
-      background: '#1a1a1a',
-      border: '#303030',
-    }, tableHead: {
-      background: '#1a1a1a',
-      text: '#f0f0f0', // Xám nhẹ thay vì trắng tinh
-      sortActive: '#c4b5fd', // Lighter purple for active sort in dark mode
-      sortHover: '#c4b5fd',  // Lighter purple for hover in dark mode
-      sortIcon: 'rgba(255, 255, 255, 0.7)',
-    },
-    tableRow: {
-      background: '#1e1e1e',
-      hover: '#313131',
-      selected: '#4c1d95', // Dark purple for selected state - matching chip background
-    },
-    chip: {
-      successBackground: '#4c1d95', // Dark purple for dark mode success chip
-      successColor: '#c4b5fd',      // Lighter purple for dark mode success chip text
-      defaultBackground: '#303030',
-      defaultColor: '#bdbdbd',
-    },
-    modal: {
-      background: '#1a1a1a', // Nền modal tối hơn
-      noteBackground: '#2d2d2d', // Nền xám nhạt hơn modal cho phần lưu ý
-      noteBorder: '#404040',
-      noteText: '#b0b0b0',
-    }
   },
+  
+  // Component colors will be assigned after palette definitions
+  lightComponentColors: {} as any,
+  darkComponentColors: {} as any,
 };
 
 // Light Theme Palette (Strictly PaletteOptions)
@@ -167,7 +107,7 @@ export const lightThemePalette: PaletteOptions = {
     main: '#7c3aed',
     light: '#a78bfa',
     dark: '#5b21b6',
-    contrastText: '#fafbfc', // Xám rất nhẹ thay vì trắng
+    contrastText: '#fafbfc',
   },
   secondary: colorTokens.secondary,
   error: colorTokens.error,
@@ -175,8 +115,8 @@ export const lightThemePalette: PaletteOptions = {
   info: colorTokens.info,
   success: colorTokens.success,
   background: {
-    default: '#fafbfc',// Xám rất nhẹ thay vì trắng
-    paper: '#f5f5f5', 
+    default: '#fafbfc',
+    paper: '#f5f5f5',
   },
   text: {
     primary: 'rgba(0, 0, 0, 0.95)',
@@ -204,16 +144,88 @@ export const darkThemePalette: PaletteOptions = {
   error: colorTokens.error,
   warning: colorTokens.warning,
   info: colorTokens.info,
-  success: colorTokens.success, background: {
+  success: colorTokens.success,
+  background: {
     default: '#121212',
-    paper: '#1a1a1a', // Sử dụng màu tối hơn cho modal
+    paper: '#1e1e1e',
   },
   text: {
-    primary: '#f0f0f0', // Xám nhẹ thay vì trắng tinh
-    secondary: 'rgba(240, 240, 240, 0.7)', // Xám nhẹ với opacity
-    disabled: 'rgba(240, 240, 240, 0.5)', // Xám nhẹ với opacity
+    primary: '#f0f0f0',
+    secondary: 'rgba(240, 240, 240, 0.7)',
+    disabled: 'rgba(240, 240, 240, 0.5)',
   },
   divider: 'rgba(255, 255, 255, 0.12)',
+};
+
+// Component-specific colors - Tham chiếu từ palette
+colorTokens.lightComponentColors = {
+  appBar: {
+    background: lightThemePalette.background!.default as string,
+    text: lightThemePalette.text!.primary as string,
+  },
+  drawer: {
+    background: lightThemePalette.background!.default as string,
+    border: '#f0f0f0',
+  },
+  tableHead: {
+    background: '#fafafa',
+    text: lightThemePalette.text!.primary as string,
+    sortActive: (lightThemePalette.primary as any).main,
+    sortHover: (lightThemePalette.primary as any).main,
+    sortIcon: 'rgba(0, 0, 0, 0.65)',
+  },
+  tableRow: {
+    background: lightThemePalette.background!.default as string,
+    hover: '#f2f3f4',
+    selected: '#f3e8ff',
+  },
+  chip: {
+    successBackground: '#f3e8ff',
+    successColor: (lightThemePalette.primary as any).main,
+    defaultBackground: lightThemePalette.background!.paper as string,
+    defaultColor: '#333333',
+  },
+  modal: {
+    background: lightThemePalette.background!.default as string,
+    noteBackground: '#f8f9fa',
+    noteBorder: '#e9ecef',
+    noteText: '#495057',
+  }
+};
+
+colorTokens.darkComponentColors = {
+  appBar: {
+    background: darkThemePalette.background!.default as string,
+    text: darkThemePalette.text!.primary as string,
+  },
+  drawer: {
+    background: darkThemePalette.background!.default as string,
+    border: '#303030',
+  },
+  tableHead: {
+    background: darkThemePalette.background!.paper as string,
+    text: darkThemePalette.text!.primary as string,
+    sortActive: (darkThemePalette.primary as any).main,
+    sortHover: (darkThemePalette.primary as any).main,
+    sortIcon: 'rgba(255, 255, 255, 0.7)',
+  },
+  tableRow: {
+    background: darkThemePalette.background!.paper as string,
+    hover: '#313131',
+    selected: '#4c1d95',
+  },
+  chip: {
+    successBackground: '#4c1d95',
+    successColor: (darkThemePalette.primary as any).main,
+    defaultBackground: '#303030',
+    defaultColor: '#bdbdbd',
+  },
+  modal: {
+    background: darkThemePalette.background!.paper as string,
+    noteBackground: '#2d2d2d',
+    noteBorder: '#404040',
+    noteText: '#b0b0b0',
+  }
 };
 
 // Helper function to get palette options based on mode
@@ -226,7 +238,7 @@ export const getMuiPaletteOptions = (mode: PaletteMode): PaletteOptions => {
 // --------------------
 const baseFontSizes = {
   // Headers
-  logo: { xs: '1.5rem', sm: '1.625rem', md: '1.75rem' },
+  logo: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem' },
   h1: { xs: '2rem', sm: '2.25rem', md: '2.5rem' },
   h2: { xs: '1.75rem', sm: '1.875rem', md: '2rem' },
   h3: { xs: '1.5rem', sm: '1.625rem', md: '1.75rem' },
@@ -356,9 +368,9 @@ export const breakpointTokens: ThemeOptions['breakpoints'] = {
 // --------------------
 export const layoutTokens = {
   drawerWidth: 240, // Chiều rộng drawer mặc định (khi có text)
-  compactDrawerWidth: 64, // Chiều rộng drawer mới (chỉ icon, tương đương w-16)
-  appBarHeight: 64, // Chiều cao AppBar tiêu chuẩn
-  toolbarMinHeight: 56, // Chiều cao tối thiểu của Toolbar
+  compactDrawerWidth: 50, // Chiều rộng drawer mới (chỉ icon)
+  appBarHeight: 50, // Chiều cao AppBar tiêu chuẩn
+  toolbarMinHeight: 50, // Chiều cao tối thiểu của Toolbar
   // Form and auth layout
   authFormMaxWidth: 380, // Max width cho form đăng nhập/đăng ký
   authGalleryMaxWidth: 720, // Max width cho gallery section

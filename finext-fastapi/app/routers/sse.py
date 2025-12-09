@@ -18,12 +18,12 @@ router = APIRouter()
 # --- Định nghĩa sẵn các bộ lọc (Named Filters) ---
 # Bạn có thể mở rộng đối tượng này với nhiều collection và filter hơn
 PREDEFINED_FILTERS: Dict[str, Dict[str, Any]] = {
-    "eod_index": {
+    "today_index": {
         "all": {},
         "only_spot": {"type": "spot"},
         "only_future": {"type": "future"},
     },
-    "eod_stock": {
+    "today_stock": {
         "all": {},
         "vin_group": {"symbol": {"$in": ["VIC", "VHM", "VRE"]}},
         "blue_chips_high_volume": {"group": "bluechip", "volume": {"$gt": 1000000}}
