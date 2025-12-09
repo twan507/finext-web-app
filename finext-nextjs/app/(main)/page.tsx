@@ -1,13 +1,18 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from 'components/AuthProvider';
+import { Box, Typography, Container } from '@mui/material';
 
 export default function HomePage() {
-    const { session, loading } = useAuth();
-    const router = useRouter();
-
-    // Không hiển thị gì cả, chỉ redirect
-    return null;
+    return (
+        <Container maxWidth="xl" sx={{ py: 4 }}>
+            <Box>
+                <Typography variant="h4" sx={{ mb: 2, fontWeight: 600 }}>
+                    Trang chủ
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                    Nội dung trang chủ đang được phát triển...
+                </Typography>
+            </Box>
+        </Container>
+    );
 }

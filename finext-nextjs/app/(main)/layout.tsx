@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { Icon } from '@iconify/react';
 import { useAuth } from 'components/AuthProvider';
 import {
   AppBar, Box, CssBaseline, Drawer, Toolbar, List, ListItem, ListItemButton,
@@ -15,32 +16,20 @@ import MuiLink from '@mui/material/Link';
 import { SvgIconProps } from '@mui/material/SvgIcon';
 import {
   Dashboard as DashboardIcon,
-  People as PeopleIcon,
-  Logout as LogoutIcon,
   Menu as MenuIcon,
   ChevronRight as ChevronRightIcon,
-  Analytics,
-  TrendingUp,
-  AccountBalance,
-  CreditCard,
-  Notifications,
-  Settings,
-  HelpOutline,
-  Inventory,
-  Assessment,
-  Timeline,
-  PieChart,
-  BarChart,
-  ShowChart
+  BubbleChartOutlined,
+  CategoryOutlined,
+  InsightsOutlined,
+  StarBorderPurple500Outlined
 } from '@mui/icons-material';
-import { Tabs, Tab } from '@mui/material';
 
 import UserAvatar from '../../components/UserAvatar';
 import ThemeToggleButton from 'components/ThemeToggleButton';
 import BrandLogo from 'components/BrandLogo';
 import SearchBar from '../../components/SearchBar';
 import AuthButtons from '../../components/AuthButtons';
-import { layoutTokens, responsiveTypographyTokens } from '../../theme/tokens';
+import { layoutTokens } from '../../theme/tokens';
 
 interface NavItem {
   text: string;
@@ -49,20 +38,38 @@ interface NavItem {
 }
 
 const navigationStructure: NavItem[] = [
-  { text: 'Dashboard', href: '/dashboard', icon: <DashboardIcon /> },
-  { text: 'Analytics', href: '/analytics', icon: <Analytics /> },
-  { text: 'Trading', href: '/trading', icon: <TrendingUp /> },
-  { text: 'Portfolio', href: '/portfolio', icon: <PieChart /> },
-  { text: 'Markets', href: '/markets', icon: <ShowChart /> },
-  { text: 'Watchlist', href: '/watchlist', icon: <Timeline /> },
+  { text: 'Phân tích nhóm', href: '/group-analysis', icon: <BubbleChartOutlined /> },
+  { text: 'Phân tích ngành', href: '/sector-analysis', icon: <CategoryOutlined /> },
+  { text: 'Phân tích cổ phiếu', href: '/stock-analysis', icon: <InsightsOutlined /> },
+  { text: 'Danh sách theo dõi', href: '/watchlist', icon: <StarBorderPurple500Outlined /> },
 ];
 
 // Top navigation tabs (like in Simplize)
 const topNavTabs = [
-  { label: 'Thị trường', href: '/markets' },
-  { label: 'Biểu đồ kỹ thuật', href: '/charts' },
-  { label: 'Ý tưởng đầu tư', href: '/ideas' },
-  { label: 'Cộng cụ', href: '/tools' },
+  {
+    label: 'Thị trường',
+    href: '/markets',
+    description: 'Tổng quan xu hướng, đánh giá rủi ro và xác định chu kỳ thị trường.',
+    icon: 'fluent-color:poll-32'
+  },
+  {
+    label: 'Dòng tiền',
+    href: '/money-flow',
+    description: 'Theo dấu dòng vốn thông minh và diễn biến thanh khoản theo thời gian thực.',
+    icon: 'fluent-color:data-trending-16'
+  },
+  {
+    label: 'Nhóm ngành',
+    href: '/sectors',
+    description: 'Đánh giá sức mạnh nhóm ngành và đón đầu sự luân chuyển dòng tiền.',
+    icon: 'fluent-color:diversity-16'
+  },
+  {
+    label: 'Cổ phiếu',
+    href: '/stocks',
+    description: 'Sàng lọc cơ hội đầu tư với bộ tiêu chí kỹ thuật và cơ bản chuyên sâu.',
+    icon: 'fluent-color:list-bar-32'
+  },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -214,6 +221,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <List sx={{
         flexGrow: 1,
       }}>
+        {/* Top Nav Tabs - Only visible on mobile */}
+        {topNavTabs.map((tab) => {
+          const isActive = currentPathname.startsWith(tab.href);
+          return (
+            <ListItem key={tab.href} disablePadding>
+              <Link href={tab.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
+                <ListItemButton
+                  selected={isActive}
+                  onClick={handleDrawerToggle}
+                  sx={{
+                    pl: '20px',
+                    color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
+                    '&:hover': {
+                      backgroundColor: alpha(theme.palette.primary.main, isActive ? 0.12 : 0.04),
+                      color: isActive ? theme.palette.primary.dark : theme.palette.primary.main,
+                    },
+                  }}
+                >
+                  <ListItemText primary={tab.label} />
+                </ListItemButton>
+              </Link>
+            </ListItem>
+          );
+        })}
+
+        {/* Drawer Navigation Items */}
         {navigationStructure.map((item) => {
           const isActive = currentPathname.startsWith(item.href);
           return (
@@ -223,17 +256,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   selected={isActive}
                   onClick={handleDrawerToggle}
                   sx={{
-                    color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
                     '&:hover': {
                       backgroundColor: alpha(theme.palette.primary.main, isActive ? 0.12 : 0.04),
-                      color: isActive ? theme.palette.primary.dark : theme.palette.primary.main,
+                      '& .MuiListItemIcon-root': {
+                        color: theme.palette.primary.main,
+                      },
+                      '& .MuiListItemText-root': {
+                        color: isActive ? theme.palette.primary.dark : theme.palette.primary.main,
+                      },
                     },
                   }}
                 >
-                  <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>
+                  <ListItemIcon sx={{ color: theme.palette.text.secondary, minWidth: 40 }}>
                     {item.icon}
                   </ListItemIcon>
-                  <ListItemText primary={item.text} />
+                  <ListItemText
+                    primary={item.text}
+                    sx={{
+                      color: isActive ? theme.palette.primary.main : theme.palette.text.primary
+                    }}
+                  />
                 </ListItemButton>
               </Link>
             </ListItem>
@@ -341,32 +383,67 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {topNavTabs.map((tab) => {
                   const isActive = currentPathname.startsWith(tab.href);
                   return (
-                    <Link
+                    <Tooltip
                       key={tab.href}
-                      href={tab.href}
-                      passHref
-                      style={{ textDecoration: 'none' }}
-                    >
-                      <Box
-                        sx={{
-                          px: 2,
-                          py: 1,
-                          fontSize: '0.9rem',
-                          fontWeight: isActive ? 600 : 500,
-                          color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
-                          textTransform: 'none',
-                          transition: 'all 0.2s ease',
-                          cursor: 'pointer',
-                          borderRadius: '6px',
-                          '&:hover': {
-                            color: theme.palette.primary.main,
-                            backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                      title={
+                        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
+                          <Icon icon={tab.icon} width="24" height="24" style={{ marginTop: '2px', flexShrink: 0 }} />
+                          <Box>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                              {tab.label}
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                              {tab.description}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      }
+                      placement="bottom"
+                      arrow
+                      disableInteractive
+                      enterDelay={200}
+                      leaveDelay={0}
+                      slotProps={{
+                        tooltip: {
+                          sx: {
+                            bgcolor: theme.palette.background.paper,
+                            color: theme.palette.text.primary,
+                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+                            '& .MuiTooltip-arrow': {
+                              color: theme.palette.background.paper,
+                            },
                           },
-                        }}
+                        },
+                      }}
+                    >
+                      <Link
+                        href={tab.href}
+                        passHref
+                        style={{ textDecoration: 'none' }}
                       >
-                        {tab.label}
-                      </Box>
-                    </Link>
+                        <Box
+                          sx={{
+                            px: 2,
+                            height: '30px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            fontSize: '0.9rem',
+                            fontWeight: isActive ? 600 : 500,
+                            color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
+                            textTransform: 'none',
+                            transition: 'all 0.2s ease',
+                            cursor: 'pointer',
+                            borderRadius: '6px',
+                            '&:hover': {
+                              color: theme.palette.primary.main,
+                              backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                            },
+                          }}
+                        >
+                          {tab.label}
+                        </Box>
+                      </Link>
+                    </Tooltip>
                   );
                 })}
               </Box>
