@@ -139,11 +139,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         flex: 1,
         px: 1,
       }}>
-        <List sx={{ py: 1, width: '100%' }}>
+        <List sx={{ py: 1, mt: 2, width: '100%' }}>
           {navigationStructure.map((item) => {
             const isActive = item.href === '/' ? currentPathname === '/' : currentPathname.startsWith(item.href);
             return (
-              <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
+              <ListItem key={item.text} disablePadding sx={{ mb: 2 }}>
                 <Tooltip
                   title={item.text}
                   placement="right"
@@ -185,7 +185,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           color: 'inherit',
                           justifyContent: 'center'
                         }}>
-                          {React.cloneElement(item.icon, { sx: { fontSize: 20 } })}
+                          {React.cloneElement(item.icon, { sx: { fontSize: 24 } })}
                         </ListItemIcon>
                       </ListItemButton>
                     </Link>
@@ -225,7 +225,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {topNavTabs.map((tab) => {
           const isActive = currentPathname.startsWith(tab.href);
           return (
-            <ListItem key={tab.href} disablePadding>
+            <ListItem key={tab.href} disablePadding sx={{ mb: 0.5 }}>
               <Link href={tab.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
                 <ListItemButton
                   selected={isActive}
@@ -250,7 +250,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {navigationStructure.map((item) => {
           const isActive = currentPathname.startsWith(item.href);
           return (
-            <ListItem key={item.text} disablePadding>
+            <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
               <Link href={item.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
                 <ListItemButton
                   selected={isActive}

@@ -52,6 +52,20 @@ declare module '@mui/material/styles' {
         noteBorder: string;
         noteText: string;
       };
+      chart: {
+        line: string;
+        areaTop: string;
+        areaBottom: string;
+        upColor: string;
+        downColor: string;
+        gridLine: string;
+        crosshair: string;
+        buttonBackground: string;
+        buttonBackgroundHover: string;
+        buttonBackgroundActive: string;
+        buttonText: string;
+        buttonTextActive: string;
+      };
     };
   }
 
@@ -84,6 +98,20 @@ declare module '@mui/material/styles' {
         noteBackground?: string;
         noteBorder?: string;
         noteText?: string;
+      };
+      chart?: {
+        line?: string;
+        areaTop?: string;
+        areaBottom?: string;
+        upColor?: string;
+        downColor?: string;
+        gridLine?: string;
+        crosshair?: string;
+        buttonBackground?: string;
+        buttonBackgroundHover?: string;
+        buttonBackgroundActive?: string;
+        buttonText?: string;
+        buttonTextActive?: string;
       };
     };
   }
@@ -171,6 +199,20 @@ export const lightThemePalette: PaletteOptions = {
       noteBorder: '#e9ecef',
       noteText: '#495057',
     },
+    chart: {
+      line: '#7c3aed',
+      areaTop: 'rgba(124, 58, 237, 0.4)',
+      areaBottom: 'rgba(124, 58, 237, 0.05)',
+      upColor: '#22c55e',
+      downColor: '#ef4444',
+      gridLine: 'rgba(0, 0, 0, 0.06)',
+      crosshair: 'rgba(0, 0, 0, 0.3)',
+      buttonBackground: '#f0f0f0',
+      buttonBackgroundHover: '#e5e5e5',
+      buttonBackgroundActive: '#7c3aed',
+      buttonText: 'rgba(0, 0, 0, 0.6)',
+      buttonTextActive: '#ffffff',
+    },
   },
 };
 
@@ -251,6 +293,20 @@ export const darkThemePalette: PaletteOptions = {
       noteBackground: '#2d2d2d',
       noteBorder: '#404040',
       noteText: '#b0b0b0',
+    },
+    chart: {
+      line: '#c4b5fd',
+      areaTop: 'rgba(196, 181, 253, 0.5)',
+      areaBottom: 'rgba(196, 181, 253, 0.05)',
+      upColor: '#22c55e',
+      downColor: '#ef4444',
+      gridLine: 'rgba(255, 255, 255, 0.06)',
+      crosshair: 'rgba(255, 255, 255, 0.3)',
+      buttonBackground: '#1e1e1e',
+      buttonBackgroundHover: '#2a2a2a',
+      buttonBackgroundActive: '#c4b5fd',
+      buttonText: 'rgba(255, 255, 255, 0.7)',
+      buttonTextActive: '#121212',
     },
   },
 };

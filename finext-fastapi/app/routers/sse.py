@@ -1,16 +1,24 @@
 # finext-fastapi/app/routers/sse.py
+"""
+Router SSE với giao thức chuẩn hóa.
+Chỉ có 1 API duy nhất, sử dụng keyword để xác định loại dữ liệu cần lấy.
+"""
+
 import asyncio
 import logging
 import json
+import math
 from datetime import datetime
-from typing import Optional, Any, Dict
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, Request, HTTPException, status, Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from bson import ObjectId
 
 from app.core.database import get_database
+from app.crud.sse import execute_sse_query, get_available_keywords
+from app.utils.response_wrapper import StandardApiResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -18,141 +26,182 @@ router = APIRouter()
 # --- Cấu hình Database ---
 DATABASE_NAME = "temp_stock"
 
-# --- Định nghĩa sẵn các bộ lọc (Named Filters) ---
-# Bạn có thể mở rộng đối tượng này với nhiều collection và filter hơn
-PREDEFINED_FILTERS: Dict[str, Dict[str, Any]] = {
-    "today_index": {
-        "all": {},
-        "only_spot": {"type": "spot"},
-        "only_future": {"type": "future"},
-    },
-    "today_stock": {
-        "all": {},
-        "vin_group": {"symbol": {"$in": ["VIC", "VHM", "VRE"]}},
-        "blue_chips_high_volume": {"group": "bluechip", "volume": {"$gt": 1000000}},
-    },
-}
-
 
 # --- Helper để chuyển đổi BSON sang JSON ---
+def clean_nan_values(obj: Any) -> Any:
+    """Đệ quy thay thế các giá trị nan/inf bằng None."""
+    if isinstance(obj, dict):
+        return {k: clean_nan_values(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [clean_nan_values(item) for item in obj]
+    elif isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return None
+        return obj
+    return obj
+
+
 def bson_to_json_str(data: Any) -> str:
+    """Chuyển đổi dữ liệu BSON thành JSON string, xử lý nan/inf."""
+
     def default_serializer(o):
         if isinstance(o, (ObjectId, datetime)):
             return str(o)
         try:
             return str(o)
         except Exception:
-            raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable and failed str conversion")
+            raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
 
-    return json.dumps(data, default=default_serializer)
+    # Clean nan/inf values trước khi serialize
+    cleaned_data = clean_nan_values(data)
+    return json.dumps(cleaned_data, default=default_serializer)
 
 
-# --- Generator mới ---
-async def named_filter_event_generator(request: Request, db: AsyncIOMotorDatabase, collection_name: str, filter_name: Optional[str] = None):
+# --- SSE Event Generator ---
+async def sse_event_generator(request: Request, db: AsyncIOMotorDatabase, keyword: str, ticker: Optional[str] = None):
+    """
+    Generator cho SSE stream dựa trên keyword.
+
+    Args:
+        request: FastAPI request object
+        db: Database connection
+        keyword: Từ khóa xác định loại query
+        ticker: Mã ticker (VD: VNINDEX, VN30, ...)
+    """
     last_data_hash = None
-    query_filter: Dict[str, Any] = {}
+
+    logger.info(f"SSE stream started - keyword: {keyword}, ticker: {ticker}")
 
     try:
-        # 1. Kiểm tra collection tồn tại
-        existing_collections = await db.list_collection_names()
-        if collection_name not in existing_collections:
-            logger.warning(f"Client yêu cầu collection không tồn tại trong {DATABASE_NAME}: {collection_name}")
-            yield f"data: {json.dumps({'error': f'Collection {collection_name} không tồn tại.'})}\n\n"
-            return
-
-        collection = db.get_collection(collection_name)
-
-        # 2. Lấy query_filter từ PREDEFINED_FILTERS
-        if filter_name:
-            if collection_name in PREDEFINED_FILTERS and filter_name in PREDEFINED_FILTERS[collection_name]:
-                query_filter = PREDEFINED_FILTERS[collection_name][filter_name]
-                logger.info(f"Áp dụng bộ lọc đặt tên '{filter_name}' cho collection '{collection_name}': {query_filter}")
-            else:
-                logger.warning(
-                    f"Bộ lọc đặt tên '{filter_name}' không hợp lệ hoặc không tìm thấy cho collection '{collection_name}'. Sẽ lấy tất cả (nếu có filter 'all')."
-                )
-                # Mặc định lấy 'all' nếu filter_name không hợp lệ nhưng collection có 'all'
-                if collection_name in PREDEFINED_FILTERS and "all" in PREDEFINED_FILTERS[collection_name]:
-                    query_filter = PREDEFINED_FILTERS[collection_name]["all"]
-                    logger.info(f"Sử dụng bộ lọc 'all' mặc định cho collection '{collection_name}'.")
-                # else: để query_filter là {} (lấy tất cả)
-        elif collection_name == "eod_index" and "only_spot" in PREDEFINED_FILTERS.get("eod_index", {}):
-            # Mặc định cho eod_index nếu không có filter_name
-            query_filter = PREDEFINED_FILTERS["eod_index"]["only_spot"]
-            logger.info(f"Không có filter_name, sử dụng bộ lọc mặc định 'only_spot' cho collection 'eod_index': {query_filter}")
-        else:
-            logger.info(f"Không có filter_name, sẽ lấy tất cả bản ghi (hoặc theo filter 'all' nếu có) cho collection '{collection_name}'.")
-            if collection_name in PREDEFINED_FILTERS and "all" in PREDEFINED_FILTERS[collection_name]:
-                query_filter = PREDEFINED_FILTERS[collection_name]["all"]
-
-        logger.info(f"Bắt đầu polling collection '{collection_name}' với query: {query_filter}")
-
         while True:
             if await request.is_disconnected():
-                logger.info(f"Client đã ngắt kết nối khỏi polling stream ({collection_name}).")
+                logger.info(f"Client disconnected from SSE stream (keyword: {keyword})")
                 break
 
             try:
-                data_cursor = collection.find(query_filter).sort([("_id", -1)]).limit(20)
-                current_data = await data_cursor.to_list(length=20)
-            except Exception as db_error:
-                logger.error(
-                    f"Lỗi khi truy vấn MongoDB collection '{collection_name}' với query '{query_filter}': {db_error}", exc_info=True
-                )
-                yield f"data: {json.dumps({'error': f'Lỗi truy vấn CSDL: {str(db_error)}'})}\n\n"
+                current_data = await execute_sse_query(keyword, db, ticker)
+                current_data_str = bson_to_json_str(current_data)
+                current_hash = hash(current_data_str)
+
+                if current_hash != last_data_hash:
+                    yield f"data: {current_data_str}\n\n"
+                    logger.debug(f"SSE sent (keyword: {keyword}): {len(current_data)} records")
+                    last_data_hash = current_hash
+
+            except ValueError as ve:
+                error_msg = {"error": str(ve), "type": "invalid_keyword"}
+                yield f"data: {json.dumps(error_msg)}\n\n"
+                logger.warning(f"Invalid keyword: {ve}")
+                return
+
+            except Exception as query_error:
+                logger.error(f"Query error (keyword: {keyword}): {query_error}", exc_info=True)
+                error_msg = {"error": f"Database query failed: {str(query_error)}", "type": "query_error"}
+                yield f"data: {json.dumps(error_msg)}\n\n"
                 await asyncio.sleep(5)
                 continue
-
-            current_data_str = bson_to_json_str(current_data)
-            current_hash = hash(current_data_str)
-
-            if current_data and current_hash != last_data_hash:
-                yield f"data: {current_data_str}\n\n"
-                logger.debug(f"Đã gửi SSE (polling {collection_name}, filter: {filter_name or 'default'}): {len(current_data)} bản ghi.")
-                last_data_hash = current_hash
-            elif not current_data and current_hash != last_data_hash:
-                yield f"data: {json.dumps([])}\n\n"
-                logger.debug(f"Đã gửi mảng rỗng cho {collection_name} (filter: {filter_name or 'default'}) vì không có dữ liệu.")
-                last_data_hash = current_hash
 
             await asyncio.sleep(3)
 
     except asyncio.CancelledError:
-        logger.info(f"Polling stream ({collection_name}, filter: {filter_name or 'default'}) đã bị hủy.")
+        logger.info(f"SSE stream cancelled (keyword: {keyword})")
     except Exception as e:
-        logger.error(f"Lỗi trong quá trình polling SSE ({collection_name}, filter: {filter_name or 'default'}): {e}", exc_info=True)
+        logger.error(f"SSE stream error (keyword: {keyword}): {e}", exc_info=True)
         try:
-            yield f"data: {json.dumps({'error': f'Lỗi server khi xử lý: {str(e)}'})}\n\n"
+            yield f"data: {json.dumps({'error': str(e), 'type': 'stream_error'})}\n\n"
         except Exception:
             pass
     finally:
-        logger.info(f"Đã đóng polling generator ({collection_name}, filter: {filter_name or 'default'}).")
+        logger.info(f"SSE stream closed (keyword: {keyword})")
+
+
+# ==============================================================================
+# API ENDPOINTS
+# ==============================================================================
 
 
 @router.get(
-    "/stream/{collection_name_param:path}",
-    summary="Mở một kết nối SSE công khai, với bộ lọc đặt tên",
-    description="""Lấy dữ liệu từ `collection_name_param` trong `stock_db`.
-    Sử dụng tham số `filter_name` để chọn một bộ lọc đã định nghĩa sẵn ở server.
-    Ví dụ: `?filter_name=only_spot` cho collection `eod_index`.
-    """,
+    "/stream",
+    summary="SSE Stream - Lấy dữ liệu realtime theo keyword",
+    description="Mở kết nối SSE để nhận dữ liệu realtime dựa trên keyword.",
     tags=["sse"],
 )
-async def named_filter_sse_endpoint(
+async def sse_stream_endpoint(
     request: Request,
-    collection_name_param: str,
-    filter_name: Optional[str] = Query(None, description="Tên của bộ lọc đã định nghĩa sẵn. Ví dụ: 'only_spot', 'vn30_spot'"),
+    keyword: str = Query(..., description="Từ khóa xác định loại dữ liệu cần lấy"),
+    ticker: Optional[str] = Query(None, description="Mã ticker (VD: VNINDEX, VN30, ...)"),
     db: AsyncIOMotorDatabase = Depends(lambda: get_database(DATABASE_NAME)),
 ):
+    """Endpoint SSE chính - sử dụng keyword để xác định loại dữ liệu."""
     if db is None:
-        logger.error(f"Không thể kết nối tới {DATABASE_NAME} cho SSE.")
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Không thể kết nối tới cơ sở dữ liệu stock.")
+        logger.error(f"Cannot connect to database: {DATABASE_NAME}")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Database connection failed")
 
-    if not collection_name_param:
-        logger.warning("Yêu cầu SSE không có tên collection cụ thể.")
-        raise HTTPException(status_code=404, detail="Tên collection là bắt buộc.")
+    available_keywords = get_available_keywords()
+    if keyword not in available_keywords:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid keyword '{keyword}'. Available: {', '.join(available_keywords)}"
+        )
 
-    logger.info(
-        f"Client đang kết nối tới NAMED FILTER SSE stream (collection: {collection_name_param}, filter_name: {filter_name}) trên {DATABASE_NAME}..."
+    logger.info(f"Client connecting to SSE stream - keyword: {keyword}, ticker: {ticker}")
+
+    return StreamingResponse(
+        sse_event_generator(request, db, keyword, ticker),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )
-    return StreamingResponse(named_filter_event_generator(request, db, collection_name_param, filter_name), media_type="text/event-stream")
+
+
+@router.get(
+    "/keywords",
+    summary="Lấy danh sách các keyword có sẵn",
+    description="Trả về danh sách tất cả các keyword có thể sử dụng với SSE stream.",
+    tags=["sse"],
+)
+async def get_keywords():
+    """Lấy danh sách keyword có sẵn."""
+    keywords = get_available_keywords()
+    response_data = {"keywords": keywords, "total": len(keywords), "usage": "GET /api/v1/sse/stream?keyword=<keyword>&ticker=<ticker>"}
+    return JSONResponse(
+        content=StandardApiResponse(status=200, message="Lấy danh sách keyword thành công", data=response_data).model_dump()
+    )
+
+
+@router.get(
+    "/test/{keyword}",
+    summary="Test query một lần (không stream)",
+    description="Thực thi query một lần để test, không cần mở SSE stream.",
+    tags=["sse"],
+)
+async def test_query_endpoint(
+    keyword: str,
+    ticker: Optional[str] = Query(None, description="Mã ticker (VD: VNINDEX, VN30, ...)"),
+    db: AsyncIOMotorDatabase = Depends(lambda: get_database(DATABASE_NAME)),
+):
+    """Test query một lần mà không cần mở SSE stream."""
+    if db is None:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Database connection failed")
+
+    # Validate keyword trước
+    available_keywords = get_available_keywords()
+    if keyword not in available_keywords:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid keyword '{keyword}'. Available: {', '.join(available_keywords)}",
+        )
+
+    try:
+        data = await execute_sse_query(keyword, db, ticker)
+        # Serialize data với custom encoder để xử lý ObjectId, datetime, nan
+        serialized_data = json.loads(bson_to_json_str(data))
+
+        return JSONResponse(
+            content=StandardApiResponse(status=200, message="Truy vấn dữ liệu thành công", data=serialized_data).model_dump()
+        )
+    except Exception as e:
+        logger.error(f"Test query error: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Query failed: {str(e)}")

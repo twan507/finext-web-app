@@ -64,7 +64,11 @@ const BrandLogo: React.FC<BrandLogoProps> = ({
                 alt="Finext Logo"
                 width={finalImageSize}
                 height={finalImageSize}
-                style={{ display: 'block' }} // tránh lệch baseline
+                style={{
+                    display: 'block',
+                    width: finalImageSize,
+                    height: 'auto'
+                }}
             />
         </Box>
     );

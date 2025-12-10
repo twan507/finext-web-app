@@ -48,13 +48,11 @@ export function sseClient<DataType = any>(
     }`;
 
   try {
-    console.log(`[SSE Client] Đang cố gắng kết nối đến: ${finalUrl}`);
     // Khởi tạo EventSource
     eventSource = new EventSource(finalUrl, { withCredentials: false });
 
     // Xử lý sự kiện 'open'
     eventSource.onopen = () => {
-      console.log(`[SSE Client] Kết nối đã mở đến ${finalUrl}`);
       onOpen();
     };
 
@@ -125,7 +123,6 @@ export function sseClient<DataType = any>(
   // Hàm để đóng kết nối
   const closeConnection = () => {
     if (eventSource) {
-      console.log(`[SSE Client] Đóng kết nối thủ công đến ${finalUrl}`);
       eventSource.close();
       onClose(); // Gọi onClose khi đóng thủ công
       eventSource = null; // Xóa tham chiếu
