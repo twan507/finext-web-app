@@ -308,9 +308,12 @@ export default function StockChart({
                     bottom: 0.1
                 }
             },
+            localization: {
+                locale: 'vi-VN',
+            },
             timeScale: {
                 borderColor: colors.borderColor,
-                timeVisible: true, // Always show time
+                timeVisible: isIntraday,
                 secondsVisible: false,
                 tickMarkFormatter: isIntraday
                     ? (time: UTCTimestamp) => {
@@ -529,6 +532,91 @@ export default function StockChart({
             // Cleanup only on unmount or when timeRange changes
         };
     }, [initChart, updateSeries, timeRange, eodData, intradayData]);
+
+    // Update chart colors when theme changes (without recreating chart)
+    useEffect(() => {
+        if (!chartRef.current) return;
+
+        const chart = chartRef.current;
+        const isIntraday = timeRange === '1D';
+
+        // Update chart layout and grid colors
+        chart.applyOptions({
+            layout: {
+                background: { type: ColorType.Solid, color: 'transparent' },
+                textColor: colors.textSecondary
+            },
+            grid: {
+                vertLines: { color: colors.gridColor, style: LineStyle.Solid },
+                horzLines: { color: colors.gridColor, style: LineStyle.Solid }
+            },
+            crosshair: {
+                vertLine: {
+                    color: colors.crosshairColor,
+                    width: 1,
+                    style: LineStyle.Dashed
+                },
+                horzLine: {
+                    color: colors.crosshairColor,
+                    width: 1,
+                    style: LineStyle.Dashed
+                }
+            },
+            rightPriceScale: {
+                borderColor: colors.borderColor
+            },
+            timeScale: {
+                borderColor: colors.borderColor,
+                timeVisible: isIntraday // Cập nhật timeVisible khi đổi timeRange
+            }
+        });
+
+        // Update series colors
+        if (seriesRef.current) {
+            const effectiveChartType = isIntraday ? 'area' : chartType;
+
+            if (effectiveChartType === 'area') {
+                (seriesRef.current as ISeriesApi<'Area'>).applyOptions({
+                    lineColor: colors.line,
+                    topColor: colors.areaTop,
+                    bottomColor: colors.areaBottom,
+                    crosshairMarkerBorderColor: colors.line,
+                    crosshairMarkerBackgroundColor: colors.chartBackground
+                });
+            } else {
+                (seriesRef.current as ISeriesApi<'Candlestick'>).applyOptions({
+                    upColor: colors.upColor,
+                    downColor: colors.downColor,
+                    wickUpColor: colors.upColor,
+                    wickDownColor: colors.downColor
+                });
+            }
+        }
+
+        // Update volume series colors
+        if (volumeSeriesRef.current) {
+            const { candleData, volumeData } = isIntraday ? intradayData : eodData;
+            const effectiveChartType = isIntraday ? 'area' : chartType;
+
+            if (effectiveChartType === 'area') {
+                // Area chart: single color with opacity
+                const volumeWithColors: VolumeData[] = volumeData.map((vol) => ({
+                    ...vol,
+                    color: colors.line + '40'
+                }));
+                volumeSeriesRef.current.setData(volumeWithColors);
+            } else {
+                // Candlestick chart: colors based on direction
+                const volumeWithColors: VolumeData[] = volumeData.map((vol, index) => ({
+                    ...vol,
+                    color: candleData[index].close >= candleData[index].open
+                        ? colors.upColor + '80'
+                        : colors.downColor + '80'
+                }));
+                volumeSeriesRef.current.setData(volumeWithColors);
+            }
+        }
+    }, [colors, isDarkMode, chartType, timeRange, eodData, intradayData]);
 
     // Cleanup on unmount
     useEffect(() => {

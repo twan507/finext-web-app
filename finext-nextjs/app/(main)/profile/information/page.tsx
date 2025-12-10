@@ -15,8 +15,10 @@ function generateAvatarColors(userId: string): { light: string; dark: string } {
     }
     const hue = Math.abs(hash) % 360;
     return {
-        light: `hsla(${hue}, 45%, 75%, 1)`,
-        dark: `hsla(${hue}, 55%, 35%, 0.8)`
+        // Light mode: màu đậm vừa phải, saturation cao để nổi bật trên nền sáng
+        light: `hsla(${hue}, 60%, 50%, 1)`, // Saturation 60%, Lightness 50%
+        // Dark mode: màu sáng hơn một chút để nổi trên nền tối
+        dark: `hsla(${hue}, 55%, 35%, 1)`   // Saturation 55%, Lightness 35%
     };
 }
 

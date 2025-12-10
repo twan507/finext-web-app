@@ -49,10 +49,10 @@ function generateAvatarColors(userId: string): { light: string; dark: string } {
     const hue = Math.abs(hash) % 360;
 
     return {
-        // Light mode: màu nhạt hơn, opacity thấp để badge nổi bật
-        light: `hsla(${hue}, 45%, 75%, 1)`, // Saturation 45%, Lightness 75%, Alpha 0.6
-        // Dark mode: màu đậm hơn nhưng vẫn không quá nổi, opacity thấp
-        dark: `hsla(${hue}, 55%, 35%, 0.8)`   // Saturation 55%, Lightness 35%, Alpha 0.7
+        // Light mode: màu đậm vừa phải, saturation cao để nổi bật trên nền sáng
+        light: `hsla(${hue}, 60%, 50%, 1)`, // Saturation 60%, Lightness 50%
+        // Dark mode: màu sáng hơn một chút để nổi trên nền tối
+        dark: `hsla(${hue}, 55%, 35%, 1)`   // Saturation 55%, Lightness 35%
     };
 }
 
