@@ -91,7 +91,8 @@ export function sseClient<DataType = any>(
 
     // Xử lý sự kiện 'error'
     eventSource.onerror = (errorEvent: Event) => {
-      console.error(`[SSE Client] Lỗi EventSource:`, errorEvent);
+      // Dùng console.warn thay vì console.error để tránh Next.js error overlay
+      console.warn(`[SSE Client] Lỗi EventSource:`, errorEvent);
       // Kiểm tra xem kết nối đã đóng hoàn toàn chưa
       if (eventSource?.readyState === EventSource.CLOSED) {
         onError({

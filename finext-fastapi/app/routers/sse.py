@@ -11,20 +11,15 @@ import math
 from datetime import datetime
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, Request, HTTPException, status, Query
+from fastapi import APIRouter, Request, HTTPException, status, Query
 from fastapi.responses import StreamingResponse, JSONResponse
-from motor.motor_asyncio import AsyncIOMotorDatabase
 from bson import ObjectId
 
-from app.core.database import get_database
 from app.crud.sse import execute_sse_query, get_available_keywords
 from app.utils.response_wrapper import StandardApiResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-
-# --- Cấu hình Database ---
-DATABASE_NAME = "temp_stock"
 
 
 # --- Helper để chuyển đổi BSON sang JSON ---
@@ -58,13 +53,13 @@ def bson_to_json_str(data: Any) -> str:
 
 
 # --- SSE Event Generator ---
-async def sse_event_generator(request: Request, db: AsyncIOMotorDatabase, keyword: str, ticker: Optional[str] = None):
+async def sse_event_generator(request: Request, keyword: str, ticker: Optional[str] = None):
     """
     Generator cho SSE stream dựa trên keyword.
+    Database được chọn tự động trong từng hàm query.
 
     Args:
         request: FastAPI request object
-        db: Database connection
         keyword: Từ khóa xác định loại query
         ticker: Mã ticker (VD: VNINDEX, VN30, ...)
     """
@@ -79,7 +74,7 @@ async def sse_event_generator(request: Request, db: AsyncIOMotorDatabase, keywor
                 break
 
             try:
-                current_data = await execute_sse_query(keyword, db, ticker)
+                current_data = await execute_sse_query(keyword, ticker)
                 current_data_str = bson_to_json_str(current_data)
                 current_hash = hash(current_data_str)
 
@@ -130,13 +125,8 @@ async def sse_stream_endpoint(
     request: Request,
     keyword: str = Query(..., description="Từ khóa xác định loại dữ liệu cần lấy"),
     ticker: Optional[str] = Query(None, description="Mã ticker (VD: VNINDEX, VN30, ...)"),
-    db: AsyncIOMotorDatabase = Depends(lambda: get_database(DATABASE_NAME)),
 ):
     """Endpoint SSE chính - sử dụng keyword để xác định loại dữ liệu."""
-    if db is None:
-        logger.error(f"Cannot connect to database: {DATABASE_NAME}")
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Database connection failed")
-
     available_keywords = get_available_keywords()
     if keyword not in available_keywords:
         raise HTTPException(
@@ -146,7 +136,7 @@ async def sse_stream_endpoint(
     logger.info(f"Client connecting to SSE stream - keyword: {keyword}, ticker: {ticker}")
 
     return StreamingResponse(
-        sse_event_generator(request, db, keyword, ticker),
+        sse_event_generator(request, keyword, ticker),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -180,12 +170,8 @@ async def get_keywords():
 async def test_query_endpoint(
     keyword: str,
     ticker: Optional[str] = Query(None, description="Mã ticker (VD: VNINDEX, VN30, ...)"),
-    db: AsyncIOMotorDatabase = Depends(lambda: get_database(DATABASE_NAME)),
 ):
     """Test query một lần mà không cần mở SSE stream."""
-    if db is None:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Database connection failed")
-
     # Validate keyword trước
     available_keywords = get_available_keywords()
     if keyword not in available_keywords:
@@ -195,7 +181,7 @@ async def test_query_endpoint(
         )
 
     try:
-        data = await execute_sse_query(keyword, db, ticker)
+        data = await execute_sse_query(keyword, ticker)
         # Serialize data với custom encoder để xử lý ObjectId, datetime, nan
         serialized_data = json.loads(bson_to_json_str(data))
 

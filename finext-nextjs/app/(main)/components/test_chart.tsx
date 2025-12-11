@@ -100,13 +100,20 @@ export const transformToChartData = (rawData: RawMarketData[], isIntraday: boole
     }
 
     // Filter out invalid data (null/undefined values)
-    const validData = rawData.filter(item =>
-        item.date &&
-        typeof item.open === 'number' && !isNaN(item.open) &&
-        typeof item.high === 'number' && !isNaN(item.high) &&
-        typeof item.low === 'number' && !isNaN(item.low) &&
-        typeof item.close === 'number' && !isNaN(item.close)
-    );
+    // ITD chỉ cần date và close, EOD cần đầy đủ OHLC
+    const validData = rawData.filter(item => {
+        if (!item.date || typeof item.close !== 'number' || isNaN(item.close)) {
+            return false;
+        }
+        if (isIntraday) {
+            // ITD chỉ cần close
+            return true;
+        }
+        // EOD cần đầy đủ OHLC
+        return typeof item.open === 'number' && !isNaN(item.open) &&
+            typeof item.high === 'number' && !isNaN(item.high) &&
+            typeof item.low === 'number' && !isNaN(item.low);
+    });
 
     if (validData.length === 0) {
         return data;
@@ -139,13 +146,16 @@ export const transformToChartData = (rawData: RawMarketData[], isIntraday: boole
             timestamp = Math.floor(utcDate / 1000) as UTCTimestamp;
         }
 
-        data.candleData.push({
-            time: timestamp,
-            open: item.open,
-            high: item.high,
-            low: item.low,
-            close: item.close
-        });
+        // Chỉ thêm candleData cho EOD (ITD không có OHLC, chỉ vẽ line chart)
+        if (!isIntraday) {
+            data.candleData.push({
+                time: timestamp,
+                open: item.open,
+                high: item.high,
+                low: item.low,
+                close: item.close
+            });
+        }
 
         data.areaData.push({
             time: timestamp,
@@ -790,6 +800,9 @@ export default function StockChart({
                             py: 0.5,
                             fontSize: '0.875rem',
                             backgroundColor: colors.buttonBackground,
+                            '&:hover': {
+                                backgroundColor: colors.buttonBackground
+                            },
                             '&.Mui-selected': {
                                 backgroundColor: colors.buttonBackground,
                                 color: colors.buttonBackgroundActive
@@ -827,6 +840,9 @@ export default function StockChart({
                                 py: 0.5,
                                 minWidth: 40,
                                 backgroundColor: colors.buttonBackground,
+                                '&:hover': {
+                                    backgroundColor: colors.buttonBackground
+                                },
                                 '&.Mui-selected': {
                                     backgroundColor: colors.buttonBackground,
                                     color: colors.buttonBackgroundActive

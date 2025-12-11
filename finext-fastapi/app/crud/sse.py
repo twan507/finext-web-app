@@ -2,6 +2,7 @@
 """
 Module chứa các hàm query dữ liệu cho SSE stream.
 Mỗi keyword sẽ tương ứng với một hàm query riêng biệt.
+Mỗi hàm tự chọn database phù hợp.
 """
 
 import asyncio
@@ -11,7 +12,17 @@ from typing import Any, Dict, List, Optional
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pymongo.errors import PyMongoError, ExecutionTimeout
 
+from app.core.database import get_database
+
 logger = logging.getLogger(__name__)
+
+# ==============================================================================
+# DATABASE CONFIGURATION
+# ==============================================================================
+
+# Định nghĩa các database names
+DB_TEMP_STOCK = "temp_stock"
+DB_TEMP_REF = "temp_ref"
 
 # Cấu hình timeout và retry
 MAX_RETRIES = 3
@@ -112,44 +123,47 @@ async def get_collection_data(
 # ==============================================================================
 
 
-async def eod_market_index_chart(db: AsyncIOMotorDatabase, ticker: Optional[str] = None) -> List[Dict]:
-    """Lấy dữ liệu index theo ticker. Nếu không truyền ticker thì lấy tất cả."""
-    projection = {"_id": 0, "ticker": 1, "date": 1, "open": 1, "high": 1, "low": 1, "close": 1, "volume": 1, 'diff': 1, 'pct_change': 1}
-
-    # Nếu có ticker thì filter, không thì lấy tất cả
-    find_query = {"ticker": {"$in": [ticker]}} if ticker else {}
+async def eod_market_index_chart(ticker: Optional[str] = None) -> List[Dict]:
+    """Lấy dữ liệu EOD index theo ticker. Database: temp_stock."""
+    stock_db = get_database(DB_TEMP_STOCK)
 
     # Lấy dữ liệu từ 2 collection dưới dạng DataFrame
-    today_df = await get_collection_data(db, "today_index", find_query=find_query, projection=projection)
-    history_df = await get_collection_data(db, "history_index", find_query=find_query, projection=projection)
-
-    # Gộp và sắp xếp DataFrame
-    combined_df = pd.concat([history_df, today_df], ignore_index=True)
-
-    # Sắp xếp theo date giảm dần
-    if not combined_df.empty and "date" in combined_df.columns:
-        combined_df = combined_df.sort_values(by="date", ascending=False)
+    if ticker not in ["all_stock", "top100", "large", "mid", "small"]:
+        projection = {"_id": 0, "ticker": 1, "date": 1, "open": 1, "high": 1, "low": 1, "close": 1, "volume": 1, "diff": 1, "pct_change": 1}
+        find_query = {"ticker": {"$in": [ticker]}} if ticker else {}
+        today_df = await get_collection_data(stock_db, "today_index", find_query=find_query, projection=projection)
+        history_df = await get_collection_data(stock_db, "history_index", find_query=find_query, projection=projection)
+        combined_df = pd.concat([history_df, today_df], ignore_index=True)
+    else:
+        projection = {"_id": 0,"ticker": 1,"date": 1,"open": 1,"high": 1,"low": 1,"close": 1,"volume": 1,"diff": 1,"pct_change": 1,"ticker_name": 1}
+        find_query = {"ticker": {"$in": [ticker]}} if ticker else {}
+        today_df = await get_collection_data(stock_db, "today_group", find_query=find_query, projection=projection)
+        history_df = await get_collection_data(stock_db, "history_group", find_query=find_query, projection=projection)
+        combined_df = pd.concat([history_df, today_df], ignore_index=True)
+        combined_df["ticker"] = combined_df.pop("ticker_name")
 
     # Chuyển đổi DataFrame về JSON (List[Dict])
     return combined_df.to_dict(orient="records")
 
 
-async def itd_market_index_chart(db: AsyncIOMotorDatabase, ticker: Optional[str] = None) -> List[Dict]:
-    """Lấy dữ liệu index theo ticker. Nếu không truyền ticker thì lấy tất cả."""
-    projection = {"_id": 0, "ticker": 1, "date": 1, "open": 1, "high": 1, "low": 1, "close": 1, "volume": 1, 'diff': 1, 'pct_change': 1}
+async def itd_market_index_chart(ticker: Optional[str] = None) -> List[Dict]:
+    """Lấy dữ liệu ITD index theo ticker. Database: temp_stock."""
+    stock_db = get_database(DB_TEMP_STOCK)
 
-    # Nếu có ticker thì filter, không thì lấy tất cả
-    find_query = {"ticker": {"$in": [ticker]}} if ticker else {}
-
-    # Lấy dữ liệu từ collection dưới dạng DataFrame
-    today_df = await get_collection_data(db, "itd_index", find_query=find_query, projection=projection)
-
-    # Sắp xếp theo date giảm dần
-    if not today_df.empty and "date" in today_df.columns:
-        today_df = today_df.sort_values(by="date", ascending=False)
+    # ITD chỉ cần close để vẽ line chart, không cần open/high/low
+    if ticker not in ["all_stock", "top100", "large", "mid", "small"]:
+        projection = {"_id": 0, "ticker": 1, "date": 1, "close": 1, "volume": 1, "diff": 1, "pct_change": 1}
+        find_query = {"ticker": {"$in": [ticker]}} if ticker else {}
+        itd_df = await get_collection_data(stock_db, "itd_index", find_query=find_query, projection=projection)
+    else:
+        projection = {"_id": 0, "ticker": 1, "date": 1, "close": 1, "volume": 1, "diff": 1, "pct_change": 1, "ticker_name": 1}
+        find_query = {"ticker": {"$in": [ticker]}} if ticker else {}
+        itd_df = await get_collection_data(stock_db, "itd_group", find_query=find_query, projection=projection)
+        if not itd_df.empty and "ticker_name" in itd_df.columns:
+            itd_df["ticker"] = itd_df.pop("ticker_name")
 
     # Chuyển đổi DataFrame về JSON (List[Dict])
-    return today_df.to_dict(orient="records")
+    return itd_df.to_dict(orient="records")
 
 
 # ==============================================================================
@@ -168,13 +182,13 @@ def get_available_keywords() -> List[str]:
     return list(SSE_QUERY_REGISTRY.keys())
 
 
-async def execute_sse_query(keyword: str, db: AsyncIOMotorDatabase, ticker: Optional[str] = None) -> List[Dict]:
+async def execute_sse_query(keyword: str, ticker: Optional[str] = None) -> List[Dict]:
     """
     Thực thi query dựa trên keyword.
+    Mỗi hàm query sẽ tự chọn database phù hợp.
 
     Args:
         keyword: Từ khóa xác định loại query
-        db: Database connection
         ticker: Mã ticker (VD: VNINDEX, VN30, ...)
 
     Returns:
@@ -192,6 +206,6 @@ async def execute_sse_query(keyword: str, db: AsyncIOMotorDatabase, ticker: Opti
 
     # Gọi hàm query với ticker nếu có
     if ticker:
-        return await query_func(db, ticker)
+        return await query_func(ticker)
     else:
-        return await query_func(db)
+        return await query_func()
