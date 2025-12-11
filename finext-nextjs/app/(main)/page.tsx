@@ -17,18 +17,18 @@ import { usePollingClient } from 'services/pollingClient';
 
 // Index mapping: key -> { symbol, name }
 const INDEX_OPTIONS: Record<string, { symbol: string; name: string }> = {
-    'VNINDEX': { symbol: 'VNINDEX', name: 'VN-Index' },
-    'VN30': { symbol: 'VN30', name: 'VN30' },
-    'HNXINDEX': { symbol: 'HNXINDEX', name: 'HNX-Index' },
-    'UPINDEX': { symbol: 'UPINDEX', name: 'UP-Index' },
-    'VN30F1M': { symbol: 'VN30F1M', name: 'VN30F1M' },
+    'vnindex': { symbol: 'VNINDEX', name: 'VN-Index' },
+    'vn30': { symbol: 'VN30', name: 'VN30' },
+    'hnxindex': { symbol: 'HNXINDEX', name: 'HNX-Index' },
+    'upindex': { symbol: 'UPINDEX', name: 'UP-Index' },
+    'vn30f1m': { symbol: 'VN30F1M', name: 'VN30F1M' },
     'all_stock': { symbol: 'FNXINDEX', name: 'Finext-Index' },
     'mid': { symbol: 'FNXMID', name: 'Finext-Midcap' },
     'small': { symbol: 'FNXSMALL', name: 'Finext-Smallcap' },
     'large': { symbol: 'FNXLARGE', name: 'Finext-Largecap' },
 };
 
-// Type cho today_all_indexes response
+// Type cho sse_today_index response
 type TodayAllIndexesData = Record<string, RawMarketData[]>;
 
 // Empty chart data for initial state
@@ -39,7 +39,7 @@ const emptyChartData: ChartData = {
 };
 
 export default function HomePage() {
-    const [ticker, setTicker] = useState<string>('VNINDEX');
+    const [ticker, setTicker] = useState<string>('vnindex');
 
     // Lifted timeRange state từ chart component
     const [timeRange, setTimeRange] = useState<TimeRange>('1Y');
@@ -47,7 +47,7 @@ export default function HomePage() {
     // Track if component is mounted
     const isMountedRef = useRef<boolean>(true);
 
-    // SSE connection ref cho today_all_indexes
+    // SSE connection ref cho sse_today_index
     const todaySseRef = useRef<ISseConnection | null>(null);
 
     // ========== STATE ==========
@@ -117,28 +117,35 @@ export default function HomePage() {
 
         const requestProps: ISseRequest = {
             url: '/api/v1/sse/stream',
-            queryParams: { keyword: 'today_all_indexes' }
+            queryParams: { keyword: 'sse_today_index' }
             // Không cần ticker - lấy tất cả
         };
 
-        todaySseRef.current = sseClient<TodayAllIndexesData>(requestProps, {
+        todaySseRef.current = sseClient<RawMarketData[]>(requestProps, {
             onOpen: () => {
-                if (isMountedRef.current) {
-                    console.log('[SSE Today All] Connected');
-                }
+                // Connected
             },
             onData: (receivedData) => {
-                if (isMountedRef.current && receivedData && typeof receivedData === 'object') {
-                    setTodayAllData(receivedData);
+                if (isMountedRef.current && receivedData && Array.isArray(receivedData)) {
+                    // Group by ticker trên FE
+                    const grouped: TodayAllIndexesData = {};
+                    receivedData.forEach((item: RawMarketData) => {
+                        const t = item.ticker;
+                        if (t) {
+                            if (!grouped[t]) grouped[t] = [];
+                            grouped[t].push(item);
+                        }
+                    });
+                    setTodayAllData(grouped);
                 }
             },
             onError: (sseError) => {
                 if (isMountedRef.current) {
-                    console.warn('[SSE Today All] Error:', sseError.message);
+                    console.warn('[SSE Today] Error:', sseError.message);
                 }
             },
             onClose: () => {
-                console.log('[SSE Today All] Closed');
+                // Closed
             }
         });
 
