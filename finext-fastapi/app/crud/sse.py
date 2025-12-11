@@ -135,7 +135,19 @@ async def eod_market_index_chart(ticker: Optional[str] = None) -> List[Dict]:
         history_df = await get_collection_data(stock_db, "history_index", find_query=find_query, projection=projection)
         combined_df = pd.concat([history_df, today_df], ignore_index=True)
     else:
-        projection = {"_id": 0,"ticker": 1,"date": 1,"open": 1,"high": 1,"low": 1,"close": 1,"volume": 1,"diff": 1,"pct_change": 1,"ticker_name": 1}
+        projection = {
+            "_id": 0,
+            "ticker": 1,
+            "date": 1,
+            "open": 1,
+            "high": 1,
+            "low": 1,
+            "close": 1,
+            "volume": 1,
+            "diff": 1,
+            "pct_change": 1,
+            "ticker_name": 1,
+        }
         find_query = {"ticker": {"$in": [ticker]}} if ticker else {}
         today_df = await get_collection_data(stock_db, "today_group", find_query=find_query, projection=projection)
         history_df = await get_collection_data(stock_db, "history_group", find_query=find_query, projection=projection)
@@ -166,6 +178,118 @@ async def itd_market_index_chart(ticker: Optional[str] = None) -> List[Dict]:
     return itd_df.to_dict(orient="records")
 
 
+async def today_all_indexes(ticker: Optional[str] = None) -> Dict[str, List[Dict]]:
+    """
+    Lấy dữ liệu today của TẤT CẢ indexes trong 1 lần gọi.
+    Không cần ticker param - query tất cả.
+
+    Returns:
+        Dict với key là ticker, value là array data
+        VD: {
+            "VNINDEX": [...],
+            "VN30": [...],
+            "all_stock": [...],
+            ...
+        }
+    """
+    stock_db = get_database(DB_TEMP_STOCK)
+    result: Dict[str, List[Dict]] = {}
+
+    # Các ticker từ today_index collection
+    index_tickers = ["VNINDEX", "VN30", "HNXINDEX", "UPINDEX", "VN30F1M"]
+    # Các ticker từ today_group collection (dùng ticker_name)
+    group_tickers = ["all_stock", "mid", "small", "large"]
+
+    # Query today_index cho các index tickers
+    projection_index = {
+        "_id": 0,
+        "ticker": 1,
+        "date": 1,
+        "open": 1,
+        "high": 1,
+        "low": 1,
+        "close": 1,
+        "volume": 1,
+        "diff": 1,
+        "pct_change": 1,
+    }
+    find_query_index = {"ticker": {"$in": index_tickers}}
+    today_index_df = await get_collection_data(stock_db, "today_index", find_query=find_query_index, projection=projection_index)
+
+    # Group by ticker và add vào result
+    if not today_index_df.empty:
+        for t in index_tickers:
+            ticker_data = today_index_df[today_index_df["ticker"] == t]
+            if not ticker_data.empty:
+                result[t] = ticker_data.to_dict(orient="records")
+
+    # Query today_group cho các group tickers
+    projection_group = {
+        "_id": 0,
+        "ticker": 1,
+        "ticker_name": 1,
+        "date": 1,
+        "open": 1,
+        "high": 1,
+        "low": 1,
+        "close": 1,
+        "volume": 1,
+        "diff": 1,
+        "pct_change": 1,
+    }
+    find_query_group = {"ticker": {"$in": group_tickers}}
+    today_group_df = await get_collection_data(stock_db, "today_group", find_query=find_query_group, projection=projection_group)
+
+    # Group by ticker và add vào result (dùng ticker_name làm display name)
+    if not today_group_df.empty:
+        for t in group_tickers:
+            ticker_data = today_group_df[today_group_df["ticker"] == t].copy()
+            if not ticker_data.empty:
+                # Rename ticker_name thành ticker để frontend xử lý dễ hơn
+                if "ticker_name" in ticker_data.columns:
+                    ticker_data["ticker"] = ticker_data["ticker_name"]
+                    ticker_data = ticker_data.drop(columns=["ticker_name"])
+                result[t] = ticker_data.to_dict(orient="records")
+
+    return result
+
+
+async def history_market_index_chart(ticker: Optional[str] = None) -> List[Dict]:
+    """
+    Lấy dữ liệu history index theo ticker (chỉ history, không bao gồm today).
+    Database: temp_stock.
+
+    Tương tự eod_market_index_chart nhưng chỉ query history_index/history_group.
+    """
+    stock_db = get_database(DB_TEMP_STOCK)
+
+    if ticker not in ["all_stock", "top100", "large", "mid", "small"]:
+        projection = {"_id": 0, "ticker": 1, "date": 1, "open": 1, "high": 1, "low": 1, "close": 1, "volume": 1, "diff": 1, "pct_change": 1}
+        find_query = {"ticker": {"$in": [ticker]}} if ticker else {}
+        history_df = await get_collection_data(stock_db, "history_index", find_query=find_query, projection=projection)
+    else:
+        projection = {
+            "_id": 0,
+            "ticker": 1,
+            "date": 1,
+            "open": 1,
+            "high": 1,
+            "low": 1,
+            "close": 1,
+            "volume": 1,
+            "diff": 1,
+            "pct_change": 1,
+            "ticker_name": 1,
+        }
+        find_query = {"ticker": {"$in": [ticker]}} if ticker else {}
+        history_df = await get_collection_data(stock_db, "history_group", find_query=find_query, projection=projection)
+        if not history_df.empty and "ticker_name" in history_df.columns:
+            history_df["ticker"] = history_df.pop("ticker_name")
+
+    # Chuyển đổi DataFrame về JSON (List[Dict])
+    return history_df.to_dict(orient="records")
+
+
 # ==============================================================================
 # REGISTRY - Đăng ký các keyword và hàm query tương ứng
 # ==============================================================================
@@ -174,6 +298,8 @@ SSE_QUERY_REGISTRY: Dict[str, Any] = {
     # Index queries
     "eod_market_index_chart": eod_market_index_chart,
     "itd_market_index_chart": itd_market_index_chart,
+    "today_all_indexes": today_all_indexes,
+    "history_market_index_chart": history_market_index_chart,
 }
 
 

@@ -29,8 +29,8 @@ import CandlestickChartIcon from '@mui/icons-material/CandlestickChart';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 
-// Types
-type TimeRange = '1D' | '1M' | '3M' | '1Y' | '5Y' | 'ALL';
+// Types - export để page có thể sử dụng
+export type TimeRange = '1D' | '1M' | '3M' | '1Y' | '5Y' | 'ALL';
 type ChartType = 'area' | 'candlestick';
 
 interface PriceData {
@@ -82,6 +82,9 @@ interface StockChartProps {
     intradayData: ChartData;
     isLoading?: boolean;
     error?: string | null;
+    // Lifted state từ page
+    timeRange: TimeRange;
+    onTimeRangeChange: (newTimeRange: TimeRange) => void;
 }
 
 // Transform raw API data to chart format - export để page có thể sử dụng
@@ -213,14 +216,16 @@ const emptyChartData: ChartData = {
     lastPctChange: undefined
 };
 
-export default function StockChart({
+export default function MarketIndexChart({
     symbol = 'VN-Index',
     title = 'Chỉ số VN-Index',
     height = 450,
     eodData = emptyChartData,
     intradayData = emptyChartData,
     isLoading = false,
-    error = null
+    error = null,
+    timeRange,
+    onTimeRangeChange
 }: StockChartProps) {
     const theme = useTheme();
     const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -230,7 +235,11 @@ export default function StockChart({
     >(null);
     const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
 
-    const [timeRange, setTimeRange] = useState<TimeRange>('1Y');
+    // Refs để lưu trữ visible range và track thay đổi
+    const savedLogicalRangeRef = useRef<{ from: number; to: number } | null>(null);
+    const prevTimeRangeRef = useRef<TimeRange>(timeRange);
+
+    // timeRange is now controlled by parent via props
     const [chartType, setChartType] = useState<ChartType>('area');
     const [currentPrice, setCurrentPrice] = useState<number>(0);
     const [priceChange, setPriceChange] = useState<number>(0);
@@ -504,18 +513,55 @@ export default function StockChart({
             }
         }
 
-        // Restore visible range if we had one saved
-        // Không restore range khi chuyển giữa EOD và ITD vì dữ liệu khác nhau hoàn toàn
-        if (!isIntraday) {
-            // EOD: Set visible range based on timeRange selection
-            const dataLength =
-                effectiveChartType === 'area' ? areaData.length : candleData.length;
-            const visibleRange = getVisibleRange(timeRange, dataLength);
-            chart.timeScale().setVisibleLogicalRange(visibleRange);
-        } else {
-            // ITD: Always fit content to show all intraday data
-            chart.timeScale().fitContent();
+        // Kiểm tra xem có phải chỉ timeRange thay đổi (chartType thay đổi vẫn giữ view)
+        const isTimeRangeChanged = prevTimeRangeRef.current !== timeRange;
+        const shouldResetRange = isTimeRangeChanged;
+
+        // Cập nhật refs
+        prevTimeRangeRef.current = timeRange;
+
+        if (shouldResetRange) {
+            // TimeRange thay đổi -> reset range
+            if (!isIntraday) {
+                // EOD: Set visible range based on timeRange selection
+                const dataLength =
+                    effectiveChartType === 'area' ? areaData.length : candleData.length;
+                const visibleRange = getVisibleRange(timeRange, dataLength);
+                chart.timeScale().setVisibleLogicalRange(visibleRange);
+            } else {
+                // ITD: Always fit content to show all intraday data
+                chart.timeScale().fitContent();
+            }
+            // Clear saved range khi reset
+            savedLogicalRangeRef.current = null;
+        } else if (savedLogicalRange) {
+            // Chỉ data thay đổi (từ API update) -> restore saved range
+            try {
+                chart.timeScale().setVisibleLogicalRange(savedLogicalRange);
+            } catch {
+                // Fallback nếu range không hợp lệ
+                if (!isIntraday) {
+                    const dataLength =
+                        effectiveChartType === 'area' ? areaData.length : candleData.length;
+                    const visibleRange = getVisibleRange(timeRange, dataLength);
+                    chart.timeScale().setVisibleLogicalRange(visibleRange);
+                } else {
+                    chart.timeScale().fitContent();
+                }
+            }
         }
+
+        // Lưu range hiện tại vào ref để sử dụng cho lần update tiếp theo
+        // Dùng setTimeout để đảm bảo chart đã render xong
+        setTimeout(() => {
+            try {
+                if (chartRef.current) {
+                    savedLogicalRangeRef.current = chartRef.current.timeScale().getVisibleLogicalRange();
+                }
+            } catch {
+                // Ignore
+            }
+        }, 0);
     }, [chartType, timeRange, colors, isDarkMode, eodData, intradayData]);
 
     // Combined effect: Initialize chart AND update series when data arrives
@@ -645,7 +691,7 @@ export default function StockChart({
         newRange: TimeRange | null
     ) => {
         if (newRange !== null) {
-            setTimeRange(newRange);
+            onTimeRangeChange(newRange);
         }
     };
 

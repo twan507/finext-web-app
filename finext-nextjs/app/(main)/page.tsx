@@ -1,16 +1,19 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Box, Typography, Container, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import MarketIndexChart, {
     RawMarketData,
     ChartData,
-    transformToChartData
-} from './components/test_chart';
+    transformToChartData,
+    TimeRange
+} from './components/MarketIndexChart';
 
-// Import SSE client
+// Import API clients
+import { apiClient } from 'services/apiClient';
 import { ISseConnection, ISseRequest } from 'services/core/types';
 import { sseClient } from 'services/sseClient';
+import { usePollingClient } from 'services/pollingClient';
 
 // Index mapping: key -> { symbol, name }
 const INDEX_OPTIONS: Record<string, { symbol: string; name: string }> = {
@@ -25,6 +28,9 @@ const INDEX_OPTIONS: Record<string, { symbol: string; name: string }> = {
     'large': { symbol: 'FNXLARGE', name: 'Finext-Largecap' },
 };
 
+// Type cho today_all_indexes response
+type TodayAllIndexesData = Record<string, RawMarketData[]>;
+
 // Empty chart data for initial state
 const emptyChartData: ChartData = {
     areaData: [],
@@ -35,113 +41,170 @@ const emptyChartData: ChartData = {
 export default function HomePage() {
     const [ticker, setTicker] = useState<string>('VNINDEX');
 
-    // SSE connection refs
-    const eodSseRef = useRef<ISseConnection | null>(null);
-    const itdSseRef = useRef<ISseConnection | null>(null);
+    // Lifted timeRange state từ chart component
+    const [timeRange, setTimeRange] = useState<TimeRange>('1Y');
 
     // Track if component is mounted
-    const isMountedRef = useRef<boolean>(false);
+    const isMountedRef = useRef<boolean>(true);
 
-    // State for chart data
+    // SSE connection ref cho today_all_indexes
+    const todaySseRef = useRef<ISseConnection | null>(null);
+
+    // ========== STATE ==========
+    // History data (từ REST API - gọi 1 lần khi đổi ticker)
+    const [historyData, setHistoryData] = useState<RawMarketData[]>([]);
+    const [historyLoading, setHistoryLoading] = useState<boolean>(true);
+
+    // Today data (từ SSE - cho TẤT CẢ indexes)
+    const [todayAllData, setTodayAllData] = useState<TodayAllIndexesData>({});
+
+    // Combined EOD data (history + today)
     const [eodData, setEodData] = useState<ChartData>(emptyChartData);
+
+    // Intraday data (từ Polling)
     const [intradayData, setIntradayData] = useState<ChartData>(emptyChartData);
+
+    // Loading & Error states
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+
+    // ========== LUỒNG 1: REST - History Data ==========
+    const fetchHistoryData = useCallback(async (selectedTicker: string) => {
+        setHistoryLoading(true);
+        try {
+            const response = await apiClient<RawMarketData[]>({
+                url: '/api/v1/sse/rest/history_market_index_chart',
+                method: 'GET',
+                queryParams: { ticker: selectedTicker },
+                requireAuth: false
+            });
+
+            if (isMountedRef.current && response.data) {
+                setHistoryData(response.data);
+                setError(null);
+            }
+        } catch (err: any) {
+            if (isMountedRef.current) {
+                console.error('[History] Fetch error:', err);
+                setError(`Lỗi tải dữ liệu lịch sử: ${err.message}`);
+            }
+        } finally {
+            if (isMountedRef.current) {
+                setHistoryLoading(false);
+            }
+        }
+    }, []);
+
+    // Fetch history khi ticker thay đổi
+    useEffect(() => {
+        isMountedRef.current = true;
+        fetchHistoryData(ticker);
+
+        return () => {
+            isMountedRef.current = false;
+        };
+    }, [ticker, fetchHistoryData]);
+
+    // ========== LUỒNG 2: SSE - Today All Indexes ==========
+    useEffect(() => {
+        isMountedRef.current = true;
+
+        // Close existing connection
+        if (todaySseRef.current) {
+            todaySseRef.current.close();
+            todaySseRef.current = null;
+        }
+
+        const requestProps: ISseRequest = {
+            url: '/api/v1/sse/stream',
+            queryParams: { keyword: 'today_all_indexes' }
+            // Không cần ticker - lấy tất cả
+        };
+
+        todaySseRef.current = sseClient<TodayAllIndexesData>(requestProps, {
+            onOpen: () => {
+                if (isMountedRef.current) {
+                    console.log('[SSE Today All] Connected');
+                }
+            },
+            onData: (receivedData) => {
+                if (isMountedRef.current && receivedData && typeof receivedData === 'object') {
+                    setTodayAllData(receivedData);
+                }
+            },
+            onError: (sseError) => {
+                if (isMountedRef.current) {
+                    console.warn('[SSE Today All] Error:', sseError.message);
+                }
+            },
+            onClose: () => {
+                console.log('[SSE Today All] Closed');
+            }
+        });
+
+        return () => {
+            isMountedRef.current = false;
+            if (todaySseRef.current) {
+                todaySseRef.current.close();
+            }
+        };
+    }, []); // Chỉ chạy 1 lần khi mount
+
+    // ========== LUỒNG 3: Polling - ITD Data ==========
+    // Chỉ enable polling khi timeRange === '1D' (đang xem chart intraday)
+    const isIntradayMode = timeRange === '1D';
+
+    const { data: itdRawData } = usePollingClient<RawMarketData[]>(
+        '/api/v1/sse/rest/itd_market_index_chart',
+        { ticker },
+        { interval: 5000, enabled: isIntradayMode, immediate: isIntradayMode }
+    );
+
+    // Transform ITD data khi có dữ liệu mới
+    useEffect(() => {
+        if (itdRawData && Array.isArray(itdRawData) && itdRawData.length > 0) {
+            const transformedData = transformToChartData(itdRawData, true);
+            setIntradayData(transformedData);
+        } else {
+            setIntradayData(emptyChartData);
+        }
+    }, [itdRawData]);
+
+    // ========== Combine History + Today -> EOD Data ==========
+    useEffect(() => {
+        // Lấy today data cho ticker hiện tại từ todayAllData
+        const todayDataForTicker = todayAllData[ticker] || [];
+
+        // Chỉ combine và hiển thị khi CẢ HAI đã có dữ liệu:
+        // 1. History đã load xong (historyLoading = false) VÀ có data
+        // 2. Today data đã có cho ticker hiện tại
+        const hasHistoryData = !historyLoading && historyData.length > 0;
+        const hasTodayData = todayDataForTicker.length > 0;
+
+        if (!hasHistoryData || !hasTodayData) {
+            // Chưa đủ dữ liệu -> giữ loading
+            return;
+        }
+
+        // Combine history + today
+        const combinedRawData = [...historyData, ...todayDataForTicker];
+        const transformedData = transformToChartData(combinedRawData, false);
+        setEodData(transformedData);
+
+        // Đã đủ dữ liệu -> tắt loading
+        setIsLoading(false);
+    }, [historyData, todayAllData, ticker, historyLoading]);
 
     // Handle ticker change
     const handleTickerChange = (_event: React.MouseEvent<HTMLElement>, newTicker: string | null) => {
         if (newTicker !== null) {
             setTicker(newTicker);
             setIsLoading(true);
+            setHistoryData([]);
             setEodData(emptyChartData);
             setIntradayData(emptyChartData);
         }
     };
-
-    // SSE connection for EOD data
-    useEffect(() => {
-        isMountedRef.current = true;
-
-        // Close existing connection
-        if (eodSseRef.current) {
-            eodSseRef.current.close();
-            eodSseRef.current = null;
-        }
-
-        const requestProps: ISseRequest = {
-            url: '/api/v1/sse/stream',
-            queryParams: { keyword: 'eod_market_index_chart', ticker }
-        };
-
-        eodSseRef.current = sseClient<RawMarketData[]>(requestProps, {
-            onOpen: () => {
-                if (isMountedRef.current) {
-                    setError(null);
-                }
-            },
-            onData: (receivedData) => {
-                if (isMountedRef.current && Array.isArray(receivedData) && receivedData.length > 0) {
-                    const transformedData = transformToChartData(receivedData, false);
-                    setEodData(transformedData);
-                    setIsLoading(false);
-                }
-            },
-            onError: (sseError) => {
-                if (isMountedRef.current) {
-                    setError(`Lỗi kết nối EOD: ${sseError.message}`);
-                    setIsLoading(false);
-                }
-            },
-            onClose: () => {
-            }
-        });
-
-        return () => {
-            isMountedRef.current = false;
-            if (eodSseRef.current) {
-                eodSseRef.current.close();
-            }
-        };
-    }, [ticker]);
-
-    // SSE connection for ITD (Intraday) data
-    useEffect(() => {
-        if (!isMountedRef.current) return;
-
-        // Close existing connection
-        if (itdSseRef.current) {
-            itdSseRef.current.close();
-            itdSseRef.current = null;
-        }
-
-        const requestProps: ISseRequest = {
-            url: '/api/v1/sse/stream',
-            queryParams: { keyword: 'itd_market_index_chart', ticker }
-        };
-
-        itdSseRef.current = sseClient<RawMarketData[]>(requestProps, {
-            onOpen: () => {
-            },
-            onData: (receivedData) => {
-                if (isMountedRef.current && Array.isArray(receivedData) && receivedData.length > 0) {
-                    const transformedData = transformToChartData(receivedData, true);
-                    setIntradayData(transformedData);
-                }
-            },
-            onError: (sseError) => {
-            },
-            onClose: () => {
-            }
-        });
-
-        return () => {
-            if (itdSseRef.current) {
-                itdSseRef.current.close();
-            }
-        };
-    }, [ticker]);
-
-    console.log(intradayData);
 
     // Get display info for current ticker
     const currentIndex = INDEX_OPTIONS[ticker];
@@ -190,6 +253,8 @@ export default function HomePage() {
                     intradayData={intradayData}
                     isLoading={isLoading}
                     error={error}
+                    timeRange={timeRange}
+                    onTimeRangeChange={setTimeRange}
                 />
             </Box>
         </Container>

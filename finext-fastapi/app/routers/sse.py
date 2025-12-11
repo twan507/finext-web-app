@@ -162,6 +162,43 @@ async def get_keywords():
 
 
 @router.get(
+    "/rest/{keyword}",
+    summary="REST Query - Lấy dữ liệu một lần (không stream)",
+    description="Query dữ liệu một lần theo keyword, dùng cho REST calls và polling thay vì SSE stream.",
+    tags=["sse"],
+)
+async def rest_query_endpoint(
+    keyword: str,
+    ticker: Optional[str] = Query(None, description="Mã ticker (VD: VNINDEX, VN30, ...)"),
+):
+    """
+    REST endpoint để query dữ liệu một lần.
+    Dùng cho các trường hợp cần polling hoặc fetch đơn lẻ thay vì SSE stream.
+
+    Hỗ trợ tất cả các keyword trong SSE_QUERY_REGISTRY.
+    """
+    # Validate keyword trước
+    available_keywords = get_available_keywords()
+    if keyword not in available_keywords:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid keyword '{keyword}'. Available: {', '.join(available_keywords)}",
+        )
+
+    try:
+        data = await execute_sse_query(keyword, ticker)
+        # Serialize data với custom encoder để xử lý ObjectId, datetime, nan
+        serialized_data = json.loads(bson_to_json_str(data))
+
+        return JSONResponse(
+            content=StandardApiResponse(status=200, message="Truy vấn dữ liệu thành công", data=serialized_data).model_dump()
+        )
+    except Exception as e:
+        logger.error(f"REST query error (keyword: {keyword}): {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Query failed: {str(e)}")
+
+
+@router.get(
     "/test/{keyword}",
     summary="Test query một lần (không stream)",
     description="Thực thi query một lần để test, không cần mở SSE stream.",
