@@ -9,6 +9,7 @@ import MarketIndexChart, {
     TimeRange
 } from './components/MarketIndexChart';
 import MiniIndexCard from './components/MiniIndexCard';
+import IndexTable from './components/IndexTable';
 
 // Import API clients
 import { apiClient } from 'services/apiClient';
@@ -16,14 +17,31 @@ import { ISseConnection, ISseRequest } from 'services/core/types';
 import { sseClient } from 'services/sseClient';
 import { usePollingClient } from 'services/pollingClient';
 
-// Danh sách các index symbols
-const INDEX_OPTIONS = [
+// Danh sách các index cho mini charts
+const MINI_CHART_INDEXES = [
     'VNINDEX',
     'VN30',
     'HNXINDEX',
     'UPINDEX',
     'VN30F1M',
     'VN30F2M',
+];
+
+// Danh sách các index cho bảng (nhiều hơn)
+const TABLE_INDEXES = [
+    'VNINDEX',
+    'VN30',
+    'HNXINDEX',
+    'HNX30',
+    'UPINDEX',
+    'FNXINDEX',
+    'FNX100',
+    'LARGECAP',
+    'MIDCAP',
+    'SMALLCAP',
+    'VUOTTROI',
+    'ONDINH',
+    'SUKIEN'
 ];
 
 // Type cho sse_today_index response
@@ -199,7 +217,7 @@ export default function HomePage() {
         setIsLoading(false);
     }, [historyData, todayAllData, ticker, historyLoading]);
 
-    // Handle ticker change
+    // Handle ticker change from ToggleButtonGroup
     const handleTickerChange = (_event: React.MouseEvent<HTMLElement>, newTicker: string | null) => {
         if (newTicker !== null) {
             setTicker(newTicker);
@@ -208,6 +226,15 @@ export default function HomePage() {
             setEodData(emptyChartData);
             setIntradayData(emptyChartData);
         }
+    };
+
+    // Handle ticker change from Table
+    const handleTableTickerChange = (newTicker: string) => {
+        setTicker(newTicker);
+        setIsLoading(true);
+        setHistoryData([]);
+        setEodData(emptyChartData);
+        setIntradayData(emptyChartData);
     };
 
     // Get display info for current ticker
@@ -239,46 +266,38 @@ export default function HomePage() {
                         mb: 4
                     }}
                 >
-                    {INDEX_OPTIONS.map((indexSymbol) => (
+                    {MINI_CHART_INDEXES.map((indexSymbol) => (
                         <MiniIndexCard key={indexSymbol} symbol={indexSymbol} />
                     ))}
                 </Box>
 
-                {/* Index Selection */}
-                <ToggleButtonGroup
-                    value={ticker}
-                    exclusive
-                    onChange={handleTickerChange}
-                    aria-label="Chọn chỉ số"
-                    sx={{ mb: 3, flexWrap: 'wrap', gap: 0.5 }}
-                    size="small"
-                >
-                    {INDEX_OPTIONS.map((symbol) => (
-                        <ToggleButton
-                            key={symbol}
-                            value={symbol}
-                            sx={{
-                                px: 2,
-                                textTransform: 'none',
-                                fontWeight: ticker === symbol ? 600 : 400
-                            }}
-                        >
-                            {symbol}
-                        </ToggleButton>
-                    ))}
-                </ToggleButtonGroup>
+                {/* Main Content: Chart + Table */}
+                <Box sx={{ display: 'flex', gap: 3 }}>
+                    {/* Chart */}
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <MarketIndexChart
+                            key={ticker}
+                            symbol={symbol}
+                            title={`Chỉ số ${indexName}`}
+                            eodData={eodData}
+                            intradayData={intradayData}
+                            isLoading={isLoading}
+                            error={error}
+                            timeRange={timeRange}
+                            onTimeRangeChange={setTimeRange}
+                        />
+                    </Box>
 
-                <MarketIndexChart
-                    key={ticker}
-                    symbol={symbol}
-                    title={`Chỉ số ${indexName}`}
-                    eodData={eodData}
-                    intradayData={intradayData}
-                    isLoading={isLoading}
-                    error={error}
-                    timeRange={timeRange}
-                    onTimeRangeChange={setTimeRange}
-                />
+                    {/* Index Table */}
+                    <Box sx={{ width: 400, flexShrink: 0, mt: 2 }}>
+                        <IndexTable
+                            selectedTicker={ticker}
+                            onTickerChange={handleTableTickerChange}
+                            indexList={TABLE_INDEXES}
+                            todayAllData={todayAllData}
+                        />
+                    </Box>
+                </Box>
             </Box>
         </Container>
     );

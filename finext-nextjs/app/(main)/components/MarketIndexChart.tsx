@@ -220,7 +220,7 @@ const emptyChartData: ChartData = {
 export default function MarketIndexChart({
     symbol = 'VN-Index',
     title = 'Chỉ số VN-Index',
-    height = 450,
+    height = 440,
     eodData = emptyChartData,
     intradayData = emptyChartData,
     isLoading = false,
