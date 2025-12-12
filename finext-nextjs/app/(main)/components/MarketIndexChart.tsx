@@ -55,6 +55,7 @@ interface VolumeData {
 // Raw data từ API - export để page có thể sử dụng
 export interface RawMarketData {
     ticker: string;
+    ticker_name?: string; // Tên đầy đủ của ticker/index
     date: string;
     open: number;
     high: number;

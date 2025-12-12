@@ -8,6 +8,7 @@ import MarketIndexChart, {
     transformToChartData,
     TimeRange
 } from './components/MarketIndexChart';
+import MiniIndexCard from './components/MiniIndexCard';
 
 // Import API clients
 import { apiClient } from 'services/apiClient';
@@ -15,18 +16,15 @@ import { ISseConnection, ISseRequest } from 'services/core/types';
 import { sseClient } from 'services/sseClient';
 import { usePollingClient } from 'services/pollingClient';
 
-// Index mapping: key -> { symbol, name }
-const INDEX_OPTIONS: Record<string, { symbol: string; name: string }> = {
-    'vnindex': { symbol: 'VNINDEX', name: 'VN-Index' },
-    'vn30': { symbol: 'VN30', name: 'VN30' },
-    'hnxindex': { symbol: 'HNXINDEX', name: 'HNX-Index' },
-    'upindex': { symbol: 'UPINDEX', name: 'UP-Index' },
-    'vn30f1m': { symbol: 'VN30F1M', name: 'VN30F1M' },
-    'all_stock': { symbol: 'FNXINDEX', name: 'Finext-Index' },
-    'mid': { symbol: 'FNXMID', name: 'Finext-Midcap' },
-    'small': { symbol: 'FNXSMALL', name: 'Finext-Smallcap' },
-    'large': { symbol: 'FNXLARGE', name: 'Finext-Largecap' },
-};
+// Danh sách các index symbols
+const INDEX_OPTIONS = [
+    'VNINDEX',
+    'VN30',
+    'HNXINDEX',
+    'UPINDEX',
+    'VN30F1M',
+    'VN30F2M',
+];
 
 // Type cho sse_today_index response
 type TodayAllIndexesData = Record<string, RawMarketData[]>;
@@ -39,7 +37,7 @@ const emptyChartData: ChartData = {
 };
 
 export default function HomePage() {
-    const [ticker, setTicker] = useState<string>('vnindex');
+    const [ticker, setTicker] = useState<string>('VNINDEX');
 
     // Lifted timeRange state từ chart component
     const [timeRange, setTimeRange] = useState<TimeRange>('1Y');
@@ -118,7 +116,6 @@ export default function HomePage() {
         const requestProps: ISseRequest = {
             url: '/api/v1/sse/stream',
             queryParams: { keyword: 'sse_today_index' }
-            // Không cần ticker - lấy tất cả
         };
 
         todaySseRef.current = sseClient<RawMarketData[]>(requestProps, {
@@ -214,9 +211,14 @@ export default function HomePage() {
     };
 
     // Get display info for current ticker
-    const currentIndex = INDEX_OPTIONS[ticker];
-    const symbol = currentIndex?.symbol || ticker;
-    const indexName = currentIndex?.name || ticker;
+    // Lấy ticker_name từ dữ liệu (tất cả API đều trả về ticker_name)
+    const getTickerName = (): string => {
+        const firstRecord = historyData[0] || todayAllData[ticker]?.[0] || (itdRawData && itdRawData[0]);
+        return firstRecord?.ticker_name || ticker;
+    };
+
+    const symbol = ticker;
+    const indexName = getTickerName();
 
     return (
         <Container maxWidth="xl" sx={{ py: 4 }}>
@@ -228,6 +230,20 @@ export default function HomePage() {
                     Biểu đồ chỉ số thị trường
                 </Typography>
 
+                {/* Mini Index Cards */}
+                <Box
+                    sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        gap: 1.5,
+                        mb: 4
+                    }}
+                >
+                    {INDEX_OPTIONS.map((indexSymbol) => (
+                        <MiniIndexCard key={indexSymbol} symbol={indexSymbol} />
+                    ))}
+                </Box>
+
                 {/* Index Selection */}
                 <ToggleButtonGroup
                     value={ticker}
@@ -237,14 +253,14 @@ export default function HomePage() {
                     sx={{ mb: 3, flexWrap: 'wrap', gap: 0.5 }}
                     size="small"
                 >
-                    {Object.entries(INDEX_OPTIONS).map(([key, { symbol }]) => (
+                    {INDEX_OPTIONS.map((symbol) => (
                         <ToggleButton
-                            key={key}
-                            value={key}
+                            key={symbol}
+                            value={symbol}
                             sx={{
                                 px: 2,
                                 textTransform: 'none',
-                                fontWeight: ticker === key ? 600 : 400
+                                fontWeight: ticker === symbol ? 600 : 400
                             }}
                         >
                             {symbol}

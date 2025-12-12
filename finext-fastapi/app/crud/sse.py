@@ -128,9 +128,9 @@ async def itd_market_index_chart(ticker: Optional[str] = None) -> List[Dict]:
     stock_db = get_database(DB_TEMP_STOCK)
 
     # ITD chỉ cần close để vẽ line chart, không cần open/high/low
-    projection = {"_id": 0, "ticker": 1, "date": 1, "close": 1, "volume": 1, "diff": 1, "pct_change": 1}
+    projection = {"_id": 0, "ticker": 1, "ticker_name": 1, "date": 1, "close": 1, "volume": 1, "diff": 1, "pct_change": 1}
     find_query = {"ticker": ticker} if ticker else {}
-    itd_df = await get_collection_data(stock_db, "itd_ticker", find_query=find_query, projection=projection)
+    itd_df = await get_collection_data(stock_db, "itd_index", find_query=find_query, projection=projection)
 
     # Chuyển đổi DataFrame về JSON (List[Dict])
     return itd_df.to_dict(orient="records")
@@ -142,15 +142,14 @@ async def sse_today_index(ticker: Optional[str] = None) -> List[Dict]:
     Không cần ticker param - query tất cả theo group.
 
     Returns:
-        List[Dict] - danh sách các records từ today_ticker
+        List[Dict] - danh sách các records từ today_index
     """
     stock_db = get_database(DB_TEMP_STOCK)
 
-    # Query today_ticker collection
+    # Query today_index collection
     projection = {
         "_id": 0,
         "ticker": 1,
-        "ticker_up": 1,
         "ticker_name": 1,
         "date": 1,
         "open": 1,
@@ -161,8 +160,8 @@ async def sse_today_index(ticker: Optional[str] = None) -> List[Dict]:
         "diff": 1,
         "pct_change": 1,
     }
-    find_query = {"group": {"$in": ["index", "futures", "market", "marketcap", "category", "industry"]}}
-    today_df = await get_collection_data(stock_db, "today_ticker", find_query=find_query, projection=projection)
+    find_query = {}
+    today_df = await get_collection_data(stock_db, "today_index", find_query=find_query, projection=projection)
 
     return today_df.to_dict(orient="records")
 
@@ -177,7 +176,6 @@ async def history_market_index_chart(ticker: Optional[str] = None) -> List[Dict]
     projection = {
         "_id": 0,
         "ticker": 1,
-        "ticker_up": 1,
         "ticker_name": 1,
         "date": 1,
         "open": 1,
@@ -189,7 +187,7 @@ async def history_market_index_chart(ticker: Optional[str] = None) -> List[Dict]
         "pct_change": 1,
     }
     find_query = {"ticker": ticker} if ticker else {}
-    history_df = await get_collection_data(stock_db, "history_ticker", find_query=find_query, projection=projection)
+    history_df = await get_collection_data(stock_db, "history_index", find_query=find_query, projection=projection)
 
     # Chuyển đổi DataFrame về JSON (List[Dict])
     return history_df.to_dict(orient="records")
