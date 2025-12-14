@@ -4,7 +4,6 @@ import { useEffect, useState, useMemo } from 'react';
 import { Box, Typography, Skeleton, useTheme } from '@mui/material';
 import dynamic from 'next/dynamic';
 import { ApexOptions } from 'apexcharts';
-import { usePollingClient } from 'services/pollingClient';
 
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
@@ -20,6 +19,7 @@ interface RawMarketData {
 
 interface MiniIndexCardProps {
     symbol: string;
+    itdData: RawMarketData[]; // Data được truyền từ parent (page.tsx) qua SSE
 }
 
 const getChangeColor = (pctChange: number): string => {
@@ -55,7 +55,7 @@ interface ChartDataPoint {
     dateStr: string;
 }
 
-export default function MiniIndexCard({ symbol }: MiniIndexCardProps) {
+export default function MiniIndexCard({ symbol, itdData }: MiniIndexCardProps) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
 
@@ -66,15 +66,13 @@ export default function MiniIndexCard({ symbol }: MiniIndexCardProps) {
     const [diff, setDiff] = useState<number | null>(null);
     const [pctChange, setPctChange] = useState<number | null>(null);
 
-    const { data: itdRawData, isLoading } = usePollingClient<RawMarketData[]>(
-        '/api/v1/sse/rest/itd_market_index_chart',
-        { ticker: symbol },
-        { interval: 5000, enabled: true, immediate: true }
-    );
+    // Check if data is loading (itdData is empty array initially)
+    const isLoading = itdData.length === 0;
 
+    // Process itdData from props (SSE data passed from parent)
     useEffect(() => {
-        if (itdRawData && Array.isArray(itdRawData) && itdRawData.length > 0) {
-            const validData = itdRawData.filter(
+        if (itdData && Array.isArray(itdData) && itdData.length > 0) {
+            const validData = itdData.filter(
                 (item) => item.date && typeof item.close === 'number' && !isNaN(item.close)
             );
             if (validData.length === 0) return;
@@ -92,7 +90,7 @@ export default function MiniIndexCard({ symbol }: MiniIndexCardProps) {
             setDiff(lastRecord.diff ?? null);
             setPctChange(lastRecord.pct_change != null ? lastRecord.pct_change * 100 : null);
         }
-    }, [itdRawData]);
+    }, [itdData]);
 
     const lineColor = lastPrice != null && baselinePrice != null && lastPrice >= baselinePrice ? '#22c55e' : '#ef4444';
     const changeColor = getChangeColor(pctChange ?? 0);
@@ -136,18 +134,10 @@ export default function MiniIndexCard({ symbol }: MiniIndexCardProps) {
             type: 'gradient',
             gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.1, stops: [0, 100] }
         },
-        annotations: {
-            yaxis: baselinePrice != null ? [{
-                y: baselinePrice,
-                borderColor: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.25)',
-                borderWidth: 1,
-                strokeDashArray: 3
-            }] : []
-        },
         yaxis: {
             show: false,
-            min: chartData.length > 0 ? Math.min(...chartData.map(d => d.value), baselinePrice ?? Infinity) * 0.9995 : undefined,
-            max: chartData.length > 0 ? Math.max(...chartData.map(d => d.value), baselinePrice ?? -Infinity) * 1.0005 : undefined
+            min: chartData.length > 0 ? Math.min(...chartData.map(d => d.value)) * 0.9995 : undefined,
+            max: chartData.length > 0 ? Math.max(...chartData.map(d => d.value)) * 1.0005 : undefined
         }
     }), [lineColor, isDark, chartData, baselinePrice]);
 

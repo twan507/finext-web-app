@@ -422,58 +422,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <Box sx={{ display: 'flex', height: '100vh', bgcolor: theme.palette.background.default }}>
       <CssBaseline />
 
-      {/* APP BAR */}
-      <AppBar
-        position="fixed"
-        elevation={0}
-        sx={{
-          width: { lg: `calc(100% - ${drawerWidth}px)` },
-          ml: { lg: `${drawerWidth}px` },
-          height: layoutTokens.appBarHeight,
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)', // Thêm đổ bóng viền dưới
-          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.12)}`, // Thêm viền mỏng
-          backdropFilter: 'blur(8px)', // Thêm hiệu ứng blur
-        }}
-      >
-
-        <Toolbar sx={{ justifyContent: 'space-between', alignItems: 'center', px: { xs: 2, lg: 3 }, minHeight: `${layoutTokens.toolbarMinHeight}px !important`, height: layoutTokens.appBarHeight, maxHeight: layoutTokens.appBarHeight }}>
-          {/* Container bên trái, sẽ chứa logo và nút menu mobile */}
-          <Box sx={{
-            flex: 1, // Chiếm toàn bộ không gian còn lại
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: { xs: 'center', lg: 'flex-start' }, // Căn giữa dưới lg, căn trái từ lg trở lên
-            position: 'relative', // Làm mốc cho nút menu
-          }}>
-            {isMobile && (
-              <MuiIconButton
-                color="inherit"
-                aria-label="open drawer"
-                edge="start"
-                onClick={handleDrawerToggle}
-                sx={{
-                  // Đặt nút menu ở góc trái tuyệt đối để không ảnh hưởng đến việc căn giữa logo
-                  position: 'absolute',
-                  left: 0,
-                  color: 'text.primary'
-                }}
-              >
-                <MenuIcon />
-              </MuiIconButton>
-            )}
-
-            {/* Comment out Breadcrumbs và thay bằng Logo */}
-            <BrandLogo href="/" />
-            {/* {generateBreadcrumbs()} */}
-          </Box>
-
-          {/* Container bên phải - đã bỏ UserAvatar */}
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            {/* UserAvatar đã được chuyển vào sidebar */}
-          </Box>
-        </Toolbar>
-      </AppBar>
-
       {/* NAV DRAWERS */}
       <Box component="nav" sx={{ width: { lg: drawerWidth }, flexShrink: { lg: 0 } }} aria-label="sidebar">
         {/* Mobile Drawer (overlay) */}
@@ -487,15 +435,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             display: { xs: 'block', lg: 'none' },
             '& .MuiDrawer-paper': {
               width: layoutTokens.drawerWidth || 280,
-              boxShadow: '4px 0 16px rgba(0, 0, 0, 0.15)', // Thêm đổ bóng mạnh hơn cho mobile overlay
-              backdropFilter: 'blur(12px)', // Hiệu ứng blur mạnh hơn cho mobile
+              boxShadow: '4px 0 16px rgba(0, 0, 0, 0.15)',
+              backdropFilter: 'blur(12px)',
             }
           }}
         >
           {MobileDrawerContent}
         </Drawer>
 
-        {/* Desktop Drawer (expanded ↔ icon-only) */}
+        {/* Desktop Drawer (permanent) */}
         <Drawer
           variant="permanent"
           sx={{
@@ -507,9 +455,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               height: '100vh',
               display: 'flex',
               flexDirection: 'column',
-              boxShadow: '2px 0 8px rgba(0, 0, 0, 0.08)', // Thêm đổ bóng viền phải
-              borderRight: `1px solid ${alpha(theme.palette.divider, 0.12)}`, // Thêm viền mỏng
-              backdropFilter: 'blur(8px)', // Thêm hiệu ứng blur
+              boxShadow: '2px 0 8px rgba(0, 0, 0, 0.08)',
+              borderRight: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+              backdropFilter: 'blur(8px)',
             }
           }}
           open
@@ -518,9 +466,75 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </Drawer>
       </Box>
 
-      {/* MAIN */}
-      <Box component="main" sx={{ flexGrow: 1, p: 3, width: { lg: `calc(100% - ${drawerWidth}px)` }, height: '100vh', mt: `${layoutTokens.appBarHeight}px`, maxHeight: `calc(100vh - ${layoutTokens.appBarHeight}px)`, bgcolor: theme.palette.mode === 'light' ? alpha(theme.palette.grey[500], 0.04) : theme.palette.background.default }}>
-        {children}
+      {/* SCROLLABLE CONTAINER - chứa AppBar sticky và page content */}
+      <Box
+        sx={{
+          flexGrow: 1,
+          width: { lg: `calc(100% - ${drawerWidth}px)` },
+          height: '100vh',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+        }}
+      >
+        {/* APP BAR - sticky trong container */}
+        <AppBar
+          position="sticky"
+          elevation={0}
+          sx={{
+            top: 0,
+            zIndex: theme.zIndex.appBar,
+            height: layoutTokens.appBarHeight,
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+            borderBottom: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          <Toolbar sx={{ justifyContent: 'space-between', alignItems: 'center', px: { xs: 2, lg: 3 }, minHeight: `${layoutTokens.toolbarMinHeight}px !important`, height: layoutTokens.appBarHeight, maxHeight: layoutTokens.appBarHeight }}>
+            {/* Container bên trái, sẽ chứa logo và nút menu mobile */}
+            <Box sx={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: { xs: 'center', lg: 'flex-start' },
+              position: 'relative',
+            }}>
+              {isMobile && (
+                <MuiIconButton
+                  color="inherit"
+                  aria-label="open drawer"
+                  edge="start"
+                  onClick={handleDrawerToggle}
+                  sx={{
+                    position: 'absolute',
+                    left: 0,
+                    color: 'text.primary'
+                  }}
+                >
+                  <MenuIcon />
+                </MuiIconButton>
+              )}
+
+              <BrandLogo href="/" />
+            </Box>
+
+            {/* Container bên phải */}
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              {/* UserAvatar đã được chuyển vào sidebar */}
+            </Box>
+          </Toolbar>
+        </AppBar>
+
+        {/* MAIN CONTENT - không có scrollbar riêng */}
+        <Box
+          component="main"
+          sx={{
+            p: 3,
+            bgcolor: theme.palette.mode === 'light' ? alpha(theme.palette.grey[500], 0.04) : theme.palette.background.default,
+            minHeight: `calc(100vh - ${layoutTokens.appBarHeight}px)`,
+          }}
+        >
+          {children}
+        </Box>
       </Box>
     </Box>
   );

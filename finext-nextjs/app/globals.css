@@ -12,8 +12,8 @@ html {
   /* CssBaseline của MUI có thể cũng đã xử lý các thuộc tính font-smoothing này. */
   width: 100%;
   height: 100%;
-  overflow-x: hidden;
-  /* Prevent horizontal overflow */
+  overflow: hidden;
+  /* Prevent scrollbar on html - scrollbar will be on main content instead */
 }
 
 /* 2. Kế thừa box-sizing cho tất cả các phần tử */
@@ -37,8 +37,8 @@ body {
                 hoàn toàn dựa vào MUI cho các style nền tảng này. */
   width: 100%;
   height: 100%;
-  overflow-x: hidden;
-  /* Prevent horizontal overflow */
+  overflow: hidden;
+  /* Prevent scrollbar on body - scrollbar will be on main content instead */
 }
 
 /* 4. Style cơ bản cho hình ảnh, video, svg (Tùy chọn nhưng hữu ích) */

@@ -176,16 +176,17 @@ const UserAvatar: React.FC<UserMenuProps> = ({ variant = 'icon' }) => {
                                 if (licenseResponse.data?.color) {
                                     setLicenseColor(licenseResponse.data.color);
                                 }
-                            } catch (licenseError) {
-                                console.error("Error fetching license details:", licenseError);
+                            } catch {
+                                // Silently handle license fetch errors - fallback to default color
                             }
                         }
                     } else {
                         setLicenseKey('BASIC');
                         setLicenseColor('#1565c0');
                     }
-                } catch (error) {
-                    console.error("Error fetching subscription:", error);
+                } catch {
+                    // Silently handle subscription fetch errors (e.g., on page refresh race conditions)
+                    // Fallback to default values
                     setLicenseKey('BASIC');
                     setLicenseColor('#1565c0');
                 } finally {

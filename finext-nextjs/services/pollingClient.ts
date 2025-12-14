@@ -87,7 +87,7 @@ export function usePollingClient<T = any>(
             if (isMountedRef.current) {
                 setError(err.message || 'Lỗi không xác định');
                 setIsLoading(false);
-                console.error('[usePollingClient] Fetch error:', err);
+                console.warn('[usePollingClient] Fetch error:', err);
             }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps

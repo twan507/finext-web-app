@@ -76,8 +76,8 @@ export interface ChartData {
 }
 
 interface StockChartProps {
-    symbol?: string;
-    title?: string;
+    symbol: string;
+    title: string;
     height?: number;
     eodData: ChartData;
     intradayData: ChartData;
@@ -218,9 +218,9 @@ const emptyChartData: ChartData = {
 };
 
 export default function MarketIndexChart({
-    symbol = 'VN-Index',
-    title = 'Chỉ số VN-Index',
-    height = 440,
+    symbol,
+    title,
+    height = 368,
     eodData = emptyChartData,
     intradayData = emptyChartData,
     isLoading = false,

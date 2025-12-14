@@ -324,152 +324,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <Box sx={{ display: 'flex', height: '100vh', bgcolor: theme.palette.background.default }}>
       <CssBaseline />
 
-      {/* APP BAR */}
-      <AppBar
-        position="fixed"
-        elevation={0}
-        sx={{
-          width: { lg: `calc(100% - ${drawerWidth}px)` },
-          ml: { lg: `${drawerWidth}px` },
-          height: layoutTokens.appBarHeight,
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)', // Thêm đổ bóng viền dưới
-          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.12)}`, // Thêm viền mỏng
-          backdropFilter: 'blur(8px)', // Thêm hiệu ứng blur
-        }}
-      >
-
-        <Toolbar sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          px: { xs: 2, lg: 3 },
-          minHeight: `${layoutTokens.toolbarMinHeight}px !important`,
-          height: layoutTokens.appBarHeight,
-          maxHeight: layoutTokens.appBarHeight,
-          width: '100%',
-          maxWidth: 1430,
-          mx: 'auto',
-          gap: 2,
-        }}>
-          {/* Container bên trái, sẽ chứa logo và nút menu mobile */}
-          <Box sx={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: { xs: 'center', lg: 'flex-start' },
-            position: 'relative',
-            gap: 3,
-          }}>
-            {isMobile && (
-              <MuiIconButton
-                color="inherit"
-                aria-label="open drawer"
-                edge="start"
-                onClick={handleDrawerToggle}
-                sx={{
-                  position: 'absolute',
-                  left: 0,
-                  color: 'text.primary'
-                }}
-              >
-                <MenuIcon />
-              </MuiIconButton>
-            )}
-            <BrandLogo href="/" />
-
-            {/* Top Navigation Tabs - Only visible on desktop */}
-            {!isMobile && (
-              <Box sx={{ display: 'flex', gap: 0.5 }}>
-                {topNavTabs.map((tab) => {
-                  const isActive = currentPathname.startsWith(tab.href);
-                  return (
-                    <Tooltip
-                      key={tab.href}
-                      title={
-                        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
-                          <Icon icon={tab.icon} width="24" height="24" style={{ marginTop: '2px', flexShrink: 0 }} />
-                          <Box>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                              {tab.label}
-                            </Typography>
-                            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                              {tab.description}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      }
-                      placement="bottom"
-                      arrow
-                      disableInteractive
-                      enterDelay={200}
-                      leaveDelay={0}
-                      slotProps={{
-                        tooltip: {
-                          sx: {
-                            bgcolor: theme.palette.background.paper,
-                            color: theme.palette.text.primary,
-                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-                            '& .MuiTooltip-arrow': {
-                              color: theme.palette.background.paper,
-                            },
-                          },
-                        },
-                      }}
-                    >
-                      <Link
-                        href={tab.href}
-                        passHref
-                        style={{ textDecoration: 'none' }}
-                      >
-                        <Box
-                          sx={{
-                            px: 2,
-                            height: '30px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            fontSize: '0.9rem',
-                            fontWeight: isActive ? 600 : 500,
-                            color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
-                            textTransform: 'none',
-                            transition: 'all 0.2s ease',
-                            cursor: 'pointer',
-                            borderRadius: '6px',
-                            '&:hover': {
-                              color: theme.palette.primary.main,
-                              backgroundColor: alpha(theme.palette.primary.main, 0.08),
-                            },
-                          }}
-                        >
-                          {tab.label}
-                        </Box>
-                      </Link>
-                    </Tooltip>
-                  );
-                })}
-              </Box>
-            )}
-            {/* {generateBreadcrumbs()} */}
-          </Box>
-
-          {/* Container bên phải cho thanh tìm kiếm và auth buttons */}
-          <Box sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            gap: 1.5,
-            mr: -1.1
-          }}>
-            {/* Thanh tìm kiếm luôn hiển thị */}
-            <SearchBar variant="compact" />
-
-            {/* Nút đăng nhập/đăng ký chỉ hiển thị khi chưa đăng nhập và không phải mobile */}
-            {!session && !lgDown && (
-              <AuthButtons />
-            )}
-          </Box>
-        </Toolbar>
-      </AppBar>
-
       {/* NAV DRAWERS */}
       <Box component="nav" sx={{ width: { lg: drawerWidth }, flexShrink: { lg: 0 } }} aria-label="sidebar">
         {/* Mobile Drawer (overlay) */}
@@ -482,7 +336,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           sx={{
             display: { xs: 'block', lg: 'none' },
             '& .MuiDrawer-paper': {
-              width: 280, // Mobile drawer has more width for text labels
+              width: 280,
               boxShadow: '4px 0 16px rgba(0, 0, 0, 0.15)',
               backdropFilter: 'blur(12px)',
             }
@@ -491,7 +345,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {MobileDrawerContent}
         </Drawer>
 
-        {/* Desktop Drawer (expanded ↔ icon-only) */}
+        {/* Desktop Drawer (permanent) */}
         <Drawer
           variant="permanent"
           sx={{
@@ -503,9 +357,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               height: '100vh',
               display: 'flex',
               flexDirection: 'column',
-              boxShadow: '2px 0 8px rgba(0, 0, 0, 0.08)', // Thêm đổ bóng viền phải
-              borderRight: `1px solid ${alpha(theme.palette.divider, 0.12)}`, // Thêm viền mỏng
-              backdropFilter: 'blur(8px)', // Thêm hiệu ứng blur
+              boxShadow: '2px 0 8px rgba(0, 0, 0, 0.08)',
+              borderRight: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+              backdropFilter: 'blur(8px)',
             }
           }}
           open
@@ -514,19 +368,179 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </Drawer>
       </Box>
 
-      {/* MAIN */}
-      <Box component="main" sx={{
-        flexGrow: 1,
-        width: { lg: `calc(100% - ${drawerWidth}px)` },
-        height: '100vh',
-        mt: `${layoutTokens.appBarHeight}px`,
-        maxHeight: `calc(100vh - ${layoutTokens.appBarHeight}px)`,
-        bgcolor: theme.palette.background.default,
-        display: 'flex',
-        justifyContent: 'center',
-      }}>
-        <Box sx={{ width: '100%', maxWidth: 1400, minHeight: '100%' }}>
-          {children}
+      {/* SCROLLABLE CONTAINER - chứa AppBar sticky và page content */}
+      <Box
+        sx={{
+          flexGrow: 1,
+          width: { lg: `calc(100% - ${drawerWidth}px)` },
+          height: '100vh',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+        }}
+      >
+        {/* APP BAR - sticky trong container */}
+        <AppBar
+          position="sticky"
+          elevation={0}
+          sx={{
+            top: 0,
+            zIndex: theme.zIndex.appBar,
+            height: layoutTokens.appBarHeight,
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+            borderBottom: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          <Toolbar sx={{
+            minHeight: `${layoutTokens.toolbarMinHeight}px !important`,
+            height: layoutTokens.appBarHeight,
+            maxHeight: layoutTokens.appBarHeight,
+            px: { xs: 2, lg: 3 },
+          }}>
+            {/* Inner container - cùng maxWidth với main content để căn thẳng hàng */}
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              width: '100%',
+              maxWidth: 1400,
+              mx: 'auto',
+              gap: 2,
+            }}>
+              {/* Container bên trái, sẽ chứa logo và nút menu mobile */}
+              <Box sx={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: { xs: 'center', lg: 'flex-start' },
+                position: 'relative',
+                gap: 3,
+              }}>
+                {isMobile && (
+                  <MuiIconButton
+                    color="inherit"
+                    aria-label="open drawer"
+                    edge="start"
+                    onClick={handleDrawerToggle}
+                    sx={{
+                      position: 'absolute',
+                      left: 0,
+                      color: 'text.primary'
+                    }}
+                  >
+                    <MenuIcon />
+                  </MuiIconButton>
+                )}
+                <BrandLogo href="/" />
+
+                {/* Top Navigation Tabs - Only visible on desktop */}
+                {!isMobile && (
+                  <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    {topNavTabs.map((tab) => {
+                      const isActive = currentPathname.startsWith(tab.href);
+                      return (
+                        <Tooltip
+                          key={tab.href}
+                          title={
+                            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
+                              <Icon icon={tab.icon} width="24" height="24" style={{ marginTop: '2px', flexShrink: 0 }} />
+                              <Box>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                  {tab.label}
+                                </Typography>
+                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                  {tab.description}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          }
+                          placement="bottom"
+                          arrow
+                          disableInteractive
+                          enterDelay={200}
+                          leaveDelay={0}
+                          slotProps={{
+                            tooltip: {
+                              sx: {
+                                bgcolor: theme.palette.background.paper,
+                                color: theme.palette.text.primary,
+                                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+                                '& .MuiTooltip-arrow': {
+                                  color: theme.palette.background.paper,
+                                },
+                              },
+                            },
+                          }}
+                        >
+                          <Link
+                            href={tab.href}
+                            passHref
+                            style={{ textDecoration: 'none' }}
+                          >
+                            <Box
+                              sx={{
+                                px: 2,
+                                height: '30px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                fontSize: '0.9rem',
+                                fontWeight: isActive ? 600 : 500,
+                                color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
+                                textTransform: 'none',
+                                transition: 'all 0.2s ease',
+                                cursor: 'pointer',
+                                borderRadius: '6px',
+                                '&:hover': {
+                                  color: theme.palette.primary.main,
+                                  backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                                },
+                              }}
+                            >
+                              {tab.label}
+                            </Box>
+                          </Link>
+                        </Tooltip>
+                      );
+                    })}
+                  </Box>
+                )}
+              </Box>
+
+              {/* Container bên phải cho thanh tìm kiếm và auth buttons */}
+              <Box sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: 1.5,
+              }}>
+                <SearchBar variant="compact" />
+
+                {!session && !lgDown && (
+                  <AuthButtons />
+                )}
+              </Box>
+            </Box>
+          </Toolbar>
+        </AppBar>
+
+        {/* MAIN CONTENT - không có scrollbar riêng */}
+        <Box
+          component="main"
+          sx={{
+            bgcolor: theme.palette.background.default,
+            display: 'flex',
+            justifyContent: 'center',
+            minHeight: `calc(100vh - ${layoutTokens.appBarHeight}px)`,
+            px: { xs: 2, lg: 3 },
+          }}
+        >
+          <Box sx={{
+            width: '100%',
+            maxWidth: 1400,
+            minHeight: '100%',
+          }}>
+            {children}
+          </Box>
         </Box>
       </Box>
     </Box>

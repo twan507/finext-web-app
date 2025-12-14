@@ -1,5 +1,11 @@
 {
-    "python-envs.defaultEnvManager": "ms-python.python:venv",
-    "python-envs.defaultPackageManager": "ms-python.python:pip",
-    "python-envs.pythonProjects": []
+  "workbench.colorCustomizations": {
+    "statusBar.background": "#3c3c3c",
+    "statusBar.foreground": "#ffffff",
+    "statusBar.noFolderBackground": "#3c3c3c",
+    "statusBar.debuggingBackground": "#3c3c3c"
+  },
+  "python-envs.defaultEnvManager": "ms-python.python:venv",
+  "python-envs.defaultPackageManager": "ms-python.python:pip",
+  "python-envs.pythonProjects": []
 }

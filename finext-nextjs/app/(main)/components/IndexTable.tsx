@@ -96,7 +96,7 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
                 gridTemplateColumns: '1.8fr 1fr 0.8fr 0.8fr',
                 gap: 1,
                 px: 1.5,
-                py: 1,
+                py: 1.5,
                 borderBottom: isLast ? 'none' : `1px solid ${dividerColor}`
             }}>
                 <Skeleton variant="text" width="80%" height={20} />
@@ -115,7 +115,7 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
                 gridTemplateColumns: '1.8fr 1fr 0.8fr 0.8fr',
                 gap: 1,
                 px: 1.5,
-                py: 1,
+                py: 1.5,
                 cursor: 'pointer',
                 transition: 'background-color 0.15s ease',
                 borderBottom: isLast ? 'none' : `1px solid ${dividerColor}`,
@@ -192,7 +192,7 @@ interface IndexTableProps {
 
 export default function IndexTable({ selectedTicker, onTickerChange, indexList, todayAllData }: IndexTableProps) {
     return (
-        <Box sx={{ overflow: 'hidden', mt: 8 }}>
+        <Box sx={{ overflow: 'hidden' }}>
             {/* Rows */}
             {indexList.map((ticker, index) => (
                 <IndexRow
