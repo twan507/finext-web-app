@@ -54,3 +54,82 @@ svg {
                      Nếu bạn thường xuyên dùng MUI Image component hoặc Box để bọc img,
                      thì style này có thể không quá cần thiết. */
 }
+
+/* 5. Custom Scrollbar Styling */
+
+/* Hide scrollbar on Tablet and Mobile (< 1200px) - still scrollable but invisible */
+@media (max-width: 1199px) {
+  *::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+
+  * {
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE/Edge */
+  }
+}
+
+/* Desktop only (>= 1200px) - Show styled scrollbar */
+@media (min-width: 1200px) {
+
+  /* Light Theme Scrollbar */
+  [data-theme='light'] *::-webkit-scrollbar,
+  :root:not([data-theme='dark']) *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  [data-theme='light'] *::-webkit-scrollbar-track,
+  :root:not([data-theme='dark']) *::-webkit-scrollbar-track {
+    background: #e5e5e5;
+    /* Màu xám nhạt để không bị trùng với nền trắng */
+    border-radius: 4px;
+  }
+
+  [data-theme='light'] *::-webkit-scrollbar-thumb,
+  :root:not([data-theme='dark']) *::-webkit-scrollbar-thumb {
+    background: #a0a0a0;
+    border-radius: 4px;
+  }
+
+  [data-theme='light'] *::-webkit-scrollbar-thumb:hover,
+  :root:not([data-theme='dark']) *::-webkit-scrollbar-thumb:hover {
+    background: #888888;
+  }
+
+  /* Dark Theme Scrollbar */
+  [data-theme='dark'] *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  [data-theme='dark'] *::-webkit-scrollbar-track {
+    background: #2a2a2a;
+    border-radius: 4px;
+  }
+
+  [data-theme='dark'] *::-webkit-scrollbar-thumb {
+    background: #555555;
+    border-radius: 4px;
+  }
+
+  [data-theme='dark'] *::-webkit-scrollbar-thumb:hover {
+    background: #666666;
+  }
+
+  /* Firefox scrollbar support */
+  [data-theme='light'] *,
+  :root:not([data-theme='dark']) * {
+    scrollbar-width: thin;
+    scrollbar-color: #a0a0a0 #e5e5e5;
+  }
+
+  [data-theme='dark'] * {
+    scrollbar-width: thin;
+    scrollbar-color: #555555 #2a2a2a;
+  }
+}

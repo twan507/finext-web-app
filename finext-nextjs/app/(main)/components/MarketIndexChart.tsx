@@ -134,6 +134,9 @@ export const transformToChartData = (rawData: RawMarketData[], isIntraday: boole
     data.lastDiff = lastRecord?.diff;
     data.lastPctChange = lastRecord?.pct_change;
 
+    // Track seen timestamps to avoid duplicates (lightweight-charts requires unique ascending times)
+    const seenTimestamps = new Set<number>();
+
     for (const item of sortedData) {
         let timestamp: UTCTimestamp;
 
@@ -150,6 +153,13 @@ export const transformToChartData = (rawData: RawMarketData[], isIntraday: boole
             const utcDate = Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
             timestamp = Math.floor(utcDate / 1000) as UTCTimestamp;
         }
+
+        // Skip duplicate timestamps (lightweight-charts requires unique ascending times)
+        if (seenTimestamps.has(timestamp)) {
+            console.warn(`[MarketIndexChart] Skipping duplicate timestamp: ${timestamp} (date: ${item.date})`);
+            continue;
+        }
+        seenTimestamps.add(timestamp);
 
         // Chỉ thêm candleData cho EOD (ITD không có OHLC, chỉ vẽ line chart)
         if (!isIntraday) {
@@ -426,7 +436,12 @@ export default function MarketIndexChart({
                 crosshairMarkerBorderColor: colors.line,
                 crosshairMarkerBackgroundColor: colors.chartBackground
             });
-            areaSeries.setData(areaData);
+
+            try {
+                areaSeries.setData(areaData);
+            } catch (err) {
+                console.warn('[MarketIndexChart] Error setting area data:', err);
+            }
             seriesRef.current = areaSeries;
 
             // Add volume histogram series for area chart (same color as line, with opacity)
@@ -443,7 +458,12 @@ export default function MarketIndexChart({
                 ...vol,
                 color: colors.line + '40' // 25% opacity
             }));
-            volumeSeries.setData(volumeWithColors);
+
+            try {
+                volumeSeries.setData(volumeWithColors);
+            } catch (err) {
+                console.warn('[MarketIndexChart] Error setting volume data:', err);
+            }
             volumeSeriesRef.current = volumeSeries;
 
             // Configure volume price scale (bottom 20% of chart)
@@ -473,7 +493,12 @@ export default function MarketIndexChart({
                 wickUpColor: colors.upColor,
                 wickDownColor: colors.downColor
             });
-            candlestickSeries.setData(candleData);
+
+            try {
+                candlestickSeries.setData(candleData);
+            } catch (err) {
+                console.warn('[MarketIndexChart] Error setting candlestick data:', err);
+            }
             seriesRef.current = candlestickSeries;
 
             // Add volume histogram series
@@ -491,7 +516,12 @@ export default function MarketIndexChart({
                     ? colors.upColor + '80'  // 50% opacity for up
                     : colors.downColor + '80' // 50% opacity for down
             }));
-            volumeSeries.setData(volumeWithColors);
+
+            try {
+                volumeSeries.setData(volumeWithColors);
+            } catch (err) {
+                console.warn('[MarketIndexChart] Error setting volume data:', err);
+            }
             volumeSeriesRef.current = volumeSeries;
 
             // Configure volume price scale (bottom 20% of chart)
@@ -656,22 +686,26 @@ export default function MarketIndexChart({
             const { candleData, volumeData } = isIntraday ? intradayData : eodData;
             const effectiveChartType = isIntraday ? 'area' : chartType;
 
-            if (effectiveChartType === 'area') {
-                // Area chart: single color with opacity
-                const volumeWithColors: VolumeData[] = volumeData.map((vol) => ({
-                    ...vol,
-                    color: colors.line + '40'
-                }));
-                volumeSeriesRef.current.setData(volumeWithColors);
-            } else {
-                // Candlestick chart: colors based on direction
-                const volumeWithColors: VolumeData[] = volumeData.map((vol, index) => ({
-                    ...vol,
-                    color: candleData[index].close >= candleData[index].open
-                        ? colors.upColor + '80'
-                        : colors.downColor + '80'
-                }));
-                volumeSeriesRef.current.setData(volumeWithColors);
+            try {
+                if (effectiveChartType === 'area') {
+                    // Area chart: single color with opacity
+                    const volumeWithColors: VolumeData[] = volumeData.map((vol) => ({
+                        ...vol,
+                        color: colors.line + '40'
+                    }));
+                    volumeSeriesRef.current.setData(volumeWithColors);
+                } else {
+                    // Candlestick chart: colors based on direction
+                    const volumeWithColors: VolumeData[] = volumeData.map((vol, index) => ({
+                        ...vol,
+                        color: candleData[index].close >= candleData[index].open
+                            ? colors.upColor + '80'
+                            : colors.downColor + '80'
+                    }));
+                    volumeSeriesRef.current.setData(volumeWithColors);
+                }
+            } catch (err) {
+                console.warn('[MarketIndexChart] Error updating volume colors:', err);
             }
         }
     }, [colors, isDarkMode, chartType, timeRange, eodData, intradayData]);

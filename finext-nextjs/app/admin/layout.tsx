@@ -426,7 +426,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           } else {
             return (
               <React.Fragment key={itemOrGroup.groupText}>
-                <ListItem sx={{ px: 1}}>
+                <ListItem sx={{ px: 1 }}>
                   <Typography variant="caption" color="text.primary" sx={{ textTransform: 'uppercase', fontSize: fontSize.sectionLabel.mobile, fontWeight: 600 }}>
                     {itemOrGroup.groupText}
                   </Typography>
@@ -627,7 +627,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   sx={{
                     position: 'absolute',
                     left: 0,
-                    color: 'text.primary'
+                    color: 'text.primary',
+                    '&:hover': {
+                      color: theme.palette.primary.main,
+                      backgroundColor: 'transparent',
+                    },
                   }}
                 >
                   <MenuIcon />

@@ -93,10 +93,24 @@ export default function MiniIndexCard({ symbol, itdData }: MiniIndexCardProps) {
         }
     }, [itdData]);
 
-    const lineColor = lastPrice != null && baselinePrice != null && lastPrice >= baselinePrice ? '#22c55e' : '#ef4444';
+    const lineColor = getChangeColor(pctChange ?? 0);
     const changeColor = getChangeColor(pctChange ?? 0);
     const chipBgColor = getChipBgColor(pctChange ?? 0);
     const arrow = getArrow(pctChange ?? 0);
+
+    // Cố định 58 điểm trên trục x (luôn trống 2 điểm cuối để chấm tròn không bị che)
+    const FIXED_POINTS = 58;
+    const lastDataIndex = chartData.length - 1;
+
+    // Pad data với null ở cuối để cố định x-axis
+    const paddedData = useMemo(() => {
+        const values = chartData.map(d => d.value);
+        // Pad với null ở cuối để luôn đủ FIXED_POINTS điểm
+        while (values.length < FIXED_POINTS) {
+            values.push(null as unknown as number);
+        }
+        return values;
+    }, [chartData]);
 
     const chartOptions: ApexOptions = useMemo(() => ({
         chart: {
@@ -129,20 +143,42 @@ export default function MiniIndexCard({ symbol, itdData }: MiniIndexCardProps) {
             strokeWidth: 0,
             hover: {
                 sizeOffset: 4
-            }
+            },
+            // Chấm tròn cố định tại điểm dữ liệu cuối cùng
+            discrete: lastDataIndex >= 0 ? [{
+                seriesIndex: 0,
+                dataPointIndex: lastDataIndex,
+                fillColor: lineColor,
+                strokeColor: '#fff',
+                size: 4,
+                shape: 'circle'
+            }] : []
         },
         fill: {
             type: 'gradient',
-            gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.1, stops: [0, 100] }
+            gradient: {
+                shadeIntensity: 1,
+                opacityFrom: isDark ? 0.45 : 0.55, // Light mode: opacity cao hơn
+                opacityTo: isDark ? 0 : 0,
+                stops: [0, 100]
+            }
+        },
+        xaxis: {
+            type: 'numeric',
+            min: 0,
+            max: FIXED_POINTS - 1,
+            labels: { show: false },
+            axisBorder: { show: false },
+            axisTicks: { show: false }
         },
         yaxis: {
             show: false,
             min: chartData.length > 0 ? Math.min(...chartData.map(d => d.value)) * 0.9995 : undefined,
             max: chartData.length > 0 ? Math.max(...chartData.map(d => d.value)) * 1.0005 : undefined
         }
-    }), [lineColor, isDark, chartData, baselinePrice]);
+    }), [lineColor, isDark, chartData, lastDataIndex]);
 
-    const chartSeries = useMemo(() => [{ name: symbol, data: chartData.map(d => d.value) }], [symbol, chartData]);
+    const chartSeries = useMemo(() => [{ name: symbol, data: paddedData }], [symbol, paddedData]);
 
     const formatNumber = (num: number | null | undefined): string => {
         if (num == null) return '--';

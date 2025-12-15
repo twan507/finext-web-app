@@ -560,7 +560,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     sx={{
                       position: 'absolute',
                       left: 0,
-                      color: 'text.primary'
+                      color: 'text.primary',
+                      '&:hover': {
+                        color: theme.palette.primary.main,
+                        backgroundColor: 'transparent',
+                      },
                     }}
                   >
                     <MenuIcon />

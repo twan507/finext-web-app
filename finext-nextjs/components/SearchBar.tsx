@@ -132,10 +132,11 @@ export default function SearchBar({
                     <IconButton
                         onClick={handleOpenModal}
                         sx={{
+                            p: 0, // Không padding để nút sát cạnh phải
                             color: theme.palette.text.secondary,
                             '&:hover': {
                                 color: theme.palette.primary.main,
-                                backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                                backgroundColor: 'transparent',
                             },
                         }}
                     >
