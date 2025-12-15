@@ -8,10 +8,8 @@ import CssBaseline from '@mui/material/CssBaseline';
 
 import {
   getMuiPaletteOptions,
-  typographyTokens,
-  shapeTokens,
-  spacingTokens,
-  breakpointTokens,
+  fontSize,
+  getResponsiveFontSize,
 } from 'theme/tokens';
 
 export function MuiProvider({ children }: { children: React.ReactNode }) {
@@ -28,10 +26,30 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
 
     const themeOptions: ThemeOptions = {
       palette: currentPalette,
-      typography: typographyTokens,
-      shape: shapeTokens,
-      spacing: spacingTokens.unit,
-      breakpoints: breakpointTokens,
+      typography: {
+        fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+        // All font sizes are handled via getResponsiveFontSize() in sx props
+        // These are just fallback defaults
+        logo: {
+          fontSize: fontSize.h4.desktop,
+          fontWeight: 550,
+          fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif'
+        },
+        h1: { fontSize: fontSize.h1.tablet, fontWeight: 700 },
+        h2: { fontSize: fontSize.h2.tablet, fontWeight: 700 },
+        h3: { fontSize: fontSize.h3.tablet, fontWeight: 700 },
+        h4: { fontSize: fontSize.h4.tablet, fontWeight: 600 },
+        h5: { fontSize: fontSize.h5.tablet, fontWeight: 600 },
+        h6: { fontSize: fontSize.h6.tablet, fontWeight: 600 },
+        subtitle1: { fontSize: fontSize.md.tablet, fontWeight: 500 },
+        subtitle2: { fontSize: fontSize.sm.tablet, fontWeight: 500 },
+        body1: { fontSize: fontSize.base.tablet, fontWeight: 400 },
+        body2: { fontSize: fontSize.sm.tablet, fontWeight: 400 },
+        button: { fontSize: fontSize.base.tablet, textTransform: 'none', fontWeight: 500 },
+        caption: { fontSize: fontSize.xs.tablet, fontWeight: 400 },
+        overline: { fontSize: fontSize.xs.tablet, fontWeight: 400, textTransform: 'uppercase' },
+      },
+      // shape, spacing, breakpoints use MUI defaults
       components: {
         MuiAppBar: {
           styleOverrides: {
@@ -63,12 +81,12 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
               backgroundColor: theme.palette.component.tableHead.background,
               fontWeight: 600,
               padding: '8px 12px',
-              fontSize: '0.875rem',
+              fontSize: fontSize.base.tablet,
             }),
             body: {
-              padding: '6px 12px', // Giảm padding cho body cells
-              fontSize: '0.875rem', // Tăng từ 0.8125rem lên 0.875rem (+1px)
-              lineHeight: 1.3, // Giảm line height để hàng gọn hơn
+              padding: '6px 12px',
+              fontSize: fontSize.base.tablet,
+              lineHeight: 1.3,
             },
           },
         },
@@ -92,7 +110,7 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
           styleOverrides: {
             root: ({ theme, ownerState }) => ({
               height: '22px',
-              fontSize: '0.8125rem',
+              fontSize: fontSize.sm.tablet,
               ...(ownerState.color === 'success' && {
                 backgroundColor: theme.palette.component.chip.successBackground,
                 color: theme.palette.component.chip.successColor,
@@ -123,19 +141,20 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
         MuiAvatar: {
           styleOverrides: {
             root: {
-              width: 28, // Giảm từ 30px xuống 28px
-              height: 28, // Giảm từ 30px xuống 28px
-              fontSize: '0.875rem', // Tăng từ 0.8125rem lên 0.875rem (+1px)
+              width: 28,
+              height: 28,
+              fontSize: fontSize.base.tablet,
             }
           }
-        }, MuiTypography: {
+        },
+        MuiTypography: {
           styleOverrides: {
             body1: {
-              fontSize: '0.875rem', // Tăng từ 0.8125rem lên 0.875rem (+1px)
+              fontSize: fontSize.base.tablet,
               lineHeight: 1.4,
             },
             body2: {
-              fontSize: '0.8125rem', // Tăng từ 0.75rem lên 0.8125rem (+1px)
+              fontSize: fontSize.sm.tablet,
               lineHeight: 1.3,
             }
           }
@@ -143,20 +162,20 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
         MuiButton: {
           styleOverrides: {
             root: {
-              fontSize: '0.875rem', // Tăng từ 0.8125rem lên 0.875rem (+1px)
+              fontSize: fontSize.base.tablet,
               lineHeight: 1.4,
               textTransform: 'none',
             },
             sizeSmall: {
-              fontSize: '0.8125rem', // Tăng từ 0.75rem lên 0.8125rem (+1px)
+              fontSize: fontSize.sm.tablet,
               padding: '4px 8px',
             },
             sizeMedium: {
-              fontSize: '0.875rem', // Tăng từ 0.8125rem lên 0.875rem (+1px)
+              fontSize: fontSize.base.tablet,
               padding: '6px 12px',
             },
             sizeLarge: {
-              fontSize: '0.9375rem', // Tăng từ 0.875rem lên 0.9375rem (+1px)
+              fontSize: fontSize.md.tablet,
               padding: '8px 16px',
             }
           }
@@ -164,21 +183,21 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
         MuiBreadcrumbs: {
           styleOverrides: {
             root: {
-              fontSize: '0.875rem', // Tăng từ 0.8125rem lên 0.875rem (+1px)
+              fontSize: fontSize.base.tablet,
             },
             li: {
-              fontSize: '0.875rem', // Tăng từ 0.8125rem lên 0.875rem (+1px)
+              fontSize: fontSize.base.tablet,
             }
           }
         },
         MuiListItemText: {
           styleOverrides: {
             primary: {
-              fontSize: '0.875rem', // Tăng từ 0.8125rem lên 0.875rem (+1px)
+              fontSize: fontSize.base.tablet,
               lineHeight: 1.4,
             },
             secondary: {
-              fontSize: '0.8125rem', // Tăng từ 0.75rem lên 0.8125rem (+1px)
+              fontSize: fontSize.sm.tablet,
               lineHeight: 1.3,
             }
           }
@@ -186,30 +205,30 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
         MuiMenuItem: {
           styleOverrides: {
             root: {
-              fontSize: '0.875rem', // Tăng từ 0.8125rem lên 0.875rem (+1px)
+              fontSize: fontSize.base.tablet,
               lineHeight: 1.4,
-              minHeight: '36px', // Giảm chiều cao menu item
+              minHeight: '36px',
             }
           }
         },
         MuiFormLabel: {
           styleOverrides: {
             root: {
-              fontSize: '0.875rem', // Tăng từ 0.8125rem lên 0.875rem (+1px)
+              fontSize: fontSize.base.tablet,
             }
           }
         },
         MuiInputLabel: {
           styleOverrides: {
             root: {
-              fontSize: '0.875rem', // Tăng từ 0.8125rem lên 0.875rem (+1px)
+              fontSize: fontSize.base.tablet,
             }
           }
         },
         MuiOutlinedInput: {
           styleOverrides: {
             input: {
-              fontSize: '0.875rem', // Tăng từ 0.8125rem lên 0.875rem (+1px)
+              fontSize: fontSize.base.tablet,
               lineHeight: 1.4,
             }
           }
@@ -217,7 +236,7 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
         MuiSelect: {
           styleOverrides: {
             select: {
-              fontSize: '0.875rem', // Tăng từ 0.8125rem lên 0.875rem (+1px)
+              fontSize: fontSize.base.tablet,
               lineHeight: 1.4,
             }
           }
@@ -225,7 +244,7 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
         MuiTab: {
           styleOverrides: {
             root: {
-              fontSize: '0.875rem', // Tăng từ 0.8125rem lên 0.875rem (+1px)
+              fontSize: fontSize.base.tablet,
               textTransform: 'none',
             }
           }
@@ -233,14 +252,15 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
         MuiAlert: {
           styleOverrides: {
             message: {
-              fontSize: '0.875rem', // Tăng từ 0.8125rem lên 0.875rem (+1px)
+              fontSize: fontSize.base.tablet,
               lineHeight: 1.4,
             }
           }
-        }, MuiTooltip: {
+        },
+        MuiTooltip: {
           styleOverrides: {
             tooltip: {
-              fontSize: '0.8125rem', // Tăng từ 0.75rem lên 0.8125rem (+1px)
+              fontSize: fontSize.sm.tablet,
               lineHeight: 1.3,
             }
           }
@@ -250,7 +270,7 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
             root: ({ theme }) => ({
               backgroundColor: theme.palette.component.tableRow.background,
               color: theme.palette.mode === 'dark' ? '#ffffff' : 'rgba(0, 0, 0, 0.87)',
-              fontSize: '0.875rem',
+              fontSize: fontSize.base.tablet,
             }),
             toolbar: ({ theme }) => ({
               backgroundColor: theme.palette.component.tableRow.background,
@@ -259,15 +279,15 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
               paddingRight: '8px',
             }),
             selectLabel: ({ theme }) => ({
-              fontSize: '0.8125rem',
+              fontSize: fontSize.sm.tablet,
               color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
             }),
             displayedRows: ({ theme }) => ({
-              fontSize: '0.8125rem',
+              fontSize: fontSize.sm.tablet,
               color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
             }),
             select: {
-              fontSize: '0.8125rem',
+              fontSize: fontSize.sm.tablet,
             },
             actions: ({ theme }) => ({
               '& .MuiIconButton-root': {

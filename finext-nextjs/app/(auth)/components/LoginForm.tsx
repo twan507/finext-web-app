@@ -25,12 +25,12 @@ import { useGoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 
 import BrandLogo from 'components/BrandLogo';
 import { LoginResponse, UserSchema } from 'services/core/types';
-import {  responsiveTypographyTokens, iconSizeTokens, layoutTokens  } from 'theme/tokens';
+import { fontSize, iconSize, layoutTokens } from 'theme/tokens';
 
 interface UserInfoFromAuth extends UserSchema { }
 
 /* ---------------- Google Colored Icon (SVG chuẩn) ---------------- */
-function GoogleColoredIcon({ size = iconSizeTokens.medium }: { size?: number }) {
+function GoogleColoredIcon({ size = iconSize.md }: { size?: number }) {
     return (
         <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
             {/* SVG paths... */}
@@ -95,15 +95,15 @@ function GoogleButton({
             })}
         >
             {loading ? (
-                <CircularProgress size={iconSizeTokens.progressSmall} />
+                <CircularProgress size={iconSize.progressSmall} />
             ) : (
                 <>
-                    <GoogleColoredIcon size={iconSizeTokens.googleIcon} />
+                    <GoogleColoredIcon size={iconSize.googleIcon} />
                     <Typography
                         component="span"
                         sx={{
                             ml: 1,
-                            fontSize: responsiveTypographyTokens.body1.fontSize,
+                            fontSize: { xs: fontSize.base.mobile, md: fontSize.base.tablet, lg: fontSize.base.desktop },
                             fontWeight: 600,
                             letterSpacing: 0.2
                         }}
@@ -315,8 +315,8 @@ export default function SignInForm() {
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1.5 }}>
                 <BrandLogo
                     href="/"
-                    imageSize={iconSizeTokens.brandImage}
-                    textSize={responsiveTypographyTokens.logo.fontSize.md}
+                    imageSize={iconSize.brandImage}
+                    textSize={fontSize.h4.tablet}
                     gap={layoutTokens.dotSize.small}
                     useColorOverlay={true}
                 />
@@ -326,7 +326,7 @@ export default function SignInForm() {
                 sx={(theme) => ({
                     textAlign: 'center',
                     mb: 1,
-                    fontSize: responsiveTypographyTokens.subtitle1.fontSize.md,
+                    fontSize: fontSize.md.tablet,
                     background: theme.palette.mode === 'dark'
                         ? 'linear-gradient(135deg, #FFFFFF 0%, #E0E7FF 25%, #C4B5FD 50%, #A78BFA 75%, #8B5CF6 100%)'
                         : 'linear-gradient(135deg, #1F2937 0%, #4C1D95 25%, #6B46C1 50%, #7C3AED 75%, #8B5CF6 100%)',
@@ -410,7 +410,7 @@ export default function SignInForm() {
                     sx={{ mt: 0.5, mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                 >
                     <FormControlLabel control={<Checkbox size="small" tabIndex={-1} />} label="Duy trì đăng nhập" />
-                    <Link href="/forgot-password" underline="hover" tabIndex={-1} sx={{ fontSize: responsiveTypographyTokens.body2.fontSize.md, mt: 0.6 }}>
+                    <Link href="/forgot-password" underline="hover" tabIndex={-1} sx={{ fontSize: fontSize.sm.tablet, mt: 0.6 }}>
                         Quên mật khẩu?
                     </Link>
                 </Box>
@@ -422,7 +422,7 @@ export default function SignInForm() {
                     sx={{ mt: 0.5, mb: 1.5, py: 1, borderRadius: 2 }}
                     disabled={loading || googleLoading || !!successMessage}
                 >
-                    {loading ? <CircularProgress size={iconSizeTokens.progressMedium} color="inherit" /> : 'Đăng nhập'}
+                    {loading ? <CircularProgress size={iconSize.progressMedium} color="inherit" /> : 'Đăng nhập'}
                 </Button>
 
                 <Divider sx={{ my: 1.5 }}>hoặc</Divider>

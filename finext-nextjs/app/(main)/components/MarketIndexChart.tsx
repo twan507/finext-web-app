@@ -28,6 +28,7 @@ import ShowChartIcon from '@mui/icons-material/ShowChart';
 import CandlestickChartIcon from '@mui/icons-material/CandlestickChart';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
+import { fontSize } from 'theme/tokens';
 
 // Types - export để page có thể sử dụng
 export type TimeRange = '1D' | '1M' | '3M' | '1Y' | '5Y' | 'ALL';
@@ -780,7 +781,7 @@ export default function MarketIndexChart({
                         sx={{
                             fontWeight: 600,
                             color: colors.textPrimary,
-                            fontSize: '2rem'
+                            fontSize: fontSize.h2.tablet
                         }}
                     >
                         {currentPrice.toLocaleString('en-US', {
@@ -792,7 +793,7 @@ export default function MarketIndexChart({
                         sx={{
                             color: isPositive ? colors.upColor : colors.downColor,
                             fontWeight: 500,
-                            fontSize: '1.25rem'
+                            fontSize: fontSize.h6.tablet
                         }}
                     >
                         {isPositive ? '+' : ''}
@@ -808,7 +809,7 @@ export default function MarketIndexChart({
                             backgroundColor: isPositive ? colors.upColor : colors.downColor,
                             color: '#ffffff',
                             fontWeight: 600,
-                            fontSize: '0.875rem',
+                            fontSize: fontSize.base.tablet,
                             height: 24
                         }}
                     />
@@ -816,7 +817,7 @@ export default function MarketIndexChart({
                 <Typography
                     sx={{
                         color: colors.textSecondary,
-                        fontSize: '0.875rem',
+                        fontSize: fontSize.base.tablet,
                         mt: 0.5
                     }}
                 >
@@ -845,7 +846,7 @@ export default function MarketIndexChart({
                             border: 'none',
                             px: 1.5,
                             py: 0.5,
-                            fontSize: '0.875rem',
+                            fontSize: fontSize.base.tablet,
                             backgroundColor: colors.buttonBackground,
                             '&:hover': {
                                 backgroundColor: colors.buttonBackground

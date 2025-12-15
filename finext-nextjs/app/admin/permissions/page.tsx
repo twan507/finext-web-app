@@ -19,7 +19,7 @@ import {
     UnfoldLess as CollapseIcon
 } from '@mui/icons-material';
 import { format as formatDate, parseISO } from 'date-fns';
-import { responsiveTypographyTokens  } from 'theme/tokens';
+import { fontSize, getResponsiveFontSize } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
     SortConfig,
@@ -340,7 +340,7 @@ const PermissionsPage: React.FC = () => {
 
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <PermissionIcon sx={{ mr: 1, fontSize: '24px' }} />
+                    <PermissionIcon sx={{ mr: 1, fontSize: 24 }} />
                     <Typography variant="h3" component="h1">
                         Quản lý Permissions
                     </Typography>
@@ -437,7 +437,7 @@ const PermissionsPage: React.FC = () => {
                                             minWidth: columnConfigs[0].minWidth,
                                         }}>
                                             <Typography sx={{
-                                                ...responsiveTypographyTokens.tableCell,
+                                                fontSize: getResponsiveFontSize('tableCell'),
                                                 fontWeight: 'medium',
                                                 fontFamily: 'monospace'
                                             }}>
@@ -451,7 +451,7 @@ const PermissionsPage: React.FC = () => {
                                         }}>
                                             <Tooltip title={permission.description || 'Không có mô tả'}>
                                                 <Typography sx={{
-                                                    ...responsiveTypographyTokens.tableCell,
+                                                    fontSize: getResponsiveFontSize('tableCell'),
                                                     maxWidth: expandedView ? 'none' : 300,
                                                     overflow: 'hidden',
                                                     textOverflow: 'ellipsis',
@@ -472,7 +472,7 @@ const PermissionsPage: React.FC = () => {
                                                 sx={{
                                                     backgroundColor: theme.palette.component.chip.defaultBackground,
                                                     color: theme.palette.component.chip.defaultColor,
-                                                    fontSize: '0.75rem',
+                                                    fontSize: fontSize.xs.tablet,
                                                     height: 24,
                                                     textTransform: 'capitalize',
                                                     fontWeight: 'medium'
@@ -513,7 +513,7 @@ const PermissionsPage: React.FC = () => {
                                                         sx={{
                                                             backgroundColor: theme.palette.component.chip.successBackground,
                                                             color: theme.palette.component.chip.successColor,
-                                                            fontSize: '0.7rem',
+                                                            fontSize: fontSize.xxs.tablet,
                                                             height: 20,
                                                             textTransform: 'capitalize',
                                                             fontWeight: 'medium',
@@ -528,7 +528,7 @@ const PermissionsPage: React.FC = () => {
                                             whiteSpace: expandedView ? 'nowrap' : 'normal',
                                             minWidth: columnConfigs[4].minWidth
                                         }}>
-                                            <Typography sx={responsiveTypographyTokens.tableCell}>
+                                            <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
                                                 {columnConfigs[4].format?.(permission.created_at || '')}
                                             </Typography>
                                         </TableCell>
@@ -537,7 +537,7 @@ const PermissionsPage: React.FC = () => {
                                             whiteSpace: expandedView ? 'nowrap' : 'normal',
                                             minWidth: columnConfigs[5].minWidth
                                         }}>
-                                            <Typography sx={responsiveTypographyTokens.tableCell}>
+                                            <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
                                                 {columnConfigs[5].format?.(permission.updated_at || '')}
                                             </Typography>
                                         </TableCell>
@@ -643,11 +643,11 @@ const PermissionsPage: React.FC = () => {
                                     px: { xs: 1, sm: 2 }
                                 },
                                 '& .MuiTablePagination-selectLabel': {
-                                    ...responsiveTypographyTokens.tableCellSmall,
+                                    fontSize: getResponsiveFontSize('xxs'),
                                     display: { xs: 'none', sm: 'block' }
                                 },
                                 '& .MuiTablePagination-displayedRows': {
-                                    ...responsiveTypographyTokens.tableCellSmall,
+                                    fontSize: getResponsiveFontSize('xxs'),
                                     margin: 0
                                 }
                             }}

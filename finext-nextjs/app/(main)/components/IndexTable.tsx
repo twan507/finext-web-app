@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { Box, Typography, Skeleton, useTheme } from '@mui/material';
+import { fontSize } from 'theme/tokens';
 
 interface RawMarketData {
     ticker: string;
@@ -139,7 +140,7 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
         >
             {/* Tên index */}
             <Typography sx={{
-                fontSize: '0.85rem',
+                fontSize: fontSize.tableCell.tablet,
                 fontWeight: isSelected ? 600 : 500,
                 color: 'text.primary',
                 whiteSpace: 'nowrap',
@@ -151,7 +152,7 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
 
             {/* Giá */}
             <Typography sx={{
-                fontSize: '0.85rem',
+                fontSize: fontSize.tableCell.tablet,
                 fontWeight: 600,
                 color: 'text.primary',
                 textAlign: 'right'
@@ -161,7 +162,7 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
 
             {/* Biến động điểm */}
             <Typography sx={{
-                fontSize: '0.85rem',
+                fontSize: fontSize.tableCell.tablet,
                 fontWeight: 500,
                 color: changeColor,
                 textAlign: 'right'
@@ -171,7 +172,7 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
 
             {/* Biến động % */}
             <Typography sx={{
-                fontSize: '0.85rem',
+                fontSize: fontSize.tableCell.tablet,
                 fontWeight: 500,
                 color: changeColor,
                 textAlign: 'right'

@@ -20,7 +20,7 @@ import {
     Block as InvalidIcon
 } from '@mui/icons-material';
 import { format as formatDate, parseISO } from 'date-fns';
-import { responsiveTypographyTokens  } from 'theme/tokens';
+import { fontSize, getResponsiveFontSize } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
     SortConfig,
@@ -449,7 +449,7 @@ const OtpsPage: React.FC = () => {
 
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <OtpIcon sx={{ mr: 1, fontSize: '24px' }} />
+                    <OtpIcon sx={{ mr: 1, fontSize: 24 }} />
                     <Typography variant="h3" component="h1">
                         Quản lý OTP
                     </Typography>
@@ -533,7 +533,7 @@ const OtpsPage: React.FC = () => {
                                             }}>
                                                 <Tooltip title={userEmails.get(otp.user_id) || otp.user_email || otp.user_id}>
                                                     <Typography sx={{
-                                                        ...responsiveTypographyTokens.tableCell,
+                                                        fontSize: getResponsiveFontSize('tableCell'),
                                                         maxWidth: expandedView ? 'none' : 200,
                                                         overflow: 'hidden',
                                                         textOverflow: 'ellipsis',
@@ -580,7 +580,7 @@ const OtpsPage: React.FC = () => {
                                                 whiteSpace: 'nowrap',
                                                 minWidth: columnConfigs[3].minWidth
                                             }} align="center">
-                                                <Typography sx={responsiveTypographyTokens.tableCell}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
                                                     {otp.attempts || 0}
                                                 </Typography>
                                             </TableCell>
@@ -589,7 +589,7 @@ const OtpsPage: React.FC = () => {
                                                 whiteSpace: 'nowrap',
                                                 minWidth: columnConfigs[4].minWidth
                                             }}>
-                                                <Typography sx={responsiveTypographyTokens.tableCell}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
                                                     {columnConfigs[4].format?.(otp.created_at || '')}
                                                 </Typography>
                                             </TableCell>
@@ -599,7 +599,7 @@ const OtpsPage: React.FC = () => {
                                                 minWidth: columnConfigs[5].minWidth
                                             }}>
                                                 <Box>
-                                                    <Typography sx={responsiveTypographyTokens.tableCell}>
+                                                    <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
                                                         {columnConfigs[5].format?.(otp.expires_at || '')}
                                                     </Typography>
                                                     <Typography sx={{

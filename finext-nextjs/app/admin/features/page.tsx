@@ -19,7 +19,7 @@ import {
     UnfoldLess as CollapseIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { responsiveTypographyTokens  } from 'theme/tokens';
+import { fontSize, getResponsiveFontSize } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
     SortConfig,
@@ -480,7 +480,7 @@ export default function FeaturesPage() {
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
                                                 minWidth: columnConfigs[1].minWidth
                                             }}>
-                                                <Typography sx={responsiveTypographyTokens.tableCell}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
                                                     {feature.name}
                                                 </Typography>
                                             </TableCell>
@@ -493,7 +493,7 @@ export default function FeaturesPage() {
                                             }}>
                                                 <Tooltip title={feature.description || ''}>
                                                     <Typography sx={{
-                                                        ...responsiveTypographyTokens.tableCell,
+                                                        fontSize: getResponsiveFontSize('tableCell'),
                                                         maxWidth: 300,
                                                         overflow: 'hidden',
                                                         textOverflow: 'ellipsis',
@@ -510,7 +510,7 @@ export default function FeaturesPage() {
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
                                                 minWidth: columnConfigs[3].minWidth
                                             }}>
-                                                <Typography sx={responsiveTypographyTokens.tableCell}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
                                                     {columnConfigs[3].format?.(feature.created_at || '')}
                                                 </Typography>
                                             </TableCell>
@@ -521,7 +521,7 @@ export default function FeaturesPage() {
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
                                                 minWidth: columnConfigs[4].minWidth
                                             }}>
-                                                <Typography sx={responsiveTypographyTokens.tableCell}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
                                                     {columnConfigs[4].format?.(feature.updated_at || '')}
                                                 </Typography>
                                             </TableCell>
@@ -628,11 +628,11 @@ export default function FeaturesPage() {
                                     px: { xs: 1, sm: 2 }
                                 },
                                 '& .MuiTablePagination-selectLabel': {
-                                    ...responsiveTypographyTokens.tableCellSmall,
+                                    fontSize: getResponsiveFontSize('xxs'),
                                     display: { xs: 'none', sm: 'block' }
                                 },
                                 '& .MuiTablePagination-displayedRows': {
-                                    ...responsiveTypographyTokens.tableCellSmall,
+                                    fontSize: getResponsiveFontSize('xxs'),
                                     margin: 0
                                 }
                             }}

@@ -29,6 +29,7 @@ import {
     CheckCircle,
 } from '@mui/icons-material';
 import { apiClient } from '../../../../services/apiClient';
+import { fontSize } from 'theme/tokens';
 
 interface Subscription {
     id: string;
@@ -232,8 +233,8 @@ export default function SubscriptionsPage() {
 
     if (loading) {
         return (
-            <Box sx={{ maxWidth: 700, color: 'text.primary' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+            <Box sx={{ maxWidth: 600, width: '100%', color: 'text.primary' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
                     <CircularProgress />
                 </Box>
             </Box>
@@ -313,15 +314,15 @@ export default function SubscriptionsPage() {
     };
 
     return (
-        <Box sx={{ maxWidth: 700, color: 'text.primary' }}>
+        <Box sx={{ maxWidth: 600, width: '100%', color: 'text.primary' }}>
             {/* Header */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <Box>
-                    <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
+                    <Typography variant="h5" component="h1" sx={{ fontWeight: 'bold' }}>
                         Gói đăng ký
                     </Typography>
                     <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-                        Quản lý các gói subscription đã mua và hiện tại
+                        Quản lý các gói đã mua và hiện tại
                     </Typography>
                 </Box>
             </Box>
@@ -338,7 +339,7 @@ export default function SubscriptionsPage() {
             )}
 
             {/* Current Subscription Section */}
-            <Box sx={{ mb: 4 }}>
+            <Box sx={{ mb: 3 }}>
                 {currentSubscription ? (
                     <Card sx={{
                         position: 'relative',
@@ -364,9 +365,8 @@ export default function SubscriptionsPage() {
                                         <Box sx={{
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: 4,
+                                            gap: 2,
                                             flexWrap: 'wrap',
-                                            justifyContent: 'space-between'
                                         }}>
                                             <Box
                                                 sx={{
@@ -385,7 +385,7 @@ export default function SubscriptionsPage() {
                                             </Box>
                                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                                 <Today sx={{
-                                                    fontSize: '1.1rem',
+                                                    fontSize: fontSize.h6.mobile,
                                                     mr: 1,
                                                     color: 'primary.main'
                                                 }} />
@@ -401,7 +401,7 @@ export default function SubscriptionsPage() {
                                             {!isSpecialLicense(currentSubscription.license_key) && (
                                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                                     <Schedule sx={{
-                                                        fontSize: '1.1rem',
+                                                        fontSize: fontSize.h6.mobile,
                                                         mr: 1,
                                                         color: 'primary.main'
                                                     }} />
@@ -424,7 +424,7 @@ export default function SubscriptionsPage() {
                 ) : (
                     <Card>
                         <CardContent sx={{ textAlign: 'center', py: 4 }}>
-                            <CardMembership sx={{ fontSize: '3rem', color: 'text.secondary', mb: 2 }} />
+                            <CardMembership sx={{ fontSize: fontSize.display.tablet, color: 'text.secondary', mb: 2 }} />
                             <Typography variant="h6" color="text.secondary">
                                 Chưa có gói đăng ký
                             </Typography>
@@ -450,7 +450,7 @@ export default function SubscriptionsPage() {
                                 Lịch sử đăng ký
                             </Typography>
                             <Box sx={{ textAlign: 'center', py: 2 }}>
-                                <History sx={{ fontSize: '3rem', color: 'text.secondary', mb: 2 }} />
+                                <History sx={{ fontSize: fontSize.display.tablet, color: 'text.secondary', mb: 2 }} />
                                 <Typography variant="h6" color="text.secondary">
                                     Chưa có gói đăng ký nào
                                 </Typography>

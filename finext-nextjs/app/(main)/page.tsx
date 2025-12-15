@@ -15,6 +15,7 @@ import IndexTable from './components/IndexTable';
 
 // Import API clients
 import { apiClient } from 'services/apiClient';
+import { fontSize, iconSize } from 'theme/tokens';
 import { ISseConnection, ISseRequest } from 'services/core/types';
 import { sseClient } from 'services/sseClient';
 
@@ -89,7 +90,7 @@ export default function HomePage() {
     // Colors for dropdown (giống với nút time frame/chart type)
     const dropdownColors = {
         background: theme.palette.component.chart.buttonBackground,
-        text: theme.palette.component.chart.buttonText,
+        text: theme.palette.text.primary,
         textActive: theme.palette.component.chart.buttonBackgroundActive,
     };
 
@@ -351,7 +352,7 @@ export default function HomePage() {
                     <Typography variant="h1">
                         Thị trường
                     </Typography>
-                    <ChevronRightIcon sx={{ fontSize: '2rem', mt: 1.5, color: theme.palette.text.secondary }} />
+                    <ChevronRightIcon sx={{ fontSize: fontSize.h2.tablet, mt: 1.5, color: theme.palette.text.secondary }} />
                 </Box>
 
                 {/* Main Content: Chart + Table */}
@@ -380,7 +381,7 @@ export default function HomePage() {
                                     value={indexTab}
                                     onChange={(e: SelectChangeEvent) => setIndexTab(e.target.value as IndexTabType)}
                                     sx={{
-                                        fontSize: '0.875rem',
+                                        fontSize: fontSize.base.tablet,
                                         borderRadius: 2,
                                         backgroundColor: dropdownColors.background,
                                         color: dropdownColors.text,
@@ -416,7 +417,7 @@ export default function HomePage() {
                                                     py: 0.5,
                                                 },
                                                 '& .MuiMenuItem-root': {
-                                                    fontSize: '0.875rem',
+                                                    fontSize: fontSize.base.tablet,
                                                     color: dropdownColors.text,
                                                     backgroundColor: 'transparent !important',
                                                     '&:hover': {

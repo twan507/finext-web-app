@@ -29,6 +29,7 @@ import {
 } from '@mui/icons-material';
 import { apiClient } from '../../../../services/apiClient';
 import { useAuth } from '../../../../components/AuthProvider';
+import { fontSize, iconSize } from 'theme/tokens';
 
 interface Session {
     id: string;
@@ -315,8 +316,8 @@ export default function LoginSessionsPage() {
 
     if (loading) {
         return (
-            <Box sx={{ maxWidth: 700, color: 'text.primary' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+            <Box sx={{ maxWidth: 600, width: '100%', color: 'text.primary' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
                     <CircularProgress />
                 </Box>
             </Box>
@@ -324,15 +325,15 @@ export default function LoginSessionsPage() {
     }
 
     return (
-        <Box sx={{ maxWidth: 700, color: 'text.primary' }}>
+        <Box sx={{ maxWidth: 600, width: '100%', color: 'text.primary' }}>
             {/* Header */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <Box>
-                    <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
+                    <Typography variant="h5" component="h1" sx={{ fontWeight: 'bold' }}>
                         Session đăng nhập
                     </Typography>
                     <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-                        Quản lý các thiết bị đang đăng nhập vào tài khoản của bạn
+                        Quản lý các thiết bị đang đăng nhập
                     </Typography>
                 </Box>
             </Box>
@@ -352,7 +353,7 @@ export default function LoginSessionsPage() {
             {sessions.length === 0 ? (
                 <Card>
                     <CardContent sx={{ textAlign: 'center', py: 4 }}>
-                        <DevicesOutlined sx={{ fontSize: '3rem', color: 'text.secondary', mb: 2 }} />
+                        <DevicesOutlined sx={{ fontSize: fontSize.display.tablet, color: 'text.secondary', mb: 2 }} />
                         <Typography variant="h6" color="text.secondary">
                             Không có session nào đang hoạt động
                         </Typography>
@@ -375,27 +376,26 @@ export default function LoginSessionsPage() {
                                         ? 'linear-gradient(135deg, rgba(25, 118, 210, 0.03) 0%, rgba(25, 118, 210, 0.08) 100%)'
                                         : 'background.paper',
                                 }}>
-                                    <CardContent sx={{ p: 3, pb: isLikelyCurrentSession ? 5 : 3 }}>
+                                    <CardContent sx={{ p: 2, pb: isLikelyCurrentSession ? 4 : 2 }}>
                                         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                                             <Box sx={{ display: 'flex', flex: 1 }}>
                                                 <Box sx={{
-                                                    mr: 3,
-                                                    mt: 0.5,
-                                                    p: 1.5,
-                                                    borderRadius: 2,
+                                                    mr: 2,
+                                                    p: 1,
+                                                    borderRadius: 1.5,
                                                     bgcolor: isLikelyCurrentSession ? 'primary.main' : 'action.hover',
                                                     color: isLikelyCurrentSession ? 'primary.contrastText' : 'text.primary',
-                                                    display: 'flex',
+                                                    display: { xs: 'none', sm: 'flex' },
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
+                                                    flexShrink: 0,
                                                 }}>
                                                     {getDeviceIcon(session.device_info)}
                                                 </Box>
-                                                <Box sx={{ flex: 1 }}>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                                                        <Typography variant="h6" sx={{
+                                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, flexWrap: 'wrap', gap: 1 }}>
+                                                        <Typography variant="subtitle1" sx={{
                                                             fontWeight: 'bold',
-                                                            mr: 2,
                                                             color: isLikelyCurrentSession ? 'primary.main' : 'text.primary'
                                                         }}>
                                                             {getDeviceType(session.device_info)}
@@ -412,7 +412,7 @@ export default function LoginSessionsPage() {
                                                     </Box>
 
                                                     {/* Device info with ID and IP */}
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 2 }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1.5, flexWrap: 'wrap' }}>
                                                         <Box sx={{
                                                             display: 'flex',
                                                             alignItems: 'center',
@@ -448,12 +448,12 @@ export default function LoginSessionsPage() {
                                                     <Box sx={{
                                                         display: 'flex',
                                                         alignItems: 'center',
-                                                        gap: 4,
-                                                        flexWrap: 'wrap'
+                                                        gap: 2,
+                                                        flexWrap: 'wrap',
                                                     }}>
                                                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                                             <Today sx={{
-                                                                fontSize: '1.1rem',
+                                                                fontSize: fontSize.h6.mobile,
                                                                 mr: 1,
                                                                 color: isLikelyCurrentSession ? 'primary.main' : 'text.secondary'
                                                             }} />
@@ -468,7 +468,7 @@ export default function LoginSessionsPage() {
                                                         </Box>
                                                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                                             <Schedule sx={{
-                                                                fontSize: '1.1rem',
+                                                                fontSize: fontSize.h6.mobile,
                                                                 mr: 1,
                                                                 color: isLikelyCurrentSession ? 'primary.main' : 'text.secondary'
                                                             }} />

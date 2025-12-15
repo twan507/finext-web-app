@@ -21,7 +21,7 @@ import {
     DoDisturbOn as DeactivateIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { responsiveTypographyTokens  } from 'theme/tokens';
+import { fontSize, getResponsiveFontSize } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
     SortConfig,
@@ -340,7 +340,7 @@ export default function RolesPage() {
 
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <RolesIcon sx={{ mr: 1, fontSize: '24px' }} />
+                    <RolesIcon sx={{ mr: 1, fontSize: 24 }} />
                     <Typography variant="h3" component="h1">
                         Quản lý Vai trò
                     </Typography>
@@ -442,7 +442,7 @@ export default function RolesPage() {
                                                 width: expandedView ? 'auto' : columnConfigs[0].minWidth
                                             }}>
                                                 <Typography sx={{
-                                                    ...responsiveTypographyTokens.tableCell,
+                                                    fontSize: getResponsiveFontSize('tableCell'),
                                                     fontWeight: 'medium'
                                                 }}>
                                                     {role.name}
@@ -457,7 +457,7 @@ export default function RolesPage() {
                                             }}>
                                                 <Tooltip title={role.description || 'Không có mô tả'}>
                                                     <Typography sx={{
-                                                        ...responsiveTypographyTokens.tableCell,
+                                                        fontSize: getResponsiveFontSize('tableCell'),
                                                         maxWidth: 300,
                                                         overflow: 'hidden',
                                                         textOverflow: 'ellipsis',
@@ -488,7 +488,7 @@ export default function RolesPage() {
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
                                                 minWidth: columnConfigs[3].minWidth
                                             }}>
-                                                <Typography sx={responsiveTypographyTokens.tableCell}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
                                                     {columnConfigs[3].format?.(role.created_at || '')}
                                                 </Typography>
                                             </TableCell>
@@ -499,7 +499,7 @@ export default function RolesPage() {
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
                                                 minWidth: columnConfigs[4].minWidth
                                             }}>
-                                                <Typography sx={responsiveTypographyTokens.tableCell}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
                                                     {columnConfigs[4].format?.(role.updated_at || '')}
                                                 </Typography>
                                             </TableCell>
@@ -603,11 +603,11 @@ export default function RolesPage() {
                                     px: { xs: 1, sm: 2 }
                                 },
                                 '& .MuiTablePagination-selectLabel': {
-                                    ...responsiveTypographyTokens.tableCellSmall,
+                                    fontSize: getResponsiveFontSize('xxs'),
                                     display: { xs: 'none', sm: 'block' }
                                 },
                                 '& .MuiTablePagination-displayedRows': {
-                                    ...responsiveTypographyTokens.tableCellSmall,
+                                    fontSize: getResponsiveFontSize('xxs'),
                                     margin: 0
                                 }
                             }}

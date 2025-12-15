@@ -1,5 +1,5 @@
 // finext-nextjs/theme/tokens.ts
-import { PaletteMode, PaletteOptions, ThemeOptions } from '@mui/material';
+import { PaletteMode, PaletteOptions } from '@mui/material';
 
 // Extend MUI Typography to include custom variants
 declare module '@mui/material/styles' {
@@ -317,134 +317,76 @@ export const getMuiPaletteOptions = (mode: PaletteMode): PaletteOptions => {
 };
 
 // --------------------
-// BASE TYPOGRAPHY SIZES
+// RESPONSIVE FONT SIZE TOKENS
 // --------------------
-const baseFontSizes = {
-  // Headers
-  logo: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem' },
-  h1: { xs: '2rem', sm: '2.25rem', md: '2.5rem' },
-  h2: { xs: '1.75rem', sm: '1.875rem', md: '2rem' },
-  h3: { xs: '1.5rem', sm: '1.625rem', md: '1.75rem' },
-  h4: { xs: '1.25rem', sm: '1.375rem', md: '1.5rem' },
-  h5: { xs: '1.125rem', sm: '1.25rem', md: '1.375rem' },
-  h6: { xs: '1rem', sm: '1.1rem', md: '1.25rem' },
+// Breakpoints: Mobile (<768px) | Tablet (768-1199px) | Desktop (>=1200px)
+// Matching layout.tsx: isMobile = down('md'), isTablet = between('md','lg'), isDesktop = up('lg')
 
-  // Content text
-  subtitle1: { xs: '0.8125rem', sm: '0.875rem', md: '0.9375rem' },
-  subtitle2: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' },
-  body1: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' }, // Cỡ chữ chính
-  body2: { xs: '0.6875rem', sm: '0.75rem', md: '0.8125rem' }, // Cỡ chữ phụ
-  button: { xs: '0.6875rem', sm: '0.8125rem', md: '0.875rem' },
-  caption: { xs: '0.625rem', sm: '0.6875rem', md: '0.75rem' }, // Cỡ chữ nhỏ nhất
-  overline: { xs: '0.625rem', sm: '0.6875rem', md: '0.75rem' },
+// Single source of truth for all font sizes
+export const fontSize = {
+  // === DISPLAY / HEADLINES ===
+  display: { mobile: '2.25rem', tablet: '2.75rem', desktop: '3rem' },      // 36/44/48px - Hero sections
+  h1: { mobile: '2rem', tablet: '2.25rem', desktop: '2.5rem' },            // 32/36/40px
+  h2: { mobile: '1.75rem', tablet: '1.875rem', desktop: '2rem' },          // 28/30/32px
+  h3: { mobile: '1.5rem', tablet: '1.625rem', desktop: '1.75rem' },        // 24/26/28px
+  h4: { mobile: '1.25rem', tablet: '1.375rem', desktop: '1.5rem' },        // 20/22/24px
+  h5: { mobile: '1.125rem', tablet: '1.25rem', desktop: '1.375rem' },      // 18/20/22px
+  h6: { mobile: '1rem', tablet: '1.125rem', desktop: '1.25rem' },          // 16/18/20px
 
-  // Custom variants
-  tableCell: { xs: '0.6875rem', sm: '0.8125rem', md: '0.875rem' },
-  tableCellSmall: { xs: '0.625rem', sm: '0.6875rem', md: '0.75rem' },
+  // === BODY TEXT ===
+  lg: { mobile: '0.9375rem', tablet: '1rem', desktop: '1rem' },            // 15/16/16px - Large body
+  md: { mobile: '0.875rem', tablet: '0.9375rem', desktop: '0.9375rem' },   // 14/15/15px - Medium body
+  base: { mobile: '0.8125rem', tablet: '0.875rem', desktop: '0.875rem' },  // 13/14/14px - Default body ⭐
+  sm: { mobile: '0.75rem', tablet: '0.8125rem', desktop: '0.8125rem' },    // 12/13/13px - Small body
+  xs: { mobile: '0.6875rem', tablet: '0.75rem', desktop: '0.75rem' },      // 11/12/12px - Caption
+  xxs: { mobile: '0.625rem', tablet: '0.6875rem', desktop: '0.6875rem' },  // 10/11/11px - Tiny caption
 
-  // Enhanced responsive variants
-  h4Enhanced: { xs: '1.5rem', sm: '2rem', md: '2.125rem' }, // Cho page headers
-  h5Enhanced: { xs: '1.125rem', sm: '1.25rem', md: '1.5rem' },
-};
+  // === SPECIAL USE CASES ===
+  badge: { mobile: '0.4rem', tablet: '0.45rem', desktop: '0.45rem' },       // ~6.4/7.2/7.2px - Tiny badges
+  sectionLabel: { mobile: '0.6rem', tablet: '0.65rem', desktop: '0.65rem' },// ~9.6/10.4/10.4px - Section labels
+  menuItem: { mobile: '0.85rem', tablet: '0.9rem', desktop: '0.9rem' },     // ~13.6/14.4/14.4px - Menu items
+  tableCell: { mobile: '0.8rem', tablet: '0.85rem', desktop: '0.875rem' },  // ~12.8/13.6/14px - Table cells
+  iconText: { mobile: '0.9375rem', tablet: '1rem', desktop: '1rem' },       // 15/16/16px - Text next to icons
 
-// --------------------
-// TYPOGRAPHY TOKENS (MUI Theme)
-// --------------------
-export const typographyTokens: ThemeOptions['typography'] = {
-  fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-  logo: {
-    fontSize: baseFontSizes.logo.md,
-    fontWeight: 550,
-    fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif'
-  },
-  h1: { fontSize: baseFontSizes.h1.md, fontWeight: 700 },
-  h2: { fontSize: baseFontSizes.h2.md, fontWeight: 700 },
-  h3: { fontSize: baseFontSizes.h3.md, fontWeight: 700 },
-  h4: { fontSize: baseFontSizes.h4.md, fontWeight: 600 },
-  h5: { fontSize: baseFontSizes.h5.md, fontWeight: 600 },
-  h6: { fontSize: baseFontSizes.h6.md, fontWeight: 600 },
-  subtitle1: { fontSize: baseFontSizes.subtitle1.sm, fontWeight: 500 },
-  subtitle2: { fontSize: baseFontSizes.subtitle2.sm, fontWeight: 500 },
-  body1: { fontSize: baseFontSizes.body1.sm, fontWeight: 400 },
-  body2: { fontSize: baseFontSizes.body2.sm, fontWeight: 400 },
-  button: { fontSize: baseFontSizes.button.sm, textTransform: 'none', fontWeight: 500 },
-  caption: { fontSize: baseFontSizes.caption.sm, fontWeight: 400 },
-  overline: { fontSize: baseFontSizes.overline.sm, fontWeight: 400, textTransform: 'uppercase' },
-};
+  // === ENHANCED HEADERS (for page titles) ===
+  h4Enhanced: { mobile: '1.5rem', tablet: '2rem', desktop: '2.125rem' },    // 24/32/34px
+  h5Enhanced: { mobile: '1.125rem', tablet: '1.375rem', desktop: '1.5rem' },// 18/22/24px
+} as const;
 
-// --------------------
-// RESPONSIVE TYPOGRAPHY TOKENS
-// --------------------
-export const responsiveTypographyTokens = {
-  // Logo variant with Poppins - larger than H1
-  logo: { fontSize: baseFontSizes.logo },
-
-  // Headers - using base sizes
-  h1: { fontSize: baseFontSizes.h1 },
-  h2: { fontSize: baseFontSizes.h2 },
-  h3: { fontSize: baseFontSizes.h3 },
-  h4: { fontSize: baseFontSizes.h4 },
-  h5: { fontSize: baseFontSizes.h5 },
-  h6: { fontSize: baseFontSizes.h6 },
-
-  // Enhanced headers for special use cases
-  h4Enhanced: { fontSize: baseFontSizes.h4Enhanced },
-  h5Enhanced: { fontSize: baseFontSizes.h5Enhanced },
-
-  // Content text
-  subtitle1: { fontSize: baseFontSizes.subtitle1 },
-  subtitle2: { fontSize: baseFontSizes.subtitle2 },
-  body1: { fontSize: baseFontSizes.body1 },
-  body2: { fontSize: baseFontSizes.body2 },
-  button: { fontSize: baseFontSizes.button },
-  caption: { fontSize: baseFontSizes.caption },
-  overline: { fontSize: baseFontSizes.overline },
-
-  // Table specific
-  tableCell: { fontSize: baseFontSizes.tableCell },
-  tableCellSmall: { fontSize: baseFontSizes.tableCellSmall },
-};
+// Helper to get responsive font size for sx prop
+// Usage: sx={{ fontSize: getResponsiveFontSize('base') }}
+// Output: { xs: '0.8125rem', md: '0.875rem', lg: '0.875rem' }
+export const getResponsiveFontSize = (size: keyof typeof fontSize) => ({
+  xs: fontSize[size].mobile,
+  md: fontSize[size].tablet,
+  lg: fontSize[size].desktop,
+});
 
 // --------------------
 // ICON SIZE TOKENS
 // --------------------
-export const iconSizeTokens = {
-  small: 16,
-  medium: 20,
-  large: 24,
+export const iconSize = {
+  // Standard sizes (non-responsive)
+  xs: 16,
+  sm: 18,
+  md: 20,
+  lg: 24,
+  xl: 32,
+  xxl: 48,
+
+  // Responsive icon sizes
+  nav: { mobile: 18, tablet: 20, desktop: 24 },      // Navigation icons
+  menu: { mobile: 18, tablet: 18, desktop: 20 },     // Menu/sidebar icons  
+  breadcrumb: { mobile: 14, tablet: 16, desktop: 16 }, // Breadcrumb icons
+  button: { mobile: 18, tablet: 20, desktop: 20 },   // Button icons
+  empty: { mobile: 40, tablet: 48, desktop: 48 },    // Empty state icons
+
   // Special cases
   googleIcon: 18,
   progressSmall: 20,
   progressMedium: 22,
   brandImage: 26,
-};
-
-// --------------------
-// SPACING TOKEN
-// --------------------
-export const spacingTokens = {
-  unit: 8,
-};
-
-// --------------------
-// BORDER RADIUS (SHAPE) TOKENS
-// --------------------
-export const shapeTokens: ThemeOptions['shape'] = {
-  borderRadius: 4,
-};
-
-// --------------------
-// BREAKPOINT TOKENS
-// --------------------
-export const breakpointTokens: ThemeOptions['breakpoints'] = {
-  values: {
-    xs: 0,
-    sm: 600,
-    md: 900,
-    lg: 1200,
-    xl: 1536,
-  },
-};
+} as const;
 
 // --------------------
 // LAYOUT TOKENS

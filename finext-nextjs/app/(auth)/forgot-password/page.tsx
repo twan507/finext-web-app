@@ -19,7 +19,7 @@ import ArrowBack from '@mui/icons-material/ArrowBackIosNew';
 import AccessTime from '@mui/icons-material/AccessTime';
 
 import BrandLogo from 'components/BrandLogo';
-import {  responsiveTypographyTokens, iconSizeTokens, layoutTokens  } from 'theme/tokens';
+import { fontSize, iconSize, layoutTokens } from 'theme/tokens';
 
 interface OtpRequestResponse {
     message: string;
@@ -278,8 +278,8 @@ export default function ForgotPasswordPage() {
                 <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1.5 }}>
                     <BrandLogo
                         href="/"
-                        imageSize={iconSizeTokens.brandImage}
-                        textSize={responsiveTypographyTokens.logo.fontSize.md}
+                        imageSize={iconSize.brandImage}
+                        textSize={fontSize.h4.tablet}
                         gap={layoutTokens.dotSize.small}
                         useColorOverlay={true}
                     />
@@ -289,7 +289,7 @@ export default function ForgotPasswordPage() {
                     sx={(theme) => ({
                         textAlign: 'center',
                         mb: 1,
-                        fontSize: responsiveTypographyTokens.subtitle1.fontSize.md,
+                        fontSize: fontSize.md.tablet,
                         background: theme.palette.mode === 'dark'
                             ? 'linear-gradient(135deg, #FFFFFF 0%, #E0E7FF 25%, #C4B5FD 50%, #A78BFA 75%, #8B5CF6 100%)'
                             : 'linear-gradient(135deg, #1F2937 0%, #4C1D95 25%, #6B46C1 50%, #7C3AED 75%, #8B5CF6 100%)',
@@ -364,7 +364,7 @@ export default function ForgotPasswordPage() {
                             sx={{ mt: 2, mb: 1.5, py: 1, borderRadius: 2 }}
                             disabled={loading}
                         >
-                            {loading ? <CircularProgress size={iconSizeTokens.progressMedium} color="inherit" /> : 'Gửi mã OTP'}
+                            {loading ? <CircularProgress size={iconSize.progressMedium} color="inherit" /> : 'Gửi mã OTP'}
                         </Button>
 
                         <Typography variant="body2" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
@@ -517,7 +517,7 @@ export default function ForgotPasswordPage() {
                             sx={{ mt: 2, mb: 1.5, py: 1, borderRadius: 2 }}
                             disabled={loading}
                         >
-                            {loading ? <CircularProgress size={iconSizeTokens.progressMedium} color="inherit" /> : 'Đặt lại mật khẩu'}
+                            {loading ? <CircularProgress size={iconSize.progressMedium} color="inherit" /> : 'Đặt lại mật khẩu'}
                         </Button>
 
                         <Typography variant="body2" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>

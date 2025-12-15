@@ -19,7 +19,7 @@ import {
     Devices
 } from '@mui/icons-material';
 import { format as formatDate, parseISO } from 'date-fns';
-import { responsiveTypographyTokens  } from 'theme/tokens';
+import { fontSize, getResponsiveFontSize } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
     SortConfig,
@@ -381,7 +381,7 @@ const SessionsPage: React.FC = () => {
 
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Devices sx={{ mr: 1, fontSize: '24px' }} />
+                    <Devices sx={{ mr: 1, fontSize: 24 }} />
                     <Typography variant="h3" component="h1">
                         Quản lý Sessions
                     </Typography>
@@ -458,7 +458,7 @@ const SessionsPage: React.FC = () => {
                                                 minWidth: columnConfigs[0].minWidth,
                                             }}>                                                <Tooltip title={userEmails.get(session.user_id) || session.user_email || session.user_id}>
                                                     <Typography sx={{
-                                                        ...responsiveTypographyTokens.tableCell,
+                                                        fontSize: getResponsiveFontSize('tableCell'),
                                                         maxWidth: expandedView ? 'none' : 200,
                                                         overflow: 'hidden',
                                                         textOverflow: 'ellipsis',
@@ -477,7 +477,7 @@ const SessionsPage: React.FC = () => {
                                                     {getDeviceIcon(session.device_info)}
                                                     <Tooltip title={session.device_info || 'Không có thông tin thiết bị'}>
                                                         <Typography sx={{
-                                                            ...responsiveTypographyTokens.tableCell,
+                                                            fontSize: getResponsiveFontSize('tableCell'),
                                                             maxWidth: expandedView ? 'none' : 180,
                                                             overflow: 'hidden',
                                                             textOverflow: 'ellipsis',
@@ -493,7 +493,7 @@ const SessionsPage: React.FC = () => {
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
                                                 minWidth: columnConfigs[2].minWidth
                                             }}>
-                                                <Typography sx={responsiveTypographyTokens.tableCell}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
                                                     {columnConfigs[2].format?.(session.created_at || '')}
                                                 </Typography>
                                             </TableCell>
@@ -505,7 +505,7 @@ const SessionsPage: React.FC = () => {
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                     <TimerIcon fontSize="small" color="action" />
                                                     <Box>
-                                                        <Typography sx={responsiveTypographyTokens.tableCell}>
+                                                        <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
                                                             {columnConfigs[3].format?.(session.last_active_at || '')}
                                                         </Typography>
                                                         <Typography sx={{
@@ -597,11 +597,11 @@ const SessionsPage: React.FC = () => {
                                     px: { xs: 1, sm: 2 }
                                 },
                                 '& .MuiTablePagination-selectLabel': {
-                                    ...responsiveTypographyTokens.tableCellSmall,
+                                    fontSize: getResponsiveFontSize('xxs'),
                                     display: { xs: 'none', sm: 'block' }
                                 },
                                 '& .MuiTablePagination-displayedRows': {
-                                    ...responsiveTypographyTokens.tableCellSmall,
+                                    fontSize: getResponsiveFontSize('xxs'),
                                     margin: 0
                                 }
                             }}

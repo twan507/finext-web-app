@@ -140,15 +140,15 @@ export default function ChangePasswordPage() {
     };
 
     return (
-        <Box sx={{ maxWidth: 700, color: 'text.primary' }}>
+        <Box sx={{ maxWidth: 600, width: '100%', color: 'text.primary' }}>
             {/* Header */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <Box>
-                    <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
+                    <Typography variant="h5" component="h1" sx={{ fontWeight: 'bold' }}>
                         Đổi mật khẩu
                     </Typography>
                     <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-                        Thay đổi mật khẩu để bảo vệ tài khoản của bạn
+                        Thay đổi mật khẩu để bảo vệ tài khoản
                     </Typography>
                 </Box>
             </Box>

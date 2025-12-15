@@ -19,6 +19,7 @@ import {
     Clear as ClearIcon,
     Close as CloseIcon,
 } from '@mui/icons-material';
+import { fontSize, iconSize } from 'theme/tokens';
 
 interface SearchBarProps {
     placeholder?: string;
@@ -183,7 +184,7 @@ export default function SearchBar({
                                                 <SearchIcon
                                                     sx={{
                                                         color: theme.palette.primary.main,
-                                                        fontSize: 24,
+                                                        fontSize: iconSize.lg,
                                                     }}
                                                 />
                                             </InputAdornment>
@@ -209,7 +210,7 @@ export default function SearchBar({
                                         ),
                                         sx: {
                                             borderRadius: '50px',
-                                            fontSize: '1rem',
+                                            fontSize: fontSize.lg.tablet,
                                             '& .MuiOutlinedInput-notchedOutline': {
                                                 border: 'none', // Bỏ border
                                             },
@@ -231,7 +232,7 @@ export default function SearchBar({
                             color: theme.palette.text.secondary,
                             textAlign: 'center',
                             mt: 4,
-                            fontSize: '0.875rem'
+                            fontSize: fontSize.base.tablet
                         }}>
                             Nhập từ khóa để tìm kiếm...
                         </Box>
@@ -290,7 +291,7 @@ export default function SearchBar({
                                     color: isFocused
                                         ? theme.palette.primary.main
                                         : theme.palette.text.secondary,
-                                    fontSize: 20,
+                                    fontSize: iconSize.md,
                                     transition: theme.transitions.create('color'),
                                 }}
                             />
@@ -338,7 +339,7 @@ export default function SearchBar({
                 }}
                 sx={{
                     '& .MuiInputBase-input': {
-                        fontSize: '0.8rem',
+                        fontSize: fontSize.sm.tablet,
                         fontWeight: 400,
                         padding: '6px 0',
                         '&::placeholder': {

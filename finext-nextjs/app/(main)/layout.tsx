@@ -29,7 +29,7 @@ import ThemeToggleButton from 'components/ThemeToggleButton';
 import BrandLogo from 'components/BrandLogo';
 import SearchBar from '../../components/SearchBar';
 import AuthButtons from '../../components/AuthButtons';
-import { layoutTokens } from '../../theme/tokens';
+import { layoutTokens, fontSize, iconSize } from '../../theme/tokens';
 
 interface NavItem {
   text: string;
@@ -78,16 +78,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const currentPathname = usePathname();
   const theme = useTheme();
 
-  const lgUp = useMediaQuery(theme.breakpoints.up('lg'));
-  const mdUp = useMediaQuery(theme.breakpoints.up('md'));
-  const lgDown = useMediaQuery(theme.breakpoints.down('lg'));
+  // Responsive breakpoints: Desktop (lg+), Tablet (md-lg), Mobile (sm-)
+  const isDesktop = useMediaQuery(theme.breakpoints.up('lg')); // >= 1200px
+  const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg')); // 768px - 1199px
+  const isMobile = useMediaQuery(theme.breakpoints.down('md')); // < 768px
 
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Drawer widths  
   const ICON_ONLY_WIDTH = 50;
   const drawerWidth = ICON_ONLY_WIDTH;
-  const isMobile = lgDown;
+  // Show hamburger menu for both Tablet and Mobile
+  const showHamburgerMenu = !isDesktop;
 
   useEffect(() => {
     // Main pages can be accessed without authentication for public viewing
@@ -185,7 +187,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           color: 'inherit',
                           justifyContent: 'center'
                         }}>
-                          {React.cloneElement(item.icon, { sx: { fontSize: 24 } })}
+                          {React.cloneElement(item.icon, { sx: { fontSize: iconSize.nav.desktop } })}
                         </ListItemIcon>
                       </ListItemButton>
                     </Link>
@@ -198,30 +200,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </Box>
 
       {/* Theme Toggle Footer */}
-      <Box sx={{ pb: 1, pl: 0.7, display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+      <Box sx={{ pb: 1, pl: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
         <ThemeToggleButton variant="icon" />
       </Box>
     </>
   );
 
-  const MobileDrawerContent = (
+  // Tablet Drawer Content - More spacious, shows description
+  const TabletDrawerContent = (
     <>
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'flex-start',
-          height: layoutTokens.appBarHeight,
-          gap: 1,
+          mt: 1,
+          px: 1,
         }}
       >
-        <UserAvatar variant="full" />
+        <UserAvatar variant="full" onNavigate={handleDrawerToggle} />
       </Box>
 
-      <List sx={{
-        flexGrow: 1,
-      }}>
-        {/* Top Nav Tabs - Only visible on mobile */}
+      <List sx={{ flexGrow: 1, px: 1 }}>
+        {/* Top Nav Tabs */}
+        <Typography variant="caption" sx={{ pl: 2, py: 1, color: 'text.secondary', textTransform: 'uppercase', fontWeight: 600 }}>
+          Khám phá
+        </Typography>
         {topNavTabs.map((tab) => {
           const isActive = currentPathname.startsWith(tab.href);
           return (
@@ -231,15 +235,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   selected={isActive}
                   onClick={handleDrawerToggle}
                   sx={{
-                    pl: '20px',
+                    borderRadius: '8px',
                     color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
+                    backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
                     '&:hover': {
                       backgroundColor: alpha(theme.palette.primary.main, isActive ? 0.12 : 0.04),
                       color: isActive ? theme.palette.primary.dark : theme.palette.primary.main,
                     },
                   }}
                 >
-                  <ListItemText primary={tab.label} />
+                  <ListItemIcon sx={{ color: 'inherit', minWidth: 36 }}>
+                    <Icon icon={tab.icon} width="20" height="20" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={tab.label}
+                    secondary={tab.description}
+                    secondaryTypographyProps={{
+                      sx: { fontSize: fontSize.xs.tablet, opacity: 0.7, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+                    }}
+                  />
                 </ListItemButton>
               </Link>
             </ListItem>
@@ -247,6 +261,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })}
 
         {/* Drawer Navigation Items */}
+        <Typography variant="caption" sx={{ pl: 2, py: 1, mt: 1, display: 'block', color: 'text.secondary', textTransform: 'uppercase', fontWeight: 600 }}>
+          Công cụ
+        </Typography>
         {navigationStructure.map((item) => {
           const isActive = currentPathname.startsWith(item.href);
           return (
@@ -256,36 +273,135 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   selected={isActive}
                   onClick={handleDrawerToggle}
                   sx={{
+                    borderRadius: '8px',
+                    color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
+                    backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
                     '&:hover': {
                       backgroundColor: alpha(theme.palette.primary.main, isActive ? 0.12 : 0.04),
-                      '& .MuiListItemIcon-root': {
-                        color: theme.palette.primary.main,
-                      },
-                      '& .MuiListItemText-root': {
-                        color: isActive ? theme.palette.primary.dark : theme.palette.primary.main,
-                      },
+                      color: isActive ? theme.palette.primary.dark : theme.palette.primary.main,
                     },
                   }}
                 >
-                  <ListItemIcon sx={{ color: theme.palette.text.secondary, minWidth: 40 }}>
+                  <ListItemIcon sx={{ color: 'inherit', minWidth: 36 }}>
                     {item.icon}
                   </ListItemIcon>
-                  <ListItemText
-                    primary={item.text}
-                    sx={{
-                      color: isActive ? theme.palette.primary.main : theme.palette.text.primary
-                    }}
-                  />
+                  <ListItemText primary={item.text} />
                 </ListItemButton>
               </Link>
             </ListItem>
           );
         })}
       </List>
-      <Box sx={{ p: 1, mt: 'auto' }}>
-        <ListItem disablePadding>
-          <ThemeToggleButton variant="full" />
-        </ListItem>
+
+      {/* Auth Buttons for Tablet */}
+      {!session && (
+        <Box sx={{ px: 2, py: 1 }}>
+          <AuthButtons />
+        </Box>
+      )}
+
+      {/* Divider */}
+      <Box sx={{ mx: 1, borderTop: `1px solid ${alpha(theme.palette.divider, 0.12)}` }} />
+
+      <Box sx={{ py: 1, px: 1 }}>
+        <ThemeToggleButton variant="full" />
+      </Box>
+    </>
+  );
+
+  // Mobile Drawer Content - Same as tablet but smaller fonts, no descriptions
+  const MobileDrawerContent = (
+    <>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          mt: 1,
+          px: 1,
+        }}
+      >
+        <UserAvatar variant="full" onNavigate={handleDrawerToggle} compact />
+      </Box>
+
+      <List sx={{ flexGrow: 1, px: 1 }}>
+        {/* Top Nav Tabs - No descriptions, smaller fonts */}
+        <Typography variant="caption" sx={{ pl: 2, py: 0.5, color: 'text.secondary', textTransform: 'uppercase', fontWeight: 600, fontSize: fontSize.sectionLabel.mobile }}>
+          Khám phá
+        </Typography>
+        {topNavTabs.map((tab) => {
+          const isActive = currentPathname.startsWith(tab.href);
+          return (
+            <ListItem key={tab.href} disablePadding sx={{ mb: 0.25 }}>
+              <Link href={tab.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
+                <ListItemButton
+                  selected={isActive}
+                  onClick={handleDrawerToggle}
+                  sx={{
+                    py: 1,
+                    borderRadius: '6px',
+                    color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
+                    backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                    '&:hover': {
+                      backgroundColor: alpha(theme.palette.primary.main, isActive ? 0.12 : 0.04),
+                    },
+                  }}
+                >
+                  <ListItemIcon sx={{ color: 'inherit', minWidth: 32 }}>
+                    <Icon icon={tab.icon} width="18" height="18" />
+                  </ListItemIcon>
+                  <ListItemText primary={tab.label} primaryTypographyProps={{ fontSize: fontSize.menuItem.mobile }} />
+                </ListItemButton>
+              </Link>
+            </ListItem>
+          );
+        })}
+
+        {/* Drawer Navigation Items */}
+        <Typography variant="caption" sx={{ pl: 2, py: 0.5, mt: 1, display: 'block', color: 'text.secondary', textTransform: 'uppercase', fontWeight: 600, fontSize: fontSize.sectionLabel.mobile }}>
+          Công cụ
+        </Typography>
+        {navigationStructure.map((item) => {
+          const isActive = currentPathname.startsWith(item.href);
+          return (
+            <ListItem key={item.text} disablePadding sx={{ mb: 0.25 }}>
+              <Link href={item.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
+                <ListItemButton
+                  selected={isActive}
+                  onClick={handleDrawerToggle}
+                  sx={{
+                    py: 1,
+                    borderRadius: '6px',
+                    color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
+                    backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                    '&:hover': {
+                      backgroundColor: alpha(theme.palette.primary.main, isActive ? 0.12 : 0.04),
+                    },
+                  }}
+                >
+                  <ListItemIcon sx={{ color: 'inherit', minWidth: 32 }}>
+                    {React.cloneElement(item.icon, { sx: { fontSize: iconSize.menu.mobile } })}
+                  </ListItemIcon>
+                  <ListItemText primary={item.text} primaryTypographyProps={{ fontSize: fontSize.menuItem.mobile }} />
+                </ListItemButton>
+              </Link>
+            </ListItem>
+          );
+        })}
+      </List>
+
+      {/* Auth Buttons for Mobile */}
+      {!session && (
+        <Box sx={{ px: 2, py: 1 }}>
+          <AuthButtons />
+        </Box>
+      )}
+
+      {/* Divider */}
+      <Box sx={{ mx: 1, borderTop: `1px solid ${alpha(theme.palette.divider, 0.12)}` }} />
+
+      <Box sx={{ py: 1, px: 1 }}>
+        <ThemeToggleButton variant="full" compact />
       </Box>
     </>
   );
@@ -307,12 +423,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         sx={{ color: 'text.secondary', '& .MuiBreadcrumbs-ol': { alignItems: 'center' }, '& .MuiBreadcrumbs-li': { display: 'flex', alignItems: 'center' } }}
       >
         <MuiLink component={Link} underline="hover" color="inherit" href="/dashboard" sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
-          <DashboardIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
+          <DashboardIcon sx={{ mr: 0.5, fontSize: iconSize.breadcrumb.desktop }} />
           Dashboard
         </MuiLink>
         {currentPathname !== '/dashboard' && bestMatch && (
           <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center' }} variant="body2">
-            {React.cloneElement(currentPageIcon, { sx: { mr: 0.5, fontSize: '1rem' } })}
+            {React.cloneElement(currentPageIcon, { sx: { mr: 0.5, fontSize: iconSize.breadcrumb.desktop } })}
             {currentPageTitle}
           </Typography>
         )}
@@ -326,7 +442,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* NAV DRAWERS */}
       <Box component="nav" sx={{ width: { lg: drawerWidth }, flexShrink: { lg: 0 } }} aria-label="sidebar">
-        {/* Mobile Drawer (overlay) */}
+        {/* Tablet Drawer (overlay) - 768px to 1199px */}
         <Drawer
           variant="temporary"
           open={mobileOpen}
@@ -334,9 +450,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ModalProps={{ keepMounted: true }}
           elevation={0}
           sx={{
-            display: { xs: 'block', lg: 'none' },
+            display: { xs: 'none', md: 'block', lg: 'none' },
             '& .MuiDrawer-paper': {
-              width: 280,
+              width: 320,
+              boxShadow: '4px 0 16px rgba(0, 0, 0, 0.15)',
+              backdropFilter: 'blur(12px)',
+            }
+          }}
+        >
+          {TabletDrawerContent}
+        </Drawer>
+
+        {/* Mobile Drawer (overlay) - below 768px */}
+        <Drawer
+          variant="temporary"
+          open={mobileOpen}
+          onClose={handleDrawerToggle}
+          ModalProps={{ keepMounted: true }}
+          elevation={0}
+          sx={{
+            display: { xs: 'block', md: 'none' },
+            '& .MuiDrawer-paper': {
+              width: 260,
               boxShadow: '4px 0 16px rgba(0, 0, 0, 0.15)',
               backdropFilter: 'blur(12px)',
             }
@@ -345,7 +480,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {MobileDrawerContent}
         </Drawer>
 
-        {/* Desktop Drawer (permanent) */}
+        {/* Desktop Drawer (permanent) - 1200px and above */}
         <Drawer
           variant="permanent"
           sx={{
@@ -395,7 +530,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             minHeight: `${layoutTokens.toolbarMinHeight}px !important`,
             height: layoutTokens.appBarHeight,
             maxHeight: layoutTokens.appBarHeight,
-            px: { xs: 2, lg: 3 },
+            px: { xs: 1.5, md: 2, lg: 3 }, // Mobile: 12px, Tablet: 16px, Desktop: 24px
           }}>
             {/* Inner container - cùng maxWidth với main content để căn thẳng hàng */}
             <Box sx={{
@@ -416,7 +551,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 position: 'relative',
                 gap: 3,
               }}>
-                {isMobile && (
+                {showHamburgerMenu && (
                   <MuiIconButton
                     color="inherit"
                     aria-label="open drawer"
@@ -434,7 +569,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <BrandLogo href="/" />
 
                 {/* Top Navigation Tabs - Only visible on desktop */}
-                {!isMobile && (
+                {isDesktop && (
                   <Box sx={{ display: 'flex', gap: 0.5 }}>
                     {topNavTabs.map((tab) => {
                       const isActive = currentPathname.startsWith(tab.href);
@@ -448,7 +583,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                 <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                                   {tab.label}
                                 </Typography>
-                                <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                <Typography variant="body2" sx={{ fontSize: fontSize.sm.tablet }}>
                                   {tab.description}
                                 </Typography>
                               </Box>
@@ -483,7 +618,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                 height: '30px',
                                 display: 'flex',
                                 alignItems: 'center',
-                                fontSize: '0.9rem',
+                                fontSize: fontSize.menuItem.desktop,
                                 fontWeight: isActive ? 600 : 500,
                                 color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
                                 textTransform: 'none',
@@ -515,7 +650,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               }}>
                 <SearchBar variant="compact" />
 
-                {!session && !lgDown && (
+                {!session && isDesktop && (
                   <AuthButtons />
                 )}
               </Box>
@@ -531,7 +666,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             display: 'flex',
             justifyContent: 'center',
             minHeight: `calc(100vh - ${layoutTokens.appBarHeight}px)`,
-            px: { xs: 2, lg: 3 },
+            px: { xs: 1.5, md: 2, lg: 3 }, // Mobile: 12px, Tablet: 16px, Desktop: 24px
           }}
         >
           <Box sx={{

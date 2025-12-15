@@ -5,6 +5,7 @@ import { Box, Typography, Button, TextField, Skeleton, useTheme, Alert, InputAdo
 import { Person, Email, Phone, AdminPanelSettings } from '@mui/icons-material';
 import { useAuth } from 'components/AuthProvider';
 import { apiClient } from 'services/apiClient';
+import { fontSize } from 'theme/tokens';
 import Link from 'next/link';
 
 // Function để generate màu dựa trên user ID cho avatar
@@ -176,9 +177,9 @@ export default function InformationPage() {
 
     if (isLoading) {
         return (
-            <Box sx={{ maxWidth: 700, color: 'text.primary' }}>
-                <Skeleton variant="rectangular" width="100%" height={120} sx={{ mb: 4, borderRadius: 2 }} />
-                <Skeleton variant="rectangular" width="100%" height={200} sx={{ borderRadius: 2 }} />
+            <Box sx={{ maxWidth: 600, width: '100%', color: 'text.primary' }}>
+                <Skeleton variant="rectangular" width="100%" height={100} sx={{ mb: 3, borderRadius: 2 }} />
+                <Skeleton variant="rectangular" width="100%" height={180} sx={{ borderRadius: 2 }} />
             </Box>
         );
     }
@@ -235,14 +236,14 @@ export default function InformationPage() {
     console.log('Is special role:', finalIsSpecialRole);
 
     return (
-        <Box sx={{ maxWidth: 700, color: 'text.primary' }}>
+        <Box sx={{ maxWidth: 600, width: '100%', color: 'text.primary' }}>
             {/* Header */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <Box
                     component="div"
                     sx={{
-                        width: 64,
-                        height: 64,
+                        width: 56,
+                        height: 56,
                         borderRadius: '50%',
                         display: 'flex',
                         alignItems: 'center',
@@ -252,20 +253,21 @@ export default function InformationPage() {
                         bgcolor: avatarBgColor,
                         color: 'rgba(255, 255, 255, 0.95)',
                         fontWeight: 'bold',
-                        fontSize: '1.5rem',
+                        fontSize: fontSize.h5.tablet,
                         backgroundImage: session.user.avatar_url ? `url(${session.user.avatar_url})` : 'none',
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
-                        mr: 2
+                        mr: 1.5,
+                        flexShrink: 0,
                     }}
                 >
                     {!session.user.avatar_url && userInitial}
                 </Box>
-                <Box>
-                    <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
+                <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="h5" component="h1" sx={{ fontWeight: 'bold' }}>
                         {session.user.full_name || 'User'}
                     </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, mt: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Box sx={{ display: 'flex', gap: 1, mt: 0.5, alignItems: 'center' }}>
                         {/* License Badge */}
                         <Box
                             sx={{

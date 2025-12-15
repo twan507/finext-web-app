@@ -40,13 +40,13 @@ const SunMoonIcon = ({ isDark, uniqueId }: { isDark: boolean; uniqueId: string }
 
 interface ThemeToggleButtonProps {
   variant?: 'icon' | 'full';
+  compact?: boolean;
 }
 
-const ThemeToggleButton: React.FC<ThemeToggleButtonProps> = ({ variant = 'icon' }) => {
+const ThemeToggleButton: React.FC<ThemeToggleButtonProps> = ({ variant = 'icon', compact = false }) => {
   const { theme, setTheme, resolvedTheme } = useNextTheme();
   const [mounted, setMounted] = useState(false);
 
-  // Tạo unique ID cho mỗi instance của component
   const [uniqueId] = useState(() => Math.random().toString(36).substr(2, 9));
 
   useEffect(() => { setMounted(true); }, []);
@@ -64,15 +64,13 @@ const ThemeToggleButton: React.FC<ThemeToggleButtonProps> = ({ variant = 'icon' 
   const isCurrentlyDark = resolvedTheme === 'dark';
   const tooltipText = isCurrentlyDark ? 'Chuyển chế độ sáng' : 'Chuyển chế độ tối';
 
-  // Dạng nút dài, có cấu trúc ListItemButton hoàn chỉnh
   if (variant === 'full') {
     return (
       <ListItemButton
         onClick={handleThemeChange}
         sx={{
-          px: 1.25,
-          py: 1.25,
-          borderRadius: '8px',
+          py: compact ? 1 : undefined,
+          borderRadius: compact ? '6px' : '8px',
           color: 'text.secondary',
           '&:hover': {
             backgroundColor: (theme) => theme.palette.action.hover,
@@ -81,20 +79,22 @@ const ThemeToggleButton: React.FC<ThemeToggleButtonProps> = ({ variant = 'icon' 
         }}
       >
         <ListItemIcon sx={{
-          minWidth: 32,
-          color: isCurrentlyDark ? 'text.primary' : 'text.secondary'
+          minWidth: compact ? 32 : 36,
+          color: isCurrentlyDark ? 'text.primary' : 'text.secondary',
+          '& .themeToggle': {
+            transform: compact ? 'scale(0.9)' : 'scale(1)',
+          }
         }}>
           <SunMoonIcon isDark={isCurrentlyDark} uniqueId={uniqueId} />
         </ListItemIcon>
         <ListItemText
           primary={tooltipText}
-          primaryTypographyProps={{ variant: 'body2' }}
+          primaryTypographyProps={{ fontSize: compact ? '0.9rem' : undefined }}
         />
       </ListItemButton>
     );
   }
 
-  // Dạng chỉ có icon (mặc định)
   return (
     <Tooltip title={tooltipText}>
       <IconButton

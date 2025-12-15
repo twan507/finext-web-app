@@ -19,7 +19,7 @@ import {
 	UnfoldLess as CollapseIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { responsiveTypographyTokens  } from 'theme/tokens';
+import { fontSize, getResponsiveFontSize } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import SubscriptionSearch from './components/SubscriptionSearch';
 import CreateSubscriptionModal from './components/CreateSubscriptionModal';
@@ -435,7 +435,7 @@ export default function SubscriptionsPage() {
 
 			<Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
 				<Box sx={{ display: 'flex', alignItems: 'center' }}>
-					<SubscriptionIcon sx={{ mr: 1, fontSize: '24px' }} />
+					<SubscriptionIcon sx={{ mr: 1, fontSize: 24 }} />
 					<Typography
 						variant="h3"
 						component="h1"
@@ -498,7 +498,7 @@ export default function SubscriptionsPage() {
 					severity="error"
 					sx={{
 						mb: 2,
-						...responsiveTypographyTokens.body2,
+						fontSize: getResponsiveFontSize('sm'),
 						'& .MuiAlert-message': {
 							overflow: 'hidden',
 							textOverflow: 'ellipsis'
@@ -553,7 +553,7 @@ export default function SubscriptionsPage() {
 												minWidth: columnConfigs[0].minWidth,
 												width: expandedView ? 'auto' : columnConfigs[0].minWidth
 											}}>
-												<Typography sx={responsiveTypographyTokens.tableCell}>
+												<Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
 													{sub.user_email}
 												</Typography>                                            </TableCell>
 											<TableCell sx={{
@@ -574,7 +574,7 @@ export default function SubscriptionsPage() {
 												minWidth: columnConfigs[2].minWidth,
 												width: expandedView ? 'auto' : columnConfigs[2].minWidth
 											}}>
-												<Typography sx={responsiveTypographyTokens.tableCell}>
+												<Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
 													{columnConfigs[2].format?.(sub.start_date)}
 												</Typography>                                            </TableCell>
 											<TableCell sx={{
@@ -583,7 +583,7 @@ export default function SubscriptionsPage() {
 												minWidth: columnConfigs[3].minWidth,
 												width: expandedView ? 'auto' : columnConfigs[3].minWidth
 											}}>
-												<Typography sx={responsiveTypographyTokens.tableCell}>
+												<Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
 													{columnConfigs[3].format?.(sub.expiry_date)}
 												</Typography>                                            </TableCell>
 											<TableCell sx={{
@@ -611,7 +611,7 @@ export default function SubscriptionsPage() {
 													return (
 														<Typography
 															sx={{
-																...responsiveTypographyTokens.tableCell,
+																fontSize: getResponsiveFontSize('tableCell'),
 																color: textColor,
 																fontWeight: 'medium'
 															}}
@@ -642,7 +642,7 @@ export default function SubscriptionsPage() {
 												minWidth: columnConfigs[6].minWidth,
 												width: expandedView ? 'auto' : columnConfigs[6].minWidth
 											}}>
-												<Typography sx={responsiveTypographyTokens.tableCell}>
+												<Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
 													{columnConfigs[6].format?.(sub.updated_at)}
 												</Typography>                                            </TableCell>
 											<TableCell
@@ -756,11 +756,11 @@ export default function SubscriptionsPage() {
 									px: { xs: 1, sm: 2 }
 								},
 								'& .MuiTablePagination-selectLabel': {
-									...responsiveTypographyTokens.tableCellSmall,
+									fontSize: getResponsiveFontSize('xxs'),
 									display: { xs: 'none', sm: 'block' }
 								},
 								'& .MuiTablePagination-displayedRows': {
-									...responsiveTypographyTokens.tableCellSmall,
+									fontSize: getResponsiveFontSize('xxs'),
 									margin: 0
 								}
 							}}

@@ -18,6 +18,7 @@ import {
     FilterList as FilterIcon
 } from '@mui/icons-material';
 import { PermissionSystemPublic } from '../page';
+import { fontSize } from 'theme/tokens';
 
 interface PermissionSearchProps {
     permissions: PermissionSystemPublic[];
@@ -140,7 +141,7 @@ const PermissionSearch: React.FC<PermissionSearchProps> = ({
                     }}
                     sx={{
                         '& .MuiOutlinedInput-root': {
-                            fontSize: '0.8125rem',
+                            fontSize: fontSize.sm.tablet,
                             height: '36px',
                         }
                     }}
@@ -171,14 +172,14 @@ const PermissionSearch: React.FC<PermissionSearchProps> = ({
                                 size="small"
                                 color="primary"
                                 variant="outlined"
-                                sx={{ height: '20px', fontSize: '0.6875rem' }}
+                                sx={{ height: '20px', fontSize: fontSize.xxs.tablet }}
                             />
-                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6875rem' }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: fontSize.xxs.tablet }}>
                                 (trang hiện tại)
                             </Typography>
                         </>
                     ) : (
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6875rem' }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: fontSize.xxs.tablet }}>
                             {stats.total} quyền (trang hiện tại)
                         </Typography>
                     )}
@@ -191,7 +192,7 @@ const PermissionSearch: React.FC<PermissionSearchProps> = ({
                         onDelete={handleClearSearch}
                         color="default"
                         variant="outlined"
-                        sx={{ height: '20px', fontSize: '0.6875rem', maxWidth: '120px' }}
+                        sx={{ height: '20px', fontSize: fontSize.xxs.tablet, maxWidth: '120px' }}
                     />
                 )}
             </Box>
@@ -201,7 +202,7 @@ const PermissionSearch: React.FC<PermissionSearchProps> = ({
                 <>
                     <Divider sx={{ my: 1 }} />
                     <Box>
-                        <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontSize: '0.6875rem' }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontSize: fontSize.xxs.tablet }}>
                             Bộ lọc nhanh:
                         </Typography>                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                             {[
@@ -228,7 +229,7 @@ const PermissionSearch: React.FC<PermissionSearchProps> = ({
                                     sx={{
                                         cursor: 'pointer',
                                         height: '22px',
-                                        fontSize: '0.6875rem'
+                                        fontSize: fontSize.xxs.tablet
                                     }}
                                 />
                             ))}

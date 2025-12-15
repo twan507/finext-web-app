@@ -17,7 +17,7 @@ import {
   People
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { responsiveTypographyTokens  } from 'theme/tokens';
+import { fontSize, getResponsiveFontSize } from 'theme/tokens';
 import UserSearch from './components/UserSearch';
 import AddUserModal from './components/AddUserModal';
 import EditUserModal from './components/EditUserModal';
@@ -624,7 +624,7 @@ const UsersPage: React.FC = () => {
           severity="error"
           sx={{
             mb: 2,
-            ...responsiveTypographyTokens.body2,
+            fontSize: getResponsiveFontSize('sm'),
             '& .MuiAlert-message': {
               overflow: 'hidden',
               textOverflow: 'ellipsis'
@@ -692,7 +692,7 @@ const UsersPage: React.FC = () => {
                               fontWeight="medium"
                               sx={{
                                 mb: 0.5,
-                                ...responsiveTypographyTokens.body1,
+                                fontSize: getResponsiveFontSize('base'),
                                 lineHeight: 1.2
                               }}
                             >
@@ -702,7 +702,7 @@ const UsersPage: React.FC = () => {
                               variant="body2"
                               color="text.secondary"
                               sx={{
-                                ...responsiveTypographyTokens.body2,
+                                fontSize: getResponsiveFontSize('sm'),
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap'
@@ -717,7 +717,7 @@ const UsersPage: React.FC = () => {
                         whiteSpace: expandedView ? 'nowrap' : 'normal',
                         minWidth: columnConfigs[1].minWidth,
                         width: expandedView ? 'auto' : columnConfigs[1].minWidth
-                      }}>                    <Typography sx={responsiveTypographyTokens.tableCell}>
+                      }}>                    <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
                           {user.phone_number || 'N/A'}
                         </Typography>
                       </TableCell>
@@ -795,7 +795,7 @@ const UsersPage: React.FC = () => {
                               <Chip key={index} label={roleName} size="small" variant="outlined" />
                             ))
                           ) : (
-                            <Typography variant="body2" color="text.secondary" sx={responsiveTypographyTokens.tableCell}>N/A</Typography>)}
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: getResponsiveFontSize('tableCell') }}>N/A</Typography>)}
                         </Box>
                       </TableCell>
                       <TableCell sx={{
@@ -803,7 +803,7 @@ const UsersPage: React.FC = () => {
                         whiteSpace: expandedView ? 'nowrap' : 'normal',
                         minWidth: columnConfigs[5].minWidth,
                         width: expandedView ? 'auto' : columnConfigs[5].minWidth
-                      }}>                        <Typography sx={responsiveTypographyTokens.tableCell}>
+                      }}>                        <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
                           {(() => {
                             if (!user.created_at) {
                               return 'N/A';
@@ -825,7 +825,7 @@ const UsersPage: React.FC = () => {
                         whiteSpace: expandedView ? 'nowrap' : 'normal',
                         minWidth: columnConfigs[6].minWidth,
                         width: expandedView ? 'auto' : columnConfigs[6].minWidth
-                      }}>                        <Typography sx={responsiveTypographyTokens.tableCell}>
+                      }}>                        <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
                           {(() => {
                             if (!user.updated_at) {
                               return 'N/A';
@@ -855,7 +855,7 @@ const UsersPage: React.FC = () => {
                             variant="outlined"
                             color="primary"
                           />
-                        ) : (<Typography variant="body2" color="text.secondary" sx={responsiveTypographyTokens.tableCell}>N/A</Typography>
+                        ) : (<Typography variant="body2" color="text.secondary" sx={{ fontSize: getResponsiveFontSize('tableCell') }}>N/A</Typography>
                         )}
                       </TableCell>
                       <TableCell sx={{
@@ -955,15 +955,15 @@ const UsersPage: React.FC = () => {
                   px: { xs: 1, sm: 2 }
                 },
                 '& .MuiTablePagination-selectLabel': {
-                  ...responsiveTypographyTokens.tableCellSmall,
+                  fontSize: getResponsiveFontSize('xxs'),
                   margin: 0
                 },
                 '& .MuiTablePagination-displayedRows': {
-                  ...responsiveTypographyTokens.tableCellSmall,
+                  fontSize: getResponsiveFontSize('xxs'),
                   margin: 0
                 },
                 '& .MuiTablePagination-select': {
-                  ...responsiveTypographyTokens.tableCellSmall
+                  fontSize: getResponsiveFontSize('xxs')
                 },
                 '& .MuiTablePagination-actions': {
                   '& .MuiIconButton-root': {
