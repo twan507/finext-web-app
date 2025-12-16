@@ -250,6 +250,7 @@ export default function MarketIndexChart({
     // Refs để lưu trữ visible range và track thay đổi
     const savedLogicalRangeRef = useRef<{ from: number; to: number } | null>(null);
     const prevTimeRangeRef = useRef<TimeRange>(timeRange);
+    const prevSymbolRef = useRef<string>(symbol);
 
     // timeRange is now controlled by parent via props
     const [chartType, setChartType] = useState<ChartType>('area');
@@ -545,15 +546,20 @@ export default function MarketIndexChart({
             }
         }
 
-        // Kiểm tra xem có phải chỉ timeRange thay đổi (chartType thay đổi vẫn giữ view)
+        // Kiểm tra xem timeRange hoặc symbol có thay đổi không
+        // Nếu có, cần reset range theo timeRange đang chọn
         const isTimeRangeChanged = prevTimeRangeRef.current !== timeRange;
-        const shouldResetRange = isTimeRangeChanged;
+        const isSymbolChanged = prevSymbolRef.current !== symbol;
+        // Cũng cần reset nếu chưa có saved range (lần đầu render)
+        const isFirstRender = savedLogicalRangeRef.current === null && !savedLogicalRange;
+        const shouldResetRange = isTimeRangeChanged || isSymbolChanged || isFirstRender;
 
         // Cập nhật refs
         prevTimeRangeRef.current = timeRange;
+        prevSymbolRef.current = symbol;
 
         if (shouldResetRange) {
-            // TimeRange thay đổi -> reset range
+            // Reset range theo timeRange đang chọn (mặc định là 1Y)
             if (!isIntraday) {
                 // EOD: Set visible range based on timeRange selection
                 const dataLength =
@@ -594,7 +600,7 @@ export default function MarketIndexChart({
                 // Ignore
             }
         }, 0);
-    }, [chartType, timeRange, colors, isDarkMode, eodData, intradayData]);
+    }, [chartType, timeRange, symbol, colors, isDarkMode, eodData, intradayData]);
 
     // Combined effect: Initialize chart AND update series when data arrives
     useEffect(() => {

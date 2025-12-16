@@ -203,9 +203,9 @@ export default function MarketSection({
                                     },
                                 }}
                             >
+                                <MenuItem value="finext">Chỉ số Finext</MenuItem>
                                 <MenuItem value="main">Chỉ số thị trường</MenuItem>
                                 <MenuItem value="derivative">Chỉ số phái sinh</MenuItem>
-                                <MenuItem value="finext">Chỉ số Finext</MenuItem>
                             </Select>
                         </FormControl>
                     </Box>
