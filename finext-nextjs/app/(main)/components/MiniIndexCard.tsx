@@ -21,6 +21,7 @@ interface RawMarketData {
 interface MiniIndexCardProps {
     symbol: string;
     itdData: RawMarketData[]; // Data được truyền từ parent (page.tsx) qua SSE
+    hideOnTablet?: boolean; // Ẩn card ở tablet (md breakpoint)
 }
 
 const getChangeColor = (pctChange: number): string => {
@@ -56,7 +57,7 @@ interface ChartDataPoint {
     dateStr: string;
 }
 
-export default function MiniIndexCard({ symbol, itdData }: MiniIndexCardProps) {
+export default function MiniIndexCard({ symbol, itdData, hideOnTablet = false }: MiniIndexCardProps) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
 
@@ -200,9 +201,27 @@ export default function MiniIndexCard({ symbol, itdData }: MiniIndexCardProps) {
         return `${Math.abs(num).toFixed(2)}%`;
     };
 
+    // Responsive styles cho card
+    const cardSx = {
+        p: 1.5,
+        borderRadius: 2,
+        bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+        minWidth: 150,
+        // Desktop (lg+): 6 cards
+        width: {
+            xs: 'calc(50% - 6px)', // Mobile: 2 cards per row (4 cards total, 2 rows)
+            md: 'calc((100% - 36px) / 4)', // Tablet: 4 cards (hide 2)
+            lg: 'calc((100% - 60px) / 6)', // Desktop: 6 cards
+        },
+        // Ẩn card ở tablet và mobile nếu hideOnTablet = true
+        display: hideOnTablet ? { xs: 'none', lg: 'block' } : 'block',
+        transition: 'all 0.2s ease',
+        '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)' }
+    };
+
     if (isLoading && chartData.length === 0) {
         return (
-            <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)', width: 'calc((100% - 60px) / 6)', minWidth: 140 }}>
+            <Box sx={cardSx}>
                 <Skeleton variant="text" width="60%" height={22} />
                 <Skeleton variant="text" width="90%" height={30} sx={{ mt: 0.5 }} />
                 <Skeleton variant="rectangular" width="100%" height={60} sx={{ mt: 1, borderRadius: 1 }} />
@@ -211,20 +230,16 @@ export default function MiniIndexCard({ symbol, itdData }: MiniIndexCardProps) {
     }
 
     return (
-        <Box sx={{
-            p: 1.5, borderRadius: 2, bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
-            width: 'calc((100% - 60px) / 6)', minWidth: 140, transition: 'all 0.2s ease',
-            '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)' }
-        }}>
+        <Box sx={cardSx}>
             <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {tickerName}
             </Typography>
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.5, flexWrap: 'nowrap' }}>
-                <Typography sx={{ fontWeight: 700, color: 'text.primary', lineHeight: 1, fontSize: fontSize.lg.tablet }}>
+                <Typography sx={{ fontWeight: 700, color: 'text.primary', lineHeight: 1, fontSize: fontSize.md.tablet }}>
                     {formatNumber(lastPrice)}
                 </Typography>
-                <Typography sx={{ color: changeColor, fontWeight: 500, fontSize: fontSize.sm.tablet, lineHeight: 1, mt: 0.2 }}>
+                <Typography sx={{ color: changeColor, fontWeight: 500, fontSize: fontSize.xs.tablet, lineHeight: 1, mt: 0.2 }}>
                     {diff != null && diff !== 0 && (pctChange ?? 0) > 0 ? '+' : diff != null && diff !== 0 && (pctChange ?? 0) < 0 ? '-' : ''}{formatDiff(diff)}
                 </Typography>
                 <Box component="span" sx={{
@@ -233,14 +248,14 @@ export default function MiniIndexCard({ symbol, itdData }: MiniIndexCardProps) {
                     borderRadius: 1,
                     bgcolor: chipBgColor,
                     color: '#fff',
-                    fontSize: fontSize.xxs.tablet,
+                    fontSize: fontSize.xs.mobile,
                     fontWeight: 600,
                     whiteSpace: 'nowrap',
                     display: 'inline-flex',
                     alignItems: 'center',
                     lineHeight: 1,
                 }}>
-                    {arrow && <span style={{ fontSize: fontSize.xxs.mobile, lineHeight: 1 }}>{arrow}</span>}
+                    {arrow && <span style={{ fontSize: fontSize.badge.tablet, lineHeight: 1 }}>{arrow}</span>}
                     {formatPctChange(pctChange)}
                 </Box>
             </Box>

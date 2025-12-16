@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { Box, Typography, Skeleton, useTheme } from '@mui/material';
+import { Box, Typography, Skeleton, useTheme, useMediaQuery, Theme } from '@mui/material';
 import { fontSize } from 'theme/tokens';
 
 interface RawMarketData {
@@ -34,6 +34,10 @@ const getChangeColor = (value: number | null): string => {
 function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowProps) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
+    const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'));
+
+    // Responsive font size
+    const cellFontSize = isMobile ? fontSize.tableCell.mobile : fontSize.tableCell.tablet;
 
     const [tickerName, setTickerName] = useState<string>(ticker);
     const [price, setPrice] = useState<number | null>(null);
@@ -90,20 +94,22 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
     const dividerColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
     const isLoading = !todayData || todayData.length === 0;
 
+    // Responsive padding
+    const rowPadding = isMobile ? { px: 1, py: 1.25 } : { px: 1.5, py: 1.5 };
+
     if (isLoading && price == null) {
         return (
             <Box sx={{
                 display: 'grid',
                 gridTemplateColumns: '1.8fr 1fr 0.8fr 0.8fr',
                 gap: 1,
-                px: 1.5,
-                py: 1.5,
+                ...rowPadding,
                 borderBottom: isLast ? 'none' : `1px solid ${dividerColor}`
             }}>
-                <Skeleton variant="text" width="80%" height={20} />
-                <Skeleton variant="text" width="70%" height={20} sx={{ ml: 'auto' }} />
-                <Skeleton variant="text" width="60%" height={20} sx={{ ml: 'auto' }} />
-                <Skeleton variant="text" width="60%" height={20} sx={{ ml: 'auto' }} />
+                <Skeleton variant="text" width="80%" height={isMobile ? 18 : 20} />
+                <Skeleton variant="text" width="70%" height={isMobile ? 18 : 20} sx={{ ml: 'auto' }} />
+                <Skeleton variant="text" width="60%" height={isMobile ? 18 : 20} sx={{ ml: 'auto' }} />
+                <Skeleton variant="text" width="60%" height={isMobile ? 18 : 20} sx={{ ml: 'auto' }} />
             </Box>
         );
     }
@@ -114,9 +120,8 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
             sx={{
                 display: 'grid',
                 gridTemplateColumns: '1.8fr 1fr 0.8fr 0.8fr',
-                gap: 1,
-                px: 1.5,
-                py: 1.5,
+                gap: isMobile ? 0.5 : 1,
+                ...rowPadding,
                 cursor: 'pointer',
                 transition: 'background-color 0.15s ease',
                 borderBottom: isLast ? 'none' : `1px solid ${dividerColor}`,
@@ -140,7 +145,7 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
         >
             {/* Tên index */}
             <Typography sx={{
-                fontSize: fontSize.tableCell.tablet,
+                fontSize: cellFontSize,
                 fontWeight: isSelected ? 600 : 500,
                 color: 'text.primary',
                 whiteSpace: 'nowrap',
@@ -152,7 +157,7 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
 
             {/* Giá */}
             <Typography sx={{
-                fontSize: fontSize.tableCell.tablet,
+                fontSize: cellFontSize,
                 fontWeight: 600,
                 color: 'text.primary',
                 textAlign: 'right'
@@ -162,7 +167,7 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
 
             {/* Biến động điểm */}
             <Typography sx={{
-                fontSize: fontSize.tableCell.tablet,
+                fontSize: cellFontSize,
                 fontWeight: 500,
                 color: changeColor,
                 textAlign: 'right'
@@ -172,7 +177,7 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
 
             {/* Biến động % */}
             <Typography sx={{
-                fontSize: fontSize.tableCell.tablet,
+                fontSize: cellFontSize,
                 fontWeight: 500,
                 color: changeColor,
                 textAlign: 'right'

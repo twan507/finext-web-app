@@ -9,7 +9,7 @@ import { fontSize } from 'theme/tokens';
 import { RawMarketData } from './MarketIndexChart';
 
 // Tab type cho bảng index
-type IndexTabType = 'main' | 'derivative' | 'special';
+type IndexTabType = 'main' | 'derivative' | 'finext';
 
 // List 1: Main Indexes
 const MAIN_INDEXES = [
@@ -49,7 +49,7 @@ const FINEXT_INDEXES = [
 const INDEX_TAB_MAP: Record<IndexTabType, string[]> = {
     main: MAIN_INDEXES,
     derivative: DERIVATIVE_INDEXES,
-    special: FINEXT_INDEXES,
+    finext: FINEXT_INDEXES,
 };
 
 // Type cho sse_today_index response (grouped by ticker)
@@ -113,9 +113,13 @@ export default function MarketSection({
             </Box>
 
             {/* Main Content: Chart + Table */}
-            <Box sx={{ display: 'flex', gap: 3 }}>
+            <Box sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', md: 'row' },
+                gap: { xs: 2, md: 3 },
+            }}>
                 {/* Chart */}
-                <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Box sx={{ flex: 1, minWidth: 0, width: { xs: '100%', md: 'auto' } }}>
                     <MarketIndexChart
                         key={ticker}
                         symbol={ticker}
@@ -130,7 +134,11 @@ export default function MarketSection({
                 </Box>
 
                 {/* Index Table */}
-                <Box sx={{ width: 400, flexShrink: 0, mt: 9.8 }}>
+                <Box sx={{
+                    width: { xs: '100%', md: 320, lg: 400 },
+                    flexShrink: 0,
+                    mt: { xs: 0, md: 9.8 },
+                }}>
                     {/* Dropdown chọn nhóm chỉ số - căn phải */}
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
                         <FormControl size="small">
@@ -138,11 +146,11 @@ export default function MarketSection({
                                 value={indexTab}
                                 onChange={(e: SelectChangeEvent) => onIndexTabChange(e.target.value as IndexTabType)}
                                 sx={{
-                                    fontSize: fontSize.base.tablet,
+                                    fontSize: { xs: fontSize.sm.mobile, md: fontSize.base.tablet },
                                     borderRadius: 2,
                                     backgroundColor: dropdownColors.background,
                                     color: dropdownColors.text,
-                                    height: 37,
+                                    height: { xs: 34, md: 37 },
                                     '& .MuiSelect-select': {
                                         py: 0,
                                         px: 1.5,
@@ -174,7 +182,7 @@ export default function MarketSection({
                                                 py: 0.5,
                                             },
                                             '& .MuiMenuItem-root': {
-                                                fontSize: fontSize.base.tablet,
+                                                fontSize: { xs: fontSize.sm.mobile, md: fontSize.base.tablet },
                                                 color: dropdownColors.text,
                                                 backgroundColor: 'transparent !important',
                                                 '&:hover': {
@@ -197,7 +205,7 @@ export default function MarketSection({
                             >
                                 <MenuItem value="main">Chỉ số thị trường</MenuItem>
                                 <MenuItem value="derivative">Chỉ số phái sinh</MenuItem>
-                                <MenuItem value="special">Chỉ số Finext</MenuItem>
+                                <MenuItem value="finext">Chỉ số Finext</MenuItem>
                             </Select>
                         </FormControl>
                     </Box>

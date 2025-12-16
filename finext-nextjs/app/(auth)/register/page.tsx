@@ -1,6 +1,10 @@
-import React from 'react';
-import { Box, Container } from '@mui/material';
+import type { Metadata } from 'next';
+import { Box } from '@mui/material';
 import RegisterForm from '../components/RegisterForm';
+
+export const metadata: Metadata = {
+  title: 'Đăng ký',
+};
 
 export default function RegisterPage() {
     return (

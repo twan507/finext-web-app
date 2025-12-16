@@ -68,8 +68,6 @@ export const logoutApi = async (): Promise<void> => {
         // Vẫn tiếp tục xóa session client-side
     } finally {
         clearSession();
-        if (typeof window !== 'undefined') {
-            window.location.href = '/login';
-        }
+        // Navigation sẽ được xử lý bởi AuthProvider.logout()
     }
 }

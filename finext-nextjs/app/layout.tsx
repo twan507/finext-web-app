@@ -13,6 +13,15 @@ import '@fontsource/roboto/700.css';
 
 // THÊM IMPORT NÀY
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v13-appRouter'; // Hoặc v14/v15 nếu có, nhưng v13 thường dùng cho App Router
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: {
+    default: 'Finext',
+    template: '%s | Finext',
+  },
+  description: 'Finext - Nền tảng phân tích chứng khoán thông minh',
+};
 
 export default function RootLayout({
   children,

@@ -9,8 +9,7 @@ import {
     alpha,
     IconButton,
     Fade,
-    Modal,
-    Backdrop,
+    Drawer,
     useMediaQuery,
     Tooltip,
 } from '@mui/material';
@@ -32,9 +31,7 @@ export default function SearchBar({
 }: SearchBarProps) {
     const [searchValue, setSearchValue] = useState('');
     const [isFocused, setIsFocused] = useState(false);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isClosing, setIsClosing] = useState(false);
-    const [isOpening, setIsOpening] = useState(false);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [currentPlaceholder, setCurrentPlaceholder] = useState('');
     const [isTyping, setIsTyping] = useState(true);
     const theme = useTheme();
@@ -105,23 +102,13 @@ export default function SearchBar({
         }
     };
 
-    const handleOpenModal = () => {
-        setIsModalOpen(true);
-        setIsOpening(true);
-        // Sau khi component mount, trigger animation
-        setTimeout(() => {
-            setIsOpening(false);
-        }, 10); // Delay nhỏ để browser có thời gian render
+    const handleOpenDrawer = () => {
+        setIsDrawerOpen(true);
     };
 
-    const handleCloseModal = () => {
-        setIsClosing(true);
-        setTimeout(() => {
-            setIsModalOpen(false);
-            setIsClosing(false);
-            setIsOpening(false);
-            setSearchValue('');
-        }, theme.transitions.duration.leavingScreen);
+    const handleCloseDrawer = () => {
+        setIsDrawerOpen(false);
+        setSearchValue('');
     };
 
     // Hiển thị icon search khi là mobile/tablet (lg breakpoint)
@@ -130,7 +117,7 @@ export default function SearchBar({
             <>
                 <Tooltip title="Tìm kiếm" placement="bottom">
                     <IconButton
-                        onClick={handleOpenModal}
+                        onClick={handleOpenDrawer}
                         sx={{
                             p: 0, // Không padding để nút sát cạnh phải
                             color: theme.palette.text.secondary,
@@ -144,90 +131,108 @@ export default function SearchBar({
                     </IconButton>
                 </Tooltip>
 
-                {/* Search Panel với animation slide từ phải, không dùng Modal */}
-                {(isModalOpen || isClosing) && (
-                    <Box
-                        sx={{
-                            position: 'fixed',
-                            top: 0,
-                            right: 0,
-                            height: '100vh',
-                            width: { xs: '320px', sm: '320px' },
+                {/* Search Drawer - sử dụng MUI Drawer giống layout để không gây xê dịch giao diện */}
+                <Drawer
+                    anchor="right"
+                    open={isDrawerOpen}
+                    onClose={handleCloseDrawer}
+                    ModalProps={{ keepMounted: true }}
+                    elevation={0}
+                    sx={{
+                        '& .MuiDrawer-paper': {
+                            width: { xs: 300, sm: 320 },
+                            boxShadow: '-4px 0 16px rgba(0, 0, 0, 0.15)',
+                            backdropFilter: 'blur(12px)',
                             backgroundColor: theme.palette.background.paper,
-                            boxShadow: `-8px 0 32px ${alpha(theme.palette.common.black, 0.15)}`,
-                            p: 3,
-                            outline: 'none',
-                            transform: (isModalOpen && !isClosing && !isOpening) ? 'translateX(0)' : 'translateX(100%)',
-                            transition: theme.transitions.create('transform', {
-                                duration: theme.transitions.duration.leavingScreen,
-                                easing: (isModalOpen && !isClosing)
-                                    ? theme.transitions.easing.easeOut
-                                    : theme.transitions.easing.sharp,
-                            }),
-                            zIndex: theme.zIndex.modal,
-                        }}
-                    >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, mt: 1 }}>
-                            <Box component="form" onSubmit={handleSubmit} sx={{ flex: 1 }}>
-                                <TextField
-                                    fullWidth
-                                    autoFocus
-                                    size="small"
-                                    value={searchValue}
-                                    onChange={handleSearchChange}
-                                    onFocus={() => setIsFocused(true)}
-                                    onBlur={() => setIsFocused(false)}
-                                    placeholder={isFocused ? '' : currentPlaceholder}
-                                    variant="outlined"
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <SearchIcon
-                                                    sx={{
-                                                        color: theme.palette.primary.main,
-                                                        fontSize: iconSize.lg,
-                                                    }}
-                                                />
-                                            </InputAdornment>
-                                        ),
-                                        endAdornment: searchValue && (
-                                            <InputAdornment position="end">
-                                                <Fade in={!!searchValue}>
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={handleClearSearch}
-                                                        sx={{
-                                                            color: theme.palette.text.secondary,
-                                                            '&:hover': {
-                                                                color: theme.palette.text.primary,
-                                                                backgroundColor: alpha(theme.palette.text.primary, 0.08),
-                                                            },
-                                                        }}
-                                                    >
-                                                        <ClearIcon fontSize="small" />
-                                                    </IconButton>
-                                                </Fade>
-                                            </InputAdornment>
-                                        ),
-                                        sx: {
-                                            borderRadius: '50px',
-                                            fontSize: fontSize.lg.tablet,
-                                            '& .MuiOutlinedInput-notchedOutline': {
-                                                border: 'none', // Bỏ border
-                                            },
-                                            backgroundColor: theme.palette.background.paper,
-                                            '&:hover': {
-                                                backgroundColor: theme.palette.background.paper,
-                                            },
-                                            '&.Mui-focused': {
-                                                backgroundColor: theme.palette.background.paper,
-                                                boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`,
-                                            },
-                                        },
-                                    }}
-                                />
+                        },
+                    }}
+                >
+                    <Box sx={{ p: 3 }}>
+                        {/* Header với nút đóng */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                            <Box sx={{
+                                color: theme.palette.text.primary,
+                                fontWeight: 600,
+                                fontSize: fontSize.lg.tablet
+                            }}>
+                                Tìm kiếm
                             </Box>
+                            <IconButton
+                                onClick={handleCloseDrawer}
+                                size="small"
+                                sx={{
+                                    color: theme.palette.text.secondary,
+                                    '&:hover': {
+                                        color: theme.palette.text.primary,
+                                        backgroundColor: alpha(theme.palette.text.primary, 0.08),
+                                    },
+                                }}
+                            >
+                                <CloseIcon fontSize="small" />
+                            </IconButton>
                         </Box>
+
+                        {/* Search input */}
+                        <Box component="form" onSubmit={handleSubmit}>
+                            <TextField
+                                fullWidth
+                                autoFocus
+                                size="small"
+                                value={searchValue}
+                                onChange={handleSearchChange}
+                                onFocus={() => setIsFocused(true)}
+                                onBlur={() => setIsFocused(false)}
+                                placeholder={isFocused ? '' : currentPlaceholder}
+                                variant="outlined"
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <SearchIcon
+                                                sx={{
+                                                    color: theme.palette.primary.main,
+                                                    fontSize: iconSize.lg,
+                                                }}
+                                            />
+                                        </InputAdornment>
+                                    ),
+                                    endAdornment: searchValue && (
+                                        <InputAdornment position="end">
+                                            <Fade in={!!searchValue}>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={handleClearSearch}
+                                                    sx={{
+                                                        color: theme.palette.text.secondary,
+                                                        '&:hover': {
+                                                            color: theme.palette.text.primary,
+                                                            backgroundColor: alpha(theme.palette.text.primary, 0.08),
+                                                        },
+                                                    }}
+                                                >
+                                                    <ClearIcon fontSize="small" />
+                                                </IconButton>
+                                            </Fade>
+                                        </InputAdornment>
+                                    ),
+                                    sx: {
+                                        borderRadius: '50px',
+                                        fontSize: fontSize.lg.tablet,
+                                        '& .MuiOutlinedInput-notchedOutline': {
+                                            border: 'none',
+                                        },
+                                        backgroundColor: alpha(theme.palette.text.primary, 0.04),
+                                        '&:hover': {
+                                            backgroundColor: alpha(theme.palette.text.primary, 0.06),
+                                        },
+                                        '&.Mui-focused': {
+                                            backgroundColor: alpha(theme.palette.text.primary, 0.04),
+                                            boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`,
+                                        },
+                                    },
+                                }}
+                            />
+                        </Box>
+
                         {/* TODO: Add search results here */}
                         <Box sx={{
                             color: theme.palette.text.secondary,
@@ -238,28 +243,7 @@ export default function SearchBar({
                             Nhập từ khóa để tìm kiếm...
                         </Box>
                     </Box>
-                )}
-
-                {/* Backdrop overlay khi SearchBar mở */}
-                {(isModalOpen || isClosing) && (
-                    <Box
-                        onClick={handleCloseModal}
-                        sx={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            width: '100vw',
-                            height: '100vh',
-                            backgroundColor: alpha(theme.palette.common.black, 0.3),
-                            opacity: (isModalOpen && !isClosing && !isOpening) ? 1 : 0,
-                            transition: theme.transitions.create('opacity', {
-                                duration: theme.transitions.duration.leavingScreen,
-                                easing: theme.transitions.easing.easeInOut,
-                            }),
-                            zIndex: theme.zIndex.modal - 1,
-                        }}
-                    />
-                )}
+                </Drawer>
             </>
         );
     }

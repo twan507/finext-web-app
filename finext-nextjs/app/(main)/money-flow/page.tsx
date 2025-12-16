@@ -1,16 +1,10 @@
-'use client';
+import type { Metadata } from 'next';
+import PageContent from './PageContent';
 
-import { Box, Typography } from '@mui/material';
+export const metadata: Metadata = {
+  title: 'Dòng tiền',
+};
 
 export default function MoneyFlowPage() {
-  return (
-    <Box sx={{ py: 4 }}>
-      <Typography variant="h4" sx={{ mb: 2, fontWeight: 600 }}>
-        Dòng tiền
-      </Typography>
-      <Typography variant="body1" color="text.secondary">
-        Trực quan hóa sự dịch chuyển của dòng vốn thông minh và thanh khoản, giúp phát hiện sớm hành động của các nhà đầu tư lớn.
-      </Typography>
-    </Box>
-  );
+  return <PageContent />;
 }

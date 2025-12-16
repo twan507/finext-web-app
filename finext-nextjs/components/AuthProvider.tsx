@@ -144,8 +144,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(null);
     setFeatures([]);
     setLoading(false);
-    // router.push('/login'); // Middleware sẽ xử lý redirect
-  }, []);
+    router.push('/'); // Chuyển về trang chủ mượt mà với Next.js router
+  }, [router]);
 
   const login = useCallback((sessionData: SessionData) => {
     saveSessionToStorage(sessionData); // Lưu user (có subscription_id), accessToken, features

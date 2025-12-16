@@ -231,7 +231,7 @@ const emptyChartData: ChartData = {
 export default function MarketIndexChart({
     symbol,
     title,
-    height = 368,
+    height = 345,
     eodData = emptyChartData,
     intradayData = emptyChartData,
     isLoading = false,
@@ -764,99 +764,82 @@ export default function MarketIndexChart({
 
     const isPositive = priceChange >= 0;
 
-    // Loading state
-    if (isLoading) {
-        return (
-            <Box
-                sx={{
-                    width: '100%',
-                    height: height,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexDirection: 'column',
-                    gap: 2
-                }}
-            >
-                <CircularProgress />
-                <Typography color="text.secondary">Đang tải dữ liệu biểu đồ...</Typography>
-            </Box>
-        );
-    }
-
-    // Error state
-    if (error) {
-        return (
-            <Box
-                sx={{
-                    width: '100%',
-                    height: height,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}
-            >
-                <Typography color="error">{error}</Typography>
-            </Box>
-        );
-    }
+    // Calculate total component height (header + controls + chart)
+    const headerHeight = 78; // ~78px for header (price info + title)
+    const controlsHeight = 48; // ~48px for controls
+    const totalHeight = headerHeight + controlsHeight + height;
 
     return (
         <Box
             sx={{
-                width: '100%'
+                width: '100%',
+                minHeight: totalHeight, // Fixed minimum height to prevent layout shift
             }}
         >
             {/* Header with price info */}
-            <Box sx={{ mb: 2 }}>
-                <Stack direction="row" alignItems="center" spacing={1.5}>
-                    <Typography
-                        variant="h4"
-                        sx={{
-                            fontWeight: 600,
-                            color: colors.textPrimary,
-                            fontSize: fontSize.h2.tablet
-                        }}
-                    >
-                        {currentPrice.toLocaleString('en-US', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                        })}
-                    </Typography>
-                    <Typography
-                        sx={{
-                            color: isPositive ? colors.upColor : colors.downColor,
-                            fontWeight: 500,
-                            fontSize: fontSize.h6.tablet
-                        }}
-                    >
-                        {isPositive ? '+' : ''}
-                        {priceChange.toLocaleString('en-US', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                        })}
-                    </Typography>
-                    <Chip
-                        label={`${isPositive ? '▲' : '▼'} ${Math.abs(percentChange).toFixed(2)}%`}
-                        size="small"
-                        sx={{
-                            backgroundColor: isPositive ? colors.upColor : colors.downColor,
-                            color: '#ffffff',
-                            fontWeight: 600,
-                            fontSize: fontSize.base.tablet,
-                            height: 24
-                        }}
-                    />
-                </Stack>
-                <Typography
-                    sx={{
-                        color: colors.textSecondary,
-                        fontSize: fontSize.base.tablet,
-                        mt: 0.5
-                    }}
-                >
-                    {title}
-                </Typography>
+            <Box sx={{ mb: 2, height: headerHeight }}>
+                {isLoading ? (
+                    // Loading skeleton for header
+                    <>
+                        <Stack direction="row" alignItems="center" spacing={1.5}>
+                            <Box sx={{ width: 120, height: 32, bgcolor: colors.buttonBackground, borderRadius: 1 }} />
+                            <Box sx={{ width: 60, height: 24, bgcolor: colors.buttonBackground, borderRadius: 1 }} />
+                            <Box sx={{ width: 80, height: 24, bgcolor: colors.buttonBackground, borderRadius: 2 }} />
+                        </Stack>
+                        <Box sx={{ width: 150, height: 20, bgcolor: colors.buttonBackground, borderRadius: 1, mt: 0.5 }} />
+                    </>
+                ) : (
+                    <>
+                        <Stack direction="row" alignItems="center" spacing={1.5}>
+                            <Typography
+                                variant="h4"
+                                sx={{
+                                    fontWeight: 600,
+                                    color: colors.textPrimary,
+                                    fontSize: fontSize.h2.tablet
+                                }}
+                            >
+                                {currentPrice.toLocaleString('en-US', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                })}
+                            </Typography>
+                            <Typography
+                                sx={{
+                                    color: isPositive ? colors.upColor : colors.downColor,
+                                    fontWeight: 500,
+                                    fontSize: fontSize.h6.tablet
+                                }}
+                            >
+                                {isPositive ? '+' : ''}
+                                {priceChange.toLocaleString('en-US', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                })}
+                            </Typography>
+                            <Chip
+                                label={`${isPositive ? '▲' : '▼'} ${Math.abs(percentChange).toFixed(2)}%`}
+                                size="small"
+                                sx={{
+                                    backgroundColor: isPositive ? colors.upColor : colors.downColor,
+                                    color: '#ffffff',
+                                    fontWeight: 600,
+                                    fontSize: fontSize.base.tablet,
+                                    height: 24
+                                }}
+                            />
+                        </Stack>
+                        <Typography
+                            sx={{
+                                color: colors.textSecondary,
+                                fontSize: fontSize.base.tablet,
+                                mt: 0.5
+                            }}
+                        >
+                            {title}
+                        </Typography>
+                    </>
+                )}
             </Box>
 
             {/* Controls */}
@@ -864,7 +847,7 @@ export default function MarketIndexChart({
                 direction="row"
                 justifyContent="space-between"
                 alignItems="center"
-                sx={{ mb: 2 }}
+                sx={{ mb: 2, height: controlsHeight }}
             >
                 {/* Time range buttons */}
                 <ToggleButtonGroup
@@ -962,12 +945,12 @@ export default function MarketIndexChart({
 
             {/* Chart container */}
             <Box
-                ref={chartContainerRef}
                 sx={{
                     width: '100%',
                     height: isFullscreen ? '100vh' : height,
                     borderRadius: isFullscreen ? 0 : 1,
                     overflow: 'hidden',
+                    position: 'relative',
                     ...(isFullscreen && {
                         position: 'fixed',
                         top: 0,
@@ -976,7 +959,59 @@ export default function MarketIndexChart({
                         backgroundColor: colors.containerBackground
                     })
                 }}
-            />
+            >
+                {/* Loading overlay */}
+                {isLoading && (
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexDirection: 'column',
+                            gap: 2,
+                            bgcolor: colors.containerBackground,
+                            zIndex: 1,
+                        }}
+                    >
+                        <CircularProgress />
+                        <Typography color="text.secondary">Đang tải dữ liệu biểu đồ...</Typography>
+                    </Box>
+                )}
+
+                {/* Error overlay */}
+                {error && (
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            bgcolor: colors.containerBackground,
+                            zIndex: 1,
+                        }}
+                    >
+                        <Typography color="error">{error}</Typography>
+                    </Box>
+                )}
+
+                {/* Actual chart container */}
+                <Box
+                    ref={chartContainerRef}
+                    sx={{
+                        width: '100%',
+                        height: '100%',
+                    }}
+                />
+            </Box>
         </Box>
     );
 }

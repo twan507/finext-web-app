@@ -1,14 +1,11 @@
-'use client';
+import type { Metadata } from 'next';
+import PageContent from './PageContent';
 
-import React from 'react';
-import Box from '@mui/material/Box';
+export const metadata: Metadata = {
+  title: 'Đăng nhập',
+};
 
-import SignInForm from '../components/LoginForm';
-
-export default function SignInPage() {
-  return (
-    <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-      <SignInForm />
-    </Box>
-  );
+export default function LoginPage() {
+  return <PageContent />;
 }
+

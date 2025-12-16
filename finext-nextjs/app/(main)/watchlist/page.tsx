@@ -1,16 +1,10 @@
-'use client';
+import type { Metadata } from 'next';
+import PageContent from './PageContent';
 
-import { Box, Typography } from '@mui/material';
+export const metadata: Metadata = {
+  title: 'Danh sách theo dõi',
+};
 
 export default function WatchlistPage() {
-  return (
-    <Box sx={{ py: 4 }}>
-      <Typography variant="h4" sx={{ mb: 2, fontWeight: 600 }}>
-        Danh sách theo dõi
-      </Typography>
-      <Typography variant="body1" color="text.secondary">
-        Quản lý và theo dõi các cổ phiếu yêu thích của bạn.
-      </Typography>
-    </Box>
-  );
+  return <PageContent />;
 }

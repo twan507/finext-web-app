@@ -145,7 +145,7 @@ const UserAvatar: React.FC<UserMenuProps> = ({ variant = 'icon', onNavigate, com
     const { isOpen: isSignInOpen, openModal: openSignInModal, closeModal: closeSignInModal } = useSignInModal();
     const [mounted, setMounted] = useState(false);
     const [licenseKey, setLicenseKey] = useState<string | null>(null);
-    const [licenseColor, setLicenseColor] = useState<string>("#1565c0");
+    const [licenseColor, setLicenseColor] = useState<string>("#666666"); // Màu xám mặc định khi loading
     const [isLoading, setIsLoading] = useState<boolean>(true);
 
     const handleOpenSignInModal = () => {

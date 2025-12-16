@@ -1,20 +1,10 @@
-'use client';
+import type { Metadata } from 'next';
+import PageContent from './PageContent';
 
-import { Box, Typography } from '@mui/material';
+export const metadata: Metadata = {
+  title: 'Phân tích nhóm',
+};
 
 export default function GroupAnalysisPage() {
-  return (
-    <Box sx={{ py: 4 }}>
-      <Typography variant="h4" sx={{ mb: 2, fontWeight: 600 }}>
-        Phân tích nhóm
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-        Lựa chọn một nhóm cổ phiếu để xem chi tiết phân tích, định giá và dòng tiền.
-      </Typography>
-
-      <Typography variant="body2" color="text.secondary">
-        Danh sách các nhóm cổ phiếu sẽ được hiển thị tại đây...
-      </Typography>
-    </Box>
-  );
+  return <PageContent />;
 }
