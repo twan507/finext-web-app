@@ -51,7 +51,7 @@ services:
           # Giới hạn cứng 256MB.
           # Với API cá nhân ít request, Python chạy ổn ở mức này.
           # Giúp tiết kiệm RAM cho Database.
-          memory: 256M
+          memory: 384M
         reservations:
           memory: 64M
     # ------------------------------------
@@ -84,7 +84,7 @@ services:
           # Giới hạn cứng 512MB (Khá chặt).
           # Đây là sự đánh đổi để dành RAM cho MongoDB/MSSQL.
           # Nếu app crash thường xuyên, hãy tăng lên 768M.
-          memory: 512M
+          memory: 384M
           
           # Giới hạn CPU ở mức 1.5 nhân (150%).
           # Ngăn chặn NextJS chiếm dụng 300% CPU gây treo toàn bộ VPS.
