@@ -135,7 +135,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         }}>
                             {/* Nút đăng nhập/đăng ký hiển thị khi chưa đăng nhập */}
                             {!session && (
-                                <AuthButtons variant={lgDown ? 'compact' : 'full'} />
+                                <AuthButtons />
                             )}
 
                             {/* UserAvatar hiển thị khi đã đăng nhập */}

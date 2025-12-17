@@ -10,7 +10,7 @@ import {
     Button,
     Typography
 } from '@mui/material';
-import { WatchlistPublicAdmin } from '../page';
+import { WatchlistPublicAdmin } from '../PageContent';
 
 interface EditWatchlistModalProps {
     open: boolean;

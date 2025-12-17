@@ -17,7 +17,7 @@ import {
     Clear as ClearIcon,
     FilterList as FilterIcon
 } from '@mui/icons-material';
-import { PermissionSystemPublic } from '../page';
+import { PermissionSystemPublic } from '../PageContent';
 import { fontSize } from 'theme/tokens';
 
 interface PermissionSearchProps {

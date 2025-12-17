@@ -17,7 +17,7 @@ import {
     Clear as ClearIcon,
     FilterList as FilterIcon
 } from '@mui/icons-material';
-import { WatchlistPublicAdmin } from '../page';
+import { WatchlistPublicAdmin } from '../PageContent';
 
 interface WatchlistSearchProps {
     watchlists: WatchlistPublicAdmin[];
