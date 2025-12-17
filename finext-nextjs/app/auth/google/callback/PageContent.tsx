@@ -1,7 +1,7 @@
-// finext-nextjs/app/auth/google/callback/page.tsx
+// finext-nextjs/app/auth/google/callback/PageContent.tsx
 'use client';
 
-import { useEffect, useState, Suspense } from 'react'; // Thêm Suspense
+import { useEffect, useState, Suspense, useCallback } from 'react'; // Thêm Suspense và useCallback
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from 'components/AuthProvider';
 import { apiClient } from 'services/apiClient';
@@ -24,16 +24,25 @@ function GoogleCallbackContent() {
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // Hàm redirect sau khi đăng nhập thành công
+  const redirectAfterLogin = useCallback(() => {
+    if (isRedirecting) return;
+    setIsRedirecting(true);
+    // Sử dụng window.location.href để full page reload, đảm bảo middleware nhận được cookie
+    window.location.href = '/';
+  }, [isRedirecting]);
+
   useEffect(() => {
     // Chỉ chạy logic khi component đã mounted và authProvider không còn loading và chưa có session
     if (!mounted || authLoading || session) {
-        if (session && !authLoading) { // Nếu đã có session và auth không loading, redirect
-            router.push('/');
+        if (session && !authLoading && !isRedirecting) { // Nếu đã có session và auth không loading, redirect
+            redirectAfterLogin();
         }
       return;
     }
@@ -91,9 +100,14 @@ function GoogleCallbackContent() {
                 features: featuresResponse.data || []
             };
             console.log('GoogleCallbackPage: Preparing to call login() with sessionData:', sessionData);
-            login(sessionData); // AuthProvider sẽ xử lý redirect
-            console.log('GoogleCallbackPage: login() called, AuthProvider should handle redirect.');
-            // Không cần setProcessing(false) ở đây vì login() sẽ gây unmount/redirect
+            login(sessionData);
+            console.log('GoogleCallbackPage: login() called, redirecting to home...');
+            
+            // Redirect về trang chủ sau khi đăng nhập thành công
+            // Sử dụng window.location.href để full page reload, đảm bảo middleware nhận được cookie
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 100);
           } else {
             const errMsg = (userResponse.message || featuresResponse.message || 'Không thể lấy thông tin người dùng hoặc features sau khi đăng nhập Google.');
             console.error('GoogleCallbackPage: Error fetching user/features:', errMsg);
@@ -128,9 +142,9 @@ function GoogleCallbackContent() {
       setProcessing(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, login, router, mounted, authLoading, session]); // Thêm mounted, authLoading, session vào dependencies
+  }, [searchParams, login, router, mounted, authLoading, session, isRedirecting, redirectAfterLogin]); // Thêm mounted, authLoading, session vào dependencies
 
-  if (!mounted || processing || authLoading || session ) {
+  if (!mounted || processing || authLoading || session || isRedirecting) {
     // Nếu đã có session, AuthProvider sẽ redirect, nhưng vẫn hiển thị loading ở đây cho đến khi redirect xảy ra
     return (
       <Container component="main" maxWidth="xs" sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', textAlign: 'center' }}>

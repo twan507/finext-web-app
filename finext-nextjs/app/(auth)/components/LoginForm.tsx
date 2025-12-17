@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, FormEvent, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, FormEvent, useEffect, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { apiClient } from 'services/apiClient';
 import { useAuth } from 'components/AuthProvider';
 
@@ -158,7 +158,7 @@ function GoogleLoginComponent({
 }
 
 
-export default function SignInForm() {
+function SignInFormContent() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -166,10 +166,15 @@ export default function SignInForm() {
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
+    const [isRedirecting, setIsRedirecting] = useState(false);
 
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { login, session, loading: authLoading } = useAuth();
     const [mounted, setMounted] = useState(false);
+
+    // Lấy callback URL từ query params (nếu có) hoặc mặc định về trang chủ
+    const callbackUrl = searchParams.get('callbackUrl') || '/';
 
     // Lấy Client ID từ environment variables
     const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
@@ -180,12 +185,23 @@ export default function SignInForm() {
         event.preventDefault();
     };
 
+    // Hàm redirect sau khi đăng nhập thành công
+    const redirectAfterLogin = useCallback(() => {
+        if (isRedirecting) return;
+        setIsRedirecting(true);
+        
+        // Sử dụng window.location.href để đảm bảo full page reload
+        // Điều này giúp middleware nhận được cookie mới nhất
+        window.location.href = callbackUrl;
+    }, [callbackUrl, isRedirecting]);
+
     useEffect(() => {
         setMounted(true);
-        if (!authLoading && session) {
-            router.push('/');
+        // Nếu đã có session (user đã đăng nhập), redirect về trang đích
+        if (!authLoading && session && !isRedirecting) {
+            redirectAfterLogin();
         }
-    }, [session, authLoading, router]);
+    }, [session, authLoading, redirectAfterLogin, isRedirecting]);
 
     const handleTraditionalSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -236,6 +252,12 @@ export default function SignInForm() {
                     };
                     login(sessionData);
                     setSuccessMessage(`Đăng nhập thành công! Đang chuyển hướng...`);
+                    
+                    // Sử dụng window.location.href để full page reload
+                    // Đảm bảo middleware nhận được cookie mới nhất từ backend
+                    setTimeout(() => {
+                        window.location.href = callbackUrl;
+                    }, 100);
                 } else {
                     setError(
                         (userResponse.message || 'Lỗi lấy thông tin user.') +
@@ -257,7 +279,8 @@ export default function SignInForm() {
         }
     };
 
-    if (!mounted || authLoading || (!authLoading && session)) {
+    // Hiển thị loading khi: chưa mount, đang check auth, đã có session (đang redirect), hoặc đang redirect
+    if (!mounted || authLoading || (!authLoading && session) || isRedirecting) {
         return (
             <Box
                 sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}
@@ -452,5 +475,18 @@ export default function SignInForm() {
                 </Typography>
             </Box>
         </Box>
+    );
+}
+
+// Wrap SignInFormContent với Suspense vì nó sử dụng useSearchParams
+export default function SignInForm() {
+    return (
+        <Suspense fallback={
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                <CircularProgress />
+            </Box>
+        }>
+            <SignInFormContent />
+        </Suspense>
     );
 }

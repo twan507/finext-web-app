@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText } from '@mui/material';
+import { Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Divider } from '@mui/material';
 import {
   PersonOutline,
   LockResetOutlined,
@@ -62,7 +62,7 @@ export default function LayoutContent({ children }: ProfileLayoutProps) {
           py: 1.5,
         }}
       >
-        <List sx={{ flex: 1, pr: { xs: 1.5, md: 2 } }}>
+        <List sx={{ pr: { xs: 1.5, md: 2 } }}>
           {menuItems.map((item) => (
             <ListItem key={item.href} disablePadding sx={{ mb: 0.5 }}>
               <ListItemButton
@@ -114,9 +114,11 @@ export default function LayoutContent({ children }: ProfileLayoutProps) {
               </ListItemButton>
             </ListItem>
           ))}
-        </List>
 
-        <List sx={{ pr: { xs: 1.5, md: 2 } }}>
+          {/* Divider phân cách */}
+          <Divider sx={{ my: 1, mr: { xs: 0, md: 0 } }} />
+
+          {/* Nút đăng xuất */}
           <ListItem disablePadding>
             <ListItemButton
               onClick={handleLogout}

@@ -152,8 +152,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(sessionData);
     setFeatures(sessionData.features || []);
     setLoading(false); // Sau khi login thành công, không còn loading
-    router.push('/');
-  }, [router]);
+    // Không redirect ở đây - để caller (LoginForm, Google callback, etc.) tự xử lý redirect
+    // Điều này cho phép các caller sử dụng callbackUrl hoặc window.location.href nếu cần
+  }, []);
 
   const hasFeature = useCallback((featureKey: string): boolean => {
     return features.includes(featureKey);

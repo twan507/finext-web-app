@@ -427,17 +427,23 @@ export default function PageContent() {
                     }}
                 />
 
-                <Box sx={{ display: 'flex', gap: 2 }}>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'stretch', flexWrap: 'wrap' }}>
                     <Button
                         variant="contained"
                         size="medium"
                         sx={{
                             px: 3,
                             py: 1,
+                            minHeight: 40,
+                            minWidth: 120,
                             borderRadius: 2,
                             fontWeight: 'bold',
                             textTransform: 'none',
                             boxShadow: 2,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flex: { xs: '1 1 auto', sm: '0 0 auto' },
                             '&:hover': {
                                 boxShadow: 4,
                             }
@@ -458,9 +464,15 @@ export default function PageContent() {
                             sx={{
                                 px: 3,
                                 py: 1,
+                                minHeight: 40,
+                                minWidth: 120,
                                 borderRadius: 2,
                                 fontWeight: 'bold',
                                 textTransform: 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flex: { xs: '1 1 auto', sm: '0 0 auto' },
                                 borderColor: theme.palette.mode === 'light' ? '#d32f2f' : '#f44336',
                                 color: theme.palette.mode === 'light' ? '#d32f2f' : '#f44336',
                                 '&:hover': {
