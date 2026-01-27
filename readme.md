@@ -1,112 +1,97 @@
 # Finext Web Application
 
-Dự án Finext là một ứng dụng web full-stack với backend được xây dựng bằng FastAPI và frontend sử dụng Next.js.
-Các skill
+Full-stack web application với FastAPI backend và Next.js frontend.
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/twan507/finext-web-app)
+
+## AI Skills
+
+Cài đặt các skills cho AI coding assistant:
+
+```bash
+# Vercel Agent Skills
 npx skills add vercel-labs/agent-skills
+
+# UI Pro CLI
 npm install -g uipro-cli
 uipro init --ai antigravity
+```
 
-## Công Nghệ Sử Dụng
+## Tech Stack
 
-### Backend (`finext-fastapi`)
-* **Framework**: FastAPI
-* **Ngôn ngữ**: Python 3.7+
-* **Cơ sở dữ liệu**: MongoDB (với Motor cho thao tác bất đồng bộ)
-* **Xác thực**: JWT (Access Token và Refresh Token qua HttpOnly Cookie)
-* **Quản lý môi trường**: `venv`, `python-dotenv`
+| Component | Technology |
+|-----------|------------|
+| **Backend** | FastAPI, Python 3.13+, UV, MongoDB, JWT |
+| **Frontend** | Next.js 15, TypeScript, Material UI |
+| **Infrastructure** | Docker, Nginx |
 
-### Frontend (`finext-nextjs`)
-* **Framework**: Next.js 15 (App Router)
-* **Ngôn ngữ**: TypeScript
-* **UI**: Material UI (MUI)
-* **Quản lý theme**: `next-themes`
-* **Định dạng code**: Prettier
+## Yêu Cầu
 
----
-## Hướng Dẫn Kích Hoạt
+- Python 3.13+ & [UV](https://docs.astral.sh/uv/getting-started/installation/)
+- Node.js & npm
+- MongoDB
+- Docker (optional)
 
-### Yêu Cầu
-* Node.js và npm
-* Python 3.7+ và pip
-* MongoDB instance
-* Docker và Docker Compose (tùy chọn)
+## Quick Start
 
-### Backend (`finext-fastapi`)
-1.  **Thiết lập môi trường ảo và cài đặt dependencies (dành cho lần đàu tiên):**
-    - Tạo thư mục môi trường ảo (nếu chưa có)
-    ```bash
-    python -m venv venv
-    ```
-    - Kích hoạt môi trường ảo
-    ```bash
-    .\\venv\\Scripts\\activate
-    ```
-    - Cài đặt các thư viện cần thiết
-    ```bash
-    pip install -r requirements.txt
-    ```
+### Backend
 
-    - Chạy ứng dụng
-    ```bash
-    uvicorn app.main:app --reload --env-file .\.env.development
-    ```
+```bash
+cd finext-fastapi
+uv sync                                                           # Cài dependencies
+uv run uvicorn app.main:app --reload --env-file .env.development  # Chạy server
+```
 
-    - Thoát môi trường ảo
-    ```bash
-    deactivate
-    ```
-   
-2.  **Cập nhật `requirements.txt` (nếu có thay đổi thư viện):**
-    Sau khi cài đặt hoặc gỡ bỏ các gói, bạn có thể cập nhật lại file `requirements.txt`:
-    ```bash
-    pip freeze > requirements.txt
-    ```
-   
-3.  **Cấu hình biến môi trường:** Sao chép `finext-fastapi/.env.example` thành `finext-fastapi/.env` và cập nhật. Đối với production, sử dụng `.env.production`.
+Hoặc sử dụng script `main.py`:
 
-4.  **Chạy server (Từ lần thứ 2 trở đi):**
-    ```bash
-    python main.py              # Chạy server
-    python main.py run          # Chạy server
-    python main.py venv         # Tạo môi trường ảo
-    python main.py install      # Cài đặt dependencies
-    ```
+```bash
+python main.py          # Chạy server (mặc định)
+python main.py venv     # Tạo môi trường ảo
+python main.py install  # Cài dependencies (uv sync)
+python main.py lock     # Tạo/cập nhật lockfile
+```
 
-    Server chạy tại `http://127.0.0.1:8000`.
+→ API: http://127.0.0.1:8000 | Docs: http://127.0.0.1:8000/api/v1/docs
 
-### Frontend (`finext-nextjs`)
-1.  **Cài đặt dependencies:**
-    ```bash
-    npm install
-    ```
-   
-2.  **Cấu hình biến môi trường:** Tạo `finext-nextjs/.env` với `NEXT_PUBLIC_API_URL=http://127.0.0.1:8000`. Đối với production, sử dụng `.env.production`.
-3.  **Chạy server development:**
-    ```bash
-    npm run dev
-    ```
-   
-    Ứng dụng chạy tại `http://localhost:3000`.
+### Frontend
 
-### Docker (Production)
-1.  **Cấu hình biến môi trường:** 
-    - Sao chép `.env.example` thành `.env.production` ở thư mục gốc của dự án (nơi chứa `docker-compose.yml`)
-    - Cập nhật các giá trị trong `.env.production` phù hợp với môi trường production
-2.  **Build và chạy container:**
-    ```bash
-    docker compose up -d --build
-    ```
+```bash
+cd finext-nextjs
+npm install      # Cài dependencies
+npm run dev      # Chạy server
+```
 
-### Development vs Production
-- **Development**: Sử dụng các file `.env` riêng lẻ trong từng service
-- **Production**: Sử dụng file `.env.production` chung cho toàn bộ hệ thống thông qua Docker Compose
+→ App: http://localhost:3000
 
----
-## Tài Liệu API (Backend)
+## Quản Lý Dependencies
 
-Khi backend FastAPI đang chạy, tài liệu API tự động có sẵn tại:
+### Backend (UV)
 
-* **Swagger UI**: `http://127.0.0.1:8000/api/v1/docs`
+```bash
+uv add <package>              # Thêm package
+uv add --group dev <package>  # Thêm dev dependency
+uv lock                       # Cập nhật lockfile
+uv sync                       # Đồng bộ môi trường
+```
 
-## DeepWiki
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/twan507/finext-web-app)
+### Frontend (npm)
+
+```bash
+npm install <package>         # Thêm package
+npm install -D <package>      # Thêm dev dependency
+```
+
+## Docker (Production)
+
+```bash
+# Build & Run
+docker compose --env-file .env.production up -d --build
+
+```
+
+## Environment Files
+
+| Môi trường | Backend | Frontend |
+|------------|---------|----------|
+| Development | `finext-fastapi/.env.development` | `finext-nextjs/.env` |
+| Production | `.env.production` (root) | `.env.production` (root) |

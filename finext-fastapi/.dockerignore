@@ -1,4 +1,10 @@
 .git
 __pycache__
+.venv
 venv
 *.pyc
+*.pyo
+*.pyd
+.env*
+.pytest_cache
+.mypy_cache

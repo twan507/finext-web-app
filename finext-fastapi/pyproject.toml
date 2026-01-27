@@ -1,0 +1,58 @@
+[project]
+name = "finext-fastapi"
+version = "1.0.0"
+description = "Finext FastAPI Backend Server"
+requires-python = ">=3.13"
+dependencies = [
+    # Core FastAPI
+    "fastapi>=0.115.12",
+    "uvicorn[standard]>=0.34.2",
+    "pydantic>=2.11.4",
+    "pydantic-settings>=2.9.1",
+    
+    # Database
+    "motor>=3.7.1",
+    "pymongo>=4.13.0",
+    
+    # Authentication
+    "bcrypt>=4.0.0",
+    "python-jose>=3.5.0",
+    "google-auth>=2.40.2",
+    "google-auth-oauthlib>=1.2.2",
+    
+    # Email
+    "fastapi-mail>=1.5.0",
+    "aiosmtplib>=3.0.2",
+    "email-validator>=2.2.0",
+    
+    # HTTP Client
+    "httpx>=0.28.1",
+    "requests>=2.32.3",
+    
+    # AWS
+    "boto3>=1.35.62",
+    
+    # Utils
+    "APScheduler>=3.11.0",
+    "python-multipart>=0.0.20",
+    "python-dotenv>=1.1.0",
+    "pandas>=2.2.3",
+    "pillow>=11.2.1",
+    "Jinja2>=3.1.6",
+    "PyYAML>=6.0.2",
+    "cryptography>=45.0.2",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+]
+

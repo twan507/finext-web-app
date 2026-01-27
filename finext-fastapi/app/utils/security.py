@@ -1,10 +1,6 @@
 # app/utils/security.py
-from passlib.context import CryptContext
+import bcrypt
 
-# Khởi tạo context cho việc hash mật khẩu
-# schemes=["bcrypt"] chỉ định thuật toán hash là bcrypt
-# deprecated="auto" tự động xử lý các hash cũ nếu bạn thay đổi thuật toán trong tương lai
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
@@ -17,7 +13,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         True nếu mật khẩu khớp, False nếu không.
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+
 
 def get_password_hash(password: str) -> str:
     """
@@ -29,5 +26,6 @@ def get_password_hash(password: str) -> str:
     Returns:
         Mật khẩu đã được hash.
     """
-    return pwd_context.hash(password)
-
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
+    return hashed.decode("utf-8")
