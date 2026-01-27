@@ -1,18 +1,49 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Box } from '@mui/material';
-import MarketIndexChart, {
-    RawMarketData,
-    ChartData,
-    transformToChartData,
-    TimeRange
-} from './components/MarketIndexChart';
-import MiniIndexCard from './components/MiniIndexCard';
-import MarketSection from './components/MarketSection';
-import IndustrySection from './components/IndustrySection';
-import StockSection from './components/StockSection';
-import MoneyFlowSection from './components/MoneyFlowSection';
+import dynamic from 'next/dynamic';
+import { Box, Skeleton } from '@mui/material';
+
+// Import types từ MarketIndexChart (types được export riêng, không ảnh hưởng bundle)
+import type { RawMarketData, ChartData, TimeRange } from './components/MarketIndexChart';
+import { transformToChartData } from './components/MarketIndexChart';
+
+// Lazy load heavy chart components để giảm initial bundle size
+const MarketIndexChart = dynamic(
+    () => import('./components/MarketIndexChart').then(mod => ({ default: mod.default })),
+    {
+        loading: () => <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 2 }} />,
+        ssr: false
+    }
+);
+
+const MiniIndexCard = dynamic(
+    () => import('./components/MiniIndexCard'),
+    {
+        loading: () => <Skeleton variant="rectangular" height={120} sx={{ borderRadius: 2 }} />,
+        ssr: false
+    }
+);
+
+const MarketSection = dynamic(
+    () => import('./components/MarketSection'),
+    { loading: () => <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, my: 2 }} /> }
+);
+
+const IndustrySection = dynamic(
+    () => import('./components/IndustrySection'),
+    { loading: () => <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, my: 2 }} /> }
+);
+
+const StockSection = dynamic(
+    () => import('./components/StockSection'),
+    { loading: () => <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, my: 2 }} /> }
+);
+
+const MoneyFlowSection = dynamic(
+    () => import('./components/MoneyFlowSection'),
+    { loading: () => <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, my: 2 }} /> }
+);
 
 // Import API clients
 import { apiClient } from 'services/apiClient';

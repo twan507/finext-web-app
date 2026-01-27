@@ -1,5 +1,4 @@
-'use client';
-
+// Server Component - không cần 'use client' vì chỉ render static content
 import { Box, Typography } from '@mui/material';
 
 export default function MarketsContent() {

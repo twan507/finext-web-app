@@ -1,19 +1,40 @@
 // finext-nextjs/app/layout.tsx
+import { Suspense } from 'react';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { MuiProvider } from '@/components/provider/MuiProvider';
 import { NextThemesProvider } from '@/components/provider/NextThemesProvider';
 import { NotificationProvider } from '@/components/provider/NotificationProvider';
 import './globals.css';
 
-// Import Roboto font
-import '@fontsource/roboto/300.css';
-import '@fontsource/roboto/400.css';
-import '@fontsource/roboto/500.css';
-import '@fontsource/roboto/700.css';
+// Optimized font loading với next/font
+import { Roboto, Poppins } from 'next/font/google';
 
-// THÊM IMPORT NÀY
-import { AppRouterCacheProvider } from '@mui/material-nextjs/v13-appRouter'; // Hoặc v14/v15 nếu có, nhưng v13 thường dùng cho App Router
-import type { Metadata } from 'next';
+const roboto = Roboto({
+  weight: ['300', '400', '500', '700'],
+  subsets: ['latin', 'vietnamese'],
+  display: 'swap',
+  variable: '--font-roboto',
+});
+
+const poppins = Poppins({
+  weight: ['300', '400', '500', '600', '700'],
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-poppins',
+});
+
+import { AppRouterCacheProvider } from '@mui/material-nextjs/v13-appRouter';
+import type { Metadata, Viewport } from 'next';
+
+// Viewport configuration tách riêng (Next.js 14+ best practice)
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#fafbfc' },
+    { media: '(prefers-color-scheme: dark)', color: '#0f0f0f' },
+  ],
+};
 
 export const metadata: Metadata = {
   title: {
@@ -21,7 +42,57 @@ export const metadata: Metadata = {
     template: '%s | Finext',
   },
   description: 'Finext - Nền tảng phân tích chứng khoán thông minh',
+  keywords: ['chứng khoán', 'phân tích', 'đầu tư', 'thị trường', 'cổ phiếu', 'Vietnam stock'],
+  authors: [{ name: 'Finext Team' }],
+  creator: 'Finext',
+  metadataBase: new URL('https://finext.vn'),
+  openGraph: {
+    type: 'website',
+    locale: 'vi_VN',
+    siteName: 'Finext',
+    title: 'Finext - Nền tảng phân tích chứng khoán thông minh',
+    description: 'Công cụ phân tích chứng khoán chuyên sâu cho nhà đầu tư Việt Nam',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Finext - Nền tảng phân tích chứng khoán thông minh',
+    description: 'Công cụ phân tích chứng khoán chuyên sâu cho nhà đầu tư Việt Nam',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
 };
+
+// Loading fallback component
+function RootLoading() {
+  return (
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: '100vh',
+      background: 'var(--background, #fafbfc)'
+    }}>
+      <div style={{
+        width: 40,
+        height: 40,
+        border: '3px solid #e0e0e0',
+        borderTop: '3px solid #8b5cf6',
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite'
+      }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
 
 export default function RootLayout({
   children,
@@ -29,29 +100,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="vi" suppressHydrationWarning className={`${roboto.variable} ${poppins.variable}`}>
       <head>
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/icon?family=Material+Icons"
-        />
-        {/* Add Poppins font from Google Fonts */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
       </head>
-      <body style={{ margin: 0, height: '100vh', overflow: 'auto' }}>
-        {/* BỌC BÊN NGOÀI MuiProvider */}
+      <body className={roboto.className} style={{ margin: 0, height: '100vh', overflow: 'auto' }}>
+        {/* AppRouterCacheProvider tối ưu emotion cache cho MUI */}
         <AppRouterCacheProvider options={{ key: 'css' }}>
           <NextThemesProvider>
             <NotificationProvider>
               <AuthProvider>
                 <MuiProvider>
-                  <div style={{ minHeight: '100vh' }}>
-                    {children}
-                  </div>
+                  {/* Suspense boundary cho page transitions */}
+                  <Suspense fallback={<RootLoading />}>
+                    <div style={{ minHeight: '100vh' }}>
+                      {children}
+                    </div>
+                  </Suspense>
                 </MuiProvider>
               </AuthProvider>
             </NotificationProvider>

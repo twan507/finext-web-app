@@ -98,14 +98,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
 
-  // Show loading only while checking auth, but don't block access
-  if (authLoading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: 'background.default' }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+  // OPTIMIZED: Không block render khi auth đang loading
+  // Public pages sẽ render ngay, auth state sẽ được hydrate sau
+  // Chỉ các UI elements phụ thuộc vào auth (như UserAvatar) sẽ hiển thị skeleton
 
   const findBestMatch = () => {
     let bestMatch: NavItem | undefined;

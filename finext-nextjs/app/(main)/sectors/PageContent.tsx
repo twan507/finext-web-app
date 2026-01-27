@@ -1,5 +1,4 @@
-'use client';
-
+// Server Component - static content, không cần 'use client'
 import { Box, Typography } from '@mui/material';
 
 export default function SectorsContent() {

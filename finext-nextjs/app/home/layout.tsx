@@ -47,14 +47,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         // Remove redirect to login for public access
     }, [session, authLoading, router]);
 
-    // Show loading only while checking auth, but don't block access
-    if (authLoading) {
-        return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: 'background.default' }}>
-                <CircularProgress />
-            </Box>
-        );
-    }
+    // OPTIMIZED: Không block render khi auth đang loading
+    // Home page là public, render ngay để cải thiện LCP
+
     return (
         <Box sx={{
             display: 'flex',

@@ -29,13 +29,14 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
     const themeOptions: ThemeOptions = {
       palette: currentPalette,
       typography: {
-        fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+        // Sử dụng CSS variables từ next/font để tối ưu font loading
+        fontFamily: 'var(--font-roboto), "Roboto", "Helvetica", "Arial", sans-serif',
         // All font sizes are handled via getResponsiveFontSize() in sx props
         // These are just fallback defaults
         logo: {
           fontSize: fontSize.h4.desktop,
           fontWeight: 550,
-          fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif'
+          fontFamily: 'var(--font-poppins), "Poppins", "Roboto", "Helvetica", "Arial", sans-serif'
         },
         h1: { fontSize: fontSize.h1.tablet, fontWeight: 700 },
         h2: { fontSize: fontSize.h2.tablet, fontWeight: 700 },
