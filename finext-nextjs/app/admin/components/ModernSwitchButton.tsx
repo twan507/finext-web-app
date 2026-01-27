@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Box, Typography, useTheme } from '@mui/material';
+import { transitions, durations, easings } from 'theme/tokens';
 
 interface CustomSwitchButtonProps {
     checked: boolean;
@@ -197,7 +198,7 @@ const ModernSwitchButton: React.FC<CustomSwitchButtonProps> = ({
                     : (theme.palette.mode === 'dark'
                         ? 'rgba(255, 255, 255, 0.2)'
                         : 'rgba(0, 0, 0, 0.2)'),
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                transition: `all ${durations.slow} ${easings.smooth}`,
                 '&::after': {
                     content: '""',
                     position: 'absolute',
@@ -210,7 +211,7 @@ const ModernSwitchButton: React.FC<CustomSwitchButtonProps> = ({
                     boxShadow: theme.palette.mode === 'dark'
                         ? '0 2px 4px rgba(0, 0, 0, 0.5)'
                         : '0 2px 4px rgba(0, 0, 0, 0.2)',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transition: `all ${durations.slow} ${easings.smooth}`,
                 }
             }}
         />
@@ -234,7 +235,7 @@ const ModernSwitchButton: React.FC<CustomSwitchButtonProps> = ({
                     bgcolor: getBgColor(checked, backgroundColor),
                     border: getBorderStyle(checked, borderStyle),
                     cursor: disabled ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transition: `all ${durations.slow} ${easings.smooth}`,
                     width: fullWidth ? '100%' : 'auto',
                     '&:hover': !disabled ? {
                         bgcolor: getHoverBgColor(checked, backgroundColor),
@@ -269,7 +270,7 @@ const ModernSwitchButton: React.FC<CustomSwitchButtonProps> = ({
                             borderRadius: '50%',
                             bgcolor: iconColors.bgColor,
                             color: iconColors.iconColor,
-                            transition: 'all 0.2s ease-in-out',
+                            transition: transitions.all,
                         }}
                     >
                         {icon}
@@ -285,7 +286,7 @@ const ModernSwitchButton: React.FC<CustomSwitchButtonProps> = ({
                             color: checked
                                 ? theme.palette.primary.main
                                 : 'text.primary',
-                            transition: 'color 0.2s ease'
+                            transition: transitions.colors
                         }}
                     >
                         {label}
@@ -298,7 +299,7 @@ const ModernSwitchButton: React.FC<CustomSwitchButtonProps> = ({
                                 color: checked
                                     ? theme.palette.primary.main
                                     : 'text.secondary',
-                                transition: 'color 0.2s ease',
+                                transition: transitions.colors,
                                 opacity: 0.8,
                                 mt: label ? 0.5 : 0
                             }}
@@ -329,7 +330,7 @@ const ModernSwitchButton: React.FC<CustomSwitchButtonProps> = ({
                     bgcolor: getBgColor(checked, backgroundColor),
                     border: getBorderStyle(checked, borderStyle),
                     cursor: disabled ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transition: `all ${durations.slow} ${easings.smooth}`,
                     '&:hover': !disabled ? {
                         bgcolor: getHoverBgColor(checked, backgroundColor),
                         borderColor: getHoverBorderColor(checked, borderStyle),
@@ -357,7 +358,7 @@ const ModernSwitchButton: React.FC<CustomSwitchButtonProps> = ({
                                 color: checked
                                     ? theme.palette.primary.main
                                     : 'text.primary',
-                                transition: 'color 0.2s ease'
+                                transition: transitions.colors
                             }}
                         >
                             {label}
@@ -371,7 +372,7 @@ const ModernSwitchButton: React.FC<CustomSwitchButtonProps> = ({
                                 color: checked
                                     ? theme.palette.primary.main
                                     : 'text.secondary',
-                                transition: 'color 0.2s ease',
+                                transition: transitions.colors,
                                 opacity: 0.8
                             }}
                         >
@@ -397,7 +398,7 @@ const ModernSwitchButton: React.FC<CustomSwitchButtonProps> = ({
                 p: config.padding,
                 borderRadius: borderRadius,
                 cursor: disabled ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s ease-in-out',
+                transition: transitions.all,
                 '&:hover': {
                     bgcolor: theme.palette.action.hover,
                 },
@@ -415,7 +416,7 @@ const ModernSwitchButton: React.FC<CustomSwitchButtonProps> = ({
                         borderRadius: '50%',
                         bgcolor: iconColors.bgColor,
                         color: iconColors.iconColor,
-                        transition: 'all 0.2s ease-in-out',
+                        transition: transitions.all,
                     }}
                 >
                     {icon}
@@ -431,7 +432,7 @@ const ModernSwitchButton: React.FC<CustomSwitchButtonProps> = ({
                             color: checked
                                 ? theme.palette.primary.main
                                 : 'text.primary',
-                            transition: 'color 0.2s ease',
+                            transition: transitions.colors,
                         }}
                     >
                         {label}

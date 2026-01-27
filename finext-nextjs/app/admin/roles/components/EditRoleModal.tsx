@@ -18,8 +18,10 @@ import {
     ToggleOff as ToggleOffIcon,
     ToggleOn as ToggleOnIcon
 } from '@mui/icons-material';
+import { transitions } from 'theme/tokens';
 import { apiClient } from 'services/apiClient';
 import ModernSwitchButton from '../../components/ModernSwitchButton';
+import { borderRadius, borderRadiusTop } from 'theme/tokens';
 
 interface RoleUpdateRequest {
     name: string;
@@ -60,7 +62,7 @@ const EditRoleModal: React.FC<EditRoleModalProps> = ({
     onRoleUpdated
 }) => {
     const theme = useTheme();
-    
+
 
     const [allPermissions, setAllPermissions] = useState<PermissionPublic[]>([]);
     const [categories, setCategories] = useState<string[]>([]);
@@ -558,7 +560,7 @@ const EditRoleModal: React.FC<EditRoleModalProps> = ({
                                                                 className="category-title"
                                                                 variant="body1"
                                                                 fontWeight="500"
-                                                                sx={{ transition: 'color 0.2s' }}
+                                                                sx={{ transition: transitions.colors }}
                                                             >
                                                                 {category}
                                                             </Typography>
@@ -582,7 +584,7 @@ const EditRoleModal: React.FC<EditRoleModalProps> = ({
                                                                 sx={{
                                                                     px: 1.5,
                                                                     py: 0.5,
-                                                                    borderRadius: '12px',
+                                                                    borderRadius: borderRadius.lg,
                                                                     '&:hover': {
                                                                         bgcolor: 'action.hover'
                                                                     }
@@ -679,7 +681,7 @@ const EditRoleModal: React.FC<EditRoleModalProps> = ({
                             right: 0,
                             height: '3px',
                             bgcolor: 'warning.main',
-                            borderRadius: '4px 4px 0 0'
+                            borderRadius: borderRadiusTop('sm')
                         },
                         position: 'relative'
                     }}>

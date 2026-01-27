@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useAuth } from 'components/AuthProvider';
+import { useAuth } from '@/components/auth/AuthProvider';
 import {
   AppBar, Box, CssBaseline, Drawer, Toolbar, List, ListItem, ListItemButton,
   ListItemIcon, ListItemText, Typography, CircularProgress, useTheme,
@@ -39,10 +39,10 @@ import {
   ContactPage
 } from '@mui/icons-material';
 
-import ThemeToggleButton from 'components/ThemeToggleButton';
-import BrandLogo from 'components/BrandLogo';
-import { layoutTokens, fontSize, iconSize } from '../../theme/tokens';
-import UserAvatar from '@/components/UserAvatar';
+import ThemeToggleButton from '@/components/themeToggle/ThemeToggleButton';
+import BrandLogo from '@/components/layout/BrandLogo';
+import { layoutTokens, fontSize, iconSize, borderRadius, shadows } from '../../theme/tokens';
+import UserAvatar from '@/components/layout/UserAvatar';
 
 interface NavItem {
   text: string;
@@ -148,7 +148,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     px: theme.spacing(1.25), // Desktop sidebar luôn expanded
     py: theme.spacing(isSubItem ? 1 : 1.25),
     minHeight: isSubItem ? 36 : 44,
-    borderRadius: '8px',
+    borderRadius: borderRadius.md,
     width: '100%',
     display: 'flex',
     alignItems: 'center',
@@ -311,7 +311,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     selected={isActive}
                     onClick={handleDrawerToggle}
                     sx={{
-                      borderRadius: '8px',
+                      borderRadius: borderRadius.md,
                       color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
                       backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
                       '&:hover': {
@@ -345,7 +345,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                           selected={isActive}
                           onClick={handleDrawerToggle}
                           sx={{
-                            borderRadius: '8px',
+                            borderRadius: borderRadius.md,
                             color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
                             backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
                             '&:hover': {
@@ -404,7 +404,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     onClick={handleDrawerToggle}
                     sx={{
                       py: 0.75,
-                      borderRadius: '6px',
+                      borderRadius: borderRadius.md,
                       color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
                       backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
                       '&:hover': {
@@ -441,7 +441,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                           onClick={handleDrawerToggle}
                           sx={{
                             py: 0.75,
-                            borderRadius: '6px',
+                            borderRadius: borderRadius.md,
                             color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
                             backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
                             '&:hover': {
@@ -575,7 +575,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               height: '100vh',
               display: 'flex',
               flexDirection: 'column',
-              boxShadow: '2px 0 8px rgba(0, 0, 0, 0.08)',
+              boxShadow: shadows.card,
               borderRight: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
               backdropFilter: 'blur(8px)',
             }
@@ -604,7 +604,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             top: 0,
             zIndex: theme.zIndex.appBar,
             height: layoutTokens.appBarHeight,
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+            boxShadow: shadows.appBar,
             borderBottom: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
             backdropFilter: 'blur(8px)',
           }}

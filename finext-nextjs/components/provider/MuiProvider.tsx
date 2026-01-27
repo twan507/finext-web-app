@@ -10,6 +10,8 @@ import {
   getMuiPaletteOptions,
   fontSize,
   getResponsiveFontSize,
+  shadows,
+  shadowsDark,
 } from 'theme/tokens';
 
 export function MuiProvider({ children }: { children: React.ReactNode }) {
@@ -134,7 +136,7 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
             paper: ({ theme }) => ({
               backgroundColor: theme.palette.component.modal.background,
               backgroundImage: 'none',
-              boxShadow: theme.palette.mode === 'dark' ? '0px 4px 20px rgba(0, 0, 0, 0.5)' : '0px 4px 20px rgba(0, 0, 0, 0.15)',
+              boxShadow: theme.palette.mode === 'dark' ? shadowsDark.lg : shadows.lg,
             })
           }
         },

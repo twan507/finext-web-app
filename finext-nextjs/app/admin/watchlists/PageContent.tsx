@@ -17,7 +17,7 @@ import {
     Delete as DeleteIcon
 } from '@mui/icons-material';
 import { format as formatDate, parseISO } from 'date-fns';
-import { fontSize, getResponsiveFontSize } from 'theme/tokens';
+import { fontSize, getResponsiveFontSize, transitions } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
     SortConfig,
@@ -45,7 +45,7 @@ interface PaginatedWatchlistsResponse {
 
 const WatchlistsPage: React.FC = () => {
     const theme = useTheme();
-     const [watchlists, setWatchlists] = useState<WatchlistPublicAdmin[]>([]);
+    const [watchlists, setWatchlists] = useState<WatchlistPublicAdmin[]>([]);
     const [filteredWatchlists, setFilteredWatchlists] = useState<WatchlistPublicAdmin[]>([]);
     const [isFiltering, setIsFiltering] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -483,7 +483,7 @@ const WatchlistsPage: React.FC = () => {
                                                                 color: 'primary.contrastText',
                                                                 transform: 'scale(1.05)',
                                                             },
-                                                            transition: 'all 0.2s ease-in-out'
+                                                            transition: transitions.all
                                                         }}
                                                     />
                                                 </Tooltip>

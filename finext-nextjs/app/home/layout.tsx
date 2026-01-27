@@ -2,17 +2,17 @@
 
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from 'components/AuthProvider';
+import { useAuth } from '@/components/auth/AuthProvider';
 import {
     AppBar, Box, CssBaseline, Toolbar, CircularProgress, useTheme,
     alpha, useMediaQuery
 } from '@mui/material';
 
 
-import BrandLogo from 'components/BrandLogo';
+import BrandLogo from '@/components/layout/BrandLogo';
 import AuthButtons from 'components/AuthButtons';
-import { layoutTokens } from '../../theme/tokens';
-import ThemeToggleButton from '@/components/ThemeToggleButton';
+import { layoutTokens, shadows, zIndex } from '../../theme/tokens';
+import ThemeToggleButton from '@/components/themeToggle/ThemeToggleButton';
 
 
 
@@ -85,7 +85,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <CssBaseline />
 
             {/* Theme Toggle Button */}
-            <Box sx={{ position: 'fixed', bottom: 16, right: 10, zIndex: 1000 }}>
+            <Box sx={{ position: 'fixed', bottom: 16, right: 10, zIndex: zIndex.dropdown }}>
                 <ThemeToggleButton />
             </Box>
 
@@ -96,12 +96,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 sx={{
                     width: '100%',
                     height: layoutTokens.appBarHeight,
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)', // Thêm đổ bóng viền dưới
-                    borderBottom: `1px solid ${alpha(theme.palette.divider, 0.12)}`, // Thêm viền mỏng
-                    backdropFilter: 'blur(8px)', // Thêm hiệu ứng blur
+                    boxShadow: shadows.appBar,
+                    borderBottom: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+                    backdropFilter: 'blur(8px)',
                     display: 'flex',
                     justifyContent: 'center',
-                    zIndex: 100, // Ensure AppBar is above all content
+                    zIndex: zIndex.sticky,
                 }}
             >
                 <Box sx={{ width: '100%', mx: 'auto' }}>

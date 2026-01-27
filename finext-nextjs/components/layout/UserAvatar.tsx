@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from 'components/AuthProvider';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { apiClient } from 'services/apiClient';
 import { useRouter } from 'next/navigation';
 import { useSignInModal } from 'hooks/useSignInModal';
@@ -11,7 +11,7 @@ import {
 } from '@mui/material';
 import { Person as PersonIcon } from '@mui/icons-material';
 import SignInModal from 'app/(auth)/components/LoginModal';
-import { fontSize, iconSize } from 'theme/tokens';
+import { fontSize, iconSize, borderRadius, shadows } from 'theme/tokens';
 
 interface ISubscription {
     _id: string;
@@ -116,8 +116,8 @@ function UserAvatarWithSubscription({
                         fontWeight: 'bold',
                         lineHeight: '1.4',
                         textTransform: 'uppercase',
-                        borderRadius: '4px', // Giảm từ 6px xuống 4px
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                        borderRadius: borderRadius.sm,
+                        boxShadow: shadows.sm,
                         whiteSpace: 'nowrap',
                     }}
                 >
@@ -257,7 +257,7 @@ const UserAvatar: React.FC<UserMenuProps> = ({ variant = 'icon', onNavigate, com
                                 px: 0.45,
                                 py: 0.15,
                                 fontSize: fontSize.badge.tablet,
-                                borderRadius: '4px',
+                                borderRadius: borderRadius.sm,
                                 border: theme.palette.mode === 'dark'
                                     ? '1px solid rgba(255, 255, 255, 0.1)'
                                     : '1px solid rgba(0, 0, 0, 0.05)',
@@ -323,7 +323,7 @@ const UserAvatar: React.FC<UserMenuProps> = ({ variant = 'icon', onNavigate, com
                                 px: 0.45,
                                 py: 0.15,
                                 fontSize: fontSize.badge.tablet,
-                                borderRadius: '4px',
+                                borderRadius: borderRadius.sm,
                                 border: theme.palette.mode === 'dark'
                                     ? '1px solid rgba(255, 255, 255, 0.1)'
                                     : '1px solid rgba(0, 0, 0, 0.05)',

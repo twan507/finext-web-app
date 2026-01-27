@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Button, TextField, Skeleton, useTheme, Alert, InputAdornment } from '@mui/material';
 import { Person, Email, Phone, AdminPanelSettings } from '@mui/icons-material';
-import { useAuth } from 'components/AuthProvider';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { apiClient } from 'services/apiClient';
-import { fontSize } from 'theme/tokens';
+import { fontSize, borderRadius } from 'theme/tokens';
 import Link from 'next/link';
 
 // Function để generate màu dựa trên user ID cho avatar
@@ -277,7 +277,7 @@ export default function PageContent() {
                                 py: 0.2,
                                 fontWeight: 'bold',
                                 textTransform: 'uppercase',
-                                borderRadius: '4px',
+                                borderRadius: borderRadius.sm,
                                 alignItems: 'center',
                             }}
                         >

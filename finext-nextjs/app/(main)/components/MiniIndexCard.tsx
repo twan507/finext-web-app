@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Box, Typography, Skeleton, useTheme } from '@mui/material';
 import dynamic from 'next/dynamic';
-import { fontSize } from 'theme/tokens';
+import { fontSize, transitions } from 'theme/tokens';
 import { ApexOptions } from 'apexcharts';
 
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
@@ -215,7 +215,7 @@ export default function MiniIndexCard({ symbol, itdData, hideOnTablet = false }:
         },
         // Ẩn card ở tablet và mobile nếu hideOnTablet = true
         display: hideOnTablet ? { xs: 'none', lg: 'block' } : 'block',
-        transition: 'all 0.2s ease',
+        transition: transitions.all,
         '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)' }
     };
 

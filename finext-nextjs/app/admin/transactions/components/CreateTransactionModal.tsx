@@ -13,6 +13,7 @@ import {
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
 import { filterNonSystemLicenses, isSystemLicense } from 'utils/systemProtection';
+import { borderRadiusTop } from 'theme/tokens';
 
 interface UserPublic {
     id: string;
@@ -70,7 +71,7 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
     onTransactionAdded
 }) => {
     const theme = useTheme();
-    
+
 
     const [allUsers, setAllUsers] = useState<UserPublic[]>([]);
     const [allLicenses, setAllLicenses] = useState<LicensePublic[]>([]);
@@ -601,7 +602,7 @@ const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({
                             right: 0,
                             height: '3px',
                             bgcolor: 'info.main',
-                            borderRadius: '4px 4px 0 0'
+                            borderRadius: borderRadiusTop('sm')
                         },
                         position: 'relative'
                     }}>

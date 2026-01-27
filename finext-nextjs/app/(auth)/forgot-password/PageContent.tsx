@@ -18,7 +18,7 @@ import VisibilityOff from '@mui/icons-material/VisibilityOffOutlined';
 import ArrowBack from '@mui/icons-material/ArrowBackIosNew';
 import AccessTime from '@mui/icons-material/AccessTime';
 
-import BrandLogo from 'components/BrandLogo';
+import BrandLogo from '@/components/layout/BrandLogo';
 import { fontSize, iconSize, layoutTokens } from 'theme/tokens';
 
 interface OtpRequestResponse {

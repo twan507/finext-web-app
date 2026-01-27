@@ -407,3 +407,269 @@ export const layoutTokens = {
     large: 20,
   },
 };
+
+// --------------------
+// SPACING TOKENS
+// --------------------
+// Based on 4px grid system (MUI default spacing unit = 8px, we use 4px for finer control)
+// Usage: sx={{ p: spacing.md }} or sx={{ gap: spacing.sm }}
+export const spacing = {
+  none: 0,      // 0px
+  xxs: 2,       // 2px - Minimal spacing (icons, tight elements)
+  xs: 4,        // 4px - Extra small (chip padding, icon gaps)
+  sm: 8,        // 8px - Small (button padding, list item gaps)
+  md: 16,       // 16px - Medium (card padding, section gaps)
+  lg: 24,       // 24px - Large (section padding, modal padding)
+  xl: 32,       // 32px - Extra large (page margins, major sections)
+  xxl: 48,      // 48px - Maximum (hero sections, major separations)
+  xxxl: 64,     // 64px - Extra maximum (landing page sections)
+} as const;
+
+// Responsive spacing helper
+// Usage: sx={{ p: getResponsiveSpacing('md') }}
+// Output: { xs: 8, md: 12, lg: 16 } (scaled down on mobile)
+export const getResponsiveSpacing = (size: keyof typeof spacing) => {
+  const baseValue = spacing[size];
+  return {
+    xs: Math.max(baseValue * 0.5, spacing.xxs),  // 50% on mobile, minimum 2px
+    md: Math.max(baseValue * 0.75, spacing.xs),  // 75% on tablet
+    lg: baseValue,                                // 100% on desktop
+  };
+};
+
+// --------------------
+// BORDER RADIUS TOKENS
+// --------------------
+// Consistent border radius across the app
+// Usage: sx={{ borderRadius: borderRadius.md }} or borderRadius: `${borderRadius.md}px`
+// Base border radius values (numeric for flexibility)
+export const borderRadius = {
+  none: 0,      // 0px - Sharp corners (dividers, full-width elements)
+  xs: 2,        // 2px - Subtle rounding (tags, badges)
+  sm: 4,        // 4px - Small rounding (chips, small buttons)
+  md: 8,        // 8px - Medium rounding (cards, inputs, buttons) ⭐ Default
+  lg: 12,       // 12px - Large rounding (modals, larger cards)
+  xl: 16,       // 16px - Extra large (feature cards, hero elements)
+  xxl: 24,      // 24px - Very large (special containers)
+  pill: 50,     // 50px - Pill/capsule shape for search inputs, tags
+  full: 9999,   // Full circle (avatar containers)
+} as const;
+
+// Type for base border radius keys (excluding compound patterns)
+type BorderRadiusSize = keyof typeof borderRadius;
+
+// Helper for consistent border radius in sx
+export const getBorderRadius = (size: BorderRadiusSize) => `${borderRadius[size]}px`;
+
+// --------------------
+// COMPOUND BORDER RADIUS HELPERS
+// --------------------
+// Generate compound border radius from base tokens
+// Usage: sx={{ borderRadius: borderRadiusTop('sm') }} => "4px 4px 0 0"
+
+/** Top corners only - e.g., tabs, sheet headers */
+export const borderRadiusTop = (size: BorderRadiusSize = 'sm') =>
+  `${borderRadius[size]}px ${borderRadius[size]}px 0 0`;
+
+/** Bottom corners only - e.g., bottom tabs, footers */
+export const borderRadiusBottom = (size: BorderRadiusSize = 'sm') =>
+  `0 0 ${borderRadius[size]}px ${borderRadius[size]}px`;
+
+/** Left corners only - e.g., left-side panels */
+export const borderRadiusLeft = (size: BorderRadiusSize = 'sm') =>
+  `${borderRadius[size]}px 0 0 ${borderRadius[size]}px`;
+
+/** Right corners only - e.g., right-side panels */
+export const borderRadiusRight = (size: BorderRadiusSize = 'sm') =>
+  `0 ${borderRadius[size]}px ${borderRadius[size]}px 0`;
+
+/** Top-left corner only */
+export const borderRadiusTopLeft = (size: BorderRadiusSize = 'sm') =>
+  `${borderRadius[size]}px 0 0 0`;
+
+/** Top-right corner only */
+export const borderRadiusTopRight = (size: BorderRadiusSize = 'sm') =>
+  `0 ${borderRadius[size]}px 0 0`;
+
+/** Bottom-left corner only */
+export const borderRadiusBottomLeft = (size: BorderRadiusSize = 'sm') =>
+  `0 0 0 ${borderRadius[size]}px`;
+
+/** Bottom-right corner only */
+export const borderRadiusBottomRight = (size: BorderRadiusSize = 'sm') =>
+  `0 0 ${borderRadius[size]}px 0`;
+
+/** Custom corners - specify each corner individually */
+export const borderRadiusCustom = (
+  topLeft: BorderRadiusSize = 'none',
+  topRight: BorderRadiusSize = 'none',
+  bottomRight: BorderRadiusSize = 'none',
+  bottomLeft: BorderRadiusSize = 'none'
+) => `${borderRadius[topLeft]}px ${borderRadius[topRight]}px ${borderRadius[bottomRight]}px ${borderRadius[bottomLeft]}px`;
+
+// --------------------
+// SHADOW TOKENS
+// --------------------
+// Elevation system for depth and hierarchy
+// Usage: sx={{ boxShadow: shadows.md }}
+export const shadows = {
+  none: 'none',
+
+  // Subtle shadows (hover states, subtle elevation)
+  xs: '0 1px 2px rgba(0, 0, 0, 0.05)',
+
+  // Small shadows (cards, dropdowns)
+  sm: '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
+
+  // Medium shadows (modals, popovers) ⭐ Default for floating elements
+  md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+
+  // Large shadows (dialogs, prominent floating elements)
+  lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+
+  // Extra large shadows (full-screen overlays)
+  xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+
+  // 2XL shadows (maximum elevation)
+  xxl: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+
+  // Special purpose shadows
+  drawer: '4px 0 16px rgba(0, 0, 0, 0.15)',      // Side drawers
+  drawerLeft: '-4px 0 16px rgba(0, 0, 0, 0.15)', // Left-side drawers
+  appBar: '0 2px 8px rgba(0, 0, 0, 0.08)',       // App bar/header
+  card: '0 2px 8px rgba(0, 0, 0, 0.08)',         // Cards
+  cardHover: '0 8px 16px rgba(0, 0, 0, 0.12)',   // Card hover state
+  button: '0 2px 4px rgba(0, 0, 0, 0.1)',        // Buttons
+  buttonHover: '0 4px 8px rgba(0, 0, 0, 0.15)',  // Button hover
+  input: '0 0 0 3px rgba(139, 92, 246, 0.1)',    // Input focus ring (primary color)
+
+  // Inner shadows
+  inner: 'inset 0 2px 4px rgba(0, 0, 0, 0.06)',
+  innerLg: 'inset 0 4px 8px rgba(0, 0, 0, 0.1)',
+} as const;
+
+// Dark mode shadows (less visible, more subtle)
+export const shadowsDark = {
+  ...shadows,
+  xs: '0 1px 2px rgba(0, 0, 0, 0.2)',
+  sm: '0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2)',
+  md: '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)',
+  lg: '0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2)',
+  xl: '0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
+  xxl: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+  drawer: '4px 0 24px rgba(0, 0, 0, 0.4)',
+  card: '0 2px 8px rgba(0, 0, 0, 0.3)',
+  cardHover: '0 8px 24px rgba(0, 0, 0, 0.4)',
+  input: '0 0 0 3px rgba(180, 126, 255, 0.2)', // Dark mode primary
+} as const;
+
+// --------------------
+// TRANSITION TOKENS
+// --------------------
+// Consistent animation timing across the app
+// Usage: sx={{ transition: transitions.fast }} or transition: `all ${durations.fast} ${easings.easeOut}`
+export const durations = {
+  instant: '0ms',       // No animation
+  fastest: '100ms',     // Micro-interactions (hover states)
+  fast: '150ms',        // Quick transitions (button press)
+  normal: '250ms',      // Standard transitions ⭐ Default
+  slow: '350ms',        // Deliberate animations (modal open)
+  slower: '500ms',      // Complex animations (page transitions)
+  slowest: '700ms',     // Long animations (loading sequences)
+} as const;
+
+export const easings = {
+  // Standard easings
+  linear: 'linear',
+  ease: 'ease',
+  easeIn: 'ease-in',
+  easeOut: 'ease-out',
+  easeInOut: 'ease-in-out',
+
+  // Custom easings for specific use cases
+  easeOutQuart: 'cubic-bezier(0.25, 1, 0.5, 1)',      // Smooth deceleration
+  easeInQuart: 'cubic-bezier(0.5, 0, 0.75, 0)',      // Smooth acceleration
+  easeInOutQuart: 'cubic-bezier(0.76, 0, 0.24, 1)',  // Smooth both ways
+
+  // Spring-like easings
+  spring: 'cubic-bezier(0.175, 0.885, 0.32, 1.275)', // Bouncy entrance
+  springOut: 'cubic-bezier(0.34, 1.56, 0.64, 1)',    // Overshoot then settle
+
+  // Emphasis easings
+  sharp: 'cubic-bezier(0.4, 0, 0.6, 1)',             // Quick and snappy
+  smooth: 'cubic-bezier(0.4, 0, 0.2, 1)',            // Material Design standard
+} as const;
+
+// Pre-composed transitions for common use cases
+// Usage: sx={{ transition: transitions.colors }}
+export const transitions = {
+  // Property-specific transitions
+  all: `all ${durations.normal} ${easings.smooth}`,
+  colors: `background-color ${durations.fast} ${easings.easeOut}, color ${durations.fast} ${easings.easeOut}, border-color ${durations.fast} ${easings.easeOut}`,
+  opacity: `opacity ${durations.fast} ${easings.easeOut}`,
+  shadow: `box-shadow ${durations.fast} ${easings.easeOut}`,
+  transform: `transform ${durations.normal} ${easings.easeOut}`,
+
+  // Component-specific transitions
+  button: `all ${durations.fast} ${easings.smooth}`,
+  card: `box-shadow ${durations.normal} ${easings.easeOut}, transform ${durations.normal} ${easings.easeOut}`,
+  modal: `opacity ${durations.slow} ${easings.easeOut}, transform ${durations.slow} ${easings.spring}`,
+  drawer: `transform ${durations.slow} ${easings.easeOutQuart}`,
+  tooltip: `opacity ${durations.fast} ${easings.easeOut}`,
+  menu: `opacity ${durations.fast} ${easings.easeOut}, transform ${durations.fast} ${easings.easeOut}`,
+
+  // Micro-interactions
+  hover: `all ${durations.fastest} ${easings.easeOut}`,
+  focus: `box-shadow ${durations.fast} ${easings.easeOut}, border-color ${durations.fast} ${easings.easeOut}`,
+  active: `transform ${durations.instant} ${easings.linear}`,
+} as const;
+
+// --------------------
+// BUTTON SIZE TOKENS
+// --------------------
+// Consistent button sizing
+export const buttonSize = {
+  xs: {
+    height: 24,
+    paddingX: spacing.sm,
+    fontSize: fontSize.xs,
+  },
+  sm: {
+    height: 30,
+    paddingX: spacing.md,
+    fontSize: fontSize.sm,
+  },
+  md: {
+    height: 36,
+    paddingX: spacing.lg,
+    fontSize: fontSize.base,
+  },
+  lg: {
+    height: 44,
+    paddingX: spacing.xl,
+    fontSize: fontSize.md,
+  },
+  xl: {
+    height: 52,
+    paddingX: spacing.xxl,
+    fontSize: fontSize.lg,
+  },
+} as const;
+
+// --------------------
+// Z-INDEX TOKENS
+// --------------------
+// Layering system for proper stacking
+export const zIndex = {
+  hide: -1,
+  base: 0,
+  dropdown: 1000,
+  sticky: 1100,
+  drawer: 1200,
+  modal: 1300,
+  popover: 1400,
+  tooltip: 1500,
+  toast: 1600,
+  overlay: 1700,
+  max: 9999,
+} as const;

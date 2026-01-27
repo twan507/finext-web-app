@@ -19,7 +19,7 @@ import {
     UnfoldLess as CollapseIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { fontSize, getResponsiveFontSize } from 'theme/tokens';
+import { fontSize, getResponsiveFontSize, borderRadiusTop } from 'theme/tokens';
 import BrokerSearch from './components/BrokerSearch';
 import SortableTableHead from '../components/SortableTableHead';
 import AddBrokerModal from './components/AddBrokerModal';
@@ -59,7 +59,7 @@ interface UserPublic {
 
 export default function BrokersPage() {
     const theme = useTheme();
-    
+
 
     const [brokers, setBrokers] = useState<BrokerPublic[]>([]);
     const [filteredBrokers, setFilteredBrokers] = useState<BrokerPublic[]>([]);
@@ -787,7 +787,7 @@ export default function BrokersPage() {
                             right: 0,
                             height: '3px',
                             bgcolor: actionType === 'revoke' ? 'error.main' : 'warning.main',
-                            borderRadius: '4px 4px 0 0'
+                            borderRadius: borderRadiusTop('sm')
                         },
                         position: 'relative'
                     }}>

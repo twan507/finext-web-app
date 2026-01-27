@@ -12,6 +12,7 @@ import {
     Close as CloseIcon
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
+import { borderRadiusTop } from 'theme/tokens';
 interface FeaturePublic {
     id: string;
     key: string;
@@ -38,7 +39,7 @@ const EditFeatureModal: React.FC<EditFeatureModalProps> = ({
     onFeatureUpdated
 }) => {
     const theme = useTheme();
-    
+
 
     const [formData, setFormData] = useState({
         name: '',
@@ -230,7 +231,7 @@ const EditFeatureModal: React.FC<EditFeatureModalProps> = ({
                             right: 0,
                             height: '3px',
                             bgcolor: 'warning.main',
-                            borderRadius: '4px 4px 0 0'
+                            borderRadius: borderRadiusTop('sm')
                         },
                         position: 'relative'
                     }}>

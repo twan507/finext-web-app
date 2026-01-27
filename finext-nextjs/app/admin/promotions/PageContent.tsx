@@ -20,7 +20,7 @@ import {
     DoDisturbOn as DeactivateIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { fontSize, getResponsiveFontSize } from 'theme/tokens';
+import { fontSize, getResponsiveFontSize, borderRadiusTop } from 'theme/tokens';
 import { formatUTCToGMT7 } from 'utils/dateUtils';
 import SortableTableHead from '../components/SortableTableHead';
 import {
@@ -62,7 +62,7 @@ interface PaginatedPromotionsResponse {
 
 export default function PromotionsPage() {
     const theme = useTheme();
-    
+
 
     const [promotions, setPromotions] = useState<PromotionPublic[]>([]);
     const [filteredPromotions, setFilteredPromotions] = useState<PromotionPublic[]>([]);
@@ -815,7 +815,7 @@ export default function PromotionsPage() {
                                     right: 0,
                                     height: '3px',
                                     bgcolor: 'error.main',
-                                    borderRadius: '4px 4px 0 0'
+                                    borderRadius: borderRadiusTop('sm')
                                 },
                                 position: 'relative'
                             }}>
@@ -929,7 +929,7 @@ export default function PromotionsPage() {
                             right: 0,
                             height: '3px',
                             bgcolor: 'info.main',
-                            borderRadius: '4px 4px 0 0'
+                            borderRadius: borderRadiusTop('sm')
                         },
                         position: 'relative'
                     }}>
@@ -1027,7 +1027,7 @@ export default function PromotionsPage() {
                             right: 0,
                             height: '3px',
                             bgcolor: 'warning.main',
-                            borderRadius: '4px 4px 0 0'
+                            borderRadius: borderRadiusTop('sm')
                         },
                         position: 'relative'
                     }}>

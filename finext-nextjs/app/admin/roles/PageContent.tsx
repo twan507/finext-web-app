@@ -21,7 +21,7 @@ import {
     DoDisturbOn as DeactivateIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { fontSize, getResponsiveFontSize } from 'theme/tokens';
+import { fontSize, getResponsiveFontSize, borderRadiusTop } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
     SortConfig,
@@ -50,7 +50,7 @@ interface PaginatedRolesResponse {
 
 export default function RolesPage() {
     const theme = useTheme();
-    
+
 
     const [roles, setRoles] = useState<RolePublic[]>([]);
     const [filteredRoles, setFilteredRoles] = useState<RolePublic[]>([]);
@@ -672,7 +672,7 @@ export default function RolesPage() {
                             right: 0,
                             height: '3px',
                             bgcolor: 'error.main',
-                            borderRadius: '4px 4px 0 0'
+                            borderRadius: borderRadiusTop('sm')
                         }
                     }}>
                         <Typography

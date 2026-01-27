@@ -4,8 +4,8 @@ import React from "react";
 import { Box } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import Gallery, { Slide } from "./components/Gallery";
-import ThemeToggleButton from "components/ThemeToggleButton";
-import { layoutTokens } from "theme/tokens";
+import ThemeToggleButton from "@/components/themeToggle/ThemeToggleButton";
+import { layoutTokens, shadows, zIndex } from "theme/tokens";
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -62,7 +62,7 @@ export default function LayoutContent({ children }: AuthLayoutProps) {
         borderRadius: 2,
         background: 'linear-gradient(180deg, rgba(10,8,20,0.86) 0%, rgba(12,10,28,0.92) 100%)',
         border: '1px solid rgba(255,255,255,0.08)',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.45)',
+        boxShadow: shadows.xxl,
         overflow: 'hidden',
       }}
     >
@@ -105,7 +105,7 @@ export default function LayoutContent({ children }: AuthLayoutProps) {
       }}
     >
       {/* Theme Toggle Button */}
-      <Box sx={{ position: 'fixed', top: 16, right: 16, zIndex: 1000 }}>
+      <Box sx={{ position: 'fixed', top: 16, right: 16, zIndex: zIndex.dropdown }}>
         <ThemeToggleButton />
       </Box>
 

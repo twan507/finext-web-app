@@ -21,7 +21,7 @@ import {
     DoDisturbOn as DeactivateIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { fontSize, getResponsiveFontSize } from 'theme/tokens';
+import { fontSize, getResponsiveFontSize, borderRadiusTop } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
     SortConfig,
@@ -55,7 +55,7 @@ interface PaginatedLicensesResponse {
 
 export default function LicensesPage() {
     const theme = useTheme();
-    
+
 
     const [licenses, setLicenses] = useState<LicensePublic[]>([]);
     const [filteredLicenses, setFilteredLicenses] = useState<LicensePublic[]>([]);
@@ -876,7 +876,7 @@ export default function LicensesPage() {
                             right: 0,
                             height: '3px',
                             bgcolor: 'warning.main',
-                            borderRadius: '4px 4px 0 0'
+                            borderRadius: borderRadiusTop('sm')
                         },
                         position: 'relative'
                     }}>
@@ -970,7 +970,7 @@ export default function LicensesPage() {
                             right: 0,
                             height: '3px',
                             bgcolor: 'info.main',
-                            borderRadius: '4px 4px 0 0'
+                            borderRadius: borderRadiusTop('sm')
                         },
                         position: 'relative'
                     }}>
@@ -1073,7 +1073,7 @@ export default function LicensesPage() {
                             right: 0,
                             height: '3px',
                             bgcolor: 'error.main',
-                            borderRadius: '4px 4px 0 0'
+                            borderRadius: borderRadiusTop('sm')
                         }
                     }}>
                         <Typography

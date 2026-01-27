@@ -20,7 +20,8 @@ import {
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
 import ModernSwitchButton from '../../components/ModernSwitchButton';
-import ColorPicker from '../../../../components/ColorPicker';
+import { borderRadiusTop } from 'theme/tokens';
+import ColorPicker from '../../../../components/layout/ColorPicker';
 import {
     getBasicFeatures,
     getSystemFeatures,
@@ -76,7 +77,7 @@ const EditLicenseModal: React.FC<EditLicenseModalProps> = ({
     onLicenseUpdated
 }) => {
     const theme = useTheme();
-    
+
 
     const [allFeatures, setAllFeatures] = useState<FeaturePublic[]>([]);
     const [formData, setFormData] = useState<LicenseUpdateRequest>({
@@ -631,7 +632,7 @@ const EditLicenseModal: React.FC<EditLicenseModalProps> = ({
                                 right: 0,
                                 height: '3px',
                                 bgcolor: 'warning.main',
-                                borderRadius: '4px 4px 0 0'
+                                borderRadius: borderRadiusTop('sm')
                             },
                             position: 'relative'
                         }}>

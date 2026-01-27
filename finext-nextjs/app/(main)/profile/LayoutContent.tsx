@@ -10,7 +10,7 @@ import {
   CardMembership,
   LogoutOutlined
 } from '@mui/icons-material';
-import { useAuth } from 'components/AuthProvider';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { fontSize } from 'theme/tokens';
 
 interface ProfileLayoutProps {

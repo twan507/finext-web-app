@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { useAuth } from 'components/AuthProvider';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { Box, Tooltip, Typography } from '@mui/material'; // Thêm Tooltip và Typography
 
 interface FeatureGuardProps {
@@ -34,7 +34,7 @@ const FeatureGuard: React.FC<FeatureGuardProps> = ({
   }
 
   if (hideWhenDisabled) {
-      return null;
+    return null;
   }
 
   if (dummyComponent) {
@@ -43,25 +43,25 @@ const FeatureGuard: React.FC<FeatureGuardProps> = ({
 
   // Nếu không có dummyComponent, thử disable children và thêm tooltip
   // Chỉ hoạt động tốt nếu children là component chấp nhận prop 'disabled' (như Button)
-  const isMuiComponent = React.isValidElement(children) && 
-    children.type && 
+  const isMuiComponent = React.isValidElement(children) &&
+    children.type &&
     (
       (typeof children.type === 'function' && (children.type as any).muiName) ||
       (children.props && typeof children.props === 'object' && children.props !== null && 'disabled' in children.props)
     );
 
   if (isMuiComponent) {
-      const disabledChild = React.cloneElement(
-        children,
-        { disabled: true } as Partial<React.ComponentProps<any>>
-      );
-      return (
-          <Tooltip title={tooltipMessage}>
-              <Box component="span" sx={{ cursor: 'not-allowed', display: 'inline-block' }}>
-                  {disabledChild}
-              </Box>
-          </Tooltip>
-      );
+    const disabledChild = React.cloneElement(
+      children,
+      { disabled: true } as Partial<React.ComponentProps<any>>
+    );
+    return (
+      <Tooltip title={tooltipMessage}>
+        <Box component="span" sx={{ cursor: 'not-allowed', display: 'inline-block' }}>
+          {disabledChild}
+        </Box>
+      </Tooltip>
+    );
   }
 
 

@@ -16,6 +16,7 @@ import {
     LockReset as LockResetIcon
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
+import { borderRadiusTop } from 'theme/tokens';
 interface UserPublic {
     id: string;
     role_ids: string[];
@@ -64,7 +65,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     onUserUpdated
 }) => {
     const theme = useTheme();
-    
+
 
     const [formData, setFormData] = useState({
         full_name: '',
@@ -596,7 +597,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                                 right: 0,
                                 height: '3px',
                                 bgcolor: 'warning.main',
-                                borderRadius: '4px 4px 0 0'
+                                borderRadius: borderRadiusTop('sm')
                             },
                             position: 'relative'
                         }}>

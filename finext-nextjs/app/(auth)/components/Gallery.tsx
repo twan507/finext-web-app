@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Typography } from '@mui/material';
-import {  layoutTokens  } from 'theme/tokens';
+import { layoutTokens, shadows, durations, easings } from 'theme/tokens';
 
 export interface Slide {
     overline: string;
@@ -70,7 +70,7 @@ export default function Gallery({
         <Box sx={{ maxWidth: layoutTokens.authGalleryMaxWidth, position: 'relative' }}>
             <Box
                 sx={{
-                    transition: 'opacity 500ms ease-in-out, transform 500ms ease-in-out',
+                    transition: `opacity ${durations.slower} ${easings.easeInOut}, transform ${durations.slower} ${easings.easeInOut}`,
                     ...animationStyle,
                 }}
             >
@@ -116,7 +116,7 @@ export default function Gallery({
                             borderRadius: 2,
                             background: 'linear-gradient(180deg, rgba(10,8,20,0.86) 0%, rgba(12,10,28,0.92) 100%)',
                             border: '1px solid rgba(255,255,255,0.08)',
-                            boxShadow: '0 20px 60px rgba(0,0,0,0.45)',
+                            boxShadow: shadows.xxl,
                             overflow: 'hidden',
                         }}
                     >
@@ -149,7 +149,7 @@ export default function Gallery({
                                     ? 'rgba(140,90,255,0.6)'
                                     : 'rgba(80,60,140,0.3)',
                             cursor: 'pointer',
-                            transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                            transition: `all ${durations.slow} ${easings.smooth}`,
                             position: 'relative',
                             '&:hover': {
                                 backgroundColor: i === currentSlide

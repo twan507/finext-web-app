@@ -18,6 +18,7 @@ import {
     Palette as PaletteIcon,
     Close as CloseIcon
 } from '@mui/icons-material';
+import { borderRadius, transitions } from 'theme/tokens';
 
 interface HSV {
     h: number; // 0-360
@@ -153,11 +154,11 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
     const getSizeConfig = () => {
         switch (size) {
             case 'small':
-                return { width: 24, height: 24, borderRadius: variant === 'circle' ? '50%' : '4px' };
+                return { width: 24, height: 24, borderRadius: variant === 'circle' ? '50%' : borderRadius.sm };
             case 'large':
-                return { width: 40, height: 40, borderRadius: variant === 'circle' ? '50%' : '6px' };
+                return { width: 40, height: 40, borderRadius: variant === 'circle' ? '50%' : borderRadius.md };
             default:
-                return { width: 32, height: 32, borderRadius: variant === 'circle' ? '50%' : '4px' };
+                return { width: 32, height: 32, borderRadius: variant === 'circle' ? '50%' : borderRadius.sm };
         }
     };
 
@@ -175,7 +176,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
                         height: sizeConfig.height + 8,
                         backgroundColor: value,
                         border: `2px solid ${theme.palette.divider}`,
-                        borderRadius: '8px',
+                        borderRadius: borderRadius.md,
                         '&:hover': {
                             backgroundColor: value,
                             opacity: 0.8,
@@ -185,7 +186,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
                             opacity: 0.5,
                             cursor: 'not-allowed'
                         },
-                        transition: 'all 0.2s ease-in-out',
+                        transition: transitions.all,
                     }}
                 >
                     <PaletteIcon
@@ -214,7 +215,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
                         boxShadow: theme.shadows[4],
                     },
                     opacity: disabled ? 0.5 : 1,
-                    transition: 'all 0.2s ease-in-out',
+                    transition: transitions.all,
                 }}
             />
         );
@@ -242,7 +243,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
                 PaperProps={{
                     elevation: 8,
                     sx: {
-                        borderRadius: '12px',
+                        borderRadius: borderRadius.lg,
                         overflow: 'hidden',
                         border: `1px solid ${theme.palette.divider}`,
                         width: 250
@@ -274,7 +275,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
                             sx={{
                                 width: '100%',
                                 height: 150,
-                                borderRadius: '6px',
+                                borderRadius: borderRadius.md,
                                 background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${localHsv.h}, 100%, 50%))`,
                                 position: 'relative',
                                 cursor: 'crosshair',
@@ -325,7 +326,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
                                 mb: 2,
                                 '& .MuiSlider-rail': {
                                     height: 10,
-                                    borderRadius: '5px',
+                                    borderRadius: borderRadius.sm,
                                     opacity: 1,
                                     background: 'linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)',
                                 },
@@ -357,7 +358,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
                                 sx={{
                                     width: 36,
                                     height: 36,
-                                    borderRadius: '6px',
+                                    borderRadius: borderRadius.md,
                                     backgroundColor: value,
                                     border: `1px solid ${theme.palette.divider}`,
                                     flexShrink: 0,

@@ -20,6 +20,7 @@ import {
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
 import ModernSwitchButton from '../../components/ModernSwitchButton';
+import { borderRadiusTop } from 'theme/tokens';
 import {
     getBasicFeatures,
     getSystemFeatures,
@@ -59,7 +60,7 @@ const CreateLicenseModal: React.FC<CreateLicenseModalProps> = ({
     onLicenseCreated
 }) => {
     const theme = useTheme();
-    
+
 
     const [allFeatures, setAllFeatures] = useState<FeaturePublic[]>([]); const [formData, setFormData] = useState<LicenseCreateRequest>({
         key: '',
@@ -638,7 +639,7 @@ const CreateLicenseModal: React.FC<CreateLicenseModalProps> = ({
                             right: 0,
                             height: '3px',
                             bgcolor: 'info.main',
-                            borderRadius: '4px 4px 0 0'
+                            borderRadius: borderRadiusTop('sm')
                         },
                         position: 'relative'
                     }}>

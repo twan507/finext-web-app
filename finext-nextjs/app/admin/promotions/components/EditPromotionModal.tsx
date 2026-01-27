@@ -17,6 +17,7 @@ import { apiClient } from 'services/apiClient';
 import { convertGMT7ToUTC, convertUTCToGMT7DateString } from 'utils/dateUtils';
 import { filterNonSystemLicenses } from 'utils/systemProtection';
 import ModernSwitchButton from '../../components/ModernSwitchButton';
+import { borderRadiusTop } from 'theme/tokens';
 
 enum DiscountTypeEnumFE {
     PERCENTAGE = "percentage",
@@ -71,7 +72,7 @@ const EditPromotionModal: React.FC<EditPromotionModalProps> = ({
     onPromotionUpdated
 }) => {
     const theme = useTheme();
-    
+
 
     const [allLicenses, setAllLicenses] = useState<LicensePublic[]>([]);
 
@@ -494,7 +495,7 @@ const EditPromotionModal: React.FC<EditPromotionModalProps> = ({
                             right: 0,
                             height: '3px',
                             bgcolor: 'warning.main',
-                            borderRadius: '4px 4px 0 0'
+                            borderRadius: borderRadiusTop('sm')
                         },
                         position: 'relative'
                     }}>

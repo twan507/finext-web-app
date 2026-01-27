@@ -4,7 +4,7 @@ import React from 'react';
 import { Container, Typography, Box, Button } from '@mui/material';
 import { useSignInModal } from 'hooks/useSignInModal';
 import { useRegisterModal } from 'hooks/useRegisterModal';
-import { useAuth } from 'components/AuthProvider';
+import { useAuth } from '@/components/auth/AuthProvider';
 import SignInModal from '../(auth)/components/LoginModal';
 import RegisterModal from '../(auth)/components/RegisterModal';
 

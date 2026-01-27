@@ -19,7 +19,7 @@ import {
 	UnfoldLess as CollapseIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { fontSize, getResponsiveFontSize } from 'theme/tokens';
+import { fontSize, getResponsiveFontSize, borderRadiusTop } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import SubscriptionSearch from './components/SubscriptionSearch';
 import CreateSubscriptionModal from './components/CreateSubscriptionModal';
@@ -52,7 +52,7 @@ interface PaginatedSubscriptionsResponse {
 
 export default function SubscriptionsPage() {
 	const theme = useTheme();
-	
+
 
 	const [subscriptions, setSubscriptions] = useState<SubscriptionPublic[]>([]);
 	const [filteredSubscriptions, setFilteredSubscriptions] = useState<SubscriptionPublic[]>([]);
@@ -823,7 +823,7 @@ export default function SubscriptionsPage() {
 							right: 0,
 							height: '3px',
 							bgcolor: 'warning.main',
-							borderRadius: '4px 4px 0 0'
+							borderRadius: borderRadiusTop('sm')
 						},
 						position: 'relative'
 					}}>
@@ -916,7 +916,7 @@ export default function SubscriptionsPage() {
 							right: 0,
 							height: '3px',
 							bgcolor: 'info.main',
-							borderRadius: '4px 4px 0 0'
+							borderRadius: borderRadiusTop('sm')
 						},
 						position: 'relative'
 					}}>
@@ -1018,7 +1018,7 @@ export default function SubscriptionsPage() {
 							right: 0,
 							height: '3px',
 							bgcolor: 'error.main',
-							borderRadius: '4px 4px 0 0'
+							borderRadius: borderRadiusTop('sm')
 						}
 					}}>
 						<Typography

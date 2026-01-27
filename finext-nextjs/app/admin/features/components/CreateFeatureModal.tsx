@@ -13,6 +13,7 @@ import {
     Close as CloseIcon
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
+import { borderRadiusTop } from 'theme/tokens';
 interface FeatureCreate {
     key: string;
     name: string;
@@ -31,7 +32,7 @@ const CreateFeatureModal: React.FC<CreateFeatureModalProps> = ({
     onFeatureCreated
 }) => {
     const theme = useTheme();
-    
+
 
     const [formData, setFormData] = useState<FeatureCreate>({
         key: '',
@@ -235,7 +236,7 @@ const CreateFeatureModal: React.FC<CreateFeatureModalProps> = ({
                             right: 0,
                             height: '3px',
                             bgcolor: 'info.main',
-                            borderRadius: '4px 4px 0 0'
+                            borderRadius: borderRadiusTop('sm')
                         },
                         position: 'relative'
                     }}>

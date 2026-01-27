@@ -11,7 +11,7 @@ import {
     useTheme
 } from '@mui/material';
 import { SortDirection, ColumnConfig, getResponsiveDisplayStyle } from './TableSortUtils';
-import { fontSize } from 'theme/tokens';
+import { fontSize, transitions } from 'theme/tokens';
 
 interface SortableTableHeadProps {
     columns: ColumnConfig[];
@@ -79,7 +79,7 @@ const SortableTableHead: React.FC<SortableTableHeadProps> = ({
                             '& .MuiTableSortLabel-icon': {
                                 fontSize: fontSize.base.tablet,
                                 opacity: isActive && direction ? 1 : 0,
-                                transition: 'opacity 0.15s ease-in-out',
+                                transition: transitions.opacity,
                                 marginLeft: '4px',
                                 color: theme.palette.component.tableHead.sortIcon,
                             },

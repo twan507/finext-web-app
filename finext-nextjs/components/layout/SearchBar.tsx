@@ -18,7 +18,7 @@ import {
     Clear as ClearIcon,
     Close as CloseIcon,
 } from '@mui/icons-material';
-import { fontSize, iconSize } from 'theme/tokens';
+import { fontSize, iconSize, borderRadius, shadows } from 'theme/tokens';
 
 interface SearchBarProps {
     placeholder?: string;
@@ -118,6 +118,7 @@ export default function SearchBar({
                 <Tooltip title="Tìm kiếm" placement="bottom">
                     <IconButton
                         onClick={handleOpenDrawer}
+                        aria-label="Mở tìm kiếm"
                         sx={{
                             p: 0, // Không padding để nút sát cạnh phải
                             color: theme.palette.text.secondary,
@@ -127,7 +128,7 @@ export default function SearchBar({
                             },
                         }}
                     >
-                        <SearchIcon />
+                        <SearchIcon aria-hidden="true" />
                     </IconButton>
                 </Tooltip>
 
@@ -138,10 +139,11 @@ export default function SearchBar({
                     onClose={handleCloseDrawer}
                     ModalProps={{ keepMounted: true }}
                     elevation={0}
+                    aria-label="Tìm kiếm"
                     sx={{
                         '& .MuiDrawer-paper': {
                             width: { xs: 300, sm: 320 },
-                            boxShadow: '-4px 0 16px rgba(0, 0, 0, 0.15)',
+                            boxShadow: shadows.drawerLeft,
                             backdropFilter: 'blur(12px)',
                             backgroundColor: theme.palette.background.paper,
                         },
@@ -150,16 +152,22 @@ export default function SearchBar({
                     <Box sx={{ p: 3 }}>
                         {/* Header với nút đóng */}
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                            <Box sx={{
-                                color: theme.palette.text.primary,
-                                fontWeight: 600,
-                                fontSize: fontSize.lg.tablet
-                            }}>
+                            <Box
+                                component="h2"
+                                id="search-drawer-title"
+                                sx={{
+                                    color: theme.palette.text.primary,
+                                    fontWeight: 600,
+                                    fontSize: fontSize.lg.tablet,
+                                    m: 0,
+                                }}
+                            >
                                 Tìm kiếm
                             </Box>
                             <IconButton
                                 onClick={handleCloseDrawer}
                                 size="small"
+                                aria-label="Đóng tìm kiếm"
                                 sx={{
                                     color: theme.palette.text.secondary,
                                     '&:hover': {
@@ -168,7 +176,7 @@ export default function SearchBar({
                                     },
                                 }}
                             >
-                                <CloseIcon fontSize="small" />
+                                <CloseIcon fontSize="small" aria-hidden="true" />
                             </IconButton>
                         </Box>
 
@@ -215,7 +223,7 @@ export default function SearchBar({
                                         </InputAdornment>
                                     ),
                                     sx: {
-                                        borderRadius: '50px',
+                                        borderRadius: borderRadius.pill,
                                         fontSize: fontSize.lg.tablet,
                                         '& .MuiOutlinedInput-notchedOutline': {
                                             border: 'none',
@@ -303,7 +311,7 @@ export default function SearchBar({
                         </InputAdornment>
                     ),
                     sx: {
-                        borderRadius: '50px',
+                        borderRadius: borderRadius.pill,
                         backgroundColor: theme.palette.background.paper,
                         backdropFilter: 'blur(8px)',
                         transition: theme.transitions.create([

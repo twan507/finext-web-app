@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
+import { borderRadiusTop } from 'theme/tokens';
 interface RolePublic {
     id: string;
     name: string;
@@ -39,13 +40,13 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
     roles
 }) => {
     const theme = useTheme();
-     const [formData, setFormData] = useState<UserCreate>({
-            full_name: '',
-            email: '',
-            phone_number: '',
-            password: '',
-            referral_code: ''
-        }); const [loading, setLoading] = useState(false);
+    const [formData, setFormData] = useState<UserCreate>({
+        full_name: '',
+        email: '',
+        phone_number: '',
+        password: '',
+        referral_code: ''
+    }); const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
     const [confirmPassword, setConfirmPassword] = useState(''); const handleInputChange = (field: keyof UserCreate) => (
@@ -305,7 +306,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
                             right: 0,
                             height: '3px',
                             bgcolor: 'info.main',
-                            borderRadius: '4px 4px 0 0'
+                            borderRadius: borderRadiusTop('sm')
                         },
                         position: 'relative'
                     }}>                        <Typography

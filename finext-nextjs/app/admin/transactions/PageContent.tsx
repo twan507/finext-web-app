@@ -20,7 +20,7 @@ import {
   Delete as DeleteIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { fontSize, getResponsiveFontSize } from 'theme/tokens';
+import { fontSize, getResponsiveFontSize, borderRadiusTop } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
   SortConfig,
@@ -71,7 +71,7 @@ interface PaginatedTransactionsResponse {
 
 export default function TransactionsPage() {
   const theme = useTheme();
-   const [transactions, setTransactions] = useState<TransactionPublic[]>([]);
+  const [transactions, setTransactions] = useState<TransactionPublic[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<TransactionPublic[]>([]);
   const [isFiltering, setIsFiltering] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -1025,7 +1025,7 @@ export default function TransactionsPage() {
                   right: 0,
                   height: '3px',
                   bgcolor: 'error.main',
-                  borderRadius: '4px 4px 0 0'
+                  borderRadius: borderRadiusTop('sm')
                 },
                 position: 'relative'
               }}>

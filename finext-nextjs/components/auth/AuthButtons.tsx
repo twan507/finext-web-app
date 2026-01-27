@@ -12,7 +12,7 @@ import {
     PersonAdd as PersonAddIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
-import { fontSize } from 'theme/tokens';
+import { fontSize, buttonSize, borderRadius, transitions, shadows } from 'theme/tokens';
 
 export default function AuthButtons() {
     const theme = useTheme();
@@ -27,32 +27,27 @@ export default function AuthButtons() {
     };
 
     return (
-        <Box sx={{ display: 'flex', gap: 1, flexShrink: 0 }}>
+        <Box sx={{ display: 'flex', gap: 1, flexShrink: 0 }} role="group" aria-label="Xác thực người dùng">
             <Button
                 size="small"
                 variant="outlined"
                 onClick={handleSignInClick}
                 sx={{
                     minWidth: 100,
-                    height: 30,
+                    height: buttonSize.sm.height,
                     fontSize: fontSize.base.tablet,
                     fontWeight: 400,
                     color: theme.palette.primary.main,
                     borderColor: theme.palette.primary.main,
-                    borderRadius: 1.5,
+                    borderRadius: `${borderRadius.md}px`,
                     textTransform: 'none',
                     whiteSpace: 'nowrap',
-                    transition: theme.transitions.create([
-                        'background-color',
-                        'border-color',
-                        'color',
-                        'box-shadow'
-                    ]),
+                    transition: transitions.button,
                     '&:hover': {
                         backgroundColor: alpha(theme.palette.primary.main, 0.08),
                         borderColor: theme.palette.primary.dark,
                         color: theme.palette.primary.dark,
-                        boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.2)}`,
+                        boxShadow: shadows.button,
                     },
                 }}
             >
@@ -64,23 +59,19 @@ export default function AuthButtons() {
                 onClick={handleRegisterClick}
                 sx={{
                     minWidth: 100,
-                    height: 30,
+                    height: buttonSize.sm.height,
                     fontSize: fontSize.base.tablet,
                     fontWeight: 400,
                     backgroundColor: theme.palette.primary.main,
                     color: theme.palette.primary.contrastText,
-                    borderRadius: 1.5,
+                    borderRadius: `${borderRadius.md}px`,
                     textTransform: 'none',
                     whiteSpace: 'nowrap',
-                    boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.3)}`,
-                    transition: theme.transitions.create([
-                        'background-color',
-                        'box-shadow',
-                        'transform'
-                    ]),
+                    boxShadow: shadows.button,
+                    transition: transitions.button,
                     '&:hover': {
                         backgroundColor: theme.palette.primary.dark,
-                        boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.4)}`,
+                        boxShadow: shadows.buttonHover,
                         transform: 'translateY(-1px)',
                     },
                 }}

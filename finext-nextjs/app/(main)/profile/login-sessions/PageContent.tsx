@@ -14,6 +14,8 @@ import {
     IconButton,
     Divider,
 } from '@mui/material';
+import { shadows } from 'theme/tokens';
+} from '@mui/material';
 import {
     DevicesOutlined,
     DeleteOutline,
@@ -28,7 +30,7 @@ import {
     Computer,
 } from '@mui/icons-material';
 import { apiClient } from '../../../../services/apiClient';
-import { useAuth } from '../../../../components/AuthProvider';
+import { useAuth } from '../../../../components/auth/AuthProvider';
 import { fontSize, iconSize } from 'theme/tokens';
 
 interface Session {
@@ -517,7 +519,7 @@ export default function PageContent() {
                                                     right: 12,
                                                     zIndex: 1,
                                                     fontWeight: 'bold',
-                                                    boxShadow: '0 2px 8px rgba(25, 118, 210, 0.3)',
+                                                    boxShadow: shadows.md,
                                                 }}
                                             />
                                         )}

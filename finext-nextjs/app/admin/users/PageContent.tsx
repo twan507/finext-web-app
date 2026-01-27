@@ -17,7 +17,7 @@ import {
   People
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { fontSize, getResponsiveFontSize } from 'theme/tokens';
+import { fontSize, getResponsiveFontSize, borderRadiusTop } from 'theme/tokens';
 import UserSearch from './components/UserSearch';
 import AddUserModal from './components/AddUserModal';
 import EditUserModal from './components/EditUserModal';
@@ -79,7 +79,7 @@ interface PaginatedUsersResponse {
 
 const UsersPage: React.FC = () => {
   const theme = useTheme();
-  
+
 
   const [users, setUsers] = useState<UserPublic[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserPublic[]>([]);
@@ -1016,7 +1016,7 @@ const UsersPage: React.FC = () => {
               right: 0,
               height: '3px',
               bgcolor: 'error.main',
-              borderRadius: '4px 4px 0 0'
+              borderRadius: borderRadiusTop('sm')
             },
             position: 'relative'
           }}>

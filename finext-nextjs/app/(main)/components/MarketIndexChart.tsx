@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { zIndex } from 'theme/tokens';
 import {
     createChart,
     IChartApi,
@@ -961,7 +962,7 @@ export default function MarketIndexChart({
                         position: 'fixed',
                         top: 0,
                         left: 0,
-                        zIndex: 9999,
+                        zIndex: zIndex.max,
                         backgroundColor: colors.containerBackground
                     })
                 }}

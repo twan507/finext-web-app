@@ -16,6 +16,7 @@ import {
     Business as BrokerIcon
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
+import { borderRadiusTop } from 'theme/tokens';
 enum PaymentStatusEnumFE {
     PENDING = "pending",
     SUCCEEDED = "succeeded",
@@ -82,7 +83,7 @@ export default function ConfirmTransactionModal({
     userEmail
 }: ConfirmTransactionModalProps) {
     const theme = useTheme();
-        // Form state
+    // Form state
     const [adminNotes, setAdminNotes] = useState('');
     const [amountOverride, setAmountOverride] = useState<string>('');
     const [durationOverride, setDurationOverride] = useState<string>('');
@@ -605,7 +606,7 @@ export default function ConfirmTransactionModal({
                         right: 0,
                         height: '3px',
                         bgcolor: 'warning.main',
-                        borderRadius: '4px 4px 0 0'
+                        borderRadius: borderRadiusTop('sm')
                     }
                 }}>
                     <Typography

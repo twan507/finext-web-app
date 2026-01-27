@@ -21,6 +21,7 @@ import {
   Support as SupportIcon,
   Assessment as ReportsIcon,
 } from '@mui/icons-material';
+import { borderRadius } from 'theme/tokens';
 
 // Dummy Data (Giữ nguyên)
 const kpiData = [
@@ -191,7 +192,7 @@ const DashboardHomePage: React.FC = () => {
                     value={period}
                     aria-label={period}
                     sx={{
-                      borderRadius: '20px !important', // Ghi đè border-radius của ToggleButton
+                      borderRadius: `${borderRadius.xxl}px !important`, // Ghi đè border-radius của ToggleButton
                       px: 1.5, py: 0.5,
                       border: 'none',
                       textTransform: 'none',
@@ -243,7 +244,7 @@ const DashboardHomePage: React.FC = () => {
                     value={period}
                     aria-label={period}
                     sx={{
-                      borderRadius: '20px !important',
+                      borderRadius: `${borderRadius.xxl}px !important`,
                       px: 1.5, py: 0.5,
                       border: 'none',
                       textTransform: 'none',

@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Icon } from '@iconify/react';
-import { useAuth } from 'components/AuthProvider';
+import { useAuth } from '@/components/auth/AuthProvider';
 import {
   AppBar, Box, CssBaseline, Drawer, Toolbar, List, ListItem, ListItemButton,
   ListItemIcon, ListItemText, Typography, CircularProgress, useTheme,
@@ -24,12 +24,12 @@ import {
   StarBorderPurple500Outlined
 } from '@mui/icons-material';
 
-import UserAvatar from '../../components/UserAvatar';
-import ThemeToggleButton from 'components/ThemeToggleButton';
-import BrandLogo from 'components/BrandLogo';
-import SearchBar from '../../components/SearchBar';
-import AuthButtons from '../../components/AuthButtons';
-import { layoutTokens, fontSize, iconSize } from '../../theme/tokens';
+import UserAvatar from '../../components/layout/UserAvatar';
+import ThemeToggleButton from '@/components/themeToggle/ThemeToggleButton';
+import BrandLogo from '@/components/layout/BrandLogo';
+import SearchBar from '../../components/layout/SearchBar';
+import { layoutTokens, fontSize, iconSize, borderRadius, shadows, transitions, spacing } from '../../theme/tokens';
+import AuthButtons from '@/components/auth/AuthButtons';
 
 interface NavItem {
   text: string;
@@ -170,16 +170,14 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                           minHeight: 48,
                           justifyContent: 'center',
                           px: 1,
-                          borderRadius: '8px',
+                          borderRadius: borderRadius.md,
                           color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
                           backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
                           '&:hover': {
                             backgroundColor: alpha(theme.palette.primary.main, isActive ? 0.12 : 0.04),
                             color: isActive ? theme.palette.primary.dark : theme.palette.primary.main,
                           },
-                          transition: theme.transitions.create(['background-color', 'color'], {
-                            duration: theme.transitions.duration.shortest,
-                          }),
+                          transition: transitions.colors,
                         }}
                       >
                         <ListItemIcon sx={{
@@ -235,7 +233,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   selected={isActive}
                   onClick={handleDrawerToggle}
                   sx={{
-                    borderRadius: '8px',
+                    borderRadius: borderRadius.md,
                     color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
                     backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
                     '&:hover': {
@@ -273,7 +271,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   selected={isActive}
                   onClick={handleDrawerToggle}
                   sx={{
-                    borderRadius: '8px',
+                    borderRadius: borderRadius.md,
                     color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
                     backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
                     '&:hover': {
@@ -339,7 +337,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   onClick={handleDrawerToggle}
                   sx={{
                     py: 1,
-                    borderRadius: '6px',
+                    borderRadius: borderRadius.sm,
                     color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
                     backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
                     '&:hover': {
@@ -371,7 +369,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   onClick={handleDrawerToggle}
                   sx={{
                     py: 1,
-                    borderRadius: '6px',
+                    borderRadius: borderRadius.sm,
                     color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
                     backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
                     '&:hover': {
@@ -449,11 +447,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           onClose={handleDrawerToggle}
           ModalProps={{ keepMounted: true }}
           elevation={0}
+          aria-label="Menu điều hướng"
           sx={{
             display: { xs: 'none', md: 'block', lg: 'none' },
             '& .MuiDrawer-paper': {
               width: 320,
-              boxShadow: '4px 0 16px rgba(0, 0, 0, 0.15)',
+              boxShadow: shadows.drawer,
               backdropFilter: 'blur(12px)',
             }
           }}
@@ -468,11 +467,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           onClose={handleDrawerToggle}
           ModalProps={{ keepMounted: true }}
           elevation={0}
+          aria-label="Menu điều hướng"
           sx={{
             display: { xs: 'block', md: 'none' },
             '& .MuiDrawer-paper': {
               width: 260,
-              boxShadow: '4px 0 16px rgba(0, 0, 0, 0.15)',
+              boxShadow: shadows.drawer,
               backdropFilter: 'blur(12px)',
             }
           }}
@@ -492,7 +492,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               height: '100vh',
               display: 'flex',
               flexDirection: 'column',
-              boxShadow: '2px 0 8px rgba(0, 0, 0, 0.08)',
+              boxShadow: shadows.appBar,
               borderRight: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
               backdropFilter: 'blur(8px)',
             }
@@ -521,7 +521,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             top: 0,
             zIndex: theme.zIndex.appBar,
             height: layoutTokens.appBarHeight,
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+            boxShadow: shadows.appBar,
             borderBottom: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
             backdropFilter: 'blur(8px)',
           }}
@@ -603,7 +603,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                               sx: {
                                 bgcolor: theme.palette.background.paper,
                                 color: theme.palette.text.primary,
-                                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+                                boxShadow: shadows.lg,
                                 '& .MuiTooltip-arrow': {
                                   color: theme.palette.background.paper,
                                 },
@@ -626,9 +626,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                                 fontWeight: isActive ? 600 : 500,
                                 color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
                                 textTransform: 'none',
-                                transition: 'all 0.2s ease',
+                                transition: transitions.colors,
                                 cursor: 'pointer',
-                                borderRadius: '6px',
+                                borderRadius: borderRadius.sm,
                                 '&:hover': {
                                   color: theme.palette.primary.main,
                                   backgroundColor: alpha(theme.palette.primary.main, 0.08),

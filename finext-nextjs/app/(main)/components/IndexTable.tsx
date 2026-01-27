@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { Box, Typography, Skeleton, useTheme, useMediaQuery, Theme } from '@mui/material';
-import { fontSize } from 'theme/tokens';
+import { fontSize, transitions } from 'theme/tokens';
 
 interface RawMarketData {
     ticker: string;
@@ -123,7 +123,7 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
                 gap: isMobile ? 0.5 : 1,
                 ...rowPadding,
                 cursor: 'pointer',
-                transition: 'background-color 0.15s ease',
+                transition: transitions.colors,
                 borderBottom: isLast ? 'none' : `1px solid ${dividerColor}`,
                 bgcolor: isSelected
                     ? (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)')

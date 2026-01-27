@@ -14,6 +14,7 @@ import {
 import { apiClient } from 'services/apiClient';
 import { parseISO, addDays, format } from 'date-fns';
 import { filterNonSystemLicenses, isSystemLicense } from 'utils/systemProtection';
+import { borderRadiusTop } from 'theme/tokens';
 
 interface UserPublic {
     id: string;
@@ -66,7 +67,7 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
     onSubscriptionCreated
 }) => {
     const theme = useTheme();
-     const [allUsers, setAllUsers] = useState<UserPublic[]>([]);
+    const [allUsers, setAllUsers] = useState<UserPublic[]>([]);
     const [allLicenses, setAllLicenses] = useState<LicensePublic[]>([]);
     const [userActiveSubscription, setUserActiveSubscription] = useState<SubscriptionPublic | null>(null);
     const [hasActiveNonBasicSub, setHasActiveNonBasicSub] = useState(false);
@@ -378,7 +379,7 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
                                         right: 0,
                                         height: '3px',
                                         bgcolor: hasActiveNonBasicSub ? 'warning.main' : 'info.main',
-                                        borderRadius: '4px 4px 0 0'
+                                        borderRadius: borderRadiusTop('sm')
                                     },
                                     position: 'relative'
                                 }}>
@@ -522,7 +523,7 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
                                 right: 0,
                                 height: '3px',
                                 bgcolor: 'info.main',
-                                borderRadius: '4px 4px 0 0'
+                                borderRadius: borderRadiusTop('sm')
                             },
                             position: 'relative'
                         }}>

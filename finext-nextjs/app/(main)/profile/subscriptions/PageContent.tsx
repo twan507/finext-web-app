@@ -28,6 +28,7 @@ import {
     Cancel,
     CheckCircle,
 } from '@mui/icons-material';
+import { fontSize, borderRadius } from 'theme/tokens';
 import { apiClient } from '../../../../services/apiClient';
 import { fontSize } from 'theme/tokens';
 
@@ -346,7 +347,7 @@ export default function PageContent() {
                         border: '2px solid',
                         borderColor: 'primary.main',
                         borderRadius: 3,
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                        boxShadow: shadows.lg,
                         background: 'linear-gradient(135deg, rgba(25, 118, 210, 0.03) 0%, rgba(25, 118, 210, 0.08) 100%)',
                     }}>
                         <CardContent sx={{ p: 3, pb: 5 }}>
@@ -376,7 +377,7 @@ export default function PageContent() {
                                                     py: 0.4,
                                                     fontWeight: 'bold',
                                                     textTransform: 'uppercase',
-                                                    borderRadius: '6px',
+                                                    borderRadius: borderRadius.md,
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                 }}
@@ -443,7 +444,7 @@ export default function PageContent() {
                         border: '1px solid',
                         borderColor: 'divider',
                         borderRadius: 3,
-                        boxShadow: '0 2px 16px rgba(0,0,0,0.08)'
+                        boxShadow: shadows.card
                     }}>
                         <CardContent sx={{ p: 3 }}>
                             <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 3 }}>
@@ -465,7 +466,7 @@ export default function PageContent() {
                         border: '1px solid',
                         borderColor: 'divider',
                         borderRadius: 3,
-                        boxShadow: '0 2px 16px rgba(0,0,0,0.08)'
+                        boxShadow: shadows.card
                     }}>
                         <CardContent sx={{ p: 3 }}>
                             <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 3 }}>

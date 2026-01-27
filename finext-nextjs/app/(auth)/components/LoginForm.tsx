@@ -3,7 +3,7 @@
 import React, { useState, FormEvent, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiClient } from 'services/apiClient';
-import { useAuth } from 'components/AuthProvider';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 // MUI
 import Button from '@mui/material/Button';
@@ -23,7 +23,7 @@ import VisibilityOff from '@mui/icons-material/VisibilityOffOutlined';
 // Google OAuth - Import thêm GoogleOAuthProvider
 import { useGoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 
-import BrandLogo from 'components/BrandLogo';
+import BrandLogo from '@/components/layout/BrandLogo';
 import { LoginResponse, UserSchema } from 'services/core/types';
 import { fontSize, iconSize, layoutTokens } from 'theme/tokens';
 
@@ -189,7 +189,7 @@ function SignInFormContent() {
     const redirectAfterLogin = useCallback(() => {
         if (isRedirecting) return;
         setIsRedirecting(true);
-        
+
         // Sử dụng window.location.href để đảm bảo full page reload
         // Điều này giúp middleware nhận được cookie mới nhất
         window.location.href = callbackUrl;
@@ -252,7 +252,7 @@ function SignInFormContent() {
                     };
                     login(sessionData);
                     setSuccessMessage(`Đăng nhập thành công! Đang chuyển hướng...`);
-                    
+
                     // Sử dụng window.location.href để full page reload
                     // Đảm bảo middleware nhận được cookie mới nhất từ backend
                     setTimeout(() => {

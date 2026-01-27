@@ -11,6 +11,7 @@ import {
     BusinessCenter as BrokerIcon
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
+import { borderRadiusTop } from 'theme/tokens';
 interface UserPublic {
     id: string;
     full_name: string;
@@ -35,7 +36,7 @@ const AddBrokerModal: React.FC<AddBrokerModalProps> = ({
     allUsers
 }) => {
     const theme = useTheme();
-    
+
 
     const [selectedUser, setSelectedUser] = useState<UserPublic | null>(null);
     const [loading, setLoading] = useState(false);
@@ -220,7 +221,7 @@ const AddBrokerModal: React.FC<AddBrokerModalProps> = ({
                             right: 0,
                             height: '3px',
                             bgcolor: 'warning.main',
-                            borderRadius: '4px 4px 0 0'
+                            borderRadius: borderRadiusTop('sm')
                         },
                         position: 'relative'
                     }}>

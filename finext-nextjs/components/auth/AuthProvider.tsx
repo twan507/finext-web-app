@@ -10,7 +10,7 @@ import { logoutApi } from 'services/authService';
 // UserSchema cũng cần được import nếu bạn dùng nó trực tiếp ở đây
 import { LoginResponse, UserSchema } from 'services/core/types';
 import { formatErrorForUser, safeLogError, isAuthError, safeHandleError, shouldLogError } from 'utils/errorHandler';
-import { useNotification } from './NotificationProvider';
+import { useNotification } from '../provider/NotificationProvider';
 
 
 interface AuthContextType {

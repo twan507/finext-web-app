@@ -84,11 +84,13 @@ const BrandLogo: React.FC<BrandLogoProps> = ({
                 gap: gap,
             }}
             className={className}
+            aria-label="Finext - Trang chủ"
         >
             {logoImage}
             {showText && (
                 <Typography
                     variant="logo"
+                    aria-hidden="true"
                     sx={{
                         letterSpacing: 0.5,
                         fontSize: textSize || undefined, // Override font size if provided

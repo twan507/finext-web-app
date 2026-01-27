@@ -14,10 +14,10 @@ import styles from './ThemeToggleButton.module.css';
 
 // Tách SVG ra một component riêng và cho phép nhận prop `isDark` để quản lý animation
 const SunMoonIcon = ({ isDark, uniqueId }: { isDark: boolean; uniqueId: string }) => (
-  <div className={`${styles.themeToggle} ${isDark ? styles.isDark : ''}`}>
+  <div className={`${styles.themeToggle} ${isDark ? styles.isDark : ''}`} aria-hidden="true">
     <div className={styles.sunMoonContainer}>
       {/* SVG content với unique mask ID */}
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
         <mask id={`moon-mask-${uniqueId}`}>
           <rect x="0" y="0" width="100%" height="100%" fill="white"></rect>
           <circle cx="16" cy="5" r="8" fill="black"></circle>
@@ -68,6 +68,8 @@ const ThemeToggleButton: React.FC<ThemeToggleButtonProps> = ({ variant = 'icon',
     return (
       <ListItemButton
         onClick={handleThemeChange}
+        aria-label={tooltipText}
+        role="button"
         sx={{
           py: compact ? 1 : undefined,
           borderRadius: compact ? '6px' : '8px',
@@ -99,6 +101,7 @@ const ThemeToggleButton: React.FC<ThemeToggleButtonProps> = ({ variant = 'icon',
     <Tooltip title={tooltipText}>
       <IconButton
         onClick={handleThemeChange}
+        aria-label={tooltipText}
         sx={{
           mr: 1,
           color: isCurrentlyDark ? 'text.primary' : 'text.secondary'

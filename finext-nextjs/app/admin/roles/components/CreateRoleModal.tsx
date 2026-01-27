@@ -18,8 +18,10 @@ import {
     ToggleOff as ToggleOffIcon,
     ToggleOn as ToggleOnIcon
 } from '@mui/icons-material';
+import { transitions } from 'theme/tokens';
 import { apiClient } from 'services/apiClient';
 import ModernSwitchButton from '../../components/ModernSwitchButton';
+import { borderRadius, borderRadiusTop } from 'theme/tokens';
 
 interface RoleCreateRequest {
     name: string;
@@ -48,7 +50,7 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
     onClose,
     onRoleCreated
 }) => {
-    const theme = useTheme();  const [allPermissions, setAllPermissions] = useState<PermissionPublic[]>([]);
+    const theme = useTheme(); const [allPermissions, setAllPermissions] = useState<PermissionPublic[]>([]);
     const [categories, setCategories] = useState<string[]>([]);
     const [permissionsByCategory, setPermissionsByCategory] = useState<Record<string, PermissionPublic[]>>({});
 
@@ -523,7 +525,7 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
                                                                 className="category-title"
                                                                 variant="body1"
                                                                 fontWeight="500"
-                                                                sx={{ transition: 'color 0.2s' }}
+                                                                sx={{ transition: transitions.colors }}
                                                             >
                                                                 {category}
                                                             </Typography>
@@ -546,7 +548,7 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
                                                             sx={{
                                                                 px: 0.5,
                                                                 py: 0,
-                                                                borderRadius: '30px',
+                                                                borderRadius: borderRadius.pill,
                                                                 '&:hover': {
                                                                     bgcolor: 'action.hover'
                                                                 }
@@ -641,7 +643,7 @@ const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
                             right: 0,
                             height: '3px',
                             bgcolor: 'info.main',
-                            borderRadius: '4px 4px 0 0'
+                            borderRadius: borderRadiusTop('sm')
                         },
                         position: 'relative'
                     }}>
