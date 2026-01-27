@@ -1,6 +1,10 @@
 # Finext Web Application
 
 Dự án Finext là một ứng dụng web full-stack với backend được xây dựng bằng FastAPI và frontend sử dụng Next.js.
+Các skill
+npx skills add vercel-labs/agent-skills
+npm install -g uipro-cli
+uipro init --ai antigravity
 
 ## Công Nghệ Sử Dụng
 
