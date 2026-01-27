@@ -11,7 +11,7 @@ const PUBLIC_ROUTES = [
   '/',                  // Trang chủ
   '/home',              // Home pages
   '/markets',           // Thị trường
-  '/money-flow',        // Dòng tiền
+  '/news',              // Tin tức
   '/sectors',           // Nhóm ngành
   '/stocks',            // Cổ phiếu
   '/login',             // Đăng nhập

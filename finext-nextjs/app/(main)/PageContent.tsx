@@ -40,8 +40,8 @@ const StockSection = dynamic(
     { loading: () => <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, my: 2 }} /> }
 );
 
-const MoneyFlowSection = dynamic(
-    () => import('./components/MoneyFlowSection'),
+const NewsSection = dynamic(
+    () => import('./components/NewsSection'),
     { loading: () => <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, my: 2 }} /> }
 );
 
@@ -348,9 +348,9 @@ export default function HomeContent() {
                 />
             </Box>
 
-            {/* Section 2: Dòng tiền */}
+            {/* Section 2: Tin tức */}
             <Box sx={{ mt: 5 }}>
-                <MoneyFlowSection />
+                <NewsSection />
             </Box>
 
             {/* Section 3: Ngành */}

@@ -53,10 +53,10 @@ const topNavTabs = [
     icon: 'fluent-color:poll-32'
   },
   {
-    label: 'Dòng tiền',
-    href: '/money-flow',
-    description: 'Theo dấu dòng vốn thông minh và diễn biến thanh khoản theo thời gian thực.',
-    icon: 'fluent-color:data-trending-16'
+    label: 'Tin tức',
+    href: '/news',
+    description: 'Cập nhật tin tức thị trường tài chính và các sự kiện nổi bật.',
+    icon: 'fluent-color:news-16'
   },
   {
     label: 'Nhóm ngành',
