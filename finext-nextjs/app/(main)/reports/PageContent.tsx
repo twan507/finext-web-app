@@ -1,28 +1,30 @@
-// finext-nextjs/app/(main)/news/PageContent.tsx
+// finext-nextjs/app/(main)/reports/PageContent.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
 
-import { NewsBreadcrumb, NewsList, SourceTabs, CategoryInfo } from './components';
+import { ReportList, TypeTabs } from './components';
+import NewsBreadcrumb from '../news/components/NewsBreadcrumb';
 import { spacing } from 'theme/tokens';
 import { apiClient } from 'services/apiClient';
+import { ReportCategoryInfo } from './types';
 
 interface CategoriesApiResponse {
-    items: CategoryInfo[];
+    items: ReportCategoryInfo[];
     total: number;
 }
 
-export default function NewsContent() {
-    const [categories, setCategories] = useState<CategoryInfo[]>([]);
+export default function ReportsContent() {
+    const [categories, setCategories] = useState<ReportCategoryInfo[]>([]);
     const [categoriesLoading, setCategoriesLoading] = useState(true);
 
-    // Fetch categories từ API riêng
+    // Fetch categories từ API
     useEffect(() => {
         const fetchCategories = async () => {
             try {
                 const response = await apiClient<CategoriesApiResponse>({
-                    url: '/api/v1/sse/rest/news_categories',
+                    url: '/api/v1/sse/rest/news_report_types',
                     method: 'GET',
                     requireAuth: false,
                 });
@@ -31,7 +33,7 @@ export default function NewsContent() {
                     setCategories(response.data.items);
                 }
             } catch (error) {
-                console.error('[NewsContent] Failed to fetch categories:', error);
+                console.error('[ReportsContent] Failed to fetch categories:', error);
             } finally {
                 setCategoriesLoading(false);
             }
@@ -43,24 +45,24 @@ export default function NewsContent() {
     return (
         <Box sx={{ py: spacing.xs }}>
             {/* Breadcrumb */}
-            <NewsBreadcrumb items={[]} />
+            <NewsBreadcrumb sectionLabel="Bản tin" sectionHref="/reports" items={[]} />
 
             {/* Header */}
             <Box sx={{ mb: spacing.xs }}>
                 <Typography variant="h1">
-                    Tin tức thị trường
+                    Bản tin thị trường
                 </Typography>
                 <Typography
                     variant="body1"
                     color="text.secondary"
                     sx={{ mt: 0.5 }}
                 >
-                    Cập nhật tin tức tài chính, chứng khoán và các sự kiện nổi bật từ nhiều nguồn uy tín.
+                    Tổng hợp báo cáo phân tích, bản tin doanh nghiệp và thị trường hàng ngày.
                 </Typography>
             </Box>
 
             {/* Category Tabs */}
-            <SourceTabs
+            <TypeTabs
                 categories={categories}
                 selectedCategory="all"
                 onCategoryChange={() => { }}
@@ -68,9 +70,8 @@ export default function NewsContent() {
                 useNavigation
             />
 
-            {/* News List */}
-            <NewsList />
+            {/* Report List */}
+            <ReportList />
         </Box>
     );
 }
-

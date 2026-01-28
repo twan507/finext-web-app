@@ -12,7 +12,10 @@ import {
     ColorType,
     CrosshairMode,
     LineStyle,
-    UTCTimestamp
+    UTCTimestamp,
+    OhlcData,
+    SingleValueData,
+    Time
 } from 'lightweight-charts';
 import {
     Box,
@@ -247,6 +250,21 @@ export default function MarketIndexChart({
         ISeriesApi<'Area'> | ISeriesApi<'Candlestick'> | null
     >(null);
     const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
+    const tooltipRef = useRef<HTMLDivElement>(null);
+
+    // Tooltip state
+    const [tooltipData, setTooltipData] = useState<{
+        visible: boolean;
+        x: number;
+        y: number;
+        time: string;
+        price: number;
+        open?: number;
+        high?: number;
+        low?: number;
+        close?: number;
+        volume?: number;
+    } | null>(null);
 
     // Refs để lưu trữ visible range và track thay đổi
     const savedLogicalRangeRef = useRef<{ from: number; to: number } | null>(null);
@@ -381,6 +399,93 @@ export default function MarketIndexChart({
                 });
             }
         };
+
+        // Subscribe to crosshair move for tooltip
+        chart.subscribeCrosshairMove((param) => {
+            if (!param.time || !param.point || !seriesRef.current || !chartContainerRef.current) {
+                setTooltipData(null);
+                return;
+            }
+
+            const seriesData = param.seriesData.get(seriesRef.current);
+            if (!seriesData) {
+                setTooltipData(null);
+                return;
+            }
+
+            // Check if it's area data (SingleValueData) or candlestick data (OhlcData)
+            const isAreaData = 'value' in seriesData;
+
+            // Get coordinate of the price point
+            let price: number;
+            if (isAreaData) {
+                price = (seriesData as SingleValueData<Time>).value;
+            } else {
+                price = (seriesData as OhlcData<Time>).close;
+            }
+            const coordinate = seriesRef.current.priceToCoordinate(price);
+
+            if (coordinate === null) {
+                setTooltipData(null);
+                return;
+            }
+
+            // Format time for display
+            const timestamp = param.time as number;
+            const date = new Date(timestamp * 1000);
+            let timeStr: string;
+
+            if (isIntraday) {
+                const hours = date.getHours().toString().padStart(2, '0');
+                const minutes = date.getMinutes().toString().padStart(2, '0');
+                const day = date.getDate().toString().padStart(2, '0');
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                timeStr = `${day}/${month} ${hours}:${minutes}`;
+            } else {
+                const day = date.getUTCDate().toString().padStart(2, '0');
+                const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+                const year = date.getUTCFullYear();
+                timeStr = `${day}/${month}/${year}`;
+            }
+
+            // Get volume data if available
+            let volumeValue: number | undefined;
+            if (volumeSeriesRef.current) {
+                const volumeData = param.seriesData.get(volumeSeriesRef.current);
+                if (volumeData && 'value' in volumeData) {
+                    volumeValue = (volumeData as SingleValueData<Time>).value;
+                }
+            }
+
+            // Set tooltip data at intersection point
+            if (isAreaData) {
+                // Area chart
+                const areaData = seriesData as SingleValueData<Time>;
+                setTooltipData({
+                    visible: true,
+                    x: param.point.x,
+                    y: coordinate,
+                    time: timeStr,
+                    price: areaData.value,
+                    volume: volumeValue
+                });
+            } else {
+                // Candlestick chart
+                const ohlcData = seriesData as OhlcData<Time>;
+                setTooltipData({
+                    visible: true,
+                    x: param.point.x,
+                    y: coordinate,
+                    time: timeStr,
+                    price: ohlcData.close,
+                    open: ohlcData.open,
+                    high: ohlcData.high,
+                    low: ohlcData.low,
+                    close: ohlcData.close,
+                    volume: volumeValue
+                });
+            }
+        });
 
         window.addEventListener('resize', handleResize);
 
@@ -952,6 +1057,7 @@ export default function MarketIndexChart({
 
             {/* Chart container */}
             <Box
+                onMouseLeave={() => setTooltipData(null)}
                 sx={{
                     width: '100%',
                     height: isFullscreen ? '100vh' : height,
@@ -1018,6 +1124,126 @@ export default function MarketIndexChart({
                         height: '100%',
                     }}
                 />
+
+                {/* Tooltip at intersection point */}
+                {tooltipData && tooltipData.visible && (
+                    <Box
+                        ref={tooltipRef}
+                        sx={{
+                            position: 'absolute',
+                            left: tooltipData.x + 15,
+                            top: tooltipData.y - 30,
+                            backgroundColor: isDarkMode ? 'rgba(30, 30, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                            border: `1px solid ${colors.borderColor}`,
+                            borderRadius: 1.5,
+                            padding: '8px 12px',
+                            pointerEvents: 'none',
+                            zIndex: 10,
+                            boxShadow: isDarkMode
+                                ? '0 4px 12px rgba(0, 0, 0, 0.5)'
+                                : '0 4px 12px rgba(0, 0, 0, 0.15)',
+                            minWidth: 120,
+                            transform: tooltipData.x > (chartContainerRef.current?.clientWidth || 0) - 180
+                                ? 'translateX(-100%) translateX(-30px)'
+                                : 'none',
+                        }}
+                    >
+                        <Typography
+                            sx={{
+                                fontSize: fontSize.sm.tablet,
+                                color: colors.textSecondary,
+                                mb: 0.5,
+                                fontWeight: 500
+                            }}
+                        >
+                            {tooltipData.time}
+                        </Typography>
+
+                        {tooltipData.open !== undefined ? (
+                            // Candlestick tooltip
+                            <Box>
+                                <Stack direction="row" justifyContent="space-between" spacing={2}>
+                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary }}>
+                                        O:
+                                    </Typography>
+                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textPrimary, fontWeight: 600 }}>
+                                        {tooltipData.open?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </Typography>
+                                </Stack>
+                                <Stack direction="row" justifyContent="space-between" spacing={2}>
+                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary }}>
+                                        H:
+                                    </Typography>
+                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.upColor, fontWeight: 600 }}>
+                                        {tooltipData.high?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </Typography>
+                                </Stack>
+                                <Stack direction="row" justifyContent="space-between" spacing={2}>
+                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary }}>
+                                        L:
+                                    </Typography>
+                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.downColor, fontWeight: 600 }}>
+                                        {tooltipData.low?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </Typography>
+                                </Stack>
+                                <Stack direction="row" justifyContent="space-between" spacing={2}>
+                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary }}>
+                                        C:
+                                    </Typography>
+                                    <Typography
+                                        sx={{
+                                            fontSize: fontSize.sm.tablet,
+                                            color: (tooltipData.close ?? 0) >= (tooltipData.open ?? 0) ? colors.upColor : colors.downColor,
+                                            fontWeight: 600
+                                        }}
+                                    >
+                                        {tooltipData.close?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </Typography>
+                                </Stack>
+                                {tooltipData.volume !== undefined && (
+                                    <Stack direction="row" justifyContent="space-between" spacing={2} sx={{ mt: 0.5, pt: 0.5, borderTop: `1px solid ${colors.borderColor}` }}>
+                                        <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary }}>
+                                            Khối lượng:
+                                        </Typography>
+                                        <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textPrimary, fontWeight: 600 }}>
+                                            {tooltipData.volume >= 1000000
+                                                ? `${(tooltipData.volume / 1000000).toFixed(2)}M`
+                                                : tooltipData.volume >= 1000
+                                                    ? `${(tooltipData.volume / 1000).toFixed(2)}K`
+                                                    : tooltipData.volume.toLocaleString('en-US')}
+                                        </Typography>
+                                    </Stack>
+                                )}
+                            </Box>
+                        ) : (
+                            // Area chart tooltip
+                            <Box>
+                                <Stack direction="row" justifyContent="space-between" spacing={2}>
+                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary }}>
+                                        Giá:
+                                    </Typography>
+                                    <Typography sx={{ fontSize: fontSize.base.tablet, color: colors.line, fontWeight: 700 }}>
+                                        {tooltipData.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </Typography>
+                                </Stack>
+                                {tooltipData.volume !== undefined && (
+                                    <Stack direction="row" justifyContent="space-between" spacing={2} sx={{ mt: 0.5 }}>
+                                        <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary }}>
+                                            Khối lượng:
+                                        </Typography>
+                                        <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textPrimary, fontWeight: 600 }}>
+                                            {tooltipData.volume >= 1000000
+                                                ? `${(tooltipData.volume / 1000000).toFixed(2)}M`
+                                                : tooltipData.volume >= 1000
+                                                    ? `${(tooltipData.volume / 1000).toFixed(2)}K`
+                                                    : tooltipData.volume.toLocaleString('en-US')}
+                                        </Typography>
+                                    </Stack>
+                                )}
+                            </Box>
+                        )}
+                    </Box>
+                )}
             </Box>
         </Box>
     );

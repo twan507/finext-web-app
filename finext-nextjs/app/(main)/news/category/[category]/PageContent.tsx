@@ -1,21 +1,26 @@
-// finext-nextjs/app/(main)/news/PageContent.tsx
+// finext-nextjs/app/(main)/news/category/[category]/PageContent.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
 
-import { NewsBreadcrumb, NewsList, SourceTabs, CategoryInfo } from './components';
+import { NewsBreadcrumb, NewsList, SourceTabs, CategoryInfo } from '../../components';
 import { spacing } from 'theme/tokens';
 import { apiClient } from 'services/apiClient';
+
+interface PageContentProps {
+    category: string;
+}
 
 interface CategoriesApiResponse {
     items: CategoryInfo[];
     total: number;
 }
 
-export default function NewsContent() {
+export default function PageContent({ category }: PageContentProps) {
     const [categories, setCategories] = useState<CategoryInfo[]>([]);
     const [categoriesLoading, setCategoriesLoading] = useState(true);
+    const [categoryName, setCategoryName] = useState<string>(decodeURIComponent(category));
 
     // Fetch categories từ API riêng
     useEffect(() => {
@@ -29,21 +34,26 @@ export default function NewsContent() {
 
                 if (response.data?.items) {
                     setCategories(response.data.items);
+                    // Tìm tên category từ danh sách
+                    const found = response.data.items.find((c) => c.category === category);
+                    if (found) {
+                        setCategoryName(found.category_name);
+                    }
                 }
             } catch (error) {
-                console.error('[NewsContent] Failed to fetch categories:', error);
+                console.error('[PageContent] Failed to fetch categories:', error);
             } finally {
                 setCategoriesLoading(false);
             }
         };
 
         fetchCategories();
-    }, []);
+    }, [category]);
 
     return (
         <Box sx={{ py: spacing.xs }}>
             {/* Breadcrumb */}
-            <NewsBreadcrumb items={[]} />
+            <NewsBreadcrumb items={[{ label: categoryName }]} />
 
             {/* Header */}
             <Box sx={{ mb: spacing.xs }}>
@@ -62,15 +72,14 @@ export default function NewsContent() {
             {/* Category Tabs */}
             <SourceTabs
                 categories={categories}
-                selectedCategory="all"
+                selectedCategory={category}
                 onCategoryChange={() => { }}
                 loading={categoriesLoading}
                 useNavigation
             />
 
-            {/* News List */}
-            <NewsList />
+            {/* News List - Filtered by category */}
+            <NewsList category={category} />
         </Box>
     );
 }
-

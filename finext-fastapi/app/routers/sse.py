@@ -164,18 +164,26 @@ async def get_keywords():
 @router.get(
     "/rest/{keyword}",
     summary="REST Query - Lấy dữ liệu một lần (không stream)",
-    description="Query dữ liệu một lần theo keyword, dùng cho REST calls và polling thay vì SSE stream.",
+    description="Query dữ liệu một lần theo keyword, dùng cho REST calls và polling thay vì SSE stream. Hỗ trợ pagination.",
     tags=["sse"],
 )
 async def rest_query_endpoint(
     keyword: str,
     ticker: Optional[str] = Query(None, description="Mã ticker (VD: VNINDEX, VN30, ...)"),
+    source: Optional[str] = Query(None, description="Nguồn tin (VD: chinhphu.vn, cafef.vn, vietstock.vn)"),
+    category: Optional[str] = Query(None, description="Danh mục tin tức (VD: thi-truong, doanh-nghiep)"),
+    report_type: Optional[str] = Query(None, description="Loại bản tin (VD: doanh_nghiep)"),
+    page: Optional[int] = Query(None, ge=1, description="Số trang (bắt đầu từ 1)"),
+    limit: Optional[int] = Query(None, ge=1, le=100, description="Số lượng bản ghi mỗi trang (tối đa 100)"),
+    sort_by: Optional[str] = Query(None, description="Tên field để sắp xếp"),
+    sort_order: Optional[str] = Query(None, regex="^(asc|desc)$", description="Thứ tự sắp xếp: asc hoặc desc"),
 ):
     """
     REST endpoint để query dữ liệu một lần.
     Dùng cho các trường hợp cần polling hoặc fetch đơn lẻ thay vì SSE stream.
 
     Hỗ trợ tất cả các keyword trong SSE_QUERY_REGISTRY.
+    Hỗ trợ pagination với page, limit, sort_by, sort_order.
     """
     # Validate keyword trước
     available_keywords = get_available_keywords()
@@ -186,45 +194,25 @@ async def rest_query_endpoint(
         )
 
     try:
-        data = await execute_sse_query(keyword, ticker)
+        # Tạo dict chứa các tham số tuỳ chọn
+        query_params = {
+            "ticker": ticker,
+            "source": source,
+            "category": category,
+            "report_type": report_type,
+            "page": page,
+            "limit": limit,
+            "sort_by": sort_by,
+            "sort_order": sort_order,
+        }
+
+        result = await execute_sse_query(keyword, **query_params)
         # Serialize data với custom encoder để xử lý ObjectId, datetime, nan
-        serialized_data = json.loads(bson_to_json_str(data))
+        serialized_data = json.loads(bson_to_json_str(result))
 
         return JSONResponse(
             content=StandardApiResponse(status=200, message="Truy vấn dữ liệu thành công", data=serialized_data).model_dump()
         )
     except Exception as e:
         logger.error(f"REST query error (keyword: {keyword}): {e}", exc_info=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Query failed: {str(e)}")
-
-
-@router.get(
-    "/test/{keyword}",
-    summary="Test query một lần (không stream)",
-    description="Thực thi query một lần để test, không cần mở SSE stream.",
-    tags=["sse"],
-)
-async def test_query_endpoint(
-    keyword: str,
-    ticker: Optional[str] = Query(None, description="Mã ticker (VD: VNINDEX, VN30, ...)"),
-):
-    """Test query một lần mà không cần mở SSE stream."""
-    # Validate keyword trước
-    available_keywords = get_available_keywords()
-    if keyword not in available_keywords:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid keyword '{keyword}'. Available: {', '.join(available_keywords)}",
-        )
-
-    try:
-        data = await execute_sse_query(keyword, ticker)
-        # Serialize data với custom encoder để xử lý ObjectId, datetime, nan
-        serialized_data = json.loads(bson_to_json_str(data))
-
-        return JSONResponse(
-            content=StandardApiResponse(status=200, message="Truy vấn dữ liệu thành công", data=serialized_data).model_dump()
-        )
-    except Exception as e:
-        logger.error(f"Test query error: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Query failed: {str(e)}")

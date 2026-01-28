@@ -334,12 +334,12 @@ export const fontSize = {
   h6: { mobile: '1rem', tablet: '1.125rem', desktop: '1.25rem' },          // 16/18/20px
 
   // === BODY TEXT ===
-  lg: { mobile: '0.9375rem', tablet: '1rem', desktop: '1rem' },            // 15/16/16px - Large body
-  md: { mobile: '0.875rem', tablet: '0.9375rem', desktop: '0.9375rem' },   // 14/15/15px - Medium body
-  base: { mobile: '0.8125rem', tablet: '0.875rem', desktop: '0.875rem' },  // 13/14/14px - Default body ⭐
-  sm: { mobile: '0.75rem', tablet: '0.8125rem', desktop: '0.8125rem' },    // 12/13/13px - Small body
-  xs: { mobile: '0.6875rem', tablet: '0.75rem', desktop: '0.75rem' },      // 11/12/12px - Caption
-  xxs: { mobile: '0.625rem', tablet: '0.6875rem', desktop: '0.6875rem' },  // 10/11/11px - Tiny caption
+  lg: { mobile: '1rem', tablet: '1.0625rem', desktop: '1.0625rem' },            // 16/17/17px - Large body
+  md: { mobile: '0.9375rem', tablet: '1rem', desktop: '1rem' },                 // 15/16/16px - Medium body
+  base: { mobile: '0.875rem', tablet: '0.9375rem', desktop: '0.9375rem' },      // 14/15/15px - Default body ⭐
+  sm: { mobile: '0.8125rem', tablet: '0.875rem', desktop: '0.875rem' },         // 13/14/14px - Small body
+  xs: { mobile: '0.75rem', tablet: '0.8125rem', desktop: '0.8125rem' },         // 12/13/13px - Caption
+  xxs: { mobile: '0.6875rem', tablet: '0.75rem', desktop: '0.75rem' },          // 11/12/12px - Tiny caption
 
   // === SPECIAL USE CASES ===
   badge: { mobile: '0.4rem', tablet: '0.45rem', desktop: '0.45rem' },       // ~6.4/7.2/7.2px - Tiny badges

@@ -28,6 +28,7 @@ import UserAvatar from '../../components/layout/UserAvatar';
 import ThemeToggleButton from '@/components/themeToggle/ThemeToggleButton';
 import BrandLogo from '@/components/layout/BrandLogo';
 import SearchBar from '../../components/layout/SearchBar';
+import Footer from '@/components/layout/Footer';
 import { layoutTokens, fontSize, iconSize, borderRadius, shadows, transitions, spacing } from '../../theme/tokens';
 import AuthButtons from '@/components/auth/AuthButtons';
 
@@ -45,7 +46,22 @@ const navigationStructure: NavItem[] = [
 ];
 
 // Top navigation tabs (like in Simplize)
-const topNavTabs = [
+interface NavSubmenuItem {
+  label: string;
+  href: string;
+  icon: string;
+  description?: string;
+}
+
+interface TopNavTab {
+  label: string;
+  href: string;
+  description: string;
+  icon: string;
+  submenu?: NavSubmenuItem[];
+}
+
+const topNavTabs: TopNavTab[] = [
   {
     label: 'Thị trường',
     href: '/markets',
@@ -56,7 +72,11 @@ const topNavTabs = [
     label: 'Tin tức',
     href: '/news',
     description: 'Cập nhật tin tức thị trường tài chính và các sự kiện nổi bật.',
-    icon: 'fluent-color:news-16'
+    icon: 'fluent-color:news-16',
+    submenu: [
+      { label: 'Tin tức', href: '/news', icon: 'fluent-color:news-16', description: 'Tổng hợp tin tức vĩ mô và tài chính từ nhiều nguồn uy tín' },
+      { label: 'Bản tin', href: '/reports', icon: 'fluent-color:document-text-16', description: 'Bản tin tổng hợp và phân tích tin tức hàng ngày' },
+    ]
   },
   {
     label: 'Nhóm ngành',
@@ -571,7 +591,112 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 {isDesktop && (
                   <Box sx={{ display: 'flex', gap: 0.5 }}>
                     {topNavTabs.map((tab) => {
-                      const isActive = currentPathname.startsWith(tab.href);
+                      const isActive = currentPathname.startsWith(tab.href) ||
+                        (tab.submenu && tab.submenu.some(sub => currentPathname.startsWith(sub.href)));
+                      const hasSubmenu = tab.submenu && tab.submenu.length > 0;
+
+                      // For tabs with submenu, use a different approach
+                      if (hasSubmenu) {
+                        return (
+                          <Box
+                            key={tab.href}
+                            sx={{
+                              position: 'relative',
+                              '&:hover .nav-dropdown': {
+                                opacity: 1,
+                                visibility: 'visible',
+                                transform: 'translateY(0)',
+                              },
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                px: 2,
+                                height: '30px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                fontSize: fontSize.menuItem.desktop,
+                                fontWeight: isActive ? 600 : 500,
+                                color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
+                                textTransform: 'none',
+                                transition: transitions.colors,
+                                cursor: 'pointer',
+                                borderRadius: borderRadius.sm,
+                                '&:hover': {
+                                  color: theme.palette.primary.main,
+                                  backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                                },
+                              }}
+                            >
+                              {tab.label}
+                            </Box>
+
+                            {/* Dropdown menu */}
+                            <Box
+                              className="nav-dropdown"
+                              sx={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: 0,
+                                mt: 0.5,
+                                minWidth: 280,
+                                bgcolor: 'background.paper',
+                                borderRadius: `${borderRadius.md}px`,
+                                boxShadow: shadows.lg,
+                                py: 1,
+                                opacity: 0,
+                                visibility: 'hidden',
+                                transform: 'translateY(-8px)',
+                                transition: 'all 0.2s ease-in-out',
+                                zIndex: theme.zIndex.tooltip,
+                              }}
+                            >
+                              {tab.submenu!.map((subItem) => {
+                                const isSubActive = currentPathname === subItem.href ||
+                                  (subItem.href !== '/news' && subItem.href !== '/reports' && currentPathname.startsWith(subItem.href));
+                                return (
+                                  <Link
+                                    key={subItem.href}
+                                    href={subItem.href}
+                                    style={{ textDecoration: 'none' }}
+                                  >
+                                    <Box
+                                      sx={{
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        gap: 1.5,
+                                        px: 2,
+                                        py: 1,
+                                        color: isSubActive ? theme.palette.primary.main : theme.palette.text.primary,
+                                        bgcolor: isSubActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                                        '&:hover': {
+                                          bgcolor: alpha(theme.palette.primary.main, 0.08),
+                                          color: theme.palette.primary.main,
+                                        },
+                                        transition: transitions.colors,
+                                      }}
+                                    >
+                                      <Icon icon={subItem.icon} width="24" height="24" style={{ marginTop: '2px', flexShrink: 0 }} />
+                                      <Box>
+                                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                          {subItem.label}
+                                        </Typography>
+                                        {subItem.description && (
+                                          <Typography variant="body2" sx={{ fontSize: fontSize.sm.tablet }}>
+                                            {subItem.description}
+                                          </Typography>
+                                        )}
+                                      </Box>
+                                    </Box>
+                                  </Link>
+                                );
+                              })}
+                            </Box>
+                          </Box>
+                        );
+                      }
+
+                      // Regular tabs without submenu
                       return (
                         <Tooltip
                           key={tab.href}
@@ -663,6 +788,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           sx={{
             bgcolor: theme.palette.background.default,
             display: 'flex',
+            flexDirection: 'column',
             justifyContent: 'center',
             minHeight: `calc(100vh - ${layoutTokens.appBarHeight}px)`,
             px: { xs: 1.5, md: 2, lg: 3 }, // Mobile: 12px, Tablet: 16px, Desktop: 24px
@@ -672,12 +798,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             width: '100%',
             maxWidth: 1400,
             minHeight: '100%',
+            mx: 'auto',
+            flex: 1,
           }}>
             {children}
           </Box>
         </Box>
+
+        {/* FOOTER */}
+        <Footer />
       </Box>
-    </Box>
+    </Box >
   );
 }
 

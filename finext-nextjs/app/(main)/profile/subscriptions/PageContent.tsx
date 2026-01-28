@@ -28,9 +28,8 @@ import {
     Cancel,
     CheckCircle,
 } from '@mui/icons-material';
-import { fontSize, borderRadius } from 'theme/tokens';
+import { fontSize, borderRadius, shadows } from 'theme/tokens';
 import { apiClient } from '../../../../services/apiClient';
-import { fontSize } from 'theme/tokens';
 
 interface Subscription {
     id: string;

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { Box, Typography, Skeleton, useTheme, useMediaQuery, Theme } from '@mui/material';
-import { fontSize, transitions } from 'theme/tokens';
+import { fontSize, transitions, borderRadius } from 'theme/tokens';
 
 interface RawMarketData {
     ticker: string;
@@ -197,8 +197,16 @@ interface IndexTableProps {
 }
 
 export default function IndexTable({ selectedTicker, onTickerChange, indexList, todayAllData }: IndexTableProps) {
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
+
     return (
-        <Box sx={{ overflow: 'hidden' }}>
+        <Box sx={{
+            overflow: 'hidden',
+            borderRadius: `${borderRadius.md}px`,
+            // border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+            // bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)'
+        }}>
             {/* Rows */}
             {indexList.map((ticker, index) => (
                 <IndexRow

@@ -123,7 +123,7 @@ async def get_collection_data(
 # ==============================================================================
 
 
-async def itd_market_index_chart(ticker: Optional[str] = None) -> List[Dict]:
+async def itd_market_index_chart(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
     """Lấy dữ liệu ITD index theo ticker. Database: temp_stock."""
     stock_db = get_database(DB_TEMP_STOCK)
 
@@ -132,11 +132,11 @@ async def itd_market_index_chart(ticker: Optional[str] = None) -> List[Dict]:
     find_query = {"ticker": ticker} if ticker else {}
     itd_df = await get_collection_data(stock_db, "itd_index", find_query=find_query, projection=projection)
 
-    # Chuyển đổi DataFrame về JSON (List[Dict])
+    # Chuyển đổi DataFrame về JSON (List[Dict]) - không cần pagination cho ITD
     return itd_df.to_dict(orient="records")
 
 
-async def sse_today_index(ticker: Optional[str] = None) -> List[Dict]:
+async def sse_today_index(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
     """
     Lấy dữ liệu today của TẤT CẢ indexes trong 1 lần gọi.
     Không cần ticker param - query tất cả theo group.
@@ -166,7 +166,7 @@ async def sse_today_index(ticker: Optional[str] = None) -> List[Dict]:
     return today_df.to_dict(orient="records")
 
 
-async def history_market_index_chart(ticker: Optional[str] = None) -> List[Dict]:
+async def history_market_index_chart(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
     """
     Lấy dữ liệu history index theo ticker (chỉ history, không bao gồm today).
     Database: temp_stock.
@@ -193,6 +193,220 @@ async def history_market_index_chart(ticker: Optional[str] = None) -> List[Dict]
     return history_df.to_dict(orient="records")
 
 
+async def news_categories(**kwargs) -> Dict[str, Any]:
+    """
+    Lấy danh sách tất cả categories duy nhất từ collection news_daily.
+    Database: temp_stock.
+
+    Returns:
+        Dict chứa danh sách categories với category và category_name
+    """
+    stock_db = get_database(DB_TEMP_STOCK)
+    collection = stock_db.get_collection("news_daily")
+
+    # Sử dụng aggregation để lấy distinct categories
+    pipeline = [
+        # Match documents có category và category_name
+        {"$match": {"category": {"$exists": True, "$ne": None}, "category_name": {"$exists": True, "$ne": None}}},
+        # Group by category để lấy unique values
+        {"$group": {"_id": {"category": "$category", "category_name": "$category_name"}}},
+        # Project ra format mong muốn
+        {"$project": {"_id": 0, "category": "$_id.category", "category_name": "$_id.category_name"}},
+        # Sort theo category_name
+        {"$sort": {"category_name": 1}},
+    ]
+
+    cursor = collection.aggregate(pipeline)
+    categories = await cursor.to_list(length=None)
+
+    return {
+        "items": categories,
+        "total": len(categories),
+    }
+
+
+async def news_daily(
+    ticker: Optional[str] = None,
+    source: Optional[str] = None,
+    category: Optional[str] = None,
+    page: Optional[int] = None,
+    limit: Optional[int] = None,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = None,
+    **kwargs,
+) -> Dict[str, Any]:
+    """
+    Lấy dữ liệu tin tức từ collection news_daily với hỗ trợ pagination.
+    Database: temp_stock.
+
+    Args:
+        ticker: Mã ticker để filter (tuỳ chọn)
+        source: Nguồn tin để filter (VD: chinhphu.vn, cafef.vn, vietstock.vn)
+        category: Danh mục tin tức để filter (VD: thi-truong, doanh-nghiep)
+        page: Số trang (bắt đầu từ 1)
+        limit: Số lượng bản ghi mỗi trang
+        sort_by: Tên field để sắp xếp (mặc định: created_at)
+        sort_order: Thứ tự sắp xếp: asc hoặc desc (mặc định: desc)
+
+    Returns:
+        Dict chứa data và pagination info
+    """
+    stock_db = get_database(DB_TEMP_STOCK)
+    collection = stock_db.get_collection("news_daily")
+
+    # Build query
+    find_query = {}
+    if ticker:
+        # Filter theo tickers array
+        find_query["tickers"] = ticker
+    if source:
+        find_query["source"] = source
+    if category:
+        find_query["category"] = category
+
+    # Đếm tổng số documents
+    total = await collection.count_documents(find_query)
+
+    # Xử lý pagination defaults
+    page = page or 1
+    limit = limit or 20
+    skip = (page - 1) * limit
+
+    # Xử lý sort - mặc định theo created_at giảm dần (tin mới nhất trước)
+    sort_field = sort_by or "created_at"
+    sort_direction = -1 if (sort_order or "desc") == "desc" else 1
+
+    # Query với pagination
+    projection = {"_id": 0}
+    cursor = collection.find(find_query, projection)
+    cursor.sort(sort_field, sort_direction)
+    cursor.skip(skip)
+    cursor.limit(limit)
+    cursor.max_time_ms(OPERATION_TIMEOUT_MS)
+
+    docs = await cursor.to_list(length=limit)
+
+    # Tính pagination info
+    total_pages = (total + limit - 1) // limit if limit > 0 else 1
+
+    return {
+        "items": docs,
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total": total,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1,
+        },
+    }
+
+
+# ==============================================================================
+# NEWS REPORT QUERIES - Bản tin từ collection news_report
+# ==============================================================================
+
+
+async def news_report_types(**kwargs) -> Dict[str, Any]:
+    """
+    Lấy danh sách tất cả categories duy nhất từ collection news_report.
+    Database: temp_stock.
+
+    Returns:
+        Dict chứa danh sách categories
+    """
+    stock_db = get_database(DB_TEMP_STOCK)
+    collection = stock_db.get_collection("news_report")
+
+    # Sử dụng aggregation để lấy distinct categories với category_name
+    pipeline = [
+        # Match documents có category
+        {"$match": {"category": {"$exists": True, "$ne": None}}},
+        # Group by category và category_name
+        {"$group": {"_id": "$category", "category_name": {"$first": "$category_name"}}},
+        # Project ra format mong muốn
+        {"$project": {"_id": 0, "category": "$_id", "category_name": 1}},
+        # Sort theo category
+        {"$sort": {"category": 1}},
+    ]
+
+    cursor = collection.aggregate(pipeline)
+    categories = await cursor.to_list(length=None)
+
+    return {
+        "items": categories,
+        "total": len(categories),
+    }
+
+
+async def news_report(
+    category: Optional[str] = None,
+    page: Optional[int] = None,
+    limit: Optional[int] = None,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = None,
+    **kwargs,
+) -> Dict[str, Any]:
+    """
+    Lấy dữ liệu bản tin từ collection news_report với hỗ trợ pagination.
+    Database: temp_stock.
+
+    Args:
+        category: Category để filter (VD: baochinhphu)
+        page: Số trang (bắt đầu từ 1)
+        limit: Số lượng bản ghi mỗi trang
+        sort_by: Tên field để sắp xếp (mặc định: created_at)
+        sort_order: Thứ tự sắp xếp: asc hoặc desc (mặc định: desc)
+
+    Returns:
+        Dict chứa data và pagination info
+    """
+    stock_db = get_database(DB_TEMP_STOCK)
+    collection = stock_db.get_collection("news_report")
+
+    # Build query
+    find_query = {}
+    if category:
+        find_query["category"] = category
+
+    # Đếm tổng số documents
+    total = await collection.count_documents(find_query)
+
+    # Xử lý pagination defaults
+    page = page or 1
+    limit = limit or 20
+    skip = (page - 1) * limit
+
+    # Xử lý sort - mặc định theo created_at giảm dần (tin mới nhất trước)
+    sort_field = sort_by or "created_at"
+    sort_direction = -1 if (sort_order or "desc") == "desc" else 1
+
+    # Query với pagination
+    projection = {"_id": 0}
+    cursor = collection.find(find_query, projection)
+    cursor.sort(sort_field, sort_direction)
+    cursor.skip(skip)
+    cursor.limit(limit)
+    cursor.max_time_ms(OPERATION_TIMEOUT_MS)
+
+    docs = await cursor.to_list(length=limit)
+
+    # Tính pagination info
+    total_pages = (total + limit - 1) // limit if limit > 0 else 1
+
+    return {
+        "items": docs,
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total": total,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1,
+        },
+    }
+
+
 # ==============================================================================
 # REGISTRY - Đăng ký các keyword và hàm query tương ứng
 # ==============================================================================
@@ -202,6 +416,12 @@ SSE_QUERY_REGISTRY: Dict[str, Any] = {
     "sse_today_index": sse_today_index,
     "itd_market_index_chart": itd_market_index_chart,
     "history_market_index_chart": history_market_index_chart,
+    # News queries
+    "news_daily": news_daily,
+    "news_categories": news_categories,
+    # News report queries
+    "news_report": news_report,
+    "news_report_types": news_report_types,
 }
 
 
@@ -210,7 +430,17 @@ def get_available_keywords() -> List[str]:
     return list(SSE_QUERY_REGISTRY.keys())
 
 
-async def execute_sse_query(keyword: str, ticker: Optional[str] = None) -> List[Dict]:
+async def execute_sse_query(
+    keyword: str,
+    ticker: Optional[str] = None,
+    source: Optional[str] = None,
+    category: Optional[str] = None,
+    page: Optional[int] = None,
+    limit: Optional[int] = None,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = None,
+    **kwargs,
+) -> Dict[str, Any]:
     """
     Thực thi query dựa trên keyword.
     Mỗi hàm query sẽ tự chọn database phù hợp.
@@ -218,9 +448,15 @@ async def execute_sse_query(keyword: str, ticker: Optional[str] = None) -> List[
     Args:
         keyword: Từ khóa xác định loại query
         ticker: Mã ticker (VD: VNINDEX, VN30, ...)
+        source: Nguồn tin (VD: chinhphu.vn, cafef.vn, ...)
+        category: Danh mục tin tức hoặc bản tin (VD: thi-truong, baochinhphu)
+        page: Số trang (bắt đầu từ 1)
+        limit: Số lượng bản ghi mỗi trang
+        sort_by: Tên field để sắp xếp
+        sort_order: Thứ tự sắp xếp (asc/desc)
 
     Returns:
-        List các document từ database
+        Dict chứa data và pagination info (nếu có)
 
     Raises:
         ValueError: Nếu keyword không hợp lệ
@@ -230,10 +466,20 @@ async def execute_sse_query(keyword: str, ticker: Optional[str] = None) -> List[
         raise ValueError(f"Keyword '{keyword}' không hợp lệ. Các keyword có sẵn: {available}")
 
     query_func = SSE_QUERY_REGISTRY[keyword]
-    logger.debug(f"Executing SSE query for keyword: {keyword}, ticker: {ticker}")
+    logger.debug(
+        f"Executing SSE query for keyword: {keyword}, ticker: {ticker}, source: {source}, category: {category}, page: {page}, limit: {limit}"
+    )
 
-    # Gọi hàm query với ticker nếu có
-    if ticker:
-        return await query_func(ticker)
-    else:
-        return await query_func()
+    # Tạo dict params để truyền vào hàm query
+    query_params = {
+        "ticker": ticker,
+        "source": source,
+        "category": category,
+        "page": page,
+        "limit": limit,
+        "sort_by": sort_by,
+        "sort_order": sort_order,
+    }
+
+    # Gọi hàm query với các params
+    return await query_func(**query_params)
