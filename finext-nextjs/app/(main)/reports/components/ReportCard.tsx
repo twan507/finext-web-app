@@ -107,17 +107,23 @@ export default function ReportCard({ report }: ReportCardProps) {
                     {report.title || 'Bản tin'}
                 </Typography>
 
-                {/* Category name */}
-                <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{
-                        fontSize: getResponsiveFontSize('sm'),
-                        lineHeight: 1.5,
-                    }}
-                >
-                    {report.category_name}
-                </Typography>
+                {/* Category name - hiển thị giống NewsCard nhưng không có sapo */}
+                {report.category_name && (
+                    <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{
+                            fontSize: getResponsiveFontSize('sm'),
+                            lineHeight: 1.5,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                        }}
+                    >
+                        {report.category_name}
+                    </Typography>
+                )}
             </Box>
         </Box>
     );

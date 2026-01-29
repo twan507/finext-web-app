@@ -7,7 +7,7 @@ interface PageProps {
 }
 
 export const metadata: Metadata = {
-    title: 'Bản tin | FinExt',
+    title: 'Chi tiết bản tin',
     description: 'Chi tiết bản tin thị trường.',
 };
 

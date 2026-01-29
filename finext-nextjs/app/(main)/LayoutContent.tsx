@@ -609,27 +609,29 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                               },
                             }}
                           >
-                            <Box
-                              sx={{
-                                px: 2,
-                                height: '30px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                fontSize: fontSize.menuItem.desktop,
-                                fontWeight: isActive ? 600 : 500,
-                                color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
-                                textTransform: 'none',
-                                transition: transitions.colors,
-                                cursor: 'pointer',
-                                borderRadius: borderRadius.sm,
-                                '&:hover': {
-                                  color: theme.palette.primary.main,
-                                  backgroundColor: alpha(theme.palette.primary.main, 0.08),
-                                },
-                              }}
-                            >
-                              {tab.label}
-                            </Box>
+                            <Link href={tab.href} passHref style={{ textDecoration: 'none' }}>
+                              <Box
+                                sx={{
+                                  px: 2,
+                                  height: '30px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  fontSize: fontSize.menuItem.desktop,
+                                  fontWeight: isActive ? 600 : 500,
+                                  color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
+                                  textTransform: 'none',
+                                  transition: transitions.colors,
+                                  cursor: 'pointer',
+                                  borderRadius: borderRadius.sm,
+                                  '&:hover': {
+                                    color: theme.palette.primary.main,
+                                    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                                  },
+                                }}
+                              >
+                                {tab.label}
+                              </Box>
+                            </Link>
 
                             {/* Dropdown menu */}
                             <Box

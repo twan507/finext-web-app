@@ -176,14 +176,8 @@ export default function PageContent({ articleId }: PageContentProps) {
         <Box sx={{ py: spacing.xs }}>
             {/* Breadcrumbs */}
             <NewsBreadcrumb
-                items={
-                    article
-                        ? [
-                            { label: article.category_name || article.category, href: `/news/category/${article.category}` },
-                            { label: article.title },
-                        ]
-                        : [{ label: loading ? 'Đang tải...' : 'Bài viết' }]
-                }
+                loading={loading}
+                items={[]}
             />
 
             {/* Back button */}

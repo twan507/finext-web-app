@@ -10,7 +10,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const { category } = await params;
 
     return {
-        title: `Bản tin ${category} | FinExt`,
+        title: 'Bản tin',
         description: `Tổng hợp bản tin ${category} hàng ngày.`,
     };
 }

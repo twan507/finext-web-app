@@ -3,7 +3,7 @@ import { Metadata } from 'next';
 import ReportsContent from './PageContent';
 
 export const metadata: Metadata = {
-    title: 'Bản tin thị trường | FinExt',
+    title: 'Bản tin',
     description: 'Tổng hợp báo cáo phân tích, bản tin doanh nghiệp và thị trường hàng ngày.',
 };
 

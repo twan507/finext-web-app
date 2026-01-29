@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
     Box,
+    Divider,
     IconButton,
     Skeleton,
     Stack,
@@ -11,7 +12,6 @@ import {
     Typography,
     Alert,
     Button,
-    Divider,
 } from '@mui/material';
 import {
     AccessTime,
@@ -188,14 +188,8 @@ export default function PageContent({ reportId }: PageContentProps) {
             <NewsBreadcrumb
                 sectionLabel="Bản tin"
                 sectionHref="/reports"
-                items={
-                    report
-                        ? [
-                            { label: categoryName, href: `/reports/category/${report.category}` },
-                            { label: title },
-                        ]
-                        : [{ label: loading ? 'Đang tải...' : 'Bản tin' }]
-                }
+                loading={loading}
+                items={[]}
             />
 
             {/* Back button */}
@@ -221,14 +215,27 @@ export default function PageContent({ reportId }: PageContentProps) {
             {!loading && report && (
                 <Box>
                     {/* Header */}
-                    <Box>
+                    <Box sx={{}}>
+                        {/* Title */}
+                        <Typography
+                            variant="h4"
+                            component="h1"
+                            sx={{
+                                fontWeight: 800,
+                                fontSize: getResponsiveFontSize('h3'),
+                                lineHeight: 1.3,
+                                mb: spacing.xxs,
+                            }}
+                        >
+                            {title}
+                        </Typography>
+
                         {/* Meta info */}
                         <Stack
                             direction={{ xs: 'column', sm: 'row' }}
                             justifyContent="space-between"
                             alignItems={{ xs: 'flex-start', sm: 'center' }}
                             spacing={2}
-                            sx={{ mb: spacing.xs }}
                         >
                             <Stack direction="row" alignItems="center" spacing={1}>
                                 <AccessTime sx={{ fontSize: getResponsiveFontSize('md'), color: 'text.secondary' }} />
@@ -273,7 +280,7 @@ export default function PageContent({ reportId }: PageContentProps) {
 
                     <Divider sx={{ my: spacing.xs }} />
 
-                    {/* Content - Render HTML directly */}
+                    {/* Content - Render HTML directly (không có sapo) */}
                     <Box
                         sx={{
                             fontSize: getResponsiveFontSize('md'),
@@ -293,6 +300,12 @@ export default function PageContent({ reportId }: PageContentProps) {
                             },
                             '& p': {
                                 mb: 2,
+                            },
+                            '& img': {
+                                maxWidth: '100%',
+                                height: 'auto',
+                                borderRadius: `${borderRadius.md}px`,
+                                my: 2,
                             },
                             '& a': {
                                 color: 'primary.main',

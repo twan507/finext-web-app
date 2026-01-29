@@ -54,8 +54,13 @@ export default function PageContent({ category }: PageContentProps) {
 
     return (
         <Box sx={{ py: spacing.xs }}>
-            {/* Breadcrumb */}
-            <NewsBreadcrumb sectionLabel="Bản tin" sectionHref="/reports" items={[{ label: categoryName }]} />
+            {/* Breadcrumb - đợi load xong mới hiển thị category_name */}
+            <NewsBreadcrumb
+                sectionLabel="Bản tin"
+                sectionHref="/reports"
+                loading={categoriesLoading}
+                items={categoriesLoading ? [] : [{ label: categoryName }]}
+            />
 
             {/* Header */}
             <Box sx={{ mb: spacing.xs }}>
