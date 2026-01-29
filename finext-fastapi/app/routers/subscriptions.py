@@ -1,12 +1,12 @@
 # finext-fastapi/app/routers/subscriptions.py
 import logging
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query  # Thêm Query
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.database import get_database
-from app.schemas.subscriptions import SubscriptionCreate, SubscriptionPublic
+from app.schemas.subscriptions import SubscriptionCreate, SubscriptionPublic, SubscriptionAdminResponse
 from app.schemas.users import UserInDB  # Giữ UserInDB cho current_user
 from app.utils.types import PyObjectId
 from app.utils.response_wrapper import StandardApiResponse, api_response_wrapper
@@ -25,7 +25,7 @@ router = APIRouter()  # Prefix và tags sẽ được thêm ở main.py
 
 @router.post(
     "/",
-    response_model=StandardApiResponse[SubscriptionPublic],
+    response_model=StandardApiResponse[SubscriptionAdminResponse],
     status_code=status.HTTP_201_CREATED,
     summary="[Admin] Tạo subscription mới cho user",
     dependencies=[Depends(require_permission("subscription", "create"))],
@@ -50,14 +50,14 @@ async def create_new_subscription_endpoint(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Không thể tạo subscription. Vui lòng kiểm tra User ID và License Key ('{sub_data.license_key}') có hợp lệ không, hoặc license có active không.",
             )
-        return SubscriptionPublic.model_validate(created_sub)
+        return SubscriptionAdminResponse.model_validate(created_sub)
     except ValueError as ve:  # Bắt lỗi từ CRUD (ví dụ license không active)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
 @router.post(
     "/{subscription_id}/activate",
-    response_model=StandardApiResponse[SubscriptionPublic],
+    response_model=StandardApiResponse[SubscriptionAdminResponse],
     summary="[Admin] Kích hoạt lại một subscription cụ thể cho user",
     dependencies=[Depends(require_permission("subscription", "update_any"))],
     tags=["subscriptions"],
@@ -88,15 +88,15 @@ async def activate_subscription_endpoint(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Không thể kích hoạt subscription {subscription_id}. Có thể nó không thuộc user hoặc lỗi khác.",
             )
-        return SubscriptionPublic.model_validate(activated_sub)
+        return SubscriptionAdminResponse.model_validate(activated_sub)
     except ValueError as ve:  # Bắt lỗi từ CRUD (ví dụ license gốc không active)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
 @router.get(
     "/{subscription_id}",
-    response_model=StandardApiResponse[SubscriptionPublic],
-    summary="Lấy chi tiết subscription theo ID",
+    response_model=StandardApiResponse[Union[SubscriptionAdminResponse, SubscriptionPublic]],
+    summary="Lấy chi tiết subscription theo ID (admin: full data, user: minimal data)",
     tags=["subscriptions"],
 )
 @api_response_wrapper(default_success_message="Lấy thông tin subscription thành công.")
@@ -129,12 +129,18 @@ async def read_subscription_by_id(  # Đổi tên hàm nếu bị trùng
         else:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Bạn không có quyền truy cập thông tin subscription này.")
 
-    return SubscriptionPublic.model_validate(sub)
+    # Phân loại response dựa trên quyền:
+    # - Admin (có subscription:read_any) → trả về full data
+    # - User thường (chỉ có subscription:read_own) → trả về minimal data
+    if has_read_any:
+        return SubscriptionAdminResponse.model_validate(sub)
+    else:
+        return SubscriptionPublic.model_validate(sub)
 
 
 @router.get(
     "/user/{user_id}",
-    response_model=StandardApiResponse[List[SubscriptionPublic]],
+    response_model=StandardApiResponse[List[SubscriptionAdminResponse]],
     summary="Lấy lịch sử subscriptions của user",
     dependencies=[Depends(require_permission("subscription", "read_any"))],
     tags=["subscriptions"],
@@ -148,7 +154,7 @@ async def read_user_subscriptions(  # Đổi tên hàm nếu bị trùng
     # current_user: UserInDB = Depends(get_current_active_user), # Bỏ nếu không dùng
 ):
     subs = await crud_subscriptions.get_subscriptions_for_user_db(db, user_id, skip, limit)
-    return [SubscriptionPublic.model_validate(s) for s in subs]
+    return [SubscriptionAdminResponse.model_validate(s) for s in subs]
 
 
 @router.get(
@@ -171,7 +177,7 @@ async def read_my_current_subscription_endpoint(
 
 @router.put(
     "/{subscription_id}/deactivate",
-    response_model=StandardApiResponse[SubscriptionPublic],
+    response_model=StandardApiResponse[SubscriptionAdminResponse],
     summary="[Admin] Hủy kích hoạt một subscription",
     dependencies=[Depends(require_permission("subscription", "deactivate_any"))],
     tags=["subscriptions"],
@@ -188,7 +194,7 @@ async def deactivate_subscription(  # Đổi tên hàm nếu bị trùng
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Subscription với ID {subscription_id} không tìm thấy hoặc đã bị hủy kích hoạt.",
             )
-        return SubscriptionPublic.model_validate(deactivated_sub)
+        return SubscriptionAdminResponse.model_validate(deactivated_sub)
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
@@ -196,7 +202,7 @@ async def deactivate_subscription(  # Đổi tên hàm nếu bị trùng
 # <<<< PHẦN BỔ SUNG MỚI >>>>
 @router.get(
     "/admin/all",
-    response_model=StandardApiResponse[PaginatedResponse[SubscriptionPublic]],
+    response_model=StandardApiResponse[PaginatedResponse[SubscriptionAdminResponse]],
     summary="[Admin] Lấy danh sách tất cả subscriptions (hỗ trợ filter và phân trang)",
     dependencies=[Depends(require_permission("subscription", "read_any"))],
     tags=["subscriptions"],
@@ -224,13 +230,13 @@ async def admin_read_all_subscriptions(
         license_key_filter=license_key.upper() if license_key else None,  # Chuẩn hóa license_key
         is_active_filter=is_active,
     )
-    items = [SubscriptionPublic.model_validate(s) for s in subscriptions_docs]
-    return PaginatedResponse[SubscriptionPublic](items=items, total=total)
+    items = [SubscriptionAdminResponse.model_validate(s) for s in subscriptions_docs]
+    return PaginatedResponse[SubscriptionAdminResponse](items=items, total=total)
 
 
 @router.delete(
     "/{subscription_id}",
-    response_model=StandardApiResponse[SubscriptionPublic],
+    response_model=StandardApiResponse[SubscriptionAdminResponse],
     summary="[Admin] Xóa một subscription",
     dependencies=[Depends(require_permission("subscription", "delete_any"))],
     tags=["subscriptions"],
@@ -250,7 +256,7 @@ async def delete_subscription_endpoint(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Subscription với ID {subscription_id} không tìm thấy hoặc không thể xóa.",
             )
-        return SubscriptionPublic.model_validate(deleted_sub)
+        return SubscriptionAdminResponse.model_validate(deleted_sub)
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 

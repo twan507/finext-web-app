@@ -1,10 +1,11 @@
 # finext-fastapi/app/routers/licenses.py
 import logging
+from typing import List, Optional, Union
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.database import get_database
-from app.schemas.licenses import LicenseCreate, LicensePublic, LicenseUpdate  # Thêm LicenseInDB
+from app.schemas.licenses import LicenseCreate, LicensePublic, LicenseAdminResponse, LicenseUpdate
 from app.schemas.users import UserInDB  # Thêm import này
 from app.auth.dependencies import get_current_active_user  # Thêm import này
 
@@ -23,7 +24,7 @@ router = APIRouter()  # Prefix và tags sẽ được đặt ở main.py
 
 @router.post(
     "/",
-    response_model=StandardApiResponse[LicensePublic],
+    response_model=StandardApiResponse[LicenseAdminResponse],
     status_code=status.HTTP_201_CREATED,
     summary="[Admin] Tạo một license mới",
     dependencies=[Depends(require_permission("license", "manage"))],
@@ -46,7 +47,7 @@ async def create_new_license(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Không thể tạo license do lỗi máy chủ.",
             )
-        return LicensePublic.model_validate(created_license)
+        return LicenseAdminResponse.model_validate(created_license)
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
@@ -54,9 +55,11 @@ async def create_new_license(
 # <<<< PHẦN CẬP NHẬT ENDPOINT LIST ALL LICENSES >>>>
 @router.get(
     "/",
-    response_model=StandardApiResponse[PaginatedResponse[LicensePublic]],  # SỬA RESPONSE MODEL
-    summary="[Admin] Lấy danh sách các licenses (bao gồm cả inactive nếu có query param)",
-    dependencies=[Depends(require_permission("license", "manage"))],  # "manage" bao gồm cả list
+    response_model=StandardApiResponse[
+        PaginatedResponse[Union[LicenseAdminResponse, LicensePublic]]
+    ],  # SỬA RESPONSE MODEL: Support cả 2 type
+    summary="Lấy danh sách các licenses (User: minimal, Admin: full)",
+    dependencies=[Depends(require_permission("license", "read"))],  # Đổi thành "read" để user xem được
     tags=["licenses"],
 )
 @api_response_wrapper(default_success_message="Lấy danh sách licenses thành công.")
@@ -67,19 +70,30 @@ async def read_all_licenses(
     # Thêm các filter nếu cần:
     # key_filter: Optional[str] = Query(None, description="Lọc theo key license (chứa)"),
     # name_filter: Optional[str] = Query(None, description="Lọc theo tên license (chứa)"),
+    current_user: UserInDB = Depends(get_current_active_user),
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
+    # Kiểm tra quyền admin để quyết định trả về full hay minimal
+    from app.auth.access import _get_user_permissions
+
+    user_permissions = await _get_user_permissions(db, str(current_user.id))
+    is_admin_or_manager = "license:manage" in user_permissions
+
     licenses_docs, total_count = await crud_licenses.get_licenses(
         db,
         skip=skip,
         limit=limit,
-        include_inactive=include_inactive,
-        # key_filter=key_filter, # Truyền filter nếu có
+        include_inactive=include_inactive if is_admin_or_manager else False,  # User thường k được xem inactive
+        # key_filter=key_filter,
         # name_filter=name_filter,
     )
 
-    items = [LicensePublic.model_validate(lic) for lic in licenses_docs]
-    return PaginatedResponse[LicensePublic](items=items, total=total_count)
+    if is_admin_or_manager:
+        items = [LicenseAdminResponse.model_validate(lic) for lic in licenses_docs]
+        return PaginatedResponse[LicenseAdminResponse](items=items, total=total_count)
+    else:
+        items = [LicensePublic.model_validate(lic) for lic in licenses_docs]
+        return PaginatedResponse[LicensePublic](items=items, total=total_count)
 
 
 # <<<< KẾT THÚC PHẦN CẬP NHẬT >>>>
@@ -116,7 +130,7 @@ async def read_license_by_id_endpoint(
 
 @router.put(
     "/{license_id}",
-    response_model=StandardApiResponse[LicensePublic],
+    response_model=StandardApiResponse[LicenseAdminResponse],
     summary="[Admin] Cập nhật thông tin một license",
     dependencies=[Depends(require_permission("license", "manage"))],
     tags=["licenses"],
@@ -134,14 +148,14 @@ async def update_existing_license(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Không thể cập nhật. License với ID {license_id} không tồn tại.",
             )
-        return LicensePublic.model_validate(updated_license)
+        return LicenseAdminResponse.model_validate(updated_license)
     except ValueError as ve:  # Bắt lỗi từ CRUD (ví dụ: không cho sửa license được bảo vệ)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
 @router.put(
     "/{license_id}/deactivate",
-    response_model=StandardApiResponse[LicensePublic],
+    response_model=StandardApiResponse[LicenseAdminResponse],
     status_code=status.HTTP_200_OK,
     summary="[Admin] Vô hiệu hoá một license",
     dependencies=[Depends(require_permission("license", "manage"))],
@@ -160,14 +174,14 @@ async def deactivate_existing_license(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,  # Hoặc 404 nếu không tìm thấy sau khi check
                 detail=f"Không thể vô hiệu hoá license với ID {license_id} sau khi kiểm tra.",
             )
-        return LicensePublic.model_validate(deactivated_license)
+        return LicenseAdminResponse.model_validate(deactivated_license)
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
 @router.put(
     "/{license_id}/activate",
-    response_model=StandardApiResponse[LicensePublic],
+    response_model=StandardApiResponse[LicenseAdminResponse],
     status_code=status.HTTP_200_OK,
     summary="[Admin] Kích hoạt một license",
     dependencies=[Depends(require_permission("license", "manage"))],
@@ -186,7 +200,7 @@ async def activate_existing_license(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,  # Hoặc 404 nếu không tìm thấy sau khi check
                 detail=f"Không thể kích hoạt license với ID {license_id} sau khi kiểm tra.",
             )
-        return LicensePublic.model_validate(activated_license)
+        return LicenseAdminResponse.model_validate(activated_license)
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 

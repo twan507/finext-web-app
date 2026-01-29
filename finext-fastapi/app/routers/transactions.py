@@ -15,6 +15,7 @@ from app.schemas.transactions import (
     TransactionCreateByUser,
     TransactionCreateForAdmin,
     TransactionPublic,
+    TransactionAdminResponse,
     TransactionTypeEnum,
     TransactionPaymentConfirmationRequest,
     TransactionPriceCalculationRequest,
@@ -35,7 +36,7 @@ router = APIRouter(tags=["transactions"])  # Prefix sẽ được đặt ở mai
 
 @router.post(
     "/admin/create",
-    response_model=StandardApiResponse[TransactionPublic],
+    response_model=StandardApiResponse[TransactionAdminResponse],
     status_code=status.HTTP_201_CREATED,
     summary="[Admin] Tạo một giao dịch mới cho một người dùng",
     dependencies=[Depends(require_permission("transaction", "create_any"))],
@@ -50,7 +51,7 @@ async def admin_create_new_transaction(
 ):
     try:
         created_transaction = await crud_transactions.create_transaction_for_admin_db(db, transaction_data)
-        return TransactionPublic.model_validate(created_transaction)
+        return TransactionAdminResponse.model_validate(created_transaction)
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
@@ -81,7 +82,7 @@ async def user_create_new_order(
 # <<<< PHẦN CẬP NHẬT ENDPOINT /admin/all >>>>
 @router.get(
     "/admin/all",
-    response_model=StandardApiResponse[PaginatedResponse[TransactionPublic]],  # SỬA RESPONSE MODEL
+    response_model=StandardApiResponse[PaginatedResponse[TransactionAdminResponse]],  # SỬA RESPONSE MODEL
     summary="[Admin] Lấy danh sách tất cả giao dịch (hỗ trợ filter và phân trang)",
     dependencies=[Depends(require_permission("transaction", "read_any"))],
 )
@@ -107,8 +108,8 @@ async def admin_read_all_transactions(
         limit=limit,
     )
 
-    items = [TransactionPublic.model_validate(t) for t in transactions_docs]
-    return PaginatedResponse[TransactionPublic](items=items, total=total_count)
+    items = [TransactionAdminResponse.model_validate(t) for t in transactions_docs]
+    return PaginatedResponse[TransactionAdminResponse](items=items, total=total_count)
 
 
 # <<<< KẾT THÚC PHẦN CẬP NHẬT >>>>
@@ -116,7 +117,7 @@ async def admin_read_all_transactions(
 
 @router.get(
     "/admin/{transaction_id}",
-    response_model=StandardApiResponse[TransactionPublic],
+    response_model=StandardApiResponse[TransactionAdminResponse],
     summary="[Admin] Lấy chi tiết một giao dịch theo ID",
     dependencies=[Depends(require_permission("transaction", "read_any"))],
 )
@@ -128,7 +129,7 @@ async def admin_read_transaction_by_id(  # Đổi tên hàm
     transaction = await crud_transactions.get_transaction_by_id(db, transaction_id)
     if transaction is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Giao dịch không tìm thấy.")
-    return TransactionPublic.model_validate(transaction)
+    return TransactionAdminResponse.model_validate(transaction)
 
 
 @router.delete(
@@ -157,7 +158,7 @@ async def admin_delete_transaction(
 
 @router.put(
     "/admin/{transaction_id}/confirm-payment",
-    response_model=StandardApiResponse[TransactionPublic],
+    response_model=StandardApiResponse[TransactionAdminResponse],
     summary="[Admin] Xác nhận thanh toán thành công cho một giao dịch 'pending'",
     dependencies=[Depends(require_permission("transaction", "confirm_payment_any"))],
 )
@@ -169,7 +170,7 @@ async def admin_confirm_transaction_payment(  # Đổi tên hàm
 ):
     try:
         confirmed_transaction = await crud_transactions.confirm_transaction_payment_db(db, transaction_id, confirmation_request)
-        return TransactionPublic.model_validate(confirmed_transaction)
+        return TransactionAdminResponse.model_validate(confirmed_transaction)
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
     except Exception as e:
@@ -185,7 +186,7 @@ async def admin_confirm_transaction_payment(  # Đổi tên hàm
 
 @router.put(
     "/admin/{transaction_id}/cancel",
-    response_model=StandardApiResponse[TransactionPublic],
+    response_model=StandardApiResponse[TransactionAdminResponse],
     summary="[Admin] Hủy một giao dịch 'pending'",
     dependencies=[Depends(require_permission("transaction", "cancel_any"))],
 )
@@ -196,7 +197,7 @@ async def admin_cancel_pending_transaction(  # Đổi tên hàm
 ):
     try:
         canceled_transaction = await crud_transactions.cancel_transaction_db(db, transaction_id)
-        return TransactionPublic.model_validate(canceled_transaction)
+        return TransactionAdminResponse.model_validate(canceled_transaction)
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 

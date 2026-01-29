@@ -185,10 +185,36 @@ class TransactionInDB(TransactionBase):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
-class TransactionPublic(TransactionBase):
+class TransactionPublic(BaseModel):
+    """Schema for returning transaction data to regular users (minimal info)."""
+
+    id: PyObjectId = Field(alias="_id")  # Thêm id để frontend có thể dùng làm key
+    license_key: str
+    original_license_price: float
+    purchased_duration_days: int
+    promotion_code_applied: Optional[str] = None
+    promotion_discount_amount: Optional[float] = None
+    broker_code_applied: Optional[str] = None
+    broker_discount_amount: Optional[float] = None
+    total_discount_amount: Optional[float] = None
+    transaction_amount: float
+    payment_status: PaymentStatusEnum
+    transaction_type: TransactionTypeEnum
+    notes: Optional[str] = None
+    created_at: datetime
+    # KHÔNG bao gồm: buyer_user_id, license_id, target_subscription_id, updated_at
+
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True, use_enum_values=True)
+
+
+class TransactionAdminResponse(TransactionBase):
+    """Schema for returning full transaction data to admin."""
+
     id: PyObjectId = Field(alias="_id")
     created_at: datetime
     updated_at: datetime
+
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
 
 class TransactionPaymentConfirmationRequest(BaseModel):

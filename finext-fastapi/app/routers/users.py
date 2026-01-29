@@ -24,7 +24,7 @@ from app.crud.users import (
 import app.crud.brokers as crud_brokers
 import app.crud.subscriptions as crud_subscriptions
 
-from app.schemas.users import UserCreate, UserPublic, UserRoleModificationRequest, UserUpdate, UserInDB
+from app.schemas.users import UserCreate, UserAdminResponse, UserRoleModificationRequest, UserUpdate, UserInDB
 from app.schemas.auth import AdminChangePasswordRequest  # Thêm import schema mới
 from app.schemas.common import PaginatedResponse  # <<<< IMPORT SCHEMA PHÂN TRANG >>>>
 from app.utils.response_wrapper import StandardApiResponse, api_response_wrapper
@@ -37,7 +37,7 @@ router = APIRouter()  # Prefix và tags sẽ được đặt ở main.py
 
 @router.post(
     "/",
-    response_model=StandardApiResponse[UserPublic],
+    response_model=StandardApiResponse[UserAdminResponse],
     status_code=status.HTTP_201_CREATED,
     summary="Tạo người dùng mới (yêu cầu quyền user:create)",
     dependencies=[Depends(require_permission("user", "create"))],
@@ -60,7 +60,7 @@ async def create_new_user_endpoint(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Không thể tạo người dùng do lỗi máy chủ.",
             )
-        return UserPublic.model_validate(created_user)
+        return UserAdminResponse.model_validate(created_user)
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
@@ -82,7 +82,7 @@ async def get_protected_emails_endpoint():
 
 @router.get(
     "/{user_id}",
-    response_model=StandardApiResponse[UserPublic],
+    response_model=StandardApiResponse[UserAdminResponse],
     summary="Lấy thông tin người dùng theo ID (yêu cầu quyền user:read_any)",
     dependencies=[
         Depends(require_permission("user", "read_any")),
@@ -100,12 +100,12 @@ async def read_user_endpoint(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User with ID {user_id} not found.",
         )
-    return UserPublic.model_validate(user)
+    return UserAdminResponse.model_validate(user)
 
 
 @router.put(
     "/{user_id}",
-    response_model=StandardApiResponse[UserPublic],
+    response_model=StandardApiResponse[UserAdminResponse],
     summary="Cập nhật thông tin người dùng (yêu cầu quyền user:update_own hoặc user:update_any)",
     dependencies=[Depends(require_permission("user", "update"))],
     tags=["users"],
@@ -151,7 +151,7 @@ async def update_user_info_endpoint(
                 status_code=status.HTTP_404_NOT_FOUND,  # Hoặc 500 tùy thuộc nguyên nhân
                 detail=f"User with ID {user_id} not found for update or update failed.",
             )
-        return UserPublic.model_validate(updated_user_doc)
+        return UserAdminResponse.model_validate(updated_user_doc)
     except ValueError as ve:  # Bắt lỗi từ CRUD (ví dụ: email trùng, ref_code không hợp lệ)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
@@ -259,7 +259,7 @@ async def delete_user_by_id_endpoint(
 # <<<< PHẦN CẬP NHẬT ENDPOINT LIST ALL USERS >>>>
 @router.get(
     "/",
-    response_model=StandardApiResponse[PaginatedResponse[UserPublic]],  # SỬA RESPONSE MODEL
+    response_model=StandardApiResponse[PaginatedResponse[UserAdminResponse]],  # SỬA RESPONSE MODEL
     summary="Lấy danh sách người dùng (phân trang, yêu cầu quyền user:list)",
     dependencies=[Depends(require_permission("user", "list"))],
     tags=["users"],
@@ -281,8 +281,8 @@ async def read_all_users_endpoint(
         # is_active_filter=is_active_filter,
     )
 
-    items = [UserPublic.model_validate(doc) for doc in user_docs]
-    return PaginatedResponse[UserPublic](items=items, total=total_count)
+    items = [UserAdminResponse.model_validate(doc) for doc in user_docs]
+    return PaginatedResponse[UserAdminResponse](items=items, total=total_count)
 
 
 # <<<< KẾT THÚC PHẦN CẬP NHẬT >>>>
@@ -293,7 +293,7 @@ async def read_all_users_endpoint(
 
 @router.post(
     "/{user_id}/roles",
-    response_model=StandardApiResponse[UserPublic],
+    response_model=StandardApiResponse[UserAdminResponse],
     summary="Gán một hoặc nhiều vai trò cho người dùng",
     dependencies=[Depends(require_permission("user", "manage_roles"))],
     tags=["users"],
@@ -313,12 +313,12 @@ async def assign_roles_to_user_endpoint(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Người dùng không tìm thấy hoặc không có vai trò hợp lệ nào được gán."
         )
-    return UserPublic.model_validate(updated_user)
+    return UserAdminResponse.model_validate(updated_user)
 
 
 @router.delete(
     "/{user_id}/roles",
-    response_model=StandardApiResponse[UserPublic],
+    response_model=StandardApiResponse[UserAdminResponse],
     summary="Thu hồi một hoặc nhiều vai trò từ người dùng",
     dependencies=[Depends(require_permission("user", "manage_roles"))],
     tags=["users"],
@@ -353,7 +353,7 @@ async def revoke_roles_from_user_endpoint(
     updated_user = await revoke_roles_from_user(db, user_id, request_body.role_ids)
     if not updated_user:  # Should not happen if user was found initially
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Người dùng không tìm thấy sau khi thu hồi vai trò.")
-    return UserPublic.model_validate(updated_user)
+    return UserAdminResponse.model_validate(updated_user)
 
 
 @router.put(

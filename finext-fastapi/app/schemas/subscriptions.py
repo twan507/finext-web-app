@@ -70,7 +70,22 @@ class SubscriptionInDB(SubscriptionBase):
     )
 
 
-class SubscriptionPublic(SubscriptionBase):
+class SubscriptionPublic(BaseModel):
+    """Schema for returning subscription data to regular users (minimal info)."""
+
+    license_key: str
+    license_id: PyObjectId  # Cần cho frontend để fetch license color
+    is_active: bool
+    start_date: datetime
+    expiry_date: datetime
+    # KHÔNG bao gồm: user_id, user_email, id, created_at, updated_at
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SubscriptionAdminResponse(SubscriptionBase):
+    """Schema for returning full subscription data to admin."""
+
     id: PyObjectId = Field(alias="_id")
     created_at: datetime
     updated_at: datetime

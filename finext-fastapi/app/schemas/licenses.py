@@ -111,12 +111,22 @@ class LicenseInDB(LicenseBase):  # Kế thừa is_active
     )
 
 
-class LicensePublic(LicenseBase):  # Kế thừa is_active
+class LicensePublic(BaseModel):
+    """Schema for returning license data to regular users (minimal info)."""
+
+    key: str
+    name: str
+    color: str
+    # KHÔNG bao gồm: id, price, duration_days, feature_keys, is_active, created_at, updated_at
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class LicenseAdminResponse(LicenseBase):
+    """Schema for returning full license data to admin."""
+
     id: PyObjectId = Field(alias="_id")
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    model_config = ConfigDict(
-        populate_by_name=True,
-        from_attributes=True,
-    )
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)

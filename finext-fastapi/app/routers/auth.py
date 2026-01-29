@@ -142,9 +142,20 @@ async def register_user(
 @api_response_wrapper(default_success_message="Lấy thông tin người dùng thành công.")
 async def read_users_me(
     current_user: Annotated[UserInDB, Depends(get_current_active_user)],
+    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
-    # UserPublic giờ đã có google_id
-    return UserPublic.model_validate(current_user)
+    # Query role names từ database
+    role_names = []
+    if current_user.role_ids:
+        roles_cursor = db.roles.find({"_id": {"$in": [ObjectId(rid) if isinstance(rid, str) else rid for rid in current_user.role_ids]}})
+        async for role in roles_cursor:
+            if "name" in role:
+                role_names.append(role["name"])
+
+    # Tạo response với role_names
+    user_data = current_user.model_dump()
+    user_data["role_names"] = role_names
+    return UserPublic.model_validate(user_data)
 
 
 @router.get(

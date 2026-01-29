@@ -8,7 +8,7 @@ from PIL import Image
 from bson import ObjectId
 from app.core.database import get_database
 from app.auth.dependencies import get_current_active_user
-from app.schemas.users import UserPublic  # Changed from UserInDB to UserPublic as per get_current_active_user
+from app.schemas.users import UserInDB  # For dependency type annotation
 from app.schemas.uploads import UploadCreate, UploadInDB, UploadPublic, UploadKey
 from app.utils.storage import upload_file_to_r2
 from app.auth.access import require_permission
@@ -89,7 +89,7 @@ def compress_image(image_bytes: bytes, content_type: str, target_size: int = TAR
 )
 @api_response_wrapper(default_success_message="Tải ảnh lên thành công và đã được tối ưu kích thước")
 async def upload_image(
-    current_user: Annotated[UserPublic, Depends(get_current_active_user)],
+    current_user: Annotated[UserInDB, Depends(get_current_active_user)],
     upload_key: UploadKey,
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
     file: UploadFile = File(...),

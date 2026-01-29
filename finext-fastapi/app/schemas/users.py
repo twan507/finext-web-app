@@ -71,8 +71,25 @@ class UserUpdate(BaseModel):
     )
 
 
-class UserPublic(UserBase):  # Kế thừa từ UserBase đã có google_id
-    """Schema for returning user data to the client (output)."""
+class UserPublic(BaseModel):
+    """Schema for returning user data to regular users (minimal info)."""
+
+    id: PyObjectId = Field(alias="_id")  # Frontend cần để identify user
+    full_name: str
+    email: EmailStr
+    phone_number: Optional[str] = None
+    avatar_url: Optional[str] = None
+    referral_code: Optional[str] = None
+    role_ids: List[PyObjectId] = []  # Frontend cần để check admin/manager role
+    role_names: List[str] = []  # Danh sách tên role để frontend hiển thị
+    subscription_id: Optional[PyObjectId] = None  # Frontend cần để fetch subscription
+    # KHÔNG bao gồm: google_id, is_active, created_at, updated_at
+
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+
+class UserAdminResponse(UserBase):
+    """Schema for returning full user data to admin."""
 
     id: PyObjectId = Field(alias="_id")
     role_ids: List[PyObjectId]
@@ -80,9 +97,6 @@ class UserPublic(UserBase):  # Kế thừa từ UserBase đã có google_id
     is_active: Optional[bool] = None
     created_at: datetime
     updated_at: datetime
-    # referral_code đã có từ UserBase
-    # avatar_url đã có từ UserBase
-    # google_id đã có từ UserBase
 
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
