@@ -14,8 +14,6 @@ import {
     IconButton,
     Divider,
 } from '@mui/material';
-import { shadows } from 'theme/tokens';
-} from '@mui/material';
 import {
     DevicesOutlined,
     DeleteOutline,
@@ -31,7 +29,7 @@ import {
 } from '@mui/icons-material';
 import { apiClient } from '../../../../services/apiClient';
 import { useAuth } from '../../../../components/auth/AuthProvider';
-import { fontSize, iconSize } from 'theme/tokens';
+import { fontSize, iconSize, shadows } from 'theme/tokens';
 
 interface Session {
     id: string;

@@ -415,14 +415,14 @@ export const layoutTokens = {
 // Usage: sx={{ p: spacing.md }} or sx={{ gap: spacing.sm }}
 export const spacing = {
   none: 0,      // 0px
-  xxs: 2,       // 2px - Minimal spacing (icons, tight elements)
-  xs: 4,        // 4px - Extra small (chip padding, icon gaps)
-  sm: 8,        // 8px - Small (button padding, list item gaps)
-  md: 16,       // 16px - Medium (card padding, section gaps)
-  lg: 24,       // 24px - Large (section padding, modal padding)
-  xl: 32,       // 32px - Extra large (page margins, major sections)
-  xxl: 48,      // 48px - Maximum (hero sections, major separations)
-  xxxl: 64,     // 64px - Extra maximum (landing page sections)
+  xxs: 1,       // 2px - Minimal spacing (icons, tight elements)
+  xs: 2,        // 4px - Extra small (chip padding, icon gaps)
+  sm: 4,        // 8px - Small (button padding, list item gaps)
+  md: 8,       // 16px - Medium (card padding, section gaps)
+  lg: 12,       // 24px - Large (section padding, modal padding)
+  xl: 24,       // 32px - Extra large (page margins, major sections)
+  xxl: 32,      // 48px - Maximum (hero sections, major separations)
+  xxxl: 48,     // 64px - Extra maximum (landing page sections)
 } as const;
 
 // Responsive spacing helper

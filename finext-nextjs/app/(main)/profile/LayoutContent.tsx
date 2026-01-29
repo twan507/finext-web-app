@@ -42,7 +42,7 @@ export default function LayoutContent({ children }: ProfileLayoutProps) {
   return (
     <Box
       sx={{
-        height: '100%',
+        height: '100vh',
         width: '100%',
         display: 'flex',
         bgcolor: 'background.default',
@@ -53,6 +53,7 @@ export default function LayoutContent({ children }: ProfileLayoutProps) {
         component="aside"
         sx={{
           width: { xs: 60, md: 260 },
+          height: '100%',
           flexShrink: 0,
           display: 'flex',
           flexDirection: 'column',
@@ -168,6 +169,8 @@ export default function LayoutContent({ children }: ProfileLayoutProps) {
         component="main"
         sx={{
           flex: 1,
+          height: '100%',
+          minHeight: 0,
           minWidth: 0,
           p: 2,
           bgcolor: 'background.paper',
