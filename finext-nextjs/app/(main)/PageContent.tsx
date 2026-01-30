@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { Box, Skeleton } from '@mui/material';
 
@@ -93,9 +94,6 @@ export default function HomeContent() {
     const itdSseRef = useRef<ISseConnection | null>(null);
 
     // ========== STATE ==========
-    // History data (từ REST API - gọi 1 lần khi đổi ticker)
-    const [historyData, setHistoryData] = useState<RawMarketData[]>([]);
-    const [historyLoading, setHistoryLoading] = useState<boolean>(true);
 
     // Today data (từ SSE sse_today_index - cho TẤT CẢ indexes)
     const [todayAllData, setTodayAllData] = useState<IndexDataByTicker>({});
@@ -114,41 +112,21 @@ export default function HomeContent() {
     const [error, setError] = useState<string | null>(null);
 
     // ========== LUỒNG 1: REST - History Data ==========
-    const fetchHistoryData = useCallback(async (selectedTicker: string) => {
-        setHistoryLoading(true);
-        try {
+    const { data: historyData = [], isLoading: historyLoading } = useQuery({
+        queryKey: ['market', 'history', ticker],
+        queryFn: async () => {
             const response = await apiClient<RawMarketData[]>({
                 url: '/api/v1/sse/rest/history_market_index_chart',
                 method: 'GET',
-                queryParams: { ticker: selectedTicker },
+                queryParams: { ticker },
                 requireAuth: false
             });
+            return response.data || [];
+        },
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        refetchOnWindowFocus: false,
+    });
 
-            if (isMountedRef.current && response.data) {
-                setHistoryData(response.data);
-                setError(null);
-            }
-        } catch (err: any) {
-            if (isMountedRef.current) {
-                console.error('[History] Fetch error:', err);
-                setError(`Lỗi tải dữ liệu lịch sử: ${err.message}`);
-            }
-        } finally {
-            if (isMountedRef.current) {
-                setHistoryLoading(false);
-            }
-        }
-    }, []);
-
-    // Fetch history khi ticker thay đổi
-    useEffect(() => {
-        isMountedRef.current = true;
-        fetchHistoryData(ticker);
-
-        return () => {
-            isMountedRef.current = false;
-        };
-    }, [ticker, fetchHistoryData]);
 
     // ========== LUỒNG 2: SSE - Today All Indexes ==========
     useEffect(() => {
@@ -295,7 +273,7 @@ export default function HomeContent() {
         setTicker(newTicker);
         setTimeRange('1Y'); // Reset timeRange về mặc định khi đổi index
         setIsLoading(true);
-        setHistoryData([]);
+        // Date refetch handled by React Query queryKey change
         setEodData(emptyChartData);
         setIntradayData(emptyChartData);
     };

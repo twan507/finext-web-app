@@ -2,6 +2,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import {
     Box,
     Pagination,
@@ -95,21 +97,31 @@ export default function NewsList({
     pageSize = NEWS_PAGE_SIZE,
     onCategoriesLoaded,
 }: NewsListProps) {
-    const [articles, setArticles] = useState<NewsArticle[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [page, setPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [total, setTotal] = useState(0);
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
 
-    const fetchNews = useCallback(async (pageNum: number) => {
-        setLoading(true);
-        setError(null);
+    // Get params from URL or props
+    const page = Number(searchParams.get('page')) || 1;
+    // const urlCategory = searchParams.get('category'); // We prioritize prop 'category' for now as it aligns with route segments
 
-        try {
+    // React Query Key
+    const queryKey = ['news', 'list', {
+        page,
+        limit: pageSize,
+        source,
+        category: (category && category !== 'all') ? category : undefined,
+        sort_by: NEWS_SORT_FIELD,
+        sort_order: NEWS_SORT_ORDER
+    }];
+
+    // Use Query
+    const { data: newsData, isLoading, error: queryError } = useQuery({
+        queryKey,
+        queryFn: async () => {
             // Build query params
             const queryParams: Record<string, string> = {
-                page: String(pageNum),
+                page: String(page),
                 limit: String(pageSize),
                 sort_by: NEWS_SORT_FIELD,
                 sort_order: NEWS_SORT_ORDER,
@@ -132,48 +144,45 @@ export default function NewsList({
                 requireAuth: false,
             });
 
-            if (response.data) {
-                const items = response.data.items || [];
-                setArticles(items);
-                setTotalPages(response.data.pagination?.total_pages || 1);
-                setTotal(response.data.pagination?.total || 0);
+            return response.data;
+        },
+        placeholderData: (previousData) => previousData, // Keep previous data while fetching new page
+    });
 
-                // Extract unique categories từ articles và gọi callback
-                if (onCategoriesLoaded && pageNum === 1) {
-                    const categoryMap = new Map<string, string>();
-                    items.forEach((article) => {
-                        if (article.category && article.category_name) {
-                            categoryMap.set(article.category, article.category_name);
-                        }
-                    });
-                    const categories = Array.from(categoryMap.entries()).map(([cat, name]) => ({
-                        category: cat,
-                        category_name: name,
-                    }));
-                    onCategoriesLoaded(categories);
+    // Derived state from query data
+    const articles = newsData?.items || [];
+    const loading = isLoading;
+    const error = queryError ? (queryError as Error).message : null;
+    const totalPages = newsData?.pagination?.total_pages || 1;
+    const total = newsData?.pagination?.total || 0;
+
+    // Effect to extract categories (only run when data changes)
+    useEffect(() => {
+        if (newsData?.items && onCategoriesLoaded && page === 1) {
+            const categoryMap = new Map<string, string>();
+            newsData.items.forEach((article) => {
+                if (article.category && article.category_name) {
+                    categoryMap.set(article.category, article.category_name);
                 }
-            }
-        } catch (err: any) {
-            console.error('[NewsList] Fetch error:', err);
-            setError(err.message || 'Không thể tải tin tức. Vui lòng thử lại sau.');
-        } finally {
-            setLoading(false);
+            });
+            const categories = Array.from(categoryMap.entries()).map(([cat, name]) => ({
+                category: cat,
+                category_name: name,
+            }));
+            onCategoriesLoaded(categories);
         }
-    }, [pageSize, source, category, onCategoriesLoaded]);
-
-    // Reset page về 1 khi category thay đổi
-    useEffect(() => {
-        setPage(1);
-    }, [category]);
-
-    useEffect(() => {
-        fetchNews(page);
-    }, [fetchNews, page]);
+    }, [newsData, onCategoriesLoaded, page]);
 
     const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
-        setPage(value);
-        // Scroll to top
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Update URL
+        const params = new URLSearchParams(searchParams.toString());
+        if (value === 1) {
+            params.delete('page');
+        } else {
+            params.set('page', value.toString());
+        }
+
+        router.push(`${pathname}?${params.toString()}`, { scroll: true });
     };
 
     return (

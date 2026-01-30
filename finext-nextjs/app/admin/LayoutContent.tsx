@@ -520,7 +520,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   };
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh', bgcolor: theme.palette.background.default }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: theme.palette.background.default }}>
       <CssBaseline />
 
       {/* NAV DRAWERS */}
@@ -591,9 +591,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         sx={{
           flexGrow: 1,
           width: { lg: `calc(100% - ${drawerWidth}px)` },
-          height: '100vh',
-          overflowY: 'auto',
-          overflowX: 'hidden',
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          minWidth: 0,
         }}
       >
         {/* APP BAR - sticky trong container */}

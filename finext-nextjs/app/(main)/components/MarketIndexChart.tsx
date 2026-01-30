@@ -377,15 +377,15 @@ export default function MarketIndexChart({
                     : undefined
             },
             handleScroll: {
-                mouseWheel: true,
-                pressedMouseMove: true,
-                horzTouchDrag: true,
+                mouseWheel: false,
+                pressedMouseMove: false,
+                horzTouchDrag: false,
                 vertTouchDrag: false
             },
             handleScale: {
-                axisPressedMouseMove: true,
-                mouseWheel: true,
-                pinch: true
+                axisPressedMouseMove: false,
+                mouseWheel: false,
+                pinch: false
             }
         });
 
@@ -1057,7 +1057,41 @@ export default function MarketIndexChart({
 
             {/* Chart container */}
             <Box
-                onMouseLeave={() => setTooltipData(null)}
+                onClick={() => {
+                    if (chartRef.current) {
+                        chartRef.current.applyOptions({
+                            handleScroll: {
+                                mouseWheel: true,
+                                pressedMouseMove: true,
+                                horzTouchDrag: true,
+                                vertTouchDrag: false
+                            },
+                            handleScale: {
+                                axisPressedMouseMove: true,
+                                mouseWheel: true,
+                                pinch: true
+                            }
+                        });
+                    }
+                }}
+                onMouseLeave={() => {
+                    setTooltipData(null);
+                    if (chartRef.current) {
+                        chartRef.current.applyOptions({
+                            handleScroll: {
+                                mouseWheel: false,
+                                pressedMouseMove: false,
+                                horzTouchDrag: false,
+                                vertTouchDrag: false
+                            },
+                            handleScale: {
+                                axisPressedMouseMove: false,
+                                mouseWheel: false,
+                                pinch: false
+                            }
+                        });
+                    }
+                }}
                 sx={{
                     width: '100%',
                     height: isFullscreen ? '100vh' : height,
@@ -1136,14 +1170,13 @@ export default function MarketIndexChart({
                             backgroundColor: isDarkMode ? 'rgba(30, 30, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)',
                             border: `1px solid ${colors.borderColor}`,
                             borderRadius: 1.5,
-                            padding: '8px 12px',
+                            padding: '6px 10px',
                             pointerEvents: 'none',
                             zIndex: 10,
                             boxShadow: isDarkMode
                                 ? '0 4px 12px rgba(0, 0, 0, 0.5)'
                                 : '0 4px 12px rgba(0, 0, 0, 0.15)',
-                            minWidth: 120,
-                            transform: tooltipData.x > (chartContainerRef.current?.clientWidth || 0) - 180
+                            transform: tooltipData.x > (chartContainerRef.current?.clientWidth || 0) - 150
                                 ? 'translateX(-100%) translateX(-30px)'
                                 : 'none',
                         }}
@@ -1162,32 +1195,32 @@ export default function MarketIndexChart({
                         {tooltipData.open !== undefined ? (
                             // Candlestick tooltip
                             <Box>
-                                <Stack direction="row" justifyContent="space-between" spacing={2}>
-                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary }}>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary, minWidth: 20 }}>
                                         O:
                                     </Typography>
                                     <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textPrimary, fontWeight: 600 }}>
                                         {tooltipData.open?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </Typography>
                                 </Stack>
-                                <Stack direction="row" justifyContent="space-between" spacing={2}>
-                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary }}>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary, minWidth: 20 }}>
                                         H:
                                     </Typography>
                                     <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.upColor, fontWeight: 600 }}>
                                         {tooltipData.high?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </Typography>
                                 </Stack>
-                                <Stack direction="row" justifyContent="space-between" spacing={2}>
-                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary }}>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary, minWidth: 20 }}>
                                         L:
                                     </Typography>
                                     <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.downColor, fontWeight: 600 }}>
                                         {tooltipData.low?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </Typography>
                                 </Stack>
-                                <Stack direction="row" justifyContent="space-between" spacing={2}>
-                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary }}>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary, minWidth: 20 }}>
                                         C:
                                     </Typography>
                                     <Typography
@@ -1201,9 +1234,9 @@ export default function MarketIndexChart({
                                     </Typography>
                                 </Stack>
                                 {tooltipData.volume !== undefined && (
-                                    <Stack direction="row" justifyContent="space-between" spacing={2} sx={{ mt: 0.5, pt: 0.5, borderTop: `1px solid ${colors.borderColor}` }}>
+                                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5, pt: 0.5, borderTop: `1px solid ${colors.borderColor}` }}>
                                         <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary }}>
-                                            Khối lượng:
+                                            KL:
                                         </Typography>
                                         <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textPrimary, fontWeight: 600 }}>
                                             {tooltipData.volume >= 1000000
@@ -1218,7 +1251,7 @@ export default function MarketIndexChart({
                         ) : (
                             // Area chart tooltip
                             <Box>
-                                <Stack direction="row" justifyContent="space-between" spacing={2}>
+                                <Stack direction="row" spacing={1} alignItems="center">
                                     <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary }}>
                                         Giá:
                                     </Typography>
@@ -1227,9 +1260,9 @@ export default function MarketIndexChart({
                                     </Typography>
                                 </Stack>
                                 {tooltipData.volume !== undefined && (
-                                    <Stack direction="row" justifyContent="space-between" spacing={2} sx={{ mt: 0.5 }}>
+                                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
                                         <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary }}>
-                                            Khối lượng:
+                                            KL:
                                         </Typography>
                                         <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textPrimary, fontWeight: 600 }}>
                                             {tooltipData.volume >= 1000000

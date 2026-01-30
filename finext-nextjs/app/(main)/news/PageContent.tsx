@@ -1,7 +1,8 @@
 // finext-nextjs/app/(main)/news/PageContent.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Box, Typography } from '@mui/material';
 
 import { NewsBreadcrumb, NewsList, SourceTabs, CategoryInfo } from './components';
@@ -14,31 +15,21 @@ interface CategoriesApiResponse {
 }
 
 export default function NewsContent() {
-    const [categories, setCategories] = useState<CategoryInfo[]>([]);
-    const [categoriesLoading, setCategoriesLoading] = useState(true);
+    // Use Query for categories
+    const { data: categoriesData, isLoading: categoriesLoading } = useQuery({
+        queryKey: ['news', 'categories'],
+        queryFn: async () => {
+            const response = await apiClient<CategoriesApiResponse>({
+                url: '/api/v1/sse/rest/news_categories',
+                method: 'GET',
+                requireAuth: false,
+            });
+            return response.data;
+        },
+        staleTime: 10 * 60 * 1000 // Cache for 10 minutes
+    });
 
-    // Fetch categories từ API riêng
-    useEffect(() => {
-        const fetchCategories = async () => {
-            try {
-                const response = await apiClient<CategoriesApiResponse>({
-                    url: '/api/v1/sse/rest/news_categories',
-                    method: 'GET',
-                    requireAuth: false,
-                });
-
-                if (response.data?.items) {
-                    setCategories(response.data.items);
-                }
-            } catch (error) {
-                console.error('[NewsContent] Failed to fetch categories:', error);
-            } finally {
-                setCategoriesLoading(false);
-            }
-        };
-
-        fetchCategories();
-    }, []);
+    const categories = categoriesData?.items || [];
 
     return (
         <Box sx={{ py: spacing.xs }}>

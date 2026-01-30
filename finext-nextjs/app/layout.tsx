@@ -94,6 +94,11 @@ function RootLoading() {
   );
 }
 
+// ... imports
+import QueryProvider from './QueryProvider';
+
+// ... (RootLoading function)
+
 export default function RootLayout({
   children,
 }: {
@@ -104,19 +109,21 @@ export default function RootLayout({
       <head>
         <meta charSet="utf-8" />
       </head>
-      <body className={roboto.className} style={{ margin: 0, height: '100vh', overflow: 'auto' }}>
+      <body className={roboto.className} style={{ margin: 0 }}>
         {/* AppRouterCacheProvider tối ưu emotion cache cho MUI */}
         <AppRouterCacheProvider options={{ key: 'css' }}>
           <NextThemesProvider>
             <NotificationProvider>
               <AuthProvider>
                 <MuiProvider>
-                  {/* Suspense boundary cho page transitions */}
-                  <Suspense fallback={<RootLoading />}>
-                    <div style={{ minHeight: '100vh' }}>
-                      {children}
-                    </div>
-                  </Suspense>
+                  <QueryProvider>
+                    {/* Suspense boundary cho page transitions */}
+                    <Suspense fallback={<RootLoading />}>
+                      <div style={{ minHeight: '100vh' }}>
+                        {children}
+                      </div>
+                    </Suspense>
+                  </QueryProvider>
                 </MuiProvider>
               </AuthProvider>
             </NotificationProvider>

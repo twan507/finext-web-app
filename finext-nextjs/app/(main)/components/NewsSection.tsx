@@ -2,6 +2,7 @@
 
 import { Box, Typography, useTheme, Skeleton, Grid, Divider } from '@mui/material';
 import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { fontSize, spacing, getResponsiveFontSize, transitions, borderRadius } from 'theme/tokens';
@@ -74,6 +75,19 @@ interface MiniNewsCardProps {
 function MiniNewsCard({ article }: MiniNewsCardProps) {
     const theme = useTheme();
 
+    // Calculate fixed heights based on HOVER font sizes to prevent layout shift
+    const titleHeight = {
+        xs: `calc(1.4 * ${fontSize.md.mobile} * 2)`,
+        md: `calc(1.4 * ${fontSize.md.tablet} * 2)`,
+        lg: `calc(1.4 * ${fontSize.md.desktop} * 2)`,
+    };
+
+    const sapoHeight = {
+        xs: `calc(1.5 * ${fontSize.sm.mobile} * 2)`,
+        md: `calc(1.5 * ${fontSize.sm.tablet} * 2)`,
+        lg: `calc(1.5 * ${fontSize.sm.desktop} * 2)`,
+    };
+
     return (
         <Box
             sx={{
@@ -90,7 +104,7 @@ function MiniNewsCard({ article }: MiniNewsCardProps) {
                     flexDirection: 'column',
                     textDecoration: 'none',
                     color: 'inherit',
-                    py: spacing.xs,
+                    py: spacing.xs, // Increased from xs (4px) to sm (8px)
                     width: '100%',
                     overflow: 'hidden',
                     cursor: 'pointer',
@@ -119,7 +133,9 @@ function MiniNewsCard({ article }: MiniNewsCardProps) {
                         overflow: 'hidden',
                         color: 'text.primary',
                         transition: transitions.hover,
-                        minHeight: 'calc(1.4em * 2)',
+                        height: titleHeight, // Fixed height based on hover size
+                        // Ensure text aligns effectively if it's shorter (optional, but good for single lines)
+                        // display: 'flex', alignItems: 'center' // Beware this might break multi-line ellipsis
                     }}
                 >
                     {article.title}
@@ -137,7 +153,7 @@ function MiniNewsCard({ article }: MiniNewsCardProps) {
                         WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical',
                         overflow: 'hidden',
-                        minHeight: 'calc(1.5em * 2)',
+                        height: sapoHeight, // Fixed height based on hover size
                         transition: transitions.hover,
                     }}
                 >
@@ -160,6 +176,19 @@ interface MiniReportCardProps {
 function MiniReportCard({ report }: MiniReportCardProps) {
     const theme = useTheme();
 
+    // Calculate fixed heights based on HOVER font sizes to prevent layout shift
+    const titleHeight = {
+        xs: `calc(1.4 * ${fontSize.md.mobile} * 2)`,
+        md: `calc(1.4 * ${fontSize.md.tablet} * 2)`,
+        lg: `calc(1.4 * ${fontSize.md.desktop} * 2)`,
+    };
+
+    const sapoHeight = {
+        xs: `calc(1.5 * ${fontSize.sm.mobile} * 2)`,
+        md: `calc(1.5 * ${fontSize.sm.tablet} * 2)`,
+        lg: `calc(1.5 * ${fontSize.sm.desktop} * 2)`,
+    };
+
     return (
         <Box
             sx={{
@@ -176,7 +205,7 @@ function MiniReportCard({ report }: MiniReportCardProps) {
                     flexDirection: 'column',
                     textDecoration: 'none',
                     color: 'inherit',
-                    py: spacing.xs,
+                    py: spacing.xs, // Increased from xs (4px) to sm (8px)
                     width: '100%',
                     overflow: 'hidden',
                     cursor: 'pointer',
@@ -205,7 +234,7 @@ function MiniReportCard({ report }: MiniReportCardProps) {
                         overflow: 'hidden',
                         color: 'text.primary',
                         transition: transitions.hover,
-                        minHeight: 'calc(1.4em * 2)',
+                        height: titleHeight, // Fixed height based on hover size
                     }}
                 >
                     {report.title || 'Bản tin'}
@@ -223,7 +252,7 @@ function MiniReportCard({ report }: MiniReportCardProps) {
                         WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical',
                         overflow: 'hidden',
-                        minHeight: 'calc(1.5em * 2)',
+                        height: sapoHeight, // Fixed height based on hover size
                         transition: transitions.hover,
                     }}
                 >
@@ -346,106 +375,67 @@ export default function NewsSection() {
     const theme = useTheme();
     const router = useRouter();
 
-    // State for reports
-    const [reports, setReports] = useState<NewsReport[]>([]);
-    const [reportsLoading, setReportsLoading] = useState(true);
-
-    // State for macro news
-    const [macroNews, setMacroNews] = useState<NewsArticle[]>([]);
-    const [macroLoading, setMacroLoading] = useState(true);
-
-    // State for enterprise news
-    const [enterpriseNews, setEnterpriseNews] = useState<NewsArticle[]>([]);
-    const [enterpriseLoading, setEnterpriseLoading] = useState(true);
-
     // Fetch reports
-    useEffect(() => {
-        const fetchReports = async () => {
-            try {
-                const response = await apiClient<ReportApiResponse>({
-                    url: '/api/v1/sse/rest/news_report',
-                    method: 'GET',
-                    queryParams: {
-                        page: '1',
-                        limit: '5',
-                        sort_by: 'created_at',
-                        sort_order: 'desc',
-                    },
-                    requireAuth: false,
-                });
-
-                if (response.data?.items) {
-                    setReports(response.data.items);
-                }
-            } catch (error) {
-                console.error('[NewsSection] Failed to fetch reports:', error);
-            } finally {
-                setReportsLoading(false);
-            }
-        };
-
-        fetchReports();
-    }, []);
+    const { data: reportsData, isLoading: reportsLoading } = useQuery({
+        queryKey: ['news', 'reports', 'home'],
+        queryFn: async () => {
+            const response = await apiClient<ReportApiResponse>({
+                url: '/api/v1/sse/rest/news_report',
+                method: 'GET',
+                queryParams: {
+                    page: '1',
+                    limit: '5',
+                    sort_by: 'created_at',
+                    sort_order: 'desc',
+                },
+                requireAuth: false,
+            });
+            return response.data;
+        }
+    });
+    const reports = reportsData?.items || [];
 
     // Fetch macro news
-    useEffect(() => {
-        const fetchMacroNews = async () => {
-            try {
-                const response = await apiClient<NewsApiResponse>({
-                    url: '/api/v1/sse/rest/news_daily',
-                    method: 'GET',
-                    queryParams: {
-                        page: '1',
-                        limit: '5',
-                        sort_by: 'created_at',
-                        sort_order: 'desc',
-                        source: 'baochinhphu.vn',
-                    },
-                    requireAuth: false,
-                });
-
-                if (response.data?.items) {
-                    setMacroNews(response.data.items);
-                }
-            } catch (error) {
-                console.error('[NewsSection] Failed to fetch macro news:', error);
-            } finally {
-                setMacroLoading(false);
-            }
-        };
-
-        fetchMacroNews();
-    }, []);
+    const { data: macroNewsData, isLoading: macroLoading } = useQuery({
+        queryKey: ['news', 'macro', 'home'],
+        queryFn: async () => {
+            const response = await apiClient<NewsApiResponse>({
+                url: '/api/v1/sse/rest/news_daily',
+                method: 'GET',
+                queryParams: {
+                    page: '1',
+                    limit: '5',
+                    sort_by: 'created_at',
+                    sort_order: 'desc',
+                    source: 'baochinhphu.vn',
+                },
+                requireAuth: false,
+            });
+            return response.data;
+        }
+    });
+    const macroNews = macroNewsData?.items || [];
 
     // Fetch enterprise news
-    useEffect(() => {
-        const fetchEnterpriseNews = async () => {
-            try {
-                const response = await apiClient<NewsApiResponse>({
-                    url: '/api/v1/sse/rest/news_daily',
-                    method: 'GET',
-                    queryParams: {
-                        page: '1',
-                        limit: '5',
-                        sort_by: 'created_at',
-                        sort_order: 'desc',
-                        source: 'findata.vn',
-                    },
-                    requireAuth: false,
-                });
-
-                if (response.data?.items) {
-                    setEnterpriseNews(response.data.items);
-                }
-            } catch (error) {
-                console.error('[NewsSection] Failed to fetch enterprise news:', error);
-            } finally {
-                setEnterpriseLoading(false);
-            }
-        };
-
-        fetchEnterpriseNews();
-    }, []);
+    const { data: enterpriseNewsData, isLoading: enterpriseLoading } = useQuery({
+        queryKey: ['news', 'enterprise', 'home'],
+        queryFn: async () => {
+            const response = await apiClient<NewsApiResponse>({
+                url: '/api/v1/sse/rest/news_daily',
+                method: 'GET',
+                queryParams: {
+                    page: '1',
+                    limit: '5',
+                    sort_by: 'created_at',
+                    sort_order: 'desc',
+                    source: 'findata.vn',
+                },
+                requireAuth: false,
+            });
+            return response.data;
+        }
+    });
+    const enterpriseNews = enterpriseNewsData?.items || [];
 
     return (
         <Box>
