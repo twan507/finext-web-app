@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { Box, Typography, useTheme, Grid, Checkbox, CircularProgress, alpha, ToggleButton, ToggleButtonGroup, Skeleton } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import { fontSize, spacing } from 'theme/tokens';
+import { fontSize, spacing, getResponsiveFontSize } from 'theme/tokens';
 import { apiClient } from 'services/apiClient';
 import type { RawMarketData } from './MarketIndexChart';
 
@@ -43,8 +43,8 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
     // Ngành đang được chọn để vẽ chart bên trái
     const [selectedTickers, setSelectedTickers] = useState<string[]>([]);
 
-    // Shared Time range cho cả chart và list - Mặc định là 1W
-    const [timeRange, setTimeRange] = useState<TimeRange>('1W');
+    // Shared Time range cho cả chart và list - Mặc định là 1M
+    const [timeRange, setTimeRange] = useState<TimeRange>('1M');
 
     // Dữ liệu hiển thị trên chart (Line Chart)
     const [chartSeries, setChartSeries] = useState<{ name: string; data: { x: number; y: number }[] }[]>([]);
@@ -250,112 +250,110 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                 return;
             }
 
-            // CASE 1: 1D -> Use ITD Data prop với index mapping (loại bỏ gap nghỉ trưa)
+            // 1. Collect all raw data points first
+            const allRawData: { ticker: string; tickerName: string; data: { date: string | number; value: number }[] }[] = [];
+
             if (timeRange === '1D') {
-                // Thu thập tất cả timestamps unique từ tất cả tickers
-                const allTimestamps = new Set<number>();
+                // 1D Mode: Use ITD Data
                 selectedTickers.forEach(ticker => {
-                    const itdItems = itdAllData[ticker] || [];
-                    itdItems.forEach(item => {
-                        const d = new Date(item.date);
-                        // Dữ liệu từ API là UTC, thêm 7h để chuyển sang VN time
-                        const vnTimestamp = d.getTime() + 7 * 60 * 60 * 1000;
-                        allTimestamps.add(vnTimestamp);
-                    });
-                });
-
-                // Sort và tạo mapping: timestamp → index (liên tục, không gap)
-                const sortedTimestamps = Array.from(allTimestamps).sort((a, b) => a - b);
-                const timestampToIndex = new Map<number, number>();
-                const idxToTs = new Map<number, number>();
-
-                sortedTimestamps.forEach((ts, index) => {
-                    timestampToIndex.set(ts, index);
-                    idxToTs.set(index, ts);
-                });
-
-                // Lưu mapping để formatter sử dụng
-                setIndexToTimestamp(idxToTs);
-
-                // Build series với x là index (liên tục)
-                const newSeries = selectedTickers.map(ticker => {
                     const itdItems = itdAllData[ticker] || [];
                     const todayItem = allIndustries.find(i => i.ticker === ticker);
                     const tickerName = todayItem?.ticker_name || ticker;
 
-                    if (itdItems.length === 0) {
-                        return { name: tickerName, data: [] };
+                    if (itdItems.length > 0) {
+                        const points = itdItems.map(item => ({
+                            date: new Date(item.date).getTime() + 7 * 60 * 60 * 1000, // Shift to VN Time
+                            value: (item.pct_change || 0) * 100
+                        }));
+                        allRawData.push({ ticker, tickerName, data: points });
+                    } else {
+                        allRawData.push({ ticker, tickerName, data: [] });
                     }
-
-                    const dataPoints = itdItems
-                        .map(item => {
-                            const d = new Date(item.date);
-                            const vnTimestamp = d.getTime() + 7 * 60 * 60 * 1000;
-                            const index = timestampToIndex.get(vnTimestamp) ?? 0;
-                            return {
-                                x: index,
-                                y: (item.pct_change || 0) * 100
-                            };
-                        })
-                        .sort((a, b) => a.x - b.x);
-
-                    return { name: tickerName, data: dataPoints };
                 });
-                setChartSeries(newSeries);
-                return;
+            } else {
+                // History Mode: Use Cached Data
+                selectedTickers.forEach(ticker => {
+                    const history = historyCacheRef.current[ticker] || [];
+                    const todayItem = allIndustries.find(i => i.ticker === ticker);
+                    const tickerName = todayItem?.ticker_name || ticker;
+
+                    // Merge history + today
+                    let fullData = [...history];
+                    if (todayItem) {
+                        const lastHistDate = history.length > 0 ? history[history.length - 1].date : '';
+                        if (todayItem.date !== lastHistDate) {
+                            fullData.push(todayItem);
+                        } else if (fullData.length > 0) {
+                            fullData[fullData.length - 1] = todayItem;
+                        }
+                    }
+                    fullData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+                    // Filter by range
+                    const filtered = filterDataByTimeRange(fullData, timeRange);
+
+                    // Calculate cumulative
+                    let cumulative = 0;
+                    const points = filtered.map(item => {
+                        const pctRaw = item.pct_change || 0;
+                        const pct = Math.abs(pctRaw) < 1 ? pctRaw * 100 : pctRaw;
+                        cumulative += pct;
+                        return {
+                            date: new Date(item.date).getTime(),
+                            value: parseFloat(cumulative.toFixed(2))
+                        };
+                    });
+
+                    // Normalize start to 0
+                    if (points.length > 0) {
+                        const baseVal = points[0].value;
+                        const normalizedPoints = points.map(p => ({
+                            ...p,
+                            value: parseFloat((p.value - baseVal).toFixed(2))
+                        }));
+                        allRawData.push({ ticker, tickerName, data: normalizedPoints });
+                    } else {
+                        allRawData.push({ ticker, tickerName, data: points });
+                    }
+                });
             }
 
-            // Clear mapping khi không phải 1D
-            setIndexToTimestamp(new Map());
-
-            // CASE 2: History -> Use cached data (fetched by separate effect)
-            const results = selectedTickers.map((ticker) => {
-                const history = historyCacheRef.current[ticker] || [];
-                const todayItem = allIndustries.find(i => i.ticker === ticker);
-                const tickerName = todayItem?.ticker_name || ticker;
-
-                // Merge
-                let fullData = [...history];
-                if (todayItem) {
-                    const lastHistDate = history.length > 0 ? history[history.length - 1].date : '';
-                    if (todayItem.date !== lastHistDate) {
-                        fullData.push(todayItem);
-                    } else if (fullData.length > 0) {
-                        fullData[fullData.length - 1] = todayItem;
-                    }
-                }
-                fullData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-                // Filter
-                const filtered = filterDataByTimeRange(fullData, timeRange);
-
-                // Cumulative
-                let cumulative = 0;
-                const dataPoints = filtered.map((item) => {
-                    const pctRaw = item.pct_change || 0;
-                    // For history, simple addition of %
-                    const pct = Math.abs(pctRaw) < 1 ? pctRaw * 100 : pctRaw;
-                    cumulative += pct;
-                    return {
-                        x: new Date(item.date).getTime(),
-                        y: parseFloat(cumulative.toFixed(2))
-                    };
-                });
-
-                // Normalize start to 0
-                if (dataPoints.length > 0) {
-                    const baseVal = dataPoints[0].y;
-                    const normalized = dataPoints.map(p => ({
-                        ...p,
-                        y: parseFloat((p.y - baseVal).toFixed(2))
-                    }));
-                    return { name: tickerName, data: normalized };
-                }
-
-                return { name: tickerName, data: dataPoints };
+            // 2. Build Global Index Map (Category Axis Logic)
+            // Collect all unique timestamps from all series
+            const allTimestamps = new Set<number>();
+            allRawData.forEach(series => {
+                series.data.forEach(p => allTimestamps.add(typeof p.date === 'number' ? p.date : new Date(p.date).getTime()));
             });
 
-            setChartSeries(results);
+            // Sort timestamps
+            const sortedTimestamps = Array.from(allTimestamps).sort((a, b) => a - b);
+
+            // Map timestamp -> continuous index
+            const timestampToIndex = new Map<number, number>();
+            const idxToTs = new Map<number, number>();
+            sortedTimestamps.forEach((ts, index) => {
+                timestampToIndex.set(ts, index);
+                idxToTs.set(index, ts);
+            });
+
+            // Update state for formatter
+            setIndexToTimestamp(idxToTs);
+
+            // 3. Transform Data to use Index as X
+            const finalizedSeries = allRawData.map(series => {
+                const dataPoints = series.data.map(p => {
+                    const ts = typeof p.date === 'number' ? p.date : new Date(p.date).getTime();
+                    const index = timestampToIndex.get(ts) ?? 0;
+                    return {
+                        x: index,
+                        y: p.value
+                    };
+                }).sort((a, b) => a.x - b.x);
+
+                return { name: series.tickerName, data: dataPoints };
+            });
+
+            setChartSeries(finalizedSeries);
         };
 
         updateChart();
@@ -398,6 +396,16 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
         }
     }, []);
 
+    const chartColors = useMemo(() => [
+        theme.palette.primary.main,
+        theme.palette.secondary.main,
+        theme.palette.success.main,
+        theme.palette.warning.main,
+        theme.palette.info.main,
+        '#FF4560', '#775DD0', '#00E396', '#FEB019',
+        '#FF9F40', '#4BC0C0', '#9966FF', '#C9CBCF' // Added more colors just in case
+    ], [theme]);
+
     const getXAxisConfig = useCallback((): ApexXAxis => {
         const baseConfig: ApexXAxis = {
             tooltip: { enabled: false },
@@ -415,30 +423,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
             }
         };
 
-        if (timeRange === '1D') {
-            // 1D: Sử dụng numeric axis với index, formatter convert index → timestamp → HH:mm
-            return {
-                ...baseConfig,
-                type: 'numeric',
-                tickAmount: 6,
-                labels: {
-                    ...baseConfig.labels,
-                    formatter: (value: string) => {
-                        const index = Math.round(parseFloat(value));
-                        if (isNaN(index)) return '';
-                        const ts = indexToTimestamp.get(index);
-                        if (!ts) return '';
-                        const d = new Date(ts);
-                        // Sử dụng getUTCHours/getUTCMinutes vì timestamp đã được cộng 7h
-                        const hours = d.getUTCHours().toString().padStart(2, '0');
-                        const minutes = d.getUTCMinutes().toString().padStart(2, '0');
-                        return `${hours}:${minutes}`;
-                    }
-                }
-            };
-        }
-
-        // Các khung lớn hơn: Sử dụng numeric axis với custom formatter
+        // Unified logic: X is always index, so we always look up timestamp
         let tickAmount = 6;
         if (timeRange === '1W') tickAmount = 7;
 
@@ -449,139 +434,191 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
             labels: {
                 ...baseConfig.labels,
                 formatter: (value: string) => {
-                    const numValue = parseFloat(value);
-                    if (isNaN(numValue)) return '';
-                    return formatDateLabel(numValue, timeRange);
+                    const index = Math.round(parseFloat(value));
+                    if (isNaN(index)) return '';
+                    const ts = indexToTimestamp.get(index);
+                    if (!ts) return '';
+
+                    if (timeRange === '1D') {
+                        const d = new Date(ts);
+                        const hours = d.getUTCHours().toString().padStart(2, '0');
+                        const minutes = d.getUTCMinutes().toString().padStart(2, '0');
+                        return `${hours}:${minutes}`;
+                    }
+
+                    return formatDateLabel(ts, timeRange);
                 }
             }
         };
     }, [timeRange, theme.palette.text.secondary, formatDateLabel, indexToTimestamp]);
 
-    const chartOptions: ApexCharts.ApexOptions = useMemo(() => ({
-        chart: {
-            type: 'line',
-            background: 'transparent',
-            toolbar: { show: false },
-            zoom: { enabled: false },
-            fontFamily: 'inherit',
-            animations: { enabled: true, speed: 300, dynamicAnimation: { enabled: true, speed: 150 } },
-            redrawOnParentResize: true,
-            dropShadow: {
-                enabled: false
-            }
-        },
-        grid: {
-            padding: {
-                left: 30,
-                right: 20,
-                bottom: 5
-            },
-            borderColor: theme.palette.divider,
-            strokeDashArray: 0,
-            xaxis: {
-                lines: { show: false }
-            },
-            yaxis: {
-                lines: { show: true }
-            }
-        },
-        theme: { mode: theme.palette.mode },
-        colors: [
-            theme.palette.primary.main, theme.palette.secondary.main, theme.palette.success.main,
-            theme.palette.warning.main, theme.palette.info.main,
-            '#FF4560', '#775DD0', '#00E396', '#FEB019'
-        ],
-        stroke: {
-            width: 2,
-            curve: 'smooth'
-        },
-        xaxis: getXAxisConfig(),
-        yaxis: {
-            opposite: true, // Hiển thị bên trái
-            labels: {
-                formatter: (val) => `${val.toFixed(1)}%`,
-                style: {
-                    colors: theme.palette.text.secondary,
-                    fontSize: fontSize.sm.tablet
-                },
-                offsetX: -10, // Thêm offset để text không bị cắt
-            },
-        },
-        legend: { show: false },
-        tooltip: {
-            enabled: true,
-            shared: true,
-            intersect: false,
-            custom: function ({ series, seriesIndex, dataPointIndex, w }) {
-                const xValue = w.globals.seriesX[seriesIndex][dataPointIndex];
+    const chartOptions: ApexCharts.ApexOptions = useMemo(() => {
+        // Generate annotations for the last data point of each series (Price Tags)
+        const yAxisAnnotations = chartSeries.map((series, index) => {
+            const data = series.data;
+            if (!data || data.length === 0) return null;
+            const lastPoint = data[data.length - 1];
+            const color = chartColors[index % chartColors.length];
 
-                // Format date/time based on timeRange
-                let dateStr = '';
-                if (timeRange === '1D') {
+            return {
+                y: lastPoint.y,
+                borderColor: 'transparent', // Hide the line, keep only the tag
+                strokeDashArray: 0,
+                label: {
+                    borderColor: 'transparent',
+                    style: {
+                        color: '#fff',
+                        background: color,
+                        fontSize: fontSize.sm.tablet, // Sync with chart font size
+                        fontWeight: 500,
+                        padding: {
+                            left: 6,
+                            right: 6,
+                            top: 2,
+                            bottom: 2,
+                        }
+                    },
+                    text: `${lastPoint.y.toFixed(1)}%`,
+                    position: 'right',
+                    textAnchor: 'start',
+                    offsetX: 15.5,
+                    offsetY: 0,
+                    borderRadius: 2,
+                }
+            };
+        }).filter(Boolean) as any[];
+
+        return {
+            chart: {
+                type: 'line',
+                background: 'transparent',
+                toolbar: { show: false },
+                zoom: { enabled: false },
+                fontFamily: 'inherit',
+                animations: { enabled: true, speed: 300, dynamicAnimation: { enabled: true, speed: 150 } },
+                redrawOnParentResize: true,
+                dropShadow: {
+                    enabled: false
+                }
+            },
+            annotations: {
+                yaxis: yAxisAnnotations
+            },
+            grid: {
+                padding: {
+                    left: 20,
+                    right: 5,
+                    bottom: 0,
+                    top: 0
+                },
+                borderColor: theme.palette.divider,
+                strokeDashArray: 0,
+                xaxis: {
+                    lines: { show: false }
+                },
+                yaxis: {
+                    lines: { show: true }
+                }
+            },
+            theme: { mode: theme.palette.mode },
+            colors: chartColors,
+            stroke: {
+                width: 2.5,
+                curve: 'smooth'
+            },
+            xaxis: getXAxisConfig(),
+            yaxis: {
+                opposite: true, // Hiển thị bên trái
+                labels: {
+                    formatter: (val) => `${val.toFixed(1)}%\u00A0\u00A0\u00A0`,
+                    style: {
+                        colors: theme.palette.text.secondary,
+                        fontSize: fontSize.sm.tablet
+                    },
+                    offsetX: -10, // Thêm offset để text không bị cắt
+                },
+            },
+            legend: { show: false },
+            tooltip: {
+                enabled: true,
+                shared: true,
+                intersect: false,
+                custom: function ({ series, seriesIndex, dataPointIndex, w }) {
+                    const xValue = w.globals.seriesX[seriesIndex][dataPointIndex];
+
+                    // Unified lookup: xValue is always index
                     const index = Math.round(xValue);
                     const ts = indexToTimestamp.get(index);
+
+                    let dateStr = '';
                     if (ts) {
-                        const d = new Date(ts);
-                        const hours = d.getUTCHours().toString().padStart(2, '0');
-                        const minutes = d.getUTCMinutes().toString().padStart(2, '0');
-                        dateStr = `${hours}:${minutes}`;
+                        if (timeRange === '1D') {
+                            const d = new Date(ts);
+                            const hours = d.getUTCHours().toString().padStart(2, '0');
+                            const minutes = d.getUTCMinutes().toString().padStart(2, '0');
+                            dateStr = `${hours}:${minutes}`;
+                        } else {
+                            const date = new Date(ts);
+                            const day = date.getDate().toString().padStart(2, '0');
+                            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                            const year = date.getFullYear();
+                            dateStr = `${day}/${month}/${year}`;
+                        }
                     }
-                } else {
-                    const date = new Date(xValue);
-                    const day = date.getDate().toString().padStart(2, '0');
-                    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                    const year = date.getFullYear();
-                    dateStr = `${day}/${month}/${year}`;
-                }
 
-                // Build series HTML
-                let seriesHTML = '';
-                series.forEach((seriesData: any, idx: number) => {
-                    const value = seriesData[dataPointIndex];
-                    if (value !== null && value !== undefined) {
-                        const seriesName = w.globals.seriesNames[idx];
-                        const color = w.globals.colors[idx];
-                        const formattedValue = `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+                    // Build series HTML
+                    let seriesHTML = '';
+                    series.forEach((seriesData: any, idx: number) => {
+                        const value = seriesData[dataPointIndex];
+                        if (value !== null && value !== undefined) {
+                            const seriesName = w.globals.seriesNames[idx];
+                            const color = w.globals.colors[idx];
+                            const formattedValue = `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
 
-                        seriesHTML += `
-                            <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0;">
-                                <span style="width: 10px; height: 10px; border-radius: 50%; background: ${color};"></span>
-                                <span style="flex: 1; font-size: 12px;">${seriesName}:</span>
-                                <span style="font-weight: 600; font-size: 12px;">${formattedValue}</span>
+                            seriesHTML += `
+                                <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0;">
+                                    <span style="width: 10px; height: 10px; border-radius: 50%; background: ${color};"></span>
+                                    <span style="flex: 1; font-size: 12px;">${seriesName}:</span>
+                                    <span style="font-weight: 600; font-size: 12px;">${formattedValue}</span>
+                                </div>
+                            `;
+                        }
+                    });
+
+                    const bgColor = theme.palette.mode === 'dark' ? 'rgba(26, 26, 26, 0.9)' : 'rgba(255, 255, 255, 0.9)';
+                    const textColor = theme.palette.mode === 'dark' ? '#e0e0e0' : '#333333';
+
+                    return `
+                        <div style="
+                            background: ${bgColor};
+                            border: none;
+                            border-radius: 6px;
+                            padding: 12px;
+                            color: ${textColor};
+                            min-width: 200px;
+                            box-shadow: none !important;
+                            filter: none !important;
+                            -webkit-box-shadow: none !important;
+                            -moz-box-shadow: none !important;
+                        ">
+                            <div style="font-weight: 600; margin-bottom: 8px; font-size: 13px; color: ${textColor};">
+                                ${dateStr}
                             </div>
-                        `;
-                    }
-                });
-
-                const bgColor = theme.palette.mode === 'dark' ? 'rgba(26, 26, 26, 0.9)' : 'rgba(255, 255, 255, 0.9)';
-                const textColor = theme.palette.mode === 'dark' ? '#e0e0e0' : '#333333';
-
-                return `
-                    <div style="
-                        background: ${bgColor};
-                        border: none;
-                        border-radius: 6px;
-                        padding: 12px;
-                        color: ${textColor};
-                        min-width: 200px;
-                        box-shadow: none !important;
-                        filter: none !important;
-                        -webkit-box-shadow: none !important;
-                        -moz-box-shadow: none !important;
-                    ">
-                        <div style="font-weight: 600; margin-bottom: 8px; font-size: 13px; color: ${textColor};">
-                            ${dateStr}
+                            ${seriesHTML}
                         </div>
-                        ${seriesHTML}
-                    </div>
-                `;
+                    `;
+                }
+            },
+            markers: {
+                size: 0,
+                colors: [theme.palette.mode === 'dark' ? '#000000' : '#ffffff'], // Match background
+                strokeColors: chartColors,
+                strokeWidth: 2,
+                hover: { size: 6 }
             }
-        },
-        markers: {
-            size: 0,
-            hover: { size: 4 }
-        }
-    }), [theme, timeRange, getXAxisConfig, indexToTimestamp]);
+            // Depend on chartColors in the memo
+        };
+    }, [theme, timeRange, getXAxisConfig, indexToTimestamp, chartColors, chartSeries]);
 
     // Helper for Bar Width
     const maxListValue = useMemo(() => {
@@ -599,7 +636,6 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                         display: 'inline-flex',
                         alignItems: 'center',
                         cursor: 'pointer',
-                        mb: spacing.xs,
                     }}
                 >
                     <Typography variant="h1">Nhóm ngành</Typography>
@@ -608,7 +644,20 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
             </Box>
 
             {/* SEPARATE TOOLBAR SECTION for Time Toggles (Above Content) */}
-            <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                {/* Left: Deselect All */}
+                <Typography
+                    variant="body2"
+                    onClick={() => setSelectedTickers([])}
+                    sx={{
+                        cursor: 'pointer',
+                        color: theme.palette.text.secondary,
+                        '&:hover': { color: theme.palette.text.primary, textDecoration: 'underline' }
+                    }}
+                >
+                    Bỏ chọn tất cả
+                </Typography>
+
                 <ToggleButtonGroup
                     value={timeRange}
                     exclusive
@@ -647,7 +696,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
             <Grid container spacing={3} sx={{ alignItems: 'stretch' }}>
 
                 {/* LEFT: LIST (Checkbox List) */}
-                <Grid size={{ xs: 12, md: 5, lg: 4 }} sx={{ display: 'flex' }}>
+                <Grid size={{ xs: 12, md: 6, lg: 5 }} sx={{ display: 'flex' }}>
                     <Box sx={{
                         flex: 1,
                         display: 'flex',
@@ -655,7 +704,8 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                         minHeight: 350,
                     }}>
                         {/* List Items */}
-                        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0.5, overflowY: 'auto' }}>
+                        {/* List Items */}
+                        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25, overflowY: 'auto' }}>
                             {(listSeries.length === 0 || (timeRange !== '1D' && isLoadingHistory)) ? (
                                 // Skeleton loading cho list
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
@@ -670,7 +720,14 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                                 </Box>
                             ) : (
                                 listSeries.map((item) => {
-                                    const isSelected = selectedTickers.includes(item.ticker);
+                                    // Calculate selection and color
+                                    const selectionIndex = selectedTickers.indexOf(item.ticker);
+                                    const isSelected = selectionIndex !== -1;
+                                    // Use the same color logic as chartSeries: color based on index in selectedTickers
+                                    const dotColor = isSelected
+                                        ? chartColors[selectionIndex % chartColors.length]
+                                        : 'transparent';
+
                                     const val = item.value;
                                     const isPositive = val >= 0;
                                     const barColor = isPositive ? theme.palette.success.main : theme.palette.error.main;
@@ -679,26 +736,64 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                                     return (
                                         <Box
                                             key={item.ticker}
-                                            onClick={() => handleToggleIndustry(item.ticker)}
                                             sx={{
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 gap: 1.5,
-                                                cursor: 'pointer',
-                                                '&:hover': { bgcolor: alpha(theme.palette.action.hover, 0.1) },
-                                                p: 0, // Reduced padding
-                                                borderRadius: 1
+                                                p: 0.25, // Reduced padding (was 0.5)
+                                                borderRadius: 2
                                             }}
                                         >
-                                            <Checkbox checked={isSelected} size="small" sx={{ p: 0.5 }} />
-                                            <Typography variant="body2" sx={{ width: 140, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item.tickerName}>
+                                            {/* Custom Round "Checkbox" */}
+                                            <Box
+                                                onClick={() => handleToggleIndustry(item.ticker)}
+                                                sx={{
+                                                    width: 14,
+                                                    height: 14,
+                                                    borderRadius: '50%',
+                                                    border: `2px solid ${isSelected ? dotColor : theme.palette.divider}`,
+                                                    bgcolor: isSelected ? dotColor : 'transparent',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    flexShrink: 0
+                                                }}
+                                            />
+
+                                            {/* Name with HREF placeholder handling */}
+                                            <Typography
+                                                component="a"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    // Placeholder for href
+                                                    // console.log("Navigate to", item.ticker);
+                                                }}
+                                                href={`#${item.ticker}`}
+                                                sx={{
+                                                    fontSize: getResponsiveFontSize('md'),
+                                                    flex: 1, // Allow text to take available space
+                                                    fontWeight: 400,
+                                                    whiteSpace: 'nowrap',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    textDecoration: 'none',
+                                                    color: isSelected ? dotColor : 'inherit',
+                                                    cursor: 'pointer',
+                                                    '&:hover': {
+                                                        textDecoration: 'underline'
+                                                    }
+                                                }}
+                                                title={item.tickerName}
+                                            >
                                                 {item.tickerName}
                                             </Typography>
-                                            <Typography variant="body2" sx={{ width: 50, textAlign: 'right', fontWeight: 600 }}>
+
+                                            <Typography variant="body2" sx={{ width: 50, textAlign: 'right', fontWeight: 500, fontSize: getResponsiveFontSize('md') }}>
                                                 {(val > 0 ? '+' : '') + val.toFixed(1)}%
                                             </Typography>
-                                            <Box sx={{ flex: 1 }}>
-                                                <Box sx={{ height: 16, width: `${Math.max(widthPct, 1)}%`, bgcolor: barColor, borderRadius: 1, opacity: 0.8 }} />
+
+                                            {/* Bar Chart Part - Increased width and height */}
+                                            <Box sx={{ width: '45%', display: 'flex', alignItems: 'center' }}>
+                                                <Box sx={{ height: 16, width: `${Math.max(widthPct, 1)}%`, bgcolor: barColor, borderRadius: 1 }} />
                                             </Box>
                                         </Box>
                                     );
@@ -709,13 +804,12 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                 </Grid>
 
                 {/* RIGHT: CHART */}
-                <Grid size={{ xs: 12, md: 7, lg: 8 }} sx={{ display: 'flex' }}>
+                <Grid size={{ xs: 12, md: 6, lg: 7 }} sx={{ display: 'flex' }}>
                     <Box sx={{
                         flex: 1,
                         display: 'flex',
                         flexDirection: 'column',
                         minHeight: 350,
-                        pr: 2, // Thêm padding bên phải để text không bị cắt
                         '& .apexcharts-tooltip': {
                             boxShadow: 'none !important',
                             filter: 'none !important',

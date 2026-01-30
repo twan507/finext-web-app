@@ -256,7 +256,7 @@ export const darkThemePalette: PaletteOptions = {
     contrastText: '#fafbfc',
   },
   background: {
-    default: '#121212',
+    default: '#0a0a0a',
     paper: '#1e1e1e',
   },
   text: {
@@ -267,7 +267,7 @@ export const darkThemePalette: PaletteOptions = {
   divider: 'rgba(255, 255, 255, 0.12)',
   component: {
     appBar: {
-      background: '#121212',
+      background: '#0a0a0a',
       text: '#f0f0f0',
     },
     drawer: {
