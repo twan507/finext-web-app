@@ -44,7 +44,7 @@ export interface ReportApiResponse {
     pagination: PaginationInfo;
 }
 
-/** Category info từ API (từ news_report_types) */
+/** Category info từ API (từ news_report_categories) */
 export interface ReportCategoryInfo {
     category: string;
     category_name: string;

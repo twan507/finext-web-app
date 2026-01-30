@@ -52,7 +52,7 @@ const INDEX_TAB_MAP: Record<IndexTabType, string[]> = {
     finext: FINEXT_INDEXES,
 };
 
-// Type cho sse_today_index response (grouped by ticker)
+// Type cho home_today_index response (grouped by ticker)
 type IndexDataByTicker = Record<string, RawMarketData[]>;
 
 interface MarketSectionProps {

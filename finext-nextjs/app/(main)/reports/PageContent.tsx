@@ -24,7 +24,7 @@ export default function ReportsContent() {
         const fetchCategories = async () => {
             try {
                 const response = await apiClient<CategoriesApiResponse>({
-                    url: '/api/v1/sse/rest/news_report_types',
+                    url: '/api/v1/sse/rest/news_report_categories',
                     method: 'GET',
                     requireAuth: false,
                 });

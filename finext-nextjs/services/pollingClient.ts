@@ -30,7 +30,7 @@ interface UsePollingResult<T> {
 /**
  * Hook để polling REST API với interval
  * 
- * @param url - Endpoint path (VD: '/api/v1/sse/rest/itd_market_index_chart')
+ * @param url - Endpoint path (VD: '/api/v1/sse/rest/home_itd_index')
  * @param queryParams - Query parameters (VD: { ticker: 'VNINDEX' })
  * @param options - Các options cho polling
  * @returns { data, isLoading, error, refetch }
@@ -38,7 +38,7 @@ interface UsePollingResult<T> {
  * @example
  * ```tsx
  * const { data, isLoading, error, refetch } = usePollingClient<RawMarketData[]>(
- *   '/api/v1/sse/rest/itd_market_index_chart',
+ *   '/api/v1/sse/rest/home_itd_index',
  *   { ticker: 'VNINDEX' },
  *   { interval: 5000, enabled: true }
  * );

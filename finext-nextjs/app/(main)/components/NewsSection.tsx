@@ -446,7 +446,7 @@ export default function NewsSection() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     cursor: 'pointer',
-                    mb: 2,
+                    mb: spacing.xs,
                 }}
             >
                 <Typography variant="h1">

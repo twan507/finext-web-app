@@ -69,6 +69,7 @@ export interface RawMarketData {
     volume: number;
     diff?: number;        // Giá trị thay đổi
     pct_change?: number;  // Phần trăm thay đổi
+    type?: string;        // Loại dữ liệu (industry, index, ...)
 }
 
 // Chart data format - export để page có thể sử dụng
@@ -1167,15 +1168,13 @@ export default function MarketIndexChart({
                             position: 'absolute',
                             left: tooltipData.x + 15,
                             top: tooltipData.y - 30,
-                            backgroundColor: isDarkMode ? 'rgba(30, 30, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-                            border: `1px solid ${colors.borderColor}`,
+                            backgroundColor: isDarkMode ? 'rgba(30, 30, 30, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+                            border: 'none',
                             borderRadius: 1.5,
                             padding: '6px 10px',
                             pointerEvents: 'none',
                             zIndex: 10,
-                            boxShadow: isDarkMode
-                                ? '0 4px 12px rgba(0, 0, 0, 0.5)'
-                                : '0 4px 12px rgba(0, 0, 0, 0.15)',
+                            boxShadow: 'none',
                             transform: tooltipData.x > (chartContainerRef.current?.clientWidth || 0) - 150
                                 ? 'translateX(-100%) translateX(-30px)'
                                 : 'none',

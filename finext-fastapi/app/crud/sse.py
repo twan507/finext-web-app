@@ -123,7 +123,7 @@ async def get_collection_data(
 # ==============================================================================
 
 
-async def itd_market_index_chart(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+async def home_itd_index(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
     """Lấy dữ liệu ITD index theo ticker. Database: temp_stock."""
     stock_db = get_database(DB_TEMP_STOCK)
 
@@ -136,7 +136,7 @@ async def itd_market_index_chart(ticker: Optional[str] = None, **kwargs) -> Dict
     return itd_df.to_dict(orient="records")
 
 
-async def sse_today_index(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+async def home_today_index(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
     """
     Lấy dữ liệu today của TẤT CẢ indexes trong 1 lần gọi.
     Không cần ticker param - query tất cả theo group.
@@ -159,6 +159,7 @@ async def sse_today_index(ticker: Optional[str] = None, **kwargs) -> Dict[str, A
         "volume": 1,
         "diff": 1,
         "pct_change": 1,
+        "type": 1,
     }
     find_query = {}
     today_df = await get_collection_data(stock_db, "today_index", find_query=find_query, projection=projection)
@@ -166,7 +167,7 @@ async def sse_today_index(ticker: Optional[str] = None, **kwargs) -> Dict[str, A
     return today_df.to_dict(orient="records")
 
 
-async def history_market_index_chart(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+async def home_hist_index(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
     """
     Lấy dữ liệu history index theo ticker (chỉ history, không bao gồm today).
     Database: temp_stock.
@@ -185,6 +186,7 @@ async def history_market_index_chart(ticker: Optional[str] = None, **kwargs) -> 
         "volume": 1,
         "diff": 1,
         "pct_change": 1,
+        "type": 1,
     }
     find_query = {"ticker": ticker} if ticker else {}
     history_df = await get_collection_data(stock_db, "history_index", find_query=find_query, projection=projection)
@@ -302,12 +304,70 @@ async def news_daily(
     }
 
 
+async def home_today_industry(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+    """
+    Lấy dữ liệu today của TẤT CẢ industry trong 1 lần gọi.
+    Query từ collection today_index với filter type='industry'.
+    Database: temp_stock.
+    """
+    stock_db = get_database(DB_TEMP_STOCK)
+
+    projection = {
+        "_id": 0,
+        "ticker": 1,
+        "ticker_name": 1,
+        "date": 1,
+        "close": 1,
+        "volume": 1,
+        "diff": 1,
+        "pct_change": 1,
+        "type": 1,
+    }
+    # Filter theo type='industry'
+    find_query = {"type": "industry"}
+    today_df = await get_collection_data(stock_db, "today_index", find_query=find_query, projection=projection)
+
+    return today_df.to_dict(orient="records")
+
+
+async def home_hist_industry(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+    """
+    Lấy dữ liệu history của industry theo ticker.
+    Query từ collection history_index với filter type='industry'.
+    Database: temp_stock.
+    """
+    stock_db = get_database(DB_TEMP_STOCK)
+
+    projection = {
+        "_id": 0,
+        "ticker": 1,
+        "ticker_name": 1,
+        "date": 1,
+        "open": 1,
+        "high": 1,
+        "low": 1,
+        "close": 1,
+        "volume": 1,
+        "diff": 1,
+        "pct_change": 1,
+        "type": 1,
+    }
+    # Filter theo type='industry' và ticker nếu có
+    find_query = {"type": "industry"}
+    if ticker:
+        find_query["ticker"] = ticker
+
+    history_df = await get_collection_data(stock_db, "history_index", find_query=find_query, projection=projection)
+
+    return history_df.to_dict(orient="records")
+
+
 # ==============================================================================
 # NEWS REPORT QUERIES - Bản tin từ collection news_report
 # ==============================================================================
 
 
-async def news_report_types(**kwargs) -> Dict[str, Any]:
+async def news_report_categories(**kwargs) -> Dict[str, Any]:
     """
     Lấy danh sách tất cả categories duy nhất từ collection news_report.
     Database: temp_stock.
@@ -413,15 +473,15 @@ async def news_report(
 
 SSE_QUERY_REGISTRY: Dict[str, Any] = {
     # Index queries
-    "sse_today_index": sse_today_index,
-    "itd_market_index_chart": itd_market_index_chart,
-    "history_market_index_chart": history_market_index_chart,
+    "home_today_index": home_today_index,
+    "home_itd_index": home_itd_index,
+    "home_hist_index": home_hist_index,
     # News queries
     "news_daily": news_daily,
     "news_categories": news_categories,
     # News report queries
     "news_report": news_report,
-    "news_report_types": news_report_types,
+    "news_report_categories": news_report_categories,
 }
 
 

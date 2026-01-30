@@ -67,7 +67,7 @@ const HIDDEN_ON_TABLET = ['VNXALL', 'HNX30'];
 // Tab type cho bảng index
 type IndexTabType = 'main' | 'derivative' | 'finext';
 
-// Type cho sse_today_index và itd_market_index_chart response (grouped by ticker)
+// Type cho home_today_index và home_itd_index response (grouped by ticker)
 type IndexDataByTicker = Record<string, RawMarketData[]>;
 
 // Empty chart data for initial state
@@ -95,10 +95,10 @@ export default function HomeContent() {
 
     // ========== STATE ==========
 
-    // Today data (từ SSE sse_today_index - cho TẤT CẢ indexes)
+    // Today data (từ SSE home_today_index - cho TẤT CẢ indexes)
     const [todayAllData, setTodayAllData] = useState<IndexDataByTicker>({});
 
-    // ITD data (từ SSE itd_market_index_chart - cho TẤT CẢ indexes)
+    // ITD data (từ SSE home_itd_index - cho TẤT CẢ indexes)
     const [itdAllData, setItdAllData] = useState<IndexDataByTicker>({});
 
     // Combined EOD data (history + today)
@@ -116,7 +116,7 @@ export default function HomeContent() {
         queryKey: ['market', 'history', ticker],
         queryFn: async () => {
             const response = await apiClient<RawMarketData[]>({
-                url: '/api/v1/sse/rest/history_market_index_chart',
+                url: '/api/v1/sse/rest/home_hist_index',
                 method: 'GET',
                 queryParams: { ticker },
                 requireAuth: false
@@ -140,7 +140,7 @@ export default function HomeContent() {
 
         const requestProps: ISseRequest = {
             url: '/api/v1/sse/stream',
-            queryParams: { keyword: 'sse_today_index' }
+            queryParams: { keyword: 'home_today_index' }
         };
 
         todaySseRef.current = sseClient<RawMarketData[]>(requestProps, {
@@ -192,7 +192,7 @@ export default function HomeContent() {
 
         const requestProps: ISseRequest = {
             url: '/api/v1/sse/stream',
-            queryParams: { keyword: 'itd_market_index_chart' }
+            queryParams: { keyword: 'home_itd_index' }
             // Không truyền ticker -> lấy tất cả indexes
         };
 
@@ -333,7 +333,7 @@ export default function HomeContent() {
 
             {/* Section 3: Ngành */}
             <Box sx={{ mt: 5 }}>
-                <IndustrySection />
+                <IndustrySection todayAllData={todayAllData} itdAllData={itdAllData} />
             </Box>
 
             {/* Section 4: Cổ phiếu */}
