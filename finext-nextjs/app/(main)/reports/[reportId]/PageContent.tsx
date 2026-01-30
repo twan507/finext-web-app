@@ -280,7 +280,24 @@ export default function PageContent({ reportId }: PageContentProps) {
 
                     <Divider sx={{ my: spacing.xs }} />
 
-                    {/* Content - Render HTML directly (không có sapo) */}
+                    {/* Sapo */}
+                    {report.sapo && (
+                        <Typography
+                            variant="subtitle1"
+                            sx={{
+                                fontWeight: 600,
+                                fontSize: getResponsiveFontSize('lg'),
+                                lineHeight: 1.7,
+                                mb: spacing.xs,
+                                color: 'text.primary',
+                                fontStyle: 'italic',
+                            }}
+                        >
+                            {report.sapo}
+                        </Typography>
+                    )}
+
+                    {/* Content - Render HTML directly */}
                     <Box
                         sx={{
                             fontSize: getResponsiveFontSize('md'),

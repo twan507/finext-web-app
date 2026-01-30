@@ -20,6 +20,7 @@ export interface NewsReport {
     title: string;
     category: string;
     category_name: string;
+    sapo?: string;
     created_at: string;
     links: (string | ReportLink)[];
     report_html: string;

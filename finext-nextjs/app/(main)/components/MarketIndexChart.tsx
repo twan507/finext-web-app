@@ -272,7 +272,7 @@ export default function MarketIndexChart({
     const prevSymbolRef = useRef<string>(symbol);
 
     // timeRange is now controlled by parent via props
-    const [chartType, setChartType] = useState<ChartType>('area');
+    const [chartType, setChartType] = useState<ChartType>('candlestick');
     const [currentPrice, setCurrentPrice] = useState<number>(0);
     const [priceChange, setPriceChange] = useState<number>(0);
     const [percentChange, setPercentChange] = useState<number>(0);

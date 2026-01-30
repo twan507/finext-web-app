@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, Typography, useTheme, Skeleton, Grid } from '@mui/material';
+import { Box, Typography, useTheme, Skeleton, Grid, Divider } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -27,6 +27,7 @@ interface NewsReport {
     title: string;
     category: string;
     category_name: string;
+    sapo?: string;
     created_at: string;
 }
 
@@ -75,70 +76,75 @@ function MiniNewsCard({ article }: MiniNewsCardProps) {
 
     return (
         <Box
-            component={Link}
-            href={`/news/${article.article_id}`}
             sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                textDecoration: 'none',
-                color: 'inherit',
-                p: spacing.xs,
-                mb: spacing.xs,
-                width: '100%',
-                overflow: 'hidden',
-                backgroundColor: 'background.paper',
-                borderRadius: `${borderRadius.lg}px`,
-                cursor: 'pointer',
-                transition: transitions.card,
-                '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: theme.palette.mode === 'light'
-                        ? '0 4px 12px rgba(0, 0, 0, 0.08)'
-                        : '0 4px 12px rgba(0, 0, 0, 0.3)',
-                    '& .news-card-title': {
-                        color: 'primary.main',
-                    },
-                },
-                '&:last-child': {
-                    mb: 0,
+                '&:last-of-type .news-divider': {
+                    display: 'none',
                 },
             }}
         >
-            {/* Title */}
-            <Typography
-                variant="h6"
-                className="news-card-title"
+            <Box
+                component={Link}
+                href={`/news/${article.article_id}`}
                 sx={{
-                    fontWeight: 600,
-                    fontSize: getResponsiveFontSize('sm'),
-                    lineHeight: 1.4,
-                    mb: spacing.xs,
-                    display: '-webkit-box',
-                    WebkitLineClamp: 1,
-                    WebkitBoxOrient: 'vertical',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    py: spacing.xs,
+                    width: '100%',
                     overflow: 'hidden',
-                    color: 'text.primary',
-                    transition: transitions.colors,
+                    cursor: 'pointer',
+                    '&:hover': {
+                        '& .news-card-title': {
+                            fontSize: getResponsiveFontSize('md'),
+                        },
+                        '& .news-card-sapo': {
+                            fontSize: getResponsiveFontSize('sm'),
+                        },
+                    },
                 }}
             >
-                {article.title}
-            </Typography>
+                {/* Title */}
+                <Typography
+                    variant="h6"
+                    className="news-card-title"
+                    sx={{
+                        fontWeight: 600,
+                        fontSize: getResponsiveFontSize('sm'),
+                        lineHeight: 1.4,
+                        mb: spacing.xxs,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        color: 'text.primary',
+                        transition: transitions.hover,
+                        minHeight: 'calc(1.4em * 2)',
+                    }}
+                >
+                    {article.title}
+                </Typography>
 
-            {/* Sapo */}
-            <Typography
-                variant="body2"
-                sx={{
-                    fontSize: getResponsiveFontSize('xs'),
-                    lineHeight: 1.5,
-                    color: 'text.secondary',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 1,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                }}
-            >
-                {article.sapo}
-            </Typography>
+                {/* Sapo */}
+                <Typography
+                    variant="body2"
+                    className="news-card-sapo"
+                    sx={{
+                        fontSize: getResponsiveFontSize('xs'),
+                        lineHeight: 1.5,
+                        color: 'text.secondary',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        minHeight: 'calc(1.5em * 2)',
+                        transition: transitions.hover,
+                    }}
+                >
+                    {article.sapo}
+                </Typography>
+            </Box>
+            <Divider className="news-divider" sx={{ borderColor: 'divider' }} />
         </Box>
     );
 }
@@ -156,72 +162,75 @@ function MiniReportCard({ report }: MiniReportCardProps) {
 
     return (
         <Box
-            component={Link}
-            href={`/reports/${report.report_id}`}
             sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                textDecoration: 'none',
-                color: 'inherit',
-                p: spacing.xs,
-                mb: spacing.xs,
-                width: '100%',
-                overflow: 'hidden',
-                backgroundColor: 'background.paper',
-                borderRadius: `${borderRadius.lg}px`,
-                cursor: 'pointer',
-                transition: transitions.card,
-                '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: theme.palette.mode === 'light'
-                        ? '0 4px 12px rgba(0, 0, 0, 0.08)'
-                        : '0 4px 12px rgba(0, 0, 0, 0.3)',
-                    '& .report-card-title': {
-                        color: 'primary.main',
-                    },
-                },
-                '&:last-child': {
-                    mb: 0,
+                '&:last-of-type .report-divider': {
+                    display: 'none',
                 },
             }}
         >
-            {/* Title */}
-            <Typography
-                variant="h6"
-                className="report-card-title"
+            <Box
+                component={Link}
+                href={`/reports/${report.report_id}`}
                 sx={{
-                    fontWeight: 600,
-                    fontSize: getResponsiveFontSize('sm'),
-                    lineHeight: 1.4,
-                    mb: spacing.xs,
-                    display: '-webkit-box',
-                    WebkitLineClamp: 1,
-                    WebkitBoxOrient: 'vertical',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    py: spacing.xs,
+                    width: '100%',
                     overflow: 'hidden',
-                    color: 'text.primary',
-                    transition: transitions.colors,
+                    cursor: 'pointer',
+                    '&:hover': {
+                        '& .report-card-title': {
+                            fontSize: getResponsiveFontSize('md'),
+                        },
+                        '& .report-card-sapo': {
+                            fontSize: getResponsiveFontSize('sm'),
+                        },
+                    },
                 }}
             >
-                {report.title || 'Bản tin'}
-            </Typography>
+                {/* Title */}
+                <Typography
+                    variant="h6"
+                    className="report-card-title"
+                    sx={{
+                        fontWeight: 600,
+                        fontSize: getResponsiveFontSize('sm'),
+                        lineHeight: 1.4,
+                        mb: spacing.xxs,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        color: 'text.primary',
+                        transition: transitions.hover,
+                        minHeight: 'calc(1.4em * 2)',
+                    }}
+                >
+                    {report.title || 'Bản tin'}
+                </Typography>
 
-            {/* Category */}
-            {report.category_name && (
+                {/* Sapo */}
                 <Typography
                     variant="body2"
+                    className="report-card-sapo"
                     sx={{
                         fontSize: getResponsiveFontSize('xs'),
                         lineHeight: 1.5,
                         color: 'text.secondary',
                         display: '-webkit-box',
-                        WebkitLineClamp: 1,
+                        WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical',
                         overflow: 'hidden',
+                        minHeight: 'calc(1.5em * 2)',
+                        transition: transitions.hover,
                     }}
                 >
-                    {report.category_name}
+                    {report.sapo || report.category_name || ''}
                 </Typography>
-            )}
+            </Box>
+            <Divider className="report-divider" sx={{ borderColor: 'divider' }} />
         </Box>
     );
 }
@@ -232,20 +241,15 @@ function MiniReportCard({ report }: MiniReportCardProps) {
 
 function NewsCardSkeleton() {
     return (
-        <Box
-            sx={{
-                p: spacing.xs,
-                mb: spacing.xxs,
-                height: 120,
-                backgroundColor: 'background.paper',
-                borderRadius: `${borderRadius.lg}px`,
-            }}
-        >
-            <Skeleton variant="text" width="95%" height={18} sx={{ mb: spacing.xxs }} />
-            <Skeleton variant="text" width="85%" height={18} sx={{ mb: spacing.xxs }} />
-            <Skeleton variant="text" width="90%" height={16} />
-            <Skeleton variant="text" width="70%" height={16} />
-        </Box>
+        <>
+            <Box sx={{ py: spacing.sm }}>
+                <Skeleton variant="text" width="95%" height={18} sx={{ mb: spacing.xxs }} />
+                <Skeleton variant="text" width="85%" height={18} sx={{ mb: spacing.xxs }} />
+                <Skeleton variant="text" width="90%" height={16} />
+                <Skeleton variant="text" width="70%" height={16} />
+            </Box>
+            <Divider sx={{ borderColor: 'divider' }} />
+        </>
     );
 }
 
@@ -254,30 +258,82 @@ function NewsCardSkeleton() {
 // ============================================================================
 
 interface NewsColumnProps {
+    title: string;
+    href: string;
     loading: boolean;
     newsItems?: NewsArticle[];
     reportItems?: NewsReport[];
 }
 
-function NewsColumn({ loading, newsItems, reportItems }: NewsColumnProps) {
+function NewsColumn({ title, href, loading, newsItems, reportItems }: NewsColumnProps) {
+    const theme = useTheme();
+
     return (
-        <Box>
-            {loading ? (
-                <>
-                    {Array.from({ length: 5 }).map((_, index) => (
-                        <NewsCardSkeleton key={index} />
-                    ))}
-                </>
-            ) : (
-                <>
-                    {newsItems?.map((article) => (
-                        <MiniNewsCard key={article.article_id} article={article} />
-                    ))}
-                    {reportItems?.map((report) => (
-                        <MiniReportCard key={report.report_id} report={report} />
-                    ))}
-                </>
-            )}
+        <Box
+            sx={{
+                backgroundColor: 'background.paper',
+                borderRadius: `${borderRadius.lg}px`,
+                overflow: 'hidden',
+                height: '100%',
+            }}
+        >
+            {/* Column Header - Sticky */}
+            <Box
+                component={Link}
+                href={href}
+                sx={{
+                    display: 'block',
+                    position: 'sticky',
+                    top: 0,
+                    px: spacing.xs,
+                    py: spacing.xs,
+                    zIndex: 1,
+                    backgroundColor: 'background.paper',
+                    textDecoration: 'none',
+                    cursor: 'pointer',
+                    transition: transitions.hover,
+                    '&:hover': {
+                        '& .column-title': {
+                            color: 'primary.dark',
+                        },
+                    },
+                }}
+            >
+                <Typography
+                    variant="h6"
+                    className="column-title"
+                    sx={{
+                        fontWeight: 700,
+                        fontSize: getResponsiveFontSize('lg'),
+                        color: 'primary.main',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        transition: transitions.hover,
+                    }}
+                >
+                    {title}
+                </Typography>
+            </Box>
+
+            {/* Content */}
+            <Box sx={{ px: spacing.xs }}>
+                {loading ? (
+                    <>
+                        {Array.from({ length: 5 }).map((_, index) => (
+                            <NewsCardSkeleton key={index} />
+                        ))}
+                    </>
+                ) : (
+                    <>
+                        {newsItems?.map((article) => (
+                            <MiniNewsCard key={article.article_id} article={article} />
+                        ))}
+                        {reportItems?.map((report) => (
+                            <MiniReportCard key={report.report_id} report={report} />
+                        ))}
+                    </>
+                )}
+            </Box>
         </Box>
     );
 }
@@ -414,6 +470,8 @@ export default function NewsSection() {
                 {/* Column 1: Macro News */}
                 <Grid size={{ xs: 12, md: 4 }}>
                     <NewsColumn
+                        title="TIN TỨC VĨ MÔ"
+                        href="/news"
                         loading={macroLoading}
                         newsItems={macroNews}
                     />
@@ -422,6 +480,8 @@ export default function NewsSection() {
                 {/* Column 2: Enterprise News */}
                 <Grid size={{ xs: 12, md: 4 }}>
                     <NewsColumn
+                        title="TIN TỨC DOANH NGHIỆP"
+                        href="/news/category/ttck"
                         loading={enterpriseLoading}
                         newsItems={enterpriseNews}
                     />
@@ -430,6 +490,8 @@ export default function NewsSection() {
                 {/* Column 3: Reports */}
                 <Grid size={{ xs: 12, md: 4 }}>
                     <NewsColumn
+                        title="BẢN TIN HÀNG NGÀY"
+                        href="/reports"
                         loading={reportsLoading}
                         reportItems={reports}
                     />

@@ -80,7 +80,7 @@ export default function HomeContent() {
     const [ticker, setTicker] = useState<string>('FNXINDEX');
 
     // Lifted timeRange state từ chart component
-    const [timeRange, setTimeRange] = useState<TimeRange>('1Y');
+    const [timeRange, setTimeRange] = useState<TimeRange>('3M');
 
     // Tab state cho bảng index
     const [indexTab, setIndexTab] = useState<IndexTabType>('finext');

@@ -86,7 +86,7 @@ export default function ReportCard({ report }: ReportCardProps) {
                 </Typography>
             </Box>
 
-            {/* Cột phải: Tiêu đề + Category */}
+            {/* Cột phải: Tiêu đề + Sapo */}
             <Box sx={{ flex: 1, minWidth: 0 }}>
                 {/* Tiêu đề - lấy từ field title */}
                 <Typography
@@ -107,8 +107,8 @@ export default function ReportCard({ report }: ReportCardProps) {
                     {report.title || 'Bản tin'}
                 </Typography>
 
-                {/* Category name - hiển thị giống NewsCard nhưng không có sapo */}
-                {report.category_name && (
+                {/* Sapo - hiển thị giống NewsCard */}
+                {(report.sapo || report.category_name) && (
                     <Typography
                         variant="body2"
                         color="text.secondary"
@@ -121,7 +121,7 @@ export default function ReportCard({ report }: ReportCardProps) {
                             overflow: 'hidden',
                         }}
                     >
-                        {report.category_name}
+                        {report.category_name ? `(${report.category_name}) - ` : ''}{report.sapo || report.category_name}
                     </Typography>
                 )}
             </Box>
