@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Breadcrumbs, Typography, Skeleton } from '@mui/material';
 import MuiLink from '@mui/material/Link';
 
-import { fontSize, spacing } from 'theme/tokens';
+import { getResponsiveFontSize, spacing, fontWeight } from 'theme/tokens';
 
 interface BreadcrumbItem {
     label: string;
@@ -68,7 +68,7 @@ export default function NewsBreadcrumb({
                 underline="hover"
                 color="text.secondary"
                 sx={{
-                    fontSize: fontSize.sm,
+                    fontSize: getResponsiveFontSize('sm'),
                     '&:hover': {
                         color: 'primary.main',
                     },
@@ -85,7 +85,7 @@ export default function NewsBreadcrumb({
                     underline="hover"
                     color="text.secondary"
                     sx={{
-                        fontSize: fontSize.sm,
+                        fontSize: getResponsiveFontSize('sm'),
                         '&:hover': {
                             color: 'primary.main',
                         },
@@ -97,8 +97,8 @@ export default function NewsBreadcrumb({
                 <Typography
                     color="text.primary"
                     sx={{
-                        fontSize: fontSize.sm,
-                        fontWeight: 500,
+                        fontSize: getResponsiveFontSize('sm'),
+                        fontWeight: fontWeight.medium,
                     }}
                 >
                     {sectionLabel}
@@ -125,8 +125,8 @@ export default function NewsBreadcrumb({
                             key={index}
                             color="text.primary"
                             sx={{
-                                fontSize: fontSize.sm,
-                                fontWeight: 500,
+                                fontSize: getResponsiveFontSize('sm'),
+                                fontWeight: fontWeight.medium,
                                 maxWidth: 200,
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
@@ -146,7 +146,7 @@ export default function NewsBreadcrumb({
                         underline="hover"
                         color="text.secondary"
                         sx={{
-                            fontSize: fontSize.sm,
+                            fontSize: getResponsiveFontSize('sm'),
                             '&:hover': {
                                 color: 'primary.main',
                             },

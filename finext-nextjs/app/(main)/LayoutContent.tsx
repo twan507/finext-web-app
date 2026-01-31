@@ -29,8 +29,9 @@ import ThemeToggleButton from '@/components/themeToggle/ThemeToggleButton';
 import BrandLogo from '@/components/layout/BrandLogo';
 import SearchBar from '../../components/layout/SearchBar';
 import Footer from '@/components/layout/Footer';
-import { layoutTokens, fontSize, iconSize, borderRadius, shadows, transitions, spacing } from '../../theme/tokens';
+import { layoutTokens, iconSize, borderRadius, shadows, transitions, spacing, getResponsiveFontSize, fontWeight } from '../../theme/tokens';
 import AuthButtons from '@/components/auth/AuthButtons';
+import ConsultationSection from './components/ConsultationSection';
 
 interface NavItem {
   text: string;
@@ -236,7 +237,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
       <List sx={{ flexGrow: 1, px: 1 }}>
         {/* Top Nav Tabs */}
-        <Typography variant="caption" sx={{ pl: 2, py: 1, color: 'text.secondary', textTransform: 'uppercase', fontWeight: 600 }}>
+        <Typography variant="caption" sx={{ pl: 2, py: 1, color: 'text.secondary', textTransform: 'uppercase', fontWeight: fontWeight.semibold }}>
           Khám phá
         </Typography>
         {topNavTabs.map((tab) => {
@@ -264,7 +265,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     primary={tab.label}
                     secondary={tab.description}
                     secondaryTypographyProps={{
-                      sx: { fontSize: fontSize.xs.tablet, opacity: 0.7, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+                      sx: { fontSize: getResponsiveFontSize('xs'), opacity: 0.7, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
                     }}
                   />
                 </ListItemButton>
@@ -274,7 +275,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         })}
 
         {/* Drawer Navigation Items */}
-        <Typography variant="caption" sx={{ pl: 2, py: 1, mt: 1, display: 'block', color: 'text.secondary', textTransform: 'uppercase', fontWeight: 600 }}>
+        <Typography variant="caption" sx={{ pl: 2, py: 1, mt: 1, display: 'block', color: 'text.secondary', textTransform: 'uppercase', fontWeight: fontWeight.semibold }}>
           Công cụ
         </Typography>
         {navigationStructure.map((item) => {
@@ -339,7 +340,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
       <List sx={{ flexGrow: 1, px: 1 }}>
         {/* Top Nav Tabs - No descriptions, smaller fonts */}
-        <Typography variant="caption" sx={{ pl: 2, py: 0.5, color: 'text.secondary', textTransform: 'uppercase', fontWeight: 600, fontSize: fontSize.sectionLabel.mobile }}>
+        <Typography variant="caption" sx={{ pl: 2, py: 0.5, color: 'text.secondary', textTransform: 'uppercase', fontWeight: fontWeight.semibold, fontSize: getResponsiveFontSize('xs') }}>
           Khám phá
         </Typography>
         {topNavTabs.map((tab) => {
@@ -363,7 +364,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   <ListItemIcon sx={{ color: 'inherit', minWidth: 32 }}>
                     <Icon icon={tab.icon} width="18" height="18" />
                   </ListItemIcon>
-                  <ListItemText primary={tab.label} primaryTypographyProps={{ fontSize: fontSize.menuItem.mobile }} />
+                  <ListItemText primary={tab.label} primaryTypographyProps={{ fontSize: getResponsiveFontSize('md') }} />
                 </ListItemButton>
               </Link>
             </ListItem>
@@ -371,7 +372,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         })}
 
         {/* Drawer Navigation Items */}
-        <Typography variant="caption" sx={{ pl: 2, py: 0.5, mt: 1, display: 'block', color: 'text.secondary', textTransform: 'uppercase', fontWeight: 600, fontSize: fontSize.sectionLabel.mobile }}>
+        <Typography variant="caption" sx={{ pl: 2, py: 0.5, mt: 1, display: 'block', color: 'text.secondary', textTransform: 'uppercase', fontWeight: fontWeight.semibold, fontSize: getResponsiveFontSize('xs') }}>
           Công cụ
         </Typography>
         {navigationStructure.map((item) => {
@@ -395,7 +396,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   <ListItemIcon sx={{ color: 'inherit', minWidth: 32 }}>
                     {React.cloneElement(item.icon, { sx: { fontSize: iconSize.menu.mobile } })}
                   </ListItemIcon>
-                  <ListItemText primary={item.text} primaryTypographyProps={{ fontSize: fontSize.menuItem.mobile }} />
+                  <ListItemText primary={item.text} primaryTypographyProps={{ fontSize: getResponsiveFontSize('md') }} />
                 </ListItemButton>
               </Link>
             </ListItem>
@@ -616,8 +617,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                                   height: '30px',
                                   display: 'flex',
                                   alignItems: 'center',
-                                  fontSize: fontSize.menuItem.desktop,
-                                  fontWeight: isActive ? 600 : 500,
+                                  fontSize: getResponsiveFontSize('md'),
+                                  fontWeight: isActive ? fontWeight.semibold : fontWeight.medium,
                                   color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
                                   textTransform: 'none',
                                   transition: transitions.colors,
@@ -680,11 +681,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                                     >
                                       <Icon icon={subItem.icon} width="24" height="24" style={{ marginTop: '2px', flexShrink: 0 }} />
                                       <Box>
-                                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                        <Typography variant="subtitle2" sx={{ fontWeight: fontWeight.semibold, mb: 0.5 }}>
                                           {subItem.label}
                                         </Typography>
                                         {subItem.description && (
-                                          <Typography variant="body2" sx={{ fontSize: fontSize.sm.tablet }}>
+                                          <Typography variant="body2" sx={{ fontSize: getResponsiveFontSize('sm') }}>
                                             {subItem.description}
                                           </Typography>
                                         )}
@@ -706,10 +707,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                             <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
                               <Icon icon={tab.icon} width="24" height="24" style={{ marginTop: '2px', flexShrink: 0 }} />
                               <Box>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: fontWeight.semibold, mb: 0.5 }}>
                                   {tab.label}
                                 </Typography>
-                                <Typography variant="body2" sx={{ fontSize: fontSize.sm.tablet }}>
+                                <Typography variant="body2" sx={{ fontSize: getResponsiveFontSize('sm') }}>
                                   {tab.description}
                                 </Typography>
                               </Box>
@@ -744,8 +745,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                                 height: '30px',
                                 display: 'flex',
                                 alignItems: 'center',
-                                fontSize: fontSize.menuItem.desktop,
-                                fontWeight: isActive ? 600 : 500,
+                                fontSize: getResponsiveFontSize('md'),
+                                fontWeight: isActive ? fontWeight.semibold : fontWeight.medium,
                                 color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
                                 textTransform: 'none',
                                 transition: transitions.colors,
@@ -807,7 +808,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           </Box>
         </Box>
 
+
         {/* FOOTER */}
+        {currentPathname === '/' && <ConsultationSection />}
         <Footer />
       </Box>
     </Box >

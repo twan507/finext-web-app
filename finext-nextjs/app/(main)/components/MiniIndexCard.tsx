@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Box, Typography, Skeleton, useTheme } from '@mui/material';
 import dynamic from 'next/dynamic';
-import { fontSize, transitions } from 'theme/tokens';
+import { transitions, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import { ApexOptions } from 'apexcharts';
 
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
@@ -231,15 +231,15 @@ export default function MiniIndexCard({ symbol, itdData, hideOnTablet = false }:
 
     return (
         <Box sx={cardSx}>
-            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <Typography variant="body2" sx={{ fontWeight: fontWeight.semibold, color: 'text.secondary', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {tickerName}
             </Typography>
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.5, flexWrap: 'nowrap' }}>
-                <Typography sx={{ fontWeight: 700, color: 'text.primary', lineHeight: 1, fontSize: fontSize.md.tablet }}>
+                <Typography sx={{ fontWeight: fontWeight.bold, color: 'text.primary', lineHeight: 1, fontSize: getResponsiveFontSize('md') }}>
                     {formatNumber(lastPrice)}
                 </Typography>
-                <Typography sx={{ color: changeColor, fontWeight: 500, fontSize: fontSize.xs.tablet, lineHeight: 1, mt: 0.2 }}>
+                <Typography sx={{ color: changeColor, fontWeight: fontWeight.medium, fontSize: getResponsiveFontSize('xs'), lineHeight: 1, mt: 0.2 }}>
                     {diff != null && diff !== 0 && (pctChange ?? 0) > 0 ? '+' : diff != null && diff !== 0 && (pctChange ?? 0) < 0 ? '-' : ''}{formatDiff(diff)}
                 </Typography>
                 <Box component="span" sx={{
@@ -248,14 +248,14 @@ export default function MiniIndexCard({ symbol, itdData, hideOnTablet = false }:
                     borderRadius: 1,
                     bgcolor: chipBgColor,
                     color: '#fff',
-                    fontSize: fontSize.xs.mobile,
-                    fontWeight: 600,
+                    fontSize: getResponsiveFontSize('xs'),
+                    fontWeight: fontWeight.semibold,
                     whiteSpace: 'nowrap',
                     display: 'inline-flex',
                     alignItems: 'center',
                     lineHeight: 1,
                 }}>
-                    {arrow && <span style={{ fontSize: fontSize.badge.tablet, lineHeight: 1 }}>{arrow}</span>}
+                    {arrow && <span style={{ fontSize: '0.65em', lineHeight: 1 }}>{arrow}</span>}
                     {formatPctChange(pctChange)}
                 </Box>
             </Box>
@@ -264,7 +264,7 @@ export default function MiniIndexCard({ symbol, itdData, hideOnTablet = false }:
                 {chartData.length > 0 ? (
                     <ReactApexChart options={chartOptions} series={chartSeries} type="area" height={60} width="100%" />
                 ) : (
-                    <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled', fontSize: fontSize.tableCell.tablet }}>
+                    <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled', fontSize: getResponsiveFontSize('sm') }}>
                         Không có dữ liệu
                     </Box>
                 )}

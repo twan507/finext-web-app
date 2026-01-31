@@ -4,7 +4,7 @@
 import { Box, Chip, Skeleton } from '@mui/material';
 import { useRouter } from 'next/navigation';
 
-import { spacing } from 'theme/tokens';
+import { spacing, fontWeight } from 'theme/tokens';
 
 /** Category info từ API hoặc extracted từ articles */
 export interface CategoryInfo {
@@ -79,7 +79,7 @@ export default function SourceTabs({
                 onClick={() => handleClick('all')}
                 color={selectedCategory === 'all' ? 'primary' : 'default'}
                 variant="filled"
-                sx={{ fontWeight: 600, border: 'none' }}
+                sx={{ fontWeight: fontWeight.medium, border: 'none' }}
             />
             {categories.map((cat) => (
                 <Chip
@@ -88,7 +88,7 @@ export default function SourceTabs({
                     onClick={() => handleClick(cat.category)}
                     color={selectedCategory === cat.category ? 'primary' : 'default'}
                     variant="filled"
-                    sx={{ fontWeight: 600, border: 'none' }}
+                    sx={{ fontWeight: fontWeight.medium, border: 'none' }}
                 />
             ))}
         </Box>

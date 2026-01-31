@@ -18,7 +18,7 @@ import {
     Clear as ClearIcon,
     Close as CloseIcon,
 } from '@mui/icons-material';
-import { fontSize, iconSize, borderRadius, shadows } from 'theme/tokens';
+import { getResponsiveFontSize, borderRadius, transitions, fontWeight, iconSize, shadows } from 'theme/tokens';
 
 interface SearchBarProps {
     placeholder?: string;
@@ -157,8 +157,8 @@ export default function SearchBar({
                                 id="search-drawer-title"
                                 sx={{
                                     color: theme.palette.text.primary,
-                                    fontWeight: 600,
-                                    fontSize: fontSize.lg.tablet,
+                                    fontWeight: fontWeight.semibold,
+                                    fontSize: getResponsiveFontSize('lg'),
                                     m: 0,
                                 }}
                             >
@@ -224,7 +224,7 @@ export default function SearchBar({
                                     ),
                                     sx: {
                                         borderRadius: borderRadius.pill,
-                                        fontSize: fontSize.lg.tablet,
+                                        fontSize: getResponsiveFontSize('lg'),
                                         '& .MuiOutlinedInput-notchedOutline': {
                                             border: 'none',
                                         },
@@ -246,7 +246,7 @@ export default function SearchBar({
                             color: theme.palette.text.secondary,
                             textAlign: 'center',
                             mt: 4,
-                            fontSize: fontSize.base.tablet
+                            fontSize: getResponsiveFontSize('md')
                         }}>
                             Nhập từ khóa để tìm kiếm...
                         </Box>
@@ -332,8 +332,8 @@ export default function SearchBar({
                 }}
                 sx={{
                     '& .MuiInputBase-input': {
-                        fontSize: fontSize.sm.tablet,
-                        fontWeight: 400,
+                        fontSize: getResponsiveFontSize('sm'),
+                        fontWeight: 'normal',
                         padding: '6px 0',
                         '&::placeholder': {
                             color: theme.palette.text.secondary,

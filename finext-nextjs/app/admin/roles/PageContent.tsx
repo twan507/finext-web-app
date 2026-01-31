@@ -21,7 +21,7 @@ import {
     DoDisturbOn as DeactivateIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { fontSize, getResponsiveFontSize, borderRadiusTop } from 'theme/tokens';
+import { getResponsiveFontSize, borderRadiusTop, fontWeight } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
     SortConfig,
@@ -442,8 +442,8 @@ export default function RolesPage() {
                                                 width: expandedView ? 'auto' : columnConfigs[0].minWidth
                                             }}>
                                                 <Typography sx={{
-                                                    fontSize: getResponsiveFontSize('tableCell'),
-                                                    fontWeight: 'medium'
+                                                    fontSize: getResponsiveFontSize('sm'),
+                                                    fontWeight: fontWeight.medium
                                                 }}>
                                                     {role.name}
                                                 </Typography>
@@ -457,7 +457,7 @@ export default function RolesPage() {
                                             }}>
                                                 <Tooltip title={role.description || 'Không có mô tả'}>
                                                     <Typography sx={{
-                                                        fontSize: getResponsiveFontSize('tableCell'),
+                                                        fontSize: getResponsiveFontSize('sm'),
                                                         maxWidth: 300,
                                                         overflow: 'hidden',
                                                         textOverflow: 'ellipsis',
@@ -478,7 +478,7 @@ export default function RolesPage() {
                                                     label={columnConfigs[2].format?.(role.permission_ids?.length || 0)}
                                                     size="small"
                                                     variant="outlined"
-                                                    sx={{ fontWeight: 'medium' }}
+                                                    sx={{ fontWeight: fontWeight.medium }}
                                                 />
                                             </TableCell>
 
@@ -488,7 +488,7 @@ export default function RolesPage() {
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
                                                 minWidth: columnConfigs[3].minWidth
                                             }}>
-                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                                                     {columnConfigs[3].format?.(role.created_at || '')}
                                                 </Typography>
                                             </TableCell>
@@ -499,7 +499,7 @@ export default function RolesPage() {
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
                                                 minWidth: columnConfigs[4].minWidth
                                             }}>
-                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                                                     {columnConfigs[4].format?.(role.updated_at || '')}
                                                 </Typography>
                                             </TableCell>
@@ -624,7 +624,7 @@ export default function RolesPage() {
                     sx: { borderRadius: 2 }
                 }}
             >
-                <DialogTitle sx={{ color: 'error.main', fontWeight: 'bold' }}>
+                <DialogTitle sx={{ color: 'error.main', fontWeight: fontWeight.bold }}>
                     ⚠️ Xác nhận xóa vai trò
                 </DialogTitle>
                 <DialogContent>

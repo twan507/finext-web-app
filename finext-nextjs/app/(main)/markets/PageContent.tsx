@@ -1,10 +1,11 @@
 // Server Component - không cần 'use client' vì chỉ render static content
 import { Box, Typography } from '@mui/material';
+import { fontWeight } from 'theme/tokens';
 
 export default function MarketsContent() {
   return (
     <Box sx={{ py: 4 }}>
-      <Typography variant="h4" sx={{ mb: 2, fontWeight: 600 }}>
+      <Typography variant="h4" sx={{ mb: 2, fontWeight: fontWeight.bold }}>
         Thị trường
       </Typography>
       <Typography variant="body1" color="text.secondary">

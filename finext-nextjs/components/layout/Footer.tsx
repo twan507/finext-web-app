@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Box, Typography, Grid, useTheme, alpha } from '@mui/material';
 import BrandLogo from './BrandLogo';
-import { fontSize, getResponsiveFontSize, spacing, borderRadius, transitions } from 'theme/tokens';
+import { getResponsiveFontSize, spacing, borderRadius, transitions, fontWeight } from 'theme/tokens';
 
 // Footer navigation structure - only 4 sections
 const footerLinks = {
@@ -54,8 +54,8 @@ const FooterLinkColumn: React.FC<FooterLinkColumnProps> = ({ title, links }) => 
     <Box>
       <Typography
         sx={{
-          fontSize: getResponsiveFontSize('h6'),
-          fontWeight: 600,
+          fontSize: getResponsiveFontSize('lg'),
+          fontWeight: fontWeight.semibold,
           color: theme.palette.text.primary,
           mb: spacing.sm / 8, // Convert to theme spacing units
         }}
@@ -83,7 +83,7 @@ const FooterLinkColumn: React.FC<FooterLinkColumnProps> = ({ title, links }) => 
             >
               <Typography
                 sx={{
-                  fontSize: getResponsiveFontSize('base'),
+                  fontSize: getResponsiveFontSize('md'),
                   color: theme.palette.text.secondary,
                   transition: transitions.colors,
                   py: 0.5,
@@ -110,8 +110,9 @@ const Footer: React.FC = () => {
     <Box
       component="footer"
       sx={{
-        bgcolor: theme.palette.mode === 'dark' ? '#0a0a0a' : theme.palette.background.default,
-        borderTop: `1px solid ${theme.palette.divider}`,
+        bgcolor: theme.palette.mode === 'dark'
+          ? '#050505' // Slightly distinct from default #0a0a0a
+          : '#f8f9fa', // Slightly distinct from default #fafbfc
         mt: 'auto',
       }}
     >
@@ -144,22 +145,22 @@ const Footer: React.FC = () => {
             }}
           >
             {/* Brand Section - 50% width */}
-            <Box sx={{ flex: '0 0 50%' }}>
+            <Box sx={{ flex: { md: '0 0 40%', lg: '0 0 50%' } }}>
               <Box sx={{ mb: spacing.md / 8 }}>
                 <BrandLogo
                   href="/"
                   showText={true}
                   imageSize={45}
-                  textSize={fontSize.h1.desktop}
+                  textSize={getResponsiveFontSize('h1')}
                   gap={12}
                   useColorOverlay={false}
                 />
               </Box>
               <Typography
                 sx={{
-                  fontSize: getResponsiveFontSize('h5'),
+                  fontSize: getResponsiveFontSize('xl'),
                   color: theme.palette.primary.main,
-                  fontWeight: 500,
+                  fontWeight: fontWeight.semibold,
                 }}
               >
                 Your{' '}
@@ -180,9 +181,9 @@ const Footer: React.FC = () => {
             {/* Links Sections - 50% width */}
             <Box
               sx={{
-                flex: '0 0 50%',
+                flex: { md: '0 0 60%', lg: '0 0 50%' },
                 display: 'grid',
-                gridTemplateColumns: 'repeat(2, minmax(220px, 1fr))',
+                gridTemplateColumns: 'repeat(2, 1fr)',
                 columnGap: { md: 4, lg: 6 },
                 rowGap: 4,
               }}
@@ -215,16 +216,16 @@ const Footer: React.FC = () => {
                   href="/"
                   showText={true}
                   imageSize={45}
-                  textSize={fontSize.h1.desktop}
+                  textSize={getResponsiveFontSize('h1')}
                   gap={12}
                   useColorOverlay={false}
                 />
               </Box>
               <Typography
                 sx={{
-                  fontSize: getResponsiveFontSize('h5'),
+                  fontSize: getResponsiveFontSize('xl'),
                   color: theme.palette.primary.main,
-                  fontWeight: 500,
+                  fontWeight: fontWeight.semibold,
                 }}
               >
                 Your{' '}
@@ -246,8 +247,8 @@ const Footer: React.FC = () => {
             <Box
               sx={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(2, minmax(200px, 1fr))',
-                columnGap: 6,
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                columnGap: 3,
                 rowGap: 4,
                 width: '100%',
                 maxWidth: 400,

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { Box, Typography, Skeleton, useTheme, useMediaQuery, Theme } from '@mui/material';
-import { fontSize, transitions, borderRadius } from 'theme/tokens';
+import { transitions, getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
 
 interface RawMarketData {
     ticker: string;
@@ -37,7 +37,7 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
     const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'));
 
     // Responsive font size
-    const cellFontSize = isMobile ? fontSize.tableCell.mobile : fontSize.tableCell.tablet;
+    const cellFontSize = getResponsiveFontSize('sm');
 
     const [tickerName, setTickerName] = useState<string>(ticker);
     const [price, setPrice] = useState<number | null>(null);
@@ -146,7 +146,7 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
             {/* Tên index */}
             <Typography sx={{
                 fontSize: cellFontSize,
-                fontWeight: isSelected ? 600 : 500,
+                fontWeight: isSelected ? fontWeight.semibold : fontWeight.medium,
                 color: 'text.primary',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
@@ -158,7 +158,7 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
             {/* Giá */}
             <Typography sx={{
                 fontSize: cellFontSize,
-                fontWeight: 600,
+                fontWeight: fontWeight.semibold,
                 color: 'text.primary',
                 textAlign: 'right'
             }}>
@@ -168,7 +168,7 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
             {/* Biến động điểm */}
             <Typography sx={{
                 fontSize: cellFontSize,
-                fontWeight: 500,
+                fontWeight: fontWeight.semibold,
                 color: changeColor,
                 textAlign: 'right'
             }}>
@@ -178,7 +178,7 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
             {/* Biến động % */}
             <Typography sx={{
                 fontSize: cellFontSize,
-                fontWeight: 500,
+                fontWeight: fontWeight.semibold,
                 color: changeColor,
                 textAlign: 'right'
             }}>

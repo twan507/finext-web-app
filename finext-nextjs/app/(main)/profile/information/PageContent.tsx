@@ -5,7 +5,7 @@ import { Box, Typography, Button, TextField, Skeleton, useTheme, Alert, InputAdo
 import { Person, Email, Phone, AdminPanelSettings } from '@mui/icons-material';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { apiClient } from 'services/apiClient';
-import { fontSize, borderRadius } from 'theme/tokens';
+import { borderRadius, getResponsiveFontSize } from 'theme/tokens';
 import Link from 'next/link';
 
 // Function để generate màu dựa trên user ID cho avatar
@@ -253,7 +253,7 @@ export default function PageContent() {
                         bgcolor: avatarBgColor,
                         color: 'rgba(255, 255, 255, 0.95)',
                         fontWeight: 'bold',
-                        fontSize: fontSize.h5.tablet,
+                        fontSize: getResponsiveFontSize('xl'),
                         backgroundImage: session.user.avatar_url ? `url(${session.user.avatar_url})` : 'none',
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',

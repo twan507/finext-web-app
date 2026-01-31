@@ -19,7 +19,7 @@ import {
 	UnfoldLess as CollapseIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { fontSize, getResponsiveFontSize, borderRadiusTop } from 'theme/tokens';
+import { getResponsiveFontSize, borderRadiusTop, fontWeight } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import SubscriptionSearch from './components/SubscriptionSearch';
 import CreateSubscriptionModal from './components/CreateSubscriptionModal';
@@ -553,7 +553,7 @@ export default function SubscriptionsPage() {
 												minWidth: columnConfigs[0].minWidth,
 												width: expandedView ? 'auto' : columnConfigs[0].minWidth
 											}}>
-												<Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+												<Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
 													{sub.user_email}
 												</Typography>                                            </TableCell>
 											<TableCell sx={{
@@ -566,7 +566,7 @@ export default function SubscriptionsPage() {
 													label={sub.license_key}
 													size="small"
 													variant="outlined"
-													sx={{ fontWeight: 'medium' }} />
+													sx={{ fontWeight: fontWeight.medium }} />
 											</TableCell>
 											<TableCell sx={{
 												...getResponsiveDisplayStyle(columnConfigs[2], expandedView),
@@ -574,7 +574,7 @@ export default function SubscriptionsPage() {
 												minWidth: columnConfigs[2].minWidth,
 												width: expandedView ? 'auto' : columnConfigs[2].minWidth
 											}}>
-												<Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+												<Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
 													{columnConfigs[2].format?.(sub.start_date)}
 												</Typography>                                            </TableCell>
 											<TableCell sx={{
@@ -583,7 +583,7 @@ export default function SubscriptionsPage() {
 												minWidth: columnConfigs[3].minWidth,
 												width: expandedView ? 'auto' : columnConfigs[3].minWidth
 											}}>
-												<Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+												<Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
 													{columnConfigs[3].format?.(sub.expiry_date)}
 												</Typography>                                            </TableCell>
 											<TableCell sx={{
@@ -611,7 +611,7 @@ export default function SubscriptionsPage() {
 													return (
 														<Typography
 															sx={{
-																fontSize: getResponsiveFontSize('tableCell'),
+																fontSize: getResponsiveFontSize('sm'),
 																color: textColor,
 																fontWeight: 'medium'
 															}}
@@ -642,7 +642,7 @@ export default function SubscriptionsPage() {
 												minWidth: columnConfigs[6].minWidth,
 												width: expandedView ? 'auto' : columnConfigs[6].minWidth
 											}}>
-												<Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+												<Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
 													{columnConfigs[6].format?.(sub.updated_at)}
 												</Typography>                                            </TableCell>
 											<TableCell
@@ -778,7 +778,7 @@ export default function SubscriptionsPage() {
 				}}
 			>
 				<DialogTitle>
-					<Typography variant="h6" component="div" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
+					<Typography variant="h6" component="div" fontWeight={fontWeight.bold} sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
 						<DeactivateIcon />
 						Xác nhận hủy kích hoạt subscription
 					</Typography>
@@ -959,7 +959,7 @@ export default function SubscriptionsPage() {
 				maxWidth="sm"
 				fullWidth
 			>
-				<DialogTitle sx={{ color: 'error.main', fontWeight: 'bold' }}>
+				<DialogTitle sx={{ color: 'error.main', fontWeight: fontWeight.bold }}>
 					⚠️ Xác nhận xóa subscription
 				</DialogTitle>
 				<DialogContent>

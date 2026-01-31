@@ -14,7 +14,7 @@ import {
 import { apiClient } from 'services/apiClient';
 import { parseISO, addDays, format } from 'date-fns';
 import { filterNonSystemLicenses, isSystemLicense } from 'utils/systemProtection';
-import { borderRadiusTop } from 'theme/tokens';
+import { borderRadiusTop, fontWeight } from 'theme/tokens';
 
 interface UserPublic {
     id: string;
@@ -307,7 +307,7 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
             }}
         >
             <DialogTitle>
-                <Typography variant="h5" component="div" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="h5" component="div" fontWeight={fontWeight.bold} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <CreateIcon color="primary" />
                     Tạo Subscription Mới
                 </Typography>
@@ -385,7 +385,7 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
                                 }}>
                                     <Typography
                                         variant="body2"
-                                        fontWeight="bold"
+                                        fontWeight={fontWeight.bold}
                                         sx={{
                                             display: 'flex',
                                             alignItems: 'center',
@@ -485,7 +485,7 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
                                             borderRadius: 1,
                                             border: `1px solid ${theme.palette.component.modal.noteBorder}`
                                         }}>
-                                            <Typography variant="subtitle2" color="primary.main" sx={{ mb: 1, fontWeight: 'bold' }}>
+                                            <Typography variant="subtitle2" color="primary.main" sx={{ mb: 1, fontWeight: fontWeight.bold }}>
                                                 Thông tin gói đã chọn:
                                             </Typography>
                                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
@@ -529,7 +529,7 @@ const CreateSubscriptionModal: React.FC<CreateSubscriptionModalProps> = ({
                         }}>
                             <Typography
                                 variant="body2"
-                                fontWeight="bold"
+                                fontWeight={fontWeight.bold}
                                 sx={{
                                     display: 'flex',
                                     alignItems: 'center',

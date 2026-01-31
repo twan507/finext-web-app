@@ -10,7 +10,7 @@ import {
 } from '@mui/material';
 import MuiLink from '@mui/material/Link';
 import { SvgIconProps } from '@mui/material/SvgIcon';
-import { fontSize, iconSize } from 'theme/tokens';
+import { iconSize, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import {
     Dashboard as DashboardIcon,
     People as PeopleIcon,
@@ -159,13 +159,13 @@ export default function AdminBreadcrumb() {
                 Dashboard
             </MuiLink>
             {currentGroupText && currentGroupIcon && (
-                <Typography color="text.secondary" sx={{ display: 'flex', alignItems: 'center', fontSize: fontSize.base.tablet }}>
+                <Typography color="text.secondary" sx={{ display: 'flex', alignItems: 'center', fontSize: getResponsiveFontSize('md') }}>
                     {React.cloneElement(currentGroupIcon, { sx: { mr: 0.5, fontSize: iconSize.breadcrumb.desktop } })}
                     {currentGroupText}
                 </Typography>
             )}
             {currentPathname !== '/admin/dashboard' && bestMatch && (
-                <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center', fontSize: fontSize.base.tablet, fontWeight: 500 }}>
+                <Typography color="text.primary" sx={{ display: 'flex', alignItems: 'center', fontSize: getResponsiveFontSize('md'), fontWeight: fontWeight.medium }}>
                     {React.cloneElement(currentPageIcon, { sx: { mr: 0.5, fontSize: iconSize.breadcrumb.desktop } })}
                     {currentPageTitle}
                 </Typography>

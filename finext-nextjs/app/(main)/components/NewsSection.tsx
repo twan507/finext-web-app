@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import { fontSize, spacing, getResponsiveFontSize, transitions, borderRadius } from 'theme/tokens';
+import { spacing, getResponsiveFontSize, transitions, borderRadius, fontWeight } from 'theme/tokens';
+
+
 import { apiClient } from 'services/apiClient';
 import Link from 'next/link';
 
@@ -77,15 +79,15 @@ function MiniNewsCard({ article }: MiniNewsCardProps) {
 
     // Calculate fixed heights based on HOVER font sizes to prevent layout shift
     const titleHeight = {
-        xs: `calc(1.4 * ${fontSize.md.mobile} * 2)`,
-        md: `calc(1.4 * ${fontSize.md.tablet} * 2)`,
-        lg: `calc(1.4 * ${fontSize.md.desktop} * 2)`,
+        xs: `calc(1.4 * ${getResponsiveFontSize('md').xs} * 2)`,
+        md: `calc(1.4 * ${getResponsiveFontSize('md').md} * 2)`,
+        lg: `calc(1.4 * ${getResponsiveFontSize('md').lg} * 2)`,
     };
 
     const sapoHeight = {
-        xs: `calc(1.5 * ${fontSize.sm.mobile} * 2)`,
-        md: `calc(1.5 * ${fontSize.sm.tablet} * 2)`,
-        lg: `calc(1.5 * ${fontSize.sm.desktop} * 2)`,
+        xs: `calc(1.5 * ${getResponsiveFontSize('sm').xs} * 2)`,
+        md: `calc(1.5 * ${getResponsiveFontSize('sm').md} * 2)`,
+        lg: `calc(1.5 * ${getResponsiveFontSize('sm').lg} * 2)`,
     };
 
     return (
@@ -104,7 +106,7 @@ function MiniNewsCard({ article }: MiniNewsCardProps) {
                     flexDirection: 'column',
                     textDecoration: 'none',
                     color: 'inherit',
-                    py: spacing.xs, // Increased from xs (4px) to sm (8px)
+                    my: spacing.xxs,
                     width: '100%',
                     overflow: 'hidden',
                     cursor: 'pointer',
@@ -123,10 +125,9 @@ function MiniNewsCard({ article }: MiniNewsCardProps) {
                     variant="h6"
                     className="news-card-title"
                     sx={{
-                        fontWeight: 600,
+                        fontWeight: fontWeight.semibold,
                         fontSize: getResponsiveFontSize('sm'),
                         lineHeight: 1.4,
-                        mb: spacing.xxs,
                         display: '-webkit-box',
                         WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical',
@@ -147,7 +148,7 @@ function MiniNewsCard({ article }: MiniNewsCardProps) {
                     className="news-card-sapo"
                     sx={{
                         fontSize: getResponsiveFontSize('xs'),
-                        lineHeight: 1.5,
+                        lineHeight: 1.6,
                         color: 'text.secondary',
                         display: '-webkit-box',
                         WebkitLineClamp: 2,
@@ -178,15 +179,15 @@ function MiniReportCard({ report }: MiniReportCardProps) {
 
     // Calculate fixed heights based on HOVER font sizes to prevent layout shift
     const titleHeight = {
-        xs: `calc(1.4 * ${fontSize.md.mobile} * 2)`,
-        md: `calc(1.4 * ${fontSize.md.tablet} * 2)`,
-        lg: `calc(1.4 * ${fontSize.md.desktop} * 2)`,
+        xs: `calc(1.4 * ${getResponsiveFontSize('md').xs} * 2)`,
+        md: `calc(1.4 * ${getResponsiveFontSize('md').md} * 2)`,
+        lg: `calc(1.4 * ${getResponsiveFontSize('md').lg} * 2)`,
     };
 
     const sapoHeight = {
-        xs: `calc(1.5 * ${fontSize.sm.mobile} * 2)`,
-        md: `calc(1.5 * ${fontSize.sm.tablet} * 2)`,
-        lg: `calc(1.5 * ${fontSize.sm.desktop} * 2)`,
+        xs: `calc(1.5 * ${getResponsiveFontSize('sm').xs} * 2)`,
+        md: `calc(1.5 * ${getResponsiveFontSize('sm').md} * 2)`,
+        lg: `calc(1.5 * ${getResponsiveFontSize('sm').lg} * 2)`,
     };
 
     return (
@@ -205,7 +206,7 @@ function MiniReportCard({ report }: MiniReportCardProps) {
                     flexDirection: 'column',
                     textDecoration: 'none',
                     color: 'inherit',
-                    py: spacing.xs, // Increased from xs (4px) to sm (8px)
+                    my: spacing.xxs,
                     width: '100%',
                     overflow: 'hidden',
                     cursor: 'pointer',
@@ -224,10 +225,9 @@ function MiniReportCard({ report }: MiniReportCardProps) {
                     variant="h6"
                     className="report-card-title"
                     sx={{
-                        fontWeight: 600,
+                        fontWeight: fontWeight.semibold,
                         fontSize: getResponsiveFontSize('sm'),
                         lineHeight: 1.4,
-                        mb: spacing.xxs,
                         display: '-webkit-box',
                         WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical',
@@ -246,7 +246,7 @@ function MiniReportCard({ report }: MiniReportCardProps) {
                     className="report-card-sapo"
                     sx={{
                         fontSize: getResponsiveFontSize('xs'),
-                        lineHeight: 1.5,
+                        lineHeight: 1.6,
                         color: 'text.secondary',
                         display: '-webkit-box',
                         WebkitLineClamp: 2,
@@ -332,7 +332,7 @@ function NewsColumn({ title, href, loading, newsItems, reportItems }: NewsColumn
                     variant="h6"
                     className="column-title"
                     sx={{
-                        fontWeight: 700,
+                        fontWeight: fontWeight.bold,
                         fontSize: getResponsiveFontSize('lg'),
                         color: 'primary.main',
                         textTransform: 'uppercase',
@@ -449,10 +449,10 @@ export default function NewsSection() {
                     mb: spacing.xs,
                 }}
             >
-                <Typography variant="h1">
+                <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1') }}>
                     Tin tức
                 </Typography>
-                <ChevronRightIcon sx={{ fontSize: fontSize.h2.tablet, mt: 1, color: theme.palette.text.secondary }} />
+                <ChevronRightIcon sx={{ fontSize: getResponsiveFontSize('h2').md, mt: 1, color: theme.palette.text.secondary }} />
             </Box>
 
             {/* Three Column Layout */}

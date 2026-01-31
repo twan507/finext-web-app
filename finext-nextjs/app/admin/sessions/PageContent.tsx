@@ -19,7 +19,7 @@ import {
     Devices
 } from '@mui/icons-material';
 import { format as formatDate, parseISO } from 'date-fns';
-import { fontSize, getResponsiveFontSize } from 'theme/tokens';
+import { getResponsiveFontSize, borderRadiusTop } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
     SortConfig,
@@ -39,7 +39,7 @@ interface PaginatedSessionsResponse {
 
 const SessionsPage: React.FC = () => {
     const theme = useTheme();
-    
+
 
     const [sessions, setSessions] = useState<SessionPublicAdmin[]>([]);
     const [filteredSessions, setFilteredSessions] = useState<SessionPublicAdmin[]>([]);
@@ -458,7 +458,7 @@ const SessionsPage: React.FC = () => {
                                                 minWidth: columnConfigs[0].minWidth,
                                             }}>                                                <Tooltip title={userEmails.get(session.user_id) || session.user_email || session.user_id}>
                                                     <Typography sx={{
-                                                        fontSize: getResponsiveFontSize('tableCell'),
+                                                        fontSize: getResponsiveFontSize('sm'),
                                                         maxWidth: expandedView ? 'none' : 200,
                                                         overflow: 'hidden',
                                                         textOverflow: 'ellipsis',
@@ -477,7 +477,7 @@ const SessionsPage: React.FC = () => {
                                                     {getDeviceIcon(session.device_info)}
                                                     <Tooltip title={session.device_info || 'Không có thông tin thiết bị'}>
                                                         <Typography sx={{
-                                                            fontSize: getResponsiveFontSize('tableCell'),
+                                                            fontSize: getResponsiveFontSize('sm'),
                                                             maxWidth: expandedView ? 'none' : 180,
                                                             overflow: 'hidden',
                                                             textOverflow: 'ellipsis',
@@ -493,7 +493,7 @@ const SessionsPage: React.FC = () => {
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
                                                 minWidth: columnConfigs[2].minWidth
                                             }}>
-                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                                                     {columnConfigs[2].format?.(session.created_at || '')}
                                                 </Typography>
                                             </TableCell>
@@ -505,7 +505,7 @@ const SessionsPage: React.FC = () => {
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                     <TimerIcon fontSize="small" color="action" />
                                                     <Box>
-                                                        <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                                                        <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                                                             {columnConfigs[3].format?.(session.last_active_at || '')}
                                                         </Typography>
                                                         <Typography sx={{

@@ -11,7 +11,7 @@ import {
   LogoutOutlined
 } from '@mui/icons-material';
 import { useAuth } from '@/components/auth/AuthProvider';
-import { fontSize } from 'theme/tokens';
+import { getResponsiveFontSize, borderRadius, fontWeight } from 'theme/tokens';
 
 interface ProfileLayoutProps {
   children: React.ReactNode;
@@ -107,8 +107,8 @@ export default function LayoutContent({ children }: ProfileLayoutProps) {
                     display: { xs: 'none', md: 'block' },
                     ml: { md: 0.5 },
                     '& .MuiListItemText-primary': {
-                      fontSize: fontSize.base.tablet,
-                      fontWeight: 500,
+                      fontSize: getResponsiveFontSize('md'),
+                      fontWeight: fontWeight.medium,
                     },
                   }}
                 />
@@ -152,8 +152,8 @@ export default function LayoutContent({ children }: ProfileLayoutProps) {
                   display: { xs: 'none', md: 'block' },
                   ml: { md: 0.5 },
                   '& .MuiListItemText-primary': {
-                    fontSize: fontSize.base.tablet,
-                    fontWeight: 500,
+                    fontSize: getResponsiveFontSize('md'),
+                    fontWeight: fontWeight.medium,
                     color: (theme) =>
                       theme.palette.mode === 'dark' ? '#FF5555' : '#dc004e',
                   },

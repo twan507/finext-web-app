@@ -5,7 +5,7 @@ import { Box, Stack, Typography, useTheme } from '@mui/material';
 import Link from 'next/link';
 
 import { NewsArticle, getSourceConfigBySource } from '../types';
-import { spacing, transitions, getResponsiveFontSize } from 'theme/tokens';
+import { spacing, transitions, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 
 interface NewsCardProps {
     article: NewsArticle;
@@ -71,7 +71,7 @@ export default function NewsCard({ article }: NewsCardProps) {
                     variant="body2"
                     color="primary.main"
                     sx={{
-                        fontWeight: 600,
+                        fontWeight: fontWeight.medium,
                         fontSize: getResponsiveFontSize('sm'),
                     }}
                 >
@@ -95,7 +95,7 @@ export default function NewsCard({ article }: NewsCardProps) {
                     className="news-title"
                     variant="h6"
                     sx={{
-                        fontWeight: 700,
+                        fontWeight: fontWeight.semibold,
                         fontSize: getResponsiveFontSize('md'),
                         lineHeight: 1.4,
                         mb: 0.5,

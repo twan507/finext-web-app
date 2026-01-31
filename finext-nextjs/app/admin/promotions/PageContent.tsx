@@ -20,7 +20,7 @@ import {
     DoDisturbOn as DeactivateIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { fontSize, getResponsiveFontSize, borderRadiusTop } from 'theme/tokens';
+import { getResponsiveFontSize, borderRadiusTop } from 'theme/tokens';
 import { formatUTCToGMT7 } from 'utils/dateUtils';
 import SortableTableHead from '../components/SortableTableHead';
 import {
@@ -548,7 +548,7 @@ export default function PromotionsPage() {
                                                             overflow: 'hidden',
                                                             textOverflow: 'ellipsis',
                                                             whiteSpace: 'nowrap',
-                                                            fontSize: getResponsiveFontSize('tableCell')
+                                                            fontSize: getResponsiveFontSize('sm')
                                                         }}
                                                     >
                                                         {promo.description || 'N/A'}
@@ -560,7 +560,7 @@ export default function PromotionsPage() {
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
                                                 minWidth: columnConfigs[2].minWidth
                                             }}>
-                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                                                     {promo.discount_type === DiscountTypeEnumFE.PERCENTAGE
                                                         ? `${promo.discount_value}%`
                                                         : `${promo.discount_value.toLocaleString('vi-VN')} VND`}
@@ -571,7 +571,7 @@ export default function PromotionsPage() {
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
                                                 minWidth: columnConfigs[3].minWidth
                                             }}>
-                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                                                     {promo.usage_count} / {promo.usage_limit || '∞'}
                                                 </Typography>
                                             </TableCell>
@@ -596,7 +596,7 @@ export default function PromotionsPage() {
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
                                                 minWidth: columnConfigs[5].minWidth
                                             }}>
-                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                                                     {columnConfigs[5].format ? columnConfigs[5].format!(promo.start_date) : (promo.start_date || 'N/A')}
                                                 </Typography>
                                             </TableCell>
@@ -605,7 +605,7 @@ export default function PromotionsPage() {
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
                                                 minWidth: columnConfigs[6].minWidth
                                             }}>
-                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                                                     {columnConfigs[6].format ? columnConfigs[6].format!(promo.end_date) : (promo.end_date || 'N/A')}
                                                 </Typography>
                                             </TableCell>
@@ -614,7 +614,7 @@ export default function PromotionsPage() {
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
                                                 minWidth: columnConfigs[7].minWidth
                                             }}>
-                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                                                     {columnConfigs[7].format ? columnConfigs[7].format!(promo.created_at) : promo.created_at}
                                                 </Typography>
                                             </TableCell>

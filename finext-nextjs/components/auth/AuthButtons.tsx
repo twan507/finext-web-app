@@ -12,7 +12,7 @@ import {
     PersonAdd as PersonAddIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
-import { fontSize, buttonSize, borderRadius, transitions, shadows } from 'theme/tokens';
+import { buttonSize, borderRadius, transitions, shadows, getResponsiveFontSize } from 'theme/tokens';
 
 export default function AuthButtons() {
     const theme = useTheme();
@@ -35,8 +35,7 @@ export default function AuthButtons() {
                 sx={{
                     minWidth: 100,
                     height: buttonSize.sm.height,
-                    fontSize: fontSize.base.tablet,
-                    fontWeight: 400,
+                    fontSize: getResponsiveFontSize('md'),
                     color: theme.palette.primary.main,
                     borderColor: theme.palette.primary.main,
                     borderRadius: `${borderRadius.md}px`,
@@ -60,8 +59,7 @@ export default function AuthButtons() {
                 sx={{
                     minWidth: 100,
                     height: buttonSize.sm.height,
-                    fontSize: fontSize.base.tablet,
-                    fontWeight: 400,
+                    fontSize: getResponsiveFontSize('md'),
                     backgroundColor: theme.palette.primary.main,
                     color: theme.palette.primary.contrastText,
                     borderRadius: `${borderRadius.md}px`,

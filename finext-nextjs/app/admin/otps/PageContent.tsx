@@ -20,7 +20,7 @@ import {
     Block as InvalidIcon
 } from '@mui/icons-material';
 import { format as formatDate, parseISO } from 'date-fns';
-import { fontSize, getResponsiveFontSize } from 'theme/tokens';
+import { getResponsiveFontSize, borderRadiusTop } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
     SortConfig,
@@ -37,7 +37,7 @@ interface PaginatedOtpsResponse {
 
 const OtpsPage: React.FC = () => {
     const theme = useTheme();
-    
+
 
     const [otps, setOtps] = useState<OtpPublicAdmin[]>([]);
     const [filteredOtps, setFilteredOtps] = useState<OtpPublicAdmin[]>([]);
@@ -533,7 +533,7 @@ const OtpsPage: React.FC = () => {
                                             }}>
                                                 <Tooltip title={userEmails.get(otp.user_id) || otp.user_email || otp.user_id}>
                                                     <Typography sx={{
-                                                        fontSize: getResponsiveFontSize('tableCell'),
+                                                        fontSize: getResponsiveFontSize('sm'),
                                                         maxWidth: expandedView ? 'none' : 200,
                                                         overflow: 'hidden',
                                                         textOverflow: 'ellipsis',
@@ -580,7 +580,7 @@ const OtpsPage: React.FC = () => {
                                                 whiteSpace: 'nowrap',
                                                 minWidth: columnConfigs[3].minWidth
                                             }} align="center">
-                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                                                     {otp.attempts || 0}
                                                 </Typography>
                                             </TableCell>
@@ -589,7 +589,7 @@ const OtpsPage: React.FC = () => {
                                                 whiteSpace: 'nowrap',
                                                 minWidth: columnConfigs[4].minWidth
                                             }}>
-                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                                                     {columnConfigs[4].format?.(otp.created_at || '')}
                                                 </Typography>
                                             </TableCell>
@@ -599,7 +599,7 @@ const OtpsPage: React.FC = () => {
                                                 minWidth: columnConfigs[5].minWidth
                                             }}>
                                                 <Box>
-                                                    <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                                                    <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                                                         {columnConfigs[5].format?.(otp.expires_at || '')}
                                                     </Typography>
                                                     <Typography sx={{

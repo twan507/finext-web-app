@@ -32,7 +32,7 @@ import ShowChartIcon from '@mui/icons-material/ShowChart';
 import CandlestickChartIcon from '@mui/icons-material/CandlestickChart';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
-import { fontSize } from 'theme/tokens';
+import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 
 // Types - export để page có thể sử dụng
 export type TimeRange = '1D' | '1M' | '3M' | '1Y' | '5Y' | 'ALL';
@@ -907,9 +907,9 @@ export default function MarketIndexChart({
                             <Typography
                                 variant="h4"
                                 sx={{
-                                    fontWeight: 600,
+                                    fontWeight: fontWeight.bold,
                                     color: colors.textPrimary,
-                                    fontSize: fontSize.h2.tablet
+                                    fontSize: getResponsiveFontSize('h3')
                                 }}
                             >
                                 {currentPrice.toLocaleString('en-US', {
@@ -920,8 +920,8 @@ export default function MarketIndexChart({
                             <Typography
                                 sx={{
                                     color: isPositive ? colors.upColor : colors.downColor,
-                                    fontWeight: 500,
-                                    fontSize: fontSize.h6.tablet
+                                    fontWeight: fontWeight.bold,
+                                    fontSize: getResponsiveFontSize('lg')
                                 }}
                             >
                                 {isPositive ? '+' : ''}
@@ -936,8 +936,8 @@ export default function MarketIndexChart({
                                 sx={{
                                     backgroundColor: isPositive ? colors.upColor : colors.downColor,
                                     color: '#ffffff',
-                                    fontWeight: 600,
-                                    fontSize: fontSize.base.tablet,
+                                    fontWeight: fontWeight.bold,
+                                    fontSize: getResponsiveFontSize('md'),
                                     height: 24
                                 }}
                             />
@@ -945,7 +945,7 @@ export default function MarketIndexChart({
                         <Typography
                             sx={{
                                 color: colors.textSecondary,
-                                fontSize: fontSize.base.tablet,
+                                fontSize: getResponsiveFontSize('md'),
                                 mt: 0.5
                             }}
                         >
@@ -976,7 +976,7 @@ export default function MarketIndexChart({
                             border: 'none',
                             px: 1.5,
                             py: 0.5,
-                            fontSize: fontSize.base.tablet,
+                            fontSize: getResponsiveFontSize('md'),
                             backgroundColor: colors.buttonBackground,
                             '&:hover': {
                                 backgroundColor: colors.buttonBackground
@@ -1182,10 +1182,10 @@ export default function MarketIndexChart({
                     >
                         <Typography
                             sx={{
-                                fontSize: fontSize.sm.tablet,
+                                fontSize: getResponsiveFontSize('sm'),
                                 color: colors.textSecondary,
                                 mb: 0.5,
-                                fontWeight: 500
+                                fontWeight: fontWeight.medium
                             }}
                         >
                             {tooltipData.time}
@@ -1195,38 +1195,38 @@ export default function MarketIndexChart({
                             // Candlestick tooltip
                             <Box>
                                 <Stack direction="row" spacing={1} alignItems="center">
-                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary, minWidth: 20 }}>
+                                    <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.textSecondary, minWidth: 20 }}>
                                         O:
                                     </Typography>
-                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textPrimary, fontWeight: 600 }}>
+                                    <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.textPrimary, fontWeight: fontWeight.medium }}>
                                         {tooltipData.open?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </Typography>
                                 </Stack>
                                 <Stack direction="row" spacing={1} alignItems="center">
-                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary, minWidth: 20 }}>
+                                    <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.textSecondary, minWidth: 20 }}>
                                         H:
                                     </Typography>
-                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.upColor, fontWeight: 600 }}>
+                                    <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.upColor, fontWeight: fontWeight.medium }}>
                                         {tooltipData.high?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </Typography>
                                 </Stack>
                                 <Stack direction="row" spacing={1} alignItems="center">
-                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary, minWidth: 20 }}>
+                                    <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.textSecondary, minWidth: 20 }}>
                                         L:
                                     </Typography>
-                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.downColor, fontWeight: 600 }}>
+                                    <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.downColor, fontWeight: fontWeight.medium }}>
                                         {tooltipData.low?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </Typography>
                                 </Stack>
                                 <Stack direction="row" spacing={1} alignItems="center">
-                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary, minWidth: 20 }}>
+                                    <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.textSecondary, minWidth: 20 }}>
                                         C:
                                     </Typography>
                                     <Typography
                                         sx={{
-                                            fontSize: fontSize.sm.tablet,
+                                            fontSize: getResponsiveFontSize('sm'),
                                             color: (tooltipData.close ?? 0) >= (tooltipData.open ?? 0) ? colors.upColor : colors.downColor,
-                                            fontWeight: 600
+                                            fontWeight: fontWeight.medium
                                         }}
                                     >
                                         {tooltipData.close?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -1234,10 +1234,10 @@ export default function MarketIndexChart({
                                 </Stack>
                                 {tooltipData.volume !== undefined && (
                                     <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5, pt: 0.5, borderTop: `1px solid ${colors.borderColor}` }}>
-                                        <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary }}>
+                                        <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.textSecondary }}>
                                             KL:
                                         </Typography>
-                                        <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textPrimary, fontWeight: 600 }}>
+                                        <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.textPrimary, fontWeight: fontWeight.medium }}>
                                             {tooltipData.volume >= 1000000
                                                 ? `${(tooltipData.volume / 1000000).toFixed(2)}M`
                                                 : tooltipData.volume >= 1000
@@ -1251,19 +1251,19 @@ export default function MarketIndexChart({
                             // Area chart tooltip
                             <Box>
                                 <Stack direction="row" spacing={1} alignItems="center">
-                                    <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary }}>
+                                    <Typography sx={{ fontSize: getResponsiveFontSize('sm').md, color: colors.textSecondary }}>
                                         Giá:
                                     </Typography>
-                                    <Typography sx={{ fontSize: fontSize.base.tablet, color: colors.line, fontWeight: 700 }}>
+                                    <Typography sx={{ fontSize: getResponsiveFontSize('md'), color: colors.line, fontWeight: fontWeight.medium }}>
                                         {tooltipData.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </Typography>
                                 </Stack>
                                 {tooltipData.volume !== undefined && (
                                     <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
-                                        <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textSecondary }}>
+                                        <Typography sx={{ fontSize: getResponsiveFontSize('sm').md, color: colors.textSecondary }}>
                                             KL:
                                         </Typography>
-                                        <Typography sx={{ fontSize: fontSize.sm.tablet, color: colors.textPrimary, fontWeight: 600 }}>
+                                        <Typography sx={{ fontSize: getResponsiveFontSize('sm').md, color: colors.textPrimary, fontWeight: fontWeight.medium }}>
                                             {tooltipData.volume >= 1000000
                                                 ? `${(tooltipData.volume / 1000000).toFixed(2)}M`
                                                 : tooltipData.volume >= 1000

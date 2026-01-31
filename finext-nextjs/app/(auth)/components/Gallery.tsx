@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Typography } from '@mui/material';
-import { layoutTokens, shadows, durations, easings } from 'theme/tokens';
+import { layoutTokens, shadows, durations, easings, fontWeight } from 'theme/tokens';
 
 export interface Slide {
     overline: string;
@@ -92,7 +92,7 @@ export default function Gallery({
                             WebkitBackgroundClip: 'text',
                             color: 'transparent',
                             WebkitTextFillColor: 'transparent',
-                            fontWeight: 700,
+                            fontWeight: fontWeight.bold,
                             letterSpacing: '-0.02em',
                             textShadow: theme.palette.mode === 'dark'
                                 ? '0 2px 8px rgba(139, 92, 246, 0.3)'

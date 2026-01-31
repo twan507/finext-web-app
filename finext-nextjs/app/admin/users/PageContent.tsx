@@ -17,7 +17,7 @@ import {
   People
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { fontSize, getResponsiveFontSize, borderRadiusTop } from 'theme/tokens';
+import { getResponsiveFontSize, borderRadiusTop, fontWeight } from 'theme/tokens';
 import UserSearch from './components/UserSearch';
 import AddUserModal from './components/AddUserModal';
 import EditUserModal from './components/EditUserModal';
@@ -689,10 +689,10 @@ const UsersPage: React.FC = () => {
                           <Box sx={{ flex: 1 }}>
                             <Typography
                               variant="body1"
-                              fontWeight="medium"
+                              fontWeight={fontWeight.medium}
                               sx={{
                                 mb: 0.5,
-                                fontSize: getResponsiveFontSize('base'),
+                                fontSize: getResponsiveFontSize('md'),
                                 lineHeight: 1.2
                               }}
                             >
@@ -717,7 +717,7 @@ const UsersPage: React.FC = () => {
                         whiteSpace: expandedView ? 'nowrap' : 'normal',
                         minWidth: columnConfigs[1].minWidth,
                         width: expandedView ? 'auto' : columnConfigs[1].minWidth
-                      }}>                    <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                      }}>                    <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                           {user.phone_number || 'N/A'}
                         </Typography>
                       </TableCell>
@@ -795,7 +795,7 @@ const UsersPage: React.FC = () => {
                               <Chip key={index} label={roleName} size="small" variant="outlined" />
                             ))
                           ) : (
-                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: getResponsiveFontSize('tableCell') }}>N/A</Typography>)}
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: getResponsiveFontSize('sm') }}>N/A</Typography>)}
                         </Box>
                       </TableCell>
                       <TableCell sx={{
@@ -803,7 +803,7 @@ const UsersPage: React.FC = () => {
                         whiteSpace: expandedView ? 'nowrap' : 'normal',
                         minWidth: columnConfigs[5].minWidth,
                         width: expandedView ? 'auto' : columnConfigs[5].minWidth
-                      }}>                        <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                      }}>                        <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                           {(() => {
                             if (!user.created_at) {
                               return 'N/A';
@@ -825,7 +825,7 @@ const UsersPage: React.FC = () => {
                         whiteSpace: expandedView ? 'nowrap' : 'normal',
                         minWidth: columnConfigs[6].minWidth,
                         width: expandedView ? 'auto' : columnConfigs[6].minWidth
-                      }}>                        <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                      }}>                        <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                           {(() => {
                             if (!user.updated_at) {
                               return 'N/A';
@@ -855,7 +855,7 @@ const UsersPage: React.FC = () => {
                             variant="outlined"
                             color="primary"
                           />
-                        ) : (<Typography variant="body2" color="text.secondary" sx={{ fontSize: getResponsiveFontSize('tableCell') }}>N/A</Typography>
+                        ) : (<Typography variant="body2" color="text.secondary" sx={{ fontSize: getResponsiveFontSize('sm') }}>N/A</Typography>
                         )}
                       </TableCell>
                       <TableCell sx={{
@@ -980,7 +980,7 @@ const UsersPage: React.FC = () => {
         onClose={!deleteLoading ? handleCloseDeleteDialog : undefined}
         maxWidth="sm"
         fullWidth
-      >        <DialogTitle sx={{ color: 'error.main', fontWeight: 'bold' }}>
+      >        <DialogTitle sx={{ color: 'error.main', fontWeight: fontWeight.bold }}>
           ⚠️ Xác nhận xóa người dùng
         </DialogTitle>
         <DialogContent>
@@ -990,7 +990,7 @@ const UsersPage: React.FC = () => {
             borderRadius: 1,
             mb: 2,
           }}>
-            <Typography variant="body1" fontWeight="bold">
+            <Typography variant="body1" fontWeight={fontWeight.bold}>
               {userToDelete?.full_name}
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -1022,9 +1022,9 @@ const UsersPage: React.FC = () => {
           }}>
             <Typography
               variant="body2"
-              fontWeight="bold"
+              fontWeight={fontWeight.bold}
               sx={{
-                fontWeight: 'bold',
+                fontWeight: fontWeight.bold,
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1,

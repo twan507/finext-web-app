@@ -19,7 +19,7 @@ import {
     UnfoldLess as CollapseIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { fontSize, getResponsiveFontSize } from 'theme/tokens';
+import { getResponsiveFontSize, borderRadiusTop } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
     SortConfig,
@@ -51,7 +51,7 @@ interface PaginatedFeaturesResponse {
 
 export default function FeaturesPage() {
     const theme = useTheme();
-    
+
 
     const [features, setFeatures] = useState<FeaturePublic[]>([]);
     const [filteredFeatures, setFilteredFeatures] = useState<FeaturePublic[]>([]);
@@ -480,7 +480,7 @@ export default function FeaturesPage() {
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
                                                 minWidth: columnConfigs[1].minWidth
                                             }}>
-                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                                                     {feature.name}
                                                 </Typography>
                                             </TableCell>
@@ -493,7 +493,7 @@ export default function FeaturesPage() {
                                             }}>
                                                 <Tooltip title={feature.description || ''}>
                                                     <Typography sx={{
-                                                        fontSize: getResponsiveFontSize('tableCell'),
+                                                        fontSize: getResponsiveFontSize('sm'),
                                                         maxWidth: 300,
                                                         overflow: 'hidden',
                                                         textOverflow: 'ellipsis',
@@ -510,7 +510,7 @@ export default function FeaturesPage() {
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
                                                 minWidth: columnConfigs[3].minWidth
                                             }}>
-                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                                                     {columnConfigs[3].format?.(feature.created_at || '')}
                                                 </Typography>
                                             </TableCell>
@@ -521,7 +521,7 @@ export default function FeaturesPage() {
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
                                                 minWidth: columnConfigs[4].minWidth
                                             }}>
-                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                                                     {columnConfigs[4].format?.(feature.updated_at || '')}
                                                 </Typography>
                                             </TableCell>

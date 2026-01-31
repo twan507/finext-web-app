@@ -19,7 +19,7 @@ import ArrowBack from '@mui/icons-material/ArrowBackIosNew';
 import AccessTime from '@mui/icons-material/AccessTime';
 
 import BrandLogo from '@/components/layout/BrandLogo';
-import { fontSize, iconSize, layoutTokens } from 'theme/tokens';
+import { iconSize, layoutTokens, getResponsiveFontSize, borderRadius, fontWeight } from 'theme/tokens';
 
 interface OtpRequestResponse {
     message: string;
@@ -279,7 +279,7 @@ export default function PageContent() {
                     <BrandLogo
                         href="/"
                         imageSize={iconSize.brandImage}
-                        textSize={fontSize.h4.tablet}
+                        textSize={getResponsiveFontSize('h4')}
                         gap={layoutTokens.dotSize.small}
                         useColorOverlay={true}
                     />
@@ -289,7 +289,7 @@ export default function PageContent() {
                     sx={(theme) => ({
                         textAlign: 'center',
                         mb: 1,
-                        fontSize: fontSize.md.tablet,
+                        fontSize: getResponsiveFontSize('md'),
                         background: theme.palette.mode === 'dark'
                             ? 'linear-gradient(135deg, #FFFFFF 0%, #E0E7FF 25%, #C4B5FD 50%, #A78BFA 75%, #8B5CF6 100%)'
                             : 'linear-gradient(135deg, #1F2937 0%, #4C1D95 25%, #6B46C1 50%, #7C3AED 75%, #8B5CF6 100%)',
@@ -297,7 +297,7 @@ export default function PageContent() {
                         WebkitBackgroundClip: 'text',
                         color: 'transparent',
                         WebkitTextFillColor: 'transparent',
-                        fontWeight: 600,
+                        fontWeight: fontWeight.semibold,
                         letterSpacing: '0.5px',
                     })}
                 >
@@ -497,7 +497,7 @@ export default function PageContent() {
                                 bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(139, 92, 246, 0.1)' : 'rgba(107, 70, 193, 0.1)',
                                 border: (theme) => `1px solid ${theme.palette.mode === 'dark' ? 'rgba(139, 92, 246, 0.2)' : 'rgba(107, 70, 193, 0.2)'}`
                             }}>
-                                <Typography variant="body2" sx={{ textAlign: 'center', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                                <Typography variant="body2" sx={{ textAlign: 'center', fontWeight: fontWeight.medium, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
                                     <AccessTime fontSize="small" />
                                     Mã OTP hết hạn sau <strong>{formatTime(otpValidityCountdown)}</strong>
                                 </Typography>

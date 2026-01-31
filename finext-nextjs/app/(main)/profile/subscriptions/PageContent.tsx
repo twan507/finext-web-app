@@ -28,7 +28,7 @@ import {
     Cancel,
     CheckCircle,
 } from '@mui/icons-material';
-import { fontSize, borderRadius, shadows } from 'theme/tokens';
+import { borderRadius, shadows, getResponsiveFontSize } from 'theme/tokens';
 import { apiClient } from '../../../../services/apiClient';
 
 interface Subscription {
@@ -385,7 +385,7 @@ export default function PageContent() {
                                             </Box>
                                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                                 <Today sx={{
-                                                    fontSize: fontSize.h6.mobile,
+                                                    fontSize: getResponsiveFontSize('lg'),
                                                     mr: 1,
                                                     color: 'primary.main'
                                                 }} />
@@ -401,7 +401,7 @@ export default function PageContent() {
                                             {!isSpecialLicense(currentSubscription.license_key) && (
                                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                                     <Schedule sx={{
-                                                        fontSize: fontSize.h6.mobile,
+                                                        fontSize: getResponsiveFontSize('lg'),
                                                         mr: 1,
                                                         color: 'primary.main'
                                                     }} />
@@ -424,7 +424,7 @@ export default function PageContent() {
                 ) : (
                     <Card>
                         <CardContent sx={{ textAlign: 'center', py: 4 }}>
-                            <CardMembership sx={{ fontSize: fontSize.display.tablet, color: 'text.secondary', mb: 2 }} />
+                            <CardMembership sx={{ fontSize: getResponsiveFontSize('h1'), color: 'text.secondary', mb: 2 }} />
                             <Typography variant="h6" color="text.secondary">
                                 Chưa có gói đăng ký
                             </Typography>
@@ -450,7 +450,7 @@ export default function PageContent() {
                                 Lịch sử đăng ký
                             </Typography>
                             <Box sx={{ textAlign: 'center', py: 2 }}>
-                                <History sx={{ fontSize: fontSize.display.tablet, color: 'text.secondary', mb: 2 }} />
+                                <History sx={{ fontSize: getResponsiveFontSize('h1'), color: 'text.secondary', mb: 2 }} />
                                 <Typography variant="h6" color="text.secondary">
                                     Chưa có gói đăng ký nào
                                 </Typography>

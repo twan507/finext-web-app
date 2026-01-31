@@ -15,7 +15,7 @@ import { Article } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
 import { ReportApiResponse, NewsReport, REPORT_PAGE_SIZE, REPORT_SORT_FIELD, REPORT_SORT_ORDER } from '../types';
 import ReportCard from './ReportCard';
-import { spacing, borderRadius, getResponsiveFontSize } from 'theme/tokens';
+import { spacing, borderRadius, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 
 interface ReportListProps {
     /** Lọc theo category */
@@ -158,7 +158,7 @@ export default function ReportList({
                         <Typography
                             variant="h4"
                             sx={{
-                                fontWeight: 700,
+                                fontWeight: fontWeight.bold,
                                 fontSize: getResponsiveFontSize('h4'),
                                 mb: spacing.xs,
                             }}

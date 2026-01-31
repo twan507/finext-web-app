@@ -16,7 +16,7 @@ import {
     LockReset as LockResetIcon
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
-import { borderRadiusTop } from 'theme/tokens';
+import { borderRadiusTop, fontWeight } from 'theme/tokens';
 interface UserPublic {
     id: string;
     role_ids: string[];
@@ -387,7 +387,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 }}
             >
                 <DialogTitle>
-                    <Typography variant="h5" component="div" fontWeight="bold">
+                    <Typography variant="h5" component="div" fontWeight={fontWeight.bold}>
                         Chỉnh sửa người dùng
                     </Typography>                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                         {localUser.email}
@@ -409,7 +409,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                         )}
 
                         {/* Thông tin cơ bản */}
-                        <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+                        <Typography variant="h6" sx={{ mb: 2, fontWeight: fontWeight.bold }}>
                             Thông tin cơ bản
                         </Typography>
 
@@ -475,7 +475,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                         <Divider sx={{ my: 3 }} />
 
                         {/* Thông tin trạng thái */}
-                        <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+                        <Typography variant="h6" sx={{ mb: 2, fontWeight: fontWeight.bold }}>
                             Trạng thái tài khoản
                         </Typography>                        <Box sx={{ mb: 3 }}>                            <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
                             <Chip
@@ -512,7 +512,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                         </Box>
 
                         <Divider sx={{ my: 3 }} />                        {/* Các hành động đặc biệt */}
-                        <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+                        <Typography variant="h6" sx={{ mb: 2, fontWeight: fontWeight.bold }}>
                             Hành động đặc biệt
                         </Typography>                        <Box sx={{
                             display: 'flex',
@@ -603,7 +603,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                         }}>
                             <Typography
                                 variant="body2"
-                                fontWeight="bold"
+                                fontWeight={fontWeight.bold}
                                 sx={{
                                     display: 'flex',
                                     alignItems: 'center',
@@ -625,7 +625,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                                 • Người dùng có thể tự reset mật khẩu qua tính năng "Quên mật khẩu"
                             </Typography>
                             {isAdmin && (
-                                <Typography variant="body2" sx={{ color: 'error.main', fontWeight: 'bold' }}>
+                                <Typography variant="body2" sx={{ color: 'error.main', fontWeight: fontWeight.bold }}>
                                     • Tài khoản Admin không thể bị vô hiệu hóa hoặc thay đổi quyền
                                 </Typography>
                             )}

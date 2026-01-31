@@ -27,7 +27,7 @@ import { useRouter } from 'next/navigation';
 import { apiClient } from 'services/apiClient';
 import { NewsApiResponse, NewsArticle, getSourceConfigBySource } from '../types';
 import { NewsBreadcrumb } from '../components';
-import { spacing, borderRadius, getResponsiveFontSize, shadows } from 'theme/tokens';
+import { spacing, borderRadius, getResponsiveFontSize, shadows, fontWeight } from 'theme/tokens';
 
 interface PageContentProps {
     articleId: string;
@@ -209,7 +209,7 @@ export default function PageContent({ articleId }: PageContentProps) {
                             variant="h4"
                             component="h1"
                             sx={{
-                                fontWeight: 800,
+                                fontWeight: fontWeight.extrabold,
                                 fontSize: getResponsiveFontSize('h3'),
                                 lineHeight: 1.3,
                                 mb: spacing.xxs,
@@ -287,7 +287,7 @@ export default function PageContent({ articleId }: PageContentProps) {
                     <Typography
                         variant="subtitle1"
                         sx={{
-                            fontWeight: 600,
+                            fontWeight: fontWeight.semibold,
                             fontSize: getResponsiveFontSize('lg'),
                             lineHeight: 1.7,
                             mb: spacing.xs,
@@ -305,14 +305,14 @@ export default function PageContent({ articleId }: PageContentProps) {
                             lineHeight: 1.8,
                             color: 'text.primary',
                             '& h2': {
-                                fontSize: getResponsiveFontSize('h5'),
-                                fontWeight: 700,
+                                fontSize: getResponsiveFontSize('xl'),
+                                fontWeight: fontWeight.bold,
                                 mt: 4,
                                 mb: 2,
                             },
                             '& h3': {
-                                fontSize: getResponsiveFontSize('h6'),
-                                fontWeight: 600,
+                                fontSize: getResponsiveFontSize('lg'),
+                                fontWeight: fontWeight.semibold,
                                 mt: 3,
                                 mb: 2,
                             },
@@ -367,7 +367,7 @@ export default function PageContent({ articleId }: PageContentProps) {
                                     component="span"
                                     sx={{
                                         fontSize: getResponsiveFontSize('sm'),
-                                        fontWeight: 500,
+                                        fontWeight: fontWeight.medium,
                                         color: 'text.secondary',
                                     }}
                                 >

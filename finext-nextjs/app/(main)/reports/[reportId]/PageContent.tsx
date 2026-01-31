@@ -24,7 +24,7 @@ import { useRouter } from 'next/navigation';
 import { apiClient } from 'services/apiClient';
 import { ReportApiResponse, NewsReport } from '../types';
 import NewsBreadcrumb from '../../news/components/NewsBreadcrumb';
-import { spacing, borderRadius, getResponsiveFontSize } from 'theme/tokens';
+import { spacing, borderRadius, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 
 interface PageContentProps {
     reportId: string;
@@ -221,7 +221,7 @@ export default function PageContent({ reportId }: PageContentProps) {
                             variant="h4"
                             component="h1"
                             sx={{
-                                fontWeight: 800,
+                                fontWeight: fontWeight.bold,
                                 fontSize: getResponsiveFontSize('h3'),
                                 lineHeight: 1.3,
                                 mb: spacing.xxs,
@@ -285,7 +285,7 @@ export default function PageContent({ reportId }: PageContentProps) {
                         <Typography
                             variant="subtitle1"
                             sx={{
-                                fontWeight: 600,
+                                fontWeight: fontWeight.medium,
                                 fontSize: getResponsiveFontSize('lg'),
                                 lineHeight: 1.7,
                                 mb: spacing.xs,
@@ -304,14 +304,14 @@ export default function PageContent({ reportId }: PageContentProps) {
                             lineHeight: 1.8,
                             color: 'text.primary',
                             '& h2': {
-                                fontSize: getResponsiveFontSize('h5'),
-                                fontWeight: 700,
+                                fontSize: getResponsiveFontSize('xl'),
+                                fontWeight: fontWeight.bold,
                                 mt: 4,
                                 mb: 2,
                             },
                             '& h3': {
-                                fontSize: getResponsiveFontSize('h6'),
-                                fontWeight: 600,
+                                fontSize: getResponsiveFontSize('lg'),
+                                fontWeight: fontWeight.bold,
                                 mt: 3,
                                 mb: 2,
                             },
@@ -348,7 +348,7 @@ export default function PageContent({ reportId }: PageContentProps) {
                                 borderRadius: `0 ${borderRadius.sm}px ${borderRadius.sm}px 0`,
                             },
                             '& strong': {
-                                fontWeight: 700,
+                                fontWeight: fontWeight.bold,
                             },
                             '& hr': {
                                 my: 3,
@@ -375,7 +375,7 @@ export default function PageContent({ reportId }: PageContentProps) {
                                     component="span"
                                     sx={{
                                         fontSize: getResponsiveFontSize('sm'),
-                                        fontWeight: 500,
+                                        fontWeight: fontWeight.medium,
                                         color: 'text.secondary',
                                     }}
                                 >
@@ -388,7 +388,7 @@ export default function PageContent({ reportId }: PageContentProps) {
                     {/* Links */}
                     {report.links && report.links.length > 0 && (
                         <Box sx={{ mt: spacing.sm }}>
-                            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: fontWeight.medium }}>
                                 Liên kết liên quan:
                             </Typography>
                             <Stack spacing={0.5}>

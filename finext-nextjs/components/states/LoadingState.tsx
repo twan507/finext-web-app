@@ -14,7 +14,6 @@ import {
     spacing,
     borderRadius,
     transitions,
-    fontSize,
     getResponsiveFontSize,
 } from 'theme/tokens';
 

@@ -16,7 +16,7 @@ import {
     Business as BrokerIcon
 } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
-import { borderRadiusTop } from 'theme/tokens';
+import { borderRadiusTop, fontWeight } from 'theme/tokens';
 enum PaymentStatusEnumFE {
     PENDING = "pending",
     SUCCEEDED = "succeeded",
@@ -295,7 +295,7 @@ export default function ConfirmTransactionModal({
         >
             <DialogTitle sx={{
                 color: 'primary.main',
-                fontWeight: 'bold',
+                fontWeight: fontWeight.bold,
                 pb: 1
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -322,13 +322,13 @@ export default function ConfirmTransactionModal({
                 }}>
                         {/* Column 1: Basic Information */}
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1 }}>
+                            <Typography variant="h6" sx={{ fontWeight: fontWeight.bold, color: 'primary.main', mb: 1 }}>
                                 Thông tin cơ bản
                             </Typography>
 
                             <Box>
                                 <Typography variant="body2" color="text.secondary">Email người mua:</Typography>
-                                <Typography variant="body1" fontWeight="bold">
+                                <Typography variant="body1" fontWeight={fontWeight.bold}>
                                     {userEmail || transaction.buyer_user_id}
                                 </Typography>
                             </Box>
@@ -364,14 +364,14 @@ export default function ConfirmTransactionModal({
 
                             <Box>
                                 <Typography variant="body2" color="text.secondary">Thời hạn:</Typography>
-                                <Typography variant="body1" fontWeight="bold">
+                                <Typography variant="body1" fontWeight={fontWeight.bold}>
                                     {transaction.purchased_duration_days} ngày
                                 </Typography>
                             </Box>
 
                             <Box>
                                 <Typography variant="body2" color="text.secondary">Giá gốc:</Typography>
-                                <Typography variant="body1" fontWeight="bold">
+                                <Typography variant="body1" fontWeight={fontWeight.bold}>
                                     {transaction.original_license_price.toLocaleString('vi-VN')} VNĐ
                                 </Typography>
                             </Box>
@@ -379,46 +379,46 @@ export default function ConfirmTransactionModal({
 
                         {/* Column 2: Pricing and Discounts */}
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1 }}>
+                            <Typography variant="h6" sx={{ fontWeight: fontWeight.bold, color: 'primary.main', mb: 1 }}>
                                 Thông tin giá
                             </Typography>
 
                             <Box>
                                 <Typography variant="body2" color="text.secondary">Mã Broker:</Typography>
-                                <Typography variant="body1" fontWeight="bold">
+                                <Typography variant="body1" fontWeight={fontWeight.bold}>
                                     {transaction.broker_code_applied || 'Không có'}
                                 </Typography>
                             </Box>
 
                             <Box>
                                 <Typography variant="body2" color="text.secondary">Giảm giá Broker:</Typography>
-                                <Typography variant="body1" fontWeight="bold" sx={{ color: transaction.broker_discount_amount ? 'success.main' : 'text.secondary' }}>
+                                <Typography variant="body1" fontWeight={fontWeight.bold} sx={{ color: transaction.broker_discount_amount ? 'success.main' : 'text.secondary' }}>
                                     {transaction.broker_discount_amount ? `${transaction.broker_discount_amount.toLocaleString('vi-VN')} VNĐ` : '0 VNĐ'}
                                 </Typography>
                             </Box>
 
                             <Box>
                                 <Typography variant="body2" color="text.secondary">Mã khuyến mại:</Typography>
-                                <Typography variant="body1" fontWeight="bold">
+                                <Typography variant="body1" fontWeight={fontWeight.bold}>
                                     {transaction.promotion_code_applied || 'Không có'}
                                 </Typography>
                             </Box>
 
                             <Box>
                                 <Typography variant="body2" color="text.secondary">Giảm giá khuyến mại:</Typography>
-                                <Typography variant="body1" fontWeight="bold" sx={{ color: transaction.promotion_discount_amount ? 'success.main' : 'text.secondary' }}>
+                                <Typography variant="body1" fontWeight={fontWeight.bold} sx={{ color: transaction.promotion_discount_amount ? 'success.main' : 'text.secondary' }}>
                                     {transaction.promotion_discount_amount ? `${transaction.promotion_discount_amount.toLocaleString('vi-VN')} VNĐ` : '0 VNĐ'}
                                 </Typography>
                             </Box>
 
                             <Box>
                                 <Typography variant="body2" color="text.secondary">Tổng giảm giá:</Typography>
-                                <Typography variant="body1" fontWeight="bold" sx={{ color: transaction.total_discount_amount ? 'success.main' : 'text.secondary' }}>
+                                <Typography variant="body1" fontWeight={fontWeight.bold} sx={{ color: transaction.total_discount_amount ? 'success.main' : 'text.secondary' }}>
                                     {transaction.total_discount_amount ? `${transaction.total_discount_amount.toLocaleString('vi-VN')} VNĐ` : '0 VNĐ'}
                                 </Typography>
                             </Box>                            <Box>
                                 <Typography variant="body2" color="text.secondary">Giá hiện tại:</Typography>
-                                <Typography variant="body1" fontWeight="bold" sx={{ color: 'primary.main' }}>
+                                <Typography variant="body1" fontWeight={fontWeight.bold} sx={{ color: 'primary.main' }}>
                                     {transaction.transaction_amount.toLocaleString('vi-VN')} VNĐ
                                 </Typography>
                             </Box>
@@ -433,7 +433,7 @@ export default function ConfirmTransactionModal({
                                     borderColor: 'info.main',
                                     opacity: isCalculatingPrice ? 0.7 : 1
                                 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'info.main', mb: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: fontWeight.bold, color: 'info.main', mb: 1 }}>
                                         {isCalculatingPrice ? 'Đang tính toán...' : 'Giá được tính toán mới:'}
                                     </Typography>
                                     {!isCalculatingPrice && (
@@ -446,7 +446,7 @@ export default function ConfirmTransactionModal({
                                                 Mã ĐT: {calculatedPrice.broker_code_applied || 'Không có'}
                                                 {calculatedPrice.broker_discount_amount && ` (-${calculatedPrice.broker_discount_amount.toLocaleString('vi-VN')} VNĐ)`}
                                             </Typography>
-                                            <Typography variant="body1" fontWeight="bold" sx={{ color: 'info.main' }}>
+                                            <Typography variant="body1" fontWeight={fontWeight.bold} sx={{ color: 'info.main' }}>
                                                 Giá mới: {calculatedPrice.calculated_transaction_amount.toLocaleString('vi-VN')} VNĐ
                                             </Typography>
                                         </>
@@ -611,7 +611,7 @@ export default function ConfirmTransactionModal({
                 }}>
                     <Typography
                         variant="body2"
-                        fontWeight="bold"
+                        fontWeight={fontWeight.bold}
                         sx={{
                             display: 'flex',
                             alignItems: 'center',
@@ -648,7 +648,7 @@ export default function ConfirmTransactionModal({
                     <Typography
                         variant="body2"
                         sx={{
-                            fontWeight: 'bold',
+                            fontWeight: fontWeight.bold,
                             color: theme.palette.component.modal.noteText
                         }}
                     >

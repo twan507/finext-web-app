@@ -8,9 +8,9 @@ import {
     borderRadius,
     shadows,
     transitions,
-    fontSize,
     getResponsiveFontSize,
-    iconSize
+    iconSize,
+    fontWeight
 } from 'theme/tokens';
 
 export interface EmptyStateProps {
@@ -140,7 +140,7 @@ export default function EmptyState({
             <Typography
                 variant={config.titleVariant}
                 sx={{
-                    fontWeight: 600,
+                    fontWeight: fontWeight.semibold,
                     color: 'text.primary',
                     mb: description ? 1 : action ? 2 : 0,
                 }}

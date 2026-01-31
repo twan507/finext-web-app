@@ -20,7 +20,7 @@ import {
   Delete as DeleteIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { fontSize, getResponsiveFontSize, borderRadiusTop } from 'theme/tokens';
+import { getResponsiveFontSize, borderRadiusTop, fontWeight } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
   SortConfig,
@@ -616,7 +616,7 @@ export default function TransactionsPage() {
                         minWidth: columnConfigs[0].minWidth,
                         width: expandedView ? 'auto' : columnConfigs[0].minWidth
                       }}>
-                        <Typography variant="body2" sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                        <Typography variant="body2" sx={{ fontSize: getResponsiveFontSize('sm') }}>
                           {emailsLoading ? (
                             <CircularProgress size={16} />
                           ) : (
@@ -647,7 +647,7 @@ export default function TransactionsPage() {
                             }}
                           />
                         ) : (
-                          <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>N/A</Typography>
+                          <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>N/A</Typography>
                         )}
                       </TableCell>
                       {/* Purchased Duration Days - Index 2 */}
@@ -656,7 +656,7 @@ export default function TransactionsPage() {
                         whiteSpace: expandedView ? 'nowrap' : 'normal',
                         minWidth: columnConfigs[2].minWidth
                       }}>
-                        <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                        <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                           {transaction.purchased_duration_days} ngày
                         </Typography>
                       </TableCell>
@@ -667,7 +667,7 @@ export default function TransactionsPage() {
                         whiteSpace: expandedView ? 'nowrap' : 'normal',
                         minWidth: columnConfigs[3].minWidth
                       }}>
-                        <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                        <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                           {transaction.original_license_price.toLocaleString('vi-VN')}
                         </Typography>
                       </TableCell>
@@ -678,7 +678,7 @@ export default function TransactionsPage() {
                         whiteSpace: expandedView ? 'nowrap' : 'normal',
                         minWidth: columnConfigs[4].minWidth
                       }}>
-                        <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                        <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                           {(transaction.total_discount_amount || 0).toLocaleString('vi-VN')}
                         </Typography>
                       </TableCell>
@@ -689,7 +689,7 @@ export default function TransactionsPage() {
                         whiteSpace: expandedView ? 'nowrap' : 'normal',
                         minWidth: columnConfigs[5].minWidth
                       }}>
-                        <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                        <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                           {transaction.transaction_amount.toLocaleString('vi-VN')}
                         </Typography>
                       </TableCell>
@@ -732,7 +732,7 @@ export default function TransactionsPage() {
                         whiteSpace: expandedView ? 'nowrap' : 'normal',
                         minWidth: columnConfigs[8].minWidth
                       }}>
-                        <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                        <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                           {(() => {
                             try {
                               // Parse UTC date and convert to GMT+7
@@ -752,7 +752,7 @@ export default function TransactionsPage() {
                         whiteSpace: expandedView ? 'nowrap' : 'normal',
                         minWidth: columnConfigs[9].minWidth
                       }}>
-                        <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                        <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                           {transaction.broker_code_applied || '-'}
                         </Typography>
                       </TableCell>
@@ -763,7 +763,7 @@ export default function TransactionsPage() {
                         whiteSpace: expandedView ? 'nowrap' : 'normal',
                         minWidth: columnConfigs[10].minWidth
                       }}>
-                        <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                        <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                           {(transaction.broker_discount_amount || 0).toLocaleString('vi-VN')}
                         </Typography>
                       </TableCell>
@@ -774,7 +774,7 @@ export default function TransactionsPage() {
                         whiteSpace: expandedView ? 'nowrap' : 'normal',
                         minWidth: columnConfigs[11].minWidth
                       }}>
-                        <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                        <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                           {transaction.promotion_code_applied || '-'}
                         </Typography>
                       </TableCell>
@@ -785,7 +785,7 @@ export default function TransactionsPage() {
                         whiteSpace: expandedView ? 'nowrap' : 'normal',
                         minWidth: columnConfigs[12].minWidth
                       }}>
-                        <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                        <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                           {(transaction.promotion_discount_amount || 0).toLocaleString('vi-VN')}
                         </Typography>
                       </TableCell>

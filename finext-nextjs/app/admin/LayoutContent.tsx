@@ -41,7 +41,7 @@ import {
 
 import ThemeToggleButton from '@/components/themeToggle/ThemeToggleButton';
 import BrandLogo from '@/components/layout/BrandLogo';
-import { layoutTokens, fontSize, iconSize, borderRadius, shadows } from '../../theme/tokens';
+import { layoutTokens, iconSize, borderRadius, shadows, getResponsiveFontSize, fontWeight } from '../../theme/tokens';
 import UserAvatar from '@/components/layout/UserAvatar';
 
 interface NavItem {
@@ -207,7 +207,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             primary={group.groupText}
             primaryTypographyProps={{
               variant: 'body2',
-              fontWeight: isGroupActive ? 'medium' : 'normal'
+              fontWeight: isGroupActive ? fontWeight.medium : undefined
             }}
           />
           {isOpen ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
@@ -332,7 +332,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             return (
               <React.Fragment key={itemOrGroup.groupText}>
                 <ListItem sx={{ pt: 1 }}>
-                  <Typography variant="caption" color="text.primary" sx={{ textTransform: 'uppercase', pl: 1, fontWeight: 600 }}>
+                  <Typography variant="caption" color="text.primary" sx={{ textTransform: 'uppercase', pl: 1, fontWeight: fontWeight.semibold }}>
                     {itemOrGroup.groupText}
                   </Typography>
                 </ListItem>
@@ -417,7 +417,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     </ListItemIcon>
                     <ListItemText
                       primary={itemOrGroup.text}
-                      primaryTypographyProps={{ fontSize: fontSize.menuItem.mobile }}
+                      primaryTypographyProps={{ fontSize: getResponsiveFontSize('md') }}
                     />
                   </ListItemButton>
                 </Link>
@@ -427,7 +427,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             return (
               <React.Fragment key={itemOrGroup.groupText}>
                 <ListItem sx={{ px: 1 }}>
-                  <Typography variant="caption" color="text.primary" sx={{ textTransform: 'uppercase', fontSize: fontSize.sectionLabel.mobile, fontWeight: 600 }}>
+                  <Typography variant="caption" color="text.primary" sx={{ textTransform: 'uppercase', fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold }}>
                     {itemOrGroup.groupText}
                   </Typography>
                 </ListItem>
@@ -454,7 +454,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                           </ListItemIcon>
                           <ListItemText
                             primary={subItem.text}
-                            primaryTypographyProps={{ fontSize: fontSize.menuItem.mobile }}
+                            primaryTypographyProps={{ fontSize: getResponsiveFontSize('md') }}
                           />
                         </ListItemButton>
                       </Link>

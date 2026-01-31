@@ -19,7 +19,7 @@ import {
     UnfoldLess as CollapseIcon
 } from '@mui/icons-material';
 import { format as formatDate, parseISO } from 'date-fns';
-import { fontSize, getResponsiveFontSize } from 'theme/tokens';
+import { getResponsiveFontSize, borderRadiusTop } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
     SortConfig,
@@ -437,7 +437,7 @@ const PermissionsPage: React.FC = () => {
                                             minWidth: columnConfigs[0].minWidth,
                                         }}>
                                             <Typography sx={{
-                                                fontSize: getResponsiveFontSize('tableCell'),
+                                                fontSize: getResponsiveFontSize('sm'),
                                                 fontWeight: 'medium',
                                                 fontFamily: 'monospace'
                                             }}>
@@ -451,7 +451,7 @@ const PermissionsPage: React.FC = () => {
                                         }}>
                                             <Tooltip title={permission.description || 'Không có mô tả'}>
                                                 <Typography sx={{
-                                                    fontSize: getResponsiveFontSize('tableCell'),
+                                                    fontSize: getResponsiveFontSize('sm'),
                                                     maxWidth: expandedView ? 'none' : 300,
                                                     overflow: 'hidden',
                                                     textOverflow: 'ellipsis',
@@ -472,7 +472,7 @@ const PermissionsPage: React.FC = () => {
                                                 sx={{
                                                     backgroundColor: theme.palette.component.chip.defaultBackground,
                                                     color: theme.palette.component.chip.defaultColor,
-                                                    fontSize: fontSize.xs.tablet,
+                                                    fontSize: getResponsiveFontSize('xs'),
                                                     height: 24,
                                                     textTransform: 'capitalize',
                                                     fontWeight: 'medium'
@@ -513,7 +513,7 @@ const PermissionsPage: React.FC = () => {
                                                         sx={{
                                                             backgroundColor: theme.palette.component.chip.successBackground,
                                                             color: theme.palette.component.chip.successColor,
-                                                            fontSize: fontSize.xxs.tablet,
+                                                            fontSize: getResponsiveFontSize('xxs'),
                                                             height: 20,
                                                             textTransform: 'capitalize',
                                                             fontWeight: 'medium',
@@ -528,7 +528,7 @@ const PermissionsPage: React.FC = () => {
                                             whiteSpace: expandedView ? 'nowrap' : 'normal',
                                             minWidth: columnConfigs[4].minWidth
                                         }}>
-                                            <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                                            <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                                                 {columnConfigs[4].format?.(permission.created_at || '')}
                                             </Typography>
                                         </TableCell>
@@ -537,7 +537,7 @@ const PermissionsPage: React.FC = () => {
                                             whiteSpace: expandedView ? 'nowrap' : 'normal',
                                             minWidth: columnConfigs[5].minWidth
                                         }}>
-                                            <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                                            <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                                                 {columnConfigs[5].format?.(permission.updated_at || '')}
                                             </Typography>
                                         </TableCell>

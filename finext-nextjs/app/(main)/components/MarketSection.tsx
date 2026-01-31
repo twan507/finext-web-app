@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import MarketIndexChart, { ChartData, TimeRange } from './MarketIndexChart';
 import IndexTable from './IndexTable';
-import { fontSize } from 'theme/tokens';
+import { getResponsiveFontSize } from 'theme/tokens';
 import { RawMarketData } from './MarketIndexChart';
 
 // Tab type cho bảng index
@@ -106,10 +106,10 @@ export default function MarketSection({
                     mb: 2,
                 }}
             >
-                <Typography variant="h1">
+                <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1') }}>
                     Thị trường
                 </Typography>
-                <ChevronRightIcon sx={{ fontSize: fontSize.h2.tablet, mt: 1, color: theme.palette.text.secondary }} />
+                <ChevronRightIcon sx={{ fontSize: getResponsiveFontSize('h2'), mt: 1, color: theme.palette.text.secondary }} />
             </Box>
 
             {/* Main Content: Chart + Table */}
@@ -146,7 +146,7 @@ export default function MarketSection({
                                 value={indexTab}
                                 onChange={(e: SelectChangeEvent) => onIndexTabChange(e.target.value as IndexTabType)}
                                 sx={{
-                                    fontSize: { xs: fontSize.sm.mobile, md: fontSize.base.tablet },
+                                    fontSize: getResponsiveFontSize('md'),
                                     borderRadius: 2,
                                     backgroundColor: dropdownColors.background,
                                     color: dropdownColors.text,
@@ -182,7 +182,7 @@ export default function MarketSection({
                                                 py: 0.5,
                                             },
                                             '& .MuiMenuItem-root': {
-                                                fontSize: { xs: fontSize.sm.mobile, md: fontSize.base.tablet },
+                                                fontSize: getResponsiveFontSize('md'),
                                                 color: dropdownColors.text,
                                                 backgroundColor: 'transparent !important',
                                                 '&:hover': {

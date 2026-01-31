@@ -25,7 +25,7 @@ import { useGoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 
 import BrandLogo from '@/components/layout/BrandLogo';
 import { LoginResponse, UserSchema } from 'services/core/types';
-import { fontSize, iconSize, layoutTokens } from 'theme/tokens';
+import { iconSize, layoutTokens, getResponsiveFontSize, borderRadius, fontWeight } from 'theme/tokens';
 
 interface UserInfoFromAuth extends UserSchema { }
 
@@ -78,7 +78,7 @@ function GoogleButton({
                 borderRadius: 999,
                 px: 2,
                 textTransform: 'none',
-                fontWeight: 600,
+                fontWeight: fontWeight.semibold,
                 letterSpacing: 0.2,
                 bgcolor: 'transparent',
                 color: t.palette.mode === 'dark' ? '#FFFFFF' : '#1F1A2E',
@@ -103,8 +103,8 @@ function GoogleButton({
                         component="span"
                         sx={{
                             ml: 1,
-                            fontSize: { xs: fontSize.base.mobile, md: fontSize.base.tablet, lg: fontSize.base.desktop },
-                            fontWeight: 600,
+                            fontSize: getResponsiveFontSize('md'),
+                            fontWeight: fontWeight.semibold,
                             letterSpacing: 0.2
                         }}
                     >
@@ -339,7 +339,7 @@ function SignInFormContent() {
                 <BrandLogo
                     href="/"
                     imageSize={iconSize.brandImage}
-                    textSize={fontSize.h4.tablet}
+                    textSize={getResponsiveFontSize('h4')}
                     gap={layoutTokens.dotSize.small}
                     useColorOverlay={true}
                 />
@@ -349,7 +349,7 @@ function SignInFormContent() {
                 sx={(theme) => ({
                     textAlign: 'center',
                     mb: 1,
-                    fontSize: fontSize.md.tablet,
+                    fontSize: getResponsiveFontSize('md'),
                     background: theme.palette.mode === 'dark'
                         ? 'linear-gradient(135deg, #FFFFFF 0%, #E0E7FF 25%, #C4B5FD 50%, #A78BFA 75%, #8B5CF6 100%)'
                         : 'linear-gradient(135deg, #1F2937 0%, #4C1D95 25%, #6B46C1 50%, #7C3AED 75%, #8B5CF6 100%)',
@@ -357,7 +357,7 @@ function SignInFormContent() {
                     WebkitBackgroundClip: 'text',
                     color: 'transparent',
                     WebkitTextFillColor: 'transparent',
-                    fontWeight: 600,
+                    fontWeight: fontWeight.semibold,
                     letterSpacing: '0.5px',
                 })}
             >
@@ -433,7 +433,7 @@ function SignInFormContent() {
                     sx={{ mt: 0.5, mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                 >
                     <FormControlLabel control={<Checkbox size="small" tabIndex={-1} />} label="Duy trì đăng nhập" />
-                    <Link href="/forgot-password" underline="hover" tabIndex={-1} sx={{ fontSize: fontSize.sm.tablet, mt: 0.6 }}>
+                    <Link href="/forgot-password" underline="hover" tabIndex={-1} sx={{ fontSize: getResponsiveFontSize('sm'), mt: 0.6 }}>
                         Quên mật khẩu?
                     </Link>
                 </Box>

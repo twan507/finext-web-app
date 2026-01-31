@@ -4,7 +4,7 @@
 import { Box, Chip, Skeleton } from '@mui/material';
 import { useRouter } from 'next/navigation';
 
-import { spacing } from 'theme/tokens';
+import { spacing, fontWeight } from 'theme/tokens';
 import { ReportCategoryInfo } from '../types';
 
 interface TypeTabsProps {
@@ -74,7 +74,7 @@ export default function TypeTabs({
                 onClick={() => handleClick('all')}
                 color={selectedCategory === 'all' ? 'primary' : 'default'}
                 variant="filled"
-                sx={{ fontWeight: 600, border: 'none' }}
+                sx={{ fontWeight: fontWeight.medium, border: 'none' }}
             />
             {categories.map((cat) => (
                 <Chip
@@ -83,7 +83,7 @@ export default function TypeTabs({
                     onClick={() => handleClick(cat.category)}
                     color={selectedCategory === cat.category ? 'primary' : 'default'}
                     variant="filled"
-                    sx={{ fontWeight: 600, border: 'none' }}
+                    sx={{ fontWeight: fontWeight.medium, border: 'none' }}
                 />
             ))}
         </Box>

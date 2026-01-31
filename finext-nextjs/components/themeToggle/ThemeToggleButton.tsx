@@ -11,6 +11,7 @@ import {
   ListItemText    // Thêm import
 } from '@mui/material';
 import styles from './ThemeToggleButton.module.css';
+import { getResponsiveFontSize } from 'theme/tokens';
 
 // Tách SVG ra một component riêng và cho phép nhận prop `isDark` để quản lý animation
 const SunMoonIcon = ({ isDark, uniqueId }: { isDark: boolean; uniqueId: string }) => (
@@ -91,7 +92,7 @@ const ThemeToggleButton: React.FC<ThemeToggleButtonProps> = ({ variant = 'icon',
         </ListItemIcon>
         <ListItemText
           primary={tooltipText}
-          primaryTypographyProps={{ fontSize: compact ? '0.9rem' : undefined }}
+          primaryTypographyProps={{ fontSize: compact ? getResponsiveFontSize('md') : undefined }}
         />
       </ListItemButton>
     );

@@ -11,7 +11,7 @@ import {
     useTheme
 } from '@mui/material';
 import { SortDirection, ColumnConfig, getResponsiveDisplayStyle } from './TableSortUtils';
-import { fontSize, transitions } from 'theme/tokens';
+import { transitions, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 
 interface SortableTableHeadProps {
     columns: ColumnConfig[];
@@ -77,7 +77,7 @@ const SortableTableHead: React.FC<SortableTableHeadProps> = ({
                         sx={{                            // Use default text color, override only when active or hover
                             color: (isActive && direction !== null) ? theme.palette.primary.main : theme.palette.text.primary,
                             '& .MuiTableSortLabel-icon': {
-                                fontSize: fontSize.base.tablet,
+                                fontSize: getResponsiveFontSize('md'),
                                 opacity: isActive && direction ? 1 : 0,
                                 transition: transitions.opacity,
                                 marginLeft: '4px',
@@ -105,7 +105,7 @@ const SortableTableHead: React.FC<SortableTableHeadProps> = ({
                         variant="subtitle2"
                         component="span"
                         sx={{
-                            fontWeight: 600,
+                            fontWeight: fontWeight.semibold,
                             userSelect: 'none',
                             cursor: 'pointer',
                             color: 'inherit' // Inherit color from parent TableSortLabel
@@ -117,7 +117,7 @@ const SortableTableHead: React.FC<SortableTableHeadProps> = ({
                         <Typography
                             variant="subtitle2"
                             sx={{
-                                fontWeight: 600,
+                                fontWeight: fontWeight.semibold,
                                 color: theme.palette.text.primary
                             }}
                         >

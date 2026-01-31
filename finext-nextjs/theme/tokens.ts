@@ -301,7 +301,7 @@ export const darkThemePalette: PaletteOptions = {
       upColor: '#22c55e',
       downColor: '#ef4444',
       gridLine: 'rgba(255, 255, 255, 0.08)',
-      crosshair: 'rgba(255, 255, 255, 0.4)',
+      crosshair: '#444444',
       buttonBackground: '#1e1e1e',
       buttonBackgroundHover: '#2a2a2a',
       buttonBackgroundActive: '#b47eff',
@@ -323,34 +323,22 @@ export const getMuiPaletteOptions = (mode: PaletteMode): PaletteOptions => {
 // Matching layout.tsx: isMobile = down('md'), isTablet = between('md','lg'), isDesktop = up('lg')
 
 // Single source of truth for all font sizes
-export const fontSize = {
-  // === DISPLAY / HEADLINES ===
-  display: { mobile: '2.25rem', tablet: '2.75rem', desktop: '3rem' },      // 36/44/48px - Hero sections
-  h1: { mobile: '2rem', tablet: '2.25rem', desktop: '2.5rem' },            // 32/36/40px
-  h2: { mobile: '1.75rem', tablet: '1.875rem', desktop: '2rem' },          // 28/30/32px
-  h3: { mobile: '1.5rem', tablet: '1.625rem', desktop: '1.75rem' },        // 24/26/28px
-  h4: { mobile: '1.25rem', tablet: '1.375rem', desktop: '1.5rem' },        // 20/22/24px
-  h5: { mobile: '1.125rem', tablet: '1.25rem', desktop: '1.375rem' },      // 18/20/22px
-  h6: { mobile: '1rem', tablet: '1.125rem', desktop: '1.25rem' },          // 16/18/20px
+const fontSize = {
+  // === HEADINGS ===
+  h1: { mobile: '2.1rem', tablet: '2.375rem', desktop: '2.5rem' },      // ~34-40px (Smaller than before)
+  h2: { mobile: '1.9rem', tablet: '2.0rem', desktop: '2.25rem' },     // ~30-36px
+  h3: { mobile: '1.7rem', tablet: '1.875rem', desktop: '2.0rem' },      // ~27-32px
+  h4: { mobile: '1.5rem', tablet: '1.625rem', desktop: '1.75rem' },  // ~24-28px (Unchanged)
 
-  // === BODY TEXT ===
-  lg: { mobile: '1rem', tablet: '1.0625rem', desktop: '1.0625rem' },            // 16/17/17px - Large body
-  md: { mobile: '0.9375rem', tablet: '1rem', desktop: '1rem' },                 // 15/16/16px - Medium body
-  base: { mobile: '0.875rem', tablet: '0.9375rem', desktop: '0.9375rem' },      // 14/15/15px - Default body ⭐
-  sm: { mobile: '0.8125rem', tablet: '0.875rem', desktop: '0.875rem' },         // 13/14/14px - Small body
-  xs: { mobile: '0.75rem', tablet: '0.8125rem', desktop: '0.8125rem' },         // 12/13/13px - Caption
-  xxs: { mobile: '0.6875rem', tablet: '0.75rem', desktop: '0.75rem' },          // 11/12/12px - Tiny caption
-
-  // === SPECIAL USE CASES ===
-  badge: { mobile: '0.4rem', tablet: '0.45rem', desktop: '0.45rem' },       // ~6.4/7.2/7.2px - Tiny badges
-  sectionLabel: { mobile: '0.6rem', tablet: '0.65rem', desktop: '0.65rem' },// ~9.6/10.4/10.4px - Section labels
-  menuItem: { mobile: '0.85rem', tablet: '0.9rem', desktop: '0.9rem' },     // ~13.6/14.4/14.4px - Menu items
-  tableCell: { mobile: '0.8rem', tablet: '0.85rem', desktop: '0.875rem' },  // ~12.8/13.6/14px - Table cells
-  iconText: { mobile: '0.9375rem', tablet: '1rem', desktop: '1rem' },       // 15/16/16px - Text next to icons
-
-  // === ENHANCED HEADERS (for page titles) ===
-  h4Enhanced: { mobile: '1.5rem', tablet: '2rem', desktop: '2.125rem' },    // 24/32/34px
-  h5Enhanced: { mobile: '1.125rem', tablet: '1.375rem', desktop: '1.5rem' },// 18/22/24px
+  // === BODY / TEXT ===
+  xxl: { mobile: '1.25rem', tablet: '1.375rem', desktop: '1.5rem' }, // ~20-24px (Old h4/h5)
+  xl: { mobile: '1.125rem', tablet: '1.25rem', desktop: '1.375rem' },// ~18-22px (Old h5/h6)
+  lg: { mobile: '1rem', tablet: '1.125rem', desktop: '1.25rem' },    // ~16-20px (Old h6/lg)
+  md: { mobile: '0.875rem', tablet: '1rem', desktop: '1rem' },       // ~14-16px (Old base/md) - STANDARD BODY
+  sm: { mobile: '0.8125rem', tablet: '0.875rem', desktop: '0.875rem' }, // ~13-14px (Old sm)
+  xs: { mobile: '0.75rem', tablet: '0.8125rem', desktop: '0.8125rem' }, // ~12-13px (Old xs)
+  xxs: { mobile: '0.6875rem', tablet: '0.75rem', desktop: '0.75rem' },  // ~11-12px (Old xxs)
+  badge: { mobile: '0.4rem', tablet: '0.45rem', desktop: '0.45rem' }, // Custom badge size
 } as const;
 
 // Helper to get responsive font size for sx prop
@@ -361,6 +349,16 @@ export const getResponsiveFontSize = (size: keyof typeof fontSize) => ({
   md: fontSize[size].tablet,
   lg: fontSize[size].desktop,
 });
+
+// --------------------
+// FONT WEIGHT TOKENS
+// --------------------
+export const fontWeight = {
+  medium: 500,
+  semibold: 600,
+  bold: 700,
+  extrabold: 800,
+} as const;
 
 // --------------------
 // ICON SIZE TOKENS
@@ -422,7 +420,6 @@ export const spacing = {
   lg: 12,       // 24px - Large (section padding, modal padding)
   xl: 24,       // 32px - Extra large (page margins, major sections)
   xxl: 32,      // 48px - Maximum (hero sections, major separations)
-  xxxl: 48,     // 64px - Extra maximum (landing page sections)
 } as const;
 
 // Responsive spacing helper
@@ -642,17 +639,17 @@ export const buttonSize = {
   md: {
     height: 36,
     paddingX: spacing.lg,
-    fontSize: fontSize.base,
+    fontSize: fontSize.md,
   },
   lg: {
     height: 44,
     paddingX: spacing.xl,
-    fontSize: fontSize.md,
+    fontSize: fontSize.lg,
   },
   xl: {
     height: 52,
     paddingX: spacing.xxl,
-    fontSize: fontSize.lg,
+    fontSize: fontSize.xl,
   },
 } as const;
 

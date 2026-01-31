@@ -7,7 +7,7 @@ interface BrandLogoProps {
     href?: string;
     showText?: boolean;
     imageSize?: number;
-    textSize?: string | number;
+    textSize?: any;
     gap?: number;
     className?: string;
     // Color overlay options

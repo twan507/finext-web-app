@@ -3,7 +3,7 @@
 import { Box, Typography, useTheme } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import { fontSize } from 'theme/tokens';
+import { getResponsiveFontSize } from 'theme/tokens';
 
 export default function StockSection() {
     const theme = useTheme();
@@ -24,7 +24,7 @@ export default function StockSection() {
                 <Typography variant="h1">
                     Cổ phiếu
                 </Typography>
-                <ChevronRightIcon sx={{ fontSize: fontSize.h2.tablet, mt: 1, color: theme.palette.text.secondary }} />
+                <ChevronRightIcon sx={{ fontSize: getResponsiveFontSize('h2').md, mt: 1, color: theme.palette.text.secondary }} />
             </Box>
 
             {/* Placeholder Content */}

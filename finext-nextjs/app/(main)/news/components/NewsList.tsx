@@ -17,7 +17,7 @@ import { Newspaper } from '@mui/icons-material';
 import { apiClient } from 'services/apiClient';
 import { NewsApiResponse, NewsArticle, NEWS_PAGE_SIZE, NEWS_SORT_FIELD, NEWS_SORT_ORDER, NewsSource } from '../types';
 import NewsCard from './NewsCard';
-import { spacing, borderRadius, getResponsiveFontSize } from 'theme/tokens';
+import { spacing, borderRadius, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 
 interface NewsListProps {
     /** Lọc theo source */
@@ -194,7 +194,7 @@ export default function NewsList({
                         <Typography
                             variant="h4"
                             sx={{
-                                fontWeight: 700,
+                                fontWeight: fontWeight.bold,
                                 fontSize: getResponsiveFontSize('h4'),
                                 mb: spacing.xs,
                             }}

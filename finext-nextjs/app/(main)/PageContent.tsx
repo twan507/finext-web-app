@@ -326,20 +326,22 @@ export default function HomeContent() {
                 />
             </Box>
 
-            {/* Section 2: Tin tức */}
-            <Box sx={{ mt: 5 }}>
-                <NewsSection />
-            </Box>
-
             {/* Section 3: Ngành */}
             <Box sx={{ mt: 5 }}>
                 <IndustrySection todayAllData={todayAllData} itdAllData={itdAllData} />
             </Box>
 
-            {/* Section 4: Cổ phiếu */}
+
+
+            {/* Section 2: Tin tức */}
+            <Box sx={{ mt: 5 }}>
+                <NewsSection />
+            </Box>
+
+            {/* Section 4: Cổ phiếu
             <Box sx={{ mt: 5 }}>
                 <StockSection />
-            </Box>
+            </Box> */}
 
 
         </Box>

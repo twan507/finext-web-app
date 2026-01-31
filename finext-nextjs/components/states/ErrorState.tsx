@@ -17,8 +17,8 @@ import {
     borderRadius,
     shadows,
     transitions,
-    fontSize,
     getResponsiveFontSize,
+    fontWeight,
 } from 'theme/tokens';
 
 export type ErrorType =
@@ -190,7 +190,7 @@ export default function ErrorState({
             <Typography
                 variant={size === 'large' ? 'h4' : size === 'small' ? 'h6' : 'h5'}
                 sx={{
-                    fontWeight: 600,
+                    fontWeight: fontWeight.semibold,
                     color: 'text.primary',
                     mb: 1,
                 }}
@@ -264,7 +264,7 @@ export default function ErrorState({
                         onClick={() => setShowDetails(!showDetails)}
                         sx={{
                             color: 'text.disabled',
-                            fontSize: fontSize.xs.tablet,
+                            fontSize: getResponsiveFontSize('xs'),
                             '&:hover': { color: 'text.secondary' },
                         }}
                     >
@@ -285,7 +285,7 @@ export default function ErrorState({
                                 component="pre"
                                 sx={{
                                     fontFamily: 'monospace',
-                                    fontSize: fontSize.xs.tablet,
+                                    fontSize: getResponsiveFontSize('xs'),
                                     color: 'text.secondary',
                                     whiteSpace: 'pre-wrap',
                                     wordBreak: 'break-word',

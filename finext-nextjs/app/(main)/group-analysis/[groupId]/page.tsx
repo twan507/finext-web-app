@@ -3,6 +3,7 @@
 import { Box, Typography, Breadcrumbs, Link as MuiLink } from '@mui/material';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { fontWeight } from 'theme/tokens';
 
 export default function GroupAnalysisDetailPage() {
     const params = useParams();
@@ -17,7 +18,7 @@ export default function GroupAnalysisDetailPage() {
                 <Typography color="text.primary">{groupId}</Typography>
             </Breadcrumbs>
 
-            <Typography variant="h4" sx={{ mb: 2, fontWeight: 600 }}>
+            <Typography variant="h4" sx={{ mb: 2, fontWeight: fontWeight.bold }}>
                 Phân tích nhóm: {groupId}
             </Typography>
             <Typography variant="body1" color="text.secondary">

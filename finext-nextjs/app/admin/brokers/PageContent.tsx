@@ -19,7 +19,7 @@ import {
     UnfoldLess as CollapseIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import { fontSize, getResponsiveFontSize, borderRadiusTop } from 'theme/tokens';
+import { getResponsiveFontSize, borderRadiusTop } from 'theme/tokens';
 import BrokerSearch from './components/BrokerSearch';
 import SortableTableHead from '../components/SortableTableHead';
 import AddBrokerModal from './components/AddBrokerModal';
@@ -561,7 +561,7 @@ export default function BrokersPage() {
                                                             maxWidth: expandedView ? 'none' : 120,
                                                             overflow: 'hidden',
                                                             textOverflow: 'ellipsis',
-                                                            fontSize: getResponsiveFontSize('tableCell'),
+                                                            fontSize: getResponsiveFontSize('sm'),
                                                             opacity: emailsLoading ? 0.7 : 1
                                                         }}
                                                     >
@@ -589,7 +589,7 @@ export default function BrokersPage() {
                                                 ...getResponsiveDisplayStyle(columnConfigs[3], expandedView),
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal', minWidth: columnConfigs[3].minWidth,
                                                 width: expandedView ? 'auto' : columnConfigs[3].minWidth
-                                            }}>                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>                                                    {(() => {
+                                            }}>                                                <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>                                                    {(() => {
                                                 if (!broker.created_at) return 'N/A';
                                                 try {
                                                     // Parse UTC date and convert to GMT+7
@@ -606,7 +606,7 @@ export default function BrokersPage() {
                                                 ...getResponsiveDisplayStyle(columnConfigs[4], expandedView),
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal', minWidth: columnConfigs[4].minWidth,
                                                 width: expandedView ? 'auto' : columnConfigs[4].minWidth
-                                            }}>                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>                                                    {(() => {
+                                            }}>                                                <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>                                                    {(() => {
                                                 if (!broker.updated_at) return 'N/A';
                                                 try {
                                                     // Parse UTC date and convert to GMT+7

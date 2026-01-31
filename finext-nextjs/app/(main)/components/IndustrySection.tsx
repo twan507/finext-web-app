@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { Box, Typography, useTheme, Grid, Checkbox, CircularProgress, alpha, ToggleButton, ToggleButtonGroup, Skeleton } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import { fontSize, spacing, getResponsiveFontSize } from 'theme/tokens';
+import { getResponsiveFontSize, borderRadius, transitions, fontWeight } from 'theme/tokens';
 import { apiClient } from 'services/apiClient';
 import type { RawMarketData } from './MarketIndexChart';
 
@@ -411,10 +411,17 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
             tooltip: { enabled: false },
             axisBorder: { show: false },
             axisTicks: { show: false },
+            crosshairs: {
+                stroke: {
+                    color: (theme.palette as any).component.chart.crosshair,
+                    width: 1,
+                    dashArray: 3,
+                },
+            },
             labels: {
                 style: {
                     colors: theme.palette.text.secondary,
-                    fontSize: fontSize.sm.tablet
+                    fontSize: getResponsiveFontSize('sm').md
                 },
                 rotate: 0,
                 hideOverlappingLabels: true,
@@ -469,8 +476,8 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                     style: {
                         color: '#fff',
                         background: color,
-                        fontSize: fontSize.sm.tablet, // Sync with chart font size
-                        fontWeight: 500,
+                        fontSize: getResponsiveFontSize('sm').md, // Sync with chart font size
+                        fontWeight: fontWeight.medium,
                         padding: {
                             left: 6,
                             right: 6,
@@ -533,7 +540,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                     formatter: (val) => `${val.toFixed(1)}%\u00A0\u00A0\u00A0`,
                     style: {
                         colors: theme.palette.text.secondary,
-                        fontSize: fontSize.sm.tablet
+                        fontSize: getResponsiveFontSize('sm').md
                     },
                     offsetX: -10, // Thêm offset để text không bị cắt
                 },
@@ -638,8 +645,8 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                         cursor: 'pointer',
                     }}
                 >
-                    <Typography variant="h1">Nhóm ngành</Typography>
-                    <ChevronRightIcon sx={{ fontSize: fontSize.h2.tablet, mt: 1, color: theme.palette.text.secondary }} />
+                    <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1') }}>Nhóm ngành</Typography>
+                    <ChevronRightIcon sx={{ fontSize: getResponsiveFontSize('h2').md, mt: 1, color: theme.palette.text.secondary }} />
                 </Box>
             </Box>
 
@@ -671,7 +678,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                             border: 'none',
                             px: 1.5,
                             py: 0.5,
-                            fontSize: fontSize.base.tablet,
+                            fontSize: getResponsiveFontSize('md'),
                             backgroundColor: (theme.palette as any).component?.chart?.buttonBackground || alpha(theme.palette.action.active, 0.05),
                             '&:hover': {
                                 backgroundColor: (theme.palette as any).component?.chart?.buttonBackground || alpha(theme.palette.action.active, 0.1)
@@ -771,7 +778,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                                                 sx={{
                                                     fontSize: getResponsiveFontSize('md'),
                                                     flex: 1, // Allow text to take available space
-                                                    fontWeight: 400,
+                                                    fontWeight: fontWeight.medium,
                                                     whiteSpace: 'nowrap',
                                                     overflow: 'hidden',
                                                     textOverflow: 'ellipsis',
@@ -787,7 +794,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                                                 {item.tickerName}
                                             </Typography>
 
-                                            <Typography variant="body2" sx={{ width: 50, textAlign: 'right', fontWeight: 500, fontSize: getResponsiveFontSize('md') }}>
+                                            <Typography variant="body2" sx={{ width: 50, textAlign: 'right', fontWeight: fontWeight.medium, fontSize: getResponsiveFontSize('md') }}>
                                                 {(val > 0 ? '+' : '') + val.toFixed(1)}%
                                             </Typography>
 

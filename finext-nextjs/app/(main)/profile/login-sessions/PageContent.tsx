@@ -29,7 +29,7 @@ import {
 } from '@mui/icons-material';
 import { apiClient } from '../../../../services/apiClient';
 import { useAuth } from '../../../../components/auth/AuthProvider';
-import { fontSize, iconSize, shadows } from 'theme/tokens';
+import { iconSize, shadows, getResponsiveFontSize } from 'theme/tokens';
 
 interface Session {
     id: string;
@@ -353,7 +353,7 @@ export default function PageContent() {
             {sessions.length === 0 ? (
                 <Card>
                     <CardContent sx={{ textAlign: 'center', py: 4 }}>
-                        <DevicesOutlined sx={{ fontSize: fontSize.display.tablet, color: 'text.secondary', mb: 2 }} />
+                        <DevicesOutlined sx={{ fontSize: getResponsiveFontSize('h1'), color: 'text.secondary', mb: 2 }} />
                         <Typography variant="h6" color="text.secondary">
                             Không có session nào đang hoạt động
                         </Typography>
@@ -453,7 +453,7 @@ export default function PageContent() {
                                                     }}>
                                                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                                             <Today sx={{
-                                                                fontSize: fontSize.h6.mobile,
+                                                                fontSize: getResponsiveFontSize('lg'),
                                                                 mr: 1,
                                                                 color: isLikelyCurrentSession ? 'primary.main' : 'text.secondary'
                                                             }} />
@@ -468,7 +468,7 @@ export default function PageContent() {
                                                         </Box>
                                                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                                             <Schedule sx={{
-                                                                fontSize: fontSize.h6.mobile,
+                                                                fontSize: getResponsiveFontSize('lg'),
                                                                 mr: 1,
                                                                 color: isLikelyCurrentSession ? 'primary.main' : 'text.secondary'
                                                             }} />

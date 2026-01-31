@@ -11,7 +11,7 @@ import {
 } from '@mui/material';
 import { Person as PersonIcon } from '@mui/icons-material';
 import SignInModal from 'app/(auth)/components/LoginModal';
-import { fontSize, iconSize, borderRadius, shadows } from 'theme/tokens';
+import { iconSize, borderRadius, shadows, getResponsiveFontSize } from 'theme/tokens';
 
 interface ISubscription {
     _id: string;
@@ -112,7 +112,7 @@ function UserAvatarWithSubscription({
                         color: 'white',
                         px: 0.45, // Giảm từ 0.6 xuống 0.4
                         py: 0.15,
-                        fontSize: fontSize.badge.tablet,
+                        fontSize: getResponsiveFontSize('badge'),
                         fontWeight: 'bold',
                         lineHeight: '1.4',
                         textTransform: 'uppercase',
@@ -256,7 +256,7 @@ const UserAvatar: React.FC<UserMenuProps> = ({ variant = 'icon', onNavigate, com
                                     : 'rgba(0, 0, 0, 0.15)',
                                 px: 0.45,
                                 py: 0.15,
-                                fontSize: fontSize.badge.tablet,
+                                fontSize: getResponsiveFontSize('badge'),
                                 borderRadius: borderRadius.sm,
                                 border: theme.palette.mode === 'dark'
                                     ? '1px solid rgba(255, 255, 255, 0.1)'
@@ -322,7 +322,7 @@ const UserAvatar: React.FC<UserMenuProps> = ({ variant = 'icon', onNavigate, com
                                     : 'rgba(0, 0, 0, 0.15)',
                                 px: 0.45,
                                 py: 0.15,
-                                fontSize: fontSize.badge.tablet,
+                                fontSize: getResponsiveFontSize('badge'),
                                 borderRadius: borderRadius.sm,
                                 border: theme.palette.mode === 'dark'
                                     ? '1px solid rgba(255, 255, 255, 0.1)'
@@ -586,10 +586,10 @@ const UserAvatar: React.FC<UserMenuProps> = ({ variant = 'icon', onNavigate, com
                 </Box>
 
                 <Box sx={{ minWidth: 0 }}>
-                    <Typography variant="subtitle2" fontWeight="bold" noWrap sx={{ fontSize: compact ? fontSize.tableCell.mobile : undefined }}>
+                    <Typography variant="subtitle2" fontWeight="bold" noWrap sx={{ fontSize: compact ? getResponsiveFontSize('sm') : undefined }}>
                         {session.user.full_name || 'User'}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" noWrap sx={{ fontSize: compact ? fontSize.sm.mobile : undefined }}>
+                    <Typography variant="body2" color="text.secondary" noWrap sx={{ fontSize: compact ? getResponsiveFontSize('sm') : undefined }}>
                         {session.user.email}
                     </Typography>
                 </Box>

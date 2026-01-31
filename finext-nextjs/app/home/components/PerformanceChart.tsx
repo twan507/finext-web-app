@@ -2,7 +2,7 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { ApexOptions } from 'apexcharts';
-import { fontSize } from 'theme/tokens';
+import { getResponsiveFontSize } from 'theme/tokens';
 
 // Dynamically import ApexCharts to avoid SSR issues
 const ApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
@@ -41,7 +41,7 @@ const PerformanceChart = () => {
                 show: true,
                 style: {
                     colors: '#9ca3af',
-                    fontSize: fontSize.xs.tablet,
+                    fontSize: getResponsiveFontSize('xs').md,
                 },
             },
             axisBorder: { show: false },

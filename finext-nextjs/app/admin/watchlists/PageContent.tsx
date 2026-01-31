@@ -17,7 +17,7 @@ import {
     Delete as DeleteIcon
 } from '@mui/icons-material';
 import { format as formatDate, parseISO } from 'date-fns';
-import { fontSize, getResponsiveFontSize, transitions } from 'theme/tokens';
+import { getResponsiveFontSize, borderRadiusTop, transitions } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
 import {
     SortConfig,
@@ -374,7 +374,7 @@ const WatchlistsPage: React.FC = () => {
                                                 minWidth: columnConfigs[0].minWidth,
                                             }}>
                                                 <Typography sx={{
-                                                    fontSize: getResponsiveFontSize('tableCell'),
+                                                    fontSize: getResponsiveFontSize('sm'),
                                                     fontWeight: 'medium',
                                                     fontFamily: 'monospace'
                                                 }}>
@@ -388,7 +388,7 @@ const WatchlistsPage: React.FC = () => {
                                             }}>
                                                 <Tooltip title={watchlist.user_email || watchlist.user_id}>
                                                     <Typography sx={{
-                                                        fontSize: getResponsiveFontSize('tableCell'),
+                                                        fontSize: getResponsiveFontSize('sm'),
                                                         maxWidth: expandedView ? 'none' : 200,
                                                         overflow: 'hidden',
                                                         textOverflow: 'ellipsis',
@@ -493,7 +493,7 @@ const WatchlistsPage: React.FC = () => {
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
                                                 minWidth: columnConfigs[3].minWidth
                                             }}>
-                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                                                     {columnConfigs[3].format?.(watchlist.created_at || '')}
                                                 </Typography>
                                             </TableCell>
@@ -502,7 +502,7 @@ const WatchlistsPage: React.FC = () => {
                                                 whiteSpace: expandedView ? 'nowrap' : 'normal',
                                                 minWidth: columnConfigs[4].minWidth
                                             }}>
-                                                <Typography sx={{ fontSize: getResponsiveFontSize('tableCell') }}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
                                                     {columnConfigs[4].format?.(watchlist.updated_at || '')}
                                                 </Typography>
                                             </TableCell>
