@@ -25,9 +25,18 @@ interface IndexRowProps {
     todayData: RawMarketData[] | undefined;
 }
 
-const getChangeColor = (value: number | null): string => {
-    if (value == null || Math.abs(value) < 0.0001) return '#eab308';
-    return value > 0 ? '#22c55e' : '#ef4444';
+// Helper outside component needs theme access, so move inside or assume theme is available in context/closure if needed.
+// But easier to just instantiate theme inside or pass it.
+// Actually `getChangeColor` is used inside component too.
+// Let's refactor it to accept theme or use the hex codes that match the tokens if we can't access theme here easily (which we can't outside hook).
+// BETTER: Move `getChangeColor` inside component or use a hook wrapper.
+// HOWEVER, let's keep it simple and just use the component logic.
+
+const getChangeColor = (value: number | null, theme: Theme): string => {
+    if (value == null) return theme.palette.trend.ref;
+    // Nếu biến động nằm trong khoảng ±0.005% thì tô màu vàng (ref)
+    if (Math.abs(value) <= 0.005) return theme.palette.trend.ref;
+    return value > 0 ? theme.palette.trend.up : theme.palette.trend.down;
 };
 
 // Component cho từng row - nhận data từ props (SSE today)
@@ -90,7 +99,7 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
         return `${num.toFixed(2)}%`;
     };
 
-    const changeColor = getChangeColor(pctChange);
+    const changeColor = getChangeColor(pctChange, theme);
     const dividerColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
     const isLoading = !todayData || todayData.length === 0;
 
@@ -134,11 +143,11 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
                 // Flash animation
                 animation: flashType ? `flash-${flashType} 0.5s ease` : 'none',
                 '@keyframes flash-up': {
-                    '0%': { bgcolor: 'rgba(34, 197, 94, 0.25)' },
+                    '0%': { bgcolor: `${theme.palette.trend.up}40` }, // 25% opacity
                     '100%': { bgcolor: isSelected ? (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)') : 'transparent' }
                 },
                 '@keyframes flash-down': {
-                    '0%': { bgcolor: 'rgba(239, 68, 68, 0.25)' },
+                    '0%': { bgcolor: `${theme.palette.trend.down}40` }, // 25% opacity
                     '100%': { bgcolor: isSelected ? (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)') : 'transparent' }
                 }
             }}

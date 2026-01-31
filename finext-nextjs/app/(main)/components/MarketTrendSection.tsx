@@ -10,6 +10,7 @@ const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 export interface StockData {
     ticker: string;
+    exchange: string;
     industry_name: string;
     pct_change: number;
     volume: number;
@@ -45,13 +46,42 @@ export default function MarketTrendSection({ stockData = [], foreignData = [] }:
         flexDirection: 'column',
     };
 
+    // Helper to get color based on pct_change and exchange
+    // HSX/HOSE: ceil/floor at ±6.5%, HNX: ±9%, UPCOM: ±14%
+    const getPriceColor = (pctChange: number, exchange: string | undefined) => {
+        const pct = pctChange * 100; // Convert to percentage
+
+        // Normalize exchange to uppercase for comparison
+        // Default to HSX if exchange is undefined
+        const ex = (exchange || 'HSX').toUpperCase();
+
+        // Determine ceil/floor limits based on exchange
+        let limit = 6.5; // Default HSX/HOSE
+        if (ex === 'HNX' || ex.includes('HNX')) {
+            limit = 9;
+        } else if (ex === 'UPCOM' || ex.includes('UPCOM')) {
+            limit = 14;
+        }
+
+        // Check ceil/floor first
+        if (pct >= limit) return theme.palette.trend.ceil;
+        if (pct <= -limit) return theme.palette.trend.floor;
+
+        // Check ref (near zero: ±0.005%)
+        if (Math.abs(pct) <= 0.005) return theme.palette.trend.ref;
+
+        // Normal up/down
+        return pct > 0 ? theme.palette.trend.up : theme.palette.trend.down;
+    };
+
+    // Helper to get color based on VSI
     // Helper to get color based on VSI
     const getVsiColor = (vsi: number) => {
-        if (vsi < 0.6) return theme.palette.info.main; // Cyan/Blue (Sàn)
-        if (vsi < 0.9) return theme.palette.error.main; // Red
-        if (vsi < 1.2) return theme.palette.warning.main; // Yellow
-        if (vsi < 1.5) return theme.palette.success.main; // Green
-        return theme.palette.primary.main; // Purple (Ceiling)
+        if (vsi < 0.6) return theme.palette.trend.floor; // Cyan/Blue (Sàn)
+        if (vsi < 0.9) return theme.palette.trend.down; // Red
+        if (vsi < 1.2) return theme.palette.trend.ref; // Yellow
+        if (vsi < 1.5) return theme.palette.trend.up; // Green
+        return theme.palette.trend.ceil; // Purple (Ceiling)
     };
 
     // Helper to render slide content WRAPPED in Card
@@ -74,28 +104,31 @@ export default function MarketTrendSection({ stockData = [], foreignData = [] }:
                             </tr>
                         </thead>
                         <tbody>
-                            {stocks.map((stock) => (
-                                <tr key={stock.ticker}>
-                                    <td style={{ padding: '8px 0', border: 'none' }}>
-                                        <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.semibold }}>{stock.ticker}</Typography>
-                                    </td>
-                                    <td style={{ padding: '8px 0', textAlign: 'center', border: 'none' }}>
-                                        <Typography color={color} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                                            {(stock.pct_change * 100).toFixed(2)}%
-                                        </Typography>
-                                    </td>
-                                    <td style={{ padding: '8px 0', textAlign: 'center', border: 'none' }}>
-                                        <Typography color={color} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                                            {stock.t0_score > 0 ? '+' : ''}{(stock.t0_score).toFixed(1)}
-                                        </Typography>
-                                    </td>
-                                    <td style={{ padding: '8px 0', textAlign: 'right', border: 'none' }}>
-                                        <Typography color={stock.vsi ? getVsiColor(stock.vsi) : 'text.secondary'} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium }}>
-                                            {stock.vsi ? `${(stock.vsi * 100).toFixed(2)}%` : '-'}
-                                        </Typography>
-                                    </td>
-                                </tr>
-                            ))}
+                            {stocks.map((stock) => {
+                                const stockColor = getPriceColor(stock.pct_change, stock.exchange);
+                                return (
+                                    <tr key={stock.ticker}>
+                                        <td style={{ padding: '8px 0', border: 'none' }}>
+                                            <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.semibold }}>{stock.ticker}</Typography>
+                                        </td>
+                                        <td style={{ padding: '8px 0', textAlign: 'center', border: 'none' }}>
+                                            <Typography color={stockColor} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                                                {(stock.pct_change * 100).toFixed(2)}%
+                                            </Typography>
+                                        </td>
+                                        <td style={{ padding: '8px 0', textAlign: 'center', border: 'none' }}>
+                                            <Typography color={stockColor} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                                                {stock.t0_score > 0 ? '+' : ''}{(stock.t0_score).toFixed(1)}
+                                            </Typography>
+                                        </td>
+                                        <td style={{ padding: '8px 0', textAlign: 'right', border: 'none' }}>
+                                            <Typography color={stock.vsi ? getVsiColor(stock.vsi) : 'text.secondary'} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium }}>
+                                                {stock.vsi ? `${(stock.vsi * 100).toFixed(2)}%` : '-'}
+                                            </Typography>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </Box>
@@ -153,7 +186,7 @@ export default function MarketTrendSection({ stockData = [], foreignData = [] }:
         );
     };
 
-    const STOCK_REF_YELLOW = '#F5C924';
+    // const STOCK_REF_YELLOW = '#F5C924'; // REMOVED (Replaced by theme.palette.trend.ref)
 
     const renderBreadthSlide = (title: string, series: number[], labels: string[], colors: string[]) => {
         const total = series.reduce((a, b) => a + b, 0);
@@ -312,11 +345,11 @@ export default function MarketTrendSection({ stockData = [], foreignData = [] }:
     const stockSlides: Slide[] = [
         {
             id: 'top-gainers',
-            component: renderStockSlide("Top Cổ Phiếu Tăng Giá", topGainers, theme.palette.success.main)
+            component: renderStockSlide("Top Cổ Phiếu Tăng Giá", topGainers, theme.palette.trend.up)
         },
         {
             id: 'top-losers',
-            component: renderStockSlide("Top Cổ Phiếu Giảm Giá", topLosers, theme.palette.error.main)
+            component: renderStockSlide("Top Cổ Phiếu Giảm Giá", topLosers, theme.palette.trend.down)
         },
     ];
 
@@ -327,11 +360,11 @@ export default function MarketTrendSection({ stockData = [], foreignData = [] }:
     const foreignSlides: Slide[] = [
         {
             id: 'net-buy',
-            component: renderNNSlide("Top Khối Ngoại Mua Ròng", topNetBuy, theme.palette.success.main)
+            component: renderNNSlide("Top Khối Ngoại Mua Ròng", topNetBuy, theme.palette.trend.up)
         },
         {
             id: 'net-sell',
-            component: renderNNSlide("Top Khối Ngoại Bán Ròng", topNetSell, theme.palette.error.main)
+            component: renderNNSlide("Top Khối Ngoại Bán Ròng", topNetSell, theme.palette.trend.down)
         }
     ];
 
@@ -353,7 +386,7 @@ export default function MarketTrendSection({ stockData = [], foreignData = [] }:
                 "Độ rộng thị trường",
                 [priceIncrease, priceDecrease, priceUnchanged],
                 ['Tăng giá', 'Giảm giá', 'Không đổi'],
-                [theme.palette.success.main, theme.palette.error.main, STOCK_REF_YELLOW]
+                [theme.palette.trend.up, theme.palette.trend.down, theme.palette.trend.ref]
             )
         },
         {
@@ -362,12 +395,14 @@ export default function MarketTrendSection({ stockData = [], foreignData = [] }:
                 "Độ rộng dòng tiền",
                 [flowPositive, flowNegative, flowNeutral],
                 ['Tiền vào', 'Tiền ra', 'Không đổi'],
-                [theme.palette.success.main, theme.palette.error.main, STOCK_REF_YELLOW]
+                [theme.palette.trend.up, theme.palette.trend.down, theme.palette.trend.ref]
             )
         }
     ];
 
-    const AUTO_PLAY_INTERVAL = 6000;
+    const BREADTH_INTERVAL = 12000;
+    const STOCKS_INTERVAL = 10000;
+    const FOREIGN_INTERVAL = 8000;
 
     return (
         <Box>
@@ -385,7 +420,7 @@ export default function MarketTrendSection({ stockData = [], foreignData = [] }:
                     <Carousel
                         slides={breadthSlides}
                         minHeight="240px"
-                        autoPlayInterval={AUTO_PLAY_INTERVAL + 4000}
+                        autoPlayInterval={BREADTH_INTERVAL}
                     />
                 </Box>
 
@@ -394,7 +429,7 @@ export default function MarketTrendSection({ stockData = [], foreignData = [] }:
                     <Carousel
                         slides={stockSlides}
                         minHeight="240px"
-                        autoPlayInterval={AUTO_PLAY_INTERVAL}
+                        autoPlayInterval={STOCKS_INTERVAL}
                     />
                 </Box>
 
@@ -403,7 +438,7 @@ export default function MarketTrendSection({ stockData = [], foreignData = [] }:
                     <Carousel
                         slides={foreignSlides}
                         minHeight="240px"
-                        autoPlayInterval={AUTO_PLAY_INTERVAL + 2000}
+                        autoPlayInterval={FOREIGN_INTERVAL}
                     />
                 </Box>
             </Box>

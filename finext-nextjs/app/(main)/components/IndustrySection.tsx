@@ -401,10 +401,12 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
     const chartColors = useMemo(() => [
         theme.palette.primary.main,
         theme.palette.secondary.main,
-        theme.palette.success.main,
-        theme.palette.warning.main,
+        theme.palette.trend.up,
+        theme.palette.trend.down,
         theme.palette.info.main,
-        '#FF4560', '#775DD0', '#00E396', '#FEB019',
+        theme.palette.trend.ref,
+        theme.palette.trend.ceil,
+        theme.palette.trend.floor,
         '#FF9F40', '#4BC0C0', '#9966FF', '#C9CBCF' // Added more colors just in case
     ], [theme]);
 
@@ -718,7 +720,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
 
                                     const val = item.value;
                                     const isPositive = val >= 0;
-                                    const barColor = isPositive ? theme.palette.success.main : theme.palette.error.main;
+                                    const barColor = isPositive ? theme.palette.trend.up : theme.palette.trend.down;
                                     const widthPct = maxListValue > 0 ? (Math.abs(val) / maxListValue) * 100 : 0;
 
                                     return (

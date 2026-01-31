@@ -67,6 +67,13 @@ declare module '@mui/material/styles' {
         buttonTextActive: string;
       };
     };
+    trend: {
+      up: string;
+      down: string;
+      ref: string;
+      ceil: string;
+      floor: string;
+    };
   }
 
   interface PaletteOptions {
@@ -114,8 +121,41 @@ declare module '@mui/material/styles' {
         buttonTextActive?: string;
       };
     };
+    trend?: {
+      up?: string;
+      down?: string;
+      ref?: string;
+      ceil?: string;
+      floor?: string;
+    };
   }
 }
+
+// --------------------
+// TREND COLOR TOKENS
+// --------------------
+export const trendColors = {
+  up: {
+    light: '#20b927', // Green-600
+    dark: '#22c55e',  // Green-500
+  },
+  down: {
+    light: '#e11d1d', // Rose-600
+    dark: '#d45d5d',  // Rose-400
+  },
+  ref: {
+    light: '#eadb08', // Yellow-600
+    dark: '#c5c900',  // Yellow-400
+  },
+  ceil: {
+    light: '#7e22ce', // Purple-700
+    dark: '#a855f7',  // Purple-500
+  },
+  floor: {
+    light: '#0593bb', // Cyan-700
+    dark: '#38bdf8',  // Sky-400
+  },
+} as const;
 
 // --------------------
 // PALETTE TOKENS
@@ -203,8 +243,8 @@ export const lightThemePalette: PaletteOptions = {
       line: '#8b5cf6',
       areaTop: 'rgba(139, 92, 246, 0.4)',
       areaBottom: 'rgba(139, 92, 246, 0.05)',
-      upColor: '#22c55e',
-      downColor: '#ef4444',
+      upColor: trendColors.up.light,
+      downColor: trendColors.down.light,
       gridLine: 'rgba(0, 0, 0, 0.06)',
       crosshair: 'rgba(0, 0, 0, 0.3)',
       buttonBackground: '#f0f0f0',
@@ -213,6 +253,13 @@ export const lightThemePalette: PaletteOptions = {
       buttonText: 'rgba(0, 0, 0, 0.6)',
       buttonTextActive: '#ffffff',
     },
+  },
+  trend: {
+    up: trendColors.up.light,
+    down: trendColors.down.light,
+    ref: trendColors.ref.light,
+    ceil: trendColors.ceil.light,
+    floor: trendColors.floor.light,
   },
 };
 
@@ -298,8 +345,8 @@ export const darkThemePalette: PaletteOptions = {
       line: '#b47eff',
       areaTop: 'rgba(180, 126, 255, 0.5)',
       areaBottom: 'rgba(180, 126, 255, 0.05)',
-      upColor: '#22c55e',
-      downColor: '#ef4444',
+      upColor: trendColors.up.dark,
+      downColor: trendColors.down.dark,
       gridLine: 'rgba(255, 255, 255, 0.08)',
       crosshair: '#444444',
       buttonBackground: '#1e1e1e',
@@ -308,6 +355,13 @@ export const darkThemePalette: PaletteOptions = {
       buttonText: 'rgba(255, 255, 255, 0.7)',
       buttonTextActive: '#121212',
     },
+  },
+  trend: {
+    up: trendColors.up.dark,
+    down: trendColors.down.dark,
+    ref: trendColors.ref.dark,
+    ceil: trendColors.ceil.dark,
+    floor: trendColors.floor.dark,
   },
 };
 

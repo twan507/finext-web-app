@@ -238,6 +238,7 @@ async def home_today_stock(ticker: Optional[str] = None, **kwargs) -> Dict[str, 
     projection = {
         "_id": 0,
         "ticker": 1,
+        "exchange": 1,
         "open": 1,
         "high": 1,
         "low": 1,

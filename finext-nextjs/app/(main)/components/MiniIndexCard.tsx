@@ -24,20 +24,25 @@ interface MiniIndexCardProps {
     hideOnTablet?: boolean; // Ẩn card ở tablet (md breakpoint)
 }
 
-const getChangeColor = (pctChange: number): string => {
-    if (Math.abs(pctChange) < 0.01) return '#eab308';
-    return pctChange > 0 ? '#22c55e' : '#ef4444';
+// Can't access theme here easily for default params, so we'll refactor component to use theme inside.
+// Or we can pass theme to these functions.
+// Let's refactor the functions to accept theme.
+
+const getChangeColor = (pctChange: number, theme: any): string => {
+    // Nếu biến động nằm trong khoảng ±0.005% thì tô màu vàng (ref)
+    if (Math.abs(pctChange) <= 0.005) return theme.palette.trend.ref;
+    return pctChange > 0 ? theme.palette.trend.up : theme.palette.trend.down;
 };
 
 // Màu nền fill cho chip %
-const getChipBgColor = (pctChange: number): string => {
-    if (Math.abs(pctChange) < 0.01) return '#eab308';
-    return pctChange > 0 ? '#22c55e' : '#ef4444';
+const getChipBgColor = (pctChange: number, theme: any): string => {
+    return getChangeColor(pctChange, theme);
 };
 
 // Mũi tên tam giác
 const getArrow = (pctChange: number): string => {
-    if (Math.abs(pctChange) < 0.01) return '';
+    // Không hiển thị mũi tên khi biến động nằm trong khoảng ±0.005%
+    if (Math.abs(pctChange) <= 0.005) return '';
     return pctChange > 0 ? '▲' : '▼';
 };
 
@@ -94,9 +99,9 @@ export default function MiniIndexCard({ symbol, itdData, hideOnTablet = false }:
         }
     }, [itdData]);
 
-    const lineColor = getChangeColor(pctChange ?? 0);
-    const changeColor = getChangeColor(pctChange ?? 0);
-    const chipBgColor = getChipBgColor(pctChange ?? 0);
+    const lineColor = getChangeColor(pctChange ?? 0, theme);
+    const changeColor = getChangeColor(pctChange ?? 0, theme);
+    const chipBgColor = getChipBgColor(pctChange ?? 0, theme);
     const arrow = getArrow(pctChange ?? 0);
 
     // Cố định 58 điểm trên trục x (luôn trống 2 điểm cuối để chấm tròn không bị che)
