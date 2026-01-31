@@ -708,7 +708,7 @@ export default function BrokersPage() {
                                 </TableBody>
                             </Table>
                         </TableContainer>                        <TablePagination
-                            rowsPerPageOptions={[5, 10, 50, { label: 'Tất cả', value: 99999 }]}
+                            rowsPerPageOptions={[5, 10, 50, { label: 'ALL', value: 99999 }]}
                             component="div"
                             count={displayTotalCount}
                             rowsPerPage={rowsPerPage}

@@ -661,7 +661,7 @@ const OtpsPage: React.FC = () => {
 
                         {/* Pagination */}
                         <TablePagination
-                            rowsPerPageOptions={[5, 10, 25, 50, 100, { value: 99999, label: 'Tất cả' }]}
+                            rowsPerPageOptions={[5, 10, 25, 50, 100, { value: 99999, label: 'ALL' }]}
                             component="div"
                             count={displayTotalCount}
                             rowsPerPage={rowsPerPage}

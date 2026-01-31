@@ -11,9 +11,9 @@ const footerLinks = {
   sanPham: {
     title: 'Sản phẩm',
     links: [
-      { label: 'Khám phá danh sách cổ phiếu', href: '#' },
-      { label: 'Quản lý danh mục đầu tư cá nhân', href: '#' },
-      { label: 'Bảng xếp hạng cổ phiếu tiềm năng', href: '#' },
+      { label: 'Bản tin tin tức thị trường', href: '#' },
+      { label: 'Phân tích nhóm ngành', href: '#' },
+      { label: 'Bộ lọc cổ phiếu', href: '#' },
     ],
   },
   hoTro: {

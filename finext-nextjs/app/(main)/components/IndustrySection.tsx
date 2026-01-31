@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Box, Typography, useTheme, Grid, Checkbox, CircularProgress, alpha, ToggleButton, ToggleButtonGroup, Skeleton } from '@mui/material';
+import { Box, Typography, useTheme, Grid, Checkbox, CircularProgress, alpha, Skeleton } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { getResponsiveFontSize, borderRadius, transitions, fontWeight } from 'theme/tokens';
@@ -13,7 +13,9 @@ import type { RawMarketData } from './MarketIndexChart';
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 // Unified Time Range options
+// Unified Time Range options
 type TimeRange = '1D' | '1W' | '1M' | '3M' | '6M' | '1Y' | 'YTD';
+import TimeframeSelector from 'components/common/TimeframeSelector';
 
 // Cache lưu history data theo ticker để tránh fetch lại nhiều lần
 type HistoryCache = Record<string, RawMarketData[]>;
@@ -651,7 +653,14 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
             </Box>
 
             {/* SEPARATE TOOLBAR SECTION for Time Toggles (Above Content) */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Box sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                mb: 2,
+                flexWrap: 'wrap',
+                gap: 1
+            }}>
                 {/* Left: Deselect All */}
                 <Typography
                     variant="body2"
@@ -665,39 +674,11 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                     Bỏ chọn tất cả
                 </Typography>
 
-                <ToggleButtonGroup
+                <TimeframeSelector
                     value={timeRange}
-                    exclusive
                     onChange={handleTimeRangeChange}
-                    size="small"
-                    sx={{
-                        borderRadius: 2,
-                        overflow: 'hidden',
-                        '& .MuiToggleButton-root': {
-                            color: (theme.palette as any).component?.chart?.buttonText || theme.palette.text.secondary,
-                            border: 'none',
-                            px: 1.5,
-                            py: 0.5,
-                            fontSize: getResponsiveFontSize('md'),
-                            backgroundColor: (theme.palette as any).component?.chart?.buttonBackground || alpha(theme.palette.action.active, 0.05),
-                            '&:hover': {
-                                backgroundColor: (theme.palette as any).component?.chart?.buttonBackground || alpha(theme.palette.action.active, 0.1)
-                            },
-                            '&.Mui-selected': {
-                                backgroundColor: (theme.palette as any).component?.chart?.buttonBackground || alpha(theme.palette.action.active, 0.05),
-                                color: (theme.palette as any).component?.chart?.buttonBackgroundActive || theme.palette.primary.main
-                            }
-                        }
-                    }}
-                >
-                    <ToggleButton value="1D">1D</ToggleButton>
-                    <ToggleButton value="1W">1W</ToggleButton>
-                    <ToggleButton value="1M">1M</ToggleButton>
-                    <ToggleButton value="3M">3M</ToggleButton>
-                    <ToggleButton value="6M">6M</ToggleButton>
-                    <ToggleButton value="1Y">1Y</ToggleButton>
-                    <ToggleButton value="YTD">YTD</ToggleButton>
-                </ToggleButtonGroup>
+                    options={['1D', '1W', '1M', '3M', '6M', '1Y', 'YTD']}
+                />
             </Box>
 
             <Grid container spacing={3} sx={{ alignItems: 'stretch' }}>

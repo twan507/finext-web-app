@@ -78,13 +78,13 @@ const emptyChartData: ChartData = {
 };
 
 export default function HomeContent() {
-    const [ticker, setTicker] = useState<string>('FNXINDEX');
+    const [ticker, setTicker] = useState<string>('VNINDEX');
 
     // Lifted timeRange state từ chart component
     const [timeRange, setTimeRange] = useState<TimeRange>('3M');
 
     // Tab state cho bảng index
-    const [indexTab, setIndexTab] = useState<IndexTabType>('finext');
+    const [indexTab, setIndexTab] = useState<IndexTabType>('main');
 
     // Track if component is mounted
     const isMountedRef = useRef<boolean>(true);

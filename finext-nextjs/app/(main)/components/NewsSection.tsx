@@ -3,13 +3,13 @@
 import { Box, Typography, useTheme, Skeleton, Grid, Divider } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { spacing, getResponsiveFontSize, transitions, borderRadius, fontWeight } from 'theme/tokens';
 
 
 import { apiClient } from 'services/apiClient';
 import Link from 'next/link';
+import Carousel from 'components/common/Carousel';
 
 // ============================================================================
 // TYPES
@@ -42,29 +42,6 @@ interface ReportApiResponse {
     items: NewsReport[];
 }
 
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
-/** Parse date và trả về ngày + giờ */
-const parseDateTime = (dateStr: string): { date: string; time: string } => {
-    try {
-        const date = new Date(dateStr);
-        return {
-            date: date.toLocaleDateString('vi-VN', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-            }),
-            time: date.toLocaleTimeString('vi-VN', {
-                hour: '2-digit',
-                minute: '2-digit',
-            }),
-        };
-    } catch {
-        return { date: dateStr, time: '' };
-    }
-};
 
 // ============================================================================
 // MINI NEWS CARD COMPONENT
@@ -99,48 +76,38 @@ function MiniNewsCard({ article }: MiniNewsCardProps) {
             }}
         >
             <Box
-                component={Link}
-                href={`/news/${article.article_id}`}
                 sx={{
                     display: 'flex',
                     flexDirection: 'column',
-                    textDecoration: 'none',
-                    color: 'inherit',
                     my: spacing.xxs,
                     width: '100%',
                     overflow: 'hidden',
-                    cursor: 'pointer',
-                    '&:hover': {
-                        '& .news-card-title': {
-                            fontSize: getResponsiveFontSize('md'),
-                        },
-                        '& .news-card-sapo': {
-                            fontSize: getResponsiveFontSize('sm'),
-                        },
-                    },
                 }}
             >
                 {/* Title */}
-                <Typography
-                    variant="h6"
-                    className="news-card-title"
-                    sx={{
-                        fontWeight: fontWeight.semibold,
-                        fontSize: getResponsiveFontSize('sm'),
-                        lineHeight: 1.4,
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        color: 'text.primary',
-                        transition: transitions.hover,
-                        height: titleHeight, // Fixed height based on hover size
-                        // Ensure text aligns effectively if it's shorter (optional, but good for single lines)
-                        // display: 'flex', alignItems: 'center' // Beware this might break multi-line ellipsis
-                    }}
-                >
-                    {article.title}
-                </Typography>
+                <Link href={`/news/${article.article_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <Typography
+                        variant="h6"
+                        className="news-card-title"
+                        sx={{
+                            fontWeight: fontWeight.semibold,
+                            fontSize: getResponsiveFontSize('sm'),
+                            lineHeight: 1.5,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            color: 'text.primary',
+                            transition: transitions.hover,
+                            height: titleHeight,
+                            '&:hover': {
+                                textDecoration: 'underline',
+                            },
+                        }}
+                    >
+                        {article.title}
+                    </Typography>
+                </Link>
 
                 {/* Sapo */}
                 <Typography
@@ -154,8 +121,8 @@ function MiniNewsCard({ article }: MiniNewsCardProps) {
                         WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical',
                         overflow: 'hidden',
-                        height: sapoHeight, // Fixed height based on hover size
-                        transition: transitions.hover,
+                        height: sapoHeight,
+                        mt: 0.5, // Add slight margin since flex gap is gone from parent hover effect
                     }}
                 >
                     {article.sapo}
@@ -199,46 +166,38 @@ function MiniReportCard({ report }: MiniReportCardProps) {
             }}
         >
             <Box
-                component={Link}
-                href={`/reports/${report.report_id}`}
                 sx={{
                     display: 'flex',
                     flexDirection: 'column',
-                    textDecoration: 'none',
-                    color: 'inherit',
                     my: spacing.xxs,
                     width: '100%',
                     overflow: 'hidden',
-                    cursor: 'pointer',
-                    '&:hover': {
-                        '& .report-card-title': {
-                            fontSize: getResponsiveFontSize('md'),
-                        },
-                        '& .report-card-sapo': {
-                            fontSize: getResponsiveFontSize('sm'),
-                        },
-                    },
                 }}
             >
                 {/* Title */}
-                <Typography
-                    variant="h6"
-                    className="report-card-title"
-                    sx={{
-                        fontWeight: fontWeight.semibold,
-                        fontSize: getResponsiveFontSize('sm'),
-                        lineHeight: 1.4,
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        color: 'text.primary',
-                        transition: transitions.hover,
-                        height: titleHeight, // Fixed height based on hover size
-                    }}
-                >
-                    {report.title || 'Bản tin'}
-                </Typography>
+                <Link href={`/reports/${report.report_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <Typography
+                        variant="h6"
+                        className="report-card-title"
+                        sx={{
+                            fontWeight: fontWeight.semibold,
+                            fontSize: getResponsiveFontSize('sm'),
+                            lineHeight: 1.5,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            color: 'text.primary',
+                            transition: transitions.hover,
+                            height: titleHeight,
+                            '&:hover': {
+                                textDecoration: 'underline',
+                            },
+                        }}
+                    >
+                        {report.title || 'Bản tin'}
+                    </Typography>
+                </Link>
 
                 {/* Sapo */}
                 <Typography
@@ -252,8 +211,8 @@ function MiniReportCard({ report }: MiniReportCardProps) {
                         WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical',
                         overflow: 'hidden',
-                        height: sapoHeight, // Fixed height based on hover size
-                        transition: transitions.hover,
+                        height: sapoHeight,
+                        mt: 0.5,
                     }}
                 >
                     {report.sapo || report.category_name || ''}
@@ -308,8 +267,6 @@ function NewsColumn({ title, href, loading, newsItems, reportItems }: NewsColumn
         >
             {/* Column Header - Sticky */}
             <Box
-                component={Link}
-                href={href}
                 sx={{
                     display: 'block',
                     position: 'sticky',
@@ -318,30 +275,28 @@ function NewsColumn({ title, href, loading, newsItems, reportItems }: NewsColumn
                     py: spacing.xs,
                     zIndex: 1,
                     backgroundColor: 'background.paper',
-                    textDecoration: 'none',
-                    cursor: 'pointer',
-                    transition: transitions.hover,
-                    '&:hover': {
-                        '& .column-title': {
-                            color: 'primary.dark',
-                        },
-                    },
                 }}
             >
-                <Typography
-                    variant="h6"
-                    className="column-title"
-                    sx={{
-                        fontWeight: fontWeight.bold,
-                        fontSize: getResponsiveFontSize('lg'),
-                        color: 'primary.main',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
-                        transition: transitions.hover,
-                    }}
-                >
-                    {title}
-                </Typography>
+                <Link href={href} style={{ textDecoration: 'none' }}>
+                    <Typography
+                        variant="h6"
+                        className="column-title"
+                        sx={{
+                            fontWeight: fontWeight.bold,
+                            fontSize: getResponsiveFontSize('lg'),
+                            color: 'primary.main',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            transition: transitions.hover,
+                            display: 'inline-block', // Only make text clickable
+                            '&:hover': {
+                                color: 'primary.dark',
+                            },
+                        }}
+                    >
+                        {title}
+                    </Typography>
+                </Link>
             </Box>
 
             {/* Content */}
@@ -437,6 +392,43 @@ export default function NewsSection() {
     });
     const enterpriseNews = enterpriseNewsData?.items || [];
 
+    // Define the slides content
+    const slides = [
+        {
+            id: 'macro',
+            component: (
+                <NewsColumn
+                    title="TIN TỨC VĨ MÔ"
+                    href="/news"
+                    loading={macroLoading}
+                    newsItems={macroNews}
+                />
+            )
+        },
+        {
+            id: 'enterprise',
+            component: (
+                <NewsColumn
+                    title="THỊ TRƯỜNG CHỨNG KHOÁN"
+                    href="/news/category/ttck"
+                    loading={enterpriseLoading}
+                    newsItems={enterpriseNews}
+                />
+            )
+        },
+        {
+            id: 'reports',
+            component: (
+                <NewsColumn
+                    title="BẢN TIN HÀNG NGÀY"
+                    href="/reports"
+                    loading={reportsLoading}
+                    reportItems={reports}
+                />
+            )
+        }
+    ];
+
     return (
         <Box>
             {/* Title - Tin tức (clickable) */}
@@ -455,38 +447,28 @@ export default function NewsSection() {
                 <ChevronRightIcon sx={{ fontSize: getResponsiveFontSize('h2').md, mt: 1, color: theme.palette.text.secondary }} />
             </Box>
 
-            {/* Three Column Layout */}
-            <Grid container spacing={{ xs: 2, md: 3 }}>
-                {/* Column 1: Macro News */}
-                <Grid size={{ xs: 12, md: 4 }}>
-                    <NewsColumn
-                        title="TIN TỨC VĨ MÔ"
-                        href="/news"
-                        loading={macroLoading}
-                        newsItems={macroNews}
-                    />
-                </Grid>
+            {/* Content Container */}
+            <Box>
+                {/* 1. Desktop View (Grid) */}
+                <Box
+                    sx={{
+                        display: { xs: 'none', md: 'grid' },
+                        gridTemplateColumns: 'repeat(3, 1fr)',
+                        gap: 3,
+                    }}
+                >
+                    {slides.map((slide) => (
+                        <Box key={slide.id}>
+                            {slide.component}
+                        </Box>
+                    ))}
+                </Box>
 
-                {/* Column 2: Enterprise News */}
-                <Grid size={{ xs: 12, md: 4 }}>
-                    <NewsColumn
-                        title="TIN TỨC DOANH NGHIỆP"
-                        href="/news/category/ttck"
-                        loading={enterpriseLoading}
-                        newsItems={enterpriseNews}
-                    />
-                </Grid>
-
-                {/* Column 3: Reports */}
-                <Grid size={{ xs: 12, md: 4 }}>
-                    <NewsColumn
-                        title="BẢN TIN HÀNG NGÀY"
-                        href="/reports"
-                        loading={reportsLoading}
-                        reportItems={reports}
-                    />
-                </Grid>
-            </Grid>
+                {/* 2. Mobile View (Carousel) */}
+                <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+                    <Carousel slides={slides} />
+                </Box>
+            </Box>
         </Box>
     );
 }

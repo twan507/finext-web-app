@@ -137,7 +137,7 @@ export default function MarketSection({
                 <Box sx={{
                     width: { xs: '100%', md: 320, lg: 400 },
                     flexShrink: 0,
-                    mt: { xs: 0, md: 9.8 },
+                    mt: { xs: 0, md: 12.5 },
                 }}>
                     {/* Dropdown chọn nhóm chỉ số - căn phải */}
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
@@ -150,7 +150,7 @@ export default function MarketSection({
                                     borderRadius: 2,
                                     backgroundColor: dropdownColors.background,
                                     color: dropdownColors.text,
-                                    height: { xs: 34, md: 37 },
+                                    height: { xs: 34, md: 33 },
                                     '& .MuiSelect-select': {
                                         py: 0,
                                         px: 1.5,
@@ -203,8 +203,8 @@ export default function MarketSection({
                                     },
                                 }}
                             >
-                                <MenuItem value="finext">Chỉ số Finext</MenuItem>
                                 <MenuItem value="main">Chỉ số thị trường</MenuItem>
+                                <MenuItem value="finext">Chỉ số Finext</MenuItem>
                                 <MenuItem value="derivative">Chỉ số phái sinh</MenuItem>
                             </Select>
                         </FormControl>

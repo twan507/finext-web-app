@@ -28,6 +28,7 @@ import {
     useTheme,
     CircularProgress
 } from '@mui/material';
+import TimeframeSelector from 'components/common/TimeframeSelector';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import CandlestickChartIcon from '@mui/icons-material/CandlestickChart';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
@@ -35,7 +36,7 @@ import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 
 // Types - export để page có thể sử dụng
-export type TimeRange = '1D' | '1M' | '3M' | '1Y' | '5Y' | 'ALL';
+export type TimeRange = '1D' | '1M' | '3M' | '1Y' | 'ALL';
 type ChartType = 'area' | 'candlestick';
 
 interface PriceData {
@@ -207,9 +208,6 @@ const getVisibleRange = (
             break;
         case '1Y':
             daysToShow = 252; // ~1 year of trading days
-            break;
-        case '5Y':
-            daysToShow = 252 * 5; // ~5 years of trading days
             break;
         case 'ALL':
         default:
@@ -956,26 +954,27 @@ export default function MarketIndexChart({
             </Box>
 
             {/* Controls */}
+            {/* Controls */}
             <Stack
                 direction="row"
                 justifyContent="space-between"
                 alignItems="center"
-                sx={{ mb: 2, height: controlsHeight }}
+                useFlexGap
+                flexWrap="wrap"
+                spacing={2}
+                sx={{ mb: 2, minHeight: controlsHeight }}
             >
-                {/* Time range buttons */}
-                <ToggleButtonGroup
+                <TimeframeSelector
                     value={timeRange}
-                    exclusive
                     onChange={handleTimeRangeChange}
-                    size="small"
+                    options={['1D', '1M', '3M', '1Y', 'ALL']}
+                    // getLabel={(option) => option === 'ALL' ? 'Tất cả' : option}
                     sx={{
-                        borderRadius: 2,
-                        overflow: 'hidden',
                         '& .MuiToggleButton-root': {
                             color: colors.buttonText,
                             border: 'none',
+                            height: 32,
                             px: 1.5,
-                            py: 0.5,
                             fontSize: getResponsiveFontSize('md'),
                             backgroundColor: colors.buttonBackground,
                             '&:hover': {
@@ -987,18 +986,19 @@ export default function MarketIndexChart({
                             }
                         }
                     }}
-                >
-                    <ToggleButton value="1D">1D</ToggleButton>
-                    <ToggleButton value="1M">1M</ToggleButton>
-                    <ToggleButton value="3M">3M</ToggleButton>
-                    <ToggleButton value="1Y">1Y</ToggleButton>
-                    <ToggleButton value="5Y">5Y</ToggleButton>
-                    <ToggleButton value="ALL">Tất cả</ToggleButton>
-                </ToggleButtonGroup>
+                />
 
                 {/* Chart type and fullscreen buttons */}
-                <Stack direction="row" spacing={2.5} alignItems="right" sx={{ mr: 1.3 }}>
-                    {/* Chart type toggle group - Candlestick disabled for 1D timerange */}
+                <Stack
+                    direction="row"
+                    spacing={1}
+                    alignItems="center"
+                    justifyContent="flex-end"
+                    sx={{
+                        flexGrow: { xs: 1, sm: 0 } // Fill remaining space on mobile if needed
+                    }}
+                >
+                    {/* Chart type toggle group */}
                     <ToggleButtonGroup
                         value={timeRange === '1D' ? 'area' : chartType}
                         exclusive
@@ -1014,8 +1014,8 @@ export default function MarketIndexChart({
                             '& .MuiToggleButton-root': {
                                 color: colors.buttonText,
                                 border: 'none',
+                                height: 32,
                                 px: 1,
-                                py: 0.5,
                                 minWidth: 40,
                                 backgroundColor: colors.buttonBackground,
                                 '&:hover': {
@@ -1048,7 +1048,9 @@ export default function MarketIndexChart({
                             backgroundColor: colors.buttonBackground,
                             border: 'none',
                             borderRadius: 2,
-                            px: 1
+                            height: 32,
+                            width: 32,
+                            padding: 0,
                         }}
                     >
                         {isFullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}

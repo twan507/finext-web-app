@@ -789,7 +789,7 @@ export default function LicensesPage() {
                             </Table>
                         </TableContainer>
                         <TablePagination
-                            rowsPerPageOptions={[5, 10, 25, 50, { label: 'Tất cả', value: 99999 }]}
+                            rowsPerPageOptions={[5, 10, 25, 50, { label: 'ALL', value: 99999 }]}
                             component="div"
                             count={displayTotalCount}
                             rowsPerPage={rowsPerPage}
