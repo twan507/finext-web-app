@@ -1,0 +1,412 @@
+'use client';
+
+import { Box, Typography, useTheme, Card } from '@mui/material';
+import Carousel, { Slide } from 'components/common/Carousel';
+import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
+import dynamic from 'next/dynamic';
+import { ApexOptions } from 'apexcharts';
+
+const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
+
+export interface StockData {
+    ticker: string;
+    industry_name: string;
+    pct_change: number;
+    volume: number;
+    close: number;
+    vsi: number;
+    t0_score: number;
+    top100: number;
+}
+
+export interface NNStockData {
+    ticker: string;
+    net_value: number; // Value in base unit
+    net_volume: number;
+}
+
+interface MarketTrendSectionProps {
+    stockData?: StockData[];
+    foreignData?: NNStockData[];
+}
+
+export default function MarketTrendSection({ stockData = [], foreignData = [] }: MarketTrendSectionProps) {
+    const theme = useTheme();
+
+    const cardStyle = {
+        bgcolor: 'background.paper',
+        borderRadius: 3,
+        height: '100%',
+        boxShadow: 'none',
+        border: 'none',
+        backgroundImage: 'none',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+    };
+
+    // Helper to get color based on VSI
+    const getVsiColor = (vsi: number) => {
+        if (vsi < 0.6) return theme.palette.info.main; // Cyan/Blue (Sàn)
+        if (vsi < 0.9) return theme.palette.error.main; // Red
+        if (vsi < 1.2) return theme.palette.warning.main; // Yellow
+        if (vsi < 1.5) return theme.palette.success.main; // Green
+        return theme.palette.primary.main; // Purple (Ceiling)
+    };
+
+    // Helper to render slide content WRAPPED in Card
+    const renderStockSlide = (title: string, stocks: StockData[], color: string) => (
+        <Card sx={cardStyle}>
+            <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('lg'), fontWeight: fontWeight.semibold, mb: 1, textTransform: 'uppercase' }}>
+                    {title}
+                </Typography>
+
+                {/* Table Layout */}
+                <Box sx={{ flex: 1, overflow: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr>
+                                <th style={{ textAlign: 'left', padding: '4px 0', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Mã cổ phiếu</th>
+                                <th style={{ textAlign: 'center', padding: '4px 25px', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Giá (%)</th>
+                                <th style={{ textAlign: 'center', padding: '4px 0px', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Dòng tiền (+/-)</th>
+                                <th style={{ textAlign: 'right', padding: '4px 0', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Thanh khoản</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {stocks.map((stock) => (
+                                <tr key={stock.ticker}>
+                                    <td style={{ padding: '8px 0', border: 'none' }}>
+                                        <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.semibold }}>{stock.ticker}</Typography>
+                                    </td>
+                                    <td style={{ padding: '8px 0', textAlign: 'center', border: 'none' }}>
+                                        <Typography color={color} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                                            {(stock.pct_change * 100).toFixed(2)}%
+                                        </Typography>
+                                    </td>
+                                    <td style={{ padding: '8px 0', textAlign: 'center', border: 'none' }}>
+                                        <Typography color={color} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                                            {stock.t0_score > 0 ? '+' : ''}{(stock.t0_score).toFixed(1)}
+                                        </Typography>
+                                    </td>
+                                    <td style={{ padding: '8px 0', textAlign: 'right', border: 'none' }}>
+                                        <Typography color={stock.vsi ? getVsiColor(stock.vsi) : 'text.secondary'} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium }}>
+                                            {stock.vsi ? `${(stock.vsi * 100).toFixed(2)}%` : '-'}
+                                        </Typography>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </Box>
+            </Box>
+        </Card>
+    );
+
+    const renderNNSlide = (title: string, stocks: NNStockData[], color: string) => {
+        const maxVal = Math.max(...stocks.map(s => Math.abs(s.net_value)));
+
+        return (
+            <Card sx={cardStyle}>
+                <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('lg'), fontWeight: fontWeight.semibold, mb: 1, textTransform: 'uppercase' }}>
+                        {title}
+                    </Typography>
+                    <Box sx={{ flex: 1, overflow: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr>
+                                    <th style={{ textAlign: 'left', padding: '4px 0', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem', width: '22.5%' }}>Mã cổ phiếu </th>
+                                    <th style={{ textAlign: 'center', padding: '4px 0', border: 'none', width: '50%' }}></th>
+                                    <th style={{ textAlign: 'right', padding: '4px 0', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem', width: '27.5%' }}>Giá trị giao dịch</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {stocks.map((stock) => (
+                                    <tr key={stock.ticker}>
+                                        <td style={{ padding: '8px 0', border: 'none' }}>
+                                            <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.semibold }}>{stock.ticker}</Typography>
+                                        </td>
+                                        <td style={{ padding: '8px 0', border: 'none', verticalAlign: 'middle' }}>
+                                            <Box sx={{ width: '100%', display: 'flex', alignItems: 'center' }}>
+                                                <Box sx={{
+                                                    width: `${Math.max((Math.abs(stock.net_value) / maxVal) * 100, 1)}%`,
+                                                    height: 16,
+                                                    bgcolor: color,
+                                                    borderRadius: 1,
+                                                    my: 0.5
+                                                }} />
+                                            </Box>
+                                        </td>
+                                        <td style={{ padding: '8px 0', textAlign: 'right', border: 'none' }}>
+                                            <Typography color={color} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium }}>
+                                                {stock.net_value.toFixed(2)}T
+                                            </Typography>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </Box>
+                </Box>
+            </Card>
+        );
+    };
+
+    const STOCK_REF_YELLOW = '#F5C924';
+
+    const renderBreadthSlide = (title: string, series: number[], labels: string[], colors: string[]) => {
+        const total = series.reduce((a, b) => a + b, 0);
+
+        // Sort data by value descending (largest first)
+        const combined = series.map((value, index) => ({
+            value,
+            label: labels[index],
+            color: colors[index]
+        }));
+        combined.sort((a, b) => b.value - a.value);
+
+        const sortedSeries = combined.map(item => item.value);
+        const sortedLabels = combined.map(item => item.label);
+        const sortedColors = combined.map(item => item.color);
+
+        // Calculate dynamic offset based on max value - smaller values need less offset
+        const maxValue = Math.max(...series);
+        const minValue = Math.min(...series);
+        // Base offset for the largest slice, smaller slices will have extra padding in formatter
+        const baseOffset = 0;
+
+        const chartOptions: ApexOptions = {
+            chart: {
+                type: 'polarArea',
+                background: 'transparent',
+                toolbar: { show: false },
+                fontFamily: 'inherit',
+                animations: { enabled: false },
+                sparkline: { enabled: false }
+            },
+            labels: sortedLabels,
+            colors: sortedColors,
+            stroke: {
+                show: false,
+                width: 0
+            },
+            fill: {
+                opacity: 1
+            },
+            legend: {
+                show: false
+            },
+            dataLabels: {
+                enabled: true,
+                formatter: function (val: number) {
+                    // Dynamic padding based on actual percentage value
+                    // Larger percentage = larger slice radius = label is deeper inside area = needs more padding
+                    // Smaller percentage = smaller slice = label already near edge = needs less padding
+                    const percentage = val;
+
+                    // Calculate extra padding: larger % gets more em-spaces
+                    // Using em-space (\u2003) for consistent visible spacing
+                    let extraPadding = 0;
+                    if (percentage >= 45) {
+                        extraPadding = 5; // Very large slice - needs most padding
+                    } else if (percentage >= 35) {
+                        extraPadding = 2; // Large slice
+                    } else if (percentage >= 25) {
+                        extraPadding = 0; // Medium slice
+                    }
+                    // < 25% no extra padding needed - small slice, label already near edge
+
+                    const emSpace = '\u2003'; // Unicode em-space for visible spacing
+                    const padding = emSpace.repeat(extraPadding);
+                    return padding + val.toFixed(1) + '%';
+                },
+                style: {
+                    fontSize: '0.8125rem',
+                    fontWeight: String(fontWeight.semibold),
+                    colors: [theme.palette.text.primary],
+                },
+                background: {
+                    enabled: false,
+                },
+                dropShadow: {
+                    enabled: false
+                },
+            },
+            plotOptions: {
+                pie: {
+                    dataLabels: {
+                        offset: baseOffset,
+                        minAngleToShowLabel: 5
+                    }
+                },
+                polarArea: {
+                    rings: {
+                        strokeWidth: 0
+                    },
+                    spokes: {
+                        strokeWidth: 0
+                    },
+                }
+            },
+            yaxis: {
+                show: false
+            },
+            tooltip: {
+                enabled: false,
+            }
+        };
+
+        return (
+            <Card sx={cardStyle}>
+                <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('lg'), fontWeight: fontWeight.semibold, mb: 0, textTransform: 'uppercase' }}>
+                        {title}
+                    </Typography>
+                    <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', my: -1 }}>
+                        <Box sx={{ width: '100%', maxWidth: '280px', height: '233px' }}>
+                            <Chart options={chartOptions} series={sortedSeries} type="polarArea" height="100%" width="100%" />
+                        </Box>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 0, flexWrap: 'wrap' }}>
+                        {sortedLabels.map((label, index) => (
+                            <Box key={label} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: sortedColors[index] }} />
+                                <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium }}>
+                                    {label}
+                                </Typography>
+                            </Box>
+                        ))}
+                    </Box>
+                </Box>
+            </Card>
+        );
+    };
+
+    // ===== DATA PROCESSING =====
+
+    // 1. Stock Data (Gainers / Losers)
+    // Custom Sort Score: close * pct_change * volume * vsi
+    // Top Tăng: Highest Positive Score (Desc)
+    // Top Giảm: Highest Negative Score (Asc)
+
+    const getScore = (s: StockData) => {
+        const vsi = s.vsi || 0;
+        return s.pct_change * Math.max(vsi, 5);
+    };
+    const filteredStockData = stockData.filter(s => s.vsi < 5 && s.volume > 500000);
+    // Create a copy to sort
+    const sortedByScore = [...filteredStockData].sort((a, b) => getScore(b) - getScore(a));
+
+    // For gainers, we want the highest positive scores
+    const topGainers = sortedByScore.filter(s => s.pct_change > 0).slice(0, 5);
+
+    // For losers, we want the most negative scores (lowest values)
+    // Since sortedByScore is Descending, the most negative will be at the end.
+    // Or we can just sort ascending for losers.
+    const topLosers = [...filteredStockData]
+        .filter(s => s.pct_change < 0)
+        .sort((a, b) => getScore(a) - getScore(b))
+        .slice(0, 5);
+
+    const stockSlides: Slide[] = [
+        {
+            id: 'top-gainers',
+            component: renderStockSlide("Top Cổ Phiếu Tăng Giá", topGainers, theme.palette.success.main)
+        },
+        {
+            id: 'top-losers',
+            component: renderStockSlide("Top Cổ Phiếu Giảm Giá", topLosers, theme.palette.error.main)
+        },
+    ];
+
+    // 2. Foreign Data (Buy / Sell)
+    const topNetBuy = [...foreignData].filter(x => x.net_value > 0).sort((a, b) => b.net_value - a.net_value).slice(0, 5);
+    const topNetSell = [...foreignData].filter(x => x.net_value < 0).sort((a, b) => a.net_value - b.net_value).slice(0, 5);
+
+    const foreignSlides: Slide[] = [
+        {
+            id: 'net-buy',
+            component: renderNNSlide("Top Khối Ngoại Mua Ròng", topNetBuy, theme.palette.success.main)
+        },
+        {
+            id: 'net-sell',
+            component: renderNNSlide("Top Khối Ngoại Bán Ròng", topNetSell, theme.palette.error.main)
+        }
+    ];
+
+    // 3. Market Breadth Data
+    // 3a. Price Change (pct_change)
+    const priceIncrease = stockData.filter(s => s.pct_change > 0).length;
+    const priceDecrease = stockData.filter(s => s.pct_change < 0).length;
+    const priceUnchanged = stockData.filter(s => s.pct_change === 0).length;
+
+    // 3b. Flow Score (t0_score)
+    const flowPositive = stockData.filter(s => s.t0_score > 0).length;
+    const flowNegative = stockData.filter(s => s.t0_score < 0).length;
+    const flowNeutral = stockData.filter(s => s.t0_score === 0).length;
+
+    const breadthSlides: Slide[] = [
+        {
+            id: 'breadth-price',
+            component: renderBreadthSlide(
+                "Độ rộng thị trường",
+                [priceIncrease, priceDecrease, priceUnchanged],
+                ['Tăng giá', 'Giảm giá', 'Không đổi'],
+                [theme.palette.success.main, theme.palette.error.main, STOCK_REF_YELLOW]
+            )
+        },
+        {
+            id: 'breadth-flow',
+            component: renderBreadthSlide(
+                "Độ rộng dòng tiền",
+                [flowPositive, flowNegative, flowNeutral],
+                ['Tiền vào', 'Tiền ra', 'Không đổi'],
+                [theme.palette.success.main, theme.palette.error.main, STOCK_REF_YELLOW]
+            )
+        }
+    ];
+
+    const AUTO_PLAY_INTERVAL = 6000;
+
+    return (
+        <Box>
+            <Typography sx={{ fontSize: getResponsiveFontSize('h4'), fontWeight: fontWeight.bold, mb: 2 }}>
+                Diễn biến thị trường
+            </Typography>
+
+            <Box sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
+                gap: { xs: 2, md: 3 },
+            }}>
+                {/* Column 1: Market Breadth (Donut Charts) */}
+                <Box>
+                    <Carousel
+                        slides={breadthSlides}
+                        minHeight="240px"
+                        autoPlayInterval={AUTO_PLAY_INTERVAL + 4000}
+                    />
+                </Box>
+
+                {/* Column 2: Top Biến Động (Gainers / Losers) */}
+                <Box>
+                    <Carousel
+                        slides={stockSlides}
+                        minHeight="240px"
+                        autoPlayInterval={AUTO_PLAY_INTERVAL}
+                    />
+                </Box>
+
+                {/* Column 3: Khối Ngoại (Buy / Sell) */}
+                <Box>
+                    <Carousel
+                        slides={foreignSlides}
+                        minHeight="240px"
+                        autoPlayInterval={AUTO_PLAY_INTERVAL + 2000}
+                    />
+                </Box>
+            </Box>
+        </Box>
+    );
+}

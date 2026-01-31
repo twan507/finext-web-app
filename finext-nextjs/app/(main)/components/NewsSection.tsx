@@ -279,18 +279,17 @@ function NewsColumn({ title, href, loading, newsItems, reportItems }: NewsColumn
             >
                 <Link href={href} style={{ textDecoration: 'none' }}>
                     <Typography
-                        variant="h6"
                         className="column-title"
                         sx={{
-                            fontWeight: fontWeight.bold,
                             fontSize: getResponsiveFontSize('lg'),
-                            color: 'primary.main',
+                            fontWeight: 'bold',
+                            color: 'text.secondary',
                             textTransform: 'uppercase',
-                            letterSpacing: '0.5px',
+                            mb: 1,
                             transition: transitions.hover,
-                            display: 'inline-block', // Only make text clickable
+                            display: 'inline-block',
                             '&:hover': {
-                                color: 'primary.dark',
+                                color: 'text.primary',
                             },
                         }}
                     >

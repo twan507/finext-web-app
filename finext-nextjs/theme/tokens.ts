@@ -166,7 +166,7 @@ export const lightThemePalette: PaletteOptions = {
   },
   text: {
     primary: 'rgba(0, 0, 0, 0.95)',
-    secondary: 'rgba(0, 0, 0, 0.75)',
+    secondary: 'rgba(0, 0, 0, 0.67)',
     disabled: 'rgba(0, 0, 0, 0.38)',
   },
   divider: 'rgba(0, 0, 0, 0.12)',

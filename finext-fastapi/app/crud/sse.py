@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 # ==============================================================================
 
 # Định nghĩa các database names
-DB_TEMP_STOCK = "temp_stock"
-DB_TEMP_REF = "temp_ref"
+STOCK_DB = "stock_db"
+REF_DB = "ref_db"
 
 # Cấu hình timeout và retry
 MAX_RETRIES = 3
@@ -125,7 +125,7 @@ async def get_collection_data(
 
 async def home_itd_index(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
     """Lấy dữ liệu ITD index theo ticker. Database: temp_stock."""
-    stock_db = get_database(DB_TEMP_STOCK)
+    stock_db = get_database(STOCK_DB)
 
     # ITD chỉ cần close để vẽ line chart, không cần open/high/low
     projection = {"_id": 0, "ticker": 1, "ticker_name": 1, "date": 1, "close": 1, "volume": 1, "diff": 1, "pct_change": 1}
@@ -144,7 +144,7 @@ async def home_today_index(ticker: Optional[str] = None, **kwargs) -> Dict[str, 
     Returns:
         List[Dict] - danh sách các records từ today_index
     """
-    stock_db = get_database(DB_TEMP_STOCK)
+    stock_db = get_database(STOCK_DB)
 
     # Query today_index collection
     projection = {
@@ -172,7 +172,7 @@ async def home_hist_index(ticker: Optional[str] = None, **kwargs) -> Dict[str, A
     Lấy dữ liệu history index theo ticker (chỉ history, không bao gồm today).
     Database: temp_stock.
     """
-    stock_db = get_database(DB_TEMP_STOCK)
+    stock_db = get_database(STOCK_DB)
 
     projection = {
         "_id": 0,
@@ -203,7 +203,7 @@ async def news_categories(**kwargs) -> Dict[str, Any]:
     Returns:
         Dict chứa danh sách categories với category và category_name
     """
-    stock_db = get_database(DB_TEMP_STOCK)
+    stock_db = get_database(STOCK_DB)
     collection = stock_db.get_collection("news_daily")
 
     # Sử dụng aggregation để lấy distinct categories
@@ -225,6 +225,84 @@ async def news_categories(**kwargs) -> Dict[str, Any]:
         "items": categories,
         "total": len(categories),
     }
+
+
+async def home_today_stock(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+    """
+    Lấy dữ liệu today của các mã cổ phiếu (stocks).
+    Database: temp_stock.
+    Collection: today_stock.
+    """
+    stock_db = get_database(STOCK_DB)
+
+    projection = {
+        "_id": 0,
+        "ticker": 1,
+        "open": 1,
+        "high": 1,
+        "low": 1,
+        "close": 1,
+        "volume": 1,
+        "industry_name": 1,
+        "pct_change": 1,
+        "t0_score": 1,
+        "top100": 1,
+        "vsi": 1,
+    }
+
+    find_query = {"ticker": ticker} if ticker else {}
+
+    # Nếu không có ticker, có thể cần limit hoặc filter gì đó để tránh lấy ALL stocks nếu collection quá lớn
+    # Nhưng theo yêu cầu chỉ là lấy dữ liệu, ta cứ lấy hết nếu không có ticker, hoặc theo logic hiện tại
+
+    today_df = await get_collection_data(stock_db, "today_stock", find_query=find_query, projection=projection)
+
+    return today_df.to_dict(orient="records")
+
+
+async def home_nn_stock(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+    """
+    Lấy dữ liệu nước ngoài (NN) trading.
+    1. Lấy max date từ ref_db.date_series.
+    2. Query stock_db.nntd_stock với type='NN' và date=max_date.
+    """
+    # 1. Lấy max date từ ref_db
+    ref_db = get_database(REF_DB)
+
+    # Query date_series, sort date desc, limit 1
+    date_series_df = await get_collection_data(ref_db, "date_series", find_query={}, projection={"date": 1, "_id": 0}, sort=[("date", -1)])
+
+    if date_series_df.empty:
+        logger.warning("No date found in ref_db.date_series")
+        return []
+
+    # Lấy max_date (giả sử format date giống nhau giữa 2 collection)
+    max_date = date_series_df.iloc[0]["date"]
+    logger.debug(f"Max date from ref_db.date_series: {max_date}")
+
+    # 2. Query stock_db.nntd_stock
+    stock_db = get_database(STOCK_DB)
+
+    projection = {
+        "_id": 0,
+        "date": 1,
+        "ticker": 1,
+        "sell_volume": 1,
+        "buy_volume": 1,
+        "sell_value": 1,
+        "buy_value": 1,
+        "net_volume": 1,
+        "net_value": 1,
+        "type": 1,
+    }
+
+    find_query = {"type": "NN", "date": max_date}
+    if ticker:
+        find_query["ticker"] = ticker
+
+    nntd_df = await get_collection_data(stock_db, "nntd_stock", find_query=find_query, projection=projection)
+
+    return nntd_df.to_dict(orient="records")
 
 
 async def news_daily(
@@ -253,7 +331,7 @@ async def news_daily(
     Returns:
         Dict chứa data và pagination info
     """
-    stock_db = get_database(DB_TEMP_STOCK)
+    stock_db = get_database(STOCK_DB)
     collection = stock_db.get_collection("news_daily")
 
     # Build query
@@ -310,7 +388,7 @@ async def home_today_industry(ticker: Optional[str] = None, **kwargs) -> Dict[st
     Query từ collection today_index với filter type='industry'.
     Database: temp_stock.
     """
-    stock_db = get_database(DB_TEMP_STOCK)
+    stock_db = get_database(STOCK_DB)
 
     projection = {
         "_id": 0,
@@ -336,7 +414,7 @@ async def home_hist_industry(ticker: Optional[str] = None, **kwargs) -> Dict[str
     Query từ collection history_index với filter type='industry'.
     Database: temp_stock.
     """
-    stock_db = get_database(DB_TEMP_STOCK)
+    stock_db = get_database(STOCK_DB)
 
     projection = {
         "_id": 0,
@@ -375,7 +453,7 @@ async def news_report_categories(**kwargs) -> Dict[str, Any]:
     Returns:
         Dict chứa danh sách categories
     """
-    stock_db = get_database(DB_TEMP_STOCK)
+    stock_db = get_database(STOCK_DB)
     collection = stock_db.get_collection("news_report")
 
     # Sử dụng aggregation để lấy distinct categories với category_name
@@ -421,7 +499,7 @@ async def news_report(
     Returns:
         Dict chứa data và pagination info
     """
-    stock_db = get_database(DB_TEMP_STOCK)
+    stock_db = get_database(STOCK_DB)
     collection = stock_db.get_collection("news_report")
 
     # Build query
@@ -476,6 +554,9 @@ SSE_QUERY_REGISTRY: Dict[str, Any] = {
     "home_today_index": home_today_index,
     "home_itd_index": home_itd_index,
     "home_hist_index": home_hist_index,
+    # Stock queries
+    "home_today_stock": home_today_stock,
+    "home_nn_stock": home_nn_stock,
     # News queries
     "news_daily": news_daily,
     "news_categories": news_categories,

@@ -46,6 +46,11 @@ const NewsSection = dynamic(
     { loading: () => <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, my: 2 }} /> }
 );
 
+const MarketTrendSection = dynamic(
+    () => import('./components/MarketTrendSection'),
+    { loading: () => <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, my: 2 }} /> }
+);
+
 // Import API clients
 import { apiClient } from 'services/apiClient';
 import { ISseConnection, ISseRequest } from 'services/core/types';
@@ -287,6 +292,39 @@ export default function HomeContent() {
 
     const indexName = getTickerName();
 
+    // ========== LUỒNG 4: REST - Market Trend Data (Top Losers, NN Buy) ==========
+
+    // Fetch home_today_stock for Top Losers (sort logic in component)
+    const { data: todayStockData = [] } = useQuery({
+        queryKey: ['market', 'today_stock'],
+        queryFn: async () => {
+            const response = await apiClient<any[]>({
+                url: '/api/v1/sse/rest/home_today_stock',
+                method: 'GET',
+                requireAuth: false
+            });
+            return response.data || [];
+        },
+        staleTime: 60 * 1000,
+        refetchInterval: 60 * 1000, // Refresh every minute
+    });
+
+    // Fetch home_nn_stock for Foreign Net Buy
+    const { data: nnStockData = [] } = useQuery({
+        queryKey: ['market', 'nn_stock'],
+        queryFn: async () => {
+            const response = await apiClient<any[]>({
+                url: '/api/v1/sse/rest/home_nn_stock',
+                method: 'GET',
+                requireAuth: false
+            });
+            return response.data || [];
+        },
+        staleTime: 5 * 60 * 1000,
+        refetchInterval: 5 * 60 * 1000,
+    });
+
+
     return (
         <Box sx={{ py: 4 }}>
             {/* Mini Index Cards */}
@@ -323,6 +361,14 @@ export default function HomeContent() {
                     onIndexTabChange={setIndexTab}
                     onTickerChange={handleTableTickerChange}
                     todayAllData={todayAllData}
+                />
+            </Box>
+
+            {/* Section 1.5: Diễn biến thị trường */}
+            <Box sx={{ mt: 5 }}>
+                <MarketTrendSection
+                    stockData={todayStockData}
+                    foreignData={nnStockData}
                 />
             </Box>
 
