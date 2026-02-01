@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { Box, Skeleton } from '@mui/material';
@@ -51,10 +51,15 @@ const MarketTrendSection = dynamic(
     { loading: () => <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, my: 2 }} /> }
 );
 
+const IndustryStocksSection = dynamic(
+    () => import('./components/IndustryStocksSection'),
+    { loading: () => <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, my: 2 }} /> }
+);
+
 // Import API clients
 import { apiClient } from 'services/apiClient';
-import { ISseConnection, ISseRequest } from 'services/core/types';
-import { sseClient } from 'services/sseClient';
+import { ISseRequest } from 'services/core/types';
+import { sseClient, getFromCache } from 'services/sseClient';
 
 // Danh sách các index cho mini charts
 const MINI_CHART_INDEXES = [
@@ -94,17 +99,48 @@ export default function HomeContent() {
     // Track if component is mounted
     const isMountedRef = useRef<boolean>(true);
 
-    // SSE connection refs
-    const todaySseRef = useRef<ISseConnection | null>(null);
-    const itdSseRef = useRef<ISseConnection | null>(null);
+    // SSE subscription refs (for cleanup)
+    const todaySseRef = useRef<{ unsubscribe: () => void } | null>(null);
+    const itdSseRef = useRef<{ unsubscribe: () => void } | null>(null);
+    const todayStockSseRef = useRef<{ unsubscribe: () => void } | null>(null);
 
     // ========== STATE ==========
 
     // Today data (từ SSE home_today_index - cho TẤT CẢ indexes)
-    const [todayAllData, setTodayAllData] = useState<IndexDataByTicker>({});
+    // Khởi tạo từ cache nếu có
+    const [todayAllData, setTodayAllData] = useState<IndexDataByTicker>(() => {
+        const cached = getFromCache<RawMarketData[]>('home_today_index');
+        if (cached && Array.isArray(cached)) {
+            const grouped: IndexDataByTicker = {};
+            cached.forEach((item: RawMarketData) => {
+                const t = item.ticker;
+                if (t) {
+                    if (!grouped[t]) grouped[t] = [];
+                    grouped[t].push(item);
+                }
+            });
+            return grouped;
+        }
+        return {};
+    });
 
     // ITD data (từ SSE home_itd_index - cho TẤT CẢ indexes)
-    const [itdAllData, setItdAllData] = useState<IndexDataByTicker>({});
+    // Khởi tạo từ cache nếu có
+    const [itdAllData, setItdAllData] = useState<IndexDataByTicker>(() => {
+        const cached = getFromCache<RawMarketData[]>('home_itd_index');
+        if (cached && Array.isArray(cached)) {
+            const grouped: IndexDataByTicker = {};
+            cached.forEach((item: RawMarketData) => {
+                const t = item.ticker;
+                if (t) {
+                    if (!grouped[t]) grouped[t] = [];
+                    grouped[t].push(item);
+                }
+            });
+            return grouped;
+        }
+        return {};
+    });
 
     // Combined EOD data (history + today)
     const [eodData, setEodData] = useState<ChartData>(emptyChartData);
@@ -112,8 +148,29 @@ export default function HomeContent() {
     // Intraday data (transform từ itdAllData cho ticker hiện tại)
     const [intradayData, setIntradayData] = useState<ChartData>(emptyChartData);
 
+    // Today Stock data (từ SSE home_today_stock - cho Market Trend Section)
+    // Khởi tạo từ cache nếu có
+    const [todayStockData, setTodayStockData] = useState<any[]>(() => {
+        const cached = getFromCache<any[]>('home_today_stock');
+        return cached && Array.isArray(cached) ? cached : [];
+    });
+    const [isStockDataLoading, setIsStockDataLoading] = useState<boolean>(() => {
+        // Nếu có cache, không cần loading
+        const cached = getFromCache<any[]>('home_today_stock');
+        return !(cached && Array.isArray(cached) && cached.length > 0);
+    });
+
     // Loading & Error states
-    const [isLoading, setIsLoading] = useState<boolean>(true);
+    // Khởi tạo loading dựa trên cache có sẵn
+    const [isLoading, setIsLoading] = useState<boolean>(() => {
+        const todayCache = getFromCache<RawMarketData[]>('home_today_index');
+        // Nếu có cache today data cho ticker mặc định, có thể hiển thị ngay
+        if (todayCache && Array.isArray(todayCache)) {
+            const hasTodayForTicker = todayCache.some(item => item.ticker === 'VNINDEX');
+            return !hasTodayForTicker;
+        }
+        return true;
+    });
     const [error, setError] = useState<string | null>(null);
 
     // ========== LUỒNG 1: REST - History Data ==========
@@ -133,13 +190,13 @@ export default function HomeContent() {
     });
 
 
-    // ========== LUỒNG 2: SSE - Today All Indexes ==========
+    // ========== LUỒNG 2: SSE - Today All Indexes (với cache) ==========
     useEffect(() => {
         isMountedRef.current = true;
 
-        // Close existing connection
+        // Unsubscribe from existing connection
         if (todaySseRef.current) {
-            todaySseRef.current.close();
+            todaySseRef.current.unsubscribe();
             todaySseRef.current = null;
         }
 
@@ -148,50 +205,54 @@ export default function HomeContent() {
             queryParams: { keyword: 'home_today_index' }
         };
 
-        todaySseRef.current = sseClient<RawMarketData[]>(requestProps, {
-            onOpen: () => {
-                // Connected
-            },
-            onData: (receivedData) => {
-                if (isMountedRef.current && receivedData && Array.isArray(receivedData)) {
-                    // Group by ticker trên FE
-                    const grouped: IndexDataByTicker = {};
-                    receivedData.forEach((item: RawMarketData) => {
-                        const t = item.ticker;
-                        if (t) {
-                            if (!grouped[t]) grouped[t] = [];
-                            grouped[t].push(item);
-                        }
-                    });
-                    setTodayAllData(grouped);
+        todaySseRef.current = sseClient<RawMarketData[]>(
+            requestProps,
+            {
+                onOpen: () => {
+                    // Connected
+                },
+                onData: (receivedData) => {
+                    if (isMountedRef.current && receivedData && Array.isArray(receivedData)) {
+                        // Group by ticker trên FE
+                        const grouped: IndexDataByTicker = {};
+                        receivedData.forEach((item: RawMarketData) => {
+                            const t = item.ticker;
+                            if (t) {
+                                if (!grouped[t]) grouped[t] = [];
+                                grouped[t].push(item);
+                            }
+                        });
+                        setTodayAllData(grouped);
+                    }
+                },
+                onError: (sseError) => {
+                    if (isMountedRef.current) {
+                        console.warn('[SSE Today] Error:', sseError.message);
+                    }
+                },
+                onClose: () => {
+                    // Closed
                 }
             },
-            onError: (sseError) => {
-                if (isMountedRef.current) {
-                    console.warn('[SSE Today] Error:', sseError.message);
-                }
-            },
-            onClose: () => {
-                // Closed
-            }
-        });
+            { cacheTtl: 5 * 60 * 1000, useCache: true } // Cache 5 phút
+        );
 
         return () => {
             isMountedRef.current = false;
             if (todaySseRef.current) {
-                todaySseRef.current.close();
+                todaySseRef.current.unsubscribe();
             }
         };
     }, []); // Chỉ chạy 1 lần khi mount
 
-    // ========== LUỒNG 3: SSE - ITD All Indexes ==========
+    // ========== LUỒNG 3: SSE - ITD All Indexes (với cache) ==========
     // Gọi 1 SSE duy nhất để lấy ITD data cho TẤT CẢ indexes, sau đó lọc theo ticker
     useEffect(() => {
         isMountedRef.current = true;
 
-        // Close existing connection
+        // Unsubscribe from existing connection
         if (itdSseRef.current) {
-            itdSseRef.current.close();
+            itdSseRef.current.unsubscribe();
             itdSseRef.current = null;
         }
 
@@ -201,38 +262,42 @@ export default function HomeContent() {
             // Không truyền ticker -> lấy tất cả indexes
         };
 
-        itdSseRef.current = sseClient<RawMarketData[]>(requestProps, {
-            onOpen: () => {
-                // Connected
-            },
-            onData: (receivedData) => {
-                if (isMountedRef.current && receivedData && Array.isArray(receivedData)) {
-                    // Group by ticker trên FE
-                    const grouped: IndexDataByTicker = {};
-                    receivedData.forEach((item: RawMarketData) => {
-                        const t = item.ticker;
-                        if (t) {
-                            if (!grouped[t]) grouped[t] = [];
-                            grouped[t].push(item);
-                        }
-                    });
-                    setItdAllData(grouped);
+        itdSseRef.current = sseClient<RawMarketData[]>(
+            requestProps,
+            {
+                onOpen: () => {
+                    // Connected
+                },
+                onData: (receivedData) => {
+                    if (isMountedRef.current && receivedData && Array.isArray(receivedData)) {
+                        // Group by ticker trên FE
+                        const grouped: IndexDataByTicker = {};
+                        receivedData.forEach((item: RawMarketData) => {
+                            const t = item.ticker;
+                            if (t) {
+                                if (!grouped[t]) grouped[t] = [];
+                                grouped[t].push(item);
+                            }
+                        });
+                        setItdAllData(grouped);
+                    }
+                },
+                onError: (sseError) => {
+                    if (isMountedRef.current) {
+                        console.warn('[SSE ITD] Error:', sseError.message);
+                    }
+                },
+                onClose: () => {
+                    // Closed
                 }
             },
-            onError: (sseError) => {
-                if (isMountedRef.current) {
-                    console.warn('[SSE ITD] Error:', sseError.message);
-                }
-            },
-            onClose: () => {
-                // Closed
-            }
-        });
+            { cacheTtl: 5 * 60 * 1000, useCache: true } // Cache 5 phút
+        );
 
         return () => {
             isMountedRef.current = false;
             if (itdSseRef.current) {
-                itdSseRef.current.close();
+                itdSseRef.current.unsubscribe();
             }
         };
     }, []); // Chỉ chạy 1 lần khi mount
@@ -292,25 +357,56 @@ export default function HomeContent() {
 
     const indexName = getTickerName();
 
-    // ========== LUỒNG 4: REST - Market Trend Data (Top Losers, NN Buy) ==========
+    // ========== LUỒNG 4: SSE - Today Stock Data (với cache) ==========
+    useEffect(() => {
+        isMountedRef.current = true;
 
-    // Fetch home_today_stock for Top Losers (sort logic in component)
-    const { data: todayStockData = [] } = useQuery({
-        queryKey: ['market', 'today_stock'],
-        queryFn: async () => {
-            const response = await apiClient<any[]>({
-                url: '/api/v1/sse/rest/home_today_stock',
-                method: 'GET',
-                requireAuth: false
-            });
-            return response.data || [];
-        },
-        staleTime: 60 * 1000,
-        refetchInterval: 60 * 1000, // Refresh every minute
-    });
+        // Unsubscribe from existing connection
+        if (todayStockSseRef.current) {
+            todayStockSseRef.current.unsubscribe();
+            todayStockSseRef.current = null;
+        }
 
-    // Fetch home_nn_stock for Foreign Net Buy
-    const { data: nnStockData = [] } = useQuery({
+        const requestProps: ISseRequest = {
+            url: '/api/v1/sse/stream',
+            queryParams: { keyword: 'home_today_stock' }
+        };
+
+        todayStockSseRef.current = sseClient<any[]>(
+            requestProps,
+            {
+                onOpen: () => {
+                    // Connected
+                },
+                onData: (receivedData) => {
+                    if (isMountedRef.current && receivedData && Array.isArray(receivedData)) {
+                        setTodayStockData(receivedData);
+                        setIsStockDataLoading(false);
+                    }
+                },
+                onError: (sseError) => {
+                    if (isMountedRef.current) {
+                        console.warn('[SSE Today Stock] Error:', sseError.message);
+                    }
+                },
+                onClose: () => {
+                    // Closed
+                }
+            },
+            { cacheTtl: 5 * 60 * 1000, useCache: true } // Cache 5 phút
+        );
+
+        return () => {
+            isMountedRef.current = false;
+            if (todayStockSseRef.current) {
+                todayStockSseRef.current.unsubscribe();
+            }
+        };
+    }, []); // Chỉ chạy 1 lần khi mount
+
+    // ========== LUỒNG 5: REST - NN Stock Data ==========
+    // Fetch home_nn_stock for Foreign Net Buy/Sell (REST với interval 10s)
+    const { data: nnStockData = [], isLoading: isNnLoading } = useQuery({
         queryKey: ['market', 'nn_stock'],
         queryFn: async () => {
             const response = await apiClient<any[]>({
@@ -321,7 +417,7 @@ export default function HomeContent() {
             return response.data || [];
         },
         staleTime: 5 * 60 * 1000,
-        refetchInterval: 5 * 60 * 1000,
+        refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
     });
 
 
@@ -369,12 +465,18 @@ export default function HomeContent() {
                 <MarketTrendSection
                     stockData={todayStockData}
                     foreignData={nnStockData}
+                    isLoading={isStockDataLoading || isNnLoading}
                 />
             </Box>
 
             {/* Section 3: Ngành */}
             <Box sx={{ mt: 5 }}>
                 <IndustrySection todayAllData={todayAllData} itdAllData={itdAllData} />
+            </Box>
+
+            {/* Section 3.5: Cổ phiếu nổi bật theo ngành */}
+            <Box sx={{ mt: 5 }}>
+                <IndustryStocksSection stockData={todayStockData} isLoading={isStockDataLoading} />
             </Box>
 
 

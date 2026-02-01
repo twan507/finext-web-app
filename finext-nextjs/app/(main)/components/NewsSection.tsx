@@ -1,10 +1,44 @@
 'use client';
 
-import { Box, Typography, useTheme, Skeleton, Grid, Divider } from '@mui/material';
+import { Box, Typography, useTheme, Skeleton, Divider, keyframes, alpha } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import PublicIcon from '@mui/icons-material/Public';
+import ShowChartIcon from '@mui/icons-material/ShowChart';
+import DescriptionIcon from '@mui/icons-material/Description';
+import CampaignIcon from '@mui/icons-material/Campaign';
 import { spacing, getResponsiveFontSize, transitions, borderRadius, fontWeight } from 'theme/tokens';
+
+// ============================================================================
+// KEYFRAME ANIMATIONS
+// ============================================================================
+
+const pulseRing = keyframes`
+    0% {
+        transform: scale(0.8);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.5);
+        opacity: 0.4;
+    }
+    100% {
+        transform: scale(2);
+        opacity: 0;
+    }
+`;
+
+const pulseCore = keyframes`
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 currentColor;
+    }
+    50% {
+        transform: scale(1.1);
+        box-shadow: 0 0 8px 2px currentColor;
+    }
+`;
 
 
 import { apiClient } from 'services/apiClient';
@@ -36,10 +70,249 @@ interface NewsReport {
 
 interface NewsApiResponse {
     items: NewsArticle[];
+    pagination?: {
+        total: number;
+        page: number;
+        limit: number;
+        total_pages: number;
+    };
 }
 
 interface ReportApiResponse {
     items: NewsReport[];
+    pagination?: {
+        total: number;
+        page: number;
+        limit: number;
+        total_pages: number;
+    };
+}
+
+// News count API response interface
+interface NewsCountResponse {
+    date: string;
+    today_start: string;
+    sources: {
+        'chinhphu.vn'?: number;
+        'baochinhphu.vn'?: number;
+        'findata.vn'?: number;
+        'news_report'?: number;
+    };
+    total: number;
+}
+
+// ============================================================================
+// LIVE INDICATOR COMPONENT
+// ============================================================================
+
+function LiveIndicator() {
+    const theme = useTheme();
+    const liveColor = theme.palette.primary.main;
+
+    return (
+        <Box
+            sx={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 12,
+                height: 12,
+            }}
+        >
+            {/* Outer pulse ring */}
+            <Box
+                sx={{
+                    position: 'absolute',
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    backgroundColor: liveColor,
+                    animation: `${pulseRing} 2s ease-out infinite`,
+                }}
+            />
+            {/* Inner core dot */}
+            <Box
+                sx={{
+                    position: 'relative',
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    backgroundColor: liveColor,
+                    color: liveColor,
+                    animation: `${pulseCore} 2s ease-in-out infinite`,
+                    zIndex: 1,
+                }}
+            />
+        </Box>
+    );
+}
+
+// ============================================================================
+// NEWS STATS CARD COMPONENT
+// ============================================================================
+
+interface NewsStatsProps {
+    totalNews: number;
+    thongcaoCount: number;
+    macroCount: number;
+    stockCount: number;
+    reportCount: number;
+    isLoading: boolean;
+}
+
+function NewsStatsBar({ totalNews, thongcaoCount, macroCount, stockCount, reportCount, isLoading }: NewsStatsProps) {
+    const theme = useTheme();
+
+    const statsItems = [
+        {
+            label: 'Thông cáo',
+            count: thongcaoCount,
+            icon: <CampaignIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />,
+            color: theme.palette.success.main,
+        },
+        {
+            label: 'Vĩ mô',
+            count: macroCount,
+            icon: <PublicIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />,
+            color: theme.palette.info.main,
+        },
+        {
+            label: 'Chứng khoán',
+            count: stockCount,
+            icon: <ShowChartIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />,
+            color: theme.palette.primary.main,
+        },
+        {
+            label: 'Bản tin',
+            count: reportCount,
+            icon: <DescriptionIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />,
+            color: theme.palette.warning.main,
+        },
+    ];
+
+    return (
+        <Box
+            sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', md: 'row' },
+                alignItems: { xs: 'flex-start', md: 'center' },
+                justifyContent: 'space-between',
+                gap: { xs: 2, md: 3 },
+                mb: spacing.sm,
+            }}
+        >
+            {/* Total News with Live Indicator */}
+            <Box
+                sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    minWidth: { xs: '150px', md: '180px' },
+                    flexShrink: 0,
+                }}
+            >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography
+                        sx={{
+                            fontSize: getResponsiveFontSize('sm'),
+                            color: 'text.secondary',
+                            fontWeight: fontWeight.medium,
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
+                        Cập nhật hôm nay
+                    </Typography>
+                    <LiveIndicator />
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
+                    <Typography
+                        sx={{
+                            fontSize: getResponsiveFontSize('xl'),
+                            fontWeight: fontWeight.bold,
+                            color: 'text.primary',
+                        }}
+                    >
+                        {isLoading ? <Skeleton width={40} height={32} sx={{ display: 'inline-block' }} /> : totalNews}
+                    </Typography>
+                    <Typography
+                        sx={{
+                            fontSize: getResponsiveFontSize('md'),
+                            color: 'text.secondary',
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
+                        tin tức
+                    </Typography>
+                </Box>
+            </Box>
+
+            {/* Stats by Source */}
+            <Box
+                sx={{
+                    display: 'grid',
+                    gridTemplateColumns: {
+                        xs: 'repeat(2, 1fr)',
+                        sm: 'repeat(4, 1fr)',
+                        md: 'repeat(4, minmax(100px, 150px))'
+                    },
+                    gap: { xs: 2, md: 3, lg: 4 },
+                    width: { xs: '100%', md: 'auto' },
+                    justifyContent: { xs: 'flex-start', sm: 'flex-end' },
+                }}
+            >
+                {statsItems.map((item) => (
+                    <Box
+                        key={item.label}
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.5,
+                            minWidth: 0,
+                        }}
+                    >
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: { xs: 40, md: 48 },
+                                height: { xs: 40, md: 48 },
+                                borderRadius: `${borderRadius.md}px`,
+                                backgroundColor: alpha(item.color, 0.12),
+                                color: item.color,
+                                flexShrink: 0,
+                            }}
+                        >
+                            {item.icon}
+                        </Box>
+                        <Box sx={{ minWidth: 0, flex: 1 }}>
+                            <Typography
+                                sx={{
+                                    fontSize: getResponsiveFontSize('sm'),
+                                    color: 'text.secondary',
+                                    lineHeight: 1.3,
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
+                                {item.label}
+                            </Typography>
+                            <Typography
+                                sx={{
+                                    fontSize: getResponsiveFontSize('xl'),
+                                    fontWeight: fontWeight.bold,
+                                    color: item.color,
+                                    lineHeight: 1.2,
+                                }}
+                            >
+                                {isLoading ? <Skeleton width={30} height={28} /> : item.count}
+                            </Typography>
+                        </Box>
+                    </Box>
+                ))}
+            </Box>
+        </Box>
+    );
 }
 
 
@@ -253,30 +526,12 @@ interface NewsColumnProps {
     reportItems?: NewsReport[];
 }
 
-function NewsColumn({ title, href, loading, newsItems, reportItems }: NewsColumnProps) {
-    const theme = useTheme();
-
+// Content only (no background wrapper) - for use inside Carousel
+function NewsColumnContent({ title, href, loading, newsItems, reportItems }: NewsColumnProps) {
     return (
-        <Box
-            sx={{
-                backgroundColor: 'background.paper',
-                borderRadius: `${borderRadius.lg}px`,
-                overflow: 'hidden',
-                height: '100%',
-            }}
-        >
-            {/* Column Header - Sticky */}
-            <Box
-                sx={{
-                    display: 'block',
-                    position: 'sticky',
-                    top: 0,
-                    px: spacing.xs,
-                    py: spacing.xs,
-                    zIndex: 1,
-                    backgroundColor: 'background.paper',
-                }}
-            >
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', mb: 1 }}>
+            {/* Column Header */}
+            <Box sx={{ mb: 1 }}>
                 <Link href={href} style={{ textDecoration: 'none' }}>
                     <Typography
                         className="column-title"
@@ -285,7 +540,6 @@ function NewsColumn({ title, href, loading, newsItems, reportItems }: NewsColumn
                             fontWeight: 'bold',
                             color: 'text.secondary',
                             textTransform: 'uppercase',
-                            mb: 1,
                             transition: transitions.hover,
                             display: 'inline-block',
                             '&:hover': {
@@ -299,7 +553,7 @@ function NewsColumn({ title, href, loading, newsItems, reportItems }: NewsColumn
             </Box>
 
             {/* Content */}
-            <Box sx={{ px: spacing.xs }}>
+            <Box sx={{ flex: 1 }}>
                 {loading ? (
                     <>
                         {Array.from({ length: 5 }).map((_, index) => (
@@ -321,6 +575,29 @@ function NewsColumn({ title, href, loading, newsItems, reportItems }: NewsColumn
     );
 }
 
+// Full component with background wrapper - for Desktop grid
+function NewsColumn({ title, href, loading, newsItems, reportItems }: NewsColumnProps) {
+    return (
+        <Box
+            sx={{
+                backgroundColor: 'background.paper',
+                borderRadius: `${borderRadius.lg}px`,
+                overflow: 'hidden',
+                height: '100%',
+                p: spacing.xs,
+            }}
+        >
+            <NewsColumnContent
+                title={title}
+                href={href}
+                loading={loading}
+                newsItems={newsItems}
+                reportItems={reportItems}
+            />
+        </Box>
+    );
+}
+
 // ============================================================================
 // MAIN NEWS SECTION COMPONENT
 // ============================================================================
@@ -328,6 +605,35 @@ function NewsColumn({ title, href, loading, newsItems, reportItems }: NewsColumn
 export default function NewsSection() {
     const theme = useTheme();
     const router = useRouter();
+
+    // ========================================================================
+    // STATS API CALL - Fetch news counts for today from BE
+    // ========================================================================
+
+    const { data: newsCountData, isLoading: statsLoading } = useQuery({
+        queryKey: ['news', 'stats', 'count'],
+        queryFn: async () => {
+            const response = await apiClient<NewsCountResponse>({
+                url: '/api/v1/sse/rest/news_count',
+                method: 'GET',
+                requireAuth: false,
+            });
+            return response.data;
+        },
+        staleTime: 5 * 60 * 1000,
+        refetchInterval: 5 * 60 * 1000,
+    });
+
+    // Extract stats from response
+    const thongcaoCount = newsCountData?.sources?.['chinhphu.vn'] || 0;
+    const macroCount = newsCountData?.sources?.['baochinhphu.vn'] || 0;
+    const stockCount = newsCountData?.sources?.['findata.vn'] || 0;
+    const reportCount = newsCountData?.sources?.['news_report'] || 0;
+    const totalNews = newsCountData?.total || 0;
+
+    // ========================================================================
+    // NEWS LIST API CALLS - Fetch news for display (5 items each)
+    // ========================================================================
 
     // Fetch reports
     const { data: reportsData, isLoading: reportsLoading } = useQuery({
@@ -345,7 +651,9 @@ export default function NewsSection() {
                 requireAuth: false,
             });
             return response.data;
-        }
+        },
+        staleTime: 5 * 60 * 1000,
+        refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
     });
     const reports = reportsData?.items || [];
 
@@ -366,7 +674,9 @@ export default function NewsSection() {
                 requireAuth: false,
             });
             return response.data;
-        }
+        },
+        staleTime: 5 * 60 * 1000,
+        refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
     });
     const macroNews = macroNewsData?.items || [];
 
@@ -387,12 +697,14 @@ export default function NewsSection() {
                 requireAuth: false,
             });
             return response.data;
-        }
+        },
+        staleTime: 5 * 60 * 1000,
+        refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
     });
     const enterpriseNews = enterpriseNewsData?.items || [];
 
-    // Define the slides content
-    const slides = [
+    // Define the slides content for Desktop (with bg wrapper)
+    const desktopSlides = [
         {
             id: 'macro',
             component: (
@@ -428,6 +740,43 @@ export default function NewsSection() {
         }
     ];
 
+    // Define the slides content for Mobile Carousel (content only, no bg)
+    const mobileSlides = [
+        {
+            id: 'macro',
+            component: (
+                <NewsColumnContent
+                    title="TIN TỨC VĨ MÔ"
+                    href="/news"
+                    loading={macroLoading}
+                    newsItems={macroNews}
+                />
+            )
+        },
+        {
+            id: 'enterprise',
+            component: (
+                <NewsColumnContent
+                    title="THỊ TRƯỜNG CHỨNG KHOÁN"
+                    href="/news/category/ttck"
+                    loading={enterpriseLoading}
+                    newsItems={enterpriseNews}
+                />
+            )
+        },
+        {
+            id: 'reports',
+            component: (
+                <NewsColumnContent
+                    title="BẢN TIN HÀNG NGÀY"
+                    href="/reports"
+                    loading={reportsLoading}
+                    reportItems={reports}
+                />
+            )
+        }
+    ];
+
     return (
         <Box>
             {/* Title - Tin tức (clickable) */}
@@ -446,6 +795,16 @@ export default function NewsSection() {
                 <ChevronRightIcon sx={{ fontSize: getResponsiveFontSize('h2').md, mt: 1, color: theme.palette.text.secondary }} />
             </Box>
 
+            {/* News Stats Bar */}
+            <NewsStatsBar
+                totalNews={totalNews}
+                thongcaoCount={thongcaoCount}
+                macroCount={macroCount}
+                stockCount={stockCount}
+                reportCount={reportCount}
+                isLoading={statsLoading}
+            />
+
             {/* Content Container */}
             <Box>
                 {/* 1. Desktop View (Grid) */}
@@ -453,19 +812,26 @@ export default function NewsSection() {
                     sx={{
                         display: { xs: 'none', md: 'grid' },
                         gridTemplateColumns: 'repeat(3, 1fr)',
-                        gap: 3,
+                        gap: { md: 1.5, lg: 3 },
                     }}
                 >
-                    {slides.map((slide) => (
+                    {desktopSlides.map((slide) => (
                         <Box key={slide.id}>
                             {slide.component}
                         </Box>
                     ))}
                 </Box>
 
-                {/* 2. Mobile View (Carousel) */}
-                <Box sx={{ display: { xs: 'block', md: 'none' } }}>
-                    <Carousel slides={slides} />
+                {/* 2. Mobile View (Carousel) - Background outside, content inside */}
+                <Box
+                    sx={{
+                        display: { xs: 'block', md: 'none' },
+                        backgroundColor: 'background.paper',
+                        borderRadius: `${borderRadius.lg}px`,
+                        p: spacing.xs,
+                    }}
+                >
+                    <Carousel slides={mobileSlides} minHeight="420px" />
                 </Box>
             </Box>
         </Box>

@@ -184,7 +184,7 @@ export default function Carousel({
 
             {/* Dots Navigation */}
             {showDots && (
-                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1.5, mt: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1.5 }}>
                     {slides.map((_, i) => (
                         <Box
                             key={i}

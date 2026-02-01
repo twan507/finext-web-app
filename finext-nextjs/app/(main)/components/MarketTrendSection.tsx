@@ -1,8 +1,10 @@
 'use client';
 
-import { Box, Typography, useTheme, Card } from '@mui/material';
+import { Box, Typography, useTheme, Card, Skeleton } from '@mui/material';
 import Carousel, { Slide } from 'components/common/Carousel';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
+import { getPriceColor, getFlowColor, getVsiColor } from 'theme/colorHelpers';
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { ApexOptions } from 'apexcharts';
 
@@ -29,10 +31,85 @@ export interface NNStockData {
 interface MarketTrendSectionProps {
     stockData?: StockData[];
     foreignData?: NNStockData[];
+    isLoading?: boolean;
 }
 
-export default function MarketTrendSection({ stockData = [], foreignData = [] }: MarketTrendSectionProps) {
+export default function MarketTrendSection({ stockData = [], foreignData = [], isLoading = false }: MarketTrendSectionProps) {
     const theme = useTheme();
+
+    // Skeleton components for loading state
+    const renderTableSkeleton = (title: string) => (
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Skeleton variant="text" width={180} height={28} sx={{ mb: 1 }} />
+            <Box sx={{ flex: 1, overflow: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                        <tr>
+                            <th style={{ textAlign: 'left', padding: '4px 0' }}><Skeleton variant="text" width={70} height={20} /></th>
+                            <th style={{ textAlign: 'center', padding: '4px 25px' }}><Skeleton variant="text" width={50} height={20} /></th>
+                            <th style={{ textAlign: 'center', padding: '4px 0px' }}><Skeleton variant="text" width={70} height={20} /></th>
+                            <th style={{ textAlign: 'right', padding: '4px 0' }}><Skeleton variant="text" width={60} height={20} /></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {[1, 2, 3, 4, 5].map((i) => (
+                            <tr key={i}>
+                                <td style={{ padding: '8px 0' }}><Skeleton variant="text" width={50} height={24} /></td>
+                                <td style={{ padding: '8px 0', textAlign: 'center' }}><Skeleton variant="text" width={60} height={24} sx={{ mx: 'auto' }} /></td>
+                                <td style={{ padding: '8px 0', textAlign: 'center' }}><Skeleton variant="text" width={40} height={24} sx={{ mx: 'auto' }} /></td>
+                                <td style={{ padding: '8px 0', textAlign: 'right' }}><Skeleton variant="text" width={55} height={24} sx={{ ml: 'auto' }} /></td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </Box>
+        </Box>
+    );
+
+    const renderBreadthSkeleton = () => (
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Skeleton variant="text" width={160} height={28} sx={{ mb: 1 }} />
+            <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 180 }}>
+                <Skeleton variant="circular" width={160} height={160} />
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2, pt: 1 }}>
+                {[1, 2, 3].map((i) => (
+                    <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Skeleton variant="circular" width={10} height={10} />
+                        <Skeleton variant="text" width={50} height={16} />
+                    </Box>
+                ))}
+            </Box>
+        </Box>
+    );
+
+    const renderNNSkeleton = () => (
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Skeleton variant="text" width={200} height={28} sx={{ mb: 1 }} />
+            <Box sx={{ flex: 1, overflow: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                        <tr>
+                            <th style={{ textAlign: 'left', padding: '4px 0', width: '22.5%' }}><Skeleton variant="text" width={70} height={20} /></th>
+                            <th style={{ textAlign: 'center', padding: '4px 0', width: '50%' }}></th>
+                            <th style={{ textAlign: 'right', padding: '4px 0', width: '27.5%' }}><Skeleton variant="text" width={100} height={20} sx={{ ml: 'auto' }} /></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {[1, 2, 3, 4, 5].map((i) => (
+                            <tr key={i}>
+                                <td style={{ padding: '8px 0' }}><Skeleton variant="text" width={50} height={24} /></td>
+                                <td style={{ padding: '8px 0' }}>
+                                    <Skeleton variant="rounded" width={`${Math.random() * 50 + 30}%`} height={16} sx={{ borderRadius: 1 }} />
+                                </td>
+                                <td style={{ padding: '8px 0', textAlign: 'right' }}><Skeleton variant="text" width={60} height={24} sx={{ ml: 'auto' }} /></td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </Box>
+        </Box>
+    );
 
     const cardStyle = {
         bgcolor: 'background.paper',
@@ -46,143 +123,129 @@ export default function MarketTrendSection({ stockData = [], foreignData = [] }:
         flexDirection: 'column',
     };
 
-    // Helper to get color based on pct_change and exchange
-    // HSX/HOSE: ceil/floor at ±6.5%, HNX: ±9%, UPCOM: ±14%
-    const getPriceColor = (pctChange: number, exchange: string | undefined) => {
-        const pct = pctChange * 100; // Convert to percentage
-
-        // Normalize exchange to uppercase for comparison
-        // Default to HSX if exchange is undefined
-        const ex = (exchange || 'HSX').toUpperCase();
-
-        // Determine ceil/floor limits based on exchange
-        let limit = 6.5; // Default HSX/HOSE
-        if (ex === 'HNX' || ex.includes('HNX')) {
-            limit = 9;
-        } else if (ex === 'UPCOM' || ex.includes('UPCOM')) {
-            limit = 14;
-        }
-
-        // Check ceil/floor first
-        if (pct >= limit) return theme.palette.trend.ceil;
-        if (pct <= -limit) return theme.palette.trend.floor;
-
-        // Check ref (near zero: ±0.005%)
-        if (Math.abs(pct) <= 0.005) return theme.palette.trend.ref;
-
-        // Normal up/down
-        return pct > 0 ? theme.palette.trend.up : theme.palette.trend.down;
-    };
-
-    // Helper to get color based on VSI
-    // Helper to get color based on VSI
-    const getVsiColor = (vsi: number) => {
-        if (vsi < 0.6) return theme.palette.trend.floor; // Cyan/Blue (Sàn)
-        if (vsi < 0.9) return theme.palette.trend.down; // Red
-        if (vsi < 1.2) return theme.palette.trend.ref; // Yellow
-        if (vsi < 1.5) return theme.palette.trend.up; // Green
-        return theme.palette.trend.ceil; // Purple (Ceiling)
-    };
-
-    // Helper to render slide content WRAPPED in Card
+    // Helper to render slide content (data only, no Card wrapper)
     const renderStockSlide = (title: string, stocks: StockData[], color: string) => (
-        <Card sx={cardStyle}>
-            <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('lg'), fontWeight: fontWeight.semibold, mb: 1, textTransform: 'uppercase' }}>
-                    {title}
-                </Typography>
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('lg'), fontWeight: fontWeight.semibold, mb: 1, textTransform: 'uppercase' }}>
+                {title}
+            </Typography>
 
-                {/* Table Layout */}
-                <Box sx={{ flex: 1, overflow: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr>
-                                <th style={{ textAlign: 'left', padding: '4px 0', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Mã cổ phiếu</th>
-                                <th style={{ textAlign: 'center', padding: '4px 25px', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Giá (%)</th>
-                                <th style={{ textAlign: 'center', padding: '4px 0px', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Dòng tiền (+/-)</th>
-                                <th style={{ textAlign: 'right', padding: '4px 0', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Thanh khoản</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {stocks.map((stock) => {
-                                const stockColor = getPriceColor(stock.pct_change, stock.exchange);
-                                return (
-                                    <tr key={stock.ticker}>
-                                        <td style={{ padding: '8px 0', border: 'none' }}>
-                                            <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.semibold }}>{stock.ticker}</Typography>
-                                        </td>
-                                        <td style={{ padding: '8px 0', textAlign: 'center', border: 'none' }}>
-                                            <Typography color={stockColor} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                                                {(stock.pct_change * 100).toFixed(2)}%
+            {/* Table Layout */}
+            <Box sx={{ flex: 1, overflow: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                        <tr>
+                            <th style={{ textAlign: 'left', padding: '4px 0', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Mã cổ phiếu</th>
+                            <th style={{ textAlign: 'center', padding: '4px 25px', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Giá (%)</th>
+                            <th style={{ textAlign: 'center', padding: '4px 0px', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Dòng tiền (+/-)</th>
+                            <th style={{ textAlign: 'right', padding: '4px 0', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Thanh khoản</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {stocks.map((stock) => {
+                            const stockColor = getPriceColor(stock.pct_change, stock.exchange, theme);
+                            return (
+                                <tr key={stock.ticker}>
+                                    <td style={{ padding: '8px 0', border: 'none' }}>
+                                        <Link href={`/stock-analysis/${stock.ticker}`} style={{ textDecoration: 'none' }}>
+                                            <Typography
+                                                sx={{
+                                                    fontSize: getResponsiveFontSize('sm'),
+                                                    fontWeight: fontWeight.semibold,
+                                                    color: 'text.primary',
+                                                    '&:hover': {
+                                                        color: 'primary.main',
+                                                        cursor: 'pointer'
+                                                    }
+                                                }}
+                                            >
+                                                {stock.ticker}
                                             </Typography>
-                                        </td>
-                                        <td style={{ padding: '8px 0', textAlign: 'center', border: 'none' }}>
-                                            <Typography color={stockColor} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                                                {stock.t0_score > 0 ? '+' : ''}{(stock.t0_score).toFixed(1)}
-                                            </Typography>
-                                        </td>
-                                        <td style={{ padding: '8px 0', textAlign: 'right', border: 'none' }}>
-                                            <Typography color={stock.vsi ? getVsiColor(stock.vsi) : 'text.secondary'} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium }}>
-                                                {stock.vsi ? `${(stock.vsi * 100).toFixed(2)}%` : '-'}
-                                            </Typography>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </Box>
+                                        </Link>
+                                    </td>
+                                    <td style={{ padding: '8px 0', textAlign: 'center', border: 'none' }}>
+                                        <Typography color={stockColor} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                                            {(stock.pct_change * 100).toFixed(2)}%
+                                        </Typography>
+                                    </td>
+                                    <td style={{ padding: '8px 0', textAlign: 'center', border: 'none' }}>
+                                        <Typography color={getFlowColor(stock.t0_score, theme)} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                                            {stock.t0_score > 0 ? '+' : ''}{(stock.t0_score).toFixed(1)}
+                                        </Typography>
+                                    </td>
+                                    <td style={{ padding: '8px 0', textAlign: 'right', border: 'none' }}>
+                                        <Typography color={stock.vsi ? getVsiColor(stock.vsi, theme) : 'text.secondary'} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium }}>
+                                            {stock.vsi ? `${(stock.vsi * 100).toFixed(2)}%` : '-'}
+                                        </Typography>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
             </Box>
-        </Card>
+        </Box>
     );
 
     const renderNNSlide = (title: string, stocks: NNStockData[], color: string) => {
         const maxVal = Math.max(...stocks.map(s => Math.abs(s.net_value)));
 
         return (
-            <Card sx={cardStyle}>
-                <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
-                    <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('lg'), fontWeight: fontWeight.semibold, mb: 1, textTransform: 'uppercase' }}>
-                        {title}
-                    </Typography>
-                    <Box sx={{ flex: 1, overflow: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <thead>
-                                <tr>
-                                    <th style={{ textAlign: 'left', padding: '4px 0', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem', width: '22.5%' }}>Mã cổ phiếu </th>
-                                    <th style={{ textAlign: 'center', padding: '4px 0', border: 'none', width: '50%' }}></th>
-                                    <th style={{ textAlign: 'right', padding: '4px 0', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem', width: '27.5%' }}>Giá trị giao dịch</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {stocks.map((stock) => (
-                                    <tr key={stock.ticker}>
-                                        <td style={{ padding: '8px 0', border: 'none' }}>
-                                            <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.semibold }}>{stock.ticker}</Typography>
-                                        </td>
-                                        <td style={{ padding: '8px 0', border: 'none', verticalAlign: 'middle' }}>
-                                            <Box sx={{ width: '100%', display: 'flex', alignItems: 'center' }}>
-                                                <Box sx={{
-                                                    width: `${Math.max((Math.abs(stock.net_value) / maxVal) * 100, 1)}%`,
-                                                    height: 16,
-                                                    bgcolor: color,
-                                                    borderRadius: 1,
-                                                    my: 0.5
-                                                }} />
-                                            </Box>
-                                        </td>
-                                        <td style={{ padding: '8px 0', textAlign: 'right', border: 'none' }}>
-                                            <Typography color={color} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium }}>
-                                                {stock.net_value.toFixed(2)}T
+            <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('lg'), fontWeight: fontWeight.semibold, mb: 1, textTransform: 'uppercase' }}>
+                    {title}
+                </Typography>
+                <Box sx={{ flex: 1, overflow: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr>
+                                <th style={{ textAlign: 'left', padding: '4px 0', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem', width: '22.5%' }}>Mã cổ phiếu </th>
+                                <th style={{ textAlign: 'center', padding: '4px 0', border: 'none', width: '50%' }}></th>
+                                <th style={{ textAlign: 'right', padding: '4px 0', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem', width: '27.5%' }}>Giá trị giao dịch</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {stocks.map((stock) => (
+                                <tr key={stock.ticker}>
+                                    <td style={{ padding: '8px 0', border: 'none' }}>
+                                        <Link href={`/stock-analysis/${stock.ticker}`} style={{ textDecoration: 'none' }}>
+                                            <Typography
+                                                sx={{
+                                                    fontSize: getResponsiveFontSize('sm'),
+                                                    fontWeight: fontWeight.semibold,
+                                                    color: 'text.primary',
+                                                    '&:hover': {
+                                                        color: 'primary.main',
+                                                        cursor: 'pointer'
+                                                    }
+                                                }}
+                                            >
+                                                {stock.ticker}
                                             </Typography>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </Box>
+                                        </Link>
+                                    </td>
+                                    <td style={{ padding: '8px 0', border: 'none', verticalAlign: 'middle' }}>
+                                        <Box sx={{ width: '100%', display: 'flex', alignItems: 'center' }}>
+                                            <Box sx={{
+                                                width: `${Math.max((Math.abs(stock.net_value) / maxVal) * 100, 1)}%`,
+                                                height: 16,
+                                                bgcolor: color,
+                                                borderRadius: 1,
+                                                my: 0.5
+                                            }} />
+                                        </Box>
+                                    </td>
+                                    <td style={{ padding: '8px 0', textAlign: 'right', border: 'none' }}>
+                                        <Typography color={color} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium }}>
+                                            {stock.net_value.toFixed(2)}T
+                                        </Typography>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </Box>
-            </Card>
+            </Box>
         );
     };
 
@@ -291,28 +354,26 @@ export default function MarketTrendSection({ stockData = [], foreignData = [] }:
         };
 
         return (
-            <Card sx={cardStyle}>
-                <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
-                    <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('lg'), fontWeight: fontWeight.semibold, mb: 0, textTransform: 'uppercase' }}>
-                        {title}
-                    </Typography>
-                    <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', my: -1 }}>
-                        <Box sx={{ width: '100%', maxWidth: '280px', height: '233px' }}>
-                            <Chart options={chartOptions} series={sortedSeries} type="polarArea" height="100%" width="100%" />
-                        </Box>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 0, flexWrap: 'wrap' }}>
-                        {sortedLabels.map((label, index) => (
-                            <Box key={label} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: sortedColors[index] }} />
-                                <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium }}>
-                                    {label}
-                                </Typography>
-                            </Box>
-                        ))}
+            <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('lg'), fontWeight: fontWeight.semibold, mb: 0, textTransform: 'uppercase' }}>
+                    {title}
+                </Typography>
+                <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', my: -1 }}>
+                    <Box sx={{ width: '100%', maxWidth: '280px', height: '233px' }}>
+                        <Chart options={chartOptions} series={sortedSeries} type="polarArea" height="100%" width="100%" />
                     </Box>
                 </Box>
-            </Card>
+                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 0, flexWrap: 'wrap' }}>
+                    {sortedLabels.map((label, index) => (
+                        <Box key={label} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: sortedColors[index] }} />
+                            <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium }}>
+                                {label}
+                            </Typography>
+                        </Box>
+                    ))}
+                </Box>
+            </Box>
         );
     };
 
@@ -404,6 +465,19 @@ export default function MarketTrendSection({ stockData = [], foreignData = [] }:
     const STOCKS_INTERVAL = 10000;
     const FOREIGN_INTERVAL = 8000;
 
+    // Skeleton slides for loading state
+    const skeletonBreadthSlides: Slide[] = [
+        { id: 'skeleton-breadth', component: renderBreadthSkeleton() }
+    ];
+
+    const skeletonStockSlides: Slide[] = [
+        { id: 'skeleton-stock', component: renderTableSkeleton('Loading...') }
+    ];
+
+    const skeletonForeignSlides: Slide[] = [
+        { id: 'skeleton-foreign', component: renderNNSkeleton() }
+    ];
+
     return (
         <Box>
             <Typography sx={{ fontSize: getResponsiveFontSize('h4'), fontWeight: fontWeight.bold, mb: 2 }}>
@@ -413,34 +487,40 @@ export default function MarketTrendSection({ stockData = [], foreignData = [] }:
             <Box sx={{
                 display: 'grid',
                 gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
-                gap: { xs: 2, md: 3 },
+                gap: { md: 1.5, lg: 3 },
             }}>
                 {/* Column 1: Market Breadth (Donut Charts) */}
-                <Box>
-                    <Carousel
-                        slides={breadthSlides}
-                        minHeight="240px"
-                        autoPlayInterval={BREADTH_INTERVAL}
-                    />
-                </Box>
+                <Card sx={cardStyle}>
+                    <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <Carousel
+                            slides={isLoading ? skeletonBreadthSlides : breadthSlides}
+                            minHeight="280px"
+                            autoPlayInterval={isLoading ? 0 : BREADTH_INTERVAL}
+                        />
+                    </Box>
+                </Card>
 
                 {/* Column 2: Top Biến Động (Gainers / Losers) */}
-                <Box>
-                    <Carousel
-                        slides={stockSlides}
-                        minHeight="240px"
-                        autoPlayInterval={STOCKS_INTERVAL}
-                    />
-                </Box>
+                <Card sx={cardStyle}>
+                    <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <Carousel
+                            slides={isLoading ? skeletonStockSlides : stockSlides}
+                            minHeight="280px"
+                            autoPlayInterval={isLoading ? 0 : STOCKS_INTERVAL}
+                        />
+                    </Box>
+                </Card>
 
                 {/* Column 3: Khối Ngoại (Buy / Sell) */}
-                <Box>
-                    <Carousel
-                        slides={foreignSlides}
-                        minHeight="240px"
-                        autoPlayInterval={FOREIGN_INTERVAL}
-                    />
-                </Box>
+                <Card sx={cardStyle}>
+                    <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <Carousel
+                            slides={isLoading ? skeletonForeignSlides : foreignSlides}
+                            minHeight="280px"
+                            autoPlayInterval={isLoading ? 0 : FOREIGN_INTERVAL}
+                        />
+                    </Box>
+                </Card>
             </Box>
         </Box>
     );
