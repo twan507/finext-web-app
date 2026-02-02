@@ -16,7 +16,7 @@ export interface StockData {
     close: number;
     vsi: number;
     t0_score: number;
-    top100: number;
+    vsma5: number;
 }
 
 interface IndustryStocksSectionProps {
@@ -106,7 +106,7 @@ export default function IndustryStocksSection({ stockData = [], isLoading = fals
         groupMap.forEach((stocks, industryName) => {
             // Filter stocks with good volume and vsi, then sort by score
             const filteredStocks = stocks
-                .filter(s => s.vsi < 5 && s.volume > 100000) // Same filter as MarketTrendSection
+                .filter(s => s.vsi < 5 && s.vsma5 > 100000) // Same filter as MarketTrendSection
                 .sort((a, b) => getScore(b) - getScore(a)) // Sort by score descending
                 .slice(0, 5);
 

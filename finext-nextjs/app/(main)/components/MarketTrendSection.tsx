@@ -19,7 +19,7 @@ export interface StockData {
     close: number;
     vsi: number;
     t0_score: number;
-    top100: number;
+    vsma5: number;
 }
 
 export interface NNStockData {
@@ -249,28 +249,9 @@ export default function MarketTrendSection({ stockData = [], foreignData = [], i
         );
     };
 
-    // const STOCK_REF_YELLOW = '#F5C924'; // REMOVED (Replaced by theme.palette.trend.ref)
 
     const renderBreadthSlide = (title: string, series: number[], labels: string[], colors: string[]) => {
         const total = series.reduce((a, b) => a + b, 0);
-
-        // Sort data by value descending (largest first)
-        const combined = series.map((value, index) => ({
-            value,
-            label: labels[index],
-            color: colors[index]
-        }));
-        combined.sort((a, b) => b.value - a.value);
-
-        const sortedSeries = combined.map(item => item.value);
-        const sortedLabels = combined.map(item => item.label);
-        const sortedColors = combined.map(item => item.color);
-
-        // Calculate dynamic offset based on max value - smaller values need less offset
-        const maxValue = Math.max(...series);
-        const minValue = Math.min(...series);
-        // Base offset for the largest slice, smaller slices will have extra padding in formatter
-        const baseOffset = 0;
 
         const chartOptions: ApexOptions = {
             chart: {
@@ -281,8 +262,8 @@ export default function MarketTrendSection({ stockData = [], foreignData = [], i
                 animations: { enabled: false },
                 sparkline: { enabled: false }
             },
-            labels: sortedLabels,
-            colors: sortedColors,
+            labels: labels,
+            colors: colors,
             stroke: {
                 show: false,
                 width: 0
@@ -296,34 +277,20 @@ export default function MarketTrendSection({ stockData = [], foreignData = [], i
             dataLabels: {
                 enabled: true,
                 formatter: function (val: number) {
-                    // Dynamic padding based on actual percentage value
-                    // Larger percentage = larger slice radius = label is deeper inside area = needs more padding
-                    // Smaller percentage = smaller slice = label already near edge = needs less padding
-                    const percentage = val;
-
-                    // Calculate extra padding: larger % gets more em-spaces
-                    // Using em-space (\u2003) for consistent visible spacing
-                    let extraPadding = 0;
-                    if (percentage >= 45) {
-                        extraPadding = 5; // Very large slice - needs most padding
-                    } else if (percentage >= 35) {
-                        extraPadding = 2; // Large slice
-                    } else if (percentage >= 25) {
-                        extraPadding = 0; // Medium slice
-                    }
-                    // < 25% no extra padding needed - small slice, label already near edge
-
-                    const emSpace = '\u2003'; // Unicode em-space for visible spacing
-                    const padding = emSpace.repeat(extraPadding);
-                    return padding + val.toFixed(1) + '%';
+                    return val.toFixed(1) + '%';
                 },
                 style: {
-                    fontSize: '0.8125rem',
+                    fontSize: '0.75rem',
                     fontWeight: String(fontWeight.semibold),
-                    colors: [theme.palette.text.primary],
                 },
                 background: {
-                    enabled: false,
+                    enabled: true,
+                    foreColor: theme.palette.text.primary,
+                    backgroundColor: theme.palette.background.paper,
+                    borderRadius: 2,
+                    padding: 4,
+                    opacity: 1,
+                    borderWidth: 0,
                 },
                 dropShadow: {
                     enabled: false
@@ -332,7 +299,7 @@ export default function MarketTrendSection({ stockData = [], foreignData = [], i
             plotOptions: {
                 pie: {
                     dataLabels: {
-                        offset: baseOffset,
+                        offset: 0,
                         minAngleToShowLabel: 5
                     }
                 },
@@ -360,13 +327,13 @@ export default function MarketTrendSection({ stockData = [], foreignData = [], i
                 </Typography>
                 <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', my: -1 }}>
                     <Box sx={{ width: '100%', maxWidth: '280px', height: '233px' }}>
-                        <Chart options={chartOptions} series={sortedSeries} type="polarArea" height="100%" width="100%" />
+                        <Chart key={theme.palette.mode} options={chartOptions} series={series} type="polarArea" height="100%" width="100%" />
                     </Box>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 0, flexWrap: 'wrap' }}>
-                    {sortedLabels.map((label, index) => (
+                    {labels.map((label, index) => (
                         <Box key={label} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: sortedColors[index] }} />
+                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: colors[index] }} />
                             <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium }}>
                                 {label}
                             </Typography>
@@ -388,7 +355,7 @@ export default function MarketTrendSection({ stockData = [], foreignData = [], i
         const vsi = s.vsi || 0;
         return s.pct_change * Math.max(vsi, 5);
     };
-    const filteredStockData = stockData.filter(s => s.vsi < 5 && s.volume > 500000);
+    const filteredStockData = stockData.filter(s => s.vsi < 5 && s.vsma5 > 500000);
     // Create a copy to sort
     const sortedByScore = [...filteredStockData].sort((a, b) => getScore(b) - getScore(a));
 
@@ -445,18 +412,18 @@ export default function MarketTrendSection({ stockData = [], foreignData = [], i
             id: 'breadth-price',
             component: renderBreadthSlide(
                 "Độ rộng thị trường",
-                [priceIncrease, priceDecrease, priceUnchanged],
-                ['Tăng giá', 'Giảm giá', 'Không đổi'],
-                [theme.palette.trend.up, theme.palette.trend.down, theme.palette.trend.ref]
+                [priceIncrease, priceUnchanged, priceDecrease],
+                ['Tăng giá', 'Không đổi', 'Giảm giá'],
+                [theme.palette.trend.up, theme.palette.trend.ref, theme.palette.trend.down]
             )
         },
         {
             id: 'breadth-flow',
             component: renderBreadthSlide(
                 "Độ rộng dòng tiền",
-                [flowPositive, flowNegative, flowNeutral],
-                ['Tiền vào', 'Tiền ra', 'Không đổi'],
-                [theme.palette.trend.up, theme.palette.trend.down, theme.palette.trend.ref]
+                [flowPositive, flowNeutral, flowNegative],
+                ['Tiền vào', 'Không đổi', 'Tiền ra'],
+                [theme.palette.trend.up, theme.palette.trend.ref, theme.palette.trend.down]
             )
         }
     ];
@@ -487,7 +454,7 @@ export default function MarketTrendSection({ stockData = [], foreignData = [], i
             <Box sx={{
                 display: 'grid',
                 gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
-                gap: { md: 1.5, lg: 3 },
+                gap: { xs: 2, md: 1.5, lg: 3 },
             }}>
                 {/* Column 1: Market Breadth (Donut Charts) */}
                 <Card sx={cardStyle}>

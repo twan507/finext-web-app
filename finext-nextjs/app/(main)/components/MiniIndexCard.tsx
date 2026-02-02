@@ -122,9 +122,21 @@ export default function MiniIndexCard({ symbol, itdData, hideOnTablet = false }:
         chart: {
             type: 'area',
             sparkline: { enabled: true },
-            animations: { enabled: false }
+            animations: { enabled: true },
+            dropShadow: {
+                enabled: true,
+                top: 0,
+                left: 0,
+                blur: 5,
+                opacity: 1,
+                color: lineColor,
+            }
         },
-        stroke: { curve: 'smooth', width: 1.5 },
+        stroke: {
+            curve: 'smooth',
+            width: 1.5,
+
+        },
         colors: [lineColor],
         tooltip: {
             enabled: true,

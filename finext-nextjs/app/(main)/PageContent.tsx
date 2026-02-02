@@ -56,6 +56,11 @@ const IndustryStocksSection = dynamic(
     { loading: () => <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, my: 2 }} /> }
 );
 
+const PhaseSignalSection = dynamic(
+    () => import('./components/PhaseSignalSection'),
+    { loading: () => <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 2, my: 2 }} /> }
+);
+
 // Import API clients
 import { apiClient } from 'services/apiClient';
 import { ISseRequest } from 'services/core/types';
@@ -469,28 +474,27 @@ export default function HomeContent() {
                 />
             </Box>
 
-            {/* Section 3: Ngành */}
+            {/* Section 1.8: Tín hiệu thị trường (Phase Signal) */}
+            <Box sx={{ mt: 5 }}>
+                <PhaseSignalSection />
+            </Box>
+
+            {/* Section 2: Ngành */}
             <Box sx={{ mt: 5 }}>
                 <IndustrySection todayAllData={todayAllData} itdAllData={itdAllData} />
             </Box>
 
-            {/* Section 3.5: Cổ phiếu nổi bật theo ngành */}
+            {/* Section 2.5: Cổ phiếu nổi bật theo ngành */}
             <Box sx={{ mt: 5 }}>
                 <IndustryStocksSection stockData={todayStockData} isLoading={isStockDataLoading} />
             </Box>
 
 
 
-            {/* Section 2: Tin tức */}
+            {/* Section 4: Tin tức */}
             <Box sx={{ mt: 5 }}>
                 <NewsSection />
             </Box>
-
-            {/* Section 4: Cổ phiếu
-            <Box sx={{ mt: 5 }}>
-                <StockSection />
-            </Box> */}
-
 
         </Box>
     );

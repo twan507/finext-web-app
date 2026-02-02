@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Box, Typography, useTheme, Grid, Checkbox, CircularProgress, alpha, Skeleton } from '@mui/material';
+import { Box, Typography, useTheme, Grid, Checkbox, CircularProgress, alpha, Skeleton, useMediaQuery } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { getResponsiveFontSize, borderRadius, transitions, fontWeight } from 'theme/tokens';
@@ -37,6 +37,7 @@ interface IndustrySectionProps {
 export default function IndustrySection({ todayAllData, itdAllData }: IndustrySectionProps) {
     const theme = useTheme();
     const router = useRouter();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
     // ========== STATE ==========
     // Tất cả ngành từ SSE (Today data)
@@ -52,7 +53,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
     const [chartSeries, setChartSeries] = useState<{ name: string; data: { x: number; y: number }[] }[]>([]);
 
     // Mapping từ index → timestamp cho 1D mode (để format label)
-    const [indexToTimestamp, setIndexToTimestamp] = useState<Map<number, number>>(new Map());
+    const indexToTimestampRef = useRef<Map<number, number>>(new Map());
 
     // Dữ liệu hiển thị trên danh sách (Performance List)
     const [listSeries, setListSeries] = useState<IndustryPerformance[]>([]);
@@ -338,8 +339,8 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                 idxToTs.set(index, ts);
             });
 
-            // Update state for formatter
-            setIndexToTimestamp(idxToTs);
+            // Update ref for formatter (using ref instead of state to avoid stale closure issues)
+            indexToTimestampRef.current = idxToTs;
 
             // 3. Transform Data to use Index as X
             const finalizedSeries = allRawData.map(series => {
@@ -376,26 +377,11 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
 
     // ========== CHART OPTIONS ==========
     // Format date label cho trục x
-    const formatDateLabel = useCallback((timestamp: number, range: TimeRange): string => {
+    const formatDateLabel = useCallback((timestamp: number): string => {
         const date = new Date(timestamp);
         const day = date.getDate().toString().padStart(2, '0');
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const year = date.getFullYear().toString().slice(-2);
-        const monthNames = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
-        const monthName = monthNames[date.getMonth()];
-
-        switch (range) {
-            case '1W':
-            case '1M':
-            case '3M':
-                return `${day}/${month}`;
-            case '6M':
-            case '1Y':
-            case 'YTD':
-                return `${day} ${monthName}`;
-            default:
-                return `${day}/${month}/${year}`;
-        }
+        return `${day}/${month}`;
     }, []);
 
     const chartColors = useMemo(() => [
@@ -435,8 +421,8 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
         };
 
         // Unified logic: X is always index, so we always look up timestamp
-        let tickAmount = 6;
-        if (timeRange === '1W') tickAmount = 7;
+        let tickAmount = isMobile ? 6 : 10;
+        if (timeRange === '1W') tickAmount = isMobile ? 6 : 7;
 
         return {
             ...baseConfig,
@@ -447,7 +433,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                 formatter: (value: string) => {
                     const index = Math.round(parseFloat(value));
                     if (isNaN(index)) return '';
-                    const ts = indexToTimestamp.get(index);
+                    const ts = indexToTimestampRef.current.get(index);
                     if (!ts) return '';
 
                     if (timeRange === '1D') {
@@ -457,11 +443,11 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                         return `${hours}:${minutes}`;
                     }
 
-                    return formatDateLabel(ts, timeRange);
+                    return formatDateLabel(ts);
                 }
             }
         };
-    }, [timeRange, theme.palette.text.secondary, formatDateLabel, indexToTimestamp]);
+    }, [timeRange, theme.palette.text.secondary, formatDateLabel, isMobile]);
 
     const chartOptions: ApexCharts.ApexOptions = useMemo(() => {
         // Generate annotations for the last data point of each series (Price Tags)
@@ -509,7 +495,12 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                 animations: { enabled: true, speed: 300, dynamicAnimation: { enabled: true, speed: 150 } },
                 redrawOnParentResize: true,
                 dropShadow: {
-                    enabled: false
+                    enabled: true,
+                    top: 0,
+                    left: 0,
+                    blur: 5,
+                    opacity: 1,
+                    color: chartColors as unknown as string,
                 }
             },
             annotations: {
@@ -559,7 +550,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
 
                     // Unified lookup: xValue is always index
                     const index = Math.round(xValue);
-                    const ts = indexToTimestamp.get(index);
+                    const ts = indexToTimestampRef.current.get(index);
 
                     let dateStr = '';
                     if (ts) {
@@ -629,7 +620,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
             }
             // Depend on chartColors in the memo
         };
-    }, [theme, timeRange, getXAxisConfig, indexToTimestamp, chartColors, chartSeries]);
+    }, [theme, timeRange, getXAxisConfig, chartColors, chartSeries]);
 
     // Helper for Bar Width
     const maxListValue = useMemo(() => {

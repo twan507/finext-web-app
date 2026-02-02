@@ -270,7 +270,7 @@ export const darkThemePalette: PaletteOptions = {
     main: '#b47eff',
     light: '#d4b5ff',
     dark: '#9d5cf6',
-    contrastText: '#121212',
+    contrastText: '#6b21a8',
   },
   secondary: {
     main: '#f48fb1',
