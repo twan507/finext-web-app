@@ -205,15 +205,15 @@ export default function PhaseSignalSection() {
     }, []);
 
     // Process data and build chart series with index-based x-axis
-    const { chartSeries, annotations, idxToTs } = useMemo(() => {
+    const { chartSeries, annotations, idxToTs, idxToPhase } = useMemo(() => {
         if (!rawData || rawData.length === 0) {
-            return { chartSeries: [], annotations: { xaxis: [] }, idxToTs: new Map<number, number>() };
+            return { chartSeries: [], annotations: { xaxis: [] }, idxToTs: new Map<number, number>(), idxToPhase: new Map<number, number>() };
         }
 
         // Filter by time range
         const filteredData = filterDataByTimeRange(rawData, timeRange);
         if (filteredData.length === 0) {
-            return { chartSeries: [], annotations: { xaxis: [] }, idxToTs: new Map<number, number>() };
+            return { chartSeries: [], annotations: { xaxis: [] }, idxToTs: new Map<number, number>(), idxToPhase: new Map<number, number>() };
         }
 
         // Sort by date ascending
@@ -223,9 +223,11 @@ export default function PhaseSignalSection() {
         const allTimestamps = sortedData.map(item => new Date(item.date).getTime());
         const timestampToIndex = new Map<number, number>();
         const idxToTsMap = new Map<number, number>();
+        const idxToPhaseMap = new Map<number, number>();
         allTimestamps.forEach((ts, index) => {
             timestampToIndex.set(ts, index);
             idxToTsMap.set(index, ts);
+            idxToPhaseMap.set(index, sortedData[index].final_phase);
         });
 
         // Calculate cumulative returns
@@ -243,10 +245,8 @@ export default function PhaseSignalSection() {
             // VNINDEX return: luôn cộng dồn pct_change
             cumVnindex += pctChange * 100;
 
-            // Phase return: chỉ cộng dồn khi phase = 1 (ổn định)
-            if (item.final_phase === 1) {
-                cumPhase += pctReturn * 100;
-            }
+            // Phase return: luôn cộng dồn pct_return (đã tính toán sẵn ở backend)
+            cumPhase += pctReturn * 100;
 
             vnindexData.push({ x: idx, y: parseFloat(cumVnindex.toFixed(2)) });
             phaseData.push({ x: idx, y: parseFloat(cumPhase.toFixed(2)) });
@@ -304,15 +304,15 @@ export default function PhaseSignalSection() {
 
         const series = [
             { name: 'Biến động VNINDEX', data: vnindexData },
-            { name: 'Biến động danh mục', data: phaseData },
+            { name: 'Biến động FINEXT', data: phaseData },
         ];
 
-        return { chartSeries: series, annotations: { xaxis: xAxisAnnotations }, idxToTs: idxToTsMap };
+        return { chartSeries: series, annotations: { xaxis: xAxisAnnotations }, idxToTs: idxToTsMap, idxToPhase: idxToPhaseMap };
     }, [rawData, timeRange, theme]);
 
     // Chart colors
     const chartColors = useMemo(() => [
-        theme.palette.text.secondary,
+        theme.palette.warning.main,
         theme.palette.primary.main,
     ], [theme]);
 
@@ -331,8 +331,8 @@ export default function PhaseSignalSection() {
                 label: {
                     borderColor: 'transparent',
                     style: {
-                        color: '#fff',
-                        background: color,
+                        color: theme.palette.text.primary,
+                        background: alpha(color, 1),
                         fontSize: getResponsiveFontSize('sm').md,
                         fontWeight: fontWeight.medium,
                         padding: {
@@ -450,6 +450,7 @@ export default function PhaseSignalSection() {
                 const xValue = w.globals.seriesX[seriesIndex][dataPointIndex];
                 const index = Math.round(xValue);
                 const ts = idxToTs.get(index);
+                const phase = idxToPhase.get(index);
 
                 let dateStr = '';
                 if (ts) {
@@ -458,6 +459,15 @@ export default function PhaseSignalSection() {
                     const month = (date.getMonth() + 1).toString().padStart(2, '0');
                     const year = date.getFullYear();
                     dateStr = `${day}/${month}/${year}`;
+                }
+
+                // Get phase info
+                let phaseName = 'Không xác định';
+                let phaseColor = theme.palette.text.secondary;
+                if (phase !== undefined) {
+                    const phaseInfo = getPhaseInfo(phase, theme);
+                    phaseName = phaseInfo.name;
+                    phaseColor = phaseInfo.color;
                 }
 
                 // Build series HTML
@@ -497,6 +507,11 @@ export default function PhaseSignalSection() {
                     ">
                         <div style="font-weight: 600; margin-bottom: 8px; font-size: 13px; color: ${textColor};">
                             ${dateStr}
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0;">
+                            <span style="width: 10px; height: 10px; border-radius: 50%; background: ${phaseColor};"></span>
+                            <span style="flex: 1; font-size: 12px;">Giai đoạn:</span>
+                            <span style="font-weight: 600; font-size: 12px; color: ${phaseColor};">${phaseName}</span>
                         </div>
                         ${seriesHTML}
                     </div>

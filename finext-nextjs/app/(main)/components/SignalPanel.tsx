@@ -448,7 +448,6 @@ export function SignalPanelCompact({ data, isLoading = false }: SignalPanelCompa
         >
             {/* Buy Section */}
             <Box sx={{
-                flex: 8,
                 display: 'flex',
                 flexDirection: 'column',
                 bgcolor: alpha(theme.palette.trend.up, 0.06),
@@ -503,7 +502,6 @@ export function SignalPanelCompact({ data, isLoading = false }: SignalPanelCompa
 
             {/* Sell Section */}
             <Box sx={{
-                flex: 7,
                 display: 'flex',
                 flexDirection: 'column',
                 bgcolor: alpha(theme.palette.warning.main, 0.06),
