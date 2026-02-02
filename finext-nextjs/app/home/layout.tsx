@@ -10,7 +10,7 @@ import {
 
 
 import BrandLogo from '@/components/layout/BrandLogo';
-import AuthButtons from 'components/AuthButtons';
+import AuthButtons from '@/components/auth/AuthButtons';
 import { layoutTokens, shadows, zIndex } from '../../theme/tokens';
 import ThemeToggleButton from '@/components/themeToggle/ThemeToggleButton';
 
