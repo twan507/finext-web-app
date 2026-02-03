@@ -20,7 +20,7 @@ const SOURCE_WITH_CATEGORIES = 'trong_nuoc';
 export default function PageContent({ source }: PageContentProps) {
     const router = useRouter();
     const [categories, setCategories] = useState<CategoryInfo[]>([]);
-    const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
+    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const categoriesLoadedRef = useRef(false);
 
     const currentSourceInfo = getSourceInfo(source);
@@ -28,8 +28,8 @@ export default function PageContent({ source }: PageContentProps) {
     const showCategoryChips = source === SOURCE_WITH_CATEGORIES;
 
     // Handle category selection
-    const handleCategoryChange = (category: string) => {
-        setSelectedCategory(category);
+    const handleCategoriesChange = (cats: string[]) => {
+        setSelectedCategories(cats);
     };
 
     // Handle categories loaded - only set on first load to preserve all chips when filtering
@@ -46,12 +46,24 @@ export default function PageContent({ source }: PageContentProps) {
             router.push('/news');
         } else if (newSource === source) {
             // If clicking the same source, just reset the category filter
-            setSelectedCategory(undefined);
+            setSelectedCategories([]);
         } else {
             // Navigate to different source
             router.push(`/news/category/${newSource}`);
         }
     };
+
+    // Generate breadcrumb label for selected categories
+    const getCategoryBreadcrumbLabel = () => {
+        if (selectedCategories.length === 0) return '';
+        if (selectedCategories.length === 1) {
+            return categories.find(c => c.category === selectedCategories[0])?.category_name || '';
+        }
+        return `${selectedCategories.length} chủ đề`;
+    };
+
+    // Check if filter is actually applied (not all chips selected)
+    const isFilterApplied = selectedCategories.length > 0 && selectedCategories.length < categories.length;
 
     return (
         <Box sx={{ py: spacing.xs }}>
@@ -59,8 +71,8 @@ export default function PageContent({ source }: PageContentProps) {
             <NewsBreadcrumb
                 items={[
                     { label: sourceName, href: `/news/category/${source}` },
-                    ...(selectedCategory && showCategoryChips
-                        ? [{ label: categories.find(c => c.category === selectedCategory)?.category_name || '' }]
+                    ...(isFilterApplied && showCategoryChips
+                        ? [{ label: getCategoryBreadcrumbLabel() }]
                         : [])
                 ]}
             />
@@ -104,15 +116,22 @@ export default function PageContent({ source }: PageContentProps) {
             {showCategoryChips && categories.length > 0 && (
                 <CategoryChips
                     categories={categories}
-                    selectedCategory={selectedCategory}
-                    onCategoryChange={handleCategoryChange}
+                    selectedCategories={selectedCategories}
+                    onCategoriesChange={handleCategoriesChange}
                 />
             )}
 
             {/* News List - Filtered by source and optionally category */}
+            {/* Khi chọn tất cả categories = không filter (hiện hết) */}
             <NewsList
                 source={source}
-                category={showCategoryChips ? selectedCategory : undefined}
+                categories={
+                    showCategoryChips &&
+                        selectedCategories.length > 0 &&
+                        selectedCategories.length < categories.length
+                        ? selectedCategories
+                        : undefined
+                }
                 onCategoriesLoaded={showCategoryChips ? handleCategoriesLoaded : undefined}
             />
         </Box>

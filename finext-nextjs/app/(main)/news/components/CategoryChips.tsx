@@ -13,17 +13,28 @@ export interface CategoryInfo {
 
 interface CategoryChipsProps {
     categories: CategoryInfo[];
-    selectedCategory?: string;
-    onCategoryChange: (category: string) => void;
+    selectedCategories?: string[];
+    onCategoriesChange: (categories: string[]) => void;
     loading?: boolean;
 }
 
 export default function CategoryChips({
     categories,
-    selectedCategory,
-    onCategoryChange,
+    selectedCategories = [],
+    onCategoriesChange,
     loading = false,
 }: CategoryChipsProps) {
+    const handleChipClick = (category: string) => {
+        // Toggle the category selection
+        if (selectedCategories.includes(category)) {
+            // Remove from selection
+            onCategoriesChange(selectedCategories.filter(c => c !== category));
+        } else {
+            // Add to selection
+            onCategoriesChange([...selectedCategories, category]);
+        }
+    };
+
     if (loading) {
         return (
             <Box
@@ -64,8 +75,8 @@ export default function CategoryChips({
                 <Chip
                     key={cat.category}
                     label={cat.category_name}
-                    onClick={() => onCategoryChange(cat.category)}
-                    color={selectedCategory === cat.category ? 'primary' : 'default'}
+                    onClick={() => handleChipClick(cat.category)}
+                    color={selectedCategories.includes(cat.category) ? 'primary' : 'default'}
                     variant="filled"
                     sx={{ fontWeight: fontWeight.medium, border: 'none' }}
                 />

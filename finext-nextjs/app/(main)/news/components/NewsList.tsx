@@ -22,8 +22,8 @@ import { spacing, borderRadius, getResponsiveFontSize, fontWeight } from 'theme/
 interface NewsListProps {
     /** Lọc theo source */
     source?: NewsSource;
-    /** Lọc theo category */
-    category?: string;
+    /** Lọc theo categories (multiple) */
+    categories?: string[];
     /** Tiêu đề section */
     title?: string;
     /** Mô tả section */
@@ -91,7 +91,7 @@ function EmptyState() {
 
 export default function NewsList({
     source,
-    category,
+    categories,
     title,
     description,
     pageSize = NEWS_PAGE_SIZE,
@@ -105,12 +105,16 @@ export default function NewsList({
     const page = Number(searchParams.get('page')) || 1;
     // const urlCategory = searchParams.get('category'); // We prioritize prop 'category' for now as it aligns with route segments
 
-    // React Query Key
+    // Check if we need client-side filtering (multiple categories selected)
+    const needsClientFilter = categories && categories.length > 1;
+    const clientFilterLimit = 100; // Backend max limit is 100
+
+    // React Query Key - don't include categories when doing client-side filter
     const queryKey = ['news', 'list', {
-        page,
-        limit: pageSize,
+        page: needsClientFilter ? 1 : page, // Always page 1 for client-side filtering
+        limit: needsClientFilter ? clientFilterLimit : pageSize,
         source,
-        category: (category && category !== 'all') ? category : undefined,
+        category: (categories && categories.length === 1) ? categories[0] : undefined,
         sort_by: NEWS_SORT_FIELD,
         sort_order: NEWS_SORT_ORDER
     }];
@@ -121,8 +125,8 @@ export default function NewsList({
         queryFn: async () => {
             // Build query params
             const queryParams: Record<string, string> = {
-                page: String(page),
-                limit: String(pageSize),
+                page: needsClientFilter ? '1' : String(page),
+                limit: needsClientFilter ? String(clientFilterLimit) : String(pageSize),
                 sort_by: NEWS_SORT_FIELD,
                 sort_order: NEWS_SORT_ORDER,
             };
@@ -132,9 +136,9 @@ export default function NewsList({
                 queryParams.source = source;
             }
 
-            // Thêm filter category nếu có
-            if (category && category !== 'all') {
-                queryParams.category = category;
+            // Chỉ gửi category khi chọn 1 category (backend không hỗ trợ multiple)
+            if (categories && categories.length === 1) {
+                queryParams.category = categories[0];
             }
 
             const response = await apiClient<NewsApiResponse>({
@@ -149,12 +153,27 @@ export default function NewsList({
         placeholderData: (previousData) => previousData, // Keep previous data while fetching new page
     });
 
-    // Derived state from query data
-    const articles = newsData?.items || [];
+    // Filter articles client-side when multiple categories selected
+    const rawArticles = newsData?.items || [];
+    const filteredArticles = needsClientFilter
+        ? rawArticles.filter(article => categories!.includes(article.category))
+        : rawArticles;
+
+    // Apply pagination for client-side filtering
+    const articles = needsClientFilter
+        ? filteredArticles.slice((page - 1) * pageSize, page * pageSize)
+        : filteredArticles;
+
     const loading = isLoading;
     const error = queryError ? (queryError as Error).message : null;
-    const totalPages = newsData?.pagination?.total_pages || 1;
-    const total = newsData?.pagination?.total || 0;
+
+    // Calculate pagination based on filter mode
+    const totalPages = needsClientFilter
+        ? Math.ceil(filteredArticles.length / pageSize) || 1
+        : newsData?.pagination?.total_pages || 1;
+    const total = needsClientFilter
+        ? filteredArticles.length
+        : newsData?.pagination?.total || 0;
 
     // Effect to extract categories (only run when data changes)
     useEffect(() => {

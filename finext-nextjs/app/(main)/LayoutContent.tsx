@@ -10,7 +10,7 @@ import {
   AppBar, Box, CssBaseline, Drawer, Toolbar, List, ListItem, ListItemButton,
   ListItemIcon, ListItemText, Typography, CircularProgress, useTheme,
   IconButton as MuiIconButton, useMediaQuery, Breadcrumbs,
-  alpha, Tooltip
+  alpha, Tooltip, Collapse
 } from '@mui/material';
 import MuiLink from '@mui/material/Link';
 import { SvgIconProps } from '@mui/material/SvgIcon';
@@ -21,7 +21,9 @@ import {
   BubbleChartOutlined,
   CategoryOutlined,
   InsightsOutlined,
-  StarBorderPurple500Outlined
+  StarBorderPurple500Outlined,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon
 } from '@mui/icons-material';
 
 import UserAvatar from '../../components/layout/UserAvatar';
@@ -67,16 +69,10 @@ const topNavTabs: TopNavTab[] = [
     label: 'Thị trường',
     href: '/markets',
     description: 'Tổng quan xu hướng, đánh giá rủi ro và xác định chu kỳ thị trường.',
-    icon: 'fluent-color:poll-32'
-  },
-  {
-    label: 'Tin tức',
-    href: '/news',
-    description: 'Cập nhật tin tức thị trường tài chính và các sự kiện nổi bật.',
-    icon: 'fluent-color:news-16',
+    icon: 'fluent-color:poll-32',
     submenu: [
-      { label: 'Tin tức', href: '/news', icon: 'fluent-color:news-16', description: 'Tổng hợp tin tức vĩ mô và tài chính từ nhiều nguồn uy tín' },
-      { label: 'Bản tin', href: '/reports', icon: 'fluent-color:document-text-16', description: 'Bản tin tổng hợp và phân tích tin tức hàng ngày' },
+      { label: 'Diễn biến thị trường', href: '/markets', icon: 'fluent-color:chart-multiple-20', description: 'Theo dõi diễn biến và xu hướng thị trường chứng khoán' },
+      { label: 'Giai đoạn thị trường', href: '/markets/phases', icon: 'fluent-color:arrow-trending-lines-20', description: 'Phân tích và xác định giai đoạn chu kỳ thị trường' },
     ]
   },
   {
@@ -86,10 +82,24 @@ const topNavTabs: TopNavTab[] = [
     icon: 'fluent-color:diversity-16'
   },
   {
+    label: 'Tin tức',
+    href: '/news',
+    description: 'Cập nhật tin tức thị trường tài chính và các sự kiện nổi bật.',
+    icon: 'fluent-color:book-database-32',
+    submenu: [
+      { label: 'Tin tức', href: '/news', icon: 'fluent-color:news-28', description: 'Tổng hợp tin tức vĩ mô và tài chính từ nhiều nguồn uy tín' },
+      { label: 'Bản tin', href: '/reports', icon: 'fluent-color:document-edit-24', description: 'Bản tin tổng hợp và phân tích tin tức hàng ngày' },
+    ]
+  },
+  {
     label: 'Cổ phiếu',
     href: '/stocks',
-    description: 'Sàng lọc cơ hội đầu tư với bộ tiêu chí kỹ thuật và cơ bản chuyên sâu.',
-    icon: 'fluent-color:list-bar-32'
+    description: 'Công cụ phân tích và sàng lọc cổ phiếu chuyên nghiệp.',
+    icon: 'fluent-color:search-sparkle-16',
+    submenu: [
+      { label: 'Bộ lọc thông minh', href: '/stocks', icon: 'fluent-color:list-bar-32', description: 'Sàng lọc cơ hội đầu tư với bộ tiêu chí kỹ thuật và cơ bản' },
+      { label: 'Biểu đồ kĩ thuật', href: '/charts', icon: 'fluent-color:data-trending-16', description: 'Công cụ vẽ biểu đồ kỹ thuật chuyên nghiệp' },
+    ]
   },
 ];
 
@@ -105,6 +115,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const isMobile = useMediaQuery(theme.breakpoints.down('md')); // < 768px
 
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
 
   // Drawer widths  
   const ICON_ONLY_WIDTH = 50;
@@ -118,6 +129,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   }, [session, authLoading, router]);
 
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
+
+  const handleMenuToggle = (href: string) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [href]: !prev[href]
+    }));
+  };
 
   // OPTIMIZED: Không block render khi auth đang loading
   // Public pages sẽ render ngay, auth state sẽ được hydrate sau
@@ -241,36 +259,85 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           Khám phá
         </Typography>
         {topNavTabs.map((tab) => {
-          const isActive = currentPathname.startsWith(tab.href);
+          const isActive = currentPathname.startsWith(tab.href) ||
+            (tab.submenu && tab.submenu.some(sub => currentPathname.startsWith(sub.href)));
+          const hasSubmenu = tab.submenu && tab.submenu.length > 0;
+          const isExpanded = expandedMenus[tab.href];
+
           return (
-            <ListItem key={tab.href} disablePadding sx={{ mb: 0.5 }}>
-              <Link href={tab.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
-                <ListItemButton
-                  selected={isActive}
-                  onClick={handleDrawerToggle}
-                  sx={{
-                    borderRadius: borderRadius.md,
-                    color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
-                    backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
-                    '&:hover': {
-                      backgroundColor: alpha(theme.palette.primary.main, isActive ? 0.12 : 0.04),
-                      color: isActive ? theme.palette.primary.dark : theme.palette.primary.main,
-                    },
-                  }}
-                >
-                  <ListItemIcon sx={{ color: 'inherit', minWidth: 36 }}>
-                    <Icon icon={tab.icon} width="20" height="20" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={tab.label}
-                    secondary={tab.description}
-                    secondaryTypographyProps={{
-                      sx: { fontSize: getResponsiveFontSize('xs'), opacity: 0.7, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
-                    }}
-                  />
-                </ListItemButton>
-              </Link>
-            </ListItem>
+            <React.Fragment key={tab.href}>
+              <ListItem disablePadding sx={{ mb: 0.5, flexDirection: 'column', alignItems: 'stretch' }}>
+                {hasSubmenu ? (
+                  <>
+                    <ListItemButton
+                      onClick={() => handleMenuToggle(tab.href)}
+                      sx={{
+                        borderRadius: borderRadius.sm,
+                        color: theme.palette.text.primary,
+                        '&:hover': {
+                          color: theme.palette.primary.main,
+                        },
+                      }}
+                    >
+                      <ListItemIcon sx={{ color: 'inherit', minWidth: 36 }}>
+                        <Icon icon={tab.icon} width="20" height="20" />
+                      </ListItemIcon>
+                      <ListItemText primary={tab.label} />
+                      {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                    </ListItemButton>
+                    <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                      <List component="div" disablePadding>
+                        {tab.submenu!.map((subItem) => {
+                          const isSubActive = currentPathname === subItem.href ||
+                            (subItem.href !== '/news' && subItem.href !== '/reports' && subItem.href !== '/markets' && currentPathname.startsWith(subItem.href));
+                          return (
+                            <Link key={subItem.href} href={subItem.href} passHref style={{ textDecoration: 'none', color: 'inherit' }}>
+                              <ListItemButton
+                                onClick={handleDrawerToggle}
+                                sx={{
+                                  pl: 4,
+                                  borderRadius: borderRadius.sm,
+                                  color: theme.palette.text.secondary,
+                                  '&:hover': {
+                                    color: theme.palette.primary.main,
+                                  },
+                                }}
+                              >
+                                <ListItemIcon sx={{ color: 'inherit', minWidth: 32 }}>
+                                  <Icon icon={subItem.icon} width="18" height="18" />
+                                </ListItemIcon>
+                                <ListItemText
+                                  primary={subItem.label}
+                                  primaryTypographyProps={{ fontSize: getResponsiveFontSize('sm') }}
+                                />
+                              </ListItemButton>
+                            </Link>
+                          );
+                        })}
+                      </List>
+                    </Collapse>
+                  </>
+                ) : (
+                  <Link href={tab.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
+                    <ListItemButton
+                      onClick={handleDrawerToggle}
+                      sx={{
+                        borderRadius: borderRadius.sm,
+                        color: theme.palette.text.primary,
+                        '&:hover': {
+                          color: theme.palette.primary.main,
+                        },
+                      }}
+                    >
+                      <ListItemIcon sx={{ color: 'inherit', minWidth: 36 }}>
+                        <Icon icon={tab.icon} width="20" height="20" />
+                      </ListItemIcon>
+                      <ListItemText primary={tab.label} />
+                    </ListItemButton>
+                  </Link>
+                )}
+              </ListItem>
+            </React.Fragment>
           );
         })}
 
@@ -287,12 +354,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   selected={isActive}
                   onClick={handleDrawerToggle}
                   sx={{
-                    borderRadius: borderRadius.md,
-                    color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
-                    backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                    borderRadius: borderRadius.sm,
+                    color: theme.palette.text.primary,
                     '&:hover': {
-                      backgroundColor: alpha(theme.palette.primary.main, isActive ? 0.12 : 0.04),
-                      color: isActive ? theme.palette.primary.dark : theme.palette.primary.main,
+                      color: theme.palette.primary.main,
                     },
                   }}
                 >
@@ -306,13 +371,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           );
         })}
       </List>
-
-      {/* Auth Buttons for Tablet */}
-      {!session && (
-        <Box sx={{ px: 2, py: 1 }}>
-          <AuthButtons />
-        </Box>
-      )}
 
       {/* Divider */}
       <Box sx={{ mx: 1, borderTop: `1px solid ${alpha(theme.palette.divider, 0.12)}` }} />
@@ -344,30 +402,88 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           Khám phá
         </Typography>
         {topNavTabs.map((tab) => {
-          const isActive = currentPathname.startsWith(tab.href);
+          const isActive = currentPathname.startsWith(tab.href) ||
+            (tab.submenu && tab.submenu.some(sub => currentPathname.startsWith(sub.href)));
+          const hasSubmenu = tab.submenu && tab.submenu.length > 0;
+          const isExpanded = expandedMenus[tab.href];
+
           return (
-            <ListItem key={tab.href} disablePadding sx={{ mb: 0.25 }}>
-              <Link href={tab.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
-                <ListItemButton
-                  selected={isActive}
-                  onClick={handleDrawerToggle}
-                  sx={{
-                    py: 1,
-                    borderRadius: borderRadius.sm,
-                    color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
-                    backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
-                    '&:hover': {
-                      backgroundColor: alpha(theme.palette.primary.main, isActive ? 0.12 : 0.04),
-                    },
-                  }}
-                >
-                  <ListItemIcon sx={{ color: 'inherit', minWidth: 32 }}>
-                    <Icon icon={tab.icon} width="18" height="18" />
-                  </ListItemIcon>
-                  <ListItemText primary={tab.label} primaryTypographyProps={{ fontSize: getResponsiveFontSize('md') }} />
-                </ListItemButton>
-              </Link>
-            </ListItem>
+            <React.Fragment key={tab.href}>
+              <ListItem disablePadding sx={{ mb: 0.25, flexDirection: 'column', alignItems: 'stretch' }}>
+                {hasSubmenu ? (
+                  <>
+                    <ListItemButton
+                      onClick={() => handleMenuToggle(tab.href)}
+                      sx={{
+                        py: 1,
+                        borderRadius: borderRadius.sm,
+                        color: theme.palette.text.primary,
+                        '&:hover': {
+                          color: theme.palette.primary.main,
+                        },
+                      }}
+                    >
+                      <ListItemIcon sx={{ color: 'inherit', minWidth: 32 }}>
+                        <Icon icon={tab.icon} width="18" height="18" />
+                      </ListItemIcon>
+                      <ListItemText primary={tab.label} primaryTypographyProps={{ fontSize: getResponsiveFontSize('md') }} />
+                      {isExpanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+                    </ListItemButton>
+                    <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                      <List component="div" disablePadding>
+                        {tab.submenu!.map((subItem) => {
+                          const isSubActive = currentPathname === subItem.href ||
+                            (subItem.href !== '/news' && subItem.href !== '/reports' && subItem.href !== '/markets' && currentPathname.startsWith(subItem.href));
+                          return (
+                            <Link key={subItem.href} href={subItem.href} passHref style={{ textDecoration: 'none', color: 'inherit' }}>
+                              <ListItemButton
+                                onClick={handleDrawerToggle}
+                                sx={{
+                                  pl: 4,
+                                  py: 0.75,
+                                  borderRadius: borderRadius.sm,
+                                  color: theme.palette.text.secondary,
+                                  '&:hover': {
+                                    color: theme.palette.primary.main,
+                                  },
+                                }}
+                              >
+                                <ListItemIcon sx={{ color: 'inherit', minWidth: 28 }}>
+                                  <Icon icon={subItem.icon} width="16" height="16" />
+                                </ListItemIcon>
+                                <ListItemText
+                                  primary={subItem.label}
+                                  primaryTypographyProps={{ fontSize: getResponsiveFontSize('sm') }}
+                                />
+                              </ListItemButton>
+                            </Link>
+                          );
+                        })}
+                      </List>
+                    </Collapse>
+                  </>
+                ) : (
+                  <Link href={tab.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
+                    <ListItemButton
+                      onClick={handleDrawerToggle}
+                      sx={{
+                        py: 1,
+                        borderRadius: borderRadius.sm,
+                        color: theme.palette.text.primary,
+                        '&:hover': {
+                          color: theme.palette.primary.main,
+                        },
+                      }}
+                    >
+                      <ListItemIcon sx={{ color: 'inherit', minWidth: 32 }}>
+                        <Icon icon={tab.icon} width="18" height="18" />
+                      </ListItemIcon>
+                      <ListItemText primary={tab.label} primaryTypographyProps={{ fontSize: getResponsiveFontSize('md') }} />
+                    </ListItemButton>
+                  </Link>
+                )}
+              </ListItem>
+            </React.Fragment>
           );
         })}
 
@@ -386,10 +502,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   sx={{
                     py: 1,
                     borderRadius: borderRadius.sm,
-                    color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
-                    backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                    color: theme.palette.text.primary,
                     '&:hover': {
-                      backgroundColor: alpha(theme.palette.primary.main, isActive ? 0.12 : 0.04),
+                      color: theme.palette.primary.main,
                     },
                   }}
                 >
@@ -403,13 +518,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           );
         })}
       </List>
-
-      {/* Auth Buttons for Mobile */}
-      {!session && (
-        <Box sx={{ px: 2, py: 1 }}>
-          <AuthButtons />
-        </Box>
-      )}
 
       {/* Divider */}
       <Box sx={{ mx: 1, borderTop: `1px solid ${alpha(theme.palette.divider, 0.12)}` }} />
@@ -557,14 +665,14 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               maxWidth: 1400,
               mx: 'auto',
               gap: 2,
+              position: 'relative',
             }}>
-              {/* Container bên trái, sẽ chứa logo và nút menu mobile */}
+              {/* Container bên trái cho hamburger menu và desktop navigation */}
               <Box sx={{
                 flex: 1,
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: { xs: 'center', lg: 'flex-start' },
-                position: 'relative',
+                justifyContent: 'flex-start',
                 gap: 3,
               }}>
                 {showHamburgerMenu && (
@@ -574,8 +682,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     edge="start"
                     onClick={handleDrawerToggle}
                     sx={{
-                      position: 'absolute',
-                      left: 0,
                       color: 'text.primary',
                       '&:hover': {
                         color: theme.palette.primary.main,
@@ -586,7 +692,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     <MenuIcon />
                   </MuiIconButton>
                 )}
-                <BrandLogo href="/" />
+
+                {/* Logo - centered on mobile/tablet, left-aligned on desktop */}
+                {!showHamburgerMenu && <BrandLogo href="/" />}
 
                 {/* Top Navigation Tabs - Only visible on desktop */}
                 {isDesktop && (
@@ -670,10 +778,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                                         gap: 1.5,
                                         px: 2,
                                         py: 1,
-                                        color: isSubActive ? theme.palette.primary.main : theme.palette.text.primary,
-                                        bgcolor: isSubActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                                        color: theme.palette.text.primary,
                                         '&:hover': {
-                                          bgcolor: alpha(theme.palette.primary.main, 0.08),
                                           color: theme.palette.primary.main,
                                         },
                                         transition: transitions.colors,
@@ -767,6 +873,19 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   </Box>
                 )}
               </Box>
+
+              {/* Centered logo for mobile/tablet - absolutely positioned */}
+              {showHamburgerMenu && (
+                <Box sx={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  pointerEvents: 'auto',
+                }}>
+                  <BrandLogo href="/" />
+                </Box>
+              )}
 
               {/* Container bên phải cho thanh tìm kiếm và auth buttons */}
               <Box sx={{

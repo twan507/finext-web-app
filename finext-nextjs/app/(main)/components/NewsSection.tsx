@@ -10,6 +10,7 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import CampaignIcon from '@mui/icons-material/Campaign';
 import BusinessCenterIcon from '@mui/icons-material/BusinessCenter';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import NewspaperIcon from '@mui/icons-material/Newspaper';
 import { spacing, getResponsiveFontSize, transitions, borderRadius, fontWeight } from 'theme/tokens';
 
 // ============================================================================
@@ -177,7 +178,7 @@ function NewsStatsBar({ totalNews, thongcaoCount, trongnuocCount, doanhnghiepCou
         {
             label: 'Trong nước',
             count: trongnuocCount,
-            icon: <TrendingUpIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />,
+            icon: <NewspaperIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />,
             color: theme.palette.success.main,
         },
         {
