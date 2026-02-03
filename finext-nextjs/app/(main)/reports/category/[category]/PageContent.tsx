@@ -59,7 +59,7 @@ export default function PageContent({ category }: PageContentProps) {
                 sectionLabel="Bản tin"
                 sectionHref="/reports"
                 loading={categoriesLoading}
-                items={categoriesLoading ? [] : [{ label: categoryName }]}
+                items={categoriesLoading ? [] : [{ label: categoryName, href: `/reports/category/${category}` }]}
             />
 
             {/* Header */}

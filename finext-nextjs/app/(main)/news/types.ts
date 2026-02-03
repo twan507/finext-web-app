@@ -8,7 +8,7 @@
 // ============================================================================
 
 /** Source của tin tức (internal) */
-export type NewsSource = 'chinhphu.vn' | 'baochinhphu.vn' | 'findata.vn';
+export type NewsSource = 'thong_cao' | 'trong_nuoc' | 'doanh_nghiep' | 'quoc_te';
 
 /** Category slug */
 export type NewsCategory = string;
@@ -61,20 +61,26 @@ export const NEWS_SOURCES: SourceConfig[] = [
     {
         slug: 'thong-cao',
         label: 'Thông cáo',
-        source: 'chinhphu.vn',
+        source: 'thong_cao',
         description: 'Thông cáo từ Cổng thông tin điện tử Chính phủ',
     },
     {
-        slug: 'vi-mo',
-        label: 'Tin vĩ mô',
-        source: 'baochinhphu.vn',
-        description: 'Tin tức vĩ mô, chính sách kinh tế từ Báo Chính phủ',
+        slug: 'trong-nuoc',
+        label: 'Tin trong nước',
+        source: 'trong_nuoc',
+        description: 'Tin tức trong nước, chính sách kinh tế',
     },
     {
         slug: 'doanh-nghiep',
         label: 'Tin doanh nghiệp',
-        source: 'findata.vn',
+        source: 'doanh_nghiep',
         description: 'Tin tức doanh nghiệp, phân tích thị trường',
+    },
+    {
+        slug: 'quoc-te',
+        label: 'Tin quốc tế',
+        source: 'quoc_te',
+        description: 'Tin tức quốc tế, thị trường toàn cầu',
     },
 ];
 
@@ -89,9 +95,33 @@ export const getSourceConfigBySource = (source: NewsSource): SourceConfig | unde
 };
 
 // ============================================================================
+// SOURCE INFO FOR NAVIGATION
+// ============================================================================
+
+/** Source info for navigation tabs */
+export interface SourceInfo {
+    source: NewsSource;
+    source_name: string;
+}
+
+/** Danh sách 4 nguồn tin chính */
+export const NEWS_SOURCES_INFO: SourceInfo[] = [
+    { source: 'quoc_te', source_name: 'Tài chính quốc tế' },
+    { source: 'trong_nuoc', source_name: 'Vĩ mô trong nước' },
+    { source: 'doanh_nghiep', source_name: 'Doanh nghiệp niêm yết' },
+    { source: 'thong_cao', source_name: 'Thông cáo chính phủ' },
+];
+
+/** Lấy source info theo source */
+export const getSourceInfo = (source: NewsSource): SourceInfo | undefined => {
+    return NEWS_SOURCES_INFO.find((s) => s.source === source);
+};
+
+// ============================================================================
 // CONSTANTS
 // ============================================================================
 
 export const NEWS_PAGE_SIZE = 12;
 export const NEWS_SORT_FIELD = 'created_at';
 export const NEWS_SORT_ORDER = 'desc';
+

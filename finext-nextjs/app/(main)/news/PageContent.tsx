@@ -1,35 +1,19 @@
 // finext-nextjs/app/(main)/news/PageContent.tsx
 'use client';
 
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Chip } from '@mui/material';
+import { useRouter } from 'next/navigation';
 
-import { NewsBreadcrumb, NewsList, SourceTabs, CategoryInfo } from './components';
-import { spacing } from 'theme/tokens';
-import { apiClient } from 'services/apiClient';
-
-interface CategoriesApiResponse {
-    items: CategoryInfo[];
-    total: number;
-}
+import { NewsBreadcrumb, NewsList } from './components';
+import { spacing, fontWeight } from 'theme/tokens';
+import { NEWS_SOURCES_INFO, NewsSource } from './types';
 
 export default function NewsContent() {
-    // Use Query for categories
-    const { data: categoriesData, isLoading: categoriesLoading } = useQuery({
-        queryKey: ['news', 'categories'],
-        queryFn: async () => {
-            const response = await apiClient<CategoriesApiResponse>({
-                url: '/api/v1/sse/rest/news_categories',
-                method: 'GET',
-                requireAuth: false,
-            });
-            return response.data;
-        },
-        staleTime: 10 * 60 * 1000 // Cache for 10 minutes
-    });
+    const router = useRouter();
 
-    const categories = categoriesData?.items || [];
+    const handleSourceClick = (source: NewsSource) => {
+        router.push(`/news/category/${source}`);
+    };
 
     return (
         <Box sx={{ py: spacing.xs }}>
@@ -50,14 +34,33 @@ export default function NewsContent() {
                 </Typography>
             </Box>
 
-            {/* Category Tabs */}
-            <SourceTabs
-                categories={categories}
-                selectedCategory="all"
-                onCategoryChange={() => { }}
-                loading={categoriesLoading}
-                useNavigation
-            />
+            {/* Source Tabs */}
+            <Box
+                sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 1,
+                    mb: spacing.xs,
+                }}
+            >
+                <Chip
+                    label="Tất cả"
+                    onClick={() => router.push('/news')}
+                    color="primary"
+                    variant="filled"
+                    sx={{ fontWeight: fontWeight.semibold, border: 'none' }}
+                />
+                {NEWS_SOURCES_INFO.map((sourceInfo) => (
+                    <Chip
+                        key={sourceInfo.source}
+                        label={sourceInfo.source_name}
+                        onClick={() => handleSourceClick(sourceInfo.source)}
+                        color="default"
+                        variant="filled"
+                        sx={{ fontWeight: fontWeight.medium, border: 'none' }}
+                    />
+                ))}
+            </Box>
 
             {/* News List */}
             <NewsList />

@@ -171,7 +171,7 @@ export default function NewsList({
             }));
             onCategoriesLoaded(categories);
         }
-    }, [newsData, onCategoriesLoaded, page]);
+    }, [newsData, page]); // Removed onCategoriesLoaded from dependencies
 
     const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
         // Update URL

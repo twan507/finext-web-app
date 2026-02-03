@@ -77,7 +77,8 @@ export default function PageContent({ articleId }: PageContentProps) {
     const [article, setArticle] = useState<NewsArticle | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [copied, setCopied] = useState(false);
+    const [copiedContent, setCopiedContent] = useState(false);
+    const [copiedLink, setCopiedLink] = useState(false);
 
     const fetchArticle = useCallback(async () => {
         setLoading(true);
@@ -118,29 +119,29 @@ export default function PageContent({ articleId }: PageContentProps) {
         fetchArticle();
     }, [fetchArticle]);
 
-    const handleCopyLink = async () => {
+    const handleCopyContent = async () => {
+        if (!article) return;
         try {
-            await navigator.clipboard.writeText(window.location.href);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
+            // Extract plain text from HTML content
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = article.html_content;
+            const plainText = `${article.title}\n\n${article.sapo || ''}\n\n${tempDiv.textContent || tempDiv.innerText || ''}`;
+
+            await navigator.clipboard.writeText(plainText);
+            setCopiedContent(true);
+            setTimeout(() => setCopiedContent(false), 2000);
         } catch (err) {
-            console.error('Failed to copy:', err);
+            console.error('Failed to copy content:', err);
         }
     };
 
-    const handleShare = async () => {
-        if (navigator.share && article) {
-            try {
-                await navigator.share({
-                    title: article.title,
-                    text: article.sapo,
-                    url: window.location.href,
-                });
-            } catch (err) {
-                // User cancelled or error
-            }
-        } else {
-            handleCopyLink();
+    const handleCopyLink = async () => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            setCopiedLink(true);
+            setTimeout(() => setCopiedLink(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy link:', err);
         }
     };
 
@@ -177,7 +178,19 @@ export default function PageContent({ articleId }: PageContentProps) {
             {/* Breadcrumbs */}
             <NewsBreadcrumb
                 loading={loading}
-                items={[]}
+                items={
+                    article
+                        ? [
+                            {
+                                label: sourceConfig?.label || article.source,
+                                href: `/news/category/${article.source}`
+                            },
+                            ...(article.category_name
+                                ? [{ label: article.category_name }]
+                                : []),
+                        ]
+                        : []
+                }
             />
 
             {/* Back button */}
@@ -238,10 +251,10 @@ export default function PageContent({ articleId }: PageContentProps) {
 
                             {/* Actions */}
                             <Stack direction="row" spacing={1}>
-                                <Tooltip title={copied ? 'Đã sao chép!' : 'Sao chép link'}>
+                                <Tooltip title={copiedContent ? 'Đã sao chép!' : 'Sao chép nội dung'}>
                                     <IconButton
                                         size="small"
-                                        onClick={handleCopyLink}
+                                        onClick={handleCopyContent}
                                         sx={{
                                             bgcolor: 'action.hover',
                                             '&:hover': { bgcolor: 'action.selected' },
@@ -250,10 +263,10 @@ export default function PageContent({ articleId }: PageContentProps) {
                                         <ContentCopy sx={{ fontSize: 18 }} />
                                     </IconButton>
                                 </Tooltip>
-                                <Tooltip title="Chia sẻ">
+                                <Tooltip title={copiedLink ? 'Đã sao chép!' : 'Sao chép link'}>
                                     <IconButton
                                         size="small"
-                                        onClick={handleShare}
+                                        onClick={handleCopyLink}
                                         sx={{
                                             bgcolor: 'action.hover',
                                             '&:hover': { bgcolor: 'action.selected' },
@@ -288,7 +301,7 @@ export default function PageContent({ articleId }: PageContentProps) {
                         variant="subtitle1"
                         sx={{
                             fontWeight: fontWeight.semibold,
-                            fontSize: getResponsiveFontSize('lg'),
+                            fontSize: getResponsiveFontSize('md'),
                             lineHeight: 1.7,
                             mb: spacing.xs,
                             color: 'text.primary',

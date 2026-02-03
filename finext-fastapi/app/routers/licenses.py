@@ -1,6 +1,6 @@
 # finext-fastapi/app/routers/licenses.py
 import logging
-from typing import List, Optional, Union
+from typing import Union
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from motor.motor_asyncio import AsyncIOMotorDatabase
 

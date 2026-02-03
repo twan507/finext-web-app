@@ -467,21 +467,21 @@ async def news_count(
     from datetime import datetime, timezone, timedelta
 
     stock_db = get_database(STOCK_DB)
-    
+
     # Lấy thời gian theo timezone Vietnam (UTC+7)
     vietnam_offset = timedelta(hours=7)
     vietnam_tz = timezone(vietnam_offset)
     now = datetime.now(vietnam_tz)
-    
+
     # Ngày hôm nay (cho tin tức)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     today_start_str = today_start.isoformat()
-    
+
     # Ngày hôm qua (cho bản tin)
     yesterday = now - timedelta(days=1)
     yesterday_start = yesterday.replace(hour=0, minute=0, second=0, microsecond=0)
     yesterday_start_str = yesterday_start.isoformat()
-    
+
     logger.info(f"[news_count] Current time (VN): {now.isoformat()}")
     logger.info(f"[news_count] Today start (VN): {today_start_str}")
     logger.info(f"[news_count] Yesterday start (VN): {yesterday_start_str}")
@@ -496,40 +496,34 @@ async def news_count(
 
     # Đếm tin từ news_daily
     news_collection = stock_db.get_collection("news_daily")
-    
-    # Các nguồn tin cần đếm (thêm chinhphu.vn cho thông cáo)
-    news_sources = ["chinhphu.vn", "baochinhphu.vn", "findata.vn"]
-    
+
+    # Các nguồn tin cần đếm (sử dụng category-based sources)
+    news_sources = ["thong_cao", "trong_nuoc", "doanh_nghiep", "quoc_te"]
+
     if source:
         news_sources = [source]
-    
+
     for src in news_sources:
         # Query đếm tin trong ngày hôm nay theo source (tin tức từ news_daily)
-        count_query = {
-            "source": src,
-            "created_at": {"$gte": today_start_str}
-        }
+        count_query = {"source": src, "created_at": {"$gte": today_start_str}}
         count = await news_collection.count_documents(count_query)
         result["sources"][src] = count
         result["total"] += count
         logger.info(f"[news_count] Source '{src}': {count} articles (query: created_at >= {today_start_str})")
-        
+
         # Debug: lấy tin mới nhất để xem
-        newest_doc = await news_collection.find_one(
-            {"source": src}, 
-            {"created_at": 1, "_id": 0},
-            sort=[("created_at", -1)]
-        )
+        newest_doc = await news_collection.find_one({"source": src}, {"created_at": 1, "_id": 0}, sort=[("created_at", -1)])
         if newest_doc:
-            newest_created_at = newest_doc.get('created_at')
+            newest_created_at = newest_doc.get("created_at")
             result["debug"][f"{src}_newest"] = newest_created_at
             logger.info(f"[news_count] Newest article for '{src}': {newest_created_at}")
-            
+
             # Test: đếm tất cả tin có created_at >= newest - 1 ngày
             if count == 0:
                 # Thử parse và so sánh
                 try:
                     from datetime import datetime
+
                     # Parse newest_created_at
                     if isinstance(newest_created_at, str):
                         # Thử lấy tổng số tin của source này
@@ -548,7 +542,7 @@ async def news_count(
         result["sources"]["news_report"] = report_count
         result["total"] += report_count
         logger.info(f"[news_count] news_report: {report_count} reports (query: created_at >= {yesterday_start_str})")
-        
+
         # Debug sample
         if report_count == 0:
             sample_report = await report_collection.find_one({}, {"created_at": 1, "_id": 0})
@@ -663,10 +657,10 @@ async def phase_signal(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]
     """
     Lấy dữ liệu phase signal từ collection phase_signal.
     Database: temp_stock.
-    
+
     Args:
         ticker: Mã ticker để filter (optional)
-    
+
     Returns:
         List[Dict] - danh sách các records từ phase_signal (không bao gồm _id)
     """
@@ -694,7 +688,7 @@ async def phase_signal(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]
         "sell_ratio_strength": 1,
         "sell_ratio_value": 1,
     }
-    
+
     find_query = {"ticker": ticker} if ticker else {}
     phase_df = await get_collection_data(stock_db, "phase_signal", find_query=find_query, projection=projection)
 

@@ -1,88 +1,120 @@
 // finext-nextjs/app/(main)/news/category/[category]/PageContent.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Box, Typography } from '@mui/material';
+import { useState, useRef, useCallback } from 'react';
+import { Box, Typography, Chip } from '@mui/material';
+import { useRouter } from 'next/navigation';
 
-import { NewsBreadcrumb, NewsList, SourceTabs, CategoryInfo } from '../../components';
-import { spacing } from 'theme/tokens';
-import { apiClient } from 'services/apiClient';
+import { NewsBreadcrumb, NewsList } from '../../components';
+import CategoryChips, { CategoryInfo } from '../../components/CategoryChips';
+import { spacing, fontWeight } from 'theme/tokens';
+import { NewsSource, NEWS_SOURCES_INFO, getSourceInfo } from '../../types';
 
 interface PageContentProps {
-    category: string;
+    source: NewsSource;
 }
 
-interface CategoriesApiResponse {
-    items: CategoryInfo[];
-    total: number;
-}
+// Only show level 2 category chips for this source
+const SOURCE_WITH_CATEGORIES = 'trong_nuoc';
 
-export default function PageContent({ category }: PageContentProps) {
+export default function PageContent({ source }: PageContentProps) {
+    const router = useRouter();
     const [categories, setCategories] = useState<CategoryInfo[]>([]);
-    const [categoriesLoading, setCategoriesLoading] = useState(true);
-    const [categoryName, setCategoryName] = useState<string>(decodeURIComponent(category));
+    const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
+    const categoriesLoadedRef = useRef(false);
 
-    // Fetch categories từ API riêng
-    useEffect(() => {
-        const fetchCategories = async () => {
-            try {
-                const response = await apiClient<CategoriesApiResponse>({
-                    url: '/api/v1/sse/rest/news_categories',
-                    method: 'GET',
-                    requireAuth: false,
-                });
+    const currentSourceInfo = getSourceInfo(source);
+    const sourceName = currentSourceInfo?.source_name || source;
+    const showCategoryChips = source === SOURCE_WITH_CATEGORIES;
 
-                if (response.data?.items) {
-                    setCategories(response.data.items);
-                    // Tìm tên category từ danh sách
-                    const found = response.data.items.find((c) => c.category === category);
-                    if (found) {
-                        setCategoryName(found.category_name);
-                    }
-                }
-            } catch (error) {
-                console.error('[PageContent] Failed to fetch categories:', error);
-            } finally {
-                setCategoriesLoading(false);
-            }
-        };
+    // Handle category selection
+    const handleCategoryChange = (category: string) => {
+        setSelectedCategory(category);
+    };
 
-        fetchCategories();
-    }, [category]);
+    // Handle categories loaded - only set on first load to preserve all chips when filtering
+    const handleCategoriesLoaded = useCallback((cats: CategoryInfo[]) => {
+        if (!categoriesLoadedRef.current && cats.length > 0) {
+            setCategories(cats);
+            categoriesLoadedRef.current = true;
+        }
+    }, []);
+
+    // Handle source tab click
+    const handleSourceClick = (newSource: NewsSource | 'all') => {
+        if (newSource === 'all') {
+            router.push('/news');
+        } else if (newSource === source) {
+            // If clicking the same source, just reset the category filter
+            setSelectedCategory(undefined);
+        } else {
+            // Navigate to different source
+            router.push(`/news/category/${newSource}`);
+        }
+    };
 
     return (
         <Box sx={{ py: spacing.xs }}>
-            {/* Breadcrumb - đợi load xong mới hiển thị category_name */}
+            {/* Breadcrumb */}
             <NewsBreadcrumb
-                loading={categoriesLoading}
-                items={categoriesLoading ? [] : [{ label: categoryName }]}
+                items={[
+                    { label: sourceName, href: `/news/category/${source}` },
+                    ...(selectedCategory && showCategoryChips
+                        ? [{ label: categories.find(c => c.category === selectedCategory)?.category_name || '' }]
+                        : [])
+                ]}
             />
 
             {/* Header */}
             <Box sx={{ mb: spacing.xs }}>
                 <Typography variant="h1">
-                    Tin tức thị trường
-                </Typography>
-                <Typography
-                    variant="body1"
-                    color="text.secondary"
-                    sx={{ mt: 0.5 }}
-                >
-                    Cập nhật tin tức tài chính, chứng khoán và các sự kiện nổi bật từ nhiều nguồn uy tín.
+                    {sourceName}
                 </Typography>
             </Box>
 
-            {/* Category Tabs */}
-            <SourceTabs
-                categories={categories}
-                selectedCategory={category}
-                onCategoryChange={() => { }}
-                loading={categoriesLoading}
-                useNavigation
-            />
+            {/* Source Tabs - First Row */}
+            <Box
+                sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 1,
+                    mb: spacing.xs,
+                }}
+            >
+                <Chip
+                    label="Tất cả"
+                    onClick={() => handleSourceClick('all')}
+                    color="default"
+                    variant="filled"
+                    sx={{ fontWeight: fontWeight.medium, border: 'none' }}
+                />
+                {NEWS_SOURCES_INFO.map((sourceInfo) => (
+                    <Chip
+                        key={sourceInfo.source}
+                        label={sourceInfo.source_name}
+                        onClick={() => handleSourceClick(sourceInfo.source)}
+                        color={source === sourceInfo.source ? 'primary' : 'default'}
+                        variant="filled"
+                        sx={{ fontWeight: fontWeight.semibold, border: 'none' }}
+                    />
+                ))}
+            </Box>
 
-            {/* News List - Filtered by category */}
-            <NewsList category={category} />
+            {/* Category Chips - Second Row (only show for trong_nuoc source) */}
+            {showCategoryChips && categories.length > 0 && (
+                <CategoryChips
+                    categories={categories}
+                    selectedCategory={selectedCategory}
+                    onCategoryChange={handleCategoryChange}
+                />
+            )}
+
+            {/* News List - Filtered by source and optionally category */}
+            <NewsList
+                source={source}
+                category={showCategoryChips ? selectedCategory : undefined}
+                onCategoriesLoaded={showCategoryChips ? handleCategoriesLoaded : undefined}
+            />
         </Box>
     );
 }

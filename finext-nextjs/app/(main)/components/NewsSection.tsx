@@ -8,6 +8,8 @@ import PublicIcon from '@mui/icons-material/Public';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import DescriptionIcon from '@mui/icons-material/Description';
 import CampaignIcon from '@mui/icons-material/Campaign';
+import BusinessCenterIcon from '@mui/icons-material/BusinessCenter';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { spacing, getResponsiveFontSize, transitions, borderRadius, fontWeight } from 'theme/tokens';
 
 // ============================================================================
@@ -93,9 +95,10 @@ interface NewsCountResponse {
     date: string;
     today_start: string;
     sources: {
-        'chinhphu.vn'?: number;
-        'baochinhphu.vn'?: number;
-        'findata.vn'?: number;
+        'thong_cao'?: number;
+        'trong_nuoc'?: number;
+        'doanh_nghiep'?: number;
+        'quoc_te'?: number;
         'news_report'?: number;
     };
     total: number;
@@ -155,38 +158,38 @@ function LiveIndicator() {
 interface NewsStatsProps {
     totalNews: number;
     thongcaoCount: number;
-    macroCount: number;
-    stockCount: number;
-    reportCount: number;
+    trongnuocCount: number;
+    doanhnghiepCount: number;
+    quocteCount: number;
     isLoading: boolean;
 }
 
-function NewsStatsBar({ totalNews, thongcaoCount, macroCount, stockCount, reportCount, isLoading }: NewsStatsProps) {
+function NewsStatsBar({ totalNews, thongcaoCount, trongnuocCount, doanhnghiepCount, quocteCount, isLoading }: NewsStatsProps) {
     const theme = useTheme();
 
     const statsItems = [
         {
-            label: 'Thông cáo',
-            count: thongcaoCount,
-            icon: <CampaignIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />,
-            color: theme.palette.success.main,
-        },
-        {
-            label: 'Vĩ mô',
-            count: macroCount,
+            label: 'Quốc tế',
+            count: quocteCount,
             icon: <PublicIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />,
             color: theme.palette.info.main,
         },
         {
-            label: 'Chứng khoán',
-            count: stockCount,
-            icon: <ShowChartIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />,
+            label: 'Trong nước',
+            count: trongnuocCount,
+            icon: <TrendingUpIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />,
+            color: theme.palette.success.main,
+        },
+        {
+            label: 'Doanh nghiệp',
+            count: doanhnghiepCount,
+            icon: <BusinessCenterIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />,
             color: theme.palette.primary.main,
         },
         {
-            label: 'Bản tin',
-            count: reportCount,
-            icon: <DescriptionIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />,
+            label: 'Thông cáo',
+            count: thongcaoCount,
+            icon: <CampaignIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />,
             color: theme.palette.warning.main,
         },
     ];
@@ -253,7 +256,7 @@ function NewsStatsBar({ totalNews, thongcaoCount, macroCount, stockCount, report
                     display: 'grid',
                     gridTemplateColumns: {
                         xs: 'repeat(2, 1fr)',
-                        sm: 'repeat(4, 1fr)',
+                        sm: 'repeat(2, 1fr)',
                         md: 'repeat(4, minmax(100px, 150px))'
                     },
                     gap: { xs: 2, md: 3, lg: 4 },
@@ -625,41 +628,19 @@ export default function NewsSection() {
     });
 
     // Extract stats from response
-    const thongcaoCount = newsCountData?.sources?.['chinhphu.vn'] || 0;
-    const macroCount = newsCountData?.sources?.['baochinhphu.vn'] || 0;
-    const stockCount = newsCountData?.sources?.['findata.vn'] || 0;
-    const reportCount = newsCountData?.sources?.['news_report'] || 0;
+    const thongcaoCount = newsCountData?.sources?.['thong_cao'] || 0;
+    const trongnuocCount = newsCountData?.sources?.['trong_nuoc'] || 0;
+    const doanhnghiepCount = newsCountData?.sources?.['doanh_nghiep'] || 0;
+    const quocteCount = newsCountData?.sources?.['quoc_te'] || 0;
     const totalNews = newsCountData?.total || 0;
 
     // ========================================================================
     // NEWS LIST API CALLS - Fetch news for display (5 items each)
     // ========================================================================
 
-    // Fetch reports
-    const { data: reportsData, isLoading: reportsLoading } = useQuery({
-        queryKey: ['news', 'reports', 'home'],
-        queryFn: async () => {
-            const response = await apiClient<ReportApiResponse>({
-                url: '/api/v1/sse/rest/news_report',
-                method: 'GET',
-                queryParams: {
-                    page: '1',
-                    limit: '5',
-                    sort_by: 'created_at',
-                    sort_order: 'desc',
-                },
-                requireAuth: false,
-            });
-            return response.data;
-        },
-        staleTime: 5 * 60 * 1000,
-        refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
-    });
-    const reports = reportsData?.items || [];
-
-    // Fetch macro news
-    const { data: macroNewsData, isLoading: macroLoading } = useQuery({
-        queryKey: ['news', 'macro', 'home'],
+    // Fetch thong cao news
+    const { data: thongcaoData, isLoading: thongcaoLoading } = useQuery({
+        queryKey: ['news', 'thongcao', 'home'],
         queryFn: async () => {
             const response = await apiClient<NewsApiResponse>({
                 url: '/api/v1/sse/rest/news_daily',
@@ -669,7 +650,7 @@ export default function NewsSection() {
                     limit: '5',
                     sort_by: 'created_at',
                     sort_order: 'desc',
-                    source: 'baochinhphu.vn',
+                    source: 'thong_cao',
                 },
                 requireAuth: false,
             });
@@ -678,11 +659,11 @@ export default function NewsSection() {
         staleTime: 5 * 60 * 1000,
         refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
     });
-    const macroNews = macroNewsData?.items || [];
+    const thongcaoNews = thongcaoData?.items || [];
 
-    // Fetch enterprise news
-    const { data: enterpriseNewsData, isLoading: enterpriseLoading } = useQuery({
-        queryKey: ['news', 'enterprise', 'home'],
+    // Fetch trong nuoc news
+    const { data: trongnuocNewsData, isLoading: trongnuocLoading } = useQuery({
+        queryKey: ['news', 'trongnuoc', 'home'],
         queryFn: async () => {
             const response = await apiClient<NewsApiResponse>({
                 url: '/api/v1/sse/rest/news_daily',
@@ -692,7 +673,7 @@ export default function NewsSection() {
                     limit: '5',
                     sort_by: 'created_at',
                     sort_order: 'desc',
-                    source: 'findata.vn',
+                    source: 'trong_nuoc',
                 },
                 requireAuth: false,
             });
@@ -701,40 +682,97 @@ export default function NewsSection() {
         staleTime: 5 * 60 * 1000,
         refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
     });
-    const enterpriseNews = enterpriseNewsData?.items || [];
+    const trongnuocNews = trongnuocNewsData?.items || [];
+
+    // Fetch doanh nghiep news
+    const { data: doanhnghiepNewsData, isLoading: doanhnghiepLoading } = useQuery({
+        queryKey: ['news', 'doanhnghiep', 'home'],
+        queryFn: async () => {
+            const response = await apiClient<NewsApiResponse>({
+                url: '/api/v1/sse/rest/news_daily',
+                method: 'GET',
+                queryParams: {
+                    page: '1',
+                    limit: '5',
+                    sort_by: 'created_at',
+                    sort_order: 'desc',
+                    source: 'doanh_nghiep',
+                },
+                requireAuth: false,
+            });
+            return response.data;
+        },
+        staleTime: 5 * 60 * 1000,
+        refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
+    });
+    const doanhnghiepNews = doanhnghiepNewsData?.items || [];
+
+    // Fetch quoc te news
+    const { data: quocteNewsData, isLoading: quocteLoading } = useQuery({
+        queryKey: ['news', 'quocte', 'home'],
+        queryFn: async () => {
+            const response = await apiClient<NewsApiResponse>({
+                url: '/api/v1/sse/rest/news_daily',
+                method: 'GET',
+                queryParams: {
+                    page: '1',
+                    limit: '5',
+                    sort_by: 'created_at',
+                    sort_order: 'desc',
+                    source: 'quoc_te',
+                },
+                requireAuth: false,
+            });
+            return response.data;
+        },
+        staleTime: 5 * 60 * 1000,
+        refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
+    });
+    const quocteNews = quocteNewsData?.items || [];
 
     // Define the slides content for Desktop (with bg wrapper)
     const desktopSlides = [
         {
-            id: 'macro',
+            id: 'quocte',
             component: (
                 <NewsColumn
-                    title="TIN TỨC VĨ MÔ"
-                    href="/news"
-                    loading={macroLoading}
-                    newsItems={macroNews}
+                    title="TÀI CHÍNH QUỐC TẾ"
+                    href="/news/category/quoc_te"
+                    loading={quocteLoading}
+                    newsItems={quocteNews}
                 />
             )
         },
         {
-            id: 'enterprise',
+            id: 'trongnuoc',
             component: (
                 <NewsColumn
-                    title="THỊ TRƯỜNG CHỨNG KHOÁN"
-                    href="/news/category/ttck"
-                    loading={enterpriseLoading}
-                    newsItems={enterpriseNews}
+                    title="VĨ MÔ TRONG NƯỚC"
+                    href="/news/category/trong_nuoc"
+                    loading={trongnuocLoading}
+                    newsItems={trongnuocNews}
                 />
             )
         },
         {
-            id: 'reports',
+            id: 'doanhnghiep',
             component: (
                 <NewsColumn
-                    title="BẢN TIN HÀNG NGÀY"
-                    href="/reports"
-                    loading={reportsLoading}
-                    reportItems={reports}
+                    title="DOANH NGHIỆP NIÊM YẾT"
+                    href="/news/category/doanh_nghiep"
+                    loading={doanhnghiepLoading}
+                    newsItems={doanhnghiepNews}
+                />
+            )
+        },
+        {
+            id: 'thongcao',
+            component: (
+                <NewsColumn
+                    title="THÔNG CÁO CHÍNH PHỦ"
+                    href="/news/category/thong_cao"
+                    loading={thongcaoLoading}
+                    newsItems={thongcaoNews}
                 />
             )
         }
@@ -743,35 +781,46 @@ export default function NewsSection() {
     // Define the slides content for Mobile Carousel (content only, no bg)
     const mobileSlides = [
         {
-            id: 'macro',
+            id: 'quocte',
             component: (
                 <NewsColumnContent
-                    title="TIN TỨC VĨ MÔ"
-                    href="/news"
-                    loading={macroLoading}
-                    newsItems={macroNews}
+                    title="TÀI CHÍNH QUỐC TẾ"
+                    href="/news/category/quoc_te"
+                    loading={quocteLoading}
+                    newsItems={quocteNews}
                 />
             )
         },
         {
-            id: 'enterprise',
+            id: 'trongnuoc',
             component: (
                 <NewsColumnContent
-                    title="THỊ TRƯỜNG CHỨNG KHOÁN"
-                    href="/news/category/ttck"
-                    loading={enterpriseLoading}
-                    newsItems={enterpriseNews}
+                    title="VĨ MÔ TRONG NƯỚC"
+                    href="/news/category/trong_nuoc"
+                    loading={trongnuocLoading}
+                    newsItems={trongnuocNews}
                 />
             )
         },
         {
-            id: 'reports',
+            id: 'doanhnghiep',
             component: (
                 <NewsColumnContent
-                    title="BẢN TIN HÀNG NGÀY"
-                    href="/reports"
-                    loading={reportsLoading}
-                    reportItems={reports}
+                    title="DOANH NGHIỆP NIÊM YẾT"
+                    href="/news/category/doanh_nghiep"
+                    loading={doanhnghiepLoading}
+                    newsItems={doanhnghiepNews}
+                />
+            )
+        },
+        {
+            id: 'thongcao',
+            component: (
+                <NewsColumnContent
+                    title="THÔNG CÁO CHÍNH PHỦ"
+                    href="/news/category/thong_cao"
+                    loading={thongcaoLoading}
+                    newsItems={thongcaoNews}
                 />
             )
         }
@@ -799,20 +848,20 @@ export default function NewsSection() {
             <NewsStatsBar
                 totalNews={totalNews}
                 thongcaoCount={thongcaoCount}
-                macroCount={macroCount}
-                stockCount={stockCount}
-                reportCount={reportCount}
+                trongnuocCount={trongnuocCount}
+                doanhnghiepCount={doanhnghiepCount}
+                quocteCount={quocteCount}
                 isLoading={statsLoading}
             />
 
             {/* Content Container */}
             <Box>
-                {/* 1. Desktop View (Grid) */}
+                {/* 1. Desktop View (4 columns) - lg and up */}
                 <Box
                     sx={{
-                        display: { xs: 'none', md: 'grid' },
-                        gridTemplateColumns: 'repeat(3, 1fr)',
-                        gap: { md: 1.5, lg: 3 },
+                        display: { xs: 'none', md: 'none', lg: 'grid' },
+                        gridTemplateColumns: 'repeat(4, 1fr)',
+                        gap: { lg: 1.5 },
                     }}
                 >
                     {desktopSlides.map((slide) => (
@@ -822,7 +871,44 @@ export default function NewsSection() {
                     ))}
                 </Box>
 
-                {/* 2. Mobile View (Carousel) - Background outside, content inside */}
+                {/* 2. Tablet View (2 carousels side by side) - md only */}
+                <Box
+                    sx={{
+                        display: { xs: 'none', md: 'grid', lg: 'none' },
+                        gridTemplateColumns: 'repeat(2, 1fr)',
+                        gap: { md: 2 },
+                    }}
+                >
+                    {/* Left Carousel - First 2 slides */}
+                    <Box
+                        sx={{
+                            backgroundColor: 'background.paper',
+                            borderRadius: `${borderRadius.lg}px`,
+                            p: spacing.xs,
+                        }}
+                    >
+                        <Carousel
+                            slides={[mobileSlides[0], mobileSlides[1]]}
+                            minHeight="420px"
+                        />
+                    </Box>
+
+                    {/* Right Carousel - Last 2 slides */}
+                    <Box
+                        sx={{
+                            backgroundColor: 'background.paper',
+                            borderRadius: `${borderRadius.lg}px`,
+                            p: spacing.xs,
+                        }}
+                    >
+                        <Carousel
+                            slides={[mobileSlides[2], mobileSlides[3]]}
+                            minHeight="420px"
+                        />
+                    </Box>
+                </Box>
+
+                {/* 3. Mobile View (Single Carousel with 4 slides) - xs to sm */}
                 <Box
                     sx={{
                         display: { xs: 'block', md: 'none' },
