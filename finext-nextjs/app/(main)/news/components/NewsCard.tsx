@@ -4,7 +4,7 @@
 import { Box, Stack, Typography, useTheme } from '@mui/material';
 import Link from 'next/link';
 
-import { NewsArticle, getSourceConfigBySource } from '../types';
+import { NewsArticle, getTypeConfigByType, generateSlug } from '../types';
 import { spacing, transitions, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 
 interface NewsCardProps {
@@ -33,13 +33,14 @@ const parseDateTime = (dateStr: string): { date: string; time: string } => {
 
 export default function NewsCard({ article }: NewsCardProps) {
     const theme = useTheme();
-    const sourceConfig = getSourceConfigBySource(article.source);
+    const typeConfig = getTypeConfigByType(article.news_type);
     const { date, time } = parseDateTime(article.created_at);
+    const slug = generateSlug(article.title);
 
     return (
         <Box
             component={Link}
-            href={`/news/${article.article_id}`}
+            href={`/news/${slug}`}
             sx={{
                 display: 'flex',
                 gap: { xs: spacing.xs, md: spacing.sm },
@@ -124,6 +125,21 @@ export default function NewsCard({ article }: NewsCardProps) {
                 >
                     {article.category_name ? `(${article.category_name}) - ` : ''}{article.sapo}
                 </Typography>
+
+                {/* Source - nguồn tin */}
+                {article.source && (
+                    <Typography
+                        variant="caption"
+                        color="text.disabled"
+                        sx={{
+                            fontSize: getResponsiveFontSize('xs'),
+                            mt: 0.5,
+                            display: 'block',
+                        }}
+                    >
+                        Nguồn: {article.source}
+                    </Typography>
+                )}
             </Box>
         </Box>
     );

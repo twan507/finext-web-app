@@ -11,7 +11,7 @@ const footerLinks = {
   sanPham: {
     title: 'Sản phẩm',
     links: [
-      { label: 'Bản tin tin tức thị trường', href: '#' },
+      { label: 'Báo cáo tin tức thị trường', href: '#' },
       { label: 'Phân tích nhóm ngành', href: '#' },
       { label: 'Bộ lọc cổ phiếu', href: '#' },
     ],

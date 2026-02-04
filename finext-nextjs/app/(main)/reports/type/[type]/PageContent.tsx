@@ -1,56 +1,85 @@
-// finext-nextjs/app/(main)/news/category/[category]/PageContent.tsx
+// finext-nextjs/app/(main)/reports/type/[type]/PageContent.tsx
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Box, Typography, Chip } from '@mui/material';
 import { useRouter } from 'next/navigation';
 
-import { NewsBreadcrumb, NewsList } from '../../components';
-import CategoryChips, { CategoryInfo } from '../../components/CategoryChips';
+import { ReportList } from '../../components';
+import NewsBreadcrumb from '../../../news/components/NewsBreadcrumb';
+import CategoryChips from '../../../news/components/CategoryChips';
 import { spacing, fontWeight } from 'theme/tokens';
-import { NewsType, NEWS_TYPES_INFO, getTypeInfo } from '../../types';
+import { apiClient } from 'services/apiClient';
+import { ReportCategoryInfo, ReportType, REPORT_TYPES_INFO, getReportTypeInfo } from '../../types';
 
 interface PageContentProps {
-    type: NewsType;
+    type: ReportType;
 }
 
-// Only show level 2 category chips for this type
-const TYPE_WITH_CATEGORIES = 'trong_nuoc';
+interface CategoriesApiResponse {
+    items: ReportCategoryInfo[];
+    total: number;
+}
 
 export default function PageContent({ type }: PageContentProps) {
     const router = useRouter();
-    const [categories, setCategories] = useState<CategoryInfo[]>([]);
+    const [categories, setCategories] = useState<ReportCategoryInfo[]>([]);
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-    const categoriesLoadedRef = useRef(false);
+    const [categoriesLoading, setCategoriesLoading] = useState(true);
 
-    const currentTypeInfo = getTypeInfo(type);
+    const currentTypeInfo = getReportTypeInfo(type);
     const typeName = currentTypeInfo?.type_name || type;
-    const showCategoryChips = type === TYPE_WITH_CATEGORIES;
+    const showCategoryChips = categories.length > 0;
 
-    // Handle category selection
-    const handleCategoriesChange = (cats: string[]) => {
-        setSelectedCategories(cats);
-    };
+    // Fetch categories từ API theo report_type
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const response = await apiClient<CategoriesApiResponse>({
+                    url: '/api/v1/sse/rest/news_report_categories',
+                    method: 'GET',
+                    queryParams: {
+                        report_type: type,
+                    },
+                    requireAuth: false,
+                });
 
-    // Handle categories loaded - only set on first load to preserve all chips when filtering
-    const handleCategoriesLoaded = useCallback((cats: CategoryInfo[]) => {
-        if (!categoriesLoadedRef.current && cats.length > 0) {
-            setCategories(cats);
-            categoriesLoadedRef.current = true;
-        }
-    }, []);
+                if (response.data?.items) {
+                    setCategories(response.data.items);
+                } else {
+                    setCategories([]);
+                }
+            } catch (error) {
+                console.error('[PageContent] Failed to fetch categories:', error);
+                setCategories([]);
+            } finally {
+                setCategoriesLoading(false);
+            }
+        };
+
+        // Reset categories when type changes
+        setCategories([]);
+        setSelectedCategories([]);
+        setCategoriesLoading(true);
+        fetchCategories();
+    }, [type]);
 
     // Handle type tab click
-    const handleTypeClick = (newType: NewsType | 'all') => {
+    const handleTypeClick = (newType: ReportType | 'all') => {
         if (newType === 'all') {
-            router.push('/news');
+            router.push('/reports');
         } else if (newType === type) {
             // If clicking the same type, just reset the category filter
             setSelectedCategories([]);
         } else {
             // Navigate to different type
-            router.push(`/news/category/${newType}`);
+            router.push(`/reports/type/${newType}`);
         }
+    };
+
+    // Handle category selection (multiple)
+    const handleCategoriesChange = (cats: string[]) => {
+        setSelectedCategories(cats);
     };
 
     // Generate breadcrumb label for selected categories
@@ -59,19 +88,21 @@ export default function PageContent({ type }: PageContentProps) {
         if (selectedCategories.length === 1) {
             return categories.find(c => c.category === selectedCategories[0])?.category_name || '';
         }
-        return `${selectedCategories.length} chủ đề`;
+        return `${selectedCategories.length} danh mục`;
     };
 
-    // Check if filter is actually applied (not all chips selected)
+    // Check if filter is actually applied
     const isFilterApplied = selectedCategories.length > 0 && selectedCategories.length < categories.length;
 
     return (
         <Box sx={{ py: spacing.xs }}>
             {/* Breadcrumb */}
             <NewsBreadcrumb
+                sectionLabel="Báo cáo"
+                sectionHref="/reports"
                 items={[
-                    { label: typeName, href: `/news/category/${type}` },
-                    ...(isFilterApplied && showCategoryChips
+                    { label: typeName, href: `/reports/type/${type}` },
+                    ...(isFilterApplied
                         ? [{ label: getCategoryBreadcrumbLabel() }]
                         : [])
                 ]}
@@ -82,9 +113,16 @@ export default function PageContent({ type }: PageContentProps) {
                 <Typography variant="h1">
                     {typeName}
                 </Typography>
+                <Typography
+                    variant="body1"
+                    color="text.secondary"
+                    sx={{ mt: 0.5 }}
+                >
+                    Tổng hợp và phân tích tin tức thị trường theo ngày, tuần và tháng.
+                </Typography>
             </Box>
 
-            {/* Type Tabs - First Row */}
+            {/* Type Tabs - Level 1 */}
             <Box
                 sx={{
                     display: 'flex',
@@ -100,7 +138,7 @@ export default function PageContent({ type }: PageContentProps) {
                     variant="filled"
                     sx={{ fontWeight: fontWeight.medium, border: 'none' }}
                 />
-                {NEWS_TYPES_INFO.map((typeInfo) => {
+                {REPORT_TYPES_INFO.map((typeInfo) => {
                     const isSelected = type === typeInfo.type;
                     return (
                         <Chip
@@ -125,8 +163,8 @@ export default function PageContent({ type }: PageContentProps) {
                 })}
             </Box>
 
-            {/* Category Chips - Second Row (only show for trong_nuoc type) */}
-            {showCategoryChips && categories.length > 0 && (
+            {/* Category Chips - Level 2 (multiple selection) */}
+            {showCategoryChips && (
                 <CategoryChips
                     categories={categories}
                     selectedCategories={selectedCategories}
@@ -134,18 +172,14 @@ export default function PageContent({ type }: PageContentProps) {
                 />
             )}
 
-            {/* News List - Filtered by type and optionally category */}
-            {/* Khi chọn tất cả categories = không filter (hiện hết) */}
-            <NewsList
+            {/* Report List - Filtered by type and optionally categories */}
+            <ReportList
                 type={type}
                 categories={
-                    showCategoryChips &&
-                        selectedCategories.length > 0 &&
-                        selectedCategories.length < categories.length
+                    isFilterApplied
                         ? selectedCategories
                         : undefined
                 }
-                onCategoriesLoaded={showCategoryChips ? handleCategoriesLoaded : undefined}
             />
         </Box>
     );

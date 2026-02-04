@@ -6,13 +6,13 @@ import { useRouter } from 'next/navigation';
 
 import { NewsBreadcrumb, NewsList } from './components';
 import { spacing, fontWeight } from 'theme/tokens';
-import { NEWS_SOURCES_INFO, NewsSource } from './types';
+import { NEWS_TYPES_INFO, NewsType } from './types';
 
 export default function NewsContent() {
     const router = useRouter();
 
-    const handleSourceClick = (source: NewsSource) => {
-        router.push(`/news/category/${source}`);
+    const handleTypeClick = (type: NewsType) => {
+        router.push(`/news/type/${type}`);
     };
 
     return (
@@ -34,7 +34,7 @@ export default function NewsContent() {
                 </Typography>
             </Box>
 
-            {/* Source Tabs */}
+            {/* Type Tabs */}
             <Box
                 sx={{
                     display: 'flex',
@@ -46,15 +46,23 @@ export default function NewsContent() {
                 <Chip
                     label="Tất cả"
                     onClick={() => router.push('/news')}
-                    color="primary"
+                    color="default"
                     variant="filled"
-                    sx={{ fontWeight: fontWeight.semibold, border: 'none' }}
+                    sx={{
+                        fontWeight: fontWeight.semibold,
+                        border: 'none',
+                        backgroundColor: 'primary.main',
+                        color: 'text.primary',
+                        '&:hover': {
+                            backgroundColor: 'primary.dark',
+                        },
+                    }}
                 />
-                {NEWS_SOURCES_INFO.map((sourceInfo) => (
+                {NEWS_TYPES_INFO.map((typeInfo) => (
                     <Chip
-                        key={sourceInfo.source}
-                        label={sourceInfo.source_name}
-                        onClick={() => handleSourceClick(sourceInfo.source)}
+                        key={typeInfo.type}
+                        label={typeInfo.type_name}
+                        onClick={() => handleTypeClick(typeInfo.type)}
                         color="default"
                         variant="filled"
                         sx={{ fontWeight: fontWeight.medium, border: 'none' }}

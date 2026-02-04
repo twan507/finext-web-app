@@ -22,7 +22,7 @@ import {
 import { useRouter } from 'next/navigation';
 
 import { apiClient } from 'services/apiClient';
-import { ReportApiResponse, NewsReport } from '../types';
+import { ReportApiResponse, NewsReport, generateSlug, getReportTypeInfo } from '../types';
 import NewsBreadcrumb from '../../news/components/NewsBreadcrumb';
 import { spacing, borderRadius, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 
@@ -53,12 +53,12 @@ const getTitle = (report: NewsReport): string => {
     if (report.title) return report.title;
 
     // Fallback: extract từ HTML
-    if (!report.report_html) return 'Bản tin';
+    if (!report.report_html) return 'Báo cáo';
     const h2Match = report.report_html.match(/<h2[^>]*>(.*?)<\/h2>/i);
     if (h2Match) {
         return h2Match[1].replace(/<[^>]*>/g, '').trim();
     }
-    return 'Bản tin';
+    return 'Báo cáo';
 };
 
 /** Loading skeleton */
@@ -108,7 +108,7 @@ export default function PageContent({ reportId }: PageContentProps) {
 
             if (response.data?.items) {
                 const found = response.data.items.find(
-                    (item) => item.report_id === reportId
+                    (item) => generateSlug(item.title) === reportId
                 );
 
                 if (found) {
@@ -187,19 +187,24 @@ export default function PageContent({ reportId }: PageContentProps) {
         );
     }
 
-    const title = report ? getTitle(report) : 'Bản tin';
-    const categoryName = report?.category_name || '';
+    const title = report ? getTitle(report) : 'Báo cáo';
+    const reportTypeInfo = report ? getReportTypeInfo(report.report_type) : null;
 
     return (
         <Box sx={{ py: spacing.xs }}>
             {/* Breadcrumbs */}
             <NewsBreadcrumb
-                sectionLabel="Bản tin"
+                sectionLabel="Báo cáo"
                 sectionHref="/reports"
                 loading={loading}
                 items={
-                    report && categoryName
-                        ? [{ label: categoryName, href: `/reports/category/${report.category}` }]
+                    report
+                        ? [
+                            ...(reportTypeInfo
+                                ? [{ label: reportTypeInfo.type_name, href: `/reports/type/${report.report_type}` }]
+                                : []),
+                            { label: title.length > 50 ? title.substring(0, 50) + '...' : title },
+                        ]
                         : []
                 }
             />

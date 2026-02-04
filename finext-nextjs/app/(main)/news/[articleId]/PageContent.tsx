@@ -25,7 +25,7 @@ import {
 import { useRouter } from 'next/navigation';
 
 import { apiClient } from 'services/apiClient';
-import { NewsApiResponse, NewsArticle, getSourceConfigBySource } from '../types';
+import { NewsApiResponse, NewsArticle, getTypeConfigByType, generateSlug } from '../types';
 import { NewsBreadcrumb } from '../components';
 import { spacing, borderRadius, getResponsiveFontSize, shadows, fontWeight } from 'theme/tokens';
 
@@ -98,7 +98,7 @@ export default function PageContent({ articleId }: PageContentProps) {
 
             if (response.data?.items) {
                 const found = response.data.items.find(
-                    (item) => item.article_id === articleId
+                    (item) => generateSlug(item.title) === articleId
                 );
 
                 if (found) {
@@ -145,7 +145,7 @@ export default function PageContent({ articleId }: PageContentProps) {
         }
     };
 
-    const sourceConfig = article ? getSourceConfigBySource(article.source) : null;
+    const typeConfig = article ? getTypeConfigByType(article.news_type) : null;
 
     // Error state
     if (error) {
@@ -181,13 +181,10 @@ export default function PageContent({ articleId }: PageContentProps) {
                 items={
                     article
                         ? [
-                            {
-                                label: sourceConfig?.label || article.source,
-                                href: `/news/category/${article.source}`
-                            },
                             ...(article.category_name
-                                ? [{ label: article.category_name }]
+                                ? [{ label: article.category_name, href: `/news/type/${article.news_type}` }]
                                 : []),
+                            { label: article.title.length > 50 ? article.title.substring(0, 50) + '...' : article.title },
                         ]
                         : []
                 }
@@ -388,6 +385,21 @@ export default function PageContent({ articleId }: PageContentProps) {
                                 </Typography>
                             ))}
                         </Stack>
+                    )}
+
+                    {/* Source - nguồn tin */}
+                    {article.source && (
+                        <Typography
+                            variant="caption"
+                            color="text.disabled"
+                            sx={{
+                                fontSize: getResponsiveFontSize('sm'),
+                                mt: spacing.sm,
+                                display: 'block',
+                            }}
+                        >
+                            Nguồn: {article.source}
+                        </Typography>
                     )}
                 </Box>
             )}

@@ -170,9 +170,9 @@ async def get_keywords():
 async def rest_query_endpoint(
     keyword: str,
     ticker: Optional[str] = Query(None, description="Mã ticker (VD: VNINDEX, VN30, ...)"),
-    source: Optional[str] = Query(None, description="Nguồn tin (VD: chinhphu.vn, cafef.vn, vietstock.vn)"),
-    category: Optional[str] = Query(None, description="Danh mục tin tức (VD: thi-truong, doanh-nghiep)"),
-    report_type: Optional[str] = Query(None, description="Loại bản tin (VD: doanh_nghiep)"),
+    news_type: Optional[str] = Query(None, description="Loại tin tức (VD: thong_cao, trong_nuoc, doanh_nghiep, quoc_te)"),
+    categories: Optional[str] = Query(None, description="Danh mục, có thể 1 hoặc nhiều cách nhau bởi dấu phẩy (VD: thi-truong hoặc thi-truong,doanh-nghiep)"),
+    report_type: Optional[str] = Query(None, description="Loại bản tin (VD: daily, weekly, monthly)"),
     page: Optional[int] = Query(None, ge=1, description="Số trang (bắt đầu từ 1)"),
     limit: Optional[int] = Query(None, ge=1, le=100, description="Số lượng bản ghi mỗi trang (tối đa 100)"),
     sort_by: Optional[str] = Query(None, description="Tên field để sắp xếp"),
@@ -184,6 +184,7 @@ async def rest_query_endpoint(
 
     Hỗ trợ tất cả các keyword trong SSE_QUERY_REGISTRY.
     Hỗ trợ pagination với page, limit, sort_by, sort_order.
+    Hỗ trợ filter nhiều categories với param 'categories' (comma-separated).
     """
     # Validate keyword trước
     available_keywords = get_available_keywords()
@@ -197,8 +198,8 @@ async def rest_query_endpoint(
         # Tạo dict chứa các tham số tuỳ chọn
         query_params = {
             "ticker": ticker,
-            "source": source,
-            "category": category,
+            "news_type": news_type,
+            "categories": categories,
             "report_type": report_type,
             "page": page,
             "limit": limit,

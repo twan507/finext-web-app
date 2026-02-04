@@ -35,7 +35,7 @@ export default function SourceTabs({
             if (category === 'all') {
                 router.push('/news');
             } else {
-                router.push(`/news/category/${category}`);
+                router.push(`/news/type/${category}`);
             }
         } else {
             onCategoryChange(category);

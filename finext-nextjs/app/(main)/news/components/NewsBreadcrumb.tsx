@@ -77,7 +77,7 @@ export default function NewsBreadcrumb({
                 Trang chủ
             </MuiLink>
 
-            {/* Section link - Tin tức / Bản tin */}
+            {/* Section link - Tin tức / Báo cáo */}
             {items.length > 0 && items[0].href ? (
                 <MuiLink
                     component={Link}

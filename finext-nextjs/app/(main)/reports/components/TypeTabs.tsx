@@ -30,7 +30,7 @@ export default function TypeTabs({
             if (category === 'all') {
                 router.push('/reports');
             } else {
-                router.push(`/reports/category/${category}`);
+                router.push(`/reports/type/${category}`);
             }
         } else {
             onCategoryChange(category);
@@ -72,20 +72,43 @@ export default function TypeTabs({
             <Chip
                 label="Tất cả"
                 onClick={() => handleClick('all')}
-                color={selectedCategory === 'all' ? 'primary' : 'default'}
+                color="default"
                 variant="filled"
-                sx={{ fontWeight: fontWeight.medium, border: 'none' }}
+                sx={{
+                    fontWeight: fontWeight.medium,
+                    border: 'none',
+                    ...(selectedCategory === 'all' && {
+                        backgroundColor: 'primary.main',
+                        color: 'text.primary',
+                        '&:hover': {
+                            backgroundColor: 'primary.dark',
+                        },
+                    }),
+                }}
             />
-            {categories.map((cat) => (
-                <Chip
-                    key={cat.category}
-                    label={cat.category_name}
-                    onClick={() => handleClick(cat.category)}
-                    color={selectedCategory === cat.category ? 'primary' : 'default'}
-                    variant="filled"
-                    sx={{ fontWeight: fontWeight.medium, border: 'none' }}
-                />
-            ))}
+            {categories.map((cat) => {
+                const isSelected = selectedCategory === cat.category;
+                return (
+                    <Chip
+                        key={cat.category}
+                        label={cat.category_name}
+                        onClick={() => handleClick(cat.category)}
+                        color="default"
+                        variant="filled"
+                        sx={{
+                            fontWeight: fontWeight.medium,
+                            border: 'none',
+                            ...(isSelected && {
+                                backgroundColor: 'primary.main',
+                                color: 'text.primary',
+                                '&:hover': {
+                                    backgroundColor: 'primary.dark',
+                                },
+                            }),
+                        }}
+                    />
+                );
+            })}
         </Box>
     );
 }

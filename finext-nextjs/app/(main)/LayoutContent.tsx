@@ -88,7 +88,7 @@ const topNavTabs: TopNavTab[] = [
     icon: 'fluent-color:book-database-32',
     submenu: [
       { label: 'Tin tức', href: '/news', icon: 'fluent-color:news-28', description: 'Tổng hợp tin tức vĩ mô và tài chính từ nhiều nguồn uy tín' },
-      { label: 'Bản tin', href: '/reports', icon: 'fluent-color:document-edit-24', description: 'Bản tin tổng hợp và phân tích tin tức hàng ngày' },
+      { label: 'Báo cáo', href: '/reports', icon: 'fluent-color:document-edit-24', description: 'Báo cáo tổng hợp và phân tích tin tức hàng ngày' },
     ]
   },
   {

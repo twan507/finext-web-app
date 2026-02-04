@@ -195,10 +195,17 @@ async def home_hist_index(ticker: Optional[str] = None, **kwargs) -> Dict[str, A
     return history_df.to_dict(orient="records")
 
 
-async def news_categories(**kwargs) -> Dict[str, Any]:
+async def news_categories(
+    news_type: Optional[str] = None,
+    **kwargs,
+) -> Dict[str, Any]:
     """
     Lấy danh sách tất cả categories duy nhất từ collection news_daily.
+    Có thể filter theo news_type (thong_cao, trong_nuoc, doanh_nghiep, quoc_te).
     Database: temp_stock.
+
+    Args:
+        news_type: Loại tin tức để filter (VD: thong_cao, trong_nuoc, doanh_nghiep, quoc_te)
 
     Returns:
         Dict chứa danh sách categories với category và category_name
@@ -206,10 +213,15 @@ async def news_categories(**kwargs) -> Dict[str, Any]:
     stock_db = get_database(STOCK_DB)
     collection = stock_db.get_collection("news_daily")
 
+    # Build match query
+    match_query = {"category": {"$exists": True, "$ne": None}, "category_name": {"$exists": True, "$ne": None}}
+    if news_type:
+        match_query["news_type"] = news_type
+
     # Sử dụng aggregation để lấy distinct categories
     pipeline = [
-        # Match documents có category và category_name
-        {"$match": {"category": {"$exists": True, "$ne": None}, "category_name": {"$exists": True, "$ne": None}}},
+        # Match documents có category và category_name (và filter theo news_type nếu có)
+        {"$match": match_query},
         # Group by category để lấy unique values
         {"$group": {"_id": {"category": "$category", "category_name": "$category_name"}}},
         # Project ra format mong muốn
@@ -308,8 +320,8 @@ async def home_nn_stock(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any
 
 async def news_daily(
     ticker: Optional[str] = None,
-    source: Optional[str] = None,
-    category: Optional[str] = None,
+    news_type: Optional[str] = None,
+    categories: Optional[str] = None,
     page: Optional[int] = None,
     limit: Optional[int] = None,
     sort_by: Optional[str] = None,
@@ -322,8 +334,8 @@ async def news_daily(
 
     Args:
         ticker: Mã ticker để filter (tuỳ chọn)
-        source: Nguồn tin để filter (VD: chinhphu.vn, cafef.vn, vietstock.vn)
-        category: Danh mục tin tức để filter (VD: thi-truong, doanh-nghiep)
+        news_type: Loại tin tức để filter (VD: thong_cao, trong_nuoc, doanh_nghiep, quoc_te)
+        categories: Danh mục để filter, có thể 1 hoặc nhiều cách nhau bởi dấu phẩy (VD: thi-truong hoặc thi-truong,doanh-nghiep)
         page: Số trang (bắt đầu từ 1)
         limit: Số lượng bản ghi mỗi trang
         sort_by: Tên field để sắp xếp (mặc định: created_at)
@@ -340,10 +352,17 @@ async def news_daily(
     if ticker:
         # Filter theo tickers array
         find_query["tickers"] = ticker
-    if source:
-        find_query["source"] = source
-    if category:
-        find_query["category"] = category
+    if news_type:
+        find_query["news_type"] = news_type
+    
+    # Hỗ trợ multiple categories với $in operator
+    if categories:
+        # Parse comma-separated string to list
+        category_list = [c.strip() for c in categories.split(",") if c.strip()]
+        if len(category_list) == 1:
+            find_query["category"] = category_list[0]
+        elif len(category_list) > 1:
+            find_query["category"] = {"$in": category_list}
 
     # Đếm tổng số documents
     total = await collection.count_documents(find_query)
@@ -442,27 +461,27 @@ async def home_hist_industry(ticker: Optional[str] = None, **kwargs) -> Dict[str
 
 
 # ==============================================================================
-# NEWS REPORT QUERIES - Bản tin từ collection news_report
+# NEWS REPORT QUERIES - Báo cáo từ collection news_report
 # ==============================================================================
 
 
 async def news_count(
-    source: Optional[str] = None,
+    type: Optional[str] = None,
     **kwargs,
 ) -> Dict[str, Any]:
     """
-    Đếm số lượng tin tức theo source.
+    Đếm số lượng tin tức theo type.
     - Tin tức (news_daily): đếm ngày hôm nay
-    - Bản tin (news_report): đếm ngày hôm qua
+    - Báo cáo (news_report): đếm ngày hôm qua
     Chỉ lấy các field cần thiết để đếm, không lấy nội dung.
     Database: temp_stock.
 
     Args:
-        source: Nguồn tin để filter (VD: baochinhphu.vn, findata.vn, chinhphu.vn)
-                Nếu không truyền sẽ trả về tất cả sources
+        type: Loại tin tức để filter (VD: thong_cao, trong_nuoc, doanh_nghiep, quoc_te)
+              Nếu không truyền sẽ trả về tất cả types
 
     Returns:
-        Dict chứa count theo từng source và tổng
+        Dict chứa count theo từng type và tổng
     """
     from datetime import datetime, timezone, timedelta
 
@@ -497,26 +516,26 @@ async def news_count(
     # Đếm tin từ news_daily
     news_collection = stock_db.get_collection("news_daily")
 
-    # Các nguồn tin cần đếm (sử dụng category-based sources)
-    news_sources = ["thong_cao", "trong_nuoc", "doanh_nghiep", "quoc_te"]
+    # Các loại tin cần đếm
+    news_types = ["thong_cao", "trong_nuoc", "doanh_nghiep", "quoc_te"]
 
-    if source:
-        news_sources = [source]
+    if type:
+        news_types = [type]
 
-    for src in news_sources:
-        # Query đếm tin trong ngày hôm nay theo source (tin tức từ news_daily)
-        count_query = {"source": src, "created_at": {"$gte": today_start_str}}
+    for news_type in news_types:
+        # Query đếm tin trong ngày hôm nay theo news_type (tin tức từ news_daily)
+        count_query = {"news_type": news_type, "created_at": {"$gte": today_start_str}}
         count = await news_collection.count_documents(count_query)
-        result["sources"][src] = count
+        result["sources"][news_type] = count
         result["total"] += count
-        logger.info(f"[news_count] Source '{src}': {count} articles (query: created_at >= {today_start_str})")
+        logger.info(f"[news_count] Type '{news_type}': {count} articles (query: created_at >= {today_start_str})")
 
         # Debug: lấy tin mới nhất để xem
-        newest_doc = await news_collection.find_one({"source": src}, {"created_at": 1, "_id": 0}, sort=[("created_at", -1)])
+        newest_doc = await news_collection.find_one({"news_type": news_type}, {"created_at": 1, "_id": 0}, sort=[("created_at", -1)])
         if newest_doc:
             newest_created_at = newest_doc.get("created_at")
-            result["debug"][f"{src}_newest"] = newest_created_at
-            logger.info(f"[news_count] Newest article for '{src}': {newest_created_at}")
+            result["debug"][f"{news_type}_newest"] = newest_created_at
+            logger.info(f"[news_count] Newest article for '{news_type}': {newest_created_at}")
 
             # Test: đếm tất cả tin có created_at >= newest - 1 ngày
             if count == 0:
@@ -526,14 +545,14 @@ async def news_count(
 
                     # Parse newest_created_at
                     if isinstance(newest_created_at, str):
-                        # Thử lấy tổng số tin của source này
-                        total_src = await news_collection.count_documents({"source": src})
-                        logger.info(f"[news_count] Total articles for '{src}': {total_src}")
+                        # Thử lấy tổng số tin của news_type này
+                        total_type = await news_collection.count_documents({"news_type": news_type})
+                        logger.info(f"[news_count] Total articles for '{news_type}': {total_type}")
                 except Exception as e:
                     logger.error(f"[news_count] Error parsing date: {e}")
 
-    # Đếm báo cáo từ news_report - LÙI 1 NGÀY (nếu không filter theo source cụ thể của news_daily)
-    if not source or source == "news_report":
+    # Đếm báo cáo từ news_report - LÙI 1 NGÀY (nếu không filter theo type cụ thể của news_daily)
+    if not type or type == "news_report":
         report_collection = stock_db.get_collection("news_report")
         report_count_query = {
             "created_at": {"$gte": yesterday_start_str}  # Dùng yesterday cho bản tin
@@ -553,10 +572,17 @@ async def news_count(
     return result
 
 
-async def news_report_categories(**kwargs) -> Dict[str, Any]:
+async def news_report_categories(
+    report_type: Optional[str] = None,
+    **kwargs,
+) -> Dict[str, Any]:
     """
     Lấy danh sách tất cả categories duy nhất từ collection news_report.
+    Có thể filter theo report_type (daily, weekly, monthly).
     Database: temp_stock.
+
+    Args:
+        report_type: Loại bản tin để filter (VD: daily, weekly, monthly)
 
     Returns:
         Dict chứa danh sách categories
@@ -564,10 +590,15 @@ async def news_report_categories(**kwargs) -> Dict[str, Any]:
     stock_db = get_database(STOCK_DB)
     collection = stock_db.get_collection("news_report")
 
+    # Build match query
+    match_query = {"category": {"$exists": True, "$ne": None}}
+    if report_type:
+        match_query["report_type"] = report_type
+
     # Sử dụng aggregation để lấy distinct categories với category_name
     pipeline = [
-        # Match documents có category
-        {"$match": {"category": {"$exists": True, "$ne": None}}},
+        # Match documents có category (và filter theo report_type nếu có)
+        {"$match": match_query},
         # Group by category và category_name
         {"$group": {"_id": "$category", "category_name": {"$first": "$category_name"}}},
         # Project ra format mong muốn
@@ -586,7 +617,8 @@ async def news_report_categories(**kwargs) -> Dict[str, Any]:
 
 
 async def news_report(
-    category: Optional[str] = None,
+    report_type: Optional[str] = None,
+    categories: Optional[str] = None,
     page: Optional[int] = None,
     limit: Optional[int] = None,
     sort_by: Optional[str] = None,
@@ -598,7 +630,8 @@ async def news_report(
     Database: temp_stock.
 
     Args:
-        category: Category để filter (VD: baochinhphu)
+        report_type: Loại bản tin để filter (VD: daily, weekly, monthly)
+        categories: Danh mục để filter, có thể 1 hoặc nhiều cách nhau bởi dấu phẩy (VD: trong_nuoc hoặc trong_nuoc,thong_cao)
         page: Số trang (bắt đầu từ 1)
         limit: Số lượng bản ghi mỗi trang
         sort_by: Tên field để sắp xếp (mặc định: created_at)
@@ -612,8 +645,17 @@ async def news_report(
 
     # Build query
     find_query = {}
-    if category:
-        find_query["category"] = category
+    if report_type:
+        find_query["report_type"] = report_type
+    
+    # Hỗ trợ multiple categories với $in operator
+    if categories:
+        # Parse comma-separated string to list
+        category_list = [c.strip() for c in categories.split(",") if c.strip()]
+        if len(category_list) == 1:
+            find_query["category"] = category_list[0]
+        elif len(category_list) > 1:
+            find_query["category"] = {"$in": category_list}
 
     # Đếm tổng số documents
     total = await collection.count_documents(find_query)
@@ -727,8 +769,9 @@ def get_available_keywords() -> List[str]:
 async def execute_sse_query(
     keyword: str,
     ticker: Optional[str] = None,
-    source: Optional[str] = None,
-    category: Optional[str] = None,
+    news_type: Optional[str] = None,
+    report_type: Optional[str] = None,
+    categories: Optional[str] = None,
     page: Optional[int] = None,
     limit: Optional[int] = None,
     sort_by: Optional[str] = None,
@@ -742,8 +785,9 @@ async def execute_sse_query(
     Args:
         keyword: Từ khóa xác định loại query
         ticker: Mã ticker (VD: VNINDEX, VN30, ...)
-        source: Nguồn tin (VD: chinhphu.vn, cafef.vn, ...)
-        category: Danh mục tin tức hoặc bản tin (VD: thi-truong, baochinhphu)
+        news_type: Loại tin tức (VD: thong_cao, trong_nuoc, doanh_nghiep, quoc_te)
+        report_type: Loại bản tin (VD: daily, weekly, monthly)
+        categories: Danh mục để filter, có thể 1 hoặc nhiều cách nhau bởi dấu phẩy (VD: thi-truong hoặc thi-truong,doanh-nghiep)
         page: Số trang (bắt đầu từ 1)
         limit: Số lượng bản ghi mỗi trang
         sort_by: Tên field để sắp xếp
@@ -761,14 +805,15 @@ async def execute_sse_query(
 
     query_func = SSE_QUERY_REGISTRY[keyword]
     logger.debug(
-        f"Executing SSE query for keyword: {keyword}, ticker: {ticker}, source: {source}, category: {category}, page: {page}, limit: {limit}"
+        f"Executing SSE query for keyword: {keyword}, ticker: {ticker}, news_type: {news_type}, report_type: {report_type}, categories: {categories}, page: {page}, limit: {limit}"
     )
 
     # Tạo dict params để truyền vào hàm query
     query_params = {
         "ticker": ticker,
-        "source": source,
-        "category": category,
+        "news_type": news_type,
+        "report_type": report_type,
+        "categories": categories,
         "page": page,
         "limit": limit,
         "sort_by": sort_by,

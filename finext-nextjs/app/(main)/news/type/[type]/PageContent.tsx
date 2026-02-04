@@ -1,7 +1,7 @@
-// finext-nextjs/app/(main)/news/category/[category]/PageContent.tsx
+// finext-nextjs/app/(main)/news/type/[type]/PageContent.tsx
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Box, Typography, Chip } from '@mui/material';
 import { useRouter } from 'next/navigation';
 
@@ -9,36 +9,63 @@ import { NewsBreadcrumb, NewsList } from '../../components';
 import CategoryChips, { CategoryInfo } from '../../components/CategoryChips';
 import { spacing, fontWeight } from 'theme/tokens';
 import { NewsType, NEWS_TYPES_INFO, getTypeInfo } from '../../types';
+import { apiClient } from 'services/apiClient';
 
 interface PageContentProps {
     type: NewsType;
 }
 
-// Only show level 2 category chips for this type
-const TYPE_WITH_CATEGORIES = 'trong_nuoc';
+interface CategoriesApiResponse {
+    items: CategoryInfo[];
+    total: number;
+}
 
 export default function PageContent({ type }: PageContentProps) {
     const router = useRouter();
     const [categories, setCategories] = useState<CategoryInfo[]>([]);
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-    const categoriesLoadedRef = useRef(false);
+    const [categoriesLoading, setCategoriesLoading] = useState(true);
 
     const currentTypeInfo = getTypeInfo(type);
     const typeName = currentTypeInfo?.type_name || type;
-    const showCategoryChips = type === TYPE_WITH_CATEGORIES;
+
+    // Fetch categories từ API theo news_type
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const response = await apiClient<CategoriesApiResponse>({
+                    url: '/api/v1/sse/rest/news_categories',
+                    method: 'GET',
+                    queryParams: {
+                        news_type: type,
+                    },
+                    requireAuth: false,
+                });
+
+                if (response.data?.items && response.data.items.length > 0) {
+                    setCategories(response.data.items);
+                } else {
+                    setCategories([]);
+                }
+            } catch (error) {
+                console.error('[PageContent] Failed to fetch categories:', error);
+                setCategories([]);
+            } finally {
+                setCategoriesLoading(false);
+            }
+        };
+
+        // Reset categories when type changes
+        setCategories([]);
+        setSelectedCategories([]);
+        setCategoriesLoading(true);
+        fetchCategories();
+    }, [type]);
 
     // Handle category selection
     const handleCategoriesChange = (cats: string[]) => {
         setSelectedCategories(cats);
     };
-
-    // Handle categories loaded - only set on first load to preserve all chips when filtering
-    const handleCategoriesLoaded = useCallback((cats: CategoryInfo[]) => {
-        if (!categoriesLoadedRef.current && cats.length > 0) {
-            setCategories(cats);
-            categoriesLoadedRef.current = true;
-        }
-    }, []);
 
     // Handle type tab click
     const handleTypeClick = (newType: NewsType | 'all') => {
@@ -49,7 +76,7 @@ export default function PageContent({ type }: PageContentProps) {
             setSelectedCategories([]);
         } else {
             // Navigate to different type
-            router.push(`/news/category/${newType}`);
+            router.push(`/news/type/${newType}`);
         }
     };
 
@@ -64,13 +91,14 @@ export default function PageContent({ type }: PageContentProps) {
 
     // Check if filter is actually applied (not all chips selected)
     const isFilterApplied = selectedCategories.length > 0 && selectedCategories.length < categories.length;
+    const showCategoryChips = categories.length > 0;
 
     return (
         <Box sx={{ py: spacing.xs }}>
             {/* Breadcrumb */}
             <NewsBreadcrumb
                 items={[
-                    { label: typeName, href: `/news/category/${type}` },
+                    { label: typeName, href: `/news/type/${type}` },
                     ...(isFilterApplied && showCategoryChips
                         ? [{ label: getCategoryBreadcrumbLabel() }]
                         : [])
@@ -81,6 +109,13 @@ export default function PageContent({ type }: PageContentProps) {
             <Box sx={{ mb: spacing.xs }}>
                 <Typography variant="h1">
                     {typeName}
+                </Typography>
+                <Typography
+                    variant="body1"
+                    color="text.secondary"
+                    sx={{ mt: 0.5 }}
+                >
+                    Cập nhật tin tức tài chính, chứng khoán và các sự kiện nổi bật từ nhiều nguồn uy tín.
                 </Typography>
             </Box>
 
@@ -125,8 +160,8 @@ export default function PageContent({ type }: PageContentProps) {
                 })}
             </Box>
 
-            {/* Category Chips - Second Row (only show for trong_nuoc type) */}
-            {showCategoryChips && categories.length > 0 && (
+            {/* Category Chips - Second Row (only show if categories exist for this type) */}
+            {showCategoryChips && (
                 <CategoryChips
                     categories={categories}
                     selectedCategories={selectedCategories}
@@ -135,7 +170,6 @@ export default function PageContent({ type }: PageContentProps) {
             )}
 
             {/* News List - Filtered by type and optionally category */}
-            {/* Khi chọn tất cả categories = không filter (hiện hết) */}
             <NewsList
                 type={type}
                 categories={
@@ -145,7 +179,6 @@ export default function PageContent({ type }: PageContentProps) {
                         ? selectedCategories
                         : undefined
                 }
-                onCategoriesLoaded={showCategoryChips ? handleCategoriesLoaded : undefined}
             />
         </Box>
     );

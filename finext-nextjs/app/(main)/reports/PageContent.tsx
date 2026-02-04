@@ -1,76 +1,77 @@
 // finext-nextjs/app/(main)/reports/PageContent.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Chip } from '@mui/material';
+import { useRouter } from 'next/navigation';
 
-import { ReportList, TypeTabs } from './components';
+import { ReportList } from './components';
 import NewsBreadcrumb from '../news/components/NewsBreadcrumb';
-import { spacing } from 'theme/tokens';
-import { apiClient } from 'services/apiClient';
-import { ReportCategoryInfo } from './types';
-
-interface CategoriesApiResponse {
-    items: ReportCategoryInfo[];
-    total: number;
-}
+import { spacing, fontWeight } from 'theme/tokens';
+import { REPORT_TYPES_INFO, ReportType } from './types';
 
 export default function ReportsContent() {
-    const [categories, setCategories] = useState<ReportCategoryInfo[]>([]);
-    const [categoriesLoading, setCategoriesLoading] = useState(true);
+    const router = useRouter();
 
-    // Fetch categories từ API
-    useEffect(() => {
-        const fetchCategories = async () => {
-            try {
-                const response = await apiClient<CategoriesApiResponse>({
-                    url: '/api/v1/sse/rest/news_report_categories',
-                    method: 'GET',
-                    requireAuth: false,
-                });
-
-                if (response.data?.items) {
-                    setCategories(response.data.items);
-                }
-            } catch (error) {
-                console.error('[ReportsContent] Failed to fetch categories:', error);
-            } finally {
-                setCategoriesLoading(false);
-            }
-        };
-
-        fetchCategories();
-    }, []);
+    const handleTypeClick = (type: ReportType) => {
+        router.push(`/reports/type/${type}`);
+    };
 
     return (
         <Box sx={{ py: spacing.xs }}>
             {/* Breadcrumb */}
-            <NewsBreadcrumb sectionLabel="Bản tin" sectionHref="/reports" items={[]} />
+            <NewsBreadcrumb sectionLabel="Báo cáo" sectionHref="/reports" items={[]} />
 
             {/* Header */}
             <Box sx={{ mb: spacing.xs }}>
                 <Typography variant="h1">
-                    Bản tin thị trường
+                    Báo cáo định kỳ
                 </Typography>
                 <Typography
                     variant="body1"
                     color="text.secondary"
                     sx={{ mt: 0.5 }}
                 >
-                    Tổng hợp báo cáo phân tích, bản tin doanh nghiệp và thị trường hàng ngày.
+                    Tổng hợp và phân tích tin tức thị trường theo ngày, tuần và tháng.
                 </Typography>
             </Box>
 
-            {/* Category Tabs */}
-            <TypeTabs
-                categories={categories}
-                selectedCategory="all"
-                onCategoryChange={() => { }}
-                loading={categoriesLoading}
-                useNavigation
-            />
+            {/* Type Tabs - Level 1 */}
+            <Box
+                sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 1,
+                    mb: spacing.xs,
+                }}
+            >
+                <Chip
+                    label="Tất cả"
+                    onClick={() => router.push('/reports')}
+                    color="default"
+                    variant="filled"
+                    sx={{
+                        fontWeight: fontWeight.semibold,
+                        border: 'none',
+                        backgroundColor: 'primary.main',
+                        color: 'text.primary',
+                        '&:hover': {
+                            backgroundColor: 'primary.dark',
+                        },
+                    }}
+                />
+                {REPORT_TYPES_INFO.map((typeInfo) => (
+                    <Chip
+                        key={typeInfo.type}
+                        label={typeInfo.type_name}
+                        onClick={() => handleTypeClick(typeInfo.type)}
+                        color="default"
+                        variant="filled"
+                        sx={{ fontWeight: fontWeight.medium, border: 'none' }}
+                    />
+                ))}
+            </Box>
 
-            {/* Report List */}
+            {/* Report List - Show all */}
             <ReportList />
         </Box>
     );

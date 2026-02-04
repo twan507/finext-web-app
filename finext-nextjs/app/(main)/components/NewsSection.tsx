@@ -49,6 +49,40 @@ import Link from 'next/link';
 import Carousel from 'components/common/Carousel';
 
 // ============================================================================
+// SLUG UTILITIES
+// ============================================================================
+
+/** Chuyển title thành slug URL-friendly */
+const generateSlug = (title: string): string => {
+    // Bảng chuyển đổi dấu tiếng Việt
+    const vietnameseMap: Record<string, string> = {
+        'à': 'a', 'á': 'a', 'ả': 'a', 'ã': 'a', 'ạ': 'a',
+        'ă': 'a', 'ằ': 'a', 'ắ': 'a', 'ẳ': 'a', 'ẵ': 'a', 'ặ': 'a',
+        'â': 'a', 'ầ': 'a', 'ấ': 'a', 'ẩ': 'a', 'ẫ': 'a', 'ậ': 'a',
+        'đ': 'd',
+        'è': 'e', 'é': 'e', 'ẻ': 'e', 'ẽ': 'e', 'ẹ': 'e',
+        'ê': 'e', 'ề': 'e', 'ế': 'e', 'ể': 'e', 'ễ': 'e', 'ệ': 'e',
+        'ì': 'i', 'í': 'i', 'ỉ': 'i', 'ĩ': 'i', 'ị': 'i',
+        'ò': 'o', 'ó': 'o', 'ỏ': 'o', 'õ': 'o', 'ọ': 'o',
+        'ô': 'o', 'ồ': 'o', 'ố': 'o', 'ổ': 'o', 'ỗ': 'o', 'ộ': 'o',
+        'ơ': 'o', 'ờ': 'o', 'ớ': 'o', 'ở': 'o', 'ỡ': 'o', 'ợ': 'o',
+        'ù': 'u', 'ú': 'u', 'ủ': 'u', 'ũ': 'u', 'ụ': 'u',
+        'ư': 'u', 'ừ': 'u', 'ứ': 'u', 'ử': 'u', 'ữ': 'u', 'ự': 'u',
+        'ỳ': 'y', 'ý': 'y', 'ỷ': 'y', 'ỹ': 'y', 'ỵ': 'y',
+    };
+
+    return title
+        .toLowerCase()
+        .split('')
+        .map(char => vietnameseMap[char] || char)
+        .join('')
+        .replace(/[^a-z0-9\s-]/g, '') // Loại bỏ ký tự đặc biệt
+        .replace(/\s+/g, '-') // Thay space bằng -
+        .replace(/-+/g, '-') // Loại bỏ nhiều - liên tiếp
+        .replace(/^-|-$/g, ''); // Loại bỏ - ở đầu và cuối
+};
+
+// ============================================================================
 // TYPES
 // ============================================================================
 
@@ -362,7 +396,7 @@ function MiniNewsCard({ article }: MiniNewsCardProps) {
                 }}
             >
                 {/* Title */}
-                <Link href={`/news/${article.article_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                <Link href={`/news/${generateSlug(article.title)}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                     <Typography
                         variant="h6"
                         className="news-card-title"
@@ -404,6 +438,21 @@ function MiniNewsCard({ article }: MiniNewsCardProps) {
                 >
                     {article.sapo}
                 </Typography>
+
+                {/* Source - nguồn tin */}
+                {article.source && (
+                    <Typography
+                        variant="caption"
+                        color="text.disabled"
+                        sx={{
+                            fontSize: getResponsiveFontSize('xs'),
+                            mt: 0.5,
+                            display: 'block',
+                        }}
+                    >
+                        Nguồn: {article.source}
+                    </Typography>
+                )}
             </Box>
             <Divider className="news-divider" sx={{ borderColor: 'divider' }} />
         </Box>
@@ -452,7 +501,7 @@ function MiniReportCard({ report }: MiniReportCardProps) {
                 }}
             >
                 {/* Title */}
-                <Link href={`/reports/${report.report_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                <Link href={`/reports/${generateSlug(report.title)}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                     <Typography
                         variant="h6"
                         className="report-card-title"
@@ -472,7 +521,7 @@ function MiniReportCard({ report }: MiniReportCardProps) {
                             },
                         }}
                     >
-                        {report.title || 'Bản tin'}
+                        {report.title || 'Báo cáo'}
                     </Typography>
                 </Link>
 
@@ -651,7 +700,7 @@ export default function NewsSection() {
                     limit: '5',
                     sort_by: 'created_at',
                     sort_order: 'desc',
-                    source: 'thong_cao',
+                    news_type: 'thong_cao',
                 },
                 requireAuth: false,
             });
@@ -674,7 +723,7 @@ export default function NewsSection() {
                     limit: '5',
                     sort_by: 'created_at',
                     sort_order: 'desc',
-                    source: 'trong_nuoc',
+                    news_type: 'trong_nuoc',
                 },
                 requireAuth: false,
             });
@@ -697,7 +746,7 @@ export default function NewsSection() {
                     limit: '5',
                     sort_by: 'created_at',
                     sort_order: 'desc',
-                    source: 'doanh_nghiep',
+                    news_type: 'doanh_nghiep',
                 },
                 requireAuth: false,
             });
@@ -720,7 +769,7 @@ export default function NewsSection() {
                     limit: '5',
                     sort_by: 'created_at',
                     sort_order: 'desc',
-                    source: 'quoc_te',
+                    news_type: 'quoc_te',
                 },
                 requireAuth: false,
             });
@@ -738,7 +787,7 @@ export default function NewsSection() {
             component: (
                 <NewsColumn
                     title="TÀI CHÍNH QUỐC TẾ"
-                    href="/news/category/quoc_te"
+                    href="/news/type/quoc_te"
                     loading={quocteLoading}
                     newsItems={quocteNews}
                 />
@@ -749,7 +798,7 @@ export default function NewsSection() {
             component: (
                 <NewsColumn
                     title="VĨ MÔ TRONG NƯỚC"
-                    href="/news/category/trong_nuoc"
+                    href="/news/type/trong_nuoc"
                     loading={trongnuocLoading}
                     newsItems={trongnuocNews}
                 />
@@ -760,7 +809,7 @@ export default function NewsSection() {
             component: (
                 <NewsColumn
                     title="DOANH NGHIỆP NIÊM YẾT"
-                    href="/news/category/doanh_nghiep"
+                    href="/news/type/doanh_nghiep"
                     loading={doanhnghiepLoading}
                     newsItems={doanhnghiepNews}
                 />
@@ -771,7 +820,7 @@ export default function NewsSection() {
             component: (
                 <NewsColumn
                     title="THÔNG CÁO CHÍNH PHỦ"
-                    href="/news/category/thong_cao"
+                    href="/news/type/thong_cao"
                     loading={thongcaoLoading}
                     newsItems={thongcaoNews}
                 />
@@ -786,7 +835,7 @@ export default function NewsSection() {
             component: (
                 <NewsColumnContent
                     title="TÀI CHÍNH QUỐC TẾ"
-                    href="/news/category/quoc_te"
+                    href="/news/type/quoc_te"
                     loading={quocteLoading}
                     newsItems={quocteNews}
                 />
@@ -797,7 +846,7 @@ export default function NewsSection() {
             component: (
                 <NewsColumnContent
                     title="VĨ MÔ TRONG NƯỚC"
-                    href="/news/category/trong_nuoc"
+                    href="/news/type/trong_nuoc"
                     loading={trongnuocLoading}
                     newsItems={trongnuocNews}
                 />
@@ -808,7 +857,7 @@ export default function NewsSection() {
             component: (
                 <NewsColumnContent
                     title="DOANH NGHIỆP NIÊM YẾT"
-                    href="/news/category/doanh_nghiep"
+                    href="/news/type/doanh_nghiep"
                     loading={doanhnghiepLoading}
                     newsItems={doanhnghiepNews}
                 />
@@ -819,7 +868,7 @@ export default function NewsSection() {
             component: (
                 <NewsColumnContent
                     title="THÔNG CÁO CHÍNH PHỦ"
-                    href="/news/category/thong_cao"
+                    href="/news/type/thong_cao"
                     loading={thongcaoLoading}
                     newsItems={thongcaoNews}
                 />

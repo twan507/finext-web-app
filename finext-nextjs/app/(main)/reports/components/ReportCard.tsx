@@ -4,7 +4,7 @@
 import { Box, Typography } from '@mui/material';
 import Link from 'next/link';
 
-import { NewsReport } from '../types';
+import { NewsReport, generateSlug } from '../types';
 import { spacing, transitions, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 
 interface ReportCardProps {
@@ -33,11 +33,12 @@ const parseDateTime = (dateStr: string): { date: string; time: string } => {
 
 export default function ReportCard({ report }: ReportCardProps) {
     const { date, time } = parseDateTime(report.created_at);
+    const slug = generateSlug(report.title);
 
     return (
         <Box
             component={Link}
-            href={`/reports/${report.report_id}`}
+            href={`/reports/${slug}`}
             sx={{
                 display: 'flex',
                 gap: { xs: spacing.xs, md: spacing.sm },
@@ -104,7 +105,7 @@ export default function ReportCard({ report }: ReportCardProps) {
                         overflow: 'hidden',
                     }}
                 >
-                    {report.title || 'Bản tin'}
+                    {report.title || 'Báo cáo'}
                 </Typography>
 
                 {/* Sapo - hiển thị giống NewsCard */}

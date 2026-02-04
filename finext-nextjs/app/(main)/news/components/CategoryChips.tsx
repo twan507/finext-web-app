@@ -71,16 +71,29 @@ export default function CategoryChips({
                 mb: spacing.xs,
             }}
         >
-            {categories.map((cat) => (
-                <Chip
-                    key={cat.category}
-                    label={cat.category_name}
-                    onClick={() => handleChipClick(cat.category)}
-                    color={selectedCategories.includes(cat.category) ? 'primary' : 'default'}
-                    variant="filled"
-                    sx={{ fontWeight: fontWeight.medium, border: 'none' }}
-                />
-            ))}
+            {categories.map((cat) => {
+                const isSelected = selectedCategories.includes(cat.category);
+                return (
+                    <Chip
+                        key={cat.category}
+                        label={cat.category_name}
+                        onClick={() => handleChipClick(cat.category)}
+                        color="default"
+                        variant="filled"
+                        sx={{
+                            fontWeight: fontWeight.medium,
+                            border: 'none',
+                            ...(isSelected && {
+                                backgroundColor: 'primary.main',
+                                color: 'text.primary',
+                                '&:hover': {
+                                    backgroundColor: 'primary.dark',
+                                },
+                            }),
+                        }}
+                    />
+                );
+            })}
         </Box>
     );
 }

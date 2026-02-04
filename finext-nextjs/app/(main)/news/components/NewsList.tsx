@@ -15,13 +15,13 @@ import {
 import { Newspaper } from '@mui/icons-material';
 
 import { apiClient } from 'services/apiClient';
-import { NewsApiResponse, NewsArticle, NEWS_PAGE_SIZE, NEWS_SORT_FIELD, NEWS_SORT_ORDER, NewsSource } from '../types';
+import { NewsApiResponse, NewsArticle, NEWS_PAGE_SIZE, NEWS_SORT_FIELD, NEWS_SORT_ORDER, NewsType } from '../types';
 import NewsCard from './NewsCard';
 import { spacing, borderRadius, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 
 interface NewsListProps {
-    /** Lọc theo source */
-    source?: NewsSource;
+    /** Lọc theo type */
+    type?: NewsType;
     /** Lọc theo categories (multiple) */
     categories?: string[];
     /** Tiêu đề section */
@@ -90,7 +90,7 @@ function EmptyState() {
 }
 
 export default function NewsList({
-    source,
+    type,
     categories,
     title,
     description,
@@ -103,18 +103,13 @@ export default function NewsList({
 
     // Get params from URL or props
     const page = Number(searchParams.get('page')) || 1;
-    // const urlCategory = searchParams.get('category'); // We prioritize prop 'category' for now as it aligns with route segments
 
-    // Check if we need client-side filtering (multiple categories selected)
-    const needsClientFilter = categories && categories.length > 1;
-    const clientFilterLimit = 100; // Backend max limit is 100
-
-    // React Query Key - don't include categories when doing client-side filter
+    // React Query Key - Backend now supports multiple categories
     const queryKey = ['news', 'list', {
-        page: needsClientFilter ? 1 : page, // Always page 1 for client-side filtering
-        limit: needsClientFilter ? clientFilterLimit : pageSize,
-        source,
-        category: (categories && categories.length === 1) ? categories[0] : undefined,
+        page,
+        limit: pageSize,
+        type,
+        categories: categories?.join(','),
         sort_by: NEWS_SORT_FIELD,
         sort_order: NEWS_SORT_ORDER
     }];
@@ -125,20 +120,20 @@ export default function NewsList({
         queryFn: async () => {
             // Build query params
             const queryParams: Record<string, string> = {
-                page: needsClientFilter ? '1' : String(page),
-                limit: needsClientFilter ? String(clientFilterLimit) : String(pageSize),
+                page: String(page),
+                limit: String(pageSize),
                 sort_by: NEWS_SORT_FIELD,
                 sort_order: NEWS_SORT_ORDER,
             };
 
-            // Thêm filter source nếu có
-            if (source) {
-                queryParams.source = source;
+            // Thêm filter type nếu có
+            if (type) {
+                queryParams.news_type = type;
             }
 
-            // Chỉ gửi category khi chọn 1 category (backend không hỗ trợ multiple)
-            if (categories && categories.length === 1) {
-                queryParams.category = categories[0];
+            // Gửi categories (backend hỗ trợ multiple với comma-separated)
+            if (categories && categories.length > 0) {
+                queryParams.categories = categories.join(',');
             }
 
             const response = await apiClient<NewsApiResponse>({
@@ -153,27 +148,15 @@ export default function NewsList({
         placeholderData: (previousData) => previousData, // Keep previous data while fetching new page
     });
 
-    // Filter articles client-side when multiple categories selected
-    const rawArticles = newsData?.items || [];
-    const filteredArticles = needsClientFilter
-        ? rawArticles.filter(article => categories!.includes(article.category))
-        : rawArticles;
-
-    // Apply pagination for client-side filtering
-    const articles = needsClientFilter
-        ? filteredArticles.slice((page - 1) * pageSize, page * pageSize)
-        : filteredArticles;
+    // Articles from API (backend handles filtering)
+    const articles = newsData?.items || [];
 
     const loading = isLoading;
     const error = queryError ? (queryError as Error).message : null;
 
-    // Calculate pagination based on filter mode
-    const totalPages = needsClientFilter
-        ? Math.ceil(filteredArticles.length / pageSize) || 1
-        : newsData?.pagination?.total_pages || 1;
-    const total = needsClientFilter
-        ? filteredArticles.length
-        : newsData?.pagination?.total || 0;
+    // Pagination from API
+    const totalPages = newsData?.pagination?.total_pages || 1;
+    const total = newsData?.pagination?.total || 0;
 
     // Effect to extract categories (only run when data changes)
     useEffect(() => {
@@ -184,11 +167,11 @@ export default function NewsList({
                     categoryMap.set(article.category, article.category_name);
                 }
             });
-            const categories = Array.from(categoryMap.entries()).map(([cat, name]) => ({
+            const cats = Array.from(categoryMap.entries()).map(([cat, name]) => ({
                 category: cat,
                 category_name: name,
             }));
-            onCategoriesLoaded(categories);
+            onCategoriesLoaded(cats);
         }
     }, [newsData, page]); // Removed onCategoriesLoaded from dependencies
 

@@ -1,7 +1,8 @@
 // finext-nextjs/app/(main)/reports/components/ReportList.tsx
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import {
     Box,
     Pagination,
@@ -13,13 +14,15 @@ import {
 import { Article } from '@mui/icons-material';
 
 import { apiClient } from 'services/apiClient';
-import { ReportApiResponse, NewsReport, REPORT_PAGE_SIZE, REPORT_SORT_FIELD, REPORT_SORT_ORDER } from '../types';
+import { ReportApiResponse, NewsReport, REPORT_PAGE_SIZE, REPORT_SORT_FIELD, REPORT_SORT_ORDER, ReportType } from '../types';
 import ReportCard from './ReportCard';
 import { spacing, borderRadius, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 
 interface ReportListProps {
-    /** Lọc theo category */
-    category?: string;
+    /** Lọc theo type (daily, weekly, monthly) */
+    type?: ReportType;
+    /** Lọc theo categories (multiple) */
+    categories?: string[];
     /** Tiêu đề section */
     title?: string;
     /** Mô tả section */
@@ -76,41 +79,56 @@ function EmptyState() {
                 Chưa có bản tin
             </Typography>
             <Typography variant="body2" color="text.disabled">
-                Bản tin sẽ được cập nhật liên tục. Vui lòng quay lại sau.
+                Báo cáo sẽ được cập nhật liên tục. Vui lòng quay lại sau.
             </Typography>
         </Box>
     );
 }
 
 export default function ReportList({
-    category,
+    type,
+    categories,
     title,
     description,
     pageSize = REPORT_PAGE_SIZE,
 }: ReportListProps) {
-    const [reports, setReports] = useState<NewsReport[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [page, setPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [total, setTotal] = useState(0);
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
 
-    const fetchReports = useCallback(async (pageNum: number) => {
-        setLoading(true);
-        setError(null);
+    // Get page from URL
+    const page = Number(searchParams.get('page')) || 1;
 
-        try {
+    // React Query Key
+    const queryKey = ['reports', 'list', {
+        page,
+        limit: pageSize,
+        type,
+        categories: categories?.join(','),
+        sort_by: REPORT_SORT_FIELD,
+        sort_order: REPORT_SORT_ORDER
+    }];
+
+    // Use Query
+    const { data: reportsData, isLoading, error: queryError } = useQuery({
+        queryKey,
+        queryFn: async () => {
             // Build query params
             const queryParams: Record<string, string> = {
-                page: String(pageNum),
+                page: String(page),
                 limit: String(pageSize),
                 sort_by: REPORT_SORT_FIELD,
                 sort_order: REPORT_SORT_ORDER,
             };
 
-            // Thêm filter category nếu có
-            if (category && category !== 'all') {
-                queryParams.category = category;
+            // Thêm filter type nếu có (daily, weekly, monthly)
+            if (type) {
+                queryParams.report_type = type;
+            }
+
+            // Gửi categories (backend hỗ trợ multiple với comma-separated)
+            if (categories && categories.length > 0) {
+                queryParams.categories = categories.join(',');
             }
 
             const response = await apiClient<ReportApiResponse>({
@@ -120,33 +138,31 @@ export default function ReportList({
                 requireAuth: false,
             });
 
-            if (response.data) {
-                const items = response.data.items || [];
-                setReports(items);
-                setTotalPages(response.data.pagination?.total_pages || 1);
-                setTotal(response.data.pagination?.total || 0);
-            }
-        } catch (err: any) {
-            console.error('[ReportList] Fetch error:', err);
-            setError(err.message || 'Không thể tải bản tin. Vui lòng thử lại sau.');
-        } finally {
-            setLoading(false);
-        }
-    }, [pageSize, category]);
+            return response.data;
+        },
+        placeholderData: (previousData) => previousData, // Keep previous data while fetching new page
+    });
 
-    // Reset page về 1 khi category thay đổi
-    useEffect(() => {
-        setPage(1);
-    }, [category]);
+    // Reports from API
+    const reports = reportsData?.items || [];
 
-    useEffect(() => {
-        fetchReports(page);
-    }, [fetchReports, page]);
+    const loading = isLoading;
+    const error = queryError ? (queryError as Error).message : null;
+
+    // Pagination from API
+    const totalPages = reportsData?.pagination?.total_pages || 1;
+    const total = reportsData?.pagination?.total || 0;
 
     const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
-        setPage(value);
-        // Scroll to top
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Update URL
+        const params = new URLSearchParams(searchParams.toString());
+        if (value === 1) {
+            params.delete('page');
+        } else {
+            params.set('page', value.toString());
+        }
+
+        router.push(`${pathname}?${params.toString()}`, { scroll: true });
     };
 
     return (

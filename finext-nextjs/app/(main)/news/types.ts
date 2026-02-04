@@ -7,8 +7,8 @@
 // NEWS DATA TYPES
 // ============================================================================
 
-/** Source của tin tức (internal) */
-export type NewsSource = 'thong_cao' | 'trong_nuoc' | 'doanh_nghiep' | 'quoc_te';
+/** Type của tin tức (internal) */
+export type NewsType = 'thong_cao' | 'trong_nuoc' | 'doanh_nghiep' | 'quoc_te';
 
 /** Category slug */
 export type NewsCategory = string;
@@ -16,7 +16,8 @@ export type NewsCategory = string;
 /** News article từ API */
 export interface NewsArticle {
     article_id: string;
-    source: NewsSource;
+    news_type: NewsType;
+    source?: string; // Nguồn tin đơn giản (baochinhphu.vn, tinnhanhchungkhoan.vn, ...)
     category: string;
     category_name: string;
     title: string;
@@ -46,75 +47,75 @@ export interface NewsApiResponse {
 }
 
 // ============================================================================
-// SOURCE CONFIG
+// TYPE CONFIG
 // ============================================================================
 
-export interface SourceConfig {
+export interface TypeConfig {
     slug: string;
     label: string;
-    source: NewsSource;
+    type: NewsType;
     description: string;
 }
 
-/** Cấu hình các nguồn tin - source là internal, label là tên hiển thị */
-export const NEWS_SOURCES: SourceConfig[] = [
+/** Cấu hình các loại tin - type là internal, label là tên hiển thị */
+export const NEWS_TYPES: TypeConfig[] = [
     {
         slug: 'thong-cao',
-        label: 'Thông cáo',
-        source: 'thong_cao',
+        label: 'Thông cáo chính phủ',
+        type: 'thong_cao',
         description: 'Thông cáo từ Cổng thông tin điện tử Chính phủ',
     },
     {
         slug: 'trong-nuoc',
-        label: 'Tin trong nước',
-        source: 'trong_nuoc',
+        label: 'Vĩ mô trong nước',
+        type: 'trong_nuoc',
         description: 'Tin tức trong nước, chính sách kinh tế',
     },
     {
         slug: 'doanh-nghiep',
-        label: 'Tin doanh nghiệp',
-        source: 'doanh_nghiep',
+        label: 'Doanh nghiệp niêm yết',
+        type: 'doanh_nghiep',
         description: 'Tin tức doanh nghiệp, phân tích thị trường',
     },
     {
         slug: 'quoc-te',
-        label: 'Tin quốc tế',
-        source: 'quoc_te',
+        label: 'Tài chính quốc tế',
+        type: 'quoc_te',
         description: 'Tin tức quốc tế, thị trường toàn cầu',
     },
 ];
 
 /** Lấy config theo slug */
-export const getSourceConfigBySlug = (slug: string): SourceConfig | undefined => {
-    return NEWS_SOURCES.find((s) => s.slug === slug);
+export const getTypeConfigBySlug = (slug: string): TypeConfig | undefined => {
+    return NEWS_TYPES.find((t) => t.slug === slug);
 };
 
-/** Lấy config theo source name */
-export const getSourceConfigBySource = (source: NewsSource): SourceConfig | undefined => {
-    return NEWS_SOURCES.find((s) => s.source === source);
+/** Lấy config theo type name */
+export const getTypeConfigByType = (type: NewsType): TypeConfig | undefined => {
+    return NEWS_TYPES.find((t) => t.type === type);
 };
 
 // ============================================================================
-// SOURCE INFO FOR NAVIGATION
+// TYPE INFO FOR NAVIGATION
 // ============================================================================
 
-/** Source info for navigation tabs */
-export interface SourceInfo {
-    source: NewsSource;
-    source_name: string;
+/** Type info for navigation tabs */
+export interface TypeInfo {
+    type: NewsType;
+    type_name: string;
 }
 
-/** Danh sách 4 nguồn tin chính */
-export const NEWS_SOURCES_INFO: SourceInfo[] = [
-    { source: 'quoc_te', source_name: 'Tài chính quốc tế' },
-    { source: 'trong_nuoc', source_name: 'Vĩ mô trong nước' },
-    { source: 'doanh_nghiep', source_name: 'Doanh nghiệp niêm yết' },
-    { source: 'thong_cao', source_name: 'Thông cáo chính phủ' },
+/** Danh sách 4 loại tin chính */
+export const NEWS_TYPES_INFO: TypeInfo[] = [
+    { type: 'quoc_te', type_name: 'Tài chính quốc tế' },
+    { type: 'trong_nuoc', type_name: 'Vĩ mô trong nước' },
+    { type: 'doanh_nghiep', type_name: 'Doanh nghiệp niêm yết' },
+    { type: 'thong_cao', type_name: 'Thông cáo chính phủ' },
 ];
 
-/** Lấy source info theo source */
-export const getSourceInfo = (source: NewsSource): SourceInfo | undefined => {
-    return NEWS_SOURCES_INFO.find((s) => s.source === source);
+/** Lấy type info theo type */
+export const getTypeInfo = (type: NewsType): TypeInfo | undefined => {
+    return NEWS_TYPES_INFO.find((t) => t.type === type);
 };
 
 // ============================================================================
@@ -124,4 +125,38 @@ export const getSourceInfo = (source: NewsSource): SourceInfo | undefined => {
 export const NEWS_PAGE_SIZE = 12;
 export const NEWS_SORT_FIELD = 'created_at';
 export const NEWS_SORT_ORDER = 'desc';
+
+// ============================================================================
+// SLUG UTILITIES
+// ============================================================================
+
+/** Chuyển title thành slug URL-friendly */
+export const generateSlug = (title: string): string => {
+    // Bảng chuyển đổi dấu tiếng Việt
+    const vietnameseMap: Record<string, string> = {
+        'à': 'a', 'á': 'a', 'ả': 'a', 'ã': 'a', 'ạ': 'a',
+        'ă': 'a', 'ằ': 'a', 'ắ': 'a', 'ẳ': 'a', 'ẵ': 'a', 'ặ': 'a',
+        'â': 'a', 'ầ': 'a', 'ấ': 'a', 'ẩ': 'a', 'ẫ': 'a', 'ậ': 'a',
+        'đ': 'd',
+        'è': 'e', 'é': 'e', 'ẻ': 'e', 'ẽ': 'e', 'ẹ': 'e',
+        'ê': 'e', 'ề': 'e', 'ế': 'e', 'ể': 'e', 'ễ': 'e', 'ệ': 'e',
+        'ì': 'i', 'í': 'i', 'ỉ': 'i', 'ĩ': 'i', 'ị': 'i',
+        'ò': 'o', 'ó': 'o', 'ỏ': 'o', 'õ': 'o', 'ọ': 'o',
+        'ô': 'o', 'ồ': 'o', 'ố': 'o', 'ổ': 'o', 'ỗ': 'o', 'ộ': 'o',
+        'ơ': 'o', 'ờ': 'o', 'ớ': 'o', 'ở': 'o', 'ỡ': 'o', 'ợ': 'o',
+        'ù': 'u', 'ú': 'u', 'ủ': 'u', 'ũ': 'u', 'ụ': 'u',
+        'ư': 'u', 'ừ': 'u', 'ứ': 'u', 'ử': 'u', 'ữ': 'u', 'ự': 'u',
+        'ỳ': 'y', 'ý': 'y', 'ỷ': 'y', 'ỹ': 'y', 'ỵ': 'y',
+    };
+
+    return title
+        .toLowerCase()
+        .split('')
+        .map(char => vietnameseMap[char] || char)
+        .join('')
+        .replace(/[^a-z0-9\s-]/g, '') // Loại bỏ ký tự đặc biệt
+        .replace(/\s+/g, '-') // Thay space bằng -
+        .replace(/-+/g, '-') // Loại bỏ nhiều - liên tiếp
+        .replace(/^-|-$/g, ''); // Loại bỏ - ở đầu và cuối
+};
 
