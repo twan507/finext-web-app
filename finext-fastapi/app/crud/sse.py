@@ -7,8 +7,6 @@ Mỗi hàm tự chọn database phù hợp.
 
 import asyncio
 import logging
-import re
-import unicodedata
 import pandas as pd
 from typing import Any, Dict, List, Optional
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -30,63 +28,6 @@ REF_DB = "ref_db"
 MAX_RETRIES = 3
 OPERATION_TIMEOUT_MS = 30000  # 30 giây
 RETRY_DELAY_SECONDS = 1
-
-
-# ==============================================================================
-# SLUG GENERATION - Đồng bộ với frontend
-# ==============================================================================
-
-# Bảng chuyển đổi tiếng Việt sang ASCII
-VIETNAMESE_MAP = {
-    'à': 'a', 'á': 'a', 'ả': 'a', 'ã': 'a', 'ạ': 'a',
-    'ă': 'a', 'ằ': 'a', 'ắ': 'a', 'ẳ': 'a', 'ẵ': 'a', 'ặ': 'a',
-    'â': 'a', 'ầ': 'a', 'ấ': 'a', 'ẩ': 'a', 'ẫ': 'a', 'ậ': 'a',
-    'đ': 'd',
-    'è': 'e', 'é': 'e', 'ẻ': 'e', 'ẽ': 'e', 'ẹ': 'e',
-    'ê': 'e', 'ề': 'e', 'ế': 'e', 'ể': 'e', 'ễ': 'e', 'ệ': 'e',
-    'ì': 'i', 'í': 'i', 'ỉ': 'i', 'ĩ': 'i', 'ị': 'i',
-    'ò': 'o', 'ó': 'o', 'ỏ': 'o', 'õ': 'o', 'ọ': 'o',
-    'ô': 'o', 'ồ': 'o', 'ố': 'o', 'ổ': 'o', 'ỗ': 'o', 'ộ': 'o',
-    'ơ': 'o', 'ờ': 'o', 'ớ': 'o', 'ở': 'o', 'ỡ': 'o', 'ợ': 'o',
-    'ù': 'u', 'ú': 'u', 'ủ': 'u', 'ũ': 'u', 'ụ': 'u',
-    'ư': 'u', 'ừ': 'u', 'ứ': 'u', 'ử': 'u', 'ữ': 'u', 'ự': 'u',
-    'ỳ': 'y', 'ý': 'y', 'ỷ': 'y', 'ỹ': 'y', 'ỵ': 'y',
-}
-
-
-def generate_slug(title: str) -> str:
-    """
-    Chuyển title thành slug URL-friendly.
-    Đồng bộ với hàm generateSlug trong frontend (types.ts).
-    
-    Args:
-        title: Tiêu đề cần chuyển
-        
-    Returns:
-        Slug URL-friendly
-    """
-    if not title:
-        return ""
-    
-    # Lowercase
-    result = title.lower()
-    
-    # Thay thế tiếng Việt
-    result = ''.join(VIETNAMESE_MAP.get(char, char) for char in result)
-    
-    # Loại bỏ ký tự đặc biệt (chỉ giữ a-z, 0-9, space, -)
-    result = re.sub(r'[^a-z0-9\s-]', '', result)
-    
-    # Thay space bằng -
-    result = re.sub(r'\s+', '-', result)
-    
-    # Loại bỏ nhiều - liên tiếp
-    result = re.sub(r'-+', '-', result)
-    
-    # Loại bỏ - ở đầu và cuối
-    result = result.strip('-')
-    
-    return result
 
 
 # ==============================================================================
@@ -797,110 +738,6 @@ async def phase_signal(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]
 
 
 # ==============================================================================
-# NEWS METADATA QUERIES - Cho social sharing (Zalo, Facebook, etc.)
-# ==============================================================================
-
-
-async def news_report_meta(
-    slug: Optional[str] = None,
-    **kwargs,
-) -> Dict[str, Any]:
-    """
-    Lấy metadata của 1 bài report theo slug để tạo Open Graph tags.
-    Chỉ trả về các fields cần thiết cho metadata: title, sapo, created_at.
-    Database: temp_stock.
-
-    Args:
-        slug: Slug URL của bài report (được tạo từ title)
-
-    Returns:
-        Dict chứa metadata hoặc None nếu không tìm thấy
-    """
-    if not slug:
-        return {"error": "slug is required", "item": None}
-
-    stock_db = get_database(STOCK_DB)
-    collection = stock_db.get_collection("news_report")
-
-    # Chỉ lấy các fields cần thiết cho metadata
-    projection = {
-        "_id": 0,
-        "report_id": 1,
-        "title": 1,
-        "sapo": 1,
-        "created_at": 1,
-        "report_type": 1,
-        "category_name": 1,
-    }
-
-    # Query tất cả và tìm theo slug (vì slug được generate từ title)
-    # Giới hạn 200 records gần nhất để tối ưu
-    cursor = collection.find({}, projection)
-    cursor.sort("created_at", -1)
-    cursor.limit(200)
-    cursor.max_time_ms(OPERATION_TIMEOUT_MS)
-
-    docs = await cursor.to_list(length=200)
-
-    # Tìm document có title match với slug
-    for doc in docs:
-        if doc.get("title") and generate_slug(doc["title"]) == slug:
-            return {"item": doc}
-
-    return {"item": None}
-
-
-async def news_daily_meta(
-    slug: Optional[str] = None,
-    **kwargs,
-) -> Dict[str, Any]:
-    """
-    Lấy metadata của 1 bài news theo slug để tạo Open Graph tags.
-    Chỉ trả về các fields cần thiết cho metadata: title, sapo, created_at.
-    Database: temp_stock.
-
-    Args:
-        slug: Slug URL của bài news (được tạo từ title)
-
-    Returns:
-        Dict chứa metadata hoặc None nếu không tìm thấy
-    """
-    if not slug:
-        return {"error": "slug is required", "item": None}
-
-    stock_db = get_database(STOCK_DB)
-    collection = stock_db.get_collection("news_daily")
-
-    # Chỉ lấy các fields cần thiết cho metadata
-    projection = {
-        "_id": 0,
-        "article_id": 1,
-        "title": 1,
-        "sapo": 1,
-        "created_at": 1,
-        "news_type": 1,
-        "category_name": 1,
-        "source": 1,
-    }
-
-    # Query và tìm theo slug (vì slug được generate từ title)
-    # Giới hạn 200 records gần nhất để tối ưu
-    cursor = collection.find({}, projection)
-    cursor.sort("created_at", -1)
-    cursor.limit(200)
-    cursor.max_time_ms(OPERATION_TIMEOUT_MS)
-
-    docs = await cursor.to_list(length=200)
-
-    # Tìm document có title match với slug
-    for doc in docs:
-        if doc.get("title") and generate_slug(doc["title"]) == slug:
-            return {"item": doc}
-
-    return {"item": None}
-
-
-# ==============================================================================
 # REGISTRY - Đăng ký các keyword và hàm query tương ứng
 # ==============================================================================
 
@@ -921,9 +758,6 @@ SSE_QUERY_REGISTRY: Dict[str, Any] = {
     # News report queries
     "news_report": news_report,
     "news_report_categories": news_report_categories,
-    # News metadata queries (cho social sharing: Zalo, Facebook, etc.)
-    "news_report_meta": news_report_meta,
-    "news_daily_meta": news_daily_meta,
 }
 
 
@@ -938,7 +772,6 @@ async def execute_sse_query(
     news_type: Optional[str] = None,
     report_type: Optional[str] = None,
     categories: Optional[str] = None,
-    slug: Optional[str] = None,
     page: Optional[int] = None,
     limit: Optional[int] = None,
     sort_by: Optional[str] = None,
@@ -955,7 +788,6 @@ async def execute_sse_query(
         news_type: Loại tin tức (VD: thong_cao, trong_nuoc, doanh_nghiep, quoc_te)
         report_type: Loại bản tin (VD: daily, weekly, monthly)
         categories: Danh mục để filter, có thể 1 hoặc nhiều cách nhau bởi dấu phẩy (VD: thi-truong hoặc thi-truong,doanh-nghiep)
-        slug: Slug URL của bài viết (cho metadata queries)
         page: Số trang (bắt đầu từ 1)
         limit: Số lượng bản ghi mỗi trang
         sort_by: Tên field để sắp xếp
@@ -982,7 +814,6 @@ async def execute_sse_query(
         "news_type": news_type,
         "report_type": report_type,
         "categories": categories,
-        "slug": slug,
         "page": page,
         "limit": limit,
         "sort_by": sort_by,

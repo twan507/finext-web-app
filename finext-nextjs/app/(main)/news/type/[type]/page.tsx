@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const typeName = typeInfo?.type_name || 'Tin tức';
 
     return {
-        title: `${typeName} - Finext`,
+        title: 'Tin tức',
         description: `Xem tin tức ${typeName.toLowerCase()} từ Finext`,
     };
 }
