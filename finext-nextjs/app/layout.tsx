@@ -6,21 +6,18 @@ import { NextThemesProvider } from '@/components/provider/NextThemesProvider';
 import { NotificationProvider } from '@/components/provider/NotificationProvider';
 import './globals.css';
 
-// Optimized font loading với next/font
-import { Roboto, Poppins } from 'next/font/google';
+// Sử dụng local fonts - được bundle vào build, không cần fetch từ Google
+import localFont from 'next/font/local';
 
-const roboto = Roboto({
-  weight: ['300', '400', '500', '700'],
-  subsets: ['latin', 'vietnamese'],
-  display: 'swap',
+const roboto = localFont({
+  src: [
+    { path: './fonts/Roboto-Light.ttf', weight: '300', style: 'normal' },
+    { path: './fonts/Roboto-Regular.ttf', weight: '400', style: 'normal' },
+    { path: './fonts/Roboto-Medium.ttf', weight: '500', style: 'normal' },
+    { path: './fonts/Roboto-Bold.ttf', weight: '700', style: 'normal' },
+  ],
   variable: '--font-roboto',
-});
-
-const poppins = Poppins({
-  weight: ['300', '400', '500', '600', '700'],
-  subsets: ['latin'],
   display: 'swap',
-  variable: '--font-poppins',
 });
 
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v13-appRouter';
@@ -105,7 +102,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="vi" suppressHydrationWarning className={`${roboto.variable} ${poppins.variable}`}>
+    <html lang="vi" suppressHydrationWarning className={roboto.variable}>
       <head>
         <meta charSet="utf-8" />
       </head>

@@ -30,14 +30,14 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
     const themeOptions: ThemeOptions = {
       palette: currentPalette,
       typography: {
-        // Sử dụng CSS variables từ next/font để tối ưu font loading
-        fontFamily: 'var(--font-roboto), "Roboto", "Helvetica", "Arial", sans-serif',
+        // Sử dụng CSS variable từ next/font/local - font được bundle vào build
+        fontFamily: 'var(--font-roboto), "Roboto", "Helvetica Neue", Arial, sans-serif',
         // All font sizes are handled via getResponsiveFontSize() in sx props
         // These are just fallback defaults
         logo: {
           fontSize: (getResponsiveFontSize('h4').lg) || '1.75rem',
           fontWeight: fontWeight.semibold, // Reduced from bold
-          fontFamily: 'var(--font-poppins), "Poppins", "Roboto", "Helvetica", "Arial", sans-serif'
+          fontFamily: 'var(--font-roboto), "Roboto", "Helvetica Neue", Arial, sans-serif'
         },
         h1: { fontSize: getResponsiveFontSize('h1').md, fontWeight: fontWeight.bold }, // Desktop: 3rem
         h2: { fontSize: getResponsiveFontSize('h2').md, fontWeight: fontWeight.bold }, // Desktop: 2.5rem
