@@ -1,7 +1,6 @@
 // finext-nextjs/app/(main)/reports/[reportId]/page.tsx
 import { Metadata } from 'next';
 import PageContent from './PageContent';
-import { ReportApiResponse, NewsReport, generateSlug } from '../types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://localhost';
 
@@ -9,26 +8,40 @@ interface PageProps {
     params: Promise<{ reportId: string }>;
 }
 
+/** Response type từ news_report_meta API */
+interface ReportMetaResponse {
+    status: number;
+    message: string;
+    data: {
+        item: {
+            report_id: string;
+            title: string;
+            sapo?: string;
+            created_at: string;
+            report_type: string;
+            category_name: string;
+        } | null;
+    };
+}
+
 /**
- * Fetch report data cho metadata
- * Server-side fetch không dùng apiClient (client-only)
+ * Fetch metadata cho report theo slug
+ * Sử dụng keyword news_report_meta - chỉ lấy fields cần thiết
  */
-async function fetchReportBySlug(slug: string): Promise<NewsReport | null> {
+async function fetchReportMeta(slug: string): Promise<ReportMetaResponse['data']['item']> {
     try {
         const response = await fetch(
-            `${API_BASE_URL}/api/v1/sse/rest/news_report?limit=100`,
+            `${API_BASE_URL}/api/v1/sse/rest/news_report_meta?slug=${encodeURIComponent(slug)}`,
             {
                 next: { revalidate: 300 }, // Cache 5 phút
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
             }
         );
 
         if (!response.ok) return null;
 
-        const data: ReportApiResponse = await response.json();
-        return data.items?.find((item) => generateSlug(item.title) === slug) || null;
+        const data: ReportMetaResponse = await response.json();
+        return data.data?.item || null;
     } catch (error) {
         console.error('[generateMetadata] Fetch error:', error);
         return null;
@@ -37,13 +50,13 @@ async function fetchReportBySlug(slug: string): Promise<NewsReport | null> {
 
 /**
  * Generate dynamic metadata cho SEO và social sharing (Zalo, Facebook, etc.)
- * - Title: tiêu đề bài viết
+ * - Title: tiêu đề bài viết (1 dòng)
  * - Description: sapo (2 dòng mô tả)
  * - Site: finext.vn
  */
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
     const { reportId } = await params;
-    const report = await fetchReportBySlug(reportId);
+    const report = await fetchReportMeta(reportId);
 
     // Fallback nếu không tìm thấy report
     if (!report) {
