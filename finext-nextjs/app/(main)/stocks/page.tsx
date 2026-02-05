@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: 'Cổ phiếu',
   description: 'Sàng lọc cơ hội đầu tư với bộ tiêu chí kỹ thuật và cơ bản chuyên sâu.',
   openGraph: {
-    title: 'Cổ phiếu | Finext',
+    title: 'Finext - Cổ phiếu',
     description: 'Sàng lọc cổ phiếu với tiêu chí kỹ thuật và cơ bản.',
   },
 };

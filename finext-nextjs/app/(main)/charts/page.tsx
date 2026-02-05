@@ -4,7 +4,7 @@ export const metadata: Metadata = {
     title: 'Biểu đồ kĩ thuật',
     description: 'Công cụ vẽ biểu đồ kỹ thuật chuyên nghiệp cho phân tích cổ phiếu.',
     openGraph: {
-        title: 'Biểu đồ kĩ thuật | Finext',
+        title: 'Finext - Biểu đồ kĩ thuật',
         description: 'Công cụ vẽ biểu đồ kỹ thuật chuyên nghiệp.',
     },
 };

@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: 'Nhóm ngành',
   description: 'Đánh giá sức mạnh nhóm ngành và đón đầu sự luân chuyển dòng tiền giữa các sector.',
   openGraph: {
-    title: 'Nhóm ngành | Finext',
+    title: 'Finext - Nhóm ngành',
     description: 'Phân tích sức mạnh nhóm ngành và luân chuyển dòng tiền.',
   },
 };

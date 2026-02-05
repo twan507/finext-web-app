@@ -206,10 +206,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                           px: 1,
                           borderRadius: borderRadius.md,
                           color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
-                          backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                          backgroundColor: 'transparent',
                           '&:hover': {
-                            backgroundColor: alpha(theme.palette.primary.main, isActive ? 0.12 : 0.04),
-                            color: isActive ? theme.palette.primary.dark : theme.palette.primary.main,
+                            backgroundColor: 'transparent',
+                            color: theme.palette.primary.main,
+                          },
+                          '&.Mui-selected': {
+                            backgroundColor: 'transparent',
+                            '&:hover': {
+                              backgroundColor: 'transparent',
+                            },
                           },
                           transition: transitions.colors,
                         }}
@@ -273,8 +279,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                       onClick={() => handleMenuToggle(tab.href)}
                       sx={{
                         borderRadius: borderRadius.sm,
-                        color: theme.palette.text.primary,
+                        color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
+                        backgroundColor: 'transparent',
                         '&:hover': {
+                          backgroundColor: 'transparent',
                           color: theme.palette.primary.main,
                         },
                       }}
@@ -297,9 +305,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                                 sx={{
                                   pl: 4,
                                   borderRadius: borderRadius.sm,
-                                  color: theme.palette.text.secondary,
+                                  color: isSubActive ? theme.palette.primary.main : theme.palette.text.secondary,
+                                  backgroundColor: 'transparent',
                                   '&:hover': {
+                                    backgroundColor: 'transparent',
                                     color: theme.palette.primary.main,
+                                  },
+                                  '&.Mui-selected': {
+                                    backgroundColor: 'transparent',
+                                    '&:hover': {
+                                      backgroundColor: 'transparent',
+                                    },
                                   },
                                 }}
                               >
@@ -323,9 +339,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                       onClick={handleDrawerToggle}
                       sx={{
                         borderRadius: borderRadius.sm,
-                        color: theme.palette.text.primary,
+                        color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
+                        backgroundColor: 'transparent',
                         '&:hover': {
+                          backgroundColor: 'transparent',
                           color: theme.palette.primary.main,
+                        },
+                        '&.Mui-selected': {
+                          backgroundColor: 'transparent',
+                          '&:hover': {
+                            backgroundColor: 'transparent',
+                          },
                         },
                       }}
                     >
@@ -355,9 +379,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   onClick={handleDrawerToggle}
                   sx={{
                     borderRadius: borderRadius.sm,
-                    color: theme.palette.text.primary,
+                    color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
+                    backgroundColor: 'transparent',
                     '&:hover': {
+                      backgroundColor: 'transparent',
                       color: theme.palette.primary.main,
+                    },
+                    '&.Mui-selected': {
+                      backgroundColor: 'transparent',
+                      '&:hover': {
+                        backgroundColor: 'transparent',
+                      },
                     },
                   }}
                 >
@@ -417,8 +449,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                       sx={{
                         py: 1,
                         borderRadius: borderRadius.sm,
-                        color: theme.palette.text.primary,
+                        color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
+                        backgroundColor: 'transparent',
                         '&:hover': {
+                          backgroundColor: 'transparent',
                           color: theme.palette.primary.main,
                         },
                       }}
@@ -442,9 +476,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                                   pl: 4,
                                   py: 0.75,
                                   borderRadius: borderRadius.sm,
-                                  color: theme.palette.text.secondary,
+                                  color: isSubActive ? theme.palette.primary.main : theme.palette.text.secondary,
+                                  backgroundColor: 'transparent',
                                   '&:hover': {
+                                    backgroundColor: 'transparent',
                                     color: theme.palette.primary.main,
+                                  },
+                                  '&.Mui-selected': {
+                                    backgroundColor: 'transparent',
+                                    '&:hover': {
+                                      backgroundColor: 'transparent',
+                                    },
                                   },
                                 }}
                               >
@@ -469,9 +511,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                       sx={{
                         py: 1,
                         borderRadius: borderRadius.sm,
-                        color: theme.palette.text.primary,
+                        color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
+                        backgroundColor: 'transparent',
                         '&:hover': {
+                          backgroundColor: 'transparent',
                           color: theme.palette.primary.main,
+                        },
+                        '&.Mui-selected': {
+                          backgroundColor: 'transparent',
+                          '&:hover': {
+                            backgroundColor: 'transparent',
+                          },
                         },
                       }}
                     >
@@ -502,9 +552,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   sx={{
                     py: 1,
                     borderRadius: borderRadius.sm,
-                    color: theme.palette.text.primary,
+                    color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
+                    backgroundColor: 'transparent',
                     '&:hover': {
+                      backgroundColor: 'transparent',
                       color: theme.palette.primary.main,
+                    },
+                    '&.Mui-selected': {
+                      backgroundColor: 'transparent',
+                      '&:hover': {
+                        backgroundColor: 'transparent',
+                      },
                     },
                   }}
                 >

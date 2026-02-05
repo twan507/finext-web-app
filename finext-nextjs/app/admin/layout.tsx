@@ -3,8 +3,8 @@ import LayoutContent from './LayoutContent';
 
 export const metadata: Metadata = {
   title: {
-    template: 'Admin | %s | Finext',
-    default: 'Admin | Finext',
+    template: 'Admin - %s',
+    default: 'Admin',
   },
 };
 

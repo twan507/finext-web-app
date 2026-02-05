@@ -85,26 +85,20 @@ export default function PageContent({ articleId }: PageContentProps) {
         setError(null);
 
         try {
-            // Fetch news và tìm theo article_slug
-            const response = await apiClient<NewsApiResponse>({
-                url: '/api/v1/sse/rest/news_daily',
+            // Fetch trực tiếp 1 bài viết theo article_slug (tối ưu hơn nhiều)
+            const response = await apiClient<{ article: NewsArticle | null; error?: string }>({
+                url: '/api/v1/sse/rest/news_article',
                 method: 'GET',
                 queryParams: {
-                    limit: '100',
+                    article_slug: articleId,
                 },
                 requireAuth: false,
             });
 
-            if (response.data?.items) {
-                const found = response.data.items.find(
-                    (item) => item.article_slug === articleId
-                );
-
-                if (found) {
-                    setArticle(found);
-                } else {
-                    setError('Không tìm thấy bài viết');
-                }
+            if (response.data?.article) {
+                setArticle(response.data.article);
+            } else {
+                setError('Không tìm thấy bài viết');
             }
         } catch (err: any) {
             console.error('[ArticleDetail] Fetch error:', err);

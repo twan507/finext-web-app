@@ -12,8 +12,10 @@ const PUBLIC_ROUTES = [
   '/home',              // Home pages
   '/markets',           // Thị trường
   '/news',              // Tin tức
+  '/reports',           // Báo cáo
   '/sectors',           // Nhóm ngành
   '/stocks',            // Cổ phiếu
+  '/charts',            // Biểu đồ
   '/login',             // Đăng nhập
   '/register',          // Đăng ký
   '/forgot-password',   // Quên mật khẩu

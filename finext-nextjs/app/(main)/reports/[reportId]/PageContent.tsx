@@ -96,26 +96,20 @@ export default function PageContent({ reportId }: PageContentProps) {
         setError(null);
 
         try {
-            // Fetch reports và tìm theo report_slug
-            const response = await apiClient<ReportApiResponse>({
-                url: '/api/v1/sse/rest/news_report',
+            // Fetch trực tiếp 1 báo cáo theo report_slug (tối ưu hơn nhiều)
+            const response = await apiClient<{ report: NewsReport | null; error?: string }>({
+                url: '/api/v1/sse/rest/report_article',
                 method: 'GET',
                 queryParams: {
-                    limit: '100',
+                    report_slug: reportId,
                 },
                 requireAuth: false,
             });
 
-            if (response.data?.items) {
-                const found = response.data.items.find(
-                    (item) => item.report_slug === reportId
-                );
-
-                if (found) {
-                    setReport(found);
-                } else {
-                    setError('Không tìm thấy bản tin');
-                }
+            if (response.data?.report) {
+                setReport(response.data.report);
+            } else {
+                setError('Không tìm thấy bản tin');
             }
         } catch (err: any) {
             console.error('[ReportDetail] Fetch error:', err);

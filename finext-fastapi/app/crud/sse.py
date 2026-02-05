@@ -744,15 +744,17 @@ async def phase_signal(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]
 
 async def news_article(
     article_slug: Optional[str] = None,
+    metadata_only: Optional[bool] = None,
     **kwargs,
 ) -> Dict[str, Any]:
     """
-    Lấy thông tin 1 bài viết theo article_slug (để generate metadata cho social sharing).
+    Lấy thông tin 1 bài viết theo article_slug.
     Query trực tiếp từ DB theo field article_slug.
     Database: temp_stock.
 
     Args:
         article_slug: Slug của bài viết (URL-friendly title, đã lưu trong DB)
+        metadata_only: Nếu True, chỉ trả về title và sapo cho SEO metadata
 
     Returns:
         Dict chứa thông tin bài viết hoặc None nếu không tìm thấy
@@ -763,12 +765,17 @@ async def news_article(
     stock_db = get_database(STOCK_DB)
     collection = stock_db.get_collection("news_daily")
 
-    # Chỉ lấy title và sapo cho Open Graph metadata
-    projection = {
-        "_id": 0,
-        "title": 1,
-        "sapo": 1,
-    }
+    # Projection tùy thuộc vào metadata_only flag
+    if metadata_only:
+        # Chỉ lấy title và sapo cho Open Graph metadata (nhẹ hơn)
+        projection = {
+            "_id": 0,
+            "title": 1,
+            "sapo": 1,
+        }
+    else:
+        # Lấy đầy đủ thông tin cho hiển thị
+        projection = {"_id": 0}
 
     # Query trực tiếp theo article_slug
     doc = await collection.find_one({"article_slug": article_slug}, projection)
@@ -781,15 +788,17 @@ async def news_article(
 
 async def report_article(
     report_slug: Optional[str] = None,
+    metadata_only: Optional[bool] = None,
     **kwargs,
 ) -> Dict[str, Any]:
     """
-    Lấy thông tin 1 báo cáo theo report_slug (để generate metadata cho social sharing).
+    Lấy thông tin 1 báo cáo theo report_slug.
     Query trực tiếp từ DB theo field report_slug.
     Database: temp_stock.
 
     Args:
         report_slug: Slug của báo cáo (URL-friendly title, đã lưu trong DB)
+        metadata_only: Nếu True, chỉ trả về title và sapo cho SEO metadata
 
     Returns:
         Dict chứa thông tin báo cáo hoặc None nếu không tìm thấy
@@ -800,12 +809,17 @@ async def report_article(
     stock_db = get_database(STOCK_DB)
     collection = stock_db.get_collection("news_report")
 
-    # Chỉ lấy title và sapo cho Open Graph metadata
-    projection = {
-        "_id": 0,
-        "title": 1,
-        "sapo": 1,
-    }
+    # Projection tùy thuộc vào metadata_only flag
+    if metadata_only:
+        # Chỉ lấy title và sapo cho Open Graph metadata (nhẹ hơn)
+        projection = {
+            "_id": 0,
+            "title": 1,
+            "sapo": 1,
+        }
+    else:
+        # Lấy đầy đủ thông tin cho hiển thị
+        projection = {"_id": 0}
 
     # Query trực tiếp theo report_slug
     doc = await collection.find_one({"report_slug": report_slug}, projection)

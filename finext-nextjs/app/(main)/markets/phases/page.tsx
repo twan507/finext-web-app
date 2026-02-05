@@ -4,7 +4,7 @@ export const metadata: Metadata = {
     title: 'Giai đoạn thị trường',
     description: 'Phân tích và xác định giai đoạn chu kỳ thị trường chứng khoán Việt Nam.',
     openGraph: {
-        title: 'Giai đoạn thị trường | Finext',
+        title: 'Finext - Giai đoạn thị trường',
         description: 'Phân tích và xác định giai đoạn chu kỳ thị trường chứng khoán.',
     },
 };

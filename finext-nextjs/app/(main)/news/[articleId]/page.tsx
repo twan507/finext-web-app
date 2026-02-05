@@ -12,13 +12,20 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.finext.vn';
 
 // Fetch article từ API để generate metadata
 async function fetchArticleForMetadata(articleSlug: string) {
+    // Timeout sau 3 giây để đảm bảo crawler không bị trễ
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+
     try {
         const response = await fetch(
-            `${API_URL}/api/v1/sse/rest/news_article?article_slug=${encodeURIComponent(articleSlug)}`,
+            `${API_URL}/api/v1/sse/rest/news_article?article_slug=${encodeURIComponent(articleSlug)}&metadata_only=true`,
             {
                 next: { revalidate: 60 }, // Cache 60 giây
+                signal: controller.signal,
             }
         );
+
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             return null;
@@ -27,6 +34,8 @@ async function fetchArticleForMetadata(articleSlug: string) {
         const result = await response.json();
         return result.data?.article || null;
     } catch (error) {
+        clearTimeout(timeoutId);
+        // Log nhưng không throw - trả về null để dùng fallback metadata
         console.error('[generateMetadata] Failed to fetch article:', error);
         return null;
     }
@@ -40,8 +49,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // Fallback nếu không tìm thấy bài viết
     if (!article) {
         return {
-            title: 'Tin tức | Finext',
+            title: 'Finext - Tin tức',
             description: 'Xem chi tiết bài viết tin tức tài chính.',
+            openGraph: {
+                title: 'Finext - Tin tức',
+                description: 'Xem chi tiết bài viết tin tức tài chính.',
+                siteName: 'Finext',
+                type: 'article',
+                locale: 'vi_VN',
+                images: [
+                    {
+                        url: `${BASE_URL}/finext-icon-trans.png`,
+                        width: 512,
+                        height: 512,
+                        alt: 'Finext - Tin tức',
+                    },
+                ],
+            },
         };
     }
 
@@ -63,17 +87,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             title: article.title,
             description: description,
             url: articleUrl,
-            siteName: 'finext.vn',
+            siteName: 'Finext',
             type: 'article',
             locale: 'vi_VN',
-            // Không có image vì tin tức không có ảnh
+            images: [
+                {
+                    url: `${BASE_URL}/finext-icon-trans.png`,
+                    width: 512,
+                    height: 512,
+                    alt: article.title,
+                },
+            ],
         },
 
         // Twitter Card
         twitter: {
-            card: 'summary',
+            card: 'summary_large_image',
             title: article.title,
             description: description,
+            images: [`${BASE_URL}/finext-icon-trans.png`],
         },
 
         // Canonical URL

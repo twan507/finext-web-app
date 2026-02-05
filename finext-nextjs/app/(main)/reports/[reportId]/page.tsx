@@ -12,13 +12,20 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.finext.vn';
 
 // Fetch report từ API để generate metadata
 async function fetchReportForMetadata(reportSlug: string) {
+    // Timeout sau 3 giây để đảm bảo crawler không bị trễ
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+
     try {
         const response = await fetch(
-            `${API_URL}/api/v1/sse/rest/report_article?report_slug=${encodeURIComponent(reportSlug)}`,
+            `${API_URL}/api/v1/sse/rest/report_article?report_slug=${encodeURIComponent(reportSlug)}&metadata_only=true`,
             {
                 next: { revalidate: 60 }, // Cache 60 giây
+                signal: controller.signal,
             }
         );
+
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             return null;
@@ -27,6 +34,8 @@ async function fetchReportForMetadata(reportSlug: string) {
         const result = await response.json();
         return result.data?.report || null;
     } catch (error) {
+        clearTimeout(timeoutId);
+        // Log nhưng không throw - trả về null để dùng fallback metadata
         console.error('[generateMetadata] Failed to fetch report:', error);
         return null;
     }
@@ -40,8 +49,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // Fallback nếu không tìm thấy báo cáo
     if (!report) {
         return {
-            title: 'Báo cáo | Finext',
+            title: 'Finext - Báo cáo',
             description: 'Chi tiết bản tin thị trường.',
+            openGraph: {
+                title: 'Finext - Báo cáo',
+                description: 'Chi tiết bản tin thị trường.',
+                siteName: 'Finext',
+                type: 'article',
+                locale: 'vi_VN',
+                images: [
+                    {
+                        url: `${BASE_URL}/finext-icon-trans.png`,
+                        width: 512,
+                        height: 512,
+                        alt: 'Finext - Báo cáo',
+                    },
+                ],
+            },
         };
     }
 
@@ -63,16 +87,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             title: report.title,
             description: description,
             url: reportUrl,
-            siteName: 'finext.vn',
+            siteName: 'Finext',
             type: 'article',
             locale: 'vi_VN',
+            images: [
+                {
+                    url: `${BASE_URL}/finext-icon-trans.png`,
+                    width: 512,
+                    height: 512,
+                    alt: report.title,
+                },
+            ],
         },
 
         // Twitter Card
         twitter: {
-            card: 'summary',
+            card: 'summary_large_image',
             title: report.title,
             description: description,
+            images: [`${BASE_URL}/finext-icon-trans.png`],
         },
 
         // Canonical URL
