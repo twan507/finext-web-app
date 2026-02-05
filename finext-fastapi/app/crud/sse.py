@@ -744,7 +744,6 @@ async def phase_signal(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]
 
 async def news_article(
     article_slug: Optional[str] = None,
-    metadata_only: Optional[bool] = None,
     **kwargs,
 ) -> Dict[str, Any]:
     """
@@ -754,7 +753,6 @@ async def news_article(
 
     Args:
         article_slug: Slug của bài viết (URL-friendly title, đã lưu trong DB)
-        metadata_only: Nếu True, chỉ trả về title và sapo cho SEO metadata
 
     Returns:
         Dict chứa thông tin bài viết hoặc None nếu không tìm thấy
@@ -765,17 +763,8 @@ async def news_article(
     stock_db = get_database(STOCK_DB)
     collection = stock_db.get_collection("news_daily")
 
-    # Projection tùy thuộc vào metadata_only flag
-    if metadata_only:
-        # Chỉ lấy title và sapo cho Open Graph metadata (nhẹ hơn)
-        projection = {
-            "_id": 0,
-            "title": 1,
-            "sapo": 1,
-        }
-    else:
-        # Lấy đầy đủ thông tin cho hiển thị
-        projection = {"_id": 0}
+    # Lấy đầy đủ thông tin cho hiển thị
+    projection = {"_id": 0}
 
     # Query trực tiếp theo article_slug
     doc = await collection.find_one({"article_slug": article_slug}, projection)
@@ -788,7 +777,6 @@ async def news_article(
 
 async def report_article(
     report_slug: Optional[str] = None,
-    metadata_only: Optional[bool] = None,
     **kwargs,
 ) -> Dict[str, Any]:
     """
@@ -798,7 +786,6 @@ async def report_article(
 
     Args:
         report_slug: Slug của báo cáo (URL-friendly title, đã lưu trong DB)
-        metadata_only: Nếu True, chỉ trả về title và sapo cho SEO metadata
 
     Returns:
         Dict chứa thông tin báo cáo hoặc None nếu không tìm thấy
@@ -809,17 +796,8 @@ async def report_article(
     stock_db = get_database(STOCK_DB)
     collection = stock_db.get_collection("news_report")
 
-    # Projection tùy thuộc vào metadata_only flag
-    if metadata_only:
-        # Chỉ lấy title và sapo cho Open Graph metadata (nhẹ hơn)
-        projection = {
-            "_id": 0,
-            "title": 1,
-            "sapo": 1,
-        }
-    else:
-        # Lấy đầy đủ thông tin cho hiển thị
-        projection = {"_id": 0}
+    # Lấy đầy đủ thông tin cho hiển thị
+    projection = {"_id": 0}
 
     # Query trực tiếp theo report_slug
     doc = await collection.find_one({"report_slug": report_slug}, projection)
@@ -848,11 +826,11 @@ SSE_QUERY_REGISTRY: Dict[str, Any] = {
     "news_daily": news_daily,
     "news_categories": news_categories,
     "news_count": news_count,
-    "news_article": news_article,  # Lấy 1 bài viết theo slug
+    "news_article": news_article,
     # News report queries
     "news_report": news_report,
     "news_report_categories": news_report_categories,
-    "report_article": report_article,  # Lấy 1 báo cáo theo slug
+    "report_article": report_article,
 }
 
 
@@ -884,7 +862,7 @@ async def execute_sse_query(
         ticker: Mã ticker (VD: VNINDEX, VN30, ...)
         news_type: Loại tin tức (VD: thong_cao, trong_nuoc, doanh_nghiep, quoc_te)
         report_type: Loại bản tin (VD: daily, weekly, monthly)
-        categories: Danh mục để filter, có thể 1 hoặc nhiều cách nhau bởi dấu phẩy (VD: thi-truong hoặc thi-truong,doanh-nghiep)
+        categories: Danh mục để filter, có thể 1 hoặc nhiều cách nhau bởi dấu phẩy
         article_slug: Slug của bài viết tin tức
         report_slug: Slug của báo cáo
         page: Số trang (bắt đầu từ 1)

@@ -91,7 +91,8 @@ export default function PageContent({ type }: PageContentProps) {
 
     // Check if filter is actually applied (not all chips selected)
     const isFilterApplied = selectedCategories.length > 0 && selectedCategories.length < categories.length;
-    const showCategoryChips = categories.length > 0;
+    // Chỉ hiển thị Category Chips (lv2) cho tin tức "Vĩ mô trong nước" (trong_nuoc)
+    const showCategoryChips = categories.length > 0 && type === 'trong_nuoc';
 
     return (
         <Box sx={{ py: spacing.xs }}>
