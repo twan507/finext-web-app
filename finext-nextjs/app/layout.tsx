@@ -36,7 +36,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: {
     default: 'Finext',
-    template: '%s | Finext',
+    template: 'Finext - %s',
   },
   description: 'Finext - Nền tảng phân tích chứng khoán thông minh',
   keywords: ['chứng khoán', 'phân tích', 'đầu tư', 'thị trường', 'cổ phiếu', 'Vietnam stock'],

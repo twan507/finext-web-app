@@ -4,7 +4,7 @@
 import { Box, Typography } from '@mui/material';
 import Link from 'next/link';
 
-import { NewsReport, generateSlug } from '../types';
+import { NewsReport } from '../types';
 import { spacing, transitions, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 
 interface ReportCardProps {
@@ -33,12 +33,11 @@ const parseDateTime = (dateStr: string): { date: string; time: string } => {
 
 export default function ReportCard({ report }: ReportCardProps) {
     const { date, time } = parseDateTime(report.created_at);
-    const slug = generateSlug(report.title);
 
     return (
         <Box
             component={Link}
-            href={`/reports/${slug}`}
+            href={`/reports/${report.report_slug}`}
             sx={{
                 display: 'flex',
                 gap: { xs: spacing.xs, md: spacing.sm },

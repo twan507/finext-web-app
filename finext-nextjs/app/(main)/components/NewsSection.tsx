@@ -49,45 +49,11 @@ import Link from 'next/link';
 import Carousel from 'components/common/Carousel';
 
 // ============================================================================
-// SLUG UTILITIES
-// ============================================================================
-
-/** Chuyển title thành slug URL-friendly */
-const generateSlug = (title: string): string => {
-    // Bảng chuyển đổi dấu tiếng Việt
-    const vietnameseMap: Record<string, string> = {
-        'à': 'a', 'á': 'a', 'ả': 'a', 'ã': 'a', 'ạ': 'a',
-        'ă': 'a', 'ằ': 'a', 'ắ': 'a', 'ẳ': 'a', 'ẵ': 'a', 'ặ': 'a',
-        'â': 'a', 'ầ': 'a', 'ấ': 'a', 'ẩ': 'a', 'ẫ': 'a', 'ậ': 'a',
-        'đ': 'd',
-        'è': 'e', 'é': 'e', 'ẻ': 'e', 'ẽ': 'e', 'ẹ': 'e',
-        'ê': 'e', 'ề': 'e', 'ế': 'e', 'ể': 'e', 'ễ': 'e', 'ệ': 'e',
-        'ì': 'i', 'í': 'i', 'ỉ': 'i', 'ĩ': 'i', 'ị': 'i',
-        'ò': 'o', 'ó': 'o', 'ỏ': 'o', 'õ': 'o', 'ọ': 'o',
-        'ô': 'o', 'ồ': 'o', 'ố': 'o', 'ổ': 'o', 'ỗ': 'o', 'ộ': 'o',
-        'ơ': 'o', 'ờ': 'o', 'ớ': 'o', 'ở': 'o', 'ỡ': 'o', 'ợ': 'o',
-        'ù': 'u', 'ú': 'u', 'ủ': 'u', 'ũ': 'u', 'ụ': 'u',
-        'ư': 'u', 'ừ': 'u', 'ứ': 'u', 'ử': 'u', 'ữ': 'u', 'ự': 'u',
-        'ỳ': 'y', 'ý': 'y', 'ỷ': 'y', 'ỹ': 'y', 'ỵ': 'y',
-    };
-
-    return title
-        .toLowerCase()
-        .split('')
-        .map(char => vietnameseMap[char] || char)
-        .join('')
-        .replace(/[^a-z0-9\s-]/g, '') // Loại bỏ ký tự đặc biệt
-        .replace(/\s+/g, '-') // Thay space bằng -
-        .replace(/-+/g, '-') // Loại bỏ nhiều - liên tiếp
-        .replace(/^-|-$/g, ''); // Loại bỏ - ở đầu và cuối
-};
-
-// ============================================================================
 // TYPES
 // ============================================================================
 
 interface NewsArticle {
-    article_id: string;
+    article_slug: string;
     source: string;
     category: string;
     category_name: string;
@@ -97,7 +63,7 @@ interface NewsArticle {
 }
 
 interface NewsReport {
-    report_id: string;
+    report_slug: string;
     title: string;
     category: string;
     category_name: string;
@@ -396,7 +362,7 @@ function MiniNewsCard({ article }: MiniNewsCardProps) {
                 }}
             >
                 {/* Title */}
-                <Link href={`/news/${generateSlug(article.title)}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                <Link href={`/news/${article.article_slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                     <Typography
                         variant="h6"
                         className="news-card-title"
@@ -501,7 +467,7 @@ function MiniReportCard({ report }: MiniReportCardProps) {
                 }}
             >
                 {/* Title */}
-                <Link href={`/reports/${generateSlug(report.title)}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                <Link href={`/reports/${report.report_slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                     <Typography
                         variant="h6"
                         className="report-card-title"
@@ -616,10 +582,10 @@ function NewsColumnContent({ title, href, loading, newsItems, reportItems }: New
                 ) : (
                     <>
                         {newsItems?.map((article) => (
-                            <MiniNewsCard key={article.article_id} article={article} />
+                            <MiniNewsCard key={article.article_slug} article={article} />
                         ))}
                         {reportItems?.map((report) => (
-                            <MiniReportCard key={report.report_id} report={report} />
+                            <MiniReportCard key={report.report_slug} report={report} />
                         ))}
                     </>
                 )}

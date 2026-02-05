@@ -22,7 +22,7 @@ import {
 import { useRouter } from 'next/navigation';
 
 import { apiClient } from 'services/apiClient';
-import { ReportApiResponse, NewsReport, generateSlug, getReportTypeInfo } from '../types';
+import { ReportApiResponse, NewsReport, getReportTypeInfo } from '../types';
 import NewsBreadcrumb from '../../news/components/NewsBreadcrumb';
 import { spacing, borderRadius, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 
@@ -96,7 +96,7 @@ export default function PageContent({ reportId }: PageContentProps) {
         setError(null);
 
         try {
-            // Fetch tất cả reports và tìm theo report_id
+            // Fetch reports và tìm theo report_slug
             const response = await apiClient<ReportApiResponse>({
                 url: '/api/v1/sse/rest/news_report',
                 method: 'GET',
@@ -108,7 +108,7 @@ export default function PageContent({ reportId }: PageContentProps) {
 
             if (response.data?.items) {
                 const found = response.data.items.find(
-                    (item) => generateSlug(item.title) === reportId
+                    (item) => item.report_slug === reportId
                 );
 
                 if (found) {

@@ -354,7 +354,7 @@ async def news_daily(
         find_query["tickers"] = ticker
     if news_type:
         find_query["news_type"] = news_type
-    
+
     # Hỗ trợ multiple categories với $in operator
     if categories:
         # Parse comma-separated string to list
@@ -647,7 +647,7 @@ async def news_report(
     find_query = {}
     if report_type:
         find_query["report_type"] = report_type
-    
+
     # Hỗ trợ multiple categories với $in operator
     if categories:
         # Parse comma-separated string to list
@@ -738,6 +738,85 @@ async def phase_signal(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]
 
 
 # ==============================================================================
+# NEWS ARTICLE QUERY - Lấy 1 bài viết theo slug
+# ==============================================================================
+
+
+async def news_article(
+    article_slug: Optional[str] = None,
+    **kwargs,
+) -> Dict[str, Any]:
+    """
+    Lấy thông tin 1 bài viết theo article_slug (để generate metadata cho social sharing).
+    Query trực tiếp từ DB theo field article_slug.
+    Database: temp_stock.
+
+    Args:
+        article_slug: Slug của bài viết (URL-friendly title, đã lưu trong DB)
+
+    Returns:
+        Dict chứa thông tin bài viết hoặc None nếu không tìm thấy
+    """
+    if not article_slug:
+        return {"article": None, "error": "article_slug is required"}
+
+    stock_db = get_database(STOCK_DB)
+    collection = stock_db.get_collection("news_daily")
+
+    # Chỉ lấy title và sapo cho Open Graph metadata
+    projection = {
+        "_id": 0,
+        "title": 1,
+        "sapo": 1,
+    }
+
+    # Query trực tiếp theo article_slug
+    doc = await collection.find_one({"article_slug": article_slug}, projection)
+
+    if doc:
+        return {"article": doc}
+
+    return {"article": None, "error": "Article not found"}
+
+
+async def report_article(
+    report_slug: Optional[str] = None,
+    **kwargs,
+) -> Dict[str, Any]:
+    """
+    Lấy thông tin 1 báo cáo theo report_slug (để generate metadata cho social sharing).
+    Query trực tiếp từ DB theo field report_slug.
+    Database: temp_stock.
+
+    Args:
+        report_slug: Slug của báo cáo (URL-friendly title, đã lưu trong DB)
+
+    Returns:
+        Dict chứa thông tin báo cáo hoặc None nếu không tìm thấy
+    """
+    if not report_slug:
+        return {"report": None, "error": "report_slug is required"}
+
+    stock_db = get_database(STOCK_DB)
+    collection = stock_db.get_collection("news_report")
+
+    # Chỉ lấy title và sapo cho Open Graph metadata
+    projection = {
+        "_id": 0,
+        "title": 1,
+        "sapo": 1,
+    }
+
+    # Query trực tiếp theo report_slug
+    doc = await collection.find_one({"report_slug": report_slug}, projection)
+
+    if doc:
+        return {"report": doc}
+
+    return {"report": None, "error": "Report not found"}
+
+
+# ==============================================================================
 # REGISTRY - Đăng ký các keyword và hàm query tương ứng
 # ==============================================================================
 
@@ -755,9 +834,11 @@ SSE_QUERY_REGISTRY: Dict[str, Any] = {
     "news_daily": news_daily,
     "news_categories": news_categories,
     "news_count": news_count,
+    "news_article": news_article,  # Lấy 1 bài viết theo slug
     # News report queries
     "news_report": news_report,
     "news_report_categories": news_report_categories,
+    "report_article": report_article,  # Lấy 1 báo cáo theo slug
 }
 
 
@@ -772,6 +853,8 @@ async def execute_sse_query(
     news_type: Optional[str] = None,
     report_type: Optional[str] = None,
     categories: Optional[str] = None,
+    article_slug: Optional[str] = None,
+    report_slug: Optional[str] = None,
     page: Optional[int] = None,
     limit: Optional[int] = None,
     sort_by: Optional[str] = None,
@@ -788,6 +871,8 @@ async def execute_sse_query(
         news_type: Loại tin tức (VD: thong_cao, trong_nuoc, doanh_nghiep, quoc_te)
         report_type: Loại bản tin (VD: daily, weekly, monthly)
         categories: Danh mục để filter, có thể 1 hoặc nhiều cách nhau bởi dấu phẩy (VD: thi-truong hoặc thi-truong,doanh-nghiep)
+        article_slug: Slug của bài viết tin tức
+        report_slug: Slug của báo cáo
         page: Số trang (bắt đầu từ 1)
         limit: Số lượng bản ghi mỗi trang
         sort_by: Tên field để sắp xếp
@@ -814,6 +899,8 @@ async def execute_sse_query(
         "news_type": news_type,
         "report_type": report_type,
         "categories": categories,
+        "article_slug": article_slug,
+        "report_slug": report_slug,
         "page": page,
         "limit": limit,
         "sort_by": sort_by,

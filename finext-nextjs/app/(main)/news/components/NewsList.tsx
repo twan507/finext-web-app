@@ -256,7 +256,7 @@ export default function NewsList({
                     <Box>
                         {articles.map((article) => (
                             <NewsCard
-                                key={article.article_id}
+                                key={article.article_slug}
                                 article={article}
                             />
                         ))}

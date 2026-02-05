@@ -4,7 +4,7 @@
 import { Box, Stack, Typography, useTheme } from '@mui/material';
 import Link from 'next/link';
 
-import { NewsArticle, getTypeConfigByType, generateSlug } from '../types';
+import { NewsArticle, getTypeConfigByType } from '../types';
 import { spacing, transitions, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 
 interface NewsCardProps {
@@ -35,12 +35,11 @@ export default function NewsCard({ article }: NewsCardProps) {
     const theme = useTheme();
     const typeConfig = getTypeConfigByType(article.news_type);
     const { date, time } = parseDateTime(article.created_at);
-    const slug = generateSlug(article.title);
 
     return (
         <Box
             component={Link}
-            href={`/news/${slug}`}
+            href={`/news/${article.article_slug}`}
             sx={{
                 display: 'flex',
                 gap: { xs: spacing.xs, md: spacing.sm },

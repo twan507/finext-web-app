@@ -234,7 +234,7 @@ export default function ReportList({
                     <Box>
                         {reports.map((report) => (
                             <ReportCard
-                                key={report.report_id}
+                                key={report.report_slug}
                                 report={report}
                             />
                         ))}

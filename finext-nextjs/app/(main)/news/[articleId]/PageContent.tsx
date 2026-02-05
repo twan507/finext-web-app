@@ -25,7 +25,7 @@ import {
 import { useRouter } from 'next/navigation';
 
 import { apiClient } from 'services/apiClient';
-import { NewsApiResponse, NewsArticle, getTypeConfigByType, generateSlug } from '../types';
+import { NewsApiResponse, NewsArticle, getTypeConfigByType } from '../types';
 import { NewsBreadcrumb } from '../components';
 import { spacing, borderRadius, getResponsiveFontSize, shadows, fontWeight } from 'theme/tokens';
 
@@ -85,20 +85,19 @@ export default function PageContent({ articleId }: PageContentProps) {
         setError(null);
 
         try {
-            // Fetch tất cả news và tìm theo article_id
-            // TODO: Backend nên có endpoint GET /news/{article_id} riêng
+            // Fetch news và tìm theo article_slug
             const response = await apiClient<NewsApiResponse>({
                 url: '/api/v1/sse/rest/news_daily',
                 method: 'GET',
                 queryParams: {
-                    limit: '100', // Lấy nhiều để tìm
+                    limit: '100',
                 },
                 requireAuth: false,
             });
 
             if (response.data?.items) {
                 const found = response.data.items.find(
-                    (item) => generateSlug(item.title) === articleId
+                    (item) => item.article_slug === articleId
                 );
 
                 if (found) {

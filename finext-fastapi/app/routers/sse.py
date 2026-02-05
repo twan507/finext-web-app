@@ -171,8 +171,12 @@ async def rest_query_endpoint(
     keyword: str,
     ticker: Optional[str] = Query(None, description="Mã ticker (VD: VNINDEX, VN30, ...)"),
     news_type: Optional[str] = Query(None, description="Loại tin tức (VD: thong_cao, trong_nuoc, doanh_nghiep, quoc_te)"),
-    categories: Optional[str] = Query(None, description="Danh mục, có thể 1 hoặc nhiều cách nhau bởi dấu phẩy (VD: thi-truong hoặc thi-truong,doanh-nghiep)"),
+    categories: Optional[str] = Query(
+        None, description="Danh mục, có thể 1 hoặc nhiều cách nhau bởi dấu phẩy (VD: thi-truong hoặc thi-truong,doanh-nghiep)"
+    ),
     report_type: Optional[str] = Query(None, description="Loại bản tin (VD: daily, weekly, monthly)"),
+    article_slug: Optional[str] = Query(None, description="Slug của bài viết (cho keyword news_article)"),
+    report_slug: Optional[str] = Query(None, description="Slug của báo cáo (cho keyword report_article)"),
     page: Optional[int] = Query(None, ge=1, description="Số trang (bắt đầu từ 1)"),
     limit: Optional[int] = Query(None, ge=1, le=100, description="Số lượng bản ghi mỗi trang (tối đa 100)"),
     sort_by: Optional[str] = Query(None, description="Tên field để sắp xếp"),
@@ -201,6 +205,8 @@ async def rest_query_endpoint(
             "news_type": news_type,
             "categories": categories,
             "report_type": report_type,
+            "article_slug": article_slug,
+            "report_slug": report_slug,
             "page": page,
             "limit": limit,
             "sort_by": sort_by,
