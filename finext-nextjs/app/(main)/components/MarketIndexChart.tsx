@@ -1064,7 +1064,7 @@ export default function MarketIndexChart({
                                 px: { xs: 1, sm: 1.5 },
                                 backgroundColor: colors.buttonBackground,
                                 '&:hover': {
-                                    backgroundColor: colors.buttonBackground
+                                    backgroundColor: colors.buttonBackground,
                                 },
                                 '&.Mui-selected': {
                                     backgroundColor: colors.buttonBackground,
@@ -1097,6 +1097,7 @@ export default function MarketIndexChart({
                                 borderRadius: 2,
                                 height: 34,
                                 width: 34,
+                                '&:hover': { backgroundColor: colors.buttonBackground },
                             }}
                         >
                             <OpenWithIcon sx={{ fontSize: 18 }} />
@@ -1115,6 +1116,7 @@ export default function MarketIndexChart({
                                 borderRadius: 2,
                                 height: 34,
                                 width: 34,
+                                '&:hover': { backgroundColor: colors.buttonBackground },
                             }}
                         >
                             {isFullscreen ? <FullscreenExitIcon sx={{ fontSize: 18 }} /> : <FullscreenIcon sx={{ fontSize: 18 }} />}

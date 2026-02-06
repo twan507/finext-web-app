@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Box, Typography, Skeleton } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, Skeleton, useMediaQuery, useTheme } from '@mui/material';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import Link from 'next/link';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
@@ -33,7 +33,13 @@ export default function MarketTrendSection({
     chartData,
     isLoading = false,
 }: MarketTrendSectionProps) {
-    const [timeRange, setTimeRange] = useState<TrendTimeRange>('3M');
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const [timeRange, setTimeRange] = useState<TrendTimeRange>(isMobile ? '1M' : '3M');
+
+    useEffect(() => {
+        setTimeRange(isMobile ? '1M' : '3M');
+    }, [isMobile]);
 
     return (
         <Box>

@@ -1,6 +1,7 @@
 'use client';
 
-import { Box, Typography, useTheme, alpha, Tooltip } from '@mui/material';
+import { useRef, useState } from 'react';
+import { Box, Typography, useTheme, alpha, Popover } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningIcon from '@mui/icons-material/Warning';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -171,6 +172,8 @@ interface SignalRowProps {
 
 const SignalRow = ({ label, value, signalType, tooltipText = '' }: SignalRowProps) => {
     const theme = useTheme();
+    const anchorRef = useRef<HTMLDivElement>(null);
+    const [open, setOpen] = useState(false);
 
     // Determine icon type based on signal type and value
     // Buy: 1 = positive (green check), 0 = warning (yellow)
@@ -183,42 +186,16 @@ const SignalRow = ({ label, value, signalType, tooltipText = '' }: SignalRowProp
         iconType = value === 1 ? 'warning' : 'negative';
     }
 
-    // Determine tooltip background color based on icon type
-    const tooltipBgColor = iconType === 'positive'
+    const infoColor = iconType === 'positive'
         ? theme.palette.trend.up
         : iconType === 'warning'
             ? theme.palette.warning.main
             : theme.palette.trend.down;
 
     return (
-        <Tooltip
-            title={tooltipText}
-            placement="top"
-            arrow
-            enterDelay={200}
-            leaveDelay={0}
-            followCursor
-            slotProps={{
-                tooltip: {
-                    sx: {
-                        bgcolor: theme.palette.background.paper,
-                        color: tooltipBgColor,
-                        fontSize: getResponsiveFontSize('sm').md,
-                        maxWidth: 200,
-                        p: 1.5,
-                    }
-                },
-                arrow: {
-                    sx: {
-                        color: theme.palette.background.paper,
-                        '&::before': {
-                            border: `1px solid ${alpha(tooltipBgColor, 0.3)}`,
-                        }
-                    }
-                }
-            }}
-        >
+        <Box ref={anchorRef}>
             <Box
+                onClick={() => setOpen((prev) => !prev)}
                 sx={{
                     display: 'flex',
                     alignItems: 'center',
@@ -227,12 +204,10 @@ const SignalRow = ({ label, value, signalType, tooltipText = '' }: SignalRowProp
                     pl: 1.5,
                     pr: 1.5,
                     borderRadius: 1,
-                    transition: 'background-color 0.15s',
-                    cursor: 'default',
+                    cursor: 'pointer',
                     flex: 1,
-                    '&:hover': {
-                        bgcolor: alpha(theme.palette.action.hover, 0.08),
-                    },
+                    userSelect: 'none',
+                    bgcolor: open ? alpha(infoColor, 0.08) : 'transparent',
                 }}
             >
                 <SignalIcon type={iconType} size={18} />
@@ -247,7 +222,38 @@ const SignalRow = ({ label, value, signalType, tooltipText = '' }: SignalRowProp
                     {label}
                 </Typography>
             </Box>
-        </Tooltip>
+            <Popover
+                open={open}
+                anchorEl={anchorRef.current}
+                onClose={() => setOpen(false)}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+                transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                disableRestoreFocus
+                slotProps={{
+                    paper: {
+                        sx: {
+                            bgcolor: theme.palette.background.default,
+                            borderRadius: `${borderRadius.sm}px`,
+                            boxShadow: theme.shadows[8],
+                            border: `1px solid ${alpha(infoColor, 0.25)}`,
+                            px: 1.5,
+                            py: 1,
+                            maxWidth: 260,
+                        },
+                    },
+                }}
+            >
+                <Typography
+                    sx={{
+                        fontSize: getResponsiveFontSize('sm'),
+                        color: infoColor,
+                        lineHeight: 1.5,
+                    }}
+                >
+                    {tooltipText}
+                </Typography>
+            </Popover>
+        </Box>
     );
 };
 

@@ -29,8 +29,6 @@ export default function ConsultationSection() {
                 position: 'relative',
                 overflow: 'hidden',
                 background: layers.base,
-                borderTop: `1px solid ${layers.border}`,
-                borderBottom: `1px solid ${layers.border}`,
                 width: '100%',
                 py: { xs: 6, md: 8 },
                 "&::before": {

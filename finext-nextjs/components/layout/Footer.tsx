@@ -110,9 +110,7 @@ const Footer: React.FC = () => {
     <Box
       component="footer"
       sx={{
-        bgcolor: theme.palette.mode === 'dark'
-          ? '#050505' // Slightly distinct from default #0a0a0a
-          : '#f8f9fa', // Slightly distinct from default #fafbfc
+        bgcolor: theme.palette.background.default,
         mt: 'auto',
       }}
     >

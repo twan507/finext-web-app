@@ -30,24 +30,37 @@ export default function TimeframeSelector<T extends string>({
             onChange={onChange}
             size="small"
             sx={{
-                borderRadius: 2,
-                overflow: 'hidden',
                 display: 'flex',
                 flexWrap: 'wrap',
+                backgroundColor: (theme.palette as any).component?.chart?.buttonBackground || alpha(theme.palette.action.active, 0.05),
+                borderRadius: 2,
+                overflow: 'hidden',
+                // Remove all internal MUI borders and dividers
+                '& .MuiToggleButtonGroup-grouped': {
+                    border: 'none !important',
+                    margin: '0 !important',
+                    '&:not(:first-of-type)': {
+                        borderLeft: 'none !important',
+                        marginLeft: '0 !important',
+                    },
+                },
                 '& .MuiToggleButton-root': {
                     color: (theme.palette as any).component?.chart?.buttonText || theme.palette.text.secondary,
                     border: 'none',
                     height: 34,
                     px: { xs: 1, sm: 1.5 },
                     fontSize: getResponsiveFontSize('sm'),
-                    backgroundColor: (theme.palette as any).component?.chart?.buttonBackground || alpha(theme.palette.action.active, 0.05),
+                    backgroundColor: 'transparent',
                     '&:hover': {
-                        backgroundColor: (theme.palette as any).component?.chart?.buttonBackground || alpha(theme.palette.action.active, 0.1)
+                        backgroundColor: 'transparent',
                     },
                     '&.Mui-selected': {
-                        backgroundColor: (theme.palette as any).component?.chart?.buttonBackground || alpha(theme.palette.action.active, 0.05),
-                        color: (theme.palette as any).component?.chart?.buttonBackgroundActive || theme.palette.primary.main
-                    }
+                        backgroundColor: 'transparent',
+                        color: (theme.palette as any).component?.chart?.buttonBackgroundActive || theme.palette.primary.main,
+                        '&:hover': {
+                            backgroundColor: 'transparent',
+                        },
+                    },
                 },
                 ...sx
             }}

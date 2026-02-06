@@ -610,6 +610,7 @@ export default function MarketTrendChart({
                             borderRadius: 2,
                             height: 34,
                             width: 34,
+                            '&:hover': { backgroundColor: colors.buttonBackground },
                         }}
                     >
                         <OpenWithIcon sx={{ fontSize: 18 }} />

@@ -201,7 +201,7 @@ export const lightThemePalette: PaletteOptions = {
     contrastText: '#fafbfc',
   },
   background: {
-    default: '#fafbfc',
+    default: '#f8f9fa',
     paper: '#f5f5f5',
   },
   text: {
@@ -303,7 +303,7 @@ export const darkThemePalette: PaletteOptions = {
     contrastText: '#fafbfc',
   },
   background: {
-    default: '#0a0a0a',
+    default: '#050505',
     paper: '#1e1e1e',
   },
   text: {
