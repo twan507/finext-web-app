@@ -26,13 +26,15 @@ import {
     Stack,
     Chip,
     useTheme,
-    CircularProgress
+    CircularProgress,
+    Tooltip
 } from '@mui/material';
 import TimeframeSelector from 'components/common/TimeframeSelector';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import CandlestickChartIcon from '@mui/icons-material/CandlestickChart';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
+import OpenWithIcon from '@mui/icons-material/OpenWith';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 
 // Types - export để page có thể sử dụng
@@ -850,6 +852,68 @@ export default function MarketIndexChart({
         setIsFullscreen((prev) => !prev);
     };
 
+    // Pan/Zoom toggle
+    const [panZoomEnabled, setPanZoomEnabled] = useState(false);
+
+    // Reset pan/zoom when timeRange changes — timeRange is always authoritative
+    useEffect(() => {
+        if (panZoomEnabled) {
+            setPanZoomEnabled(false);
+            if (chartRef.current) {
+                chartRef.current.applyOptions({
+                    handleScroll: {
+                        mouseWheel: false,
+                        pressedMouseMove: false,
+                        horzTouchDrag: false,
+                        vertTouchDrag: false,
+                    },
+                    handleScale: {
+                        axisPressedMouseMove: false,
+                        mouseWheel: false,
+                        pinch: false,
+                    },
+                });
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [timeRange]);
+
+    const handleTogglePanZoom = useCallback(() => {
+        setPanZoomEnabled(prev => {
+            const next = !prev;
+            if (chartRef.current) {
+                chartRef.current.applyOptions({
+                    handleScroll: {
+                        mouseWheel: next,
+                        pressedMouseMove: next,
+                        horzTouchDrag: next,
+                        vertTouchDrag: false,
+                    },
+                    handleScale: {
+                        axisPressedMouseMove: next,
+                        mouseWheel: next,
+                        pinch: next,
+                    },
+                });
+                // Reset to selected timeRange view when turning off
+                if (!next) {
+                    const isIntraday = timeRange === '1D';
+                    if (isIntraday) {
+                        chartRef.current.timeScale().fitContent();
+                    } else {
+                        const data = eodData;
+                        const dataLength = chartType === 'area' ? data.areaData.length : data.candleData.length;
+                        if (dataLength > 0) {
+                            const visibleRange = getVisibleRange(timeRange, dataLength);
+                            chartRef.current.timeScale().setVisibleLogicalRange(visibleRange);
+                        }
+                    }
+                }
+            }
+            return next;
+        });
+    }, [timeRange, eodData, chartType]);
+
     // Resize chart when fullscreen changes
     useEffect(() => {
         if (chartRef.current && chartContainerRef.current) {
@@ -968,24 +1032,6 @@ export default function MarketIndexChart({
                     value={timeRange}
                     onChange={handleTimeRangeChange}
                     options={['1D', '1M', '3M', '1Y', 'ALL']}
-                    // getLabel={(option) => option === 'ALL' ? 'Tất cả' : option}
-                    sx={{
-                        '& .MuiToggleButton-root': {
-                            color: colors.buttonText,
-                            border: 'none',
-                            height: 32,
-                            px: 1.5,
-                            fontSize: getResponsiveFontSize('md'),
-                            backgroundColor: colors.buttonBackground,
-                            '&:hover': {
-                                backgroundColor: colors.buttonBackground
-                            },
-                            '&.Mui-selected': {
-                                backgroundColor: colors.buttonBackground,
-                                color: colors.buttonBackgroundActive
-                            }
-                        }
-                    }}
                 />
 
                 {/* Chart type and fullscreen buttons */}
@@ -1014,9 +1060,8 @@ export default function MarketIndexChart({
                             '& .MuiToggleButton-root': {
                                 color: colors.buttonText,
                                 border: 'none',
-                                height: 32,
-                                px: 1,
-                                minWidth: 40,
+                                height: 34,
+                                px: { xs: 1, sm: 1.5 },
                                 backgroundColor: colors.buttonBackground,
                                 '&:hover': {
                                     backgroundColor: colors.buttonBackground
@@ -1040,60 +1085,48 @@ export default function MarketIndexChart({
                         </ToggleButton>
                     </ToggleButtonGroup>
 
+                    {/* Pan/Zoom toggle button */}
+                    <Tooltip title={panZoomEnabled ? 'Tắt kéo/thu phóng' : 'Bật kéo/thu phóng'} arrow>
+                        <IconButton
+                            onClick={handleTogglePanZoom}
+                            size="small"
+                            sx={{
+                                color: panZoomEnabled ? colors.buttonBackgroundActive : colors.buttonText,
+                                backgroundColor: colors.buttonBackground,
+                                border: 'none',
+                                borderRadius: 2,
+                                height: 34,
+                                width: 34,
+                            }}
+                        >
+                            <OpenWithIcon sx={{ fontSize: 18 }} />
+                        </IconButton>
+                    </Tooltip>
+
                     {/* Fullscreen button */}
-                    <IconButton
-                        onClick={handleFullscreen}
-                        sx={{
-                            color: isFullscreen ? colors.buttonBackgroundActive : colors.buttonText,
-                            backgroundColor: colors.buttonBackground,
-                            border: 'none',
-                            borderRadius: 2,
-                            height: 32,
-                            width: 32,
-                            padding: 0,
-                        }}
-                    >
-                        {isFullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
-                    </IconButton>
+                    <Tooltip title={isFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'} arrow>
+                        <IconButton
+                            onClick={handleFullscreen}
+                            size="small"
+                            sx={{
+                                color: isFullscreen ? colors.buttonBackgroundActive : colors.buttonText,
+                                backgroundColor: colors.buttonBackground,
+                                border: 'none',
+                                borderRadius: 2,
+                                height: 34,
+                                width: 34,
+                            }}
+                        >
+                            {isFullscreen ? <FullscreenExitIcon sx={{ fontSize: 18 }} /> : <FullscreenIcon sx={{ fontSize: 18 }} />}
+                        </IconButton>
+                    </Tooltip>
                 </Stack>
             </Stack>
 
             {/* Chart container */}
             <Box
-                onClick={() => {
-                    if (chartRef.current) {
-                        chartRef.current.applyOptions({
-                            handleScroll: {
-                                mouseWheel: true,
-                                pressedMouseMove: true,
-                                horzTouchDrag: true,
-                                vertTouchDrag: false
-                            },
-                            handleScale: {
-                                axisPressedMouseMove: true,
-                                mouseWheel: true,
-                                pinch: true
-                            }
-                        });
-                    }
-                }}
                 onMouseLeave={() => {
                     setTooltipData(null);
-                    if (chartRef.current) {
-                        chartRef.current.applyOptions({
-                            handleScroll: {
-                                mouseWheel: false,
-                                pressedMouseMove: false,
-                                horzTouchDrag: false,
-                                vertTouchDrag: false
-                            },
-                            handleScale: {
-                                axisPressedMouseMove: false,
-                                mouseWheel: false,
-                                pinch: false
-                            }
-                        });
-                    }
                 }}
                 sx={{
                     width: '100%',

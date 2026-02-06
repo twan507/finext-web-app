@@ -37,6 +37,7 @@ export default function TimeframeSelector<T extends string>({
                 '& .MuiToggleButton-root': {
                     color: (theme.palette as any).component?.chart?.buttonText || theme.palette.text.secondary,
                     border: 'none',
+                    height: 34,
                     px: { xs: 1, sm: 1.5 },
                     fontSize: getResponsiveFontSize('sm'),
                     backgroundColor: (theme.palette as any).component?.chart?.buttonBackground || alpha(theme.palette.action.active, 0.05),

@@ -568,7 +568,6 @@ async def news_count(
             if sample_report:
                 logger.info(f"[news_count] Sample created_at for 'news_report': {sample_report.get('created_at')}")
 
-    logger.info(f"[news_count] Total: {result['total']} articles/reports")
     return result
 
 
@@ -809,6 +808,61 @@ async def report_article(
 
 
 # ==============================================================================
+# TREND QUERIES - Xu hướng thị trường
+# ==============================================================================
+
+
+async def home_history_trend(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+    """
+    Lấy dữ liệu lịch sử xu hướng thị trường.
+    Database: stock_db. Collection: history_trend.
+    """
+    stock_db = get_database(STOCK_DB)
+
+    projection = {
+        "_id": 0,
+        "ticker": 1,
+        "ticker_name": 1,
+        "date": 1,
+        "w_trend": 1,
+        "m_trend": 1,
+        "q_trend": 1,
+        "y_trend": 1,
+    }
+    find_query = {"ticker": ticker} if ticker else {}
+    history_trend_df = await get_collection_data(
+        stock_db, "history_trend", find_query=find_query, projection=projection
+    )
+
+    return history_trend_df.to_dict(orient="records")
+
+
+async def home_today_trend(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+    """
+    Lấy dữ liệu xu hướng thị trường hôm nay.
+    Database: stock_db. Collection: today_trend.
+    """
+    stock_db = get_database(STOCK_DB)
+
+    projection = {
+        "_id": 0,
+        "ticker": 1,
+        "ticker_name": 1,
+        "date": 1,
+        "w_trend": 1,
+        "m_trend": 1,
+        "q_trend": 1,
+        "y_trend": 1,
+    }
+    find_query = {"ticker": ticker} if ticker else {}
+    today_trend_df = await get_collection_data(
+        stock_db, "today_trend", find_query=find_query, projection=projection
+    )
+
+    return today_trend_df.to_dict(orient="records")
+
+
+# ==============================================================================
 # REGISTRY - Đăng ký các keyword và hàm query tương ứng
 # ==============================================================================
 
@@ -822,6 +876,9 @@ SSE_QUERY_REGISTRY: Dict[str, Any] = {
     "home_nn_stock": home_nn_stock,
     # Phase signal
     "phase_signal": phase_signal,
+    # Trend queries
+    "home_history_trend": home_history_trend,
+    "home_today_trend": home_today_trend,
     # News queries
     "news_daily": news_daily,
     "news_categories": news_categories,

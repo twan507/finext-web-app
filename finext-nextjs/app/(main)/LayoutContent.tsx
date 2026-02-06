@@ -72,7 +72,7 @@ const topNavTabs: TopNavTab[] = [
     icon: 'fluent-color:poll-32',
     submenu: [
       { label: 'Diễn biến thị trường', href: '/markets', icon: 'fluent-color:chart-multiple-20', description: 'Theo dõi diễn biến và xu hướng thị trường chứng khoán' },
-      { label: 'Giai đoạn thị trường', href: '/markets/phases', icon: 'fluent-color:arrow-trending-lines-20', description: 'Phân tích và xác định giai đoạn chu kỳ thị trường' },
+      { label: 'Xu hướng thị trường', href: '/markets/trends', icon: 'fluent-color:arrow-trending-lines-20', description: 'Phân tích xu hướng, tín hiệu và giai đoạn chu kỳ thị trường' },
     ]
   },
   {

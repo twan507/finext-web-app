@@ -9,6 +9,10 @@ import { Box, Skeleton } from '@mui/material';
 import type { RawMarketData, ChartData, TimeRange } from './components/MarketIndexChart';
 import { transformToChartData } from './components/MarketIndexChart';
 
+// Import types từ MarketTrendChart
+import type { RawTrendData, TrendChartData } from './components/MarketTrendChart';
+import { transformTrendData } from './components/MarketTrendChart';
+
 // Lazy load heavy chart components để giảm initial bundle size
 const MarketIndexChart = dynamic(
     () => import('./components/MarketIndexChart').then(mod => ({ default: mod.default })),
@@ -47,8 +51,13 @@ const NewsSection = dynamic(
 );
 
 const MarketTrendSection = dynamic(
-    () => import('./components/MarketTrendSection'),
+    () => import('./components/MarketPhaseSection'),
     { loading: () => <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, my: 2 }} /> }
+);
+
+const MarketTrendLineSection = dynamic(
+    () => import('./components/MarketTrendSection'),
+    { loading: () => <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 2, my: 2 }} /> }
 );
 
 const IndustryStocksSection = dynamic(
@@ -56,15 +65,11 @@ const IndustryStocksSection = dynamic(
     { loading: () => <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, my: 2 }} /> }
 );
 
-const PhaseSignalSection = dynamic(
-    () => import('./components/PhaseSignalSection'),
-    { loading: () => <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 2, my: 2 }} /> }
-);
-
 // Import API clients
 import { apiClient } from 'services/apiClient';
 import { ISseRequest } from 'services/core/types';
 import { sseClient, getFromCache } from 'services/sseClient';
+import MarketPhaseSection from './components/MarketPhaseSection';
 
 // Danh sách các index cho mini charts
 const MINI_CHART_INDEXES = [
@@ -108,6 +113,7 @@ export default function HomeContent() {
     const todaySseRef = useRef<{ unsubscribe: () => void } | null>(null);
     const itdSseRef = useRef<{ unsubscribe: () => void } | null>(null);
     const todayStockSseRef = useRef<{ unsubscribe: () => void } | null>(null);
+    const todayTrendSseRef = useRef<{ unsubscribe: () => void } | null>(null);
 
     // ========== STATE ==========
 
@@ -165,6 +171,19 @@ export default function HomeContent() {
         return !(cached && Array.isArray(cached) && cached.length > 0);
     });
 
+    // Trend data (history_trend + today_trend cho FNXINDEX)
+    const [trendTodayData, setTrendTodayData] = useState<RawTrendData[]>(() => {
+        const cached = getFromCache<RawTrendData[]>('home_today_trend');
+        if (cached && Array.isArray(cached)) {
+            return cached.filter((item) => item.ticker === 'FNXINDEX');
+        }
+        return [];
+    });
+    const [trendChartData, setTrendChartData] = useState<TrendChartData>({
+        wTrend: [], mTrend: [], qTrend: [], yTrend: [],
+    });
+    const [isTrendLoading, setIsTrendLoading] = useState<boolean>(true);
+
     // Loading & Error states
     // Khởi tạo loading dựa trên cache có sẵn
     const [isLoading, setIsLoading] = useState<boolean>(() => {
@@ -194,6 +213,22 @@ export default function HomeContent() {
         refetchOnWindowFocus: false,
     });
 
+
+    // ========== LUỒNG 1.5: REST - History Trend Data (FNXINDEX) ==========
+    const { data: historyTrendData = [], isLoading: historyTrendLoading } = useQuery({
+        queryKey: ['market', 'history_trend', 'FNXINDEX'],
+        queryFn: async () => {
+            const response = await apiClient<RawTrendData[]>({
+                url: '/api/v1/sse/rest/home_history_trend',
+                method: 'GET',
+                queryParams: { ticker: 'FNXINDEX' },
+                requireAuth: false
+            });
+            return response.data || [];
+        },
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+    });
 
     // ========== LUỒNG 2: SSE - Today All Indexes (với cache) ==========
     useEffect(() => {
@@ -409,6 +444,66 @@ export default function HomeContent() {
         };
     }, []); // Chỉ chạy 1 lần khi mount
 
+    // ========== LUỒNG 4.5: SSE - Today Trend Data (với cache) ==========
+    useEffect(() => {
+        isMountedRef.current = true;
+
+        if (todayTrendSseRef.current) {
+            todayTrendSseRef.current.unsubscribe();
+            todayTrendSseRef.current = null;
+        }
+
+        const requestProps: ISseRequest = {
+            url: '/api/v1/sse/stream',
+            queryParams: { keyword: 'home_today_trend' }
+        };
+
+        todayTrendSseRef.current = sseClient<RawTrendData[]>(
+            requestProps,
+            {
+                onOpen: () => { },
+                onData: (receivedData) => {
+                    if (isMountedRef.current && receivedData && Array.isArray(receivedData)) {
+                        // Filter chỉ lấy FNXINDEX
+                        const fnxData = receivedData.filter((item) => item.ticker === 'FNXINDEX');
+                        setTrendTodayData(fnxData);
+                    }
+                },
+                onError: (sseError) => {
+                    if (isMountedRef.current) {
+                        console.warn('[SSE Today Trend] Error:', sseError.message);
+                    }
+                },
+                onClose: () => { }
+            },
+            { cacheTtl: 5 * 60 * 1000, useCache: true }
+        );
+
+        return () => {
+            isMountedRef.current = false;
+            if (todayTrendSseRef.current) {
+                todayTrendSseRef.current.unsubscribe();
+            }
+        };
+    }, []);
+
+    // ========== Combine History Trend + Today Trend -> Trend Chart Data ==========
+    useEffect(() => {
+        // History data is required before rendering chart
+        // Today data is optional (appended if available)
+        const hasHistory = !historyTrendLoading && historyTrendData.length > 0;
+
+        if (!hasHistory) return;
+
+        // Combine history + today (today appended after history)
+        const combined = trendTodayData.length > 0
+            ? [...historyTrendData, ...trendTodayData]
+            : [...historyTrendData];
+        const transformed = transformTrendData(combined);
+        setTrendChartData(transformed);
+        setIsTrendLoading(false);
+    }, [historyTrendData, trendTodayData, historyTrendLoading]);
+
     // ========== LUỒNG 5: REST - NN Stock Data ==========
     // Fetch home_nn_stock for Foreign Net Buy/Sell (REST với interval 10s)
     const { data: nnStockData = [], isLoading: isNnLoading } = useQuery({
@@ -467,31 +562,32 @@ export default function HomeContent() {
 
             {/* Section 1.5: Diễn biến thị trường */}
             <Box sx={{ mt: 5 }}>
-                <MarketTrendSection
+                <MarketPhaseSection
                     stockData={todayStockData}
                     foreignData={nnStockData}
                     isLoading={isStockDataLoading || isNnLoading}
                 />
             </Box>
 
-            {/* Section 1.8: Tín hiệu thị trường (Phase Signal) */}
+            {/* Section 2: Xu hướng thị trường (Trend Lines + Tín hiệu) */}
             <Box sx={{ mt: 5 }}>
-                <PhaseSignalSection />
+                <MarketTrendLineSection
+                    chartData={trendChartData}
+                    isLoading={isTrendLoading}
+                />
             </Box>
 
-            {/* Section 2: Ngành */}
+            {/* Section 3: Ngành */}
             <Box sx={{ mt: 5 }}>
                 <IndustrySection todayAllData={todayAllData} itdAllData={itdAllData} />
             </Box>
 
-            {/* Section 2.5: Cổ phiếu nổi bật theo ngành */}
+            {/* Section 3.5: Cổ phiếu nổi bật theo ngành */}
             <Box sx={{ mt: 5 }}>
                 <IndustryStocksSection stockData={todayStockData} isLoading={isStockDataLoading} />
             </Box>
 
-
-
-            {/* Section 4: Tin tức */}
+            {/* Section 5: Tin tức */}
             <Box sx={{ mt: 5 }}>
                 <NewsSection />
             </Box>

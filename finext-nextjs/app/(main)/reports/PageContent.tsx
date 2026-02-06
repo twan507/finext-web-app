@@ -24,7 +24,7 @@ export default function ReportsContent() {
             {/* Header */}
             <Box sx={{ mb: spacing.xs }}>
                 <Typography variant="h1">
-                    Báo cáo định kỳ
+                    Báo cáo tổng hợp
                 </Typography>
                 <Typography
                     variant="body1"

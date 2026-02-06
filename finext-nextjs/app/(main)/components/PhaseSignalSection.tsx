@@ -168,7 +168,7 @@ function filterDataByTimeRange(data: PhaseSignalData[], range: TimeRangeOption):
 // MAIN COMPONENT
 // ============================================================================
 
-export default function PhaseSignalSection() {
+export default function PhaseSignalSection({ hideTitle = false }: { hideTitle?: boolean } = {}) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const [timeRange, setTimeRange] = useState<TimeRangeOption>('1Y');
@@ -558,9 +558,11 @@ export default function PhaseSignalSection() {
     return (
         <Box>
             {/* Title */}
-            <Typography sx={{ fontSize: getResponsiveFontSize('h4'), fontWeight: fontWeight.bold, mb: 1.5 }}>
-                Tín hiệu thị trường
-            </Typography>
+            {!hideTitle && (
+                <Typography sx={{ fontSize: getResponsiveFontSize('h4'), fontWeight: fontWeight.bold, mb: 1.5 }}>
+                    Tín hiệu thị trường
+                </Typography>
+            )}
 
             {/* Main 2-Column Layout */}
             <Grid container spacing={3} sx={{ alignItems: 'stretch' }}>

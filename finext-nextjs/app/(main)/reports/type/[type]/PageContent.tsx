@@ -29,7 +29,7 @@ export default function PageContent({ type }: PageContentProps) {
 
     const currentTypeInfo = getReportTypeInfo(type);
     const typeName = currentTypeInfo?.type_name || type;
-    const showCategoryChips = categories.length > 0;
+    const showCategoryChips = type !== 'monthly' && categories.length > 0;
 
     // Fetch categories từ API theo report_type
     useEffect(() => {

@@ -122,7 +122,7 @@ export default function MiniIndexCard({ symbol, itdData, hideOnTablet = false }:
         chart: {
             type: 'area',
             sparkline: { enabled: true },
-            animations: { enabled: true },
+            animations: { enabled: false },
             dropShadow: {
                 enabled: true,
                 top: 0,

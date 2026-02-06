@@ -350,9 +350,13 @@ function MiniNewsCard({ article }: MiniNewsCardProps) {
                 '&:last-of-type .news-divider': {
                     display: 'none',
                 },
+                '&:last-of-type .news-card-content': {
+                    mb: -0.5,
+                },
             }}
         >
             <Box
+                className="news-card-content"
                 sx={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -648,7 +652,8 @@ export default function NewsSection() {
     const trongnuocCount = newsCountData?.sources?.['trong_nuoc'] || 0;
     const doanhnghiepCount = newsCountData?.sources?.['doanh_nghiep'] || 0;
     const quocteCount = newsCountData?.sources?.['quoc_te'] || 0;
-    const totalNews = newsCountData?.total || 0;
+    // Calculate total news by summing individual categories (excluding news_report)
+    const totalNews = thongcaoCount + trongnuocCount + doanhnghiepCount + quocteCount;
 
     // ========================================================================
     // NEWS LIST API CALLS - Fetch news for display (5 items each)
@@ -745,6 +750,28 @@ export default function NewsSection() {
         refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
     });
     const quocteNews = quocteNewsData?.items || [];
+
+    // Fetch latest reports for "Báo cáo tổng hợp" section
+    const { data: latestReportsData, isLoading: reportsLoading } = useQuery({
+        queryKey: ['reports', 'latest', 'home'],
+        queryFn: async () => {
+            const response = await apiClient<ReportApiResponse>({
+                url: '/api/v1/sse/rest/news_report',
+                method: 'GET',
+                queryParams: {
+                    page: '1',
+                    limit: '5',
+                    sort_by: 'created_at',
+                    sort_order: 'desc',
+                },
+                requireAuth: false,
+            });
+            return response.data;
+        },
+        staleTime: 5 * 60 * 1000,
+        refetchInterval: 5 * 60 * 1000,
+    });
+    const latestReports = latestReportsData?.items || [];
 
     // Define the slides content for Desktop (with bg wrapper)
     const desktopSlides = [
@@ -935,6 +962,163 @@ export default function NewsSection() {
                 >
                     <Carousel slides={mobileSlides} minHeight="420px" />
                 </Box>
+            </Box>
+
+            {/* Section 3.5: Báo cáo tổng hợp */}
+            <Box
+                component={Link}
+                href="/reports"
+                sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    mt: spacing.sm,
+                    mb: 2,
+                }}
+            >
+                <Typography className="sub-section-title" sx={{ fontSize: getResponsiveFontSize('h4'), fontWeight: fontWeight.bold }}>
+                    Báo cáo tổng hợp
+                </Typography>
+                <ChevronRightIcon sx={{ fontSize: getResponsiveFontSize('h4').md, color: 'text.secondary' }} />
+            </Box>
+
+            <Box>
+                {reportsLoading ? (
+                    Array.from({ length: 3 }).map((_, index) => (
+                        <Box
+                            key={index}
+                            sx={{
+                                display: 'flex',
+                                gap: { xs: spacing.xs, md: spacing.sm },
+                                py: spacing.xxs,
+                                borderBottom: index < 2 ? '1px solid' : 'none',
+                                borderColor: 'divider',
+                            }}
+                        >
+                            <Box sx={{ width: { xs: 80, md: 100 } }}>
+                                <Skeleton variant="text" width={80} height={20} />
+                                <Skeleton variant="text" width={50} height={16} />
+                            </Box>
+                            <Box sx={{ flex: 1 }}>
+                                <Skeleton variant="text" width="90%" height={24} />
+                                <Skeleton variant="text" width="60%" height={18} />
+                            </Box>
+                        </Box>
+                    ))
+                ) : latestReports.length === 0 ? (
+                    <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ py: spacing.sm, textAlign: 'center' }}
+                    >
+                        Chưa có báo cáo nào.
+                    </Typography>
+                ) : (
+                    latestReports.map((report, index) => {
+                        const reportDate = (() => {
+                            try {
+                                const d = new Date(report.created_at);
+                                return {
+                                    date: d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+                                    time: d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+                                };
+                            } catch {
+                                return { date: report.created_at, time: '' };
+                            }
+                        })();
+
+                        return (
+                            <Box
+                                key={report.report_slug}
+                                component={Link}
+                                href={`/reports/${report.report_slug}`}
+                                sx={{
+                                    display: 'flex',
+                                    gap: { xs: spacing.xs, md: spacing.sm },
+                                    py: spacing.xxs,
+                                    textDecoration: 'none',
+                                    color: 'inherit',
+                                    borderBottom: index < latestReports.length - 1 ? '1px solid' : 'none',
+                                    borderColor: 'divider',
+                                    transition: transitions.colors,
+                                    '&:hover': {
+                                        '& .report-title': {
+                                            color: 'primary.main',
+                                        },
+                                    },
+                                }}
+                            >
+                                {/* Cột trái: Ngày + Giờ */}
+                                <Box
+                                    sx={{
+                                        flexShrink: 0,
+                                        width: { xs: 80, md: 100 },
+                                        textAlign: 'left',
+                                    }}
+                                >
+                                    <Typography
+                                        variant="body2"
+                                        color="primary.main"
+                                        sx={{
+                                            fontWeight: fontWeight.medium,
+                                            fontSize: getResponsiveFontSize('sm'),
+                                        }}
+                                    >
+                                        {reportDate.date}
+                                    </Typography>
+                                    <Typography
+                                        variant="caption"
+                                        color="text.disabled"
+                                        sx={{
+                                            fontSize: getResponsiveFontSize('xs'),
+                                        }}
+                                    >
+                                        {reportDate.time}
+                                    </Typography>
+                                </Box>
+
+                                {/* Cột phải: Tiêu đề + Sapo */}
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                    <Typography
+                                        className="report-title"
+                                        variant="h6"
+                                        sx={{
+                                            fontWeight: fontWeight.semibold,
+                                            fontSize: getResponsiveFontSize('md'),
+                                            lineHeight: 1.4,
+                                            mb: 0.5,
+                                            transition: transitions.colors,
+                                            display: '-webkit-box',
+                                            WebkitLineClamp: 2,
+                                            WebkitBoxOrient: 'vertical',
+                                            overflow: 'hidden',
+                                        }}
+                                    >
+                                        {report.title || 'Báo cáo'}
+                                    </Typography>
+
+                                    {(report.sapo || report.category_name) && (
+                                        <Typography
+                                            variant="body2"
+                                            color="text.secondary"
+                                            sx={{
+                                                fontSize: getResponsiveFontSize('sm'),
+                                                lineHeight: 1.5,
+                                                display: '-webkit-box',
+                                                WebkitLineClamp: 2,
+                                                WebkitBoxOrient: 'vertical',
+                                                overflow: 'hidden',
+                                            }}
+                                        >
+                                            {report.category_name ? `(${report.category_name}) - ` : ''}{report.sapo || report.category_name}
+                                        </Typography>
+                                    )}
+                                </Box>
+                            </Box>
+                        );
+                    })
+                )}
             </Box>
         </Box>
     );
