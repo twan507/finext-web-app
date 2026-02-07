@@ -117,7 +117,7 @@ export default function PageContent({ articleId }: PageContentProps) {
         try {
             // Extract plain text from HTML content
             const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = article.html_content;
+            tempDiv.innerHTML = article.html_content || '';
             const plainText = `${article.title}\n\n${article.sapo || ''}\n\n${tempDiv.textContent || tempDiv.innerText || ''}`;
 
             await navigator.clipboard.writeText(plainText);
@@ -352,7 +352,7 @@ export default function PageContent({ articleId }: PageContentProps) {
                                 borderRadius: `0 ${borderRadius.sm}px ${borderRadius.sm}px 0`,
                             },
                         }}
-                        dangerouslySetInnerHTML={{ __html: article.html_content }}
+                        dangerouslySetInnerHTML={{ __html: article.html_content || '' }}
                     />
 
                     {/* Tickers as hashtags */}
