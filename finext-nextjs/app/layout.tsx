@@ -49,11 +49,20 @@ export const metadata: Metadata = {
     siteName: 'Finext',
     title: 'Finext - Nền tảng phân tích chứng khoán thông minh',
     description: 'Công cụ phân tích chứng khoán chuyên sâu cho nhà đầu tư Việt Nam',
+    images: [
+      {
+        url: '/finext-panel.png',
+        width: 1200,
+        height: 630,
+        alt: 'Finext - Nền tảng phân tích chứng khoán thông minh',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Finext - Nền tảng phân tích chứng khoán thông minh',
     description: 'Công cụ phân tích chứng khoán chuyên sâu cho nhà đầu tư Việt Nam',
+    images: ['/finext-panel.png'],
   },
   robots: {
     index: true,
