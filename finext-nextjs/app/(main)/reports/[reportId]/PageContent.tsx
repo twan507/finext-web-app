@@ -133,7 +133,7 @@ export default function PageContent({ reportId }: PageContentProps) {
             } else {
                 // Fallback: extract plain text from HTML
                 const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = report.report_html;
+                tempDiv.innerHTML = report.report_html || '';
                 content = `${getTitle(report)}\n\n${report.sapo || ''}\n\n${tempDiv.textContent || tempDiv.innerText || ''}`;
             }
 
@@ -368,7 +368,7 @@ export default function PageContent({ reportId }: PageContentProps) {
                                 borderColor: 'divider',
                             },
                         }}
-                        dangerouslySetInnerHTML={{ __html: report.report_html }}
+                        dangerouslySetInnerHTML={{ __html: report.report_html || '' }}
                     />
 
                     {/* Tickers as hashtags */}
