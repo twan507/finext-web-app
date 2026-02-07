@@ -11,6 +11,7 @@ import CampaignIcon from '@mui/icons-material/Campaign';
 import BusinessCenterIcon from '@mui/icons-material/BusinessCenter';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import NewspaperIcon from '@mui/icons-material/Newspaper';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { spacing, getResponsiveFontSize, transitions, borderRadius, fontWeight } from 'theme/tokens';
 
 // ============================================================================
@@ -47,6 +48,21 @@ const pulseCore = keyframes`
 import { apiClient } from 'services/apiClient';
 import Link from 'next/link';
 import Carousel from 'components/common/Carousel';
+
+/** Format created_at to "13:05 07/02" */
+function formatShortDate(isoString?: string): string {
+    if (!isoString) return '';
+    try {
+        const date = new Date(isoString);
+        const h = String(date.getHours()).padStart(2, '0');
+        const m = String(date.getMinutes()).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        const mo = String(date.getMonth() + 1).padStart(2, '0');
+        return `${h}:${m} ${d}/${mo}`;
+    } catch {
+        return isoString;
+    }
+}
 
 // ============================================================================
 // TYPES
@@ -394,20 +410,27 @@ function MiniNewsCard({ article }: MiniNewsCardProps) {
                     {article.sapo}
                 </Typography>
 
-                {/* Source - nguồn tin */}
-                {article.source && (
-                    <Typography
-                        variant="caption"
-                        color="text.disabled"
-                        sx={{
-                            fontSize: getResponsiveFontSize('xs'),
-                            mt: 0.5,
-                            display: 'block',
-                        }}
-                    >
-                        Nguồn: {article.source}
-                    </Typography>
-                )}
+                {/* Source + time */}
+                <Typography
+                    variant="caption"
+                    color="text.disabled"
+                    sx={{
+                        fontSize: getResponsiveFontSize('xs'),
+                        mt: 0.5,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.5,
+                    }}
+                >
+                    {article.created_at && (
+                        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
+                            <AccessTimeIcon sx={{ fontSize: '0.85em' }} />
+                            {formatShortDate(article.created_at)}
+                        </Box>
+                    )}
+                    {article.created_at && article.source && ' | '}
+                    {article.source && article.source}
+                </Typography>
             </Box>
             <Divider className="news-divider" sx={{ borderColor: 'divider' }} />
         </Box>
@@ -672,15 +695,20 @@ function SpotlightNewsCard({ article }: { article: NewsArticle }) {
             >
                 {article.sapo}
             </Typography>
-            {article.source && (
-                <Typography
-                    variant="caption"
-                    color="text.disabled"
-                    sx={{ fontSize: getResponsiveFontSize('xs'), mt: 1, display: 'block' }}
-                >
-                    Nguồn: {article.source}
-                </Typography>
-            )}
+            <Typography
+                variant="caption"
+                color="text.disabled"
+                sx={{ fontSize: getResponsiveFontSize('xs'), mt: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}
+            >
+                {article.created_at && (
+                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
+                        <AccessTimeIcon sx={{ fontSize: '0.85em' }} />
+                        {formatShortDate(article.created_at)}
+                    </Box>
+                )}
+                {article.created_at && article.source && ' | '}
+                {article.source && article.source}
+            </Typography>
         </Box>
     );
 }
@@ -712,15 +740,20 @@ function CompactNewsItem({ article }: { article: NewsArticle }) {
                         {article.title}
                     </Typography>
                 </Link>
-                {article.source && (
-                    <Typography
-                        variant="caption"
-                        color="text.disabled"
-                        sx={{ fontSize: getResponsiveFontSize('xs'), mt: 0.25, display: 'block' }}
-                    >
-                        {article.source}
-                    </Typography>
-                )}
+                <Typography
+                    variant="caption"
+                    color="text.disabled"
+                    sx={{ fontSize: getResponsiveFontSize('xs'), mt: 0.25, display: 'flex', alignItems: 'center', gap: 0.5 }}
+                >
+                    {article.created_at && (
+                        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
+                            <AccessTimeIcon sx={{ fontSize: '0.85em' }} />
+                            {formatShortDate(article.created_at)}
+                        </Box>
+                    )}
+                    {article.created_at && article.source && ' | '}
+                    {article.source && article.source}
+                </Typography>
             </Box>
             <Divider className="compact-divider" sx={{ borderColor: 'divider' }} />
         </Box>
@@ -767,7 +800,7 @@ function NewspaperNarrowColumn({ title, href, loading, newsItems, position }: Ne
                                         fontSize: getResponsiveFontSize('sm'),
                                         lineHeight: 1.4,
                                         display: '-webkit-box',
-                                        WebkitLineClamp: 1,
+                                        WebkitLineClamp: 2,
                                         WebkitBoxOrient: 'vertical',
                                         overflow: 'hidden',
                                         color: 'text.primary',
@@ -778,15 +811,20 @@ function NewspaperNarrowColumn({ title, href, loading, newsItems, position }: Ne
                                     {article.title}
                                 </Typography>
                             </Link>
-                            {article.source && (
-                                <Typography
-                                    variant="caption"
-                                    color="text.disabled"
-                                    sx={{ fontSize: getResponsiveFontSize('sm'), mt: 0.25, display: 'block' }}
-                                >
-                                    {article.source}
-                                </Typography>
-                            )}
+                            <Typography
+                                variant="caption"
+                                color="text.disabled"
+                                sx={{ fontSize: getResponsiveFontSize('sm'), mt: 0.25, display: 'flex', alignItems: 'center', gap: 0.5 }}
+                            >
+                                {article.created_at && (
+                                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
+                                        <AccessTimeIcon sx={{ fontSize: '0.85em' }} />
+                                        {formatShortDate(article.created_at)}
+                                    </Box>
+                                )}
+                                {article.created_at && article.source && ' | '}
+                                {article.source && article.source}
+                            </Typography>
                         </Box>
                         <Divider className="narrow-divider" sx={{ borderColor: 'divider' }} />
                     </Box>
@@ -856,15 +894,20 @@ function NewspaperWideColumn({ title, href, loading, newsItems, position }: News
                             >
                                 {article.sapo}
                             </Typography>
-                            {article.source && (
-                                <Typography
-                                    variant="caption"
-                                    color="text.disabled"
-                                    sx={{ fontSize: getResponsiveFontSize('sm'), mt: 0.5, display: 'block' }}
-                                >
-                                    Nguồn: {article.source}
-                                </Typography>
-                            )}
+                            <Typography
+                                variant="caption"
+                                color="text.disabled"
+                                sx={{ fontSize: getResponsiveFontSize('sm'), mt: 0.5, display: 'flex', alignItems: 'center', gap: 0.5 }}
+                            >
+                                {article.created_at && (
+                                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
+                                        <AccessTimeIcon sx={{ fontSize: '0.85em' }} />
+                                        {formatShortDate(article.created_at)}
+                                    </Box>
+                                )}
+                                {article.created_at && article.source && ' | '}
+                                {article.source && article.source}
+                            </Typography>
                         </Box>
                         <Divider className="wide-divider" sx={{ borderColor: 'divider' }} />
                     </Box>
@@ -921,7 +964,7 @@ export default function NewsSection() {
                 method: 'GET',
                 queryParams: {
                     page: '1',
-                    limit: '9',
+                    limit: '6',
                     sort_by: 'created_at',
                     sort_order: 'desc',
                     news_type: 'thong_cao',
@@ -990,7 +1033,7 @@ export default function NewsSection() {
                 method: 'GET',
                 queryParams: {
                     page: '1',
-                    limit: '9',
+                    limit: '6',
                     sort_by: 'created_at',
                     sort_order: 'desc',
                     news_type: 'quoc_te',
@@ -1130,7 +1173,7 @@ export default function NewsSection() {
                             title="Vĩ mô trong nước"
                             href="/news/type/trong_nuoc"
                             loading={trongnuocLoading}
-                            newsItems={trongnuocNews}
+                            newsItems={trongnuocNews.slice(0, 4)}
                             position="right"
                         />
                     </Box>
@@ -1141,7 +1184,7 @@ export default function NewsSection() {
                             title="Doanh nghiệp niêm yết"
                             href="/news/type/doanh_nghiep"
                             loading={doanhnghiepLoading}
-                            newsItems={doanhnghiepNews}
+                            newsItems={doanhnghiepNews.slice(0, 4)}
                             position="left"
                         />
                     </Box>
