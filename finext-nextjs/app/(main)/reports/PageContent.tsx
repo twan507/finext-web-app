@@ -53,7 +53,7 @@ export default function ReportsContent() {
                         fontWeight: fontWeight.semibold,
                         border: 'none',
                         backgroundColor: 'primary.main',
-                        color: 'text.primary',
+                        color: '#ffffff',
                         '&:hover': {
                             backgroundColor: 'primary.dark',
                         },

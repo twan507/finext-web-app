@@ -79,7 +79,7 @@ export default function TypeTabs({
                     border: 'none',
                     ...(selectedCategory === 'all' && {
                         backgroundColor: 'primary.main',
-                        color: 'text.primary',
+                        color: '#ffffff',
                         '&:hover': {
                             backgroundColor: 'primary.dark',
                         },
@@ -100,7 +100,7 @@ export default function TypeTabs({
                             border: 'none',
                             ...(isSelected && {
                                 backgroundColor: 'primary.main',
-                                color: 'text.primary',
+                                color: '#ffffff',
                                 '&:hover': {
                                     backgroundColor: 'primary.dark',
                                 },

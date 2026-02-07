@@ -176,7 +176,7 @@ export default function PageContent({ type }: PageContentProps) {
                                 border: 'none',
                                 ...(isSelected && {
                                     backgroundColor: 'primary.main',
-                                    color: 'text.primary',
+                                    color: '#ffffff',
                                     '&:hover': {
                                         backgroundColor: 'primary.dark',
                                     },
