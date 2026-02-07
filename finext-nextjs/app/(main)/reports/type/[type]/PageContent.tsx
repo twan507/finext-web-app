@@ -31,6 +31,28 @@ export default function PageContent({ type }: PageContentProps) {
     const typeName = currentTypeInfo?.type_name || type;
     const showCategoryChips = type !== 'monthly' && categories.length > 0;
 
+    // Thứ tự ưu tiên cho categories
+    const categoryOrder = ['tong_hop', 'quoc_te', 'trong_nuoc', 'thong_cao', 'doanh_nghiep'];
+
+    // Hàm sắp xếp categories theo thứ tự định trước
+    const sortCategories = (cats: ReportCategoryInfo[]): ReportCategoryInfo[] => {
+        return [...cats].sort((a, b) => {
+            const indexA = categoryOrder.indexOf(a.category);
+            const indexB = categoryOrder.indexOf(b.category);
+
+            // Nếu cả 2 đều có trong order, sắp xếp theo order
+            if (indexA !== -1 && indexB !== -1) {
+                return indexA - indexB;
+            }
+            // Nếu chỉ a có trong order, a lên trước
+            if (indexA !== -1) return -1;
+            // Nếu chỉ b có trong order, b lên trước
+            if (indexB !== -1) return 1;
+            // Nếu cả 2 đều không có trong order, giữ nguyên thứ tự
+            return 0;
+        });
+    };
+
     // Fetch categories từ API theo report_type
     useEffect(() => {
         const fetchCategories = async () => {
@@ -45,7 +67,9 @@ export default function PageContent({ type }: PageContentProps) {
                 });
 
                 if (response.data?.items) {
-                    setCategories(response.data.items);
+                    // Sắp xếp categories theo thứ tự định trước
+                    const sortedCategories = sortCategories(response.data.items);
+                    setCategories(sortedCategories);
                 } else {
                     setCategories([]);
                 }

@@ -181,6 +181,7 @@ async def rest_query_endpoint(
     limit: Optional[int] = Query(None, ge=1, le=100, description="Số lượng bản ghi mỗi trang (tối đa 100)"),
     sort_by: Optional[str] = Query(None, description="Tên field để sắp xếp"),
     sort_order: Optional[str] = Query(None, regex="^(asc|desc)$", description="Thứ tự sắp xếp: asc hoặc desc"),
+    exclude_fields: Optional[str] = Query(None, description="Danh sách fields cần loại bỏ, cách nhau bởi dấu phẩy (VD: html_content,plain_content)"),
 ):
     """
     REST endpoint để query dữ liệu một lần.
@@ -199,6 +200,15 @@ async def rest_query_endpoint(
         )
 
     try:
+        # Build projection từ exclude_fields
+        projection = None
+        if exclude_fields:
+            projection = {"_id": 0}
+            for field in exclude_fields.split(","):
+                field = field.strip()
+                if field and field != "_id":
+                    projection[field] = 0
+
         # Tạo dict chứa các tham số tuỳ chọn
         query_params = {
             "ticker": ticker,
@@ -211,6 +221,7 @@ async def rest_query_endpoint(
             "limit": limit,
             "sort_by": sort_by,
             "sort_order": sort_order,
+            "projection": projection,
         }
 
         result = await execute_sse_query(keyword, **query_params)

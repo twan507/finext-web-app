@@ -124,6 +124,7 @@ export default function NewsList({
                 limit: String(pageSize),
                 sort_by: NEWS_SORT_FIELD,
                 sort_order: NEWS_SORT_ORDER,
+                exclude_fields: 'html_content,plain_content',
             };
 
             // Thêm filter type nếu có

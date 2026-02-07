@@ -326,6 +326,7 @@ async def news_daily(
     limit: Optional[int] = None,
     sort_by: Optional[str] = None,
     sort_order: Optional[str] = None,
+    projection: Optional[Dict[str, Any]] = None,
     **kwargs,
 ) -> Dict[str, Any]:
     """
@@ -376,8 +377,9 @@ async def news_daily(
     sort_field = sort_by or "created_at"
     sort_direction = -1 if (sort_order or "desc") == "desc" else 1
 
-    # Query với pagination
-    projection = {"_id": 0}
+    # Sử dụng projection truyền vào hoặc mặc định
+    if projection is None:
+        projection = {"_id": 0}
     cursor = collection.find(find_query, projection)
     cursor.sort(sort_field, sort_direction)
     cursor.skip(skip)
@@ -622,6 +624,7 @@ async def news_report(
     limit: Optional[int] = None,
     sort_by: Optional[str] = None,
     sort_order: Optional[str] = None,
+    projection: Optional[Dict[str, Any]] = None,
     **kwargs,
 ) -> Dict[str, Any]:
     """
@@ -668,8 +671,9 @@ async def news_report(
     sort_field = sort_by or "created_at"
     sort_direction = -1 if (sort_order or "desc") == "desc" else 1
 
-    # Query với pagination
-    projection = {"_id": 0}
+    # Sử dụng projection truyền vào hoặc mặc định
+    if projection is None:
+        projection = {"_id": 0}
     cursor = collection.find(find_query, projection)
     cursor.sort(sort_field, sort_direction)
     cursor.skip(skip)
@@ -908,6 +912,7 @@ async def execute_sse_query(
     limit: Optional[int] = None,
     sort_by: Optional[str] = None,
     sort_order: Optional[str] = None,
+    projection: Optional[Dict[str, Any]] = None,
     **kwargs,
 ) -> Dict[str, Any]:
     """
@@ -954,6 +959,7 @@ async def execute_sse_query(
         "limit": limit,
         "sort_by": sort_by,
         "sort_order": sort_order,
+        "projection": projection,
     }
 
     # Gọi hàm query với các params

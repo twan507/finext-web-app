@@ -79,7 +79,13 @@ export default function SourceTabs({
                 onClick={() => handleClick('all')}
                 color={selectedCategory === 'all' ? 'primary' : 'default'}
                 variant="filled"
-                sx={{ fontWeight: fontWeight.medium, border: 'none' }}
+                sx={{
+                    fontWeight: fontWeight.medium,
+                    border: 'none',
+                    ...(selectedCategory === 'all' && {
+                        color: '#ffffff',
+                    }),
+                }}
             />
             {categories.map((cat) => (
                 <Chip
@@ -88,7 +94,13 @@ export default function SourceTabs({
                     onClick={() => handleClick(cat.category)}
                     color={selectedCategory === cat.category ? 'primary' : 'default'}
                     variant="filled"
-                    sx={{ fontWeight: fontWeight.medium, border: 'none' }}
+                    sx={{
+                        fontWeight: fontWeight.medium,
+                        border: 'none',
+                        ...(selectedCategory === cat.category && {
+                            color: '#ffffff',
+                        }),
+                    }}
                 />
             ))}
         </Box>

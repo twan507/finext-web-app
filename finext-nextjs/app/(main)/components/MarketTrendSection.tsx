@@ -52,7 +52,7 @@ export default function MarketTrendSection({
                     alignItems: 'center',
                     textDecoration: 'none',
                     color: 'inherit',
-                    mb: 2,
+                    mb: 1,
                 }}
             >
                 <Typography

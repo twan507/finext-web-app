@@ -51,7 +51,7 @@ export default function NewsCard({ article }: NewsCardProps) {
                 transition: transitions.colors,
                 '&:hover': {
                     '& .news-title': {
-                        color: 'primary.main',
+                        textDecoration: 'underline',
                     },
                 },
                 '&:last-child': {

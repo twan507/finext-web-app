@@ -52,7 +52,7 @@ export default function NewsContent() {
                         fontWeight: fontWeight.semibold,
                         border: 'none',
                         backgroundColor: 'primary.main',
-                        color: 'text.primary',
+                        color: '#ffffff',
                         '&:hover': {
                             backgroundColor: 'primary.dark',
                         },

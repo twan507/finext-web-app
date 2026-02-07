@@ -28,8 +28,8 @@ export interface NewsReport {
     sapo?: string;
     created_at: string;
     links: (string | ReportLink)[];
-    report_html: string;
-    report_markdown: string;
+    report_html?: string;
+    report_markdown?: string;
     tickers: string[];
 }
 

@@ -22,7 +22,8 @@ import {
     CircularProgress,
     alpha,
     IconButton,
-    Tooltip
+    Tooltip,
+    keyframes
 } from '@mui/material';
 import OpenWithIcon from '@mui/icons-material/OpenWith';
 import TimeframeSelector from 'components/common/TimeframeSelector';
@@ -157,19 +158,95 @@ const emptyChartData: TrendChartData = {
 };
 
 // ============================================================================
+// KEYFRAME ANIMATIONS
+// ============================================================================
+
+const pulseRing = keyframes`
+    0% {
+        transform: scale(0.8);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.5);
+        opacity: 0.4;
+    }
+    100% {
+        transform: scale(2);
+        opacity: 0;
+    }
+`;
+
+const pulseCore = keyframes`
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 currentColor;
+    }
+    50% {
+        transform: scale(1.1);
+        box-shadow: 0 0 8px 2px currentColor;
+    }
+`;
+
+// ============================================================================
+// TREND INDICATOR COMPONENT
+// ============================================================================
+
+function TrendIndicator({ color }: { color: string }) {
+    return (
+        <Box
+            sx={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 12,
+                height: 12,
+                flexShrink: 0,
+            }}
+        >
+            {/* Outer pulse ring */}
+            <Box
+                sx={{
+                    position: 'absolute',
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    backgroundColor: color,
+                    animation: `${pulseRing} 2s ease-out infinite`,
+                }}
+            />
+            {/* Inner core dot */}
+            <Box
+                sx={{
+                    position: 'relative',
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    backgroundColor: color,
+                    color: color,
+                    animation: `${pulseCore} 2s ease-in-out infinite`,
+                    zIndex: 1,
+                }}
+            />
+        </Box>
+    );
+}
+
+// ============================================================================
 // LINE CONFIG
 // ============================================================================
 
 interface TrendLineConfig {
     key: keyof TrendChartData;
     label: string;
+    fullLabel: string;
 }
 
 const TREND_LINE_KEYS: TrendLineConfig[] = [
-    { key: 'wTrend', label: 'Tuần' },
-    { key: 'mTrend', label: 'Tháng' },
-    { key: 'qTrend', label: 'Quý' },
-    { key: 'yTrend', label: 'Năm' },
+    { key: 'wTrend', label: 'Tuần', fullLabel: 'Xu hướng tuần' },
+    { key: 'mTrend', label: 'Tháng', fullLabel: 'Xu hướng tháng' },
+    { key: 'qTrend', label: 'Quý', fullLabel: 'Xu hướng quý' },
+    { key: 'yTrend', label: 'Năm', fullLabel: 'Xu hướng năm' },
 ];
 
 // ============================================================================
@@ -591,86 +668,123 @@ export default function MarketTrendChart({
 
     return (
         <Box sx={{ width: '100%' }}>
-            {/* Timeframe selector + Pan/Zoom toggle */}
+            {/* 2-Column Layout: Legend (left) + Controls (right) */}
             <Stack
                 direction="row"
-                justifyContent="flex-end"
-                alignItems="center"
-                spacing={1}
-                sx={{ mb: 1.5 }}
-            >
-                <Tooltip title={panZoomEnabled ? 'Tắt kéo/thu phóng' : 'Bật kéo/thu phóng'} arrow>
-                    <IconButton
-                        onClick={handleTogglePanZoom}
-                        size="small"
-                        sx={{
-                            color: panZoomEnabled ? colors.buttonBackgroundActive : colors.buttonText,
-                            backgroundColor: colors.buttonBackground,
-                            border: 'none',
-                            borderRadius: 2,
-                            height: 34,
-                            width: 34,
-                            '&:hover': { backgroundColor: colors.buttonBackground },
-                        }}
-                    >
-                        <OpenWithIcon sx={{ fontSize: 18 }} />
-                    </IconButton>
-                </Tooltip>
-                <TimeframeSelector
-                    value={timeRange}
-                    onChange={handleTimeRangeChange}
-                    options={['1M', '3M', '6M', '1Y'] as TrendTimeRange[]}
-                />
-            </Stack>
-
-            {/* Legend - centered */}
-            <Stack
-                direction="row"
+                justifyContent="space-between"
+                alignItems="flex-end"
                 spacing={2}
-                alignItems="center"
-                justifyContent="center"
-                flexWrap="wrap"
-                sx={{ mb: 1.5 }}
+                sx={{ mb: 2 }}
             >
-                {latestValues.map((item) => (
-                    <Stack
-                        key={item.key}
-                        direction="row"
-                        spacing={0.5}
-                        alignItems="center"
-                    >
-                        <Box
-                            sx={{
-                                width: 10,
-                                height: 10,
-                                borderRadius: '50%',
-                                backgroundColor: item.color,
-                                flexShrink: 0,
-                            }}
-                        />
-                        <Typography
-                            sx={{
-                                fontSize: getResponsiveFontSize('sm'),
-                                color: colors.textSecondary,
-                            }}
-                        >
-                            {item.label}:
-                        </Typography>
-                        <Typography
-                            sx={{
-                                fontSize: getResponsiveFontSize('sm'),
-                                fontWeight: fontWeight.bold,
-                                color: item.value !== null
-                                    ? item.color
-                                    : colors.textSecondary,
-                            }}
-                        >
-                            {item.value !== null
-                                ? `${(item.value * 100).toFixed(1)}%`
-                                : '—'}
-                        </Typography>
+                {/* Left: Trend Info Panel - 2 columns side by side */}
+                <Stack
+                    direction={{ xs: 'column', md: 'row' }}
+                    spacing={{ xs: 0.75, md: 3 }}
+                    sx={{ alignItems: { xs: 'flex-start', md: 'flex-end' } }}
+                >
+                    {/* First column: Tuần, Tháng */}
+                    <Stack spacing={0.75} sx={{ minWidth: { xs: 160, md: 'auto' } }}>
+                        {latestValues.slice(0, 2).map((item) => (
+                            <Stack
+                                key={item.key}
+                                direction="row"
+                                spacing={1}
+                                alignItems="center"
+                            >
+                                <TrendIndicator color={item.color} />
+                                <Typography
+                                    sx={{
+                                        fontSize: getResponsiveFontSize('sm'),
+                                        color: 'text.secondary',
+                                        fontWeight: fontWeight.medium,
+                                    }}
+                                >
+                                    {item.fullLabel}:
+                                </Typography>
+                                <Typography
+                                    sx={{
+                                        fontSize: getResponsiveFontSize('sm'),
+                                        fontWeight: fontWeight.bold,
+                                        color: item.value !== null
+                                            ? item.color
+                                            : 'text.secondary',
+                                    }}
+                                >
+                                    {item.value !== null
+                                        ? `${(item.value * 100).toFixed(1)}%`
+                                        : '—'}
+                                </Typography>
+                            </Stack>
+                        ))}
                     </Stack>
-                ))}
+
+                    {/* Second column: Quý, Năm */}
+                    <Stack spacing={0.75} sx={{ minWidth: { xs: 160, md: 'auto' } }}>
+                        {latestValues.slice(2, 4).map((item) => (
+                            <Stack
+                                key={item.key}
+                                direction="row"
+                                spacing={1}
+                                alignItems="center"
+                            >
+                                <TrendIndicator color={item.color} />
+                                <Typography
+                                    sx={{
+                                        fontSize: getResponsiveFontSize('sm'),
+                                        color: 'text.secondary',
+                                        fontWeight: fontWeight.medium,
+                                    }}
+                                >
+                                    {item.fullLabel}:
+                                </Typography>
+                                <Typography
+                                    sx={{
+                                        fontSize: getResponsiveFontSize('sm'),
+                                        fontWeight: fontWeight.bold,
+                                        color: item.value !== null
+                                            ? item.color
+                                            : 'text.secondary',
+                                    }}
+                                >
+                                    {item.value !== null
+                                        ? `${(item.value * 100).toFixed(1)}%`
+                                        : '—'}
+                                </Typography>
+                            </Stack>
+                        ))}
+                    </Stack>
+                </Stack>
+
+                {/* Right: Timeframe selector + Pan/Zoom toggle */}
+                <Stack
+                    direction="row"
+                    alignItems="center"
+                    spacing={1}
+                    sx={{ flexShrink: 0 }}
+                >
+                    <Tooltip title={panZoomEnabled ? 'Tắt kéo/thu phóng' : 'Bật kéo/thu phóng'} arrow>
+                        <IconButton
+                            onClick={handleTogglePanZoom}
+                            size="small"
+                            sx={{
+                                color: panZoomEnabled ? colors.buttonBackgroundActive : colors.buttonText,
+                                backgroundColor: colors.buttonBackground,
+                                border: 'none',
+                                borderRadius: 2,
+                                height: 34,
+                                width: 34,
+                                '&:hover': { backgroundColor: colors.buttonBackground },
+                            }}
+                        >
+                            <OpenWithIcon sx={{ fontSize: 18 }} />
+                        </IconButton>
+                    </Tooltip>
+                    <TimeframeSelector
+                        value={timeRange}
+                        onChange={handleTimeRangeChange}
+                        options={['1M', '3M', '6M', '1Y'] as TrendTimeRange[]}
+                    />
+                </Stack>
             </Stack>
 
             {/* Chart container */}

@@ -22,8 +22,8 @@ export interface NewsArticle {
     category_name: string;
     title: string;
     sapo: string;
-    html_content: string;
-    plain_content: string;
+    html_content?: string;
+    plain_content?: string;
     link: string;
     tickers: string[];
     created_at: string;

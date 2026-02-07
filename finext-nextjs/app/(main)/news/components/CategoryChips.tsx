@@ -85,7 +85,7 @@ export default function CategoryChips({
                             border: 'none',
                             ...(isSelected && {
                                 backgroundColor: 'primary.main',
-                                color: 'text.primary',
+                                color: '#ffffff',
                                 '&:hover': {
                                     backgroundColor: 'primary.dark',
                                 },

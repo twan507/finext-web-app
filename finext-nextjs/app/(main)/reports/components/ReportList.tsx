@@ -119,6 +119,7 @@ export default function ReportList({
                 limit: String(pageSize),
                 sort_by: REPORT_SORT_FIELD,
                 sort_order: REPORT_SORT_ORDER,
+                exclude_fields: 'report_html,report_markdown',
             };
 
             // Thêm filter type nếu có (daily, weekly, monthly)

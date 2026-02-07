@@ -49,7 +49,7 @@ export default function ReportCard({ report }: ReportCardProps) {
                 transition: transitions.colors,
                 '&:hover': {
                     '& .report-title': {
-                        color: 'primary.main',
+                        textDecoration: 'underline',
                     },
                 },
                 '&:last-child': {

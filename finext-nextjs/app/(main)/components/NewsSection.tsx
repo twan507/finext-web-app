@@ -203,7 +203,7 @@ function NewsStatsBar({ totalNews, thongcaoCount, trongnuocCount, doanhnghiepCou
                 alignItems: { xs: 'flex-start', md: 'center' },
                 justifyContent: 'space-between',
                 gap: { xs: 2, md: 3 },
-                mb: spacing.sm,
+                mb: { xs: spacing.sm, md: spacing.xs },
             }}
         >
             {/* Total News with Live Indicator */}
@@ -331,19 +331,6 @@ interface MiniNewsCardProps {
 function MiniNewsCard({ article }: MiniNewsCardProps) {
     const theme = useTheme();
 
-    // Calculate fixed heights based on HOVER font sizes to prevent layout shift
-    const titleHeight = {
-        xs: `calc(1.4 * ${getResponsiveFontSize('md').xs} * 2)`,
-        md: `calc(1.4 * ${getResponsiveFontSize('md').md} * 2)`,
-        lg: `calc(1.4 * ${getResponsiveFontSize('md').lg} * 2)`,
-    };
-
-    const sapoHeight = {
-        xs: `calc(1.5 * ${getResponsiveFontSize('sm').xs} * 2)`,
-        md: `calc(1.5 * ${getResponsiveFontSize('sm').md} * 2)`,
-        lg: `calc(1.5 * ${getResponsiveFontSize('sm').lg} * 2)`,
-    };
-
     return (
         <Box
             sx={{
@@ -372,15 +359,14 @@ function MiniNewsCard({ article }: MiniNewsCardProps) {
                         className="news-card-title"
                         sx={{
                             fontWeight: fontWeight.semibold,
-                            fontSize: getResponsiveFontSize('sm'),
-                            lineHeight: 1.5,
+                            fontSize: getResponsiveFontSize('md'),
+                            lineHeight: 1.4,
                             display: '-webkit-box',
-                            WebkitLineClamp: 2,
+                            WebkitLineClamp: 1,
                             WebkitBoxOrient: 'vertical',
                             overflow: 'hidden',
                             color: 'text.primary',
                             transition: transitions.hover,
-                            height: titleHeight,
                             '&:hover': {
                                 textDecoration: 'underline',
                             },
@@ -395,15 +381,14 @@ function MiniNewsCard({ article }: MiniNewsCardProps) {
                     variant="body2"
                     className="news-card-sapo"
                     sx={{
-                        fontSize: getResponsiveFontSize('xs'),
-                        lineHeight: 1.6,
+                        fontSize: getResponsiveFontSize('sm'),
+                        lineHeight: 1.5,
                         color: 'text.secondary',
                         display: '-webkit-box',
                         WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical',
                         overflow: 'hidden',
-                        height: sapoHeight,
-                        mt: 0.5, // Add slight margin since flex gap is gone from parent hover effect
+                        mt: 0.5,
                     }}
                 >
                     {article.sapo}
@@ -554,7 +539,7 @@ function NewsColumnContent({ title, href, loading, newsItems, reportItems }: New
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', mb: 1 }}>
             {/* Column Header */}
-            <Box sx={{ mb: 1 }}>
+            <Box sx={{ mb: 1, borderBottom: '2px solid', borderColor: 'text.secondary', pb: 0.5 }}>
                 <Link href={href} style={{ textDecoration: 'none' }}>
                     <Typography
                         className="column-title"
@@ -564,7 +549,10 @@ function NewsColumnContent({ title, href, loading, newsItems, reportItems }: New
                             color: 'text.secondary',
                             textTransform: 'uppercase',
                             transition: transitions.hover,
-                            display: 'inline-block',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 1,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
                             '&:hover': {
                                 color: 'text.primary',
                             },
@@ -622,6 +610,271 @@ function NewsColumn({ title, href, loading, newsItems, reportItems }: NewsColumn
 }
 
 // ============================================================================
+// NEWSPAPER LAYOUT COMPONENTS
+// ============================================================================
+
+// Section header with thick bottom rule (newspaper style)
+function NewspaperSectionHeader({ title, href }: { title: string; href: string }) {
+    return (
+        <Box sx={{ borderBottom: '2px solid', borderColor: 'text.secondary', pb: 0.5, mb: 1.5 }}>
+            <Link href={href} style={{ textDecoration: 'none', color: 'inherit' }}>
+                <Typography
+                    sx={{
+                        fontSize: getResponsiveFontSize('lg'),
+                        fontWeight: fontWeight.bold,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        color: 'text.secondary',
+                        transition: transitions.hover,
+                        '&:hover': { color: 'text.primary' },
+                    }}
+                >
+                    {title}
+                </Typography>
+            </Link>
+        </Box>
+    );
+}
+
+// Spotlight card for the featured article in wide (2/3) columns
+function SpotlightNewsCard({ article }: { article: NewsArticle }) {
+    return (
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            <Link href={`/news/${article.article_slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                <Typography
+                    sx={{
+                        fontWeight: fontWeight.bold,
+                        fontSize: getResponsiveFontSize('md'),
+                        lineHeight: 1.4,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        color: 'text.primary',
+                        mb: 1,
+                        transition: transitions.hover,
+                        '&:hover': { textDecoration: 'underline' },
+                    }}
+                >
+                    {article.title}
+                </Typography>
+            </Link>
+            <Typography
+                sx={{
+                    fontSize: getResponsiveFontSize('sm'),
+                    lineHeight: 1.6,
+                    color: 'text.secondary',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 4,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                }}
+            >
+                {article.sapo}
+            </Typography>
+            {article.source && (
+                <Typography
+                    variant="caption"
+                    color="text.disabled"
+                    sx={{ fontSize: getResponsiveFontSize('xs'), mt: 1, display: 'block' }}
+                >
+                    Nguồn: {article.source}
+                </Typography>
+            )}
+        </Box>
+    );
+}
+
+// Compact news item for the list side of wide columns (title only)
+function CompactNewsItem({ article }: { article: NewsArticle }) {
+    return (
+        <Box
+            sx={{
+                '&:last-of-type .compact-divider': { display: 'none' },
+            }}
+        >
+            <Box sx={{ py: 0.75 }}>
+                <Link href={`/news/${article.article_slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <Typography
+                        sx={{
+                            fontSize: getResponsiveFontSize('xs'),
+                            fontWeight: fontWeight.medium,
+                            lineHeight: 1.5,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            color: 'text.primary',
+                            transition: transitions.hover,
+                            '&:hover': { textDecoration: 'underline' },
+                        }}
+                    >
+                        {article.title}
+                    </Typography>
+                </Link>
+                {article.source && (
+                    <Typography
+                        variant="caption"
+                        color="text.disabled"
+                        sx={{ fontSize: getResponsiveFontSize('xs'), mt: 0.25, display: 'block' }}
+                    >
+                        {article.source}
+                    </Typography>
+                )}
+            </Box>
+            <Divider className="compact-divider" sx={{ borderColor: 'divider' }} />
+        </Box>
+    );
+}
+
+// Narrow column (1/3) — title + source
+interface NewspaperNarrowColumnProps {
+    title: string;
+    href: string;
+    loading: boolean;
+    newsItems: NewsArticle[];
+    position?: 'left' | 'right';
+}
+function NewspaperNarrowColumn({ title, href, loading, newsItems, position }: NewspaperNarrowColumnProps) {
+    return (
+        <Box sx={{
+            py: { md: 1.5, lg: spacing.xs },
+            pl: position === 'left' ? 0 : { md: 1.5, lg: spacing.xs },
+            pr: position === 'right' ? 0 : { md: 1.5, lg: spacing.xs },
+            height: '100%',
+            backgroundColor: 'background.default',
+            overflow: 'hidden',
+        }}>
+            <NewspaperSectionHeader title={title} href={href} />
+            {loading ? (
+                Array.from({ length: 10 }).map((_, i) => (
+                    <Box key={i} sx={{ py: 0.75 }}>
+                        <Skeleton variant="text" width="90%" height={18} />
+                        <Skeleton variant="text" width="40%" height={14} sx={{ mt: 0.25 }} />
+                    </Box>
+                ))
+            ) : (
+                newsItems?.map((article) => (
+                    <Box
+                        key={article.article_slug}
+                        sx={{ '&:last-of-type .narrow-divider': { display: 'none' } }}
+                    >
+                        <Box sx={{ py: 0.75 }}>
+                            <Link href={`/news/${article.article_slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                <Typography
+                                    sx={{
+                                        fontWeight: fontWeight.semibold,
+                                        fontSize: getResponsiveFontSize('sm'),
+                                        lineHeight: 1.4,
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 1,
+                                        WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden',
+                                        color: 'text.primary',
+                                        transition: transitions.hover,
+                                        '&:hover': { textDecoration: 'underline' },
+                                    }}
+                                >
+                                    {article.title}
+                                </Typography>
+                            </Link>
+                            {article.source && (
+                                <Typography
+                                    variant="caption"
+                                    color="text.disabled"
+                                    sx={{ fontSize: getResponsiveFontSize('sm'), mt: 0.25, display: 'block' }}
+                                >
+                                    {article.source}
+                                </Typography>
+                            )}
+                        </Box>
+                        <Divider className="narrow-divider" sx={{ borderColor: 'divider' }} />
+                    </Box>
+                ))
+            )}
+        </Box>
+    );
+}
+
+// Wide column (2/3) — title + sapo + source
+interface NewspaperWideColumnProps {
+    title: string;
+    href: string;
+    loading: boolean;
+    newsItems: NewsArticle[];
+    position?: 'left' | 'right';
+}
+function NewspaperWideColumn({ title, href, loading, newsItems, position }: NewspaperWideColumnProps) {
+    return (
+        <Box sx={{
+            py: { md: 1.5, lg: spacing.xs },
+            pl: position === 'left' ? 0 : { md: 1.5, lg: spacing.xs },
+            pr: position === 'right' ? 0 : { md: 1.5, lg: spacing.xs },
+            height: '100%',
+            backgroundColor: 'background.default',
+            overflow: 'hidden',
+        }}>
+            <NewspaperSectionHeader title={title} href={href} />
+            {loading ? (
+                Array.from({ length: 5 }).map((_, i) => <NewsCardSkeleton key={i} />)
+            ) : (
+                newsItems?.map((article) => (
+                    <Box
+                        key={article.article_slug}
+                        sx={{ '&:last-of-type .wide-divider': { display: 'none' } }}
+                    >
+                        <Box sx={{ py: 0.75 }}>
+                            <Link href={`/news/${article.article_slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                <Typography
+                                    sx={{
+                                        fontWeight: fontWeight.semibold,
+                                        fontSize: getResponsiveFontSize('md'),
+                                        lineHeight: 1.4,
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 1,
+                                        WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden',
+                                        color: 'text.primary',
+                                        transition: transitions.hover,
+                                        mb: 0.5,
+                                        '&:hover': { textDecoration: 'underline' },
+                                    }}
+                                >
+                                    {article.title}
+                                </Typography>
+                            </Link>
+                            <Typography
+                                color="text.secondary"
+                                sx={{
+                                    fontSize: getResponsiveFontSize('sm'),
+                                    lineHeight: 1.5,
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden',
+                                }}
+                            >
+                                {article.sapo}
+                            </Typography>
+                            {article.source && (
+                                <Typography
+                                    variant="caption"
+                                    color="text.disabled"
+                                    sx={{ fontSize: getResponsiveFontSize('sm'), mt: 0.5, display: 'block' }}
+                                >
+                                    Nguồn: {article.source}
+                                </Typography>
+                            )}
+                        </Box>
+                        <Divider className="wide-divider" sx={{ borderColor: 'divider' }} />
+                    </Box>
+                ))
+            )}
+        </Box>
+    );
+}
+
+// ============================================================================
 // MAIN NEWS SECTION COMPONENT
 // ============================================================================
 
@@ -668,7 +921,7 @@ export default function NewsSection() {
                 method: 'GET',
                 queryParams: {
                     page: '1',
-                    limit: '5',
+                    limit: '9',
                     sort_by: 'created_at',
                     sort_order: 'desc',
                     news_type: 'thong_cao',
@@ -737,7 +990,7 @@ export default function NewsSection() {
                 method: 'GET',
                 queryParams: {
                     page: '1',
-                    limit: '5',
+                    limit: '9',
                     sort_by: 'created_at',
                     sort_order: 'desc',
                     news_type: 'quoc_te',
@@ -773,54 +1026,6 @@ export default function NewsSection() {
     });
     const latestReports = latestReportsData?.items || [];
 
-    // Define the slides content for Desktop (with bg wrapper)
-    const desktopSlides = [
-        {
-            id: 'quocte',
-            component: (
-                <NewsColumn
-                    title="TÀI CHÍNH QUỐC TẾ"
-                    href="/news/type/quoc_te"
-                    loading={quocteLoading}
-                    newsItems={quocteNews}
-                />
-            )
-        },
-        {
-            id: 'trongnuoc',
-            component: (
-                <NewsColumn
-                    title="VĨ MÔ TRONG NƯỚC"
-                    href="/news/type/trong_nuoc"
-                    loading={trongnuocLoading}
-                    newsItems={trongnuocNews}
-                />
-            )
-        },
-        {
-            id: 'doanhnghiep',
-            component: (
-                <NewsColumn
-                    title="DOANH NGHIỆP NIÊM YẾT"
-                    href="/news/type/doanh_nghiep"
-                    loading={doanhnghiepLoading}
-                    newsItems={doanhnghiepNews}
-                />
-            )
-        },
-        {
-            id: 'thongcao',
-            component: (
-                <NewsColumn
-                    title="THÔNG CÁO CHÍNH PHỦ"
-                    href="/news/type/thong_cao"
-                    loading={thongcaoLoading}
-                    newsItems={thongcaoNews}
-                />
-            )
-        }
-    ];
-
     // Define the slides content for Mobile Carousel (content only, no bg)
     const mobileSlides = [
         {
@@ -830,7 +1035,7 @@ export default function NewsSection() {
                     title="TÀI CHÍNH QUỐC TẾ"
                     href="/news/type/quoc_te"
                     loading={quocteLoading}
-                    newsItems={quocteNews}
+                    newsItems={quocteNews.slice(0, 5)}
                 />
             )
         },
@@ -863,7 +1068,7 @@ export default function NewsSection() {
                     title="THÔNG CÁO CHÍNH PHỦ"
                     href="/news/type/thong_cao"
                     loading={thongcaoLoading}
-                    newsItems={thongcaoNews}
+                    newsItems={thongcaoNews.slice(0, 5)}
                 />
             )
         }
@@ -899,65 +1104,64 @@ export default function NewsSection() {
 
             {/* Content Container */}
             <Box>
-                {/* 1. Desktop View (4 columns) - lg and up */}
+                {/* ===== Desktop & Tablet: Asymmetrical Newspaper Grid (md+) ===== */}
                 <Box
                     sx={{
-                        display: { xs: 'none', md: 'none', lg: 'grid' },
-                        gridTemplateColumns: 'repeat(4, 1fr)',
-                        gap: { lg: 1.5 },
+                        display: { xs: 'none', md: 'grid' },
+                        gridTemplateColumns: 'repeat(3, 1fr)',
+                        gap: '1px',
+                        backgroundColor: 'divider',
                     }}
                 >
-                    {desktopSlides.map((slide) => (
-                        <Box key={slide.id}>
-                            {slide.component}
-                        </Box>
-                    ))}
-                </Box>
-
-                {/* 2. Tablet View (2 carousels side by side) - md only */}
-                <Box
-                    sx={{
-                        display: { xs: 'none', md: 'grid', lg: 'none' },
-                        gridTemplateColumns: 'repeat(2, 1fr)',
-                        gap: { md: 2 },
-                    }}
-                >
-                    {/* Left Carousel - First 2 slides */}
-                    <Box
-                        sx={{
-                            backgroundColor: 'background.paper',
-                            borderRadius: `${borderRadius.lg}px`,
-                            p: spacing.xs,
-                        }}
-                    >
-                        <Carousel
-                            slides={[mobileSlides[0], mobileSlides[1]]}
-                            minHeight="420px"
+                    {/* Row 1, Col 1 (1/3): Tài chính quốc tế */}
+                    <Box sx={{ gridColumn: 'span 1' }}>
+                        <NewspaperNarrowColumn
+                            title="Tài chính quốc tế"
+                            href="/news/type/quoc_te"
+                            loading={quocteLoading}
+                            newsItems={quocteNews}
+                            position="left"
                         />
                     </Box>
 
-                    {/* Right Carousel - Last 2 slides */}
-                    <Box
-                        sx={{
-                            backgroundColor: 'background.paper',
-                            borderRadius: `${borderRadius.lg}px`,
-                            p: spacing.xs,
-                        }}
-                    >
-                        <Carousel
-                            slides={[mobileSlides[2], mobileSlides[3]]}
-                            minHeight="420px"
+                    {/* Row 1, Col 2 (2/3): Vĩ mô trong nước */}
+                    <Box sx={{ gridColumn: 'span 2' }}>
+                        <NewspaperWideColumn
+                            title="Vĩ mô trong nước"
+                            href="/news/type/trong_nuoc"
+                            loading={trongnuocLoading}
+                            newsItems={trongnuocNews}
+                            position="right"
+                        />
+                    </Box>
+
+                    {/* Row 2, Col 1 (2/3): Doanh nghiệp niêm yết */}
+                    <Box sx={{ gridColumn: 'span 2' }}>
+                        <NewspaperWideColumn
+                            title="Doanh nghiệp niêm yết"
+                            href="/news/type/doanh_nghiep"
+                            loading={doanhnghiepLoading}
+                            newsItems={doanhnghiepNews}
+                            position="left"
+                        />
+                    </Box>
+
+                    {/* Row 2, Col 2 (1/3): Thông cáo chính phủ */}
+                    <Box sx={{ gridColumn: 'span 1' }}>
+                        <NewspaperNarrowColumn
+                            title="Thông cáo chính phủ"
+                            href="/news/type/thong_cao"
+                            loading={thongcaoLoading}
+                            newsItems={thongcaoNews}
+                            position="right"
                         />
                     </Box>
                 </Box>
 
-                {/* 3. Mobile View (Single Carousel with 4 slides) - xs to sm */}
+                {/* ===== Mobile: Carousel (xs to sm) ===== */}
                 <Box
                     sx={{
                         display: { xs: 'block', md: 'none' },
-                        backgroundColor: 'background.paper',
-                        borderRadius: `${borderRadius.lg}px`,
-                        p: spacing.xs,
                     }}
                 >
                     <Carousel slides={mobileSlides} minHeight="420px" />
@@ -973,7 +1177,7 @@ export default function NewsSection() {
                     alignItems: 'center',
                     textDecoration: 'none',
                     color: 'inherit',
-                    mt: spacing.sm,
+                    mt: spacing.xs,
                     mb: 2,
                 }}
             >
@@ -1044,7 +1248,7 @@ export default function NewsSection() {
                                     transition: transitions.colors,
                                     '&:hover': {
                                         '& .report-title': {
-                                            color: 'primary.main',
+                                            textDecoration: 'underline',
                                         },
                                     },
                                 }}
