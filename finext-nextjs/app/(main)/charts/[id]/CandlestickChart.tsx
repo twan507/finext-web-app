@@ -26,6 +26,7 @@ import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import type { ChartRawData } from './PageContent';
 import IndicatorsPanel from './IndicatorsPanel';
 import WatchlistPanel from './WatchlistPanel';
+import { INDICATOR_GROUPS, type AreaIndicator, type LineIndicator } from './indicatorConfig';
 
 interface CandlestickChartProps {
     data: ChartRawData[];
@@ -36,6 +37,9 @@ interface CandlestickChartProps {
     showLegend: boolean;
     showIndicatorsPanel: boolean;
     showWatchlistPanel: boolean;
+    enabledIndicators: Record<string, boolean>;
+    onToggleIndicator: (key: string) => void;
+    onClearAllIndicators: () => void;
     onCloseIndicatorsPanel?: () => void;
     onCloseWatchlistPanel?: () => void;
 }
@@ -53,17 +57,39 @@ function formatVolume(val: number | null | undefined): string {
     return val.toLocaleString();
 }
 
+// Extract indicator field data from raw chart data
+function extractFieldData(
+    data: ChartRawData[],
+    field: string,
+): Array<{ time: UTCTimestamp; value: number }> {
+    const result: Array<{ time: UTCTimestamp; value: number }> = [];
+    const seenTimestamps = new Set<number>();
+    for (const item of data) {
+        if (!item.date) continue;
+        const dateObj = new Date(item.date);
+        const utcDate = Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+        const timestamp = Math.floor(utcDate / 1000) as UTCTimestamp;
+        if (seenTimestamps.has(timestamp)) continue;
+        seenTimestamps.add(timestamp);
+        const value = (item as any)[field];
+        if (value != null && !isNaN(value)) {
+            result.push({ time: timestamp, value });
+        }
+    }
+    return result;
+}
+
 // Default number of candles to show on first render
 const DEFAULT_VISIBLE_BARS = 120;
 
-export default function CandlestickChart({ data, ticker, chartType, showIndicators, showVolume, showLegend, showIndicatorsPanel, showWatchlistPanel, onCloseIndicatorsPanel, onCloseWatchlistPanel }: CandlestickChartProps) {
+export default function CandlestickChart({ data, ticker, chartType, showIndicators, showVolume, showLegend, showIndicatorsPanel, showWatchlistPanel, enabledIndicators, onToggleIndicator, onClearAllIndicators, onCloseIndicatorsPanel, onCloseWatchlistPanel }: CandlestickChartProps) {
     const theme = useTheme();
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
     const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
     const lineSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
     const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
-    const ma20SeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+    const indicatorSeriesRef = useRef<Map<string, ISeriesApi<'Line'>[]>>(new Map());
 
     // Pan/zoom state preservation
     const savedLogicalRangeRef = useRef<{ from: number; to: number } | null>(null);
@@ -82,7 +108,6 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
         volume: number | null;
         diff: number | null;
         pctChange: number | null;
-        ma20: number | null;
     } | null>(null);
 
     const isDark = theme.palette.mode === 'dark';
@@ -97,7 +122,6 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
     const textColor = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)';
     const bgColor = theme.palette.background.default;
     const lineColor = chartColors?.line || primaryColor;
-    const ma20Color = '#2962FF';
 
     // Build a lookup map: timestamp -> raw data for crosshair legend
     const dataByTimestamp = useMemo(() => {
@@ -114,12 +138,11 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
 
     // Transform data to lightweight-charts format
     const transformData = useCallback(() => {
-        if (!data || data.length === 0) return { candles: [], volumes: [], ma20: [], lineData: [] };
+        if (!data || data.length === 0) return { candles: [], volumes: [], lineData: [] };
 
         const seenTimestamps = new Set<number>();
         const candles: Array<{ time: UTCTimestamp; open: number; high: number; low: number; close: number }> = [];
         const volumes: Array<{ time: UTCTimestamp; value: number; color: string }> = [];
-        const ma20: Array<{ time: UTCTimestamp; value: number }> = [];
         const lineData: Array<{ time: UTCTimestamp; value: number }> = [];
 
         for (const item of data) {
@@ -149,21 +172,21 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
             });
 
             const isUp = item.close >= item.open;
+            const candleColor = isUp ? upColor : downColor;
+            // Parse hex to rgba with 0.35 opacity for volume
+            const r = parseInt(candleColor.slice(1, 3), 16);
+            const g = parseInt(candleColor.slice(3, 5), 16);
+            const b = parseInt(candleColor.slice(5, 7), 16);
             volumes.push({
                 time: timestamp,
                 value: item.volume || 0,
-                color: isUp
-                    ? (isDark ? 'rgba(38,166,154,0.35)' : 'rgba(8,153,129,0.35)')
-                    : (isDark ? 'rgba(239,83,80,0.35)' : 'rgba(242,54,69,0.35)'),
+                color: `rgba(${r},${g},${b},0.35)`,
             });
 
-            if (item.ma20 != null && !isNaN(item.ma20)) {
-                ma20.push({ time: timestamp, value: item.ma20 });
-            }
         }
 
-        return { candles, volumes, ma20, lineData };
-    }, [data, isDark]);
+        return { candles, volumes, lineData };
+    }, [data, upColor, downColor]);
 
     // Set default legend to last bar
     useEffect(() => {
@@ -179,7 +202,6 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                 volume: last.volume,
                 diff: last.diff,
                 pctChange: last.pct_change,
-                ma20: last.ma20,
             });
         }
     }, [data, ticker]);
@@ -256,6 +278,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
             wickDownColor: downColor,
             wickUpColor: upColor,
             visible: true,
+            title: ticker,
         });
 
         // Line series for line chart mode (smooth curve)
@@ -270,16 +293,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
             priceLineVisible: true,
             lastValueVisible: true,
             visible: false,
-        });
-
-        // MA20 line series
-        const ma20Series = chart.addSeries(LineSeries, {
-            color: ma20Color,
-            lineWidth: 1,
-            lineType: LineType.Curved,
-            priceLineVisible: false,
-            lastValueVisible: true,
-            crosshairMarkerVisible: false,
+            title: ticker,
         });
 
         // Volume series
@@ -291,6 +305,73 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
         chart.priceScale('volume').applyOptions({
             scaleMargins: { top: 0.82, bottom: 0 },
         });
+
+        // Create all indicator series (hidden by default)
+        const newIndicatorSeries = new Map<string, ISeriesApi<'Line'>[]>();
+        for (const group of INDICATOR_GROUPS) {
+            for (const ind of group.indicators) {
+                if (ind.type === 'line') {
+                    const isStep = (ind as LineIndicator).step;
+                    const series = chart.addSeries(LineSeries, {
+                        color: ind.color,
+                        lineWidth: 1,
+                        lineType: isStep ? LineType.WithSteps : LineType.Simple,
+                        priceLineVisible: false,
+                        lastValueVisible: true,
+                        crosshairMarkerVisible: true,
+                        crosshairMarkerRadius: 3,
+                        visible: false,
+                    });
+                    newIndicatorSeries.set(ind.key, [series]);
+                } else if (ind.type === 'area') {
+                    // Band: upper line + middle dashed + lower line
+                    const upperSeries = chart.addSeries(LineSeries, {
+                        color: ind.color,
+                        lineWidth: 1,
+                        lineType: LineType.Simple,
+                        priceLineVisible: false,
+                        lastValueVisible: true,
+                        crosshairMarkerVisible: false,
+                        visible: false,
+                    });
+                    const middleSeries = chart.addSeries(LineSeries, {
+                        color: ind.color,
+                        lineWidth: 1,
+                        lineStyle: LineStyle.Dashed,
+                        lineType: LineType.Simple,
+                        priceLineVisible: false,
+                        lastValueVisible: true,
+                        crosshairMarkerVisible: true,
+                        crosshairMarkerRadius: 3,
+                        visible: false,
+                    });
+                    const lowerSeries = chart.addSeries(LineSeries, {
+                        color: ind.color,
+                        lineWidth: 1,
+                        lineType: LineType.Simple,
+                        priceLineVisible: false,
+                        lastValueVisible: true,
+                        crosshairMarkerVisible: false,
+                        visible: false,
+                    });
+                    newIndicatorSeries.set(ind.key, [upperSeries, middleSeries, lowerSeries]);
+                } else if (ind.type === 'volume-line') {
+                    const series = chart.addSeries(LineSeries, {
+                        color: ind.color,
+                        lineWidth: 1,
+                        lineType: LineType.Curved,
+                        priceLineVisible: false,
+                        lastValueVisible: true,
+                        crosshairMarkerVisible: true,
+                        crosshairMarkerRadius: 3,
+                        priceScaleId: 'volume',
+                        visible: false,
+                    });
+                    newIndicatorSeries.set(ind.key, [series]);
+                }
+            }
+        }
+        indicatorSeriesRef.current = newIndicatorSeries;
 
         // Crosshair move -> update legend (không update tickerName)
         chart.subscribeCrosshairMove((param: MouseEventParams) => {
@@ -305,7 +386,6 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                         volume: last.volume,
                         diff: last.diff,
                         pctChange: last.pct_change,
-                        ma20: last.ma20,
                     });
                 }
                 return;
@@ -322,7 +402,6 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                     volume: rawItem.volume,
                     diff: rawItem.diff,
                     pctChange: rawItem.pct_change,
-                    ma20: rawItem.ma20,
                 });
             }
         });
@@ -331,7 +410,6 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
         candleSeriesRef.current = candleSeries;
         lineSeriesRef.current = lineSeries;
         volumeSeriesRef.current = volumeSeries;
-        ma20SeriesRef.current = ma20Series;
 
         // Resize handler
         const resizeObserver = new ResizeObserver((entries) => {
@@ -349,18 +427,18 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
             candleSeriesRef.current = null;
             lineSeriesRef.current = null;
             volumeSeriesRef.current = null;
-            ma20SeriesRef.current = null;
+            indicatorSeriesRef.current = new Map();
             hasSetInitialRangeRef.current = false;
             prevDataLengthRef.current = 0;
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [bgColor, textColor, gridColor, crosshairColor, upColor, downColor, isDark, ma20Color, primaryColor, lineColor]);
+    }, [bgColor, textColor, gridColor, crosshairColor, upColor, downColor, isDark, primaryColor, lineColor]);
 
     // Update data when it changes - preserve pan/zoom state
     useEffect(() => {
-        if (!candleSeriesRef.current || !lineSeriesRef.current || !volumeSeriesRef.current || !ma20SeriesRef.current || !chartRef.current) return;
+        if (!candleSeriesRef.current || !lineSeriesRef.current || !volumeSeriesRef.current || !chartRef.current) return;
 
-        const { candles, volumes, ma20, lineData } = transformData();
+        const { candles, volumes, lineData } = transformData();
         if (candles.length === 0) return;
 
         // Save current visible range before updating data
@@ -375,7 +453,6 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
         candleSeriesRef.current.setData(candles);
         lineSeriesRef.current.setData(lineData);
         volumeSeriesRef.current.setData(volumes);
-        ma20SeriesRef.current.setData(ma20);
 
         // Determine visible range
         const dataLength = candles.length;
@@ -460,11 +537,41 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
         volumeSeriesRef.current.applyOptions({ visible: showVolume });
     }, [showVolume]);
 
-    // Toggle indicators (MA20) visibility
+    // Sync indicator series visibility and data
     useEffect(() => {
-        if (!ma20SeriesRef.current) return;
-        ma20SeriesRef.current.applyOptions({ visible: showIndicators });
-    }, [showIndicators]);
+        if (!chartRef.current || indicatorSeriesRef.current.size === 0) return;
+        const seriesMap = indicatorSeriesRef.current;
+
+        for (const group of INDICATOR_GROUPS) {
+            for (const ind of group.indicators) {
+                const seriesArr = seriesMap.get(ind.key);
+                if (!seriesArr) continue;
+
+                const isVisible = showIndicators && (enabledIndicators[ind.key] ?? false);
+
+                if (isVisible) {
+                    if (ind.type === 'line' || ind.type === 'volume-line') {
+                        const fieldData = extractFieldData(data, (ind as any).field);
+                        seriesArr[0].setData(fieldData);
+                        seriesArr[0].applyOptions({ visible: true });
+                    } else if (ind.type === 'area') {
+                        const areaInd = ind as AreaIndicator;
+                        // [0]=upper, [1]=middle(dashed), [2]=lower
+                        seriesArr[0].setData(extractFieldData(data, areaInd.fields[0]));
+                        seriesArr[1].setData(extractFieldData(data, areaInd.fields[1]));
+                        seriesArr[2].setData(extractFieldData(data, areaInd.fields[2]));
+                        seriesArr[0].applyOptions({ visible: true });
+                        seriesArr[1].applyOptions({ visible: true });
+                        seriesArr[2].applyOptions({ visible: true });
+                    }
+                } else {
+                    for (const s of seriesArr) {
+                        s.applyOptions({ visible: false });
+                    }
+                }
+            }
+        }
+    }, [showIndicators, enabledIndicators, data]);
 
     // Determine color for OHLC values based on close vs open
     const isUp = legendData ? (legendData.close ?? 0) >= (legendData.open ?? 0) : true;
@@ -608,7 +715,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                                 </Box>
                             </Box>
 
-                            {/* Row 2: Volume + MA20 */}
+                            {/* Row 2: Volume */}
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <Typography
                                     sx={{
@@ -620,20 +727,6 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                                     Volume
                                     <Box component="span" sx={{ color: valueColor, ml: 0.5 }}>
                                         {formatVolume(legendData.volume)}
-                                    </Box>
-                                </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Typography
-                                    sx={{
-                                        fontSize: getResponsiveFontSize('xs'),
-                                        color: ma20Color,
-                                        lineHeight: 1.2,
-                                    }}
-                                >
-                                    MA 20 close 0
-                                    <Box component="span" sx={{ ml: 0.5 }}>
-                                        {formatNum(legendData.ma20)}
                                     </Box>
                                 </Typography>
                             </Box>
@@ -661,15 +754,15 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                         ModalProps={{ keepMounted: true }}
                         sx={{
                             '& .MuiDrawer-paper': {
-                                width: 300,
+                                width: 280,
                                 backdropFilter: 'blur(12px)',
                             },
                         }}
                     >
-                        <IndicatorsPanel />
+                        <IndicatorsPanel enabledIndicators={enabledIndicators} onToggleIndicator={onToggleIndicator} onClearAll={onClearAllIndicators} />
                     </Drawer>
                 ) : (
-                    showIndicatorsPanel && <IndicatorsPanel />
+                    showIndicatorsPanel && <IndicatorsPanel enabledIndicators={enabledIndicators} onToggleIndicator={onToggleIndicator} onClearAll={onClearAllIndicators} />
                 )}
 
                 {/* Watchlist Panel - Drawer on mobile, inline on desktop */}

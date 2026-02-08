@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { zIndex } from 'theme/tokens';
 import {
     createChart,
@@ -32,8 +33,7 @@ import {
 import TimeframeSelector from 'components/common/TimeframeSelector';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import CandlestickChartIcon from '@mui/icons-material/CandlestickChart';
-import FullscreenIcon from '@mui/icons-material/Fullscreen';
-import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import OpenWithIcon from '@mui/icons-material/OpenWith';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 
@@ -244,6 +244,7 @@ export default function MarketIndexChart({
     timeRange,
     onTimeRangeChange
 }: StockChartProps) {
+    const router = useRouter();
     const theme = useTheme();
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
@@ -277,7 +278,6 @@ export default function MarketIndexChart({
     const [currentPrice, setCurrentPrice] = useState<number>(0);
     const [priceChange, setPriceChange] = useState<number>(0);
     const [percentChange, setPercentChange] = useState<number>(0);
-    const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
     // Theme-based colors
     const isDarkMode = theme.palette.mode === 'dark';
@@ -848,8 +848,8 @@ export default function MarketIndexChart({
         setChartType(type);
     };
 
-    const handleFullscreen = () => {
-        setIsFullscreen((prev) => !prev);
+    const handleOpenChart = () => {
+        router.push(`/charts/${symbol}`);
     };
 
     // Pan/Zoom toggle
@@ -875,8 +875,7 @@ export default function MarketIndexChart({
                 });
             }
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [timeRange]);
+    }, [timeRange, panZoomEnabled]);
 
     const handleTogglePanZoom = useCallback(() => {
         setPanZoomEnabled(prev => {
@@ -913,29 +912,6 @@ export default function MarketIndexChart({
             return next;
         });
     }, [timeRange, eodData, chartType]);
-
-    // Resize chart when fullscreen changes
-    useEffect(() => {
-        if (chartRef.current && chartContainerRef.current) {
-            setTimeout(() => {
-                chartRef.current?.applyOptions({
-                    width: chartContainerRef.current!.clientWidth,
-                    height: isFullscreen ? window.innerHeight : height
-                });
-            }, 50);
-        }
-    }, [isFullscreen, height]);
-
-    // Handle ESC key to exit fullscreen
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && isFullscreen) {
-                setIsFullscreen(false);
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isFullscreen]);
 
     const isPositive = priceChange >= 0;
 
@@ -1104,22 +1080,22 @@ export default function MarketIndexChart({
                         </IconButton>
                     </Tooltip>
 
-                    {/* Fullscreen button */}
-                    <Tooltip title={isFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'} arrow>
+                    {/* Open in new page button */}
+                    <Tooltip title="Mở biểu đồ" arrow>
                         <IconButton
-                            onClick={handleFullscreen}
+                            onClick={handleOpenChart}
                             size="small"
                             sx={{
-                                color: isFullscreen ? colors.buttonBackgroundActive : colors.buttonText,
+                                color: colors.buttonText,
                                 backgroundColor: colors.buttonBackground,
                                 border: 'none',
                                 borderRadius: 2,
                                 height: 34,
                                 width: 34,
-                                '&:hover': { backgroundColor: colors.buttonBackground },
+                                '&:hover': { backgroundColor: colors.buttonBackgroundHover },
                             }}
                         >
-                            {isFullscreen ? <FullscreenExitIcon sx={{ fontSize: 18 }} /> : <FullscreenIcon sx={{ fontSize: 18 }} />}
+                            <OpenInNewIcon sx={{ fontSize: 18 }} />
                         </IconButton>
                     </Tooltip>
                 </Stack>
@@ -1132,17 +1108,10 @@ export default function MarketIndexChart({
                 }}
                 sx={{
                     width: '100%',
-                    height: isFullscreen ? '100vh' : height,
-                    borderRadius: isFullscreen ? 0 : 1,
+                    height: height,
+                    borderRadius: 1,
                     overflow: 'hidden',
                     position: 'relative',
-                    ...(isFullscreen && {
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        zIndex: zIndex.max,
-                        backgroundColor: colors.containerBackground
-                    })
                 }}
             >
                 {/* Loading overlay */}

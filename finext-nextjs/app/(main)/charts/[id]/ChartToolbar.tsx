@@ -27,6 +27,8 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import TextFieldsIcon from '@mui/icons-material/TextFields';
 import TuneIcon from '@mui/icons-material/Tune';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import { getResponsiveFontSize } from 'theme/tokens';
 
 export interface TickerItem {
@@ -43,6 +45,7 @@ interface ChartToolbarProps {
     showLegend?: boolean;
     showIndicatorsPanel?: boolean;
     showWatchlistPanel?: boolean;
+    isFullscreen?: boolean;
     onTickerChange?: (ticker: string) => void;
     onChartTypeChange?: (type: 'candlestick' | 'line') => void;
     onToggleIndicators?: () => void;
@@ -50,6 +53,7 @@ interface ChartToolbarProps {
     onToggleLegend?: () => void;
     onToggleIndicatorsPanel?: () => void;
     onToggleWatchlistPanel?: () => void;
+    onToggleFullscreen?: () => void;
 }
 
 const MAX_RESULTS = 50;
@@ -63,6 +67,7 @@ export default function ChartToolbar({
     showLegend = true,
     showIndicatorsPanel = false,
     showWatchlistPanel = false,
+    isFullscreen = false,
     onTickerChange,
     onChartTypeChange,
     onToggleIndicators,
@@ -70,6 +75,7 @@ export default function ChartToolbar({
     onToggleLegend,
     onToggleIndicatorsPanel,
     onToggleWatchlistPanel,
+    onToggleFullscreen,
 }: ChartToolbarProps) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
@@ -467,6 +473,25 @@ export default function ChartToolbar({
                         }}
                     >
                         <FormatListBulletedIcon fontSize="small" />
+                    </IconButton>
+                </Tooltip>
+
+                {/* Fullscreen button */}
+                <Tooltip title={isFullscreen ? "Thoát toàn màn hình" : "Toàn màn hình"}>
+                    <IconButton
+                        size="small"
+                        onClick={onToggleFullscreen}
+                        sx={{
+                            p: 0.5,
+                            color: isFullscreen ? 'primary.main' : 'text.secondary',
+                            borderRadius: 0,
+                            '&:hover': {
+                                color: 'primary.main',
+                                backgroundColor: 'transparent',
+                            },
+                        }}
+                    >
+                        {isFullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
                     </IconButton>
                 </Tooltip>
             </Box>
