@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 
 export const metadata: Metadata = {
     title: 'Biểu đồ kĩ thuật',
@@ -10,10 +11,5 @@ export const metadata: Metadata = {
 };
 
 export default function ChartsPage() {
-    return (
-        <div style={{ padding: '2rem' }}>
-            <h1>Biểu đồ kĩ thuật</h1>
-            <p>Công cụ biểu đồ kỹ thuật đang được phát triển...</p>
-        </div>
-    );
+    redirect('/charts/VNINDEX');
 }

@@ -381,7 +381,6 @@ export default function HomeContent() {
     // Handle ticker change from Table
     const handleTableTickerChange = (newTicker: string) => {
         setTicker(newTicker);
-        setTimeRange('1Y'); // Reset timeRange về mặc định khi đổi index
         setIsLoading(true);
         // Date refetch handled by React Query queryKey change
         setEodData(emptyChartData);

@@ -5,24 +5,24 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { fontWeight } from 'theme/tokens';
 
-export default function GroupAnalysisDetailPage() {
+export default function StockDetailPage() {
     const params = useParams();
-    const groupId = params.groupId as string;
+    const symbol = params.symbol as string;
 
     return (
         <Box sx={{ py: 4 }}>
             <Breadcrumbs sx={{ mb: 3 }}>
-                <MuiLink component={Link} href="/group-analysis" underline="hover" color="inherit">
-                    Phân tích nhóm
+                <MuiLink component={Link} href="/stocks" underline="hover" color="inherit">
+                    Cổ phiếu
                 </MuiLink>
-                <Typography color="text.primary">{groupId}</Typography>
+                <Typography color="text.primary">{symbol}</Typography>
             </Breadcrumbs>
 
             <Typography variant="h4" sx={{ mb: 2, fontWeight: fontWeight.bold }}>
-                Phân tích nhóm: {groupId}
+                Phân tích cổ phiếu: {symbol}
             </Typography>
             <Typography variant="body1" color="text.secondary">
-                Chi tiết phân tích cho nhóm cổ phiếu {groupId}
+                Chi tiết phân tích kỹ thuật, cơ bản và định giá cho mã {symbol}
             </Typography>
         </Box>
     );

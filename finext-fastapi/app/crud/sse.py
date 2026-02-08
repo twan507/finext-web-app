@@ -867,6 +867,216 @@ async def home_today_trend(ticker: Optional[str] = None, **kwargs) -> Dict[str, 
 
 
 # ==============================================================================
+# CHART DATA QUERIES - Dữ liệu biểu đồ kỹ thuật
+# ==============================================================================
+
+# Projection chung cho chart data (history + today)
+CHART_DATA_PROJECTION = {
+    "_id": 0,
+    "date": 1,
+    "open": 1,
+    "ticker": 1,
+    "high": 1,
+    "low": 1,
+    "close": 1,
+    "volume": 1,
+    "trading_value": 1,
+    "diff": 1,
+    "pct_change": 1,
+    "w_pct": 1,
+    "m_pct": 1,
+    "q_pct": 1,
+    "y_pct": 1,
+    "ma5": 1,
+    "ma20": 1,
+    "ma60": 1,
+    "ma120": 1,
+    "ma240": 1,
+    "vema5": 1,
+    "vsma5": 1,
+    "vsma60": 1,
+    "vsi": 1,
+    "w_f382": 1,
+    "w_f500": 1,
+    "w_f618": 1,
+    "m_f382": 1,
+    "m_f500": 1,
+    "m_f618": 1,
+    "q_f382": 1,
+    "q_f500": 1,
+    "q_f618": 1,
+    "y_f382": 1,
+    "y_f500": 1,
+    "y_f618": 1,
+    "w_open": 1,
+    "m_open": 1,
+    "q_open": 1,
+    "y_open": 1,
+    "w_ph": 1,
+    "w_pl": 1,
+    "m_ph": 1,
+    "m_pl": 1,
+    "q_ph": 1,
+    "q_pl": 1,
+    "y_ph": 1,
+    "y_pl": 1,
+    "w_pivot": 1,
+    "m_pivot": 1,
+    "q_pivot": 1,
+    "y_pivot": 1,
+    "w_poc": 1,
+    "w_vah": 1,
+    "w_val": 1,
+    "m_poc": 1,
+    "m_vah": 1,
+    "m_val": 1,
+    "q_poc": 1,
+    "q_vah": 1,
+    "q_val": 1,
+    "y_poc": 1,
+    "y_vah": 1,
+    "y_val": 1,
+    "w_ma_zone": 1,
+    "w_fibo_zone": 1,
+    "w_vp_zone": 1,
+    "m_ma_zone": 1,
+    "m_fibo_zone": 1,
+    "m_vp_zone": 1,
+    "q_ma_zone": 1,
+    "q_fibo_zone": 1,
+    "q_vp_zone": 1,
+    "y_ma_zone": 1,
+    "y_fibo_zone": 1,
+    "y_vp_zone": 1,
+    "w_zone": 1,
+    "m_zone": 1,
+    "q_zone": 1,
+    "y_zone": 1,
+    "ticker_name": 1,
+}
+
+async def chart_ticker(**kwargs) -> Dict[str, Any]:
+    """
+    Lấy danh sách tất cả ticker từ today_index và today_stock.
+    Chỉ trả về ticker và ticker_name để phục vụ tìm kiếm.
+
+    Returns:
+        List[Dict] - danh sách các ticker với ticker và ticker_name
+    """
+    stock_db = get_database(STOCK_DB)
+
+    ticker_projection = {"_id": 0, "ticker": 1, "ticker_name": 1}
+
+    # Query cả today_index và today_stock song song
+    index_task = get_collection_data(
+        stock_db, "today_index", find_query={}, projection=ticker_projection
+    )
+    stock_task = get_collection_data(
+        stock_db, "today_stock", find_query={}, projection=ticker_projection
+    )
+
+    index_df, stock_df = await asyncio.gather(index_task, stock_task)
+
+    # Gộp 2 DataFrame
+    combined = pd.concat([index_df, stock_df], ignore_index=True)
+
+    # Loại bỏ duplicates theo ticker, giữ bản đầu tiên (index ưu tiên)
+    if not combined.empty:
+        combined = combined.drop_duplicates(subset=["ticker"], keep="first")
+        # Sort theo ticker
+        combined = combined.sort_values("ticker").reset_index(drop=True)
+
+    return combined.to_dict(orient="records")
+
+
+# Danh sách các index tickers (dùng để phân biệt query từ collection nào)
+INDEX_TICKERS = {
+    "HNX30", "HNXINDEX", "UPINDEX", "VN30", "VNINDEX", "VNXALL",
+    "VN100F1M", "VN100F1Q", "VN100F2M", "VN100F2Q", "VN30F1M",
+    "VN30F1Q", "VN30F2M", "VN30F2Q", "FNXINDEX", "FNX100", "BANLE",
+    "BDS", "CHUNGKHOAN", "KIMLOAI", "XAYDUNG", "CONGNGHIEP", "VTDK",
+    "XUATKHAU", "HOACHAT", "KHOANGSAN", "BDSKCN", "CONGNGHE",
+    "NGANHANG", "NONGSAN", "TAICHINH", "DULICH", "TIENICH", "YTE",
+    "VUOTTROI", "ONDINH", "SUKIEN", "LARGECAP", "MIDCAP", "SMALLCAP",
+}
+
+
+def _is_index_ticker(ticker: str) -> bool:
+    """Kiểm tra ticker có phải là index hay stock."""
+    if not ticker:
+        return True  # Mặc định lấy từ index nếu không truyền ticker
+    return ticker.upper() in INDEX_TICKERS
+
+
+async def chart_history_data(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+    """
+    Lấy dữ liệu lịch sử cho biểu đồ kỹ thuật (history, không bao gồm today).
+    Tự động phân biệt index và stock dựa trên ticker.
+    - Index tickers (VNINDEX, VN30, ...) → collection: history_index
+    - Stock tickers (VNM, FPT, ...) → collection: history_stock
+
+    Args:
+        ticker: Mã ticker (bắt buộc). Mặc định: VNINDEX
+
+    Returns:
+        List[Dict] - dữ liệu OHLCV + indicators theo ticker
+    """
+    if not ticker:
+        ticker = "VNINDEX"
+
+    stock_db = get_database(STOCK_DB)
+    find_query = {"ticker": ticker}
+
+    # Chọn collection phù hợp dựa trên loại ticker
+    if _is_index_ticker(ticker):
+        collection_name = "history_index"
+    else:
+        collection_name = "history_stock"
+
+    logger.debug(f"chart_history_data: ticker={ticker}, collection={collection_name}")
+
+    history_df = await get_collection_data(
+        stock_db, collection_name, find_query=find_query, projection=CHART_DATA_PROJECTION
+    )
+
+    return history_df.to_dict(orient="records")
+
+
+async def chart_today_data(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+    """
+    Lấy dữ liệu hôm nay cho biểu đồ kỹ thuật.
+    Tự động phân biệt index và stock dựa trên ticker.
+    - Index tickers (VNINDEX, VN30, ...) → collection: today_index
+    - Stock tickers (VNM, FPT, ...) → collection: today_stock
+
+    Args:
+        ticker: Mã ticker (bắt buộc). Mặc định: VNINDEX
+
+    Returns:
+        List[Dict] - dữ liệu OHLCV + indicators hôm nay theo ticker
+    """
+    if not ticker:
+        ticker = "VNINDEX"
+
+    stock_db = get_database(STOCK_DB)
+    find_query = {"ticker": ticker}
+
+    # Chọn collection phù hợp dựa trên loại ticker
+    if _is_index_ticker(ticker):
+        collection_name = "today_index"
+    else:
+        collection_name = "today_stock"
+
+    logger.debug(f"chart_today_data: ticker={ticker}, collection={collection_name}")
+
+    today_df = await get_collection_data(
+        stock_db, collection_name, find_query=find_query, projection=CHART_DATA_PROJECTION
+    )
+
+    return today_df.to_dict(orient="records")
+
+
+# ==============================================================================
 # REGISTRY - Đăng ký các keyword và hàm query tương ứng
 # ==============================================================================
 
@@ -883,6 +1093,10 @@ SSE_QUERY_REGISTRY: Dict[str, Any] = {
     # Trend queries
     "home_history_trend": home_history_trend,
     "home_today_trend": home_today_trend,
+    # Chart queries
+    "chart_history_data": chart_history_data,
+    "chart_today_data": chart_today_data,
+    "chart_ticker": chart_ticker,
     # News queries
     "news_daily": news_daily,
     "news_categories": news_categories,

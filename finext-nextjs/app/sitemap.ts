@@ -25,22 +25,34 @@ export default function sitemap(): MetadataRoute.Sitemap {
             priority: 0.9,
         },
         {
-            url: `${baseUrl}/money-flow`,
+            url: `${baseUrl}/groups`,
             lastModified: currentDate,
             changeFrequency: 'hourly',
             priority: 0.8,
         },
         {
-            url: `${baseUrl}/sectors`,
+            url: `${baseUrl}/news`,
             lastModified: currentDate,
             changeFrequency: 'hourly',
             priority: 0.8,
+        },
+        {
+            url: `${baseUrl}/reports`,
+            lastModified: currentDate,
+            changeFrequency: 'daily',
+            priority: 0.7,
         },
         {
             url: `${baseUrl}/stocks`,
             lastModified: currentDate,
             changeFrequency: 'hourly',
             priority: 0.8,
+        },
+        {
+            url: `${baseUrl}/charts`,
+            lastModified: currentDate,
+            changeFrequency: 'weekly',
+            priority: 0.7,
         },
         {
             url: `${baseUrl}/login`,

@@ -560,7 +560,7 @@ interface NewsColumnProps {
 // Content only (no background wrapper) - for use inside Carousel
 function NewsColumnContent({ title, href, loading, newsItems, reportItems }: NewsColumnProps) {
     return (
-        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', mb: 1 }}>
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', mb: 3 }}>
             {/* Column Header */}
             <Box sx={{ mb: 1, borderBottom: '2px solid', borderColor: 'text.secondary', pb: 0.5 }}>
                 <Link href={href} style={{ textDecoration: 'none' }}>

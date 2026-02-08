@@ -83,8 +83,7 @@ svg {
 
   [data-theme='light'] *::-webkit-scrollbar-track,
   :root:not([data-theme='dark']) *::-webkit-scrollbar-track {
-    background: #e5e5e5;
-    /* Màu xám nhạt để không bị trùng với nền trắng */
+    background: transparent;
     border-radius: 4px;
   }
 
@@ -106,7 +105,7 @@ svg {
   }
 
   [data-theme='dark'] *::-webkit-scrollbar-track {
-    background: #2a2a2a;
+    background: transparent;
     border-radius: 4px;
   }
 
@@ -123,11 +122,11 @@ svg {
   [data-theme='light'] *,
   :root:not([data-theme='dark']) * {
     scrollbar-width: thin;
-    scrollbar-color: #a0a0a0 #e5e5e5;
+    scrollbar-color: #a0a0a0 transparent;
   }
 
   [data-theme='dark'] * {
     scrollbar-width: thin;
-    scrollbar-color: #555555 #2a2a2a;
+    scrollbar-color: #555555 transparent;
   }
 }

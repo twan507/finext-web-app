@@ -2,17 +2,15 @@
 import { Box, Typography } from '@mui/material';
 import { fontWeight } from 'theme/tokens';
 
-export default function SectorsContent() {
+export default function GroupsContent() {
   return (
     <Box sx={{ py: 4 }}>
       <Typography variant="h4" sx={{ mb: 2, fontWeight: fontWeight.bold }}>
-        Nhóm ngành
+        Tổng quan Nhóm & Ngành
       </Typography>
       <Typography variant="body1" color="text.secondary">
-        Phân tích sức mạnh tương quan và sự luân chuyển dòng tiền giữa các nhóm ngành để tìm ra sóng ngành dẫn dắt thị trường.
+        Tổng quan sức mạnh tương quan và phân bổ dòng tiền giữa các nhóm ngành trên thị trường chứng khoán.
       </Typography>
     </Box>
   );
 }
-
-

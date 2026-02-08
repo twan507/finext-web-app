@@ -147,7 +147,7 @@ export default function MarketPhaseSection({ stockData = [], foreignData = [], i
                             return (
                                 <tr key={stock.ticker}>
                                     <td style={{ padding: '8px 0', border: 'none' }}>
-                                        <Link href={`/stock-analysis/${stock.ticker}`} style={{ textDecoration: 'none' }}>
+                                        <Link href={`/stocks/${stock.ticker}`} style={{ textDecoration: 'none' }}>
                                             <Typography
                                                 sx={{
                                                     fontSize: getResponsiveFontSize('sm'),
@@ -208,7 +208,7 @@ export default function MarketPhaseSection({ stockData = [], foreignData = [], i
                             {stocks.map((stock) => (
                                 <tr key={stock.ticker}>
                                     <td style={{ padding: '8px 0', border: 'none' }}>
-                                        <Link href={`/stock-analysis/${stock.ticker}`} style={{ textDecoration: 'none' }}>
+                                        <Link href={`/stocks/${stock.ticker}`} style={{ textDecoration: 'none' }}>
                                             <Typography
                                                 sx={{
                                                     fontSize: getResponsiveFontSize('sm'),

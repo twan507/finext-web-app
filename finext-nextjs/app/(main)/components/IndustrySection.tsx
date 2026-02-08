@@ -633,7 +633,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
             {/* Header: Title Only */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Box
-                    onClick={() => router.push('/sectors')}
+                    onClick={() => router.push('/groups')}
                     sx={{
                         display: 'inline-flex',
                         alignItems: 'center',
