@@ -1,15 +1,16 @@
-import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
+'use client';
 
-export const metadata: Metadata = {
-    title: 'Biểu đồ kĩ thuật',
-    description: 'Công cụ vẽ biểu đồ kỹ thuật chuyên nghiệp cho phân tích cổ phiếu.',
-    openGraph: {
-        title: 'Finext - Biểu đồ kĩ thuật',
-        description: 'Công cụ vẽ biểu đồ kỹ thuật chuyên nghiệp.',
-    },
-};
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { loadLastTicker } from 'hooks/useChartStore';
 
 export default function ChartsPage() {
-    redirect('/charts/VNINDEX');
+    const router = useRouter();
+
+    useEffect(() => {
+        const ticker = loadLastTicker();
+        router.replace(`/charts/${ticker}`);
+    }, [router]);
+
+    return null;
 }

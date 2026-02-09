@@ -14,19 +14,36 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
-import { INDICATOR_GROUPS, type IndicatorDef } from './indicatorConfig';
+import { INDICATOR_GROUPS, LINE_STYLE, getIndicatorColor, type IndicatorDef, type LineIndicator, type VolumeLineIndicator } from './indicatorConfig';
+
+/** Map lwOptions.lineStyle → CSS border-style */
+const getCssLineStyle = (lineStyle?: number): string => {
+    switch (lineStyle) {
+        case LINE_STYLE.Dashed:
+        case LINE_STYLE.LargeDashed:
+            return 'dashed';
+        case LINE_STYLE.Dotted:
+        case LINE_STYLE.SparseDotted:
+            return 'dotted';
+        default:
+            return 'solid';
+    }
+};
 
 export interface IndicatorsPanelProps {
     enabledIndicators: Record<string, boolean>;
     onToggleIndicator: (key: string) => void;
     onClearAll: () => void;
+    onResetDefault?: () => void;
 }
 
 export default function IndicatorsPanel({
     enabledIndicators,
     onToggleIndicator,
     onClearAll,
+    onResetDefault,
 }: IndicatorsPanelProps) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
@@ -47,7 +64,7 @@ export default function IndicatorsPanel({
         switch (type) {
             case 'line':
                 return 'Line';
-            case 'area':
+            case 'band':
                 return 'Band';
             case 'volume-line':
                 return 'Vol';
@@ -61,7 +78,7 @@ export default function IndicatorsPanel({
             const items: { key: string; label: string; color: string }[] = [];
             for (const ind of group.indicators) {
                 if (enabledIndicators[ind.key]) {
-                    items.push({ key: ind.key, label: ind.label, color: ind.color });
+                    items.push({ key: ind.key, label: ind.label, color: getIndicatorColor(ind, isDark) });
                 }
             }
             if (items.length > 0) {
@@ -69,7 +86,7 @@ export default function IndicatorsPanel({
             }
         }
         return grouped;
-    }, [enabledIndicators]);
+    }, [enabledIndicators, isDark]);
 
     const hasActiveIndicators = activeByGroup.length > 0;
 
@@ -99,17 +116,49 @@ export default function IndicatorsPanel({
                     Chỉ báo kỹ thuật
                 </Typography>
                 {hasActiveIndicators && (
-                    <Tooltip title="Xoá tất cả">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+                        {onResetDefault && (
+                            <Tooltip title="Thiết lập mặc định">
+                                <IconButton
+                                    size="small"
+                                    onClick={onResetDefault}
+                                    sx={{
+                                        p: 0.25,
+                                        color: 'text.secondary',
+                                        '&:hover': { color: 'primary.main' },
+                                    }}
+                                >
+                                    <RestartAltIcon sx={{ fontSize: 18 }} />
+                                </IconButton>
+                            </Tooltip>
+                        )}
+                        <Tooltip title="Xoá tất cả">
+                            <IconButton
+                                size="small"
+                                onClick={onClearAll}
+                                sx={{
+                                    p: 0.25,
+                                    color: 'text.secondary',
+                                    '&:hover': { color: 'error.main' },
+                                }}
+                            >
+                                <DeleteSweepIcon sx={{ fontSize: 18 }} />
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
+                )}
+                {!hasActiveIndicators && onResetDefault && (
+                    <Tooltip title="Thiết lập mặc định">
                         <IconButton
                             size="small"
-                            onClick={onClearAll}
+                            onClick={onResetDefault}
                             sx={{
                                 p: 0.25,
                                 color: 'text.secondary',
-                                '&:hover': { color: 'error.main' },
+                                '&:hover': { color: 'primary.main' },
                             }}
                         >
-                            <DeleteSweepIcon sx={{ fontSize: 18 }} />
+                            <RestartAltIcon sx={{ fontSize: 18 }} />
                         </IconButton>
                     </Tooltip>
                 )}
@@ -265,25 +314,23 @@ export default function IndicatorsPanel({
                                                 minWidth: 0,
                                             }}
                                         >
-                                            {/* Color indicator */}
-                                            {ind.type === 'area' ? (
+                                            {/* Color indicator — reflects actual line/band style */}
+                                            {ind.type === 'band' ? (
                                                 <Box
                                                     sx={{
                                                         width: 12,
                                                         height: 8,
                                                         borderRadius: 0.5,
-                                                        border: `1.5px solid ${ind.color}`,
-                                                        backgroundColor: `${ind.color}20`,
+                                                        backgroundColor: `${getIndicatorColor(ind, isDark)}30`,
                                                         flexShrink: 0,
                                                     }}
                                                 />
                                             ) : (
                                                 <Box
                                                     sx={{
-                                                        width: 12,
-                                                        height: 2,
-                                                        borderRadius: 1,
-                                                        backgroundColor: ind.color,
+                                                        width: 16,
+                                                        height: 0,
+                                                        borderBottom: `2px ${getCssLineStyle((ind as LineIndicator | VolumeLineIndicator).lwOptions?.lineStyle)} ${getIndicatorColor(ind, isDark)}`,
                                                         flexShrink: 0,
                                                     }}
                                                 />
@@ -318,11 +365,11 @@ export default function IndicatorsPanel({
                                             onChange={() => onToggleIndicator(ind.key)}
                                             sx={{
                                                 '& .MuiSwitch-switchBase.Mui-checked': {
-                                                    color: ind.color,
+                                                    color: getIndicatorColor(ind, isDark),
                                                 },
                                                 '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track':
                                                 {
-                                                    backgroundColor: ind.color,
+                                                    backgroundColor: getIndicatorColor(ind, isDark),
                                                 },
                                             }}
                                         />

@@ -26,7 +26,8 @@ import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import type { ChartRawData } from './PageContent';
 import IndicatorsPanel from './IndicatorsPanel';
 import WatchlistPanel from './WatchlistPanel';
-import { INDICATOR_GROUPS, type AreaIndicator, type LineIndicator } from './indicatorConfig';
+import { INDICATOR_GROUPS, getIndicatorColor, type AreaIndicator, type BandIndicator, type LineIndicator, type VolumeLineIndicator } from './indicatorConfig';
+import { BandFillPrimitive } from './BandFillPrimitive';
 
 interface CandlestickChartProps {
     data: ChartRawData[];
@@ -40,6 +41,7 @@ interface CandlestickChartProps {
     enabledIndicators: Record<string, boolean>;
     onToggleIndicator: (key: string) => void;
     onClearAllIndicators: () => void;
+    onResetDefaultIndicators?: () => void;
     onCloseIndicatorsPanel?: () => void;
     onCloseWatchlistPanel?: () => void;
 }
@@ -81,15 +83,28 @@ function extractFieldData(
 
 // Default number of candles to show on first render
 const DEFAULT_VISIBLE_BARS = 120;
+const INITIAL_RIGHT_MARGIN = 5; // Khoảng trống bên phải nến cuối khi render lần đầu
 
-export default function CandlestickChart({ data, ticker, chartType, showIndicators, showVolume, showLegend, showIndicatorsPanel, showWatchlistPanel, enabledIndicators, onToggleIndicator, onClearAllIndicators, onCloseIndicatorsPanel, onCloseWatchlistPanel }: CandlestickChartProps) {
+// Danh sách các index tickers (đồng bộ với BE)
+const INDEX_TICKERS = new Set([
+    'HNX30', 'HNXINDEX', 'UPINDEX', 'VN30', 'VNINDEX', 'VNXALL',
+    'VN100F1M', 'VN100F1Q', 'VN100F2M', 'VN100F2Q', 'VN30F1M',
+    'VN30F1Q', 'VN30F2M', 'VN30F2Q', 'FNXINDEX', 'FNX100', 'BANLE',
+    'BDS', 'CHUNGKHOAN', 'KIMLOAI', 'XAYDUNG', 'CONGNGHIEP', 'VTDK',
+    'XUATKHAU', 'HOACHAT', 'KHOANGSAN', 'BDSKCN', 'CONGNGHE',
+    'NGANHANG', 'NONGSAN', 'TAICHINH', 'DULICH', 'TIENICH', 'YTE',
+    'VUOTTROI', 'ONDINH', 'SUKIEN', 'LARGECAP', 'MIDCAP', 'SMALLCAP',
+]);
+
+export default function CandlestickChart({ data, ticker, chartType, showIndicators, showVolume, showLegend, showIndicatorsPanel, showWatchlistPanel, enabledIndicators, onToggleIndicator, onClearAllIndicators, onResetDefaultIndicators, onCloseIndicatorsPanel, onCloseWatchlistPanel }: CandlestickChartProps) {
     const theme = useTheme();
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
     const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
     const lineSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
     const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
-    const indicatorSeriesRef = useRef<Map<string, ISeriesApi<'Line'>[]>>(new Map());
+    const indicatorSeriesRef = useRef<Map<string, ISeriesApi<any>[]>>(new Map());
+    const bandPrimitivesRef = useRef<Map<string, BandFillPrimitive>>(new Map());
 
     // Pan/zoom state preservation
     const savedLogicalRangeRef = useRef<{ from: number; to: number } | null>(null);
@@ -109,6 +124,9 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
         diff: number | null;
         pctChange: number | null;
     } | null>(null);
+
+    // Raw data at crosshair position (for indicator legends)
+    const [crosshairRawData, setCrosshairRawData] = useState<ChartRawData | null>(null);
 
     const isDark = theme.palette.mode === 'dark';
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -203,6 +221,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                 diff: last.diff,
                 pctChange: last.pct_change,
             });
+            setCrosshairRawData(last);
         }
     }, [data, ticker]);
 
@@ -307,26 +326,38 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
         });
 
         // Create all indicator series (hidden by default)
-        const newIndicatorSeries = new Map<string, ISeriesApi<'Line'>[]>();
+        const newIndicatorSeries = new Map<string, ISeriesApi<any>[]>();
+        const newBandPrimitives = new Map<string, BandFillPrimitive>();
         for (const group of INDICATOR_GROUPS) {
             for (const ind of group.indicators) {
+                const resolvedColor = getIndicatorColor(ind, isDark);
+
                 if (ind.type === 'line') {
-                    const isStep = (ind as LineIndicator).step;
+                    const lineInd = ind as LineIndicator;
+                    const lwOpts = lineInd.lwOptions || {};
+
                     const series = chart.addSeries(LineSeries, {
-                        color: ind.color,
-                        lineWidth: 1,
-                        lineType: isStep ? LineType.WithSteps : LineType.Simple,
-                        priceLineVisible: false,
-                        lastValueVisible: true,
-                        crosshairMarkerVisible: true,
-                        crosshairMarkerRadius: 3,
+                        color: lwOpts.color ?? resolvedColor,
+                        lineWidth: lwOpts.lineWidth ?? 1,
+                        lineStyle: lwOpts.lineStyle ?? LineStyle.Solid,
+                        lineType: lwOpts.lineType ?? LineType.Simple,
+                        priceLineVisible: lwOpts.priceLineVisible ?? false,
+                        ...(lwOpts.priceLineColor && { priceLineColor: lwOpts.priceLineColor }),
+                        ...(lwOpts.priceLineWidth && { priceLineWidth: lwOpts.priceLineWidth }),
+                        ...(lwOpts.priceLineStyle !== undefined && { priceLineStyle: lwOpts.priceLineStyle }),
+                        lastValueVisible: lwOpts.lastValueVisible ?? true,
+                        crosshairMarkerVisible: lwOpts.crosshairMarkerVisible ?? true,
+                        crosshairMarkerRadius: lwOpts.crosshairMarkerRadius ?? 3,
+                        ...(lwOpts.crosshairMarkerBorderColor && { crosshairMarkerBorderColor: lwOpts.crosshairMarkerBorderColor }),
+                        ...(lwOpts.crosshairMarkerBackgroundColor && { crosshairMarkerBackgroundColor: lwOpts.crosshairMarkerBackgroundColor }),
+                        ...(lwOpts.title && { title: lwOpts.title }),
                         visible: false,
                     });
                     newIndicatorSeries.set(ind.key, [series]);
                 } else if (ind.type === 'area') {
                     // Band: upper line + middle dashed + lower line
                     const upperSeries = chart.addSeries(LineSeries, {
-                        color: ind.color,
+                        color: resolvedColor,
                         lineWidth: 1,
                         lineType: LineType.Simple,
                         priceLineVisible: false,
@@ -335,7 +366,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                         visible: false,
                     });
                     const middleSeries = chart.addSeries(LineSeries, {
-                        color: ind.color,
+                        color: resolvedColor,
                         lineWidth: 1,
                         lineStyle: LineStyle.Dashed,
                         lineType: LineType.Simple,
@@ -346,7 +377,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                         visible: false,
                     });
                     const lowerSeries = chart.addSeries(LineSeries, {
-                        color: ind.color,
+                        color: resolvedColor,
                         lineWidth: 1,
                         lineType: LineType.Simple,
                         priceLineVisible: false,
@@ -355,15 +386,47 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                         visible: false,
                     });
                     newIndicatorSeries.set(ind.key, [upperSeries, middleSeries, lowerSeries]);
-                } else if (ind.type === 'volume-line') {
-                    const series = chart.addSeries(LineSeries, {
-                        color: ind.color,
+                } else if (ind.type === 'band') {
+                    // Band: filled area primitive + 2 invisible line series for price tags
+                    const fillColor = `${resolvedColor}20`;
+                    const primitive = new BandFillPrimitive(fillColor);
+                    candleSeries.attachPrimitive(primitive);
+                    newBandPrimitives.set(ind.key, primitive);
+
+                    // Upper price tag series (transparent line, only shows last value)
+                    const upperTag = chart.addSeries(LineSeries, {
+                        color: 'transparent',
                         lineWidth: 1,
-                        lineType: LineType.Curved,
                         priceLineVisible: false,
+                        priceLineColor: resolvedColor,
                         lastValueVisible: true,
-                        crosshairMarkerVisible: true,
-                        crosshairMarkerRadius: 3,
+                        crosshairMarkerVisible: false,
+                        visible: false,
+                    });
+                    // Lower price tag series
+                    const lowerTag = chart.addSeries(LineSeries, {
+                        color: 'transparent',
+                        lineWidth: 1,
+                        priceLineVisible: false,
+                        priceLineColor: resolvedColor,
+                        lastValueVisible: true,
+                        crosshairMarkerVisible: false,
+                        visible: false,
+                    });
+                    newIndicatorSeries.set(ind.key, [upperTag, lowerTag]);
+                } else if (ind.type === 'volume-line') {
+                    const volInd = ind as VolumeLineIndicator;
+                    const lwOpts = volInd.lwOptions || {};
+
+                    const series = chart.addSeries(LineSeries, {
+                        color: lwOpts.color ?? resolvedColor,
+                        lineWidth: lwOpts.lineWidth ?? 1,
+                        lineStyle: lwOpts.lineStyle ?? LineStyle.Solid,
+                        lineType: lwOpts.lineType ?? LineType.Curved,
+                        priceLineVisible: lwOpts.priceLineVisible ?? false,
+                        lastValueVisible: lwOpts.lastValueVisible ?? true,
+                        crosshairMarkerVisible: lwOpts.crosshairMarkerVisible ?? true,
+                        crosshairMarkerRadius: lwOpts.crosshairMarkerRadius ?? 3,
                         priceScaleId: 'volume',
                         visible: false,
                     });
@@ -372,6 +435,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
             }
         }
         indicatorSeriesRef.current = newIndicatorSeries;
+        bandPrimitivesRef.current = newBandPrimitives;
 
         // Crosshair move -> update legend (không update tickerName)
         chart.subscribeCrosshairMove((param: MouseEventParams) => {
@@ -387,6 +451,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                         diff: last.diff,
                         pctChange: last.pct_change,
                     });
+                    setCrosshairRawData(last);
                 }
                 return;
             }
@@ -394,6 +459,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
             const ts = param.time as number;
             const rawItem = dataByTimestamp.get(ts);
             if (rawItem) {
+                setCrosshairRawData(rawItem);
                 setLegendData({
                     open: rawItem.open,
                     high: rawItem.high,
@@ -428,6 +494,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
             lineSeriesRef.current = null;
             volumeSeriesRef.current = null;
             indicatorSeriesRef.current = new Map();
+            bandPrimitivesRef.current = new Map();
             hasSetInitialRangeRef.current = false;
             prevDataLengthRef.current = 0;
         };
@@ -460,11 +527,11 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
         prevDataLengthRef.current = dataLength;
 
         if (!hasSetInitialRangeRef.current) {
-            // First time: show last DEFAULT_VISIBLE_BARS candles
+            // First time: show last DEFAULT_VISIBLE_BARS candles + margin bên phải
             const visibleBars = Math.min(DEFAULT_VISIBLE_BARS, dataLength);
             chartRef.current.timeScale().setVisibleLogicalRange({
                 from: dataLength - visibleBars - 0.5,
-                to: dataLength - 0.5,
+                to: dataLength - 0.5 + INITIAL_RIGHT_MARGIN,
             });
             hasSetInitialRangeRef.current = true;
             setTimeout(() => {
@@ -485,7 +552,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                 const visibleBars = Math.min(DEFAULT_VISIBLE_BARS, dataLength);
                 chartRef.current.timeScale().setVisibleLogicalRange({
                     from: dataLength - visibleBars - 0.5,
-                    to: dataLength - 0.5,
+                    to: dataLength - 0.5 + INITIAL_RIGHT_MARGIN,
                 });
             }
         } else if (currentRange) {
@@ -529,49 +596,75 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
             candleSeriesRef.current.applyOptions({ visible: false });
             lineSeriesRef.current.applyOptions({ visible: true });
         }
-    }, [chartType]);
+    }, [chartType, isDark]);
 
     // Toggle volume visibility
     useEffect(() => {
         if (!volumeSeriesRef.current) return;
         volumeSeriesRef.current.applyOptions({ visible: showVolume });
-    }, [showVolume]);
+    }, [showVolume, isDark]);
 
     // Sync indicator series visibility and data
     useEffect(() => {
-        if (!chartRef.current || indicatorSeriesRef.current.size === 0) return;
+        if (!chartRef.current) return;
         const seriesMap = indicatorSeriesRef.current;
+        const bandPrimitives = bandPrimitivesRef.current;
 
         for (const group of INDICATOR_GROUPS) {
             for (const ind of group.indicators) {
                 const seriesArr = seriesMap.get(ind.key);
-                if (!seriesArr) continue;
 
                 const isVisible = showIndicators && (enabledIndicators[ind.key] ?? false);
 
-                if (isVisible) {
-                    if (ind.type === 'line' || ind.type === 'volume-line') {
-                        const fieldData = extractFieldData(data, (ind as any).field);
-                        seriesArr[0].setData(fieldData);
-                        seriesArr[0].applyOptions({ visible: true });
-                    } else if (ind.type === 'area') {
-                        const areaInd = ind as AreaIndicator;
-                        // [0]=upper, [1]=middle(dashed), [2]=lower
-                        seriesArr[0].setData(extractFieldData(data, areaInd.fields[0]));
-                        seriesArr[1].setData(extractFieldData(data, areaInd.fields[1]));
-                        seriesArr[2].setData(extractFieldData(data, areaInd.fields[2]));
-                        seriesArr[0].applyOptions({ visible: true });
-                        seriesArr[1].applyOptions({ visible: true });
-                        seriesArr[2].applyOptions({ visible: true });
+                if (ind.type === 'band') {
+                    // Band uses canvas primitive + 2 tag series
+                    const primitive = bandPrimitives.get(ind.key);
+                    if (!primitive) continue;
+                    const tagSeries = seriesArr; // [0]=upper tag, [1]=lower tag
+                    if (isVisible) {
+                        const bandInd = ind as BandIndicator;
+                        const upperData = extractFieldData(data, bandInd.fields[0]);
+                        const lowerData = extractFieldData(data, bandInd.fields[1]);
+                        primitive.setData(upperData, lowerData);
+                        primitive.setVisible(true);
+                        if (tagSeries) {
+                            tagSeries[0].setData(upperData);
+                            tagSeries[1].setData(lowerData);
+                            tagSeries[0].applyOptions({ visible: true });
+                            tagSeries[1].applyOptions({ visible: true });
+                        }
+                    } else {
+                        primitive.setVisible(false);
+                        if (tagSeries) {
+                            tagSeries[0].applyOptions({ visible: false });
+                            tagSeries[1].applyOptions({ visible: false });
+                        }
                     }
                 } else {
-                    for (const s of seriesArr) {
-                        s.applyOptions({ visible: false });
+                    if (!seriesArr) continue;
+                    if (isVisible) {
+                        if (ind.type === 'line' || ind.type === 'volume-line') {
+                            const fieldData = extractFieldData(data, (ind as any).field);
+                            seriesArr[0].setData(fieldData);
+                            seriesArr[0].applyOptions({ visible: true });
+                        } else if (ind.type === 'area') {
+                            const areaInd = ind as AreaIndicator;
+                            seriesArr[0].setData(extractFieldData(data, areaInd.fields[0]));
+                            seriesArr[1].setData(extractFieldData(data, areaInd.fields[1]));
+                            seriesArr[2].setData(extractFieldData(data, areaInd.fields[2]));
+                            seriesArr[0].applyOptions({ visible: true });
+                            seriesArr[1].applyOptions({ visible: true });
+                            seriesArr[2].applyOptions({ visible: true });
+                        }
+                    } else {
+                        for (const s of seriesArr) {
+                            s.applyOptions({ visible: false });
+                        }
                     }
                 }
             }
         }
-    }, [showIndicators, enabledIndicators, data]);
+    }, [showIndicators, enabledIndicators, data, isDark]);
 
     // Determine color for OHLC values based on close vs open
     const isUp = legendData ? (legendData.close ?? 0) >= (legendData.open ?? 0) : true;
@@ -632,7 +725,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                                         flexBasis: '100%',
                                     }}
                                 >
-                                    {tickerName}
+                                    {INDEX_TICKERS.has(ticker.toUpperCase()) ? `CHỈ SỐ ${tickerName}` : tickerName}
                                 </Typography>
                                 {/* Group 2: Timeframe + OHLC values — each pair wraps as a unit */}
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
@@ -709,26 +802,148 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                                     >
                                         {legendData.diff != null ? (legendData.diff >= 0 ? '+' : '') + formatNum(legendData.diff) : ''}
                                         {legendData.pctChange != null
-                                            ? ` (${legendData.pctChange >= 0 ? '+' : ''}${formatNum(legendData.pctChange)}%)`
+                                            ? ` (${legendData.pctChange * 100 >= 0 ? '+' : ''}${formatNum(legendData.pctChange * 100)}%)`
                                             : ''}
                                     </Typography>
                                 </Box>
                             </Box>
 
-                            {/* Row 2: Volume */}
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            {/* Indicator Legends (excluding volume_ma, rendered with Volume row) */}
+                            {showIndicators && crosshairRawData && INDICATOR_GROUPS.filter((g) => g.key !== 'volume_ma').map((group) => {
+                                const activeInds = group.indicators.filter(
+                                    (ind) => enabledIndicators[ind.key],
+                                );
+                                if (activeInds.length === 0) return null;
+
+                                return (
+                                    <Box key={group.key} sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                                        {activeInds.map((ind) => {
+                                            const color = getIndicatorColor(ind, isDark);
+                                            const raw = crosshairRawData as any;
+
+                                            if (ind.type === 'line') {
+                                                const field = (ind as LineIndicator).field;
+                                                const val = raw[field];
+                                                return (
+                                                    <Typography
+                                                        key={ind.key}
+                                                        sx={{
+                                                            fontSize: getResponsiveFontSize('xs'),
+                                                            color: 'text.secondary',
+                                                            lineHeight: 1.2,
+                                                            whiteSpace: 'nowrap',
+                                                        }}
+                                                    >
+                                                        {ind.label}
+                                                        <Box component="span" sx={{ color, ml: 0.25 }}>
+                                                            {formatNum(val)}
+                                                        </Box>
+                                                    </Typography>
+                                                );
+                                            }
+
+                                            if (ind.type === 'area') {
+                                                const areaInd = ind as AreaIndicator;
+                                                const [f0, f1, f2] = areaInd.fields;
+                                                return (
+                                                    <Typography
+                                                        key={ind.key}
+                                                        sx={{
+                                                            fontSize: getResponsiveFontSize('xs'),
+                                                            color: 'text.secondary',
+                                                            lineHeight: 1.2,
+                                                            whiteSpace: 'nowrap',
+                                                        }}
+                                                    >
+                                                        {ind.label}
+                                                        <Box component="span" sx={{ color, ml: 0.25 }}>
+                                                            {formatNum(raw[f0])}
+                                                        </Box>
+                                                        <Box component="span" sx={{ color: 'text.disabled' }}>/</Box>
+                                                        <Box component="span" sx={{ color }}>
+                                                            {formatNum(raw[f1])}
+                                                        </Box>
+                                                        <Box component="span" sx={{ color: 'text.disabled' }}>/</Box>
+                                                        <Box component="span" sx={{ color }}>
+                                                            {formatNum(raw[f2])}
+                                                        </Box>
+                                                    </Typography>
+                                                );
+                                            }
+
+                                            if (ind.type === 'band') {
+                                                const bandInd = ind as BandIndicator;
+                                                const [fUpper, fLower] = bandInd.fields;
+                                                return (
+                                                    <Typography
+                                                        key={ind.key}
+                                                        sx={{
+                                                            fontSize: getResponsiveFontSize('xs'),
+                                                            color: 'text.secondary',
+                                                            lineHeight: 1.2,
+                                                            whiteSpace: 'nowrap',
+                                                        }}
+                                                    >
+                                                        {ind.label}
+                                                        <Box component="span" sx={{ color, ml: 0.25 }}>
+                                                            {formatNum(raw[fUpper])}
+                                                        </Box>
+                                                        <Box component="span" sx={{ color: 'text.disabled' }}>/</Box>
+                                                        <Box component="span" sx={{ color }}>
+                                                            {formatNum(raw[fLower])}
+                                                        </Box>
+                                                    </Typography>
+                                                );
+                                            }
+
+                                            return null;
+                                        })}
+                                    </Box>
+                                );
+                            })}
+
+                            {/* Volume row (always last) — includes Volume MA if enabled */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
                                 <Typography
                                     sx={{
                                         fontSize: getResponsiveFontSize('xs'),
                                         color: 'text.secondary',
                                         lineHeight: 1.2,
+                                        whiteSpace: 'nowrap',
                                     }}
                                 >
-                                    Volume
+                                    VOLUME
                                     <Box component="span" sx={{ color: valueColor, ml: 0.5 }}>
                                         {formatVolume(legendData.volume)}
                                     </Box>
                                 </Typography>
+                                {showIndicators && crosshairRawData && (() => {
+                                    const volGroup = INDICATOR_GROUPS.find((g) => g.key === 'volume_ma');
+                                    if (!volGroup) return null;
+                                    const raw = crosshairRawData as any;
+                                    return volGroup.indicators
+                                        .filter((ind) => enabledIndicators[ind.key])
+                                        .map((ind) => {
+                                            const color = getIndicatorColor(ind, isDark);
+                                            const field = (ind as VolumeLineIndicator).field;
+                                            return (
+                                                <Typography
+                                                    key={ind.key}
+                                                    sx={{
+                                                        fontSize: getResponsiveFontSize('xs'),
+                                                        color: 'text.secondary',
+                                                        lineHeight: 1.2,
+                                                        whiteSpace: 'nowrap',
+                                                    }}
+                                                >
+                                                    {ind.label}
+                                                    <Box component="span" sx={{ color, ml: 0.25 }}>
+                                                        {formatVolume(raw[field])}
+                                                    </Box>
+                                                </Typography>
+                                            );
+                                        });
+                                })()}
                             </Box>
                         </Box>
                     )}
@@ -759,10 +974,10 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                             },
                         }}
                     >
-                        <IndicatorsPanel enabledIndicators={enabledIndicators} onToggleIndicator={onToggleIndicator} onClearAll={onClearAllIndicators} />
+                        <IndicatorsPanel enabledIndicators={enabledIndicators} onToggleIndicator={onToggleIndicator} onClearAll={onClearAllIndicators} onResetDefault={onResetDefaultIndicators} />
                     </Drawer>
                 ) : (
-                    showIndicatorsPanel && <IndicatorsPanel enabledIndicators={enabledIndicators} onToggleIndicator={onToggleIndicator} onClearAll={onClearAllIndicators} />
+                    showIndicatorsPanel && <IndicatorsPanel enabledIndicators={enabledIndicators} onToggleIndicator={onToggleIndicator} onClearAll={onClearAllIndicators} onResetDefault={onResetDefaultIndicators} />
                 )}
 
                 {/* Watchlist Panel - Drawer on mobile, inline on desktop */}

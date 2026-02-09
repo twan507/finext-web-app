@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useMemo, useCallback, useState, useEffect } from 'react';
-import { Box, Typography, useTheme } from '@mui/material';
+import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
+import { Box, Typography, useTheme, useMediaQuery } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import useSseCache from 'hooks/useSseCache';
+import { apiClient } from 'services/apiClient';
+import useChartStore from 'hooks/useChartStore';
 import { zIndex } from 'theme/tokens';
 import CandlestickChart from './CandlestickChart';
 import ChartToolbar from './ChartToolbar';
 import ChartSkeleton from './ChartSkeleton';
-import { getDefaultEnabledIndicators } from './indicatorConfig';
 import type { TickerItem } from './ChartToolbar';
 
 // Raw data interface từ backend — đồng bộ với CHART_DATA_PROJECTION (sse.py)
@@ -110,24 +111,25 @@ interface ChartPageContentProps {
 export default function ChartPageContent({ ticker }: ChartPageContentProps) {
     const theme = useTheme();
     const router = useRouter();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+    // Persistent chart state (survives reload / tab switch)
+    const { enabledIndicators, toggleIndicator, clearAll, resetToDefault, setLastTicker } = useChartStore();
+
+    // Save current ticker as last viewed
+    useEffect(() => {
+        setLastTicker(ticker);
+    }, [ticker, setLastTicker]);
 
     // Chart control state (lifted from CandlestickChart so toolbar stays visible during loading)
     const [chartType, setChartType] = useState<'candlestick' | 'line'>('candlestick');
     const [showIndicators, setShowIndicators] = useState(true);
     const [showVolume, setShowVolume] = useState(true);
     const [showLegend, setShowLegend] = useState(true);
-    const [showIndicatorsPanel, setShowIndicatorsPanel] = useState(false);
+    // Default: show indicator panel on desktop & tablet, hide on mobile
+    const [showIndicatorsPanel, setShowIndicatorsPanel] = useState(!isMobile);
     const [showWatchlistPanel, setShowWatchlistPanel] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
-    const [enabledIndicators, setEnabledIndicators] = useState<Record<string, boolean>>(getDefaultEnabledIndicators);
-
-    const handleToggleIndicator = useCallback((key: string) => {
-        setEnabledIndicators(prev => ({ ...prev, [key]: !prev[key] }));
-    }, []);
-
-    const handleClearAllIndicators = useCallback(() => {
-        setEnabledIndicators(getDefaultEnabledIndicators());
-    }, []);
 
     // Handle ESC key to exit fullscreen
     useEffect(() => {
@@ -156,18 +158,43 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
         [router],
     );
 
-    // Lấy dữ liệu lịch sử (history)
-    const {
-        data: historyData,
-        isLoading: isHistoryLoading,
-        error: historyError,
-    } = useSseCache<ChartRawData[]>({
-        keyword: 'chart_history_data',
-        queryParams: { ticker },
-        enabled: !!ticker,
-    });
+    // ─── History: REST one-time fetch (dữ liệu lịch sử không đổi trong ngày) ───
+    const [historyData, setHistoryData] = useState<ChartRawData[] | null>(null);
+    const [isHistoryLoading, setIsHistoryLoading] = useState(true);
+    const [historyError, setHistoryError] = useState<string | null>(null);
 
-    // Lấy dữ liệu hôm nay (today)
+    useEffect(() => {
+        if (!ticker) return;
+
+        let cancelled = false;
+        setIsHistoryLoading(true);
+        setHistoryError(null);
+
+        apiClient<ChartRawData[]>({
+            url: '/api/v1/sse/rest/chart_history_data',
+            method: 'GET',
+            queryParams: { ticker },
+            requireAuth: false,
+            useCache: true,
+            cacheTtl: 24 * 60 * 60 * 1000, // cache cả ngày
+        })
+            .then((res) => {
+                if (!cancelled) {
+                    setHistoryData(res.data ?? []);
+                    setIsHistoryLoading(false);
+                }
+            })
+            .catch((err: any) => {
+                if (!cancelled) {
+                    setHistoryError(err.message || 'Lỗi tải dữ liệu lịch sử');
+                    setIsHistoryLoading(false);
+                }
+            });
+
+        return () => { cancelled = true; };
+    }, [ticker]);
+
+    // ─── Today: SSE real-time (cập nhật liên tục trong phiên giao dịch) ───
     const {
         data: todayData,
         isLoading: isTodayLoading,
@@ -178,11 +205,21 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
         enabled: !!ticker,
     });
 
+    // Data guard: một khi chart đã render đủ data lần đầu, không bao giờ quay lại loading
+    const initialRenderDoneRef = useRef(false);
+
+    // Reset khi đổi ticker
+    useEffect(() => {
+        initialRenderDoneRef.current = false;
+    }, [ticker]);
+
     // Ghép history + today thành 1 mảng duy nhất, sắp xếp theo date
     const mergedData = useMemo(() => {
         const history = historyData || [];
         const today = todayData || [];
         const all = [...history, ...today];
+
+        if (all.length === 0) return [];
 
         // Sort theo date tăng dần
         all.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -199,13 +236,22 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
         );
     }, [historyData, todayData]);
 
-    const error = historyError || todayError;
+    const error = historyError || (todayError ? todayError.message : null);
 
-    // Cần cả history VÀ today data mới hiển thị biểu đồ (giống market index chart)
+    // Lần đầu: cần CẢ history + today data mới render chart
     const hasHistoryData = !isHistoryLoading && Array.isArray(historyData) && historyData.length > 0;
     const hasTodayData = !isTodayLoading && Array.isArray(todayData) && todayData.length > 0;
-    const isDataReady = hasHistoryData && hasTodayData;
-    const isChartLoading = !isDataReady && !error;
+    const isFullDataReady = hasHistoryData && hasTodayData;
+
+    // Đánh dấu đã render lần đầu thành công
+    useEffect(() => {
+        if (isFullDataReady && mergedData.length > 0) {
+            initialRenderDoneRef.current = true;
+        }
+    }, [isFullDataReady, mergedData.length]);
+
+    // Loading: chỉ show skeleton khi chưa từng render thành công VÀ data chưa đủ
+    const isChartLoading = !initialRenderDoneRef.current && !isFullDataReady && !error;
 
     // Render chart content (loading / error / chart)
     const renderChartArea = () => {
@@ -213,7 +259,7 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
             return <ChartSkeleton />;
         }
 
-        if (error && mergedData.length === 0) {
+        if (error && mergedData.length === 0 && !initialRenderDoneRef.current) {
             return (
                 <Box
                     sx={{
@@ -226,13 +272,14 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
                     }}
                 >
                     <Typography color="error">
-                        Không thể tải dữ liệu: {error.message}
+                        Không thể tải dữ liệu: {error}
                     </Typography>
                 </Box>
             );
         }
 
-        if (!isDataReady || mergedData.length === 0) {
+        // Chưa đủ data lần đầu và chưa từng render → skeleton
+        if (!initialRenderDoneRef.current && !isFullDataReady) {
             return <ChartSkeleton />;
         }
 
@@ -246,8 +293,9 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
             showIndicatorsPanel={showIndicatorsPanel}
             showWatchlistPanel={showWatchlistPanel}
             enabledIndicators={enabledIndicators}
-            onToggleIndicator={handleToggleIndicator}
-            onClearAllIndicators={handleClearAllIndicators}
+            onToggleIndicator={toggleIndicator}
+            onClearAllIndicators={clearAll}
+            onResetDefaultIndicators={resetToDefault}
             onCloseIndicatorsPanel={() => setShowIndicatorsPanel(false)}
             onCloseWatchlistPanel={() => setShowWatchlistPanel(false)}
         />;
