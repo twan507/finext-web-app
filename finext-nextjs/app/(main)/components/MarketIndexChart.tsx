@@ -886,7 +886,7 @@ export default function MarketIndexChart({
                         mouseWheel: next,
                         pressedMouseMove: next,
                         horzTouchDrag: next,
-                        vertTouchDrag: false,
+                        vertTouchDrag: next,
                     },
                     handleScale: {
                         axisPressedMouseMove: next,

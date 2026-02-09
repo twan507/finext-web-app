@@ -644,7 +644,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   };
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: theme.palette.background.default }}>
+    <Box sx={{ display: 'flex', minHeight: '100dvh', bgcolor: theme.palette.background.default }}>
       <CssBaseline />
 
       {/* NAV DRAWERS */}
@@ -698,7 +698,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             '& .MuiDrawer-paper': {
               boxSizing: 'border-box',
               width: drawerWidth,
-              height: '100vh',
+              height: '100dvh',
               display: 'flex',
               flexDirection: 'column',
               boxShadow: shadows.appBar,
@@ -716,7 +716,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         sx={{
           flexGrow: 1,
           width: { lg: `calc(100% - ${drawerWidth}px)` },
-          minHeight: '100vh',
+          minHeight: '100dvh',
           display: 'flex',
           flexDirection: 'column',
           minWidth: 0, // Fix flex item not shrinking (chart resize issue)
@@ -998,7 +998,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               bgcolor: theme.palette.background.default,
               display: 'flex',
               flexDirection: 'column',
-              height: `calc(100vh - ${layoutTokens.appBarHeight}px)`,
+              height: `calc(100dvh - ${layoutTokens.appBarHeight}px)`,
               overflow: 'hidden',
             }}
           >
@@ -1013,7 +1013,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'center',
-                minHeight: `calc(100vh - ${layoutTokens.appBarHeight}px)`,
+                minHeight: `calc(100dvh - ${layoutTokens.appBarHeight}px)`,
                 px: { xs: 1.5, md: 2, lg: 3 }, // Mobile: 12px, Tablet: 16px, Desktop: 24px
               }}
             >

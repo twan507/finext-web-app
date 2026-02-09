@@ -279,7 +279,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                 mouseWheel: true,
                 pressedMouseMove: true,
                 horzTouchDrag: true,
-                vertTouchDrag: false,
+                vertTouchDrag: true,
             },
             handleScale: {
                 axisPressedMouseMove: { time: true, price: true },
