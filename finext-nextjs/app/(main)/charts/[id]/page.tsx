@@ -2,11 +2,12 @@ import { Metadata } from 'next';
 import ChartPageContent from './PageContent';
 
 type Props = {
-    params: { id: string };
+    params: Promise<{ id: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-    const ticker = params.id || 'VNINDEX';
+    const { id } = await params;
+    const ticker = id || 'VNINDEX';
 
     return {
         title: `Biểu đồ ${ticker}`,
@@ -14,8 +15,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
 }
 
-export default function ChartDetailPage({ params }: Props) {
-    const id = params.id || 'VNINDEX';
+export default async function ChartDetailPage({ params }: Props) {
+    const { id } = await params;
+    const ticker = id || 'VNINDEX';
 
-    return <ChartPageContent ticker={id} />;
+    return <ChartPageContent ticker={ticker} />;
 }
