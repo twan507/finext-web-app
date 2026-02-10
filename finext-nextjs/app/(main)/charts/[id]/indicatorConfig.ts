@@ -134,9 +134,9 @@ const LW_FIBO: LightweightLineOptions = {
 
 /** POC: đường bậc thang, nét chấm, width 2 */
 const LW_POC: LightweightLineOptions = {
-    lineWidth: 2,
+    lineWidth: 1,
     lineType: LINE_TYPE.WithSteps,
-    lineStyle: LINE_STYLE.Dashed,
+    lineStyle: LINE_STYLE.Dotted,
     priceLineVisible: false,
     lastValueVisible: true,
 };

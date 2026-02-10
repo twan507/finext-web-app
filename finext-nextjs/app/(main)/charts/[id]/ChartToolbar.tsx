@@ -210,7 +210,7 @@ export default function ChartToolbar({
                                 ),
                             }}
                             sx={{
-                                width: 110,
+                                width: 145,
                                 '& .MuiOutlinedInput-root': {
                                     fontSize: getResponsiveFontSize('xs'),
                                     height: 32,

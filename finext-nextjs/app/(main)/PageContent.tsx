@@ -536,6 +536,7 @@ export default function HomeContent() {
                         key={indexSymbol}
                         symbol={indexSymbol}
                         itdData={itdAllData[indexSymbol] || []}
+                        todayData={todayAllData[indexSymbol] || []}
                         hideOnTablet={HIDDEN_ON_TABLET.includes(indexSymbol)}
                     />
                 ))}

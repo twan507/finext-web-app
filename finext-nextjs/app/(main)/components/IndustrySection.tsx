@@ -568,23 +568,34 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                         }
                     }
 
-                    // Build series HTML
+                    // Build series HTML - Sort by value (descending) for better readability
                     let seriesHTML = '';
-                    series.forEach((seriesData: any, idx: number) => {
-                        const value = seriesData[dataPointIndex];
-                        if (value !== null && value !== undefined) {
-                            const seriesName = w.globals.seriesNames[idx];
-                            const color = w.globals.colors[idx];
-                            const formattedValue = `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
 
-                            seriesHTML += `
-                                <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0;">
-                                    <span style="width: 10px; height: 10px; border-radius: 50%; background: ${color};"></span>
-                                    <span style="flex: 1; font-size: 12px;">${seriesName}:</span>
-                                    <span style="font-weight: 600; font-size: 12px;">${formattedValue}</span>
-                                </div>
-                            `;
-                        }
+                    // Collect all series with their values
+                    const seriesWithValues = series.map((seriesData: any, idx: number) => {
+                        const value = seriesData[dataPointIndex];
+                        return {
+                            idx,
+                            value,
+                            seriesName: w.globals.seriesNames[idx],
+                            color: w.globals.colors[idx]
+                        };
+                    }).filter((item: any) => item.value !== null && item.value !== undefined);
+
+                    // Sort by value descending (highest to lowest)
+                    seriesWithValues.sort((a: any, b: any) => b.value - a.value);
+
+                    // Build HTML in sorted order
+                    seriesWithValues.forEach(({ value, seriesName, color }: any) => {
+                        const formattedValue = `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+
+                        seriesHTML += `
+                            <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0;">
+                                <span style="width: 10px; height: 10px; border-radius: 50%; background: ${color};"></span>
+                                <span style="flex: 1; font-size: 12px;">${seriesName}:</span>
+                                <span style="font-weight: 600; font-size: 12px;">${formattedValue}</span>
+                            </div>
+                        `;
                     });
 
                     const bgColor = theme.palette.mode === 'dark' ? 'rgba(26, 26, 26, 0.9)' : 'rgba(255, 255, 255, 0.9)';

@@ -89,11 +89,15 @@ const INITIAL_RIGHT_MARGIN = 5; // Khoảng trống bên phải nến cuối khi
 const INDEX_TICKERS = new Set([
     'HNX30', 'HNXINDEX', 'UPINDEX', 'VN30', 'VNINDEX', 'VNXALL',
     'VN100F1M', 'VN100F1Q', 'VN100F2M', 'VN100F2Q', 'VN30F1M',
-    'VN30F1Q', 'VN30F2M', 'VN30F2Q', 'FNXINDEX', 'FNX100', 'BANLE',
-    'BDS', 'CHUNGKHOAN', 'KIMLOAI', 'XAYDUNG', 'CONGNGHIEP', 'VTDK',
+    'VN30F1Q', 'VN30F2M', 'VN30F2Q', 'FNXINDEX', 'FNX100',
+    'VUOTTROI', 'ONDINH', 'SUKIEN', 'LARGECAP', 'MIDCAP', 'SMALLCAP',
+]);
+
+// Danh sách các industry tickers (đồng bộ với BE)
+const INDUSTRY_TICKERS = new Set([
+    'BANLE', 'BDS', 'CHUNGKHOAN', 'KIMLOAI', 'XAYDUNG', 'CONGNGHIEP', 'VTDK',
     'XUATKHAU', 'HOACHAT', 'KHOANGSAN', 'BDSKCN', 'CONGNGHE',
     'NGANHANG', 'NONGSAN', 'TAICHINH', 'DULICH', 'TIENICH', 'YTE',
-    'VUOTTROI', 'ONDINH', 'SUKIEN', 'LARGECAP', 'MIDCAP', 'SMALLCAP',
 ]);
 
 export default function CandlestickChart({ data, ticker, chartType, showIndicators, showVolume, showLegend, showIndicatorsPanel, showWatchlistPanel, enabledIndicators, onToggleIndicator, onClearAllIndicators, onResetDefaultIndicators, onCloseIndicatorsPanel, onCloseWatchlistPanel }: CandlestickChartProps) {
@@ -338,7 +342,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
 
                     const series = chart.addSeries(LineSeries, {
                         color: lwOpts.color ?? resolvedColor,
-                        lineWidth: lwOpts.lineWidth ?? 1,
+                        lineWidth: isMobile ? 1 : (lwOpts.lineWidth ?? 1),
                         lineStyle: lwOpts.lineStyle ?? LineStyle.Solid,
                         lineType: lwOpts.lineType ?? LineType.Simple,
                         priceLineVisible: lwOpts.priceLineVisible ?? false,
@@ -420,7 +424,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
 
                     const series = chart.addSeries(LineSeries, {
                         color: lwOpts.color ?? resolvedColor,
-                        lineWidth: lwOpts.lineWidth ?? 1,
+                        lineWidth: isMobile ? 1 : (lwOpts.lineWidth ?? 1),
                         lineStyle: lwOpts.lineStyle ?? LineStyle.Solid,
                         lineType: lwOpts.lineType ?? LineType.Curved,
                         priceLineVisible: lwOpts.priceLineVisible ?? false,
@@ -709,11 +713,11 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                                 pointerEvents: 'none',
                                 display: 'flex',
                                 flexDirection: 'column',
-                                gap: 0.25,
+                                gap: 0.15,
                             }}
                         >
                             {/* Row 1: Ticker name + OHLC — wraps as groups */}
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', rowGap: 0.15 }}>
                                 {/* Group 1: Ticker name */}
                                 <Typography
                                     sx={{
@@ -725,10 +729,14 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                                         flexBasis: '100%',
                                     }}
                                 >
-                                    {INDEX_TICKERS.has(ticker.toUpperCase()) ? `CHỈ SỐ ${tickerName}` : tickerName}
+                                    {INDUSTRY_TICKERS.has(ticker.toUpperCase())
+                                        ? `Chỉ số ngành ${tickerName}`
+                                        : INDEX_TICKERS.has(ticker.toUpperCase())
+                                            ? `Chỉ số ${tickerName}`
+                                            : tickerName}
                                 </Typography>
                                 {/* Group 2: Timeframe + OHLC values — each pair wraps as a unit */}
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', rowGap: 0.15 }}>
                                     <Typography
                                         sx={{
                                             fontSize: getResponsiveFontSize('xs'),
@@ -816,7 +824,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                                 if (activeInds.length === 0) return null;
 
                                 return (
-                                    <Box key={group.key} sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                                    <Box key={group.key} sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', rowGap: 0.15 }}>
                                         {activeInds.map((ind) => {
                                             const color = getIndicatorColor(ind, isDark);
                                             const raw = crosshairRawData as any;
@@ -903,7 +911,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                             })}
 
                             {/* Volume row (always last) — includes Volume MA if enabled */}
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', rowGap: 0.15 }}>
                                 <Typography
                                     sx={{
                                         fontSize: getResponsiveFontSize('xs'),

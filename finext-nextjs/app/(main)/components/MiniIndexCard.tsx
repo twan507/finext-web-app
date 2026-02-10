@@ -21,6 +21,7 @@ interface RawMarketData {
 interface MiniIndexCardProps {
     symbol: string;
     itdData: RawMarketData[]; // Data được truyền từ parent (page.tsx) qua SSE
+    todayData?: RawMarketData[]; // Fallback data từ today_index khi chưa có ITD
     hideOnTablet?: boolean; // Ẩn card ở tablet (md breakpoint)
 }
 
@@ -62,7 +63,7 @@ interface ChartDataPoint {
     dateStr: string;
 }
 
-export default function MiniIndexCard({ symbol, itdData, hideOnTablet = false }: MiniIndexCardProps) {
+export default function MiniIndexCard({ symbol, itdData, todayData = [], hideOnTablet = false }: MiniIndexCardProps) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
 
@@ -73,8 +74,22 @@ export default function MiniIndexCard({ symbol, itdData, hideOnTablet = false }:
     const [diff, setDiff] = useState<number | null>(null);
     const [pctChange, setPctChange] = useState<number | null>(null);
 
-    // Check if data is loading (itdData is empty array initially)
-    const isLoading = itdData.length === 0;
+    const hasItdData = itdData.length > 0;
+    const hasTodayData = todayData.length > 0;
+
+    // Check if data is loading (cả itdData và todayData đều chưa có)
+    const isLoading = !hasItdData && !hasTodayData;
+
+    // Dùng todayData làm fallback khi chưa có itdData
+    useEffect(() => {
+        if (!hasItdData && hasTodayData) {
+            const lastRecord = todayData[todayData.length - 1];
+            if (lastRecord?.ticker_name) setTickerName(lastRecord.ticker_name);
+            setLastPrice(lastRecord.close);
+            setDiff(lastRecord.diff ?? null);
+            setPctChange(lastRecord.pct_change != null ? lastRecord.pct_change * 100 : null);
+        }
+    }, [hasItdData, hasTodayData, todayData]);
 
     // Process itdData from props (SSE data passed from parent)
     useEffect(() => {
@@ -206,7 +221,7 @@ export default function MiniIndexCard({ symbol, itdData, hideOnTablet = false }:
     };
 
     const formatDiff = (num: number | null | undefined): string => {
-        if (num == null) return '--';
+        if (num == null) return '0.00';
         const absNum = Math.abs(num);
         return absNum >= 1000
             ? absNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -214,7 +229,7 @@ export default function MiniIndexCard({ symbol, itdData, hideOnTablet = false }:
     };
 
     const formatPctChange = (num: number | null | undefined): string => {
-        if (num == null) return '--%';
+        if (num == null) return '0.00%';
         return `${Math.abs(num).toFixed(2)}%`;
     };
 

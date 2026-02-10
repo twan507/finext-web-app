@@ -272,12 +272,17 @@ export default function MarketIndexChart({
     const savedLogicalRangeRef = useRef<{ from: number; to: number } | null>(null);
     const prevTimeRangeRef = useRef<TimeRange>(timeRange);
     const prevSymbolRef = useRef<string>(symbol);
+    const prevDataLengthRef = useRef<number>(0);
+    const hasSetInitialRangeRef = useRef<boolean>(false);
 
     // timeRange is now controlled by parent via props
     const [chartType, setChartType] = useState<ChartType>('candlestick');
     const [currentPrice, setCurrentPrice] = useState<number>(0);
     const [priceChange, setPriceChange] = useState<number>(0);
     const [percentChange, setPercentChange] = useState<number>(0);
+
+    // Ref phụ thuộc vào chartType state, đặt sau khai báo
+    const prevChartTypeRef = useRef<ChartType>(chartType);
 
     // Theme-based colors
     const isDarkMode = theme.palette.mode === 'dark';
@@ -495,44 +500,18 @@ export default function MarketIndexChart({
         };
     }, [timeRange, height, colors]);
 
-    // Update series when chartType changes (preserve view state)
-    const updateSeries = useCallback(() => {
-        if (!chartRef.current) return;
-
-        const chart = chartRef.current;
-        const isIntraday = timeRange === '1D';
-        const { areaData, candleData, volumeData, lastDiff, lastPctChange } = isIntraday ? intradayData : eodData;
-
-        // Check if we have data to display
-        if (areaData.length === 0 && candleData.length === 0) {
-            return;
-        }
-
-        // Save current visible range before removing series
-        let savedLogicalRange = null;
-        try {
-            savedLogicalRange = chart.timeScale().getVisibleLogicalRange();
-        } catch {
-            // Chart may not have data yet
-        }
-
+    // Helper: Tạo mới series (khi chart type thay đổi hoặc lần đầu)
+    const createSeries = useCallback((chart: IChartApi, effectiveChartType: ChartType) => {
         // Remove existing series if any
         if (seriesRef.current) {
             chart.removeSeries(seriesRef.current);
             seriesRef.current = null;
         }
-
-        // Remove volume series if exists
         if (volumeSeriesRef.current) {
             chart.removeSeries(volumeSeriesRef.current);
             volumeSeriesRef.current = null;
         }
 
-        // For intraday data, only allow area chart (no candlestick)
-        // For EOD data, allow both area and candlestick
-        const effectiveChartType = isIntraday ? 'area' : chartType;
-
-        // Add new series based on chart type
         if (effectiveChartType === 'area') {
             const areaSeries = chart.addSeries(AreaSeries, {
                 lineColor: colors.line,
@@ -544,55 +523,18 @@ export default function MarketIndexChart({
                 crosshairMarkerBorderColor: colors.line,
                 crosshairMarkerBackgroundColor: colors.chartBackground
             });
-
-            try {
-                areaSeries.setData(areaData);
-            } catch (err) {
-                console.warn('[MarketIndexChart] Error setting area data:', err);
-            }
             seriesRef.current = areaSeries;
 
-            // Add volume histogram series for area chart (same color as line, with opacity)
             const volumeSeries = chart.addSeries(HistogramSeries, {
-                priceFormat: {
-                    type: 'volume'
-                },
+                priceFormat: { type: 'volume' },
                 priceScaleId: 'volume',
-                color: colors.line + '40' // 25% opacity - mờ mờ
+                color: colors.line + '40'
             });
-
-            // Apply volume data with same color for all bars
-            const volumeWithColors: VolumeData[] = volumeData.map((vol) => ({
-                ...vol,
-                color: colors.line + '40' // 25% opacity
-            }));
-
-            try {
-                volumeSeries.setData(volumeWithColors);
-            } catch (err) {
-                console.warn('[MarketIndexChart] Error setting volume data:', err);
-            }
             volumeSeriesRef.current = volumeSeries;
 
-            // Configure volume price scale (bottom 20% of chart)
             chart.priceScale('volume').applyOptions({
-                scaleMargins: {
-                    top: 0.8,
-                    bottom: 0
-                }
+                scaleMargins: { top: 0.8, bottom: 0 }
             });
-
-            // Update price info from data
-            if (areaData.length > 0) {
-                const lastPrice = areaData[areaData.length - 1].value;
-                // Sử dụng lastDiff và lastPctChange từ API thay vì tự tính
-                const change = lastDiff ?? 0;
-                const percent = (lastPctChange ?? 0) * 100; // Nhân 100 vì API trả về số thập phân
-
-                setCurrentPrice(lastPrice);
-                setPriceChange(parseFloat(change.toFixed(2)));
-                setPercentChange(parseFloat(percent.toFixed(2)));
-            }
         } else {
             const candlestickSeries = chart.addSeries(CandlestickSeries, {
                 upColor: colors.upColor,
@@ -601,138 +543,185 @@ export default function MarketIndexChart({
                 wickUpColor: colors.upColor,
                 wickDownColor: colors.downColor
             });
-
-            try {
-                candlestickSeries.setData(candleData);
-            } catch (err) {
-                console.warn('[MarketIndexChart] Error setting candlestick data:', err);
-            }
             seriesRef.current = candlestickSeries;
 
-            // Add volume histogram series
             const volumeSeries = chart.addSeries(HistogramSeries, {
-                priceFormat: {
-                    type: 'volume'
-                },
+                priceFormat: { type: 'volume' },
                 priceScaleId: 'volume'
             });
-
-            // Apply volume data with colors based on candle direction
-            const volumeWithColors: VolumeData[] = volumeData.map((vol, index) => ({
-                ...vol,
-                color: candleData[index].close >= candleData[index].open
-                    ? colors.upColor + '80'  // 50% opacity for up
-                    : colors.downColor + '80' // 50% opacity for down
-            }));
-
-            try {
-                volumeSeries.setData(volumeWithColors);
-            } catch (err) {
-                console.warn('[MarketIndexChart] Error setting volume data:', err);
-            }
             volumeSeriesRef.current = volumeSeries;
 
-            // Configure volume price scale (bottom 20% of chart)
             chart.priceScale('volume').applyOptions({
-                scaleMargins: {
-                    top: 0.8,
-                    bottom: 0
-                }
+                scaleMargins: { top: 0.8, bottom: 0 }
             });
+        }
+    }, [colors]);
 
-            // Update price info from data
-            if (candleData.length > 0) {
-                const lastCandle = candleData[candleData.length - 1];
-                // Sử dụng lastDiff và lastPctChange từ API thay vì tự tính
-                const change = lastDiff ?? 0;
-                const percent = (lastPctChange ?? 0) * 100; // Nhân 100 vì API trả về số thập phân
+    // Update data on existing series — KHÔNG remove/recreate series → không giật hình
+    const updateSeriesData = useCallback(() => {
+        if (!chartRef.current || !seriesRef.current || !volumeSeriesRef.current) return;
 
-                setCurrentPrice(lastCandle.close);
-                setPriceChange(parseFloat(change.toFixed(2)));
-                setPercentChange(parseFloat(percent.toFixed(2)));
+        const chart = chartRef.current;
+        const isIntraday = timeRange === '1D';
+        const { areaData, candleData, volumeData, lastDiff, lastPctChange } = isIntraday ? intradayData : eodData;
+
+        if (areaData.length === 0 && candleData.length === 0) return;
+
+        const effectiveChartType = isIntraday ? 'area' : chartType;
+
+        // Set data trực tiếp lên series đã có, không remove/add lại
+        try {
+            if (effectiveChartType === 'area') {
+                (seriesRef.current as ISeriesApi<'Area'>).setData(areaData);
+                const volumeWithColors: VolumeData[] = volumeData.map((vol) => ({
+                    ...vol,
+                    color: colors.line + '40'
+                }));
+                volumeSeriesRef.current.setData(volumeWithColors);
+            } else {
+                (seriesRef.current as ISeriesApi<'Candlestick'>).setData(candleData);
+                const volumeWithColors: VolumeData[] = volumeData.map((vol, index) => ({
+                    ...vol,
+                    color: candleData[index].close >= candleData[index].open
+                        ? colors.upColor + '80'
+                        : colors.downColor + '80'
+                }));
+                volumeSeriesRef.current.setData(volumeWithColors);
             }
+        } catch (err) {
+            console.warn('[MarketIndexChart] Error setting data:', err);
         }
 
-        // Kiểm tra xem timeRange hoặc symbol có thay đổi không
-        // Nếu có, cần reset range theo timeRange đang chọn
+        // Update price info
+        if (effectiveChartType === 'area' && areaData.length > 0) {
+            const lastPrice = areaData[areaData.length - 1].value;
+            const change = lastDiff ?? 0;
+            const percent = (lastPctChange ?? 0) * 100;
+            setCurrentPrice(lastPrice);
+            setPriceChange(parseFloat(change.toFixed(2)));
+            setPercentChange(parseFloat(percent.toFixed(2)));
+        } else if (effectiveChartType === 'candlestick' && candleData.length > 0) {
+            const lastCandle = candleData[candleData.length - 1];
+            const change = lastDiff ?? 0;
+            const percent = (lastPctChange ?? 0) * 100;
+            setCurrentPrice(lastCandle.close);
+            setPriceChange(parseFloat(change.toFixed(2)));
+            setPercentChange(parseFloat(percent.toFixed(2)));
+        }
+    }, [chartType, timeRange, colors, eodData, intradayData]);
+
+    // Combined effect: Initialize chart, manage series, and update data
+    useEffect(() => {
+        // Initialize chart if not exists
+        if (!chartRef.current && chartContainerRef.current) {
+            initChart();
+        }
+        if (!chartRef.current) return;
+
+        const chart = chartRef.current;
+        const isIntraday = timeRange === '1D';
+        const { areaData, candleData } = isIntraday ? intradayData : eodData;
+
+        if (areaData.length === 0 && candleData.length === 0) return;
+
+        const effectiveChartType = isIntraday ? 'area' : chartType;
+
+        // Kiểm tra xem có cần tạo lại series không
         const isTimeRangeChanged = prevTimeRangeRef.current !== timeRange;
         const isSymbolChanged = prevSymbolRef.current !== symbol;
-        // Cũng cần reset nếu chưa có saved range (lần đầu render)
-        const isFirstRender = savedLogicalRangeRef.current === null && !savedLogicalRange;
-        const shouldResetRange = isTimeRangeChanged || isSymbolChanged || isFirstRender;
+        const isChartTypeChanged = prevChartTypeRef.current !== effectiveChartType;
+        const needsNewSeries = !seriesRef.current || isChartTypeChanged;
 
         // Cập nhật refs
+        prevChartTypeRef.current = effectiveChartType;
         prevTimeRangeRef.current = timeRange;
         prevSymbolRef.current = symbol;
 
+        if (needsNewSeries) {
+            // Chart type thay đổi hoặc lần đầu → tạo series mới
+            createSeries(chart, effectiveChartType);
+        }
+
+        // Update data lên series (đã có sẵn hoặc vừa tạo)
+        updateSeriesData();
+
+        // Xử lý visible range
+        const dataLength = effectiveChartType === 'area' ? areaData.length : candleData.length;
+        const isDataGrowth = dataLength > prevDataLengthRef.current && prevDataLengthRef.current > 0;
+        prevDataLengthRef.current = dataLength;
+
+        const shouldResetRange = isTimeRangeChanged || isSymbolChanged || !hasSetInitialRangeRef.current;
+
         if (shouldResetRange) {
-            // Reset range theo timeRange đang chọn (mặc định là 1Y)
+            // Reset range theo timeRange đang chọn
             if (!isIntraday) {
-                // EOD: Set visible range based on timeRange selection
-                const dataLength =
-                    effectiveChartType === 'area' ? areaData.length : candleData.length;
                 const visibleRange = getVisibleRange(timeRange, dataLength);
                 chart.timeScale().setVisibleLogicalRange(visibleRange);
             } else {
-                // ITD: Always fit content to show all intraday data
                 chart.timeScale().fitContent();
             }
-            // Clear saved range khi reset
-            savedLogicalRangeRef.current = null;
-        } else if (savedLogicalRange) {
-            // Chỉ data thay đổi (từ API update) -> restore saved range
+            hasSetInitialRangeRef.current = true;
+            // Save range sau khi chart render xong
+            setTimeout(() => {
+                try {
+                    if (chartRef.current) {
+                        savedLogicalRangeRef.current = chartRef.current.timeScale().getVisibleLogicalRange();
+                    }
+                } catch { /* ignore */ }
+            }, 0);
+        } else if (savedLogicalRangeRef.current) {
+            // Chỉ data thay đổi → giữ nguyên view hiện tại
             try {
-                chart.timeScale().setVisibleLogicalRange(savedLogicalRange);
+                // Nếu data tăng thêm (realtime), lấy range hiện tại từ chart
+                if (isDataGrowth) {
+                    let currentRange: { from: number; to: number } | null = null;
+                    try {
+                        currentRange = chart.timeScale().getVisibleLogicalRange();
+                    } catch { /* ignore */ }
+                    if (currentRange) {
+                        chart.timeScale().setVisibleLogicalRange(currentRange);
+                    } else {
+                        chart.timeScale().setVisibleLogicalRange(savedLogicalRangeRef.current);
+                    }
+                } else {
+                    chart.timeScale().setVisibleLogicalRange(savedLogicalRangeRef.current);
+                }
             } catch {
-                // Fallback nếu range không hợp lệ
+                // Fallback
                 if (!isIntraday) {
-                    const dataLength =
-                        effectiveChartType === 'area' ? areaData.length : candleData.length;
                     const visibleRange = getVisibleRange(timeRange, dataLength);
                     chart.timeScale().setVisibleLogicalRange(visibleRange);
                 } else {
                     chart.timeScale().fitContent();
                 }
             }
+            // Save range sau khi restore
+            setTimeout(() => {
+                try {
+                    if (chartRef.current) {
+                        savedLogicalRangeRef.current = chartRef.current.timeScale().getVisibleLogicalRange();
+                    }
+                } catch { /* ignore */ }
+            }, 50);
         }
+    }, [initChart, createSeries, updateSeriesData, chartType, timeRange, symbol, eodData, intradayData]);
 
-        // Lưu range hiện tại vào ref để sử dụng cho lần update tiếp theo
-        // Dùng setTimeout để đảm bảo chart đã render xong
-        setTimeout(() => {
-            try {
-                if (chartRef.current) {
-                    savedLogicalRangeRef.current = chartRef.current.timeScale().getVisibleLogicalRange();
-                }
-            } catch {
-                // Ignore
-            }
-        }, 0);
-    }, [chartType, timeRange, symbol, colors, isDarkMode, eodData, intradayData]);
-
-    // Combined effect: Initialize chart AND update series when data arrives
+    // Subscribe to visible range changes để liên tục lưu pan/zoom state (theo CandlestickChart)
     useEffect(() => {
-        // Initialize chart if not exists
-        if (!chartRef.current && chartContainerRef.current) {
-            initChart();
-        }
+        if (!chartRef.current) return;
+        const chart = chartRef.current;
 
-        // Check if we have data to display
-        const isIntraday = timeRange === '1D';
-        const { areaData, candleData } = isIntraday ? intradayData : eodData;
-
-        if (areaData.length === 0 && candleData.length === 0) {
-            return;
-        }
-
-        // Update series if chart is ready
-        if (chartRef.current) {
-            updateSeries();
-        }
-
-        return () => {
-            // Cleanup only on unmount or when timeRange changes
+        const handler = () => {
+            try {
+                savedLogicalRangeRef.current = chart.timeScale().getVisibleLogicalRange();
+            } catch { /* ignore */ }
         };
-    }, [initChart, updateSeries, timeRange, eodData, intradayData]);
+
+        chart.timeScale().subscribeVisibleLogicalRangeChange(handler);
+        return () => {
+            chart.timeScale().unsubscribeVisibleLogicalRangeChange(handler);
+        };
+    }, [colors]); // Re-subscribe khi chart được recreate (colors thay đổi → initChart chạy lại)
 
     // Update chart colors when theme changes (without recreating chart)
     useEffect(() => {
@@ -831,6 +820,8 @@ export default function MarketIndexChart({
                 chartRef.current = null;
                 seriesRef.current = null;
                 volumeSeriesRef.current = null;
+                hasSetInitialRangeRef.current = false;
+                prevDataLengthRef.current = 0;
             }
         };
     }, []);
@@ -875,7 +866,8 @@ export default function MarketIndexChart({
                 });
             }
         }
-    }, [timeRange, panZoomEnabled]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [timeRange]);
 
     const handleTogglePanZoom = useCallback(() => {
         setPanZoomEnabled(prev => {

@@ -834,9 +834,7 @@ async def home_history_trend(ticker: Optional[str] = None, **kwargs) -> Dict[str
         "y_trend": 1,
     }
     find_query = {"ticker": ticker} if ticker else {}
-    history_trend_df = await get_collection_data(
-        stock_db, "history_trend", find_query=find_query, projection=projection
-    )
+    history_trend_df = await get_collection_data(stock_db, "history_trend", find_query=find_query, projection=projection)
 
     return history_trend_df.to_dict(orient="records")
 
@@ -859,9 +857,7 @@ async def home_today_trend(ticker: Optional[str] = None, **kwargs) -> Dict[str, 
         "y_trend": 1,
     }
     find_query = {"ticker": ticker} if ticker else {}
-    today_trend_df = await get_collection_data(
-        stock_db, "today_trend", find_query=find_query, projection=projection
-    )
+    today_trend_df = await get_collection_data(stock_db, "today_trend", find_query=find_query, projection=projection)
 
     return today_trend_df.to_dict(orient="records")
 
@@ -873,101 +869,85 @@ async def home_today_trend(ticker: Optional[str] = None, **kwargs) -> Dict[str, 
 # Projection chung cho chart data (history + today)
 CHART_DATA_PROJECTION = {
     "_id": 0,
-
     # Thông tin cơ bản
     "ticker": 1,
     "ticker_name": 1,
     "date": 1,
-
     # OHLCV
     "open": 1,
     "high": 1,
     "low": 1,
     "close": 1,
     "volume": 1,
-
     # Biến động giá
     "diff": 1,
     "pct_change": 1,
-
     # ─── Chỉ báo vẽ LINE trên biểu đồ volume ───
     "vsma5": 1,
     "vsma60": 1,
-
     # ─── Chỉ báo vẽ LINE trên biểu đồ giá ───
-
     # Moving Averages
     "ma5": 1,
     "ma20": 1,
     "ma60": 1,
     "ma120": 1,
     "ma240": 1,
-
     # Open / PH / PL / Pivot — Tuần
     "w_open": 1,
     "w_ph": 1,
     "w_pl": 1,
     "w_pivot": 1,
-
     # Open / PH / PL / Pivot — Tháng
     "m_open": 1,
     "m_ph": 1,
     "m_pl": 1,
     "m_pivot": 1,
-
     # Open / PH / PL / Pivot — Quý
     "q_open": 1,
     "q_ph": 1,
     "q_pl": 1,
     "q_pivot": 1,
-
     # Open / PH / PL / Pivot — Năm
     "y_open": 1,
     "y_ph": 1,
     "y_pl": 1,
     "y_pivot": 1,
-
     # ─── Chỉ báo vẽ AREA (upper/middle/lower) trên biểu đồ giá ───
-
     # Fibonacci — Tuần / Tháng / Quý / Năm
     "w_f382": 1,
     "w_f500": 1,
     "w_f618": 1,
-
     "m_f382": 1,
     "m_f500": 1,
     "m_f618": 1,
-
     "q_f382": 1,
     "q_f500": 1,
     "q_f618": 1,
-
     "y_f382": 1,
     "y_f500": 1,
     "y_f618": 1,
-
     # Volume Profile (VAH / POC / VAL) — Tuần / Tháng / Quý / Năm
     "w_vah": 1,
     "w_poc": 1,
     "w_val": 1,
-
     "m_vah": 1,
     "m_poc": 1,
     "m_val": 1,
-
     "q_vah": 1,
     "q_poc": 1,
     "q_val": 1,
-
     "y_vah": 1,
     "y_poc": 1,
     "y_val": 1,
 }
 
+
 async def chart_ticker(**kwargs) -> Dict[str, Any]:
     """
     Lấy danh sách tất cả ticker từ today_index và today_stock.
     Chỉ trả về ticker và ticker_name để phục vụ tìm kiếm.
+    - INDEX_TICKERS: thêm suffix "CHỈ SỐ"
+    - INDUSTRY_TICKERS: thêm suffix "CHỈ SỐ NGÀNH"
 
     Returns:
         List[Dict] - danh sách các ticker với ticker và ticker_name
@@ -977,12 +957,8 @@ async def chart_ticker(**kwargs) -> Dict[str, Any]:
     ticker_projection = {"_id": 0, "ticker": 1, "ticker_name": 1}
 
     # Query cả today_index và today_stock song song
-    index_task = get_collection_data(
-        stock_db, "today_index", find_query={}, projection=ticker_projection
-    )
-    stock_task = get_collection_data(
-        stock_db, "today_stock", find_query={}, projection=ticker_projection
-    )
+    index_task = get_collection_data(stock_db, "today_index", find_query={}, projection=ticker_projection)
+    stock_task = get_collection_data(stock_db, "today_stock", find_query={}, projection=ticker_projection)
 
     index_df, stock_df = await asyncio.gather(index_task, stock_task)
 
@@ -992,6 +968,24 @@ async def chart_ticker(**kwargs) -> Dict[str, Any]:
     # Loại bỏ duplicates theo ticker, giữ bản đầu tiên (index ưu tiên)
     if not combined.empty:
         combined = combined.drop_duplicates(subset=["ticker"], keep="first")
+
+        # Thêm prefix cho ticker_name dựa trên loại ticker
+        def add_ticker_prefix(row):
+            ticker = row["ticker"]
+            ticker_name = row["ticker_name"]
+
+            if _is_industry_ticker(ticker):
+                # INDUSTRY_TICKERS: "CHỈ SỐ NGÀNH {ticker_name}"
+                return f"Chỉ số ngành {ticker_name}"
+            elif ticker.upper() in INDEX_TICKERS:
+                # INDEX_TICKERS: "CHỈ SỐ {ticker_name}"
+                return f"Chỉ số {ticker_name}"
+            else:
+                # Stock: giữ nguyên
+                return ticker_name
+
+        combined["ticker_name"] = combined.apply(add_ticker_prefix, axis=1)
+
         # Sort theo ticker
         combined = combined.sort_values("ticker").reset_index(drop=True)
 
@@ -1000,13 +994,49 @@ async def chart_ticker(**kwargs) -> Dict[str, Any]:
 
 # Danh sách các index tickers (dùng để phân biệt query từ collection nào)
 INDEX_TICKERS = {
-    "HNX30", "HNXINDEX", "UPINDEX", "VN30", "VNINDEX", "VNXALL",
-    "VN100F1M", "VN100F1Q", "VN100F2M", "VN100F2Q", "VN30F1M",
-    "VN30F1Q", "VN30F2M", "VN30F2Q", "FNXINDEX", "FNX100", "BANLE",
-    "BDS", "CHUNGKHOAN", "KIMLOAI", "XAYDUNG", "CONGNGHIEP", "VTDK",
-    "XUATKHAU", "HOACHAT", "KHOANGSAN", "BDSKCN", "CONGNGHE",
-    "NGANHANG", "NONGSAN", "TAICHINH", "DULICH", "TIENICH", "YTE",
-    "VUOTTROI", "ONDINH", "SUKIEN", "LARGECAP", "MIDCAP", "SMALLCAP",
+    "HNX30",
+    "HNXINDEX",
+    "UPINDEX",
+    "VN30",
+    "VNINDEX",
+    "VNXALL",
+    "VN100F1M",
+    "VN100F1Q",
+    "VN100F2M",
+    "VN100F2Q",
+    "VN30F1M",
+    "VN30F1Q",
+    "VN30F2M",
+    "VN30F2Q",
+    "FNXINDEX",
+    "FNX100",
+    "VUOTTROI",
+    "ONDINH",
+    "SUKIEN",
+    "LARGECAP",
+    "MIDCAP",
+    "SMALLCAP",
+}
+
+INDUSTRY_TICKERS = {
+    "BANLE",
+    "BDS",
+    "CHUNGKHOAN",
+    "KIMLOAI",
+    "XAYDUNG",
+    "CONGNGHIEP",
+    "VTDK",
+    "XUATKHAU",
+    "HOACHAT",
+    "KHOANGSAN",
+    "BDSKCN",
+    "CONGNGHE",
+    "NGANHANG",
+    "NONGSAN",
+    "TAICHINH",
+    "DULICH",
+    "TIENICH",
+    "YTE",
 }
 
 
@@ -1014,7 +1044,14 @@ def _is_index_ticker(ticker: str) -> bool:
     """Kiểm tra ticker có phải là index hay stock."""
     if not ticker:
         return True  # Mặc định lấy từ index nếu không truyền ticker
-    return ticker.upper() in INDEX_TICKERS
+    return ticker.upper() in INDEX_TICKERS or ticker.upper() in INDUSTRY_TICKERS
+
+
+def _is_industry_ticker(ticker: str) -> bool:
+    """Kiểm tra ticker có phải là industry hay không."""
+    if not ticker:
+        return False
+    return ticker.upper() in INDUSTRY_TICKERS
 
 
 async def chart_history_data(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
@@ -1044,9 +1081,7 @@ async def chart_history_data(ticker: Optional[str] = None, **kwargs) -> Dict[str
 
     logger.debug(f"chart_history_data: ticker={ticker}, collection={collection_name}")
 
-    history_df = await get_collection_data(
-        stock_db, collection_name, find_query=find_query, projection=CHART_DATA_PROJECTION
-    )
+    history_df = await get_collection_data(stock_db, collection_name, find_query=find_query, projection=CHART_DATA_PROJECTION)
 
     return history_df.to_dict(orient="records")
 
@@ -1078,9 +1113,7 @@ async def chart_today_data(ticker: Optional[str] = None, **kwargs) -> Dict[str, 
 
     logger.debug(f"chart_today_data: ticker={ticker}, collection={collection_name}")
 
-    today_df = await get_collection_data(
-        stock_db, collection_name, find_query=find_query, projection=CHART_DATA_PROJECTION
-    )
+    today_df = await get_collection_data(stock_db, collection_name, find_query=find_query, projection=CHART_DATA_PROJECTION)
 
     return today_df.to_dict(orient="records")
 
