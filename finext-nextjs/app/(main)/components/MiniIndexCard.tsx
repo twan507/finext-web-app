@@ -119,9 +119,10 @@ export default function MiniIndexCard({ symbol, itdData, todayData = [], hideOnT
     const chipBgColor = getChipBgColor(pctChange ?? 0, theme);
     const arrow = getArrow(pctChange ?? 0);
 
-    // Cố định 58 điểm trên trục x (luôn trống 2 điểm cuối để chấm tròn không bị che)
-    const FIXED_POINTS = 58;
+    // Luôn trống 2 điểm cuối để chấm tròn không bị che
+    const MIN_POINTS = 58;
     const lastDataIndex = chartData.length - 1;
+    const FIXED_POINTS = Math.max(MIN_POINTS, chartData.length + 2);
 
     // Pad data với null ở cuối để cố định x-axis
     const paddedData = useMemo(() => {
@@ -131,7 +132,7 @@ export default function MiniIndexCard({ symbol, itdData, todayData = [], hideOnT
             values.push(null as unknown as number);
         }
         return values;
-    }, [chartData]);
+    }, [chartData, FIXED_POINTS]);
 
     const chartOptions: ApexOptions = useMemo(() => ({
         chart: {
@@ -297,7 +298,7 @@ export default function MiniIndexCard({ symbol, itdData, todayData = [], hideOnT
                     <ReactApexChart options={chartOptions} series={chartSeries} type="area" height={60} width="100%" />
                 ) : (
                     <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled', fontSize: getResponsiveFontSize('sm') }}>
-                        Không có dữ liệu
+                        Đang chờ dữ liệu
                     </Box>
                 )}
             </Box>

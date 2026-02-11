@@ -4,9 +4,7 @@ import React, { useState, useMemo } from 'react';
 import {
     Box,
     Typography,
-    Switch,
     Collapse,
-    Chip,
     IconButton,
     Tooltip,
     useTheme,
@@ -32,6 +30,48 @@ const getCssLineStyle = (lineStyle?: number): string => {
     }
 };
 
+/* ── Radiant Dot indicator (static glow) ──────────── */
+const RadiantDot = ({ active, color }: { active: boolean; color: string }) => (
+    <Box
+        sx={{
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 16,
+            height: 16,
+            flexShrink: 0,
+        }}
+    >
+        {/* Outer glow halo — only when active */}
+        {active && (
+            <Box
+                sx={{
+                    position: 'absolute',
+                    width: 14,
+                    height: 14,
+                    borderRadius: '50%',
+                    backgroundColor: `${color}25`,
+                    boxShadow: `0 0 6px 1px ${color}30`,
+                }}
+            />
+        )}
+        {/* Core dot */}
+        <Box
+            sx={{
+                position: 'relative',
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                backgroundColor: active ? color : 'rgba(128,128,128,0.35)',
+                boxShadow: active ? `0 0 6px 2px ${color}` : 'none',
+                transition: 'all 0.3s',
+                zIndex: 1,
+            }}
+        />
+    </Box>
+);
+
 export interface IndicatorsPanelProps {
     enabledIndicators: Record<string, boolean>;
     onToggleIndicator: (key: string) => void;
@@ -51,7 +91,7 @@ export default function IndicatorsPanel({
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
         const initial: Record<string, boolean> = {};
         INDICATOR_GROUPS.forEach((g) => {
-            initial[g.key] = true;
+            initial[g.key] = g.indicators.some((ind) => enabledIndicators[ind.key]);
         });
         return initial;
     });
@@ -71,24 +111,10 @@ export default function IndicatorsPanel({
         }
     };
 
-    // Collect active indicators grouped by category for summary
-    const activeByGroup = useMemo(() => {
-        const grouped: { groupKey: string; groupName: string; items: { key: string; label: string; color: string }[] }[] = [];
-        for (const group of INDICATOR_GROUPS) {
-            const items: { key: string; label: string; color: string }[] = [];
-            for (const ind of group.indicators) {
-                if (enabledIndicators[ind.key]) {
-                    items.push({ key: ind.key, label: ind.label, color: getIndicatorColor(ind, isDark) });
-                }
-            }
-            if (items.length > 0) {
-                grouped.push({ groupKey: group.key, groupName: group.name, items });
-            }
-        }
-        return grouped;
-    }, [enabledIndicators, isDark]);
-
-    const hasActiveIndicators = activeByGroup.length > 0;
+    const hasActiveIndicators = useMemo(
+        () => Object.values(enabledIndicators).some(Boolean),
+        [enabledIndicators],
+    );
 
     return (
         <Box
@@ -105,8 +131,8 @@ export default function IndicatorsPanel({
             }}
         >
             {/* Header */}
-            <Box sx={{ px: 1.5, py: 1, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography
+            <Box sx={{ px: 1.5, py: 1, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                {/* <Typography
                     sx={{
                         fontSize: getResponsiveFontSize('sm'),
                         fontWeight: fontWeight.semibold,
@@ -114,7 +140,7 @@ export default function IndicatorsPanel({
                     }}
                 >
                     Chỉ báo kỹ thuật
-                </Typography>
+                </Typography> */}
                 {hasActiveIndicators && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
                         {onResetDefault && (
@@ -163,63 +189,6 @@ export default function IndicatorsPanel({
                     </Tooltip>
                 )}
             </Box>
-
-            {/* Active indicators summary — grouped */}
-            {hasActiveIndicators && (
-                <Box
-                    sx={{
-                        px: 1.5,
-                        py: 0.75,
-                        borderBottom: 1,
-                        borderColor: 'divider',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 0.5,
-                    }}
-                >
-                    {activeByGroup.map((group) => (
-                        <Box key={group.groupKey}>
-                            <Typography
-                                sx={{
-                                    fontSize: '0.55rem',
-                                    fontWeight: 600,
-                                    color: 'text.disabled',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: 0.3,
-                                    lineHeight: 1.2,
-                                    mb: 0.25,
-                                }}
-                            >
-                                {group.groupName}
-                            </Typography>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.4 }}>
-                                {group.items.map((ind) => (
-                                    <Chip
-                                        key={ind.key}
-                                        label={ind.label}
-                                        size="small"
-                                        onDelete={() => onToggleIndicator(ind.key)}
-                                        sx={{
-                                            height: 20,
-                                            fontSize: '0.6rem',
-                                            fontWeight: 600,
-                                            borderLeft: `3px solid ${ind.color}`,
-                                            borderRadius: 0.5,
-                                            backgroundColor: isDark
-                                                ? 'rgba(255,255,255,0.06)'
-                                                : 'rgba(0,0,0,0.04)',
-                                            '& .MuiChip-deleteIcon': {
-                                                fontSize: 14,
-                                                marginRight: '2px',
-                                            },
-                                        }}
-                                    />
-                                ))}
-                            </Box>
-                        </Box>
-                    ))}
-                </Box>
-            )}
 
             {INDICATOR_GROUPS.map((group) => {
                 const enabledCount = group.indicators.filter((i) => enabledIndicators[i.key]).length;
@@ -290,91 +259,93 @@ export default function IndicatorsPanel({
                         {/* Group indicators */}
                         <Collapse in={expandedGroups[group.key]}>
                             <Box sx={{ pb: 0.5, borderBottom: 1, borderColor: 'divider' }}>
-                                {group.indicators.map((ind) => (
-                                    <Box
-                                        key={ind.key}
-                                        sx={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            px: 1.5,
-                                            py: 0.25,
-                                            '&:hover': {
-                                                backgroundColor: isDark
-                                                    ? 'rgba(255,255,255,0.03)'
-                                                    : 'rgba(0,0,0,0.02)',
-                                            },
-                                        }}
-                                    >
+                                {group.indicators.map((ind) => {
+                                    const indColor = getIndicatorColor(ind, isDark);
+                                    const isActive = !!enabledIndicators[ind.key];
+
+                                    return (
                                         <Box
+                                            key={ind.key}
+                                            onClick={() => onToggleIndicator(ind.key)}
                                             sx={{
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                gap: 0.75,
-                                                minWidth: 0,
+                                                justifyContent: 'space-between',
+                                                px: 1.5,
+                                                py: 0.5,
+                                                cursor: 'pointer',
+                                                userSelect: 'none',
+                                                transition: 'background-color 0.15s',
+                                                '&:hover': {
+                                                    backgroundColor: isDark
+                                                        ? 'rgba(255,255,255,0.05)'
+                                                        : 'rgba(0,0,0,0.03)',
+                                                },
+                                                '&:active': {
+                                                    backgroundColor: isDark
+                                                        ? 'rgba(255,255,255,0.08)'
+                                                        : 'rgba(0,0,0,0.05)',
+                                                },
                                             }}
                                         >
-                                            {/* Color indicator — reflects actual line/band style */}
-                                            {ind.type === 'band' ? (
-                                                <Box
-                                                    sx={{
-                                                        width: 12,
-                                                        height: 8,
-                                                        borderRadius: 0.5,
-                                                        backgroundColor: `${getIndicatorColor(ind, isDark)}30`,
-                                                        flexShrink: 0,
-                                                    }}
-                                                />
-                                            ) : (
-                                                <Box
-                                                    sx={{
-                                                        width: 16,
-                                                        height: 0,
-                                                        borderBottom: `2px ${getCssLineStyle((ind as LineIndicator | VolumeLineIndicator).lwOptions?.lineStyle)} ${getIndicatorColor(ind, isDark)}`,
-                                                        flexShrink: 0,
-                                                    }}
-                                                />
-                                            )}
-                                            <Typography
+                                            <Box
                                                 sx={{
-                                                    fontSize: getResponsiveFontSize('xs'),
-                                                    color: enabledIndicators[ind.key]
-                                                        ? 'text.primary'
-                                                        : 'text.secondary',
-                                                    whiteSpace: 'nowrap',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 0.75,
+                                                    minWidth: 0,
                                                 }}
                                             >
-                                                {ind.label}
-                                            </Typography>
-                                            <Typography
-                                                sx={{
-                                                    fontSize: '0.55rem',
-                                                    color: 'text.disabled',
-                                                    textTransform: 'uppercase',
-                                                    letterSpacing: 0.3,
-                                                }}
-                                            >
-                                                {getTypeLabel(ind.type)}
-                                            </Typography>
+                                                {/* Color indicator — reflects actual line/band style */}
+                                                {ind.type === 'band' ? (
+                                                    <Box
+                                                        sx={{
+                                                            width: 12,
+                                                            height: 8,
+                                                            borderRadius: 0.5,
+                                                            backgroundColor: `${indColor}30`,
+                                                            flexShrink: 0,
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <Box
+                                                        sx={{
+                                                            width: 16,
+                                                            height: 0,
+                                                            borderBottom: `2px ${getCssLineStyle((ind as LineIndicator | VolumeLineIndicator).lwOptions?.lineStyle)} ${indColor}`,
+                                                            flexShrink: 0,
+                                                        }}
+                                                    />
+                                                )}
+                                                <Typography
+                                                    sx={{
+                                                        fontSize: getResponsiveFontSize('xs'),
+                                                        color: isActive
+                                                            ? 'text.primary'
+                                                            : 'text.secondary',
+                                                        whiteSpace: 'nowrap',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        transition: 'color 0.2s',
+                                                    }}
+                                                >
+                                                    {ind.label}
+                                                </Typography>
+                                                <Typography
+                                                    sx={{
+                                                        fontSize: '0.55rem',
+                                                        color: 'text.disabled',
+                                                        textTransform: 'uppercase',
+                                                        letterSpacing: 0.3,
+                                                    }}
+                                                >
+                                                    {getTypeLabel(ind.type)}
+                                                </Typography>
+                                            </Box>
+                                            <RadiantDot active={isActive} color={indColor} />
                                         </Box>
-                                        <Switch
-                                            size="small"
-                                            checked={!!enabledIndicators[ind.key]}
-                                            onChange={() => onToggleIndicator(ind.key)}
-                                            sx={{
-                                                '& .MuiSwitch-switchBase.Mui-checked': {
-                                                    color: getIndicatorColor(ind, isDark),
-                                                },
-                                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track':
-                                                {
-                                                    backgroundColor: getIndicatorColor(ind, isDark),
-                                                },
-                                            }}
-                                        />
-                                    </Box>
-                                ))}
+                                    );
+                                })}
                             </Box>
                         </Collapse>
                     </Box>

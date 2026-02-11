@@ -55,7 +55,8 @@ export default function IndustryStocksSection({ stockData = [], isLoading = fals
                     <thead>
                         <tr>
                             <th style={{ textAlign: 'left', padding: '4px 0' }}><Skeleton variant="text" width={45} height={20} /></th>
-                            <th style={{ textAlign: 'center', padding: '4px 25px' }}><Skeleton variant="text" width={50} height={20} /></th>
+                            <th style={{ textAlign: 'center', padding: '4px 10px' }}><Skeleton variant="text" width={40} height={20} /></th>
+                            <th style={{ textAlign: 'center', padding: '4px 10px' }}><Skeleton variant="text" width={50} height={20} /></th>
                             <th style={{ textAlign: 'center', padding: '4px 0px' }}><Skeleton variant="text" width={60} height={20} /></th>
                             <th style={{ textAlign: 'right', padding: '4px 0' }}><Skeleton variant="text" width={65} height={20} /></th>
                         </tr>
@@ -64,7 +65,8 @@ export default function IndustryStocksSection({ stockData = [], isLoading = fals
                         {[1, 2, 3, 4, 5].map((i) => (
                             <tr key={i}>
                                 <td style={{ padding: '8px 0' }}><Skeleton variant="text" width={45} height={24} /></td>
-                                <td style={{ padding: '8px 0', textAlign: 'center' }}><Skeleton variant="text" width={55} height={24} sx={{ mx: 'auto' }} /></td>
+                                <td style={{ padding: '8px 0', textAlign: 'center' }}><Skeleton variant="text" width={40} height={24} sx={{ mx: 'auto' }} /></td>
+                                <td style={{ padding: '8px 0', textAlign: 'center' }}><Skeleton variant="text" width={50} height={24} sx={{ mx: 'auto' }} /></td>
                                 <td style={{ padding: '8px 0', textAlign: 'center' }}><Skeleton variant="text" width={35} height={24} sx={{ mx: 'auto' }} /></td>
                                 <td style={{ padding: '8px 0', textAlign: 'right' }}><Skeleton variant="text" width={55} height={24} sx={{ ml: 'auto' }} /></td>
                             </tr>
@@ -154,7 +156,8 @@ export default function IndustryStocksSection({ stockData = [], isLoading = fals
                     <thead>
                         <tr>
                             <th style={{ textAlign: 'left', padding: '4px 0', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Mã cổ phiếu</th>
-                            <th style={{ textAlign: 'center', padding: '4px 25px', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Giá (%)</th>
+                            <th style={{ textAlign: 'center', padding: '4px 15px', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Giá</th>
+                            <th style={{ textAlign: 'center', padding: '4px 10px', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Biến động</th>
                             <th style={{ textAlign: 'center', padding: '4px 0px', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Dòng tiền</th>
                             <th style={{ textAlign: 'right', padding: '4px 0', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Thanh khoản</th>
                         </tr>
@@ -182,6 +185,11 @@ export default function IndustryStocksSection({ stockData = [], isLoading = fals
                                         </Link>
                                     </td>
                                     <td style={{ padding: '8px 0', textAlign: 'center', border: 'none' }}>
+                                        <Typography color="text.primary" sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium }}>
+                                            {stock.close.toFixed(1)}
+                                        </Typography>
+                                    </td>
+                                    <td style={{ padding: '8px 0', textAlign: 'center', border: 'none' }}>
                                         <Typography color={stockColor} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
                                             {(stock.pct_change * 100).toFixed(2)}%
                                         </Typography>
@@ -206,9 +214,9 @@ export default function IndustryStocksSection({ stockData = [], isLoading = fals
     );
 
     // Split industries into 3 columns (6 industries each)
-    const column1Industries = industryGroups.slice(0, 6);
-    const column2Industries = industryGroups.slice(6, 12);
-    const column3Industries = industryGroups.slice(12, 18);
+    const column1Industries = industryGroups.slice(0, 8);
+    const column2Industries = industryGroups.slice(8, 16);
+    const column3Industries = industryGroups.slice(16, 24);
 
     // Create slides for each column
     const column1Slides: Slide[] = column1Industries.map(group => ({
@@ -227,7 +235,7 @@ export default function IndustryStocksSection({ stockData = [], isLoading = fals
     }));
 
     // Mobile: all 18 industries in one carousel
-    const allSlides: Slide[] = industryGroups.slice(0, 18).map(group => ({
+    const allSlides: Slide[] = industryGroups.slice(0, 24).map(group => ({
         id: `all-${group.industryName}`,
         component: renderIndustrySlide(group)
     }));

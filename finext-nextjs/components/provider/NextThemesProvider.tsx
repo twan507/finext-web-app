@@ -8,7 +8,7 @@ export function NextThemesProvider({ children, ...props }: ThemeProviderProps) {
   return (
     <ThemeProvider
       attribute="data-theme" // Sử dụng data-theme
-      defaultTheme="light"     // Light theme làm mặc định
+      defaultTheme="system"     // Mắc định theo hệ thống
       enableSystem           // Bật chế độ hệ thống
       disableTransitionOnChange // Tắt transition để tránh lỗi render
       {...props}

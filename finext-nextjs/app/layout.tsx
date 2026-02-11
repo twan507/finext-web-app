@@ -77,25 +77,88 @@ export const metadata: Metadata = {
   },
 };
 
-// Loading fallback component
+// Loading fallback component - supports light/dark via data-theme & prefers-color-scheme
 function RootLoading() {
   return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      height: '100vh',
-      background: 'var(--background, #fafbfc)'
-    }}>
-      <div style={{
-        width: 40,
-        height: 40,
-        border: '3px solid #e0e0e0',
-        borderTop: '3px solid #8b5cf6',
-        borderRadius: '50%',
-        animation: 'spin 1s linear infinite'
-      }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <div className="root-loading">
+      <div className="root-loading-content">
+        <img
+          src="/finext-icon-trans.png"
+          alt="Finext"
+          width={48}
+          height={48}
+          className="root-loading-logo"
+        />
+        <div className="root-loading-dots">
+          <span />
+          <span />
+          <span />
+          <span />
+        </div>
+      </div>
+      <style>{`
+        .root-loading {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 100vh;
+          width: 100%;
+          background: #fafbfc;
+          transition: background 0.2s;
+        }
+        .root-loading-content {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 16px;
+        }
+        .root-loading-logo {
+          width: 48px;
+          height: auto;
+          animation: logoFadeIn 0.6s ease-out;
+        }
+        .root-loading-dots {
+          display: flex;
+          gap: 6px;
+        }
+        .root-loading-dots > span {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background-color: #8b5cf6;
+          animation: dotBounce 1.4s ease-in-out infinite both;
+        }
+        .root-loading-dots > span:nth-child(1) { animation-delay: -0.32s; }
+        .root-loading-dots > span:nth-child(2) { animation-delay: -0.16s; }
+        .root-loading-dots > span:nth-child(3) { animation-delay: 0s; }
+        .root-loading-dots > span:nth-child(4) { animation-delay: 0.16s; }
+        @keyframes dotBounce {
+          0%, 80%, 100% {
+            transform: scale(0.4);
+            opacity: 0.4;
+          }
+          40% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+        @keyframes logoFadeIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Dark mode via data-theme attribute (set by next-themes) */
+        [data-theme="dark"] .root-loading {
+          background: #0f0f0f;
+        }
+
+        /* Fallback: dark mode via system preference (before next-themes hydrates) */
+        @media (prefers-color-scheme: dark) {
+          html:not([data-theme="light"]) .root-loading {
+            background: #0f0f0f;
+          }
+        }
+      `}</style>
     </div>
   );
 }

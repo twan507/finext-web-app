@@ -71,10 +71,10 @@ function generateChartData(count = 120) {
     const bottom = Math.max(5, Math.min(95, baseTrend + noise));
 
     const isBullish = i > 0 ? bottom >= prevPrice : true;
-    
+
     // Tính độ biến động (Change) để quyết định body và volume
     const change = Math.abs(bottom - prevPrice);
-    
+
     prevPrice = bottom;
 
     // Body height: Biến động càng lớn, thân nến càng dài
@@ -93,10 +93,10 @@ function generateChartData(count = 120) {
 
     // 2. Tính toán Volume (Dynamic theo biến động giá)
     // Nếu giá thay đổi mạnh (change lớn) -> Volume lớn
-    let volBase = 20 + (change * 10); 
-    
+    let volBase = 20 + (change * 10);
+
     // Thêm yếu tố ngẫu nhiên đột biến volume
-    if (Math.random() > 0.9) volBase += 30; 
+    if (Math.random() > 0.9) volBase += 30;
 
     const volNoise = Math.random() * 15 - 7.5;
     const volHeight = Math.max(10, Math.min(90, volBase + volNoise));

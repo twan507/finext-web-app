@@ -51,12 +51,30 @@ export default function TimeframeSelector<T extends string>({
                     px: { xs: 1, sm: 1.5 },
                     fontSize: getResponsiveFontSize('sm'),
                     backgroundColor: 'transparent',
+                    position: 'relative',
+                    borderRadius: '0 !important',
+                    transition: 'color 0.2s',
+                    '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        bottom: 4,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: '60%',
+                        height: '2px',
+                        backgroundColor: 'transparent',
+                        borderRadius: '1px',
+                        transition: 'background-color 0.2s',
+                    },
                     '&:hover': {
                         backgroundColor: 'transparent',
                     },
                     '&.Mui-selected': {
                         backgroundColor: 'transparent',
                         color: (theme.palette as any).component?.chart?.buttonBackgroundActive || theme.palette.primary.main,
+                        '&::after': {
+                            backgroundColor: (theme.palette as any).component?.chart?.buttonBackgroundActive || theme.palette.primary.main,
+                        },
                         '&:hover': {
                             backgroundColor: 'transparent',
                         },

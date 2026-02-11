@@ -2,9 +2,12 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Box, Typography, useTheme, Grid, Checkbox, CircularProgress, alpha, Skeleton, useMediaQuery } from '@mui/material';
+import { Box, Typography, useTheme, Grid, Checkbox, CircularProgress, alpha, Skeleton, useMediaQuery, Button, Tooltip, Stack } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import DeselectIcon from '@mui/icons-material/Deselect';
+import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
+import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
 import { getResponsiveFontSize, borderRadius, transitions, fontWeight } from 'theme/tokens';
 import { apiClient } from 'services/apiClient';
 import type { RawMarketData } from './MarketIndexChart';
@@ -46,8 +49,8 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
     // Ngành đang được chọn để vẽ chart bên trái
     const [selectedTickers, setSelectedTickers] = useState<string[]>([]);
 
-    // Shared Time range cho cả chart và list - Mặc định là 1M
-    const [timeRange, setTimeRange] = useState<TimeRange>('1M');
+    // Shared Time range cho cả chart và list - Mặc định là 1D
+    const [timeRange, setTimeRange] = useState<TimeRange>('1D');
 
     // Dữ liệu hiển thị trên chart (Line Chart)
     const [chartSeries, setChartSeries] = useState<{ name: string; data: { x: number; y: number }[] }[]>([]);
@@ -70,6 +73,9 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
     // Track if all history has been fetched
     const [hasFetchedAllHistory, setHasFetchedAllHistory] = useState(false);
 
+    // Show all industries or just top 7 (4 top + 3 bottom)
+    const [showAll, setShowAll] = useState(false);
+
     // ========== PROCESS TODAY DATA FROM PROPS ==========
     useEffect(() => {
         if (!todayAllData) return;
@@ -87,9 +93,11 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
         const sorted = industries.sort((a, b) => (b.pct_change || 0) - (a.pct_change || 0));
         setAllIndustries(sorted);
 
-        // Nếu chưa có selectedTickers (lần đầu load), chọn top 5
+        // Nếu chưa có selectedTickers (lần đầu load), chọn 5 ngành (3 top tăng + 2 top giảm)
         if (isInitialLoadRef.current && sorted.length > 0) {
-            const initialTickers = sorted.slice(0, 5).map(item => item.ticker);
+            const topGainers = sorted.slice(0, 3).map(item => item.ticker);
+            const topLosers = sorted.slice(-2).reverse().map(item => item.ticker);
+            const initialTickers = [...topGainers, ...topLosers];
             isInitialLoadRef.current = false;
             setSelectedTickers(initialTickers);
         }
@@ -420,9 +428,8 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
             }
         };
 
-        // Unified logic: X is always index, so we always look up timestamp
-        let tickAmount = isMobile ? 6 : 10;
-        if (timeRange === '1W') tickAmount = isMobile ? 6 : 7;
+        // Fixed tick count for consistent spacing across all timeranges
+        const tickAmount = isMobile ? 4 : 5;
 
         return {
             ...baseConfig,
@@ -633,11 +640,28 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
         };
     }, [theme, timeRange, getXAxisConfig, chartColors, chartSeries]);
 
+    // Filtered list: showAll → all industries, collapsed → default 10 (5 top + 5 bottom)
+    const displayedList = useMemo(() => {
+        if (showAll || listSeries.length <= 10) return listSeries;
+        const topGainers = listSeries.slice(0, 5);
+        const topLosers = listSeries.slice(-5);
+        return [...topGainers, ...topLosers];
+    }, [listSeries, showAll]);
+
     // Helper for Bar Width
     const maxListValue = useMemo(() => {
-        if (listSeries.length === 0) return 0;
-        return Math.max(...listSeries.map(i => Math.abs(i.value)));
-    }, [listSeries]);
+        if (displayedList.length === 0) return 0;
+        return Math.max(...displayedList.map(i => Math.abs(i.value)));
+    }, [displayedList]);
+
+    // Dynamic height: actual row height includes padding (p:0.25 = 4px) + content (~20px) + gap (0.25 = 2px)
+    const ROW_HEIGHT = 26;
+    const MIN_SECTION_HEIGHT = 280;
+    const sectionMinHeight = useMemo(() => {
+        const gap = 2; // gap: 0.25 = 2px
+        const contentHeight = displayedList.length * ROW_HEIGHT + Math.max(0, displayedList.length - 1) * gap;
+        return Math.max(MIN_SECTION_HEIGHT, contentHeight);
+    }, [displayedList.length]);
 
     return (
         <Box>
@@ -657,141 +681,181 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
             </Box>
 
             {/* SEPARATE TOOLBAR SECTION for Time Toggles (Above Content) */}
-            <Box sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                mb: 2,
-                flexWrap: 'wrap',
-                gap: 1
-            }}>
-                {/* Left: Deselect All */}
-                <Typography
-                    variant="body2"
-                    onClick={() => setSelectedTickers([])}
-                    sx={{
-                        cursor: 'pointer',
-                        color: theme.palette.text.secondary,
-                        '&:hover': { color: theme.palette.text.primary, textDecoration: 'underline' }
-                    }}
-                >
-                    Bỏ chọn tất cả
-                </Typography>
+            <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}
+            >
+                {/* Left: Deselect + Expand/Collapse */}
+                <Stack direction="row" spacing={1} alignItems="center">
+                    <Button
+                        onClick={() => setShowAll(prev => !prev)}
+                        size="small"
+                        startIcon={showAll ? <UnfoldLessIcon sx={{ fontSize: 18 }} /> : <UnfoldMoreIcon sx={{ fontSize: 18 }} />}
+                        sx={{
+                            color: showAll
+                                ? ((theme.palette as any).component?.chart?.buttonBackgroundActive || theme.palette.primary.main)
+                                : theme.palette.text.secondary,
+                            backgroundColor: (theme.palette as any).component?.chart?.buttonBackground || alpha(theme.palette.text.primary, 0.05),
+                            border: 'none',
+                            borderRadius: 2,
+                            height: 34,
+                            px: isMobile ? 1 : 1.5,
+                            minWidth: isMobile ? 34 : 'auto',
+                            textTransform: 'none',
+                            fontSize: getResponsiveFontSize('sm').md,
+                            fontWeight: fontWeight.medium,
+                            whiteSpace: 'nowrap',
+                            '& .MuiButton-startIcon': isMobile ? { mr: 0 } : {},
+                            '&:hover': {
+                                backgroundColor: (theme.palette as any).component?.chart?.buttonBackgroundHover || alpha(theme.palette.text.primary, 0.1),
+                            },
+                        }}
+                    >
+                        {!isMobile && (showAll ? 'Thu gọn' : 'Mở rộng')}
+                    </Button>
 
+                    <Button
+                        onClick={() => setSelectedTickers([])}
+                        size="small"
+                        startIcon={<DeselectIcon sx={{ fontSize: 18 }} />}
+                        sx={{
+                            color: theme.palette.text.secondary,
+                            backgroundColor: (theme.palette as any).component?.chart?.buttonBackground || alpha(theme.palette.text.primary, 0.05),
+                            border: 'none',
+                            borderRadius: 2,
+                            height: 34,
+                            px: isMobile ? 1 : 1.5,
+                            minWidth: isMobile ? 34 : 'auto',
+                            textTransform: 'none',
+                            fontSize: getResponsiveFontSize('sm').md,
+                            fontWeight: fontWeight.medium,
+                            whiteSpace: 'nowrap',
+                            '& .MuiButton-startIcon': isMobile ? { mr: 0 } : {},
+                            '&:hover': {
+                                backgroundColor: (theme.palette as any).component?.chart?.buttonBackgroundHover || alpha(theme.palette.text.primary, 0.1),
+                            },
+                        }}
+                    >
+                        {!isMobile && 'Bỏ chọn'}
+                    </Button>
+                </Stack>
+
+                {/* Right: Timeframe */}
                 <TimeframeSelector
                     value={timeRange}
                     onChange={handleTimeRangeChange}
                     options={['1D', '1W', '1M', '3M', '6M', '1Y', 'YTD']}
                 />
-            </Box>
+            </Stack>
 
             <Grid container spacing={3} sx={{ alignItems: 'stretch' }}>
 
                 {/* LEFT: LIST (Checkbox List) */}
                 <Grid size={{ xs: 12, md: 6, lg: 5 }} sx={{ display: 'flex' }}>
                     <Box sx={{
-                        flex: 1,
                         display: 'flex',
                         flexDirection: 'column',
-                        minHeight: 350,
+                        justifyContent: 'space-between',
+                        width: '100%',
+                        height: sectionMinHeight,
+                        transition: 'height 0.3s ease',
+                        overflow: 'hidden',
                     }}>
-                        {/* List Items */}
-                        {/* List Items */}
-                        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25, overflowY: 'auto' }}>
-                            {(listSeries.length === 0 || (timeRange !== '1D' && isLoadingHistory)) ? (
-                                // Skeleton loading cho list
-                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                    {[...Array(10)].map((_, i) => (
-                                        <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 0.5 }}>
-                                            <Skeleton variant="rectangular" width={20} height={20} sx={{ borderRadius: 0.5 }} />
-                                            <Skeleton variant="text" width={140} />
-                                            <Skeleton variant="text" width={50} />
-                                            <Skeleton variant="rectangular" sx={{ flex: 1, height: 16, borderRadius: 1 }} />
-                                        </Box>
-                                    ))}
-                                </Box>
-                            ) : (
-                                listSeries.map((item) => {
-                                    // Calculate selection and color
-                                    const selectionIndex = selectedTickers.indexOf(item.ticker);
-                                    const isSelected = selectionIndex !== -1;
-                                    // Use the same color logic as chartSeries: color based on index in selectedTickers
-                                    const dotColor = isSelected
-                                        ? chartColors[selectionIndex % chartColors.length]
-                                        : 'transparent';
+                        {(listSeries.length === 0 || (timeRange !== '1D' && isLoadingHistory)) ? (
+                            // Skeleton loading cho list
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                {[...Array(10)].map((_, i) => (
+                                    <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 0.5 }}>
+                                        <Skeleton variant="rectangular" width={20} height={20} sx={{ borderRadius: 0.5 }} />
+                                        <Skeleton variant="text" width={140} />
+                                        <Skeleton variant="text" width={50} />
+                                        <Skeleton variant="rectangular" sx={{ flex: 1, height: 16, borderRadius: 1 }} />
+                                    </Box>
+                                ))}
+                            </Box>
+                        ) : (
+                            displayedList.map((item) => {
+                                // Calculate selection and color
+                                const selectionIndex = selectedTickers.indexOf(item.ticker);
+                                const isSelected = selectionIndex !== -1;
+                                // Use the same color logic as chartSeries: color based on index in selectedTickers
+                                const dotColor = isSelected
+                                    ? chartColors[selectionIndex % chartColors.length]
+                                    : 'transparent';
 
-                                    const val = item.value;
-                                    const isPositive = val >= 0;
-                                    const barColor = isPositive ? theme.palette.trend.up : theme.palette.trend.down;
-                                    const widthPct = maxListValue > 0 ? (Math.abs(val) / maxListValue) * 100 : 0;
+                                const val = item.value;
+                                const isPositive = val >= 0;
+                                const barColor = isPositive ? theme.palette.trend.up : theme.palette.trend.down;
+                                const widthPct = maxListValue > 0 ? (Math.abs(val) / maxListValue) * 100 : 0;
 
-                                    return (
+                                return (
+                                    <Box
+                                        key={item.ticker}
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 1.5,
+                                            p: 0.25, // Reduced padding (was 0.5)
+                                            borderRadius: 2
+                                        }}
+                                    >
+                                        {/* Custom Round "Checkbox" */}
                                         <Box
-                                            key={item.ticker}
+                                            onClick={() => handleToggleIndustry(item.ticker)}
                                             sx={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 1.5,
-                                                p: 0.25, // Reduced padding (was 0.5)
-                                                borderRadius: 2
+                                                width: 14,
+                                                height: 14,
+                                                borderRadius: '50%',
+                                                border: `2px solid ${isSelected ? dotColor : theme.palette.divider}`,
+                                                bgcolor: isSelected ? dotColor : 'transparent',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s',
+                                                flexShrink: 0
                                             }}
+                                        />
+
+                                        {/* Name with HREF placeholder handling */}
+                                        <Typography
+                                            component="a"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                // Placeholder for href
+                                                // console.log("Navigate to", item.ticker);
+                                            }}
+                                            href={`#${item.ticker}`}
+                                            sx={{
+                                                fontSize: getResponsiveFontSize('md'),
+                                                flex: 1, // Allow text to take available space
+                                                fontWeight: fontWeight.medium,
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                textDecoration: 'none',
+                                                color: isSelected ? dotColor : 'inherit',
+                                                cursor: 'pointer',
+                                                '&:hover': {
+                                                    textDecoration: 'underline'
+                                                }
+                                            }}
+                                            title={item.tickerName}
                                         >
-                                            {/* Custom Round "Checkbox" */}
-                                            <Box
-                                                onClick={() => handleToggleIndustry(item.ticker)}
-                                                sx={{
-                                                    width: 14,
-                                                    height: 14,
-                                                    borderRadius: '50%',
-                                                    border: `2px solid ${isSelected ? dotColor : theme.palette.divider}`,
-                                                    bgcolor: isSelected ? dotColor : 'transparent',
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s',
-                                                    flexShrink: 0
-                                                }}
-                                            />
+                                            {item.tickerName}
+                                        </Typography>
 
-                                            {/* Name with HREF placeholder handling */}
-                                            <Typography
-                                                component="a"
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    // Placeholder for href
-                                                    // console.log("Navigate to", item.ticker);
-                                                }}
-                                                href={`#${item.ticker}`}
-                                                sx={{
-                                                    fontSize: getResponsiveFontSize('md'),
-                                                    flex: 1, // Allow text to take available space
-                                                    fontWeight: fontWeight.medium,
-                                                    whiteSpace: 'nowrap',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    textDecoration: 'none',
-                                                    color: isSelected ? dotColor : 'inherit',
-                                                    cursor: 'pointer',
-                                                    '&:hover': {
-                                                        textDecoration: 'underline'
-                                                    }
-                                                }}
-                                                title={item.tickerName}
-                                            >
-                                                {item.tickerName}
-                                            </Typography>
+                                        <Typography variant="body2" sx={{ width: 50, textAlign: 'right', fontWeight: fontWeight.medium, fontSize: getResponsiveFontSize('md') }}>
+                                            {(val > 0 ? '+' : '') + val.toFixed(1)}%
+                                        </Typography>
 
-                                            <Typography variant="body2" sx={{ width: 50, textAlign: 'right', fontWeight: fontWeight.medium, fontSize: getResponsiveFontSize('md') }}>
-                                                {(val > 0 ? '+' : '') + val.toFixed(1)}%
-                                            </Typography>
-
-                                            {/* Bar Chart Part - Increased width and height */}
-                                            <Box sx={{ width: '45%', display: 'flex', alignItems: 'center' }}>
-                                                <Box sx={{ height: 16, width: `${Math.max(widthPct, 1)}%`, bgcolor: barColor, borderRadius: 1 }} />
-                                            </Box>
+                                        {/* Bar Chart Part - Increased width and height */}
+                                        <Box sx={{ width: '45%', display: 'flex', alignItems: 'center' }}>
+                                            <Box sx={{ height: 16, width: `${Math.max(widthPct, 1)}%`, bgcolor: barColor, borderRadius: 1 }} />
                                         </Box>
-                                    );
-                                })
-                            )}
-                        </Box>
+                                    </Box>
+                                );
+                            })
+                        )}
                     </Box>
                 </Grid>
 
@@ -801,7 +865,8 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                         flex: 1,
                         display: 'flex',
                         flexDirection: 'column',
-                        minHeight: 350,
+                        height: sectionMinHeight,
+                        transition: 'height 0.3s ease',
                         '& .apexcharts-tooltip': {
                             boxShadow: 'none !important',
                             filter: 'none !important',
@@ -820,7 +885,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                         <Box sx={{ flex: 1, position: 'relative' }}>
                             {isLoadingHistory ? (
                                 // Skeleton loading cho chart
-                                <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 1, p: 2 }}>
+                                <Box sx={{ height: sectionMinHeight, display: 'flex', flexDirection: 'column', gap: 1, p: 2 }}>
                                     <Skeleton variant="rectangular" width="100%" height="85%" sx={{ borderRadius: 1 }} />
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
                                         {[...Array(6)].map((_, i) => (
@@ -830,14 +895,14 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                                 </Box>
                             ) : chartSeries.length > 0 ? (
                                 <ReactApexChart
-                                    key={`chart-${timeRange}`}
+                                    key={`chart-${timeRange}-${sectionMinHeight}`}
                                     options={chartOptions}
                                     series={chartSeries}
                                     type="line"
-                                    height="100%"
+                                    height={sectionMinHeight}
                                 />
                             ) : (
-                                <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Box sx={{ height: sectionMinHeight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <Typography color="text.secondary">Chọn ngành để xem biểu đồ</Typography>
                                 </Box>
                             )}

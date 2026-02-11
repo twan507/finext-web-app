@@ -1031,12 +1031,30 @@ export default function MarketIndexChart({
                                 height: 34,
                                 px: { xs: 1, sm: 1.5 },
                                 backgroundColor: colors.buttonBackground,
+                                position: 'relative',
+                                borderRadius: '0 !important',
+                                transition: 'color 0.2s',
+                                '&::after': {
+                                    content: '""',
+                                    position: 'absolute',
+                                    bottom: 4,
+                                    left: '50%',
+                                    transform: 'translateX(-50%)',
+                                    width: '60%',
+                                    height: '2px',
+                                    backgroundColor: 'transparent',
+                                    borderRadius: '1px',
+                                    transition: 'background-color 0.2s',
+                                },
                                 '&:hover': {
                                     backgroundColor: colors.buttonBackground,
                                 },
                                 '&.Mui-selected': {
                                     backgroundColor: colors.buttonBackground,
-                                    color: colors.buttonBackgroundActive
+                                    color: colors.buttonBackgroundActive,
+                                    '&::after': {
+                                        backgroundColor: colors.buttonBackgroundActive,
+                                    },
                                 },
                                 '&.Mui-disabled': {
                                     color: colors.buttonText,

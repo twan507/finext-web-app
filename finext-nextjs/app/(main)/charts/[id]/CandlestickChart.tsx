@@ -95,9 +95,30 @@ const INDEX_TICKERS = new Set([
 
 // Danh sách các industry tickers (đồng bộ với BE)
 const INDUSTRY_TICKERS = new Set([
-    'BANLE', 'BDS', 'CHUNGKHOAN', 'KIMLOAI', 'XAYDUNG', 'CONGNGHIEP', 'VTDK',
-    'XUATKHAU', 'HOACHAT', 'KHOANGSAN', 'BDSKCN', 'CONGNGHE',
-    'NGANHANG', 'NONGSAN', 'TAICHINH', 'DULICH', 'TIENICH', 'YTE',
+    'BANLE',
+    'BAOHIEM',
+    'BDS',
+    'CAOSU',
+    'CHUNGKHOAN',
+    'CONGNGHE',
+    'CONGNGHIEP',
+    'DAUKHI',
+    'DETMAY',
+    'DULICH',
+    'HOACHAT',
+    'KCN',
+    'KHOANGSAN',
+    'KIMLOAI',
+    'NGANHANG',
+    'NHUA',
+    'NONGNGHIEP',
+    'THUCPHAM',
+    'THUYSAN',
+    'TIENICH',
+    'VANTAI',
+    'VLXD',
+    'XAYDUNG',
+    'YTE'
 ]);
 
 export default function CandlestickChart({ data, ticker, chartType, showIndicators, showVolume, showLegend, showIndicatorsPanel, showWatchlistPanel, enabledIndicators, onToggleIndicator, onClearAllIndicators, onResetDefaultIndicators, onCloseIndicatorsPanel, onCloseWatchlistPanel }: CandlestickChartProps) {

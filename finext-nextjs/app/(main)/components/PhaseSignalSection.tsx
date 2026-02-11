@@ -673,7 +673,7 @@ export default function PhaseSignalSection({ hideTitle = false }: { hideTitle?: 
                                 />
                             ) : (
                                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 350 }}>
-                                    <Typography color="text.secondary">Không có dữ liệu</Typography>
+                                    <Typography color="text.secondary">Đang chờ dữ liệu</Typography>
                                 </Box>
                             )}
                         </Box>
