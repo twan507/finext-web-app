@@ -413,7 +413,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                     newIndicatorSeries.set(ind.key, [upperSeries, middleSeries, lowerSeries]);
                 } else if (ind.type === 'band') {
                     // Band: filled area primitive + 2 invisible line series for price tags
-                    const fillColor = `${resolvedColor}20`;
+                    const fillColor = `${resolvedColor}${isDark ? '35' : '30'}`;
                     const primitive = new BandFillPrimitive(fillColor);
                     candleSeries.attachPrimitive(primitive);
                     newBandPrimitives.set(ind.key, primitive);

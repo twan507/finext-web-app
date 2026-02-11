@@ -178,7 +178,7 @@ async def rest_query_endpoint(
     article_slug: Optional[str] = Query(None, description="Slug của bài viết (cho keyword news_article)"),
     report_slug: Optional[str] = Query(None, description="Slug của báo cáo (cho keyword report_article)"),
     page: Optional[int] = Query(None, ge=1, description="Số trang (bắt đầu từ 1)"),
-    limit: Optional[int] = Query(None, ge=1, le=100, description="Số lượng bản ghi mỗi trang (tối đa 100)"),
+    limit: Optional[int] = Query(None, ge=1, le=1000, description="Số lượng bản ghi (tối đa 1000)"),
     sort_by: Optional[str] = Query(None, description="Tên field để sắp xếp"),
     sort_order: Optional[str] = Query(None, regex="^(asc|desc)$", description="Thứ tự sắp xếp: asc hoặc desc"),
     exclude_fields: Optional[str] = Query(None, description="Danh sách fields cần loại bỏ, cách nhau bởi dấu phẩy (VD: html_content,plain_content)"),

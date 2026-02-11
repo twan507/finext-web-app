@@ -41,6 +41,7 @@ async def get_collection_data(
     find_query: Optional[Dict[str, Any]] = None,
     projection: Optional[Dict[str, Any]] = None,
     sort: Optional[List[tuple]] = None,
+    limit: Optional[int] = None,
 ) -> pd.DataFrame:
     """
     Helper function để query MongoDB collection với retry và timeout.
@@ -51,6 +52,7 @@ async def get_collection_data(
         find_query: Query filter (mặc định {})
         projection: Projection fields (mặc định {"_id": 0})
         sort: Sắp xếp kết quả (mặc định None)
+        limit: Giới hạn số lượng records (mặc định None = không giới hạn)
 
     Returns:
         DataFrame chứa dữ liệu từ collection
@@ -78,6 +80,10 @@ async def get_collection_data(
             # Áp dụng sort nếu có
             if sort:
                 cursor.sort(sort)
+            
+            # Áp dụng limit nếu có
+            if limit:
+                cursor.limit(limit)
 
             # Lấy dữ liệu
             docs_list = await cursor.to_list(length=None)
@@ -171,6 +177,7 @@ async def home_hist_index(ticker: Optional[str] = None, **kwargs) -> Dict[str, A
     """
     Lấy dữ liệu history index theo ticker (chỉ history, không bao gồm today).
     Database: temp_stock.
+    Hỗ trợ limit để lấy N records gần nhất.
     """
     stock_db = get_database(STOCK_DB)
 
@@ -189,10 +196,28 @@ async def home_hist_index(ticker: Optional[str] = None, **kwargs) -> Dict[str, A
         "type": 1,
     }
     find_query = {"ticker": ticker} if ticker else {}
-    history_df = await get_collection_data(stock_db, "history_index", find_query=find_query, projection=projection)
-
-    # Chuyển đổi DataFrame về JSON (List[Dict])
-    return history_df.to_dict(orient="records")
+    
+    # Lấy limit từ kwargs nếu có
+    limit = kwargs.get("limit")
+    
+    # Nếu có limit, sort giảm dần theo date để lấy records mới nhất
+    if limit:
+        sort_criteria = [("date", -1)]
+        history_df = await get_collection_data(
+            stock_db, 
+            "history_index", 
+            find_query=find_query, 
+            projection=projection,
+            sort=sort_criteria,
+            limit=limit
+        )
+        # Reverse lại để có thứ tự tăng dần theo date
+        records = history_df.to_dict(orient="records")
+        return list(reversed(records))
+    else:
+        # Không có limit, lấy tất cả
+        history_df = await get_collection_data(stock_db, "history_index", find_query=find_query, projection=projection)
+        return history_df.to_dict(orient="records")
 
 
 async def news_categories(

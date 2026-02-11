@@ -134,8 +134,8 @@ const LW_FIBO: LightweightLineOptions = {
 
 /** POC: đường bậc thang, nét chấm, width 2 */
 const LW_POC: LightweightLineOptions = {
-    lineWidth: 1,
-    lineType: LINE_TYPE.WithSteps,
+    lineWidth: 2,
+    lineType: LINE_TYPE.Simple,
     lineStyle: LINE_STYLE.Dotted,
     priceLineVisible: false,
     lastValueVisible: true,
@@ -226,9 +226,9 @@ export const INDICATOR_GROUPS: IndicatorGroup[] = [
             // MA 5: Màu Vàng chanh (Highlight) - Nhanh nhất
             { key: 'ma5', label: 'MA 5', type: 'line', field: 'ma5', color: { dark: '#FFFF00', light: '#FFD600' }, lwOptions: LW_MA },
             // MA 20: Màu Xanh lá (Trend ngắn hạn)
-            { key: 'ma20', label: 'MA 20', type: 'line', field: 'ma20', color: { dark: '#00E676', light: '#00C853' }, lwOptions: LW_MA },
+            { key: 'ma20', label: 'MA 20', type: 'line', field: 'ma20', color: { dark: '#00E5FF', light: '#0091EA' }, lwOptions: LW_MA },
             // MA 60: Màu Xanh dương (Trend trung hạn)
-            { key: 'ma60', label: 'MA 60', type: 'line', field: 'ma60', color: { dark: '#2979FF', light: '#2962FF' }, lwOptions: LW_MA },
+            { key: 'ma60', label: 'MA 60', type: 'line', field: 'ma60', color: { dark: '#FF6D00', light: '#EF6C00' }, lwOptions: LW_MA },
             // MA 120: Màu Tím (Hỗ trợ mạnh)
             { key: 'ma120', label: 'MA 120', type: 'line', field: 'ma120', color: { dark: '#E040FB', light: '#AA00FF' }, lwOptions: LW_MA },
             // MA 240: Màu Đỏ/Xám (Trend dài hạn - Đường 200/240 huyền thoại)
@@ -324,9 +324,7 @@ export const INDICATOR_GROUPS: IndicatorGroup[] = [
 const DEFAULT_ENABLED_KEYS: ReadonlySet<string> = new Set([
     'ma20',
     'ma60',
-    'm_f500',
     'm_fibo',
-    'q_f500',
     'q_fibo',
     'm_poc',
     'q_poc',

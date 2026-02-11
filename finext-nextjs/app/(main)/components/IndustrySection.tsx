@@ -111,10 +111,14 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
         }
 
         try {
+            // Lấy 300 records gần nhất (~ 1 năm dữ liệu trading)
             const response = await apiClient<RawMarketData[]>({
                 url: '/api/v1/sse/rest/home_hist_index',
                 method: 'GET',
-                queryParams: { ticker },
+                queryParams: {
+                    ticker,
+                    limit: 300 // ~1 năm dữ liệu (252 trading days + buffer)
+                },
                 requireAuth: false
             });
 
@@ -655,13 +659,25 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
     }, [displayedList]);
 
     // Dynamic height: actual row height includes padding (p:0.25 = 4px) + content (~20px) + gap (0.25 = 2px)
-    const ROW_HEIGHT = 26;
+    const ROW_HEIGHT = 25;
     const MIN_SECTION_HEIGHT = 280;
+
+    // Skeleton row count: Cố định 10 hàng thu gọn, 24 hàng mở rộng
+    const skeletonRowCount = showAll ? 21 : 9;
+
     const sectionMinHeight = useMemo(() => {
         const gap = 2; // gap: 0.25 = 2px
+
+        // Nếu đang loading, tính theo skeleton
+        if (listSeries.length === 0 || (timeRange !== '1D' && isLoadingHistory)) {
+            const skeletonContentHeight = skeletonRowCount * ROW_HEIGHT + Math.max(0, skeletonRowCount - 1) * gap;
+            return Math.max(MIN_SECTION_HEIGHT, skeletonContentHeight);
+        }
+
+        // Nếu có data, tính theo displayedList
         const contentHeight = displayedList.length * ROW_HEIGHT + Math.max(0, displayedList.length - 1) * gap;
         return Math.max(MIN_SECTION_HEIGHT, contentHeight);
-    }, [displayedList.length]);
+    }, [displayedList.length, listSeries.length, timeRange, isLoadingHistory, skeletonRowCount]);
 
     return (
         <Box>
@@ -757,20 +773,19 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                     <Box sx={{
                         display: 'flex',
                         flexDirection: 'column',
-                        justifyContent: 'space-between',
+                        justifyContent: 'flex-start',
                         width: '100%',
-                        height: sectionMinHeight,
-                        transition: 'height 0.3s ease',
-                        overflow: 'hidden',
+                        minHeight: sectionMinHeight,
+                        transition: 'min-height 0.3s ease',
                     }}>
                         {(listSeries.length === 0 || (timeRange !== '1D' && isLoadingHistory)) ? (
-                            // Skeleton loading cho list
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                {[...Array(10)].map((_, i) => (
-                                    <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 0.5 }}>
-                                        <Skeleton variant="rectangular" width={20} height={20} sx={{ borderRadius: 0.5 }} />
-                                        <Skeleton variant="text" width={140} />
-                                        <Skeleton variant="text" width={50} />
+                            // Skeleton loading cho list - số hàng theo trạng thái thu gọn/mở rộng
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                                {[...Array(skeletonRowCount)].map((_, i) => (
+                                    <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 0.25 }}>
+                                        <Skeleton variant="circular" width={14} height={14} />
+                                        <Skeleton variant="text" width={140} sx={{ fontSize: getResponsiveFontSize('md').md }} />
+                                        <Skeleton variant="text" width={50} sx={{ fontSize: getResponsiveFontSize('md').md }} />
                                         <Skeleton variant="rectangular" sx={{ flex: 1, height: 16, borderRadius: 1 }} />
                                     </Box>
                                 ))}
@@ -884,12 +899,23 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                     }}>
                         <Box sx={{ flex: 1, position: 'relative' }}>
                             {isLoadingHistory ? (
-                                // Skeleton loading cho chart
-                                <Box sx={{ height: sectionMinHeight, display: 'flex', flexDirection: 'column', gap: 1, p: 2 }}>
-                                    <Skeleton variant="rectangular" width="100%" height="85%" sx={{ borderRadius: 1 }} />
+                                // Skeleton loading cho chart - chiều cao tương ứng với list
+                                <Box sx={{
+                                    height: sectionMinHeight,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    justifyContent: 'space-between',
+                                    p: 2
+                                }}>
+                                    <Skeleton
+                                        variant="rectangular"
+                                        width="100%"
+                                        height={`calc(100% - 40px)`}
+                                        sx={{ borderRadius: 1 }}
+                                    />
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
                                         {[...Array(6)].map((_, i) => (
-                                            <Skeleton key={i} variant="text" width={50} />
+                                            <Skeleton key={i} variant="text" width={50} height={20} />
                                         ))}
                                     </Box>
                                 </Box>

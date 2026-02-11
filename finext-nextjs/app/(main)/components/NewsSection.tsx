@@ -534,7 +534,7 @@ function MiniReportCard({ report }: MiniReportCardProps) {
 function NewsCardSkeleton() {
     return (
         <>
-            <Box sx={{ py: spacing.sm }}>
+            <Box sx={{ py: spacing.xs }}>
                 <Skeleton variant="text" width="95%" height={18} sx={{ mb: spacing.xxs }} />
                 <Skeleton variant="text" width="85%" height={18} sx={{ mb: spacing.xxs }} />
                 <Skeleton variant="text" width="90%" height={16} />
@@ -590,7 +590,7 @@ function NewsColumnContent({ title, href, loading, newsItems, reportItems }: New
             <Box sx={{ flex: 1 }}>
                 {loading ? (
                     <>
-                        {Array.from({ length: 5 }).map((_, index) => (
+                        {Array.from({ length: 4 }).map((_, index) => (
                             <NewsCardSkeleton key={index} />
                         ))}
                     </>
@@ -854,7 +854,7 @@ function NewspaperWideColumn({ title, href, loading, newsItems, position }: News
         }}>
             <NewspaperSectionHeader title={title} href={href} />
             {loading ? (
-                Array.from({ length: 5 }).map((_, i) => <NewsCardSkeleton key={i} />)
+                Array.from({ length: 4 }).map((_, i) => <NewsCardSkeleton key={i} />)
             ) : (
                 newsItems?.map((article) => (
                     <Box
