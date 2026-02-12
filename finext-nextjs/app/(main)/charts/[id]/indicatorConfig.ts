@@ -311,9 +311,9 @@ export const INDICATOR_GROUPS: IndicatorGroup[] = [
         name: 'Volume MA',
         indicators: [
             // VOLUME MA 5: Màu Cam sáng (Sunset Orange)
-            { key: 'vsma5', label: 'VOLUME MA 5', type: 'volume-line', field: 'vsma5', color: { dark: '#FF6D00', light: '#EF6C00' }, lwOptions: LW_VOL_MA },
+            { key: 'vsma5', label: 'VOLUME MA 5', type: 'volume-line', field: 'vsma5', color: { dark: '#00E5FF', light: '#0091EA' }, lwOptions: LW_VOL_MA },
             // VOLUME MA 60: Màu Xanh Cyan/Blue (Cyan Process) - Tương phản mạnh với màu Cam
-            { key: 'vsma60', label: 'VOLUME MA 60', type: 'volume-line', field: 'vsma60', color: { dark: '#00E5FF', light: '#0091EA' }, lwOptions: LW_VOL_MA },
+            { key: 'vsma60', label: 'VOLUME MA 60', type: 'volume-line', field: 'vsma60', color: { dark: '#FF6D00', light: '#EF6C00' }, lwOptions: LW_VOL_MA },
         ],
     },
 ];
