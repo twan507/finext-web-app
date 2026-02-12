@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { Box, Typography, useTheme, Card, useMediaQuery, Skeleton } from '@mui/material';
 import Carousel, { Slide } from 'components/common/Carousel';
-import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
+import { getResponsiveFontSize, fontWeight, getGlassCard, getGlassHighlight, getGlassEdgeLight } from 'theme/tokens';
 import { getPriceColor, getFlowColor, getVsiColor } from 'theme/colorHelpers';
 import Link from 'next/link';
 
@@ -34,16 +34,19 @@ export default function IndustryStocksSection({ stockData = [], isLoading = fals
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
+    const isDark = theme.palette.mode === 'dark';
+
     const cardStyle = {
-        bgcolor: 'background.paper',
         borderRadius: 3,
         height: '100%',
-        boxShadow: 'none',
-        border: 'none',
         backgroundImage: 'none',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
+        position: 'relative' as const,
+        ...getGlassCard(isDark),
+        '&::before': getGlassHighlight(isDark),
+        '&::after': getGlassEdgeLight(isDark),
     };
 
     // Skeleton component for loading state

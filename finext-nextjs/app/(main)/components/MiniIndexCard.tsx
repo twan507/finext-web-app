@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Box, Typography, Skeleton, useTheme } from '@mui/material';
 import dynamic from 'next/dynamic';
-import { transitions, getResponsiveFontSize, fontWeight } from 'theme/tokens';
+import { transitions, getResponsiveFontSize, fontWeight, getGlassCard, getGlassHighlight, getGlassEdgeLight } from 'theme/tokens';
 import { ApexOptions } from 'apexcharts';
 
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
@@ -237,9 +237,12 @@ export default function MiniIndexCard({ symbol, itdData, todayData = [], hideOnT
     // Responsive styles cho card
     const cardSx = {
         p: 1.5,
-        borderRadius: 2,
-        bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+        borderRadius: '16px',
         minWidth: 150,
+        position: 'relative' as const,
+        overflow: 'hidden',
+        // Glass card base styles
+        ...getGlassCard(isDark),
         // Desktop (lg+): 6 cards
         width: {
             xs: 'calc(50% - 6px)', // Mobile: 2 cards per row (4 cards total, 2 rows)
@@ -249,7 +252,10 @@ export default function MiniIndexCard({ symbol, itdData, todayData = [], hideOnT
         // Ẩn card ở tablet và mobile nếu hideOnTablet = true
         display: hideOnTablet ? { xs: 'none', lg: 'block' } : 'block',
         transition: transitions.all,
-        '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)' }
+        // Top highlight line (::before)
+        '&::before': getGlassHighlight(isDark),
+        // Left edge light (::after)
+        '&::after': getGlassEdgeLight(isDark),
     };
 
     if (isLoading && chartData.length === 0) {

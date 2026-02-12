@@ -2,7 +2,7 @@
 
 import { Box, Typography, useTheme, Card, Skeleton } from '@mui/material';
 import Carousel, { Slide } from 'components/common/Carousel';
-import { getResponsiveFontSize, fontWeight, transitions } from 'theme/tokens';
+import { getResponsiveFontSize, fontWeight, transitions, getGlassCard, getGlassHighlight, getGlassEdgeLight } from 'theme/tokens';
 import { getPriceColor, getFlowColor, getVsiColor } from 'theme/colorHelpers';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -113,16 +113,19 @@ export default function MarketPhaseSection({ stockData = [], foreignData = [], i
         </Box>
     );
 
+    const isDark = theme.palette.mode === 'dark';
+
     const cardStyle = {
-        bgcolor: 'background.paper',
         borderRadius: 3,
         height: '100%',
-        boxShadow: 'none',
-        border: 'none',
         backgroundImage: 'none',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
+        position: 'relative' as const,
+        ...getGlassCard(isDark),
+        '&::before': getGlassHighlight(isDark),
+        '&::after': getGlassEdgeLight(isDark),
     };
 
     // Helper to render slide content (data only, no Card wrapper)

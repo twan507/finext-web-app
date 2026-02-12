@@ -27,7 +27,7 @@ import {
 } from '@mui/material';
 import OpenWithIcon from '@mui/icons-material/OpenWith';
 import TimeframeSelector from 'components/common/TimeframeSelector';
-import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
+import { getResponsiveFontSize, fontWeight, getGlassCard } from 'theme/tokens';
 
 // ============================================================================
 // TYPES
@@ -768,12 +768,14 @@ export default function MarketTrendChart({
                             size="small"
                             sx={{
                                 color: panZoomEnabled ? colors.buttonBackgroundActive : colors.buttonText,
-                                backgroundColor: colors.buttonBackground,
-                                border: 'none',
+                                ...(() => {
+                                    const g = getGlassCard(isDarkMode);
+                                    return { background: g.background, backdropFilter: g.backdropFilter, WebkitBackdropFilter: g.WebkitBackdropFilter, border: g.border };
+                                })(),
                                 borderRadius: 2,
                                 height: 34,
                                 width: 34,
-                                '&:hover': { backgroundColor: colors.buttonBackground },
+                                '&:hover': { opacity: 0.8 },
                             }}
                         >
                             <OpenWithIcon sx={{ fontSize: 18 }} />

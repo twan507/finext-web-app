@@ -201,7 +201,7 @@ export const lightThemePalette: PaletteOptions = {
     contrastText: '#fafbfc',
   },
   background: {
-    default: '#f8f9fa',
+    default: '#ffffff',
     paper: '#f5f5f5',
   },
   text: {
@@ -613,6 +613,92 @@ export const shadowsDark = {
   cardHover: '0 8px 24px rgba(0, 0, 0, 0.4)',
   input: '0 0 0 3px rgba(180, 126, 255, 0.2)', // Dark mode primary
 } as const;
+
+// --------------------
+// GLASS CARD TOKENS
+// --------------------
+// Glassmorphism card styles for frosted-glass UI elements
+// Usage: sx={{ ...glassCard.light }} or sx={{ ...getGlassCard(isDark) }}
+export const glassCard = {
+  light: {
+    // Tăng độ đục background lên một chút để nội dung dễ đọc hơn
+    background: 'rgba(255, 255, 255, 0.7)',
+    backdropFilter: 'blur(50px)',
+    WebkitBackdropFilter: 'blur(50px)',
+    border: '1px solid rgba(0, 0, 0, 0.1)',
+    boxShadow: '0 4px 24px -1px rgba(0, 0, 0, 0.08)',
+  },
+
+  dark: {
+    // (Giữ nguyên như bạn thấy đẹp)
+    background: 'rgba(255, 255, 255, 0.06)',
+    backdropFilter: 'blur(50px)',
+    WebkitBackdropFilter: 'blur(50px)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    boxShadow: [
+      '0 8px 32px rgba(0, 0, 0, 0.3)',
+      'inset 0 1px 0 rgba(255, 255, 255, 0.12)',
+      'inset 0 -1px 0 rgba(255, 255, 255, 0.05)',
+    ].join(', '),
+  },
+
+  // --- TINH CHỈNH HIGHLIGHT ĐỂ TĂNG ĐỘ CHIẾT QUANG ---
+
+  // Highlight trên cùng (Top edge): Tăng độ sáng ở giữa để tạo điểm tụ sáng
+  highlight: {
+    content: '""',
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '1px',
+    // Gradient sắc nét hơn: Trong suốt -> Trắng tinh -> Trong suốt
+    background: 'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 1) 50%, transparent 100%)',
+    opacity: 0.8, // Đủ sáng để thấy rõ mép kính
+    pointerEvents: 'none' as const,
+  },
+
+  highlightDark: {
+    // (Giữ nguyên hoặc chỉnh nhẹ)
+    content: '""',
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '1px',
+    background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent)',
+    pointerEvents: 'none' as const,
+  },
+
+  // Highlight cạnh trái (Left edge): Tạo cảm giác độ dày vật lý của kính
+  edgeLight: {
+    content: '""',
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    width: '1px',
+    height: '100%',
+    // Ánh sáng chạy dọc từ trên xuống rồi tan biến
+    background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%)',
+    pointerEvents: 'none' as const,
+  },
+
+  edgeLightDark: {
+    content: '""',
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    width: '1px',
+    height: '100%',
+    background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent, rgba(255, 255, 255, 0.08))',
+    pointerEvents: 'none' as const,
+  },
+} as const;
+
+// Helper to get glass card styles based on dark mode
+export const getGlassCard = (isDark: boolean) => isDark ? glassCard.dark : glassCard.light;
+export const getGlassHighlight = (isDark: boolean) => isDark ? glassCard.highlightDark : glassCard.highlight;
+export const getGlassEdgeLight = (isDark: boolean) => isDark ? glassCard.edgeLightDark : glassCard.edgeLight;
 
 // --------------------
 // TRANSITION TOKENS

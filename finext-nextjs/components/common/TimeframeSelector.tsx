@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ToggleButton, ToggleButtonGroup, SxProps, Theme, alpha, useTheme } from '@mui/material';
-import { getResponsiveFontSize } from 'theme/tokens';
+import { getResponsiveFontSize, getGlassCard } from 'theme/tokens';
 
 // Export common TimeRange type for convenience, though component is now generic
 
@@ -23,6 +23,9 @@ export default function TimeframeSelector<T extends string>({
 }: TimeframeSelectorProps<T>) {
     const theme = useTheme();
 
+    const isDark = theme.palette.mode === 'dark';
+    const glassStyles = getGlassCard(isDark);
+
     return (
         <ToggleButtonGroup
             value={value}
@@ -32,7 +35,10 @@ export default function TimeframeSelector<T extends string>({
             sx={{
                 display: 'flex',
                 flexWrap: 'wrap',
-                backgroundColor: (theme.palette as any).component?.chart?.buttonBackground || alpha(theme.palette.action.active, 0.05),
+                background: glassStyles.background,
+                backdropFilter: glassStyles.backdropFilter,
+                WebkitBackdropFilter: glassStyles.WebkitBackdropFilter,
+                border: glassStyles.border,
                 borderRadius: 2,
                 overflow: 'hidden',
                 // Remove all internal MUI borders and dividers

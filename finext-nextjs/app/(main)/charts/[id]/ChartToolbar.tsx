@@ -4,6 +4,7 @@ import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import {
     Box,
     TextField,
+    Button,
     IconButton,
     Divider,
     Tooltip,
@@ -495,45 +496,73 @@ export default function ChartToolbar({
 
             <Divider orientation="vertical" flexItem sx={{ my: 0.5, mx: 0.5, flexShrink: 0 }} />
 
-            {/* Right fixed group: Indicators Panel + Watchlist Panel */}
+            {/* Right fixed group: Indicators/Watchlist section + Fullscreen */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-                {/* Indicators Panel */}
-                <Tooltip title={showIndicatorsPanel ? "Ẩn các chỉ báo" : "Hiện các chỉ báo"}>
-                    <IconButton
-                        size="small"
-                        onClick={onToggleIndicatorsPanel}
-                        sx={{
-                            p: 0.5,
-                            color: showIndicatorsPanel ? 'primary.main' : 'text.secondary',
-                            borderRadius: 0,
-                            '&:hover': {
-                                color: 'primary.main',
-                                backgroundColor: 'transparent',
-                            },
-                        }}
-                    >
-                        <TuneIcon fontSize="small" />
-                    </IconButton>
-                </Tooltip>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    {/* Indicators Panel */}
+                    <Tooltip title={showIndicatorsPanel ? "Ẩn các chỉ báo" : "Hiện các chỉ báo"}>
+                        <Button
+                            size="small"
+                            onClick={onToggleIndicatorsPanel}
+                            startIcon={<TuneIcon fontSize="small" />}
+                            sx={{
+                                minWidth: 'auto',
+                                px: { xs: 0.5, sm: 1 },
+                                py: 0.5,
+                                color: showIndicatorsPanel ? 'primary.main' : 'text.secondary',
+                                borderRadius: 0.5,
+                                textTransform: 'none',
+                                fontSize: getResponsiveFontSize('xs'),
+                                fontWeight: 600,
+                                '& .MuiButton-startIcon': {
+                                    mr: { xs: 0, sm: 0.75 },
+                                    ml: 0,
+                                },
+                                '&:hover': {
+                                    color: 'primary.main',
+                                    backgroundColor: 'transparent',
+                                },
+                            }}
+                        >
+                            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                                Các chỉ báo
+                            </Box>
+                        </Button>
+                    </Tooltip>
 
-                {/* Watchlist Panel */}
-                <Tooltip title={showWatchlistPanel ? "Ẩn Watchlist" : "Hiện Watchlist"}>
-                    <IconButton
-                        size="small"
-                        onClick={onToggleWatchlistPanel}
-                        sx={{
-                            p: 0.5,
-                            color: showWatchlistPanel ? 'primary.main' : 'text.secondary',
-                            borderRadius: 0,
-                            '&:hover': {
-                                color: 'primary.main',
-                                backgroundColor: 'transparent',
-                            },
-                        }}
-                    >
-                        <FormatListBulletedIcon fontSize="small" />
-                    </IconButton>
-                </Tooltip>
+                    {/* Watchlist Panel */}
+                    <Tooltip title={showWatchlistPanel ? "Ẩn Watchlist" : "Hiện Watchlist"}>
+                        <Button
+                            size="small"
+                            onClick={onToggleWatchlistPanel}
+                            startIcon={<FormatListBulletedIcon fontSize="small" />}
+                            sx={{
+                                minWidth: 'auto',
+                                px: { xs: 0.5, sm: 1 },
+                                py: 0.5,
+                                color: showWatchlistPanel ? 'primary.main' : 'text.secondary',
+                                borderRadius: 0.5,
+                                textTransform: 'none',
+                                fontSize: getResponsiveFontSize('xs'),
+                                fontWeight: 600,
+                                '& .MuiButton-startIcon': {
+                                    mr: { xs: 0, sm: 0.75 },
+                                    ml: 0,
+                                },
+                                '&:hover': {
+                                    color: 'primary.main',
+                                    backgroundColor: 'transparent',
+                                },
+                            }}
+                        >
+                            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                                Watchlist
+                            </Box>
+                        </Button>
+                    </Tooltip>
+                </Box>
+
+                <Divider orientation="vertical" flexItem sx={{ my: 0.5 }} />
 
                 {/* Fullscreen button */}
                 <Tooltip title={isFullscreen ? "Thoát toàn màn hình" : "Toàn màn hình"}>

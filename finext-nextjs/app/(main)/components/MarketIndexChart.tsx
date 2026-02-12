@@ -35,7 +35,7 @@ import ShowChartIcon from '@mui/icons-material/ShowChart';
 import CandlestickChartIcon from '@mui/icons-material/CandlestickChart';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import OpenWithIcon from '@mui/icons-material/OpenWith';
-import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
+import { getResponsiveFontSize, fontWeight, getGlassCard } from 'theme/tokens';
 
 // Types - export để page có thể sử dụng
 export type TimeRange = '1D' | '1M' | '3M' | '1Y' | 'ALL';
@@ -194,6 +194,21 @@ export const transformToChartData = (rawData: RawMarketData[], isIntraday: boole
     return data;
 };
 
+// Helper function to determine color based on percentage change
+// Returns yellow (ref) color for changes within ±0.005%, otherwise returns up/down color
+const getChangeColor = (pctChange: number, theme: any): string => {
+    // Nếu biến động nằm trong khoảng ±0.005% thì tô màu vàng (ref)
+    if (Math.abs(pctChange) <= 0.005) return theme.palette.trend.ref;
+    return pctChange > 0 ? theme.palette.trend.up : theme.palette.trend.down;
+};
+
+// Helper function to get arrow symbol
+const getArrow = (pctChange: number): string => {
+    // Không hiển thị mũi tên khi biến động nằm trong khoảng ±0.005%
+    if (Math.abs(pctChange) <= 0.005) return '';
+    return pctChange > 0 ? '▲' : '▼';
+};
+
 // Calculate visible range based on timeRange selection
 const getVisibleRange = (
     timeRange: TimeRange,
@@ -268,12 +283,17 @@ export default function MarketIndexChart({
         volume?: number;
     } | null>(null);
 
-    // Refs để lưu trữ visible range và track thay đổi
-    const savedLogicalRangeRef = useRef<{ from: number; to: number } | null>(null);
+    // Refs để track thay đổi
     const prevTimeRangeRef = useRef<TimeRange>(timeRange);
     const prevSymbolRef = useRef<string>(symbol);
-    const prevDataLengthRef = useRef<number>(0);
     const hasSetInitialRangeRef = useRef<boolean>(false);
+
+    // Pan/Zoom toggle state (moved up to be accessible in effects)
+    const [panZoomEnabled, setPanZoomEnabled] = useState(false);
+
+    // Ref store the visible range to restore when chart is re-created (e.g., theme change)
+    // Only used when panZoomEnabled is true
+    const savedLogicalRangeRef = useRef<{ from: number; to: number } | null>(null);
 
     // timeRange is now controlled by parent via props
     const [chartType, setChartType] = useState<ChartType>('candlestick');
@@ -647,8 +667,6 @@ export default function MarketIndexChart({
 
         // Xử lý visible range
         const dataLength = effectiveChartType === 'area' ? areaData.length : candleData.length;
-        const isDataGrowth = dataLength > prevDataLengthRef.current && prevDataLengthRef.current > 0;
-        prevDataLengthRef.current = dataLength;
 
         const shouldResetRange = isTimeRangeChanged || isSymbolChanged || !hasSetInitialRangeRef.current;
 
@@ -661,67 +679,50 @@ export default function MarketIndexChart({
                 chart.timeScale().fitContent();
             }
             hasSetInitialRangeRef.current = true;
-            // Save range sau khi chart render xong
-            setTimeout(() => {
+        } else if (panZoomEnabled) {
+            // User is in Pan/Zoom mode -> Try to preserve their view
+            // If chart was re-created (e.g. theme change), restore saved range
+            if (savedLogicalRangeRef.current) {
+                // Check if current range is default (null or full) to avoid overwriting user interaction?
+                // Actually, if we just re-created chart, range is default/fitContent.
+                // We should restore specific range.
                 try {
-                    if (chartRef.current) {
-                        savedLogicalRangeRef.current = chartRef.current.timeScale().getVisibleLogicalRange();
-                    }
-                } catch { /* ignore */ }
-            }, 0);
-        } else if (savedLogicalRangeRef.current) {
-            // Chỉ data thay đổi → giữ nguyên view hiện tại
-            try {
-                // Nếu data tăng thêm (realtime), lấy range hiện tại từ chart
-                if (isDataGrowth) {
-                    let currentRange: { from: number; to: number } | null = null;
-                    try {
-                        currentRange = chart.timeScale().getVisibleLogicalRange();
-                    } catch { /* ignore */ }
-                    if (currentRange) {
-                        chart.timeScale().setVisibleLogicalRange(currentRange);
-                    } else {
-                        chart.timeScale().setVisibleLogicalRange(savedLogicalRangeRef.current);
-                    }
-                } else {
                     chart.timeScale().setVisibleLogicalRange(savedLogicalRangeRef.current);
-                }
-            } catch {
-                // Fallback
-                if (!isIntraday) {
-                    const visibleRange = getVisibleRange(timeRange, dataLength);
-                    chart.timeScale().setVisibleLogicalRange(visibleRange);
-                } else {
-                    chart.timeScale().fitContent();
-                }
-            }
-            // Save range sau khi restore
-            setTimeout(() => {
-                try {
-                    if (chartRef.current) {
-                        savedLogicalRangeRef.current = chartRef.current.timeScale().getVisibleLogicalRange();
-                    }
                 } catch { /* ignore */ }
-            }, 50);
+            }
+        } else {
+            // Standard mode (Fixes bug: 3M -> 1Y on data update)
+            // Always enforce standard range based on timeRange
+            if (!isIntraday) {
+                const visibleRange = getVisibleRange(timeRange, dataLength);
+                chart.timeScale().setVisibleLogicalRange(visibleRange);
+            } else {
+                chart.timeScale().fitContent();
+            }
         }
-    }, [initChart, createSeries, updateSeriesData, chartType, timeRange, symbol, eodData, intradayData]);
+    }, [initChart, createSeries, updateSeriesData, chartType, timeRange, symbol, eodData, intradayData, panZoomEnabled]);
 
-    // Subscribe to visible range changes để liên tục lưu pan/zoom state (theo CandlestickChart)
+    // Subscribe to visible range changes (only when Pan/Zoom is enabled)
+    // Helps restore view after theme change/resize
     useEffect(() => {
         if (!chartRef.current) return;
         const chart = chartRef.current;
 
         const handler = () => {
-            try {
-                savedLogicalRangeRef.current = chart.timeScale().getVisibleLogicalRange();
-            } catch { /* ignore */ }
+            if (panZoomEnabled) {
+                try {
+                    savedLogicalRangeRef.current = chart.timeScale().getVisibleLogicalRange();
+                } catch { /* ignore */ }
+            }
         };
 
         chart.timeScale().subscribeVisibleLogicalRangeChange(handler);
         return () => {
             chart.timeScale().unsubscribeVisibleLogicalRangeChange(handler);
         };
-    }, [colors]); // Re-subscribe khi chart được recreate (colors thay đổi → initChart chạy lại)
+    }, [colors, panZoomEnabled]);
+
+
 
     // Update chart colors when theme changes (without recreating chart)
     useEffect(() => {
@@ -821,7 +822,6 @@ export default function MarketIndexChart({
                 seriesRef.current = null;
                 volumeSeriesRef.current = null;
                 hasSetInitialRangeRef.current = false;
-                prevDataLengthRef.current = 0;
             }
         };
     }, []);
@@ -843,8 +843,7 @@ export default function MarketIndexChart({
         router.push(`/charts/${symbol}`);
     };
 
-    // Pan/Zoom toggle
-    const [panZoomEnabled, setPanZoomEnabled] = useState(false);
+
 
     // Reset pan/zoom when timeRange changes — timeRange is always authoritative
     useEffect(() => {
@@ -868,6 +867,13 @@ export default function MarketIndexChart({
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [timeRange]);
+
+    // Clear saved range when Pan/Zoom is disabled
+    useEffect(() => {
+        if (!panZoomEnabled) {
+            savedLogicalRangeRef.current = null;
+        }
+    }, [panZoomEnabled]);
 
     const handleTogglePanZoom = useCallback(() => {
         setPanZoomEnabled(prev => {
@@ -906,6 +912,10 @@ export default function MarketIndexChart({
     }, [timeRange, eodData, chartType]);
 
     const isPositive = priceChange >= 0;
+
+    // Calculate color and arrow based on percentage change threshold
+    const changeColor = getChangeColor(percentChange, theme);
+    const arrow = getArrow(percentChange);
 
     // Calculate total component height (header + controls + chart)
     const headerHeight = 78; // ~78px for header (price info + title)
@@ -949,22 +959,22 @@ export default function MarketIndexChart({
                             </Typography>
                             <Typography
                                 sx={{
-                                    color: isPositive ? colors.upColor : colors.downColor,
+                                    color: changeColor,
                                     fontWeight: fontWeight.bold,
                                     fontSize: getResponsiveFontSize('lg')
                                 }}
                             >
-                                {isPositive ? '+' : ''}
-                                {priceChange.toLocaleString('en-US', {
+                                {priceChange !== 0 && Math.abs(percentChange) > 0.005 && isPositive ? '+' : priceChange !== 0 && Math.abs(percentChange) > 0.005 && !isPositive ? '-' : ''}
+                                {Math.abs(priceChange).toLocaleString('en-US', {
                                     minimumFractionDigits: 2,
                                     maximumFractionDigits: 2
                                 })}
                             </Typography>
                             <Chip
-                                label={`${isPositive ? '▲' : '▼'} ${Math.abs(percentChange).toFixed(2)}%`}
+                                label={`${arrow}${arrow ? ' ' : ''}${Math.abs(percentChange).toFixed(2)}%`}
                                 size="small"
                                 sx={{
-                                    backgroundColor: isPositive ? colors.upColor : colors.downColor,
+                                    backgroundColor: changeColor,
                                     color: '#ffffff',
                                     fontWeight: fontWeight.bold,
                                     fontSize: getResponsiveFontSize('md'),
@@ -1025,12 +1035,16 @@ export default function MarketIndexChart({
                         sx={{
                             borderRadius: 2,
                             overflow: 'hidden',
+                            ...(() => {
+                                const g = getGlassCard(isDarkMode);
+                                return { background: g.background, backdropFilter: g.backdropFilter, WebkitBackdropFilter: g.WebkitBackdropFilter, border: g.border };
+                            })(),
                             '& .MuiToggleButton-root': {
                                 color: colors.buttonText,
                                 border: 'none',
                                 height: 34,
                                 px: { xs: 1, sm: 1.5 },
-                                backgroundColor: colors.buttonBackground,
+                                backgroundColor: 'transparent',
                                 position: 'relative',
                                 borderRadius: '0 !important',
                                 transition: 'color 0.2s',
@@ -1047,10 +1061,10 @@ export default function MarketIndexChart({
                                     transition: 'background-color 0.2s',
                                 },
                                 '&:hover': {
-                                    backgroundColor: colors.buttonBackground,
+                                    backgroundColor: 'transparent',
                                 },
                                 '&.Mui-selected': {
-                                    backgroundColor: colors.buttonBackground,
+                                    backgroundColor: 'transparent',
                                     color: colors.buttonBackgroundActive,
                                     '&::after': {
                                         backgroundColor: colors.buttonBackgroundActive,
@@ -1078,12 +1092,14 @@ export default function MarketIndexChart({
                             size="small"
                             sx={{
                                 color: panZoomEnabled ? colors.buttonBackgroundActive : colors.buttonText,
-                                backgroundColor: colors.buttonBackground,
-                                border: 'none',
+                                ...(() => {
+                                    const g = getGlassCard(isDarkMode);
+                                    return { background: g.background, backdropFilter: g.backdropFilter, WebkitBackdropFilter: g.WebkitBackdropFilter, border: g.border };
+                                })(),
                                 borderRadius: 2,
                                 height: 34,
                                 width: 34,
-                                '&:hover': { backgroundColor: colors.buttonBackground },
+                                '&:hover': { opacity: 0.8 },
                             }}
                         >
                             <OpenWithIcon sx={{ fontSize: 18 }} />
@@ -1097,12 +1113,14 @@ export default function MarketIndexChart({
                             size="small"
                             sx={{
                                 color: colors.buttonText,
-                                backgroundColor: colors.buttonBackground,
-                                border: 'none',
+                                ...(() => {
+                                    const g = getGlassCard(isDarkMode);
+                                    return { background: g.background, backdropFilter: g.backdropFilter, WebkitBackdropFilter: g.WebkitBackdropFilter, border: g.border };
+                                })(),
                                 borderRadius: 2,
                                 height: 34,
                                 width: 34,
-                                '&:hover': { backgroundColor: colors.buttonBackgroundHover },
+                                '&:hover': { opacity: 0.8 },
                             }}
                         >
                             <OpenInNewIcon sx={{ fontSize: 18 }} />

@@ -8,7 +8,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import DeselectIcon from '@mui/icons-material/Deselect';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
-import { getResponsiveFontSize, borderRadius, transitions, fontWeight } from 'theme/tokens';
+import { getResponsiveFontSize, borderRadius, transitions, fontWeight, getGlassCard } from 'theme/tokens';
 import { apiClient } from 'services/apiClient';
 import type { RawMarketData } from './MarketIndexChart';
 
@@ -41,6 +41,11 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
     const theme = useTheme();
     const router = useRouter();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const isDark = theme.palette.mode === 'dark';
+    const glassButtonStyles = (() => {
+        const g = getGlassCard(isDark);
+        return { background: g.background, backdropFilter: g.backdropFilter, WebkitBackdropFilter: g.WebkitBackdropFilter, border: g.border };
+    })();
 
     // ========== STATE ==========
     // Tất cả ngành từ SSE (Today data)
@@ -57,6 +62,9 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
 
     // Mapping từ index → timestamp cho 1D mode (để format label)
     const indexToTimestampRef = useRef<Map<number, number>>(new Map());
+
+    // Max index cho trục X (dùng để cố định width cho 1D)
+    const [xAxisMax, setXAxisMax] = useState<number | undefined>(undefined);
 
     // Dữ liệu hiển thị trên danh sách (Performance List)
     const [listSeries, setListSeries] = useState<IndustryPerformance[]>([]);
@@ -154,6 +162,37 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
         return data.filter(item => new Date(item.date) >= cutoffDate);
     }, [getCutoffDate]);
 
+    const toPercentValue = useCallback((value?: number): number => {
+        const raw = value || 0;
+        return Math.abs(raw) < 1 ? raw * 100 : raw;
+    }, []);
+
+    // Tạo timeline cố định cho phiên 1D: 09:00-11:30, 13:00-15:00 (bỏ nghỉ trưa)
+    const build1DTradingTimeline = useCallback((referenceTimestamp?: number): number[] => {
+        const ref = referenceTimestamp != null
+            ? new Date(referenceTimestamp)
+            : new Date(Date.now() + 7 * 60 * 60 * 1000); // fallback theo VN time logic đang dùng
+
+        const y = ref.getUTCFullYear();
+        const m = ref.getUTCMonth();
+        const d = ref.getUTCDate();
+
+        const timeline: number[] = [];
+
+        const pushMinuteRange = (startHour: number, startMinute: number, endHour: number, endMinute: number) => {
+            const start = Date.UTC(y, m, d, startHour, startMinute, 0, 0);
+            const end = Date.UTC(y, m, d, endHour, endMinute, 0, 0);
+            for (let ts = start; ts <= end; ts += 60 * 1000) {
+                timeline.push(ts);
+            }
+        };
+
+        pushMinuteRange(9, 0, 11, 30);
+        pushMinuteRange(13, 0, 15, 0);
+
+        return timeline;
+    }, []);
+
 
     // ========== EFFECT: FETCH ALL HISTORY WHEN NEEDED ==========
     useEffect(() => {
@@ -183,13 +222,21 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
     useEffect(() => {
         if (allIndustries.length === 0) return;
 
-        // CASE 1: 1D -> Use today data direct from allIndustries (which is derived from todayAllData)
+        // CASE 1: 1D -> Use latest ITD row per ticker (not today snapshot)
         if (timeRange === '1D') {
-            const listData = allIndustries.map(ind => ({
-                ticker: ind.ticker,
-                tickerName: ind.ticker_name || ind.ticker,
-                value: (ind.pct_change || 0) * 100
-            })).sort((a, b) => b.value - a.value);
+            const listData = allIndustries.map(ind => {
+                const itdItems = itdAllData[ind.ticker] || [];
+                const latestItd = itdItems.length > 0
+                    ? [...itdItems].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[itdItems.length - 1]
+                    : undefined;
+
+                return {
+                    ticker: ind.ticker,
+                    tickerName: latestItd?.ticker_name || ind.ticker_name || ind.ticker,
+                    value: toPercentValue(latestItd?.pct_change)
+                };
+            }).sort((a, b) => b.value - a.value);
+
             setListSeries(listData);
             return;
         }
@@ -254,7 +301,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
 
         setListSeries(listData.sort((a, b) => b.value - a.value));
 
-    }, [timeRange, allIndustries, getCutoffDate, hasFetchedAllHistory]);
+    }, [timeRange, allIndustries, itdAllData, getCutoffDate, hasFetchedAllHistory, toPercentValue]);
 
 
     // ========== BUILD CHART SERIES (Left Side) ==========
@@ -262,6 +309,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
         const updateChart = async () => {
             if (selectedTickers.length === 0) {
                 setChartSeries([]);
+                setXAxisMax(undefined);
                 return;
             }
 
@@ -276,10 +324,22 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                     const tickerName = todayItem?.ticker_name || ticker;
 
                     if (itdItems.length > 0) {
-                        const points = itdItems.map(item => ({
-                            date: new Date(item.date).getTime() + 7 * 60 * 60 * 1000, // Shift to VN Time
-                            value: (item.pct_change || 0) * 100
-                        }));
+                        const validSorted = [...itdItems]
+                            .filter(item => item.date)
+                            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+                        const seenTimestamps = new Set<number>();
+                        const points = validSorted
+                            .map(item => ({
+                                date: Math.floor((new Date(item.date).getTime() + 7 * 60 * 60 * 1000) / (60 * 1000)) * (60 * 1000), // Shift + normalize to minute
+                                value: toPercentValue(item.pct_change)
+                            }))
+                            .filter(point => {
+                                if (seenTimestamps.has(point.date)) return false;
+                                seenTimestamps.add(point.date);
+                                return true;
+                            });
+
                         allRawData.push({ ticker, tickerName, data: points });
                     } else {
                         allRawData.push({ ticker, tickerName, data: [] });
@@ -341,29 +401,59 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
             });
 
             // Sort timestamps
-            const sortedTimestamps = Array.from(allTimestamps).sort((a, b) => a - b);
+            let sortedTimestamps = Array.from(allTimestamps).sort((a, b) => a - b);
+
+            // 1D: pin trục X theo full phiên giao dịch để line chỉ chạy tới thời điểm hiện tại
+            if (timeRange === '1D') {
+                const latestDataTs = sortedTimestamps.length > 0 ? sortedTimestamps[sortedTimestamps.length - 1] : undefined;
+                const fixedTimeline = build1DTradingTimeline(latestDataTs);
+                if (fixedTimeline.length > 0) {
+                    sortedTimestamps = fixedTimeline;
+                }
+            }
 
             // Map timestamp -> continuous index
             const timestampToIndex = new Map<number, number>();
             const idxToTs = new Map<number, number>();
-            sortedTimestamps.forEach((ts, index) => {
-                timestampToIndex.set(ts, index);
-                idxToTs.set(index, ts);
-            });
+
+            if (timeRange === '1D') {
+                // Virtual gap for lunch break: make 11:30 -> 13:00 equal 30 minutes on axis
+                // Morning: 09:00 -> 11:30  => index 0..150
+                // Afternoon starts at index 180 (30-minute virtual gap)
+                const LUNCH_SHIFT = 29; // 13:00 raw index 151 -> 180
+                sortedTimestamps.forEach((ts, rawIndex) => {
+                    const d = new Date(ts);
+                    const h = d.getUTCHours();
+                    const m = d.getUTCMinutes();
+                    const isAfternoon = h > 13 || (h === 13 && m >= 0);
+                    const finalIndex = isAfternoon ? rawIndex + LUNCH_SHIFT : rawIndex;
+                    timestampToIndex.set(ts, finalIndex);
+                    idxToTs.set(finalIndex, ts);
+                });
+            } else {
+                sortedTimestamps.forEach((ts, index) => {
+                    timestampToIndex.set(ts, index);
+                    idxToTs.set(index, ts);
+                });
+            }
 
             // Update ref for formatter (using ref instead of state to avoid stale closure issues)
             indexToTimestampRef.current = idxToTs;
+            const maxIndex = idxToTs.size > 0 ? Math.max(...Array.from(idxToTs.keys())) : undefined;
+            setXAxisMax(maxIndex);
 
             // 3. Transform Data to use Index as X
             const finalizedSeries = allRawData.map(series => {
                 const dataPoints = series.data.map(p => {
                     const ts = typeof p.date === 'number' ? p.date : new Date(p.date).getTime();
                     const index = timestampToIndex.get(ts) ?? 0;
+                    if (!timestampToIndex.has(ts)) return null;
                     return {
                         x: index,
                         y: p.value
                     };
-                }).sort((a, b) => a.x - b.x);
+                }).filter((p): p is { x: number; y: number } => p !== null)
+                    .sort((a, b) => a.x - b.x);
 
                 return { name: series.tickerName, data: dataPoints };
             });
@@ -372,7 +462,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
         };
 
         updateChart();
-    }, [timeRange, selectedTickers, itdAllData, allIndustries, filterDataByTimeRange, hasFetchedAllHistory]);
+    }, [timeRange, selectedTickers, itdAllData, allIndustries, filterDataByTimeRange, hasFetchedAllHistory, toPercentValue, build1DTradingTimeline]);
 
 
     // ========== HANDLERS ==========
@@ -426,18 +516,23 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                     fontSize: getResponsiveFontSize('sm').md
                 },
                 rotate: 0,
-                hideOverlappingLabels: true,
+                hideOverlappingLabels: timeRange !== '1D',
                 offsetX: 0,
-                offsetY: 0
+                offsetY: 0,
+                showDuplicates: true
             }
         };
 
         // Fixed tick count for consistent spacing across all timeranges
-        const tickAmount = isMobile ? 4 : 5;
+        const tickAmount = timeRange === '1D'
+            ? 10 // 0..300 with step 30m => 11 ticks
+            : (isMobile ? 4 : 5);
 
         return {
             ...baseConfig,
             type: 'numeric',
+            min: timeRange === '1D' ? 0 : undefined,
+            max: timeRange === '1D' ? xAxisMax : undefined,
             tickAmount,
             labels: {
                 ...baseConfig.labels,
@@ -451,6 +546,10 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                         const d = new Date(ts);
                         const hours = d.getUTCHours().toString().padStart(2, '0');
                         const minutes = d.getUTCMinutes().toString().padStart(2, '0');
+
+                        // Chỉ hiện nhãn mỗi 30 phút theo trục đã nén (bao gồm 11:30, 14:30)
+                        if (index % 30 !== 0) return '';
+
                         return `${hours}:${minutes}`;
                     }
 
@@ -458,9 +557,11 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                 }
             }
         };
-    }, [timeRange, theme.palette.text.secondary, formatDateLabel, isMobile]);
+    }, [timeRange, theme.palette.text.secondary, formatDateLabel, isMobile, xAxisMax]);
 
     const chartOptions: ApexCharts.ApexOptions = useMemo(() => {
+        const markerSizes = chartSeries.map(series => (series.data.length <= 1 ? 4 : 0));
+
         // Generate annotations for the last data point of each series (Price Tags)
         const yAxisAnnotations = chartSeries.map((series, index) => {
             const data = series.data;
@@ -634,7 +735,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                 }
             },
             markers: {
-                size: 0,
+                size: markerSizes,
                 colors: [theme.palette.mode === 'dark' ? '#000000' : '#ffffff'], // Match background
                 strokeColors: chartColors,
                 strokeWidth: 2,
@@ -658,26 +759,19 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
         return Math.max(...displayedList.map(i => Math.abs(i.value)));
     }, [displayedList]);
 
-    // Dynamic height: actual row height includes padding (p:0.25 = 4px) + content (~20px) + gap (0.25 = 2px)
-    const ROW_HEIGHT = 25;
-    const MIN_SECTION_HEIGHT = 280;
+    // ========== STANDARDIZED HEIGHT CONSTANTS ==========
+    const ROW_HEIGHT = 26;     // Chiều cao mỗi hàng (px): content ~22px + vertical padding 4px
+    const ROW_GAP = 2;         // Gap giữa các hàng (px): gap: 0.25 = 2px
+    const COLLAPSED_ROWS = 10; // Số hàng thu gọn (5 top + 5 bottom)
+    const EXPANDED_ROWS = listSeries.length || 24; // Số hàng mở rộng = tổng ngành, fallback 24
 
-    // Skeleton row count: Cố định 10 hàng thu gọn, 24 hàng mở rộng
-    const skeletonRowCount = showAll ? 21 : 9;
+    // Số hàng hiển thị — skeleton và data dùng chung giá trị này
+    const displayRowCount = showAll ? EXPANDED_ROWS : COLLAPSED_ROWS;
 
-    const sectionMinHeight = useMemo(() => {
-        const gap = 2; // gap: 0.25 = 2px
-
-        // Nếu đang loading, tính theo skeleton
-        if (listSeries.length === 0 || (timeRange !== '1D' && isLoadingHistory)) {
-            const skeletonContentHeight = skeletonRowCount * ROW_HEIGHT + Math.max(0, skeletonRowCount - 1) * gap;
-            return Math.max(MIN_SECTION_HEIGHT, skeletonContentHeight);
-        }
-
-        // Nếu có data, tính theo displayedList
-        const contentHeight = displayedList.length * ROW_HEIGHT + Math.max(0, displayedList.length - 1) * gap;
-        return Math.max(MIN_SECTION_HEIGHT, contentHeight);
-    }, [displayedList.length, listSeries.length, timeRange, isLoadingHistory, skeletonRowCount]);
+    // Tính chiều cao chính xác: rows * ROW_HEIGHT + (rows - 1) * ROW_GAP
+    const sectionHeight = useMemo(() => {
+        return displayRowCount * ROW_HEIGHT + Math.max(0, displayRowCount - 1) * ROW_GAP;
+    }, [displayRowCount]);
 
     return (
         <Box>
@@ -713,8 +807,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                             color: showAll
                                 ? ((theme.palette as any).component?.chart?.buttonBackgroundActive || theme.palette.primary.main)
                                 : theme.palette.text.secondary,
-                            backgroundColor: (theme.palette as any).component?.chart?.buttonBackground || alpha(theme.palette.text.primary, 0.05),
-                            border: 'none',
+                            ...glassButtonStyles,
                             borderRadius: 2,
                             height: 34,
                             px: isMobile ? 1 : 1.5,
@@ -725,7 +818,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                             whiteSpace: 'nowrap',
                             '& .MuiButton-startIcon': isMobile ? { mr: 0 } : {},
                             '&:hover': {
-                                backgroundColor: (theme.palette as any).component?.chart?.buttonBackgroundHover || alpha(theme.palette.text.primary, 0.1),
+                                opacity: 0.8,
                             },
                         }}
                     >
@@ -738,8 +831,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                         startIcon={<DeselectIcon sx={{ fontSize: 18 }} />}
                         sx={{
                             color: theme.palette.text.secondary,
-                            backgroundColor: (theme.palette as any).component?.chart?.buttonBackground || alpha(theme.palette.text.primary, 0.05),
-                            border: 'none',
+                            ...glassButtonStyles,
                             borderRadius: 2,
                             height: 34,
                             px: isMobile ? 1 : 1.5,
@@ -750,7 +842,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                             whiteSpace: 'nowrap',
                             '& .MuiButton-startIcon': isMobile ? { mr: 0 } : {},
                             '&:hover': {
-                                backgroundColor: (theme.palette as any).component?.chart?.buttonBackgroundHover || alpha(theme.palette.text.primary, 0.1),
+                                opacity: 0.8,
                             },
                         }}
                     >
@@ -775,14 +867,14 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                         flexDirection: 'column',
                         justifyContent: 'flex-start',
                         width: '100%',
-                        minHeight: sectionMinHeight,
-                        transition: 'min-height 0.3s ease',
+                        height: sectionHeight,
+                        transition: 'height 0.3s ease',
                     }}>
                         {(listSeries.length === 0 || (timeRange !== '1D' && isLoadingHistory)) ? (
-                            // Skeleton loading cho list - số hàng theo trạng thái thu gọn/mở rộng
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                                {[...Array(skeletonRowCount)].map((_, i) => (
-                                    <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 0.25 }}>
+                            // Skeleton loading cho list - cùng số hàng với data
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: `${ROW_GAP}px` }}>
+                                {[...Array(displayRowCount)].map((_, i) => (
+                                    <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, height: ROW_HEIGHT, px: 0.25, boxSizing: 'border-box' }}>
                                         <Skeleton variant="circular" width={14} height={14} />
                                         <Skeleton variant="text" width={140} sx={{ fontSize: getResponsiveFontSize('md').md }} />
                                         <Skeleton variant="text" width={50} sx={{ fontSize: getResponsiveFontSize('md').md }} />
@@ -791,85 +883,89 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                                 ))}
                             </Box>
                         ) : (
-                            displayedList.map((item) => {
-                                // Calculate selection and color
-                                const selectionIndex = selectedTickers.indexOf(item.ticker);
-                                const isSelected = selectionIndex !== -1;
-                                // Use the same color logic as chartSeries: color based on index in selectedTickers
-                                const dotColor = isSelected
-                                    ? chartColors[selectionIndex % chartColors.length]
-                                    : 'transparent';
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: `${ROW_GAP}px` }}>
+                                {displayedList.map((item) => {
+                                    // Calculate selection and color
+                                    const selectionIndex = selectedTickers.indexOf(item.ticker);
+                                    const isSelected = selectionIndex !== -1;
+                                    // Use the same color logic as chartSeries: color based on index in selectedTickers
+                                    const dotColor = isSelected
+                                        ? chartColors[selectionIndex % chartColors.length]
+                                        : 'transparent';
 
-                                const val = item.value;
-                                const isPositive = val >= 0;
-                                const barColor = isPositive ? theme.palette.trend.up : theme.palette.trend.down;
-                                const widthPct = maxListValue > 0 ? (Math.abs(val) / maxListValue) * 100 : 0;
+                                    const val = item.value;
+                                    const isPositive = val >= 0;
+                                    const barColor = isPositive ? theme.palette.trend.up : theme.palette.trend.down;
+                                    const widthPct = maxListValue > 0 ? (Math.abs(val) / maxListValue) * 100 : 0;
 
-                                return (
-                                    <Box
-                                        key={item.ticker}
-                                        sx={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 1.5,
-                                            p: 0.25, // Reduced padding (was 0.5)
-                                            borderRadius: 2
-                                        }}
-                                    >
-                                        {/* Custom Round "Checkbox" */}
+                                    return (
                                         <Box
-                                            onClick={() => handleToggleIndustry(item.ticker)}
+                                            key={item.ticker}
                                             sx={{
-                                                width: 14,
-                                                height: 14,
-                                                borderRadius: '50%',
-                                                border: `2px solid ${isSelected ? dotColor : theme.palette.divider}`,
-                                                bgcolor: isSelected ? dotColor : 'transparent',
-                                                cursor: 'pointer',
-                                                transition: 'all 0.2s',
-                                                flexShrink: 0
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 1.5,
+                                                height: ROW_HEIGHT,
+                                                px: 0.25,
+                                                boxSizing: 'border-box',
+                                                borderRadius: 2
                                             }}
-                                        />
-
-                                        {/* Name with HREF placeholder handling */}
-                                        <Typography
-                                            component="a"
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                // Placeholder for href
-                                                // console.log("Navigate to", item.ticker);
-                                            }}
-                                            href={`#${item.ticker}`}
-                                            sx={{
-                                                fontSize: getResponsiveFontSize('md'),
-                                                flex: 1, // Allow text to take available space
-                                                fontWeight: fontWeight.medium,
-                                                whiteSpace: 'nowrap',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                textDecoration: 'none',
-                                                color: isSelected ? dotColor : 'inherit',
-                                                cursor: 'pointer',
-                                                '&:hover': {
-                                                    textDecoration: 'underline'
-                                                }
-                                            }}
-                                            title={item.tickerName}
                                         >
-                                            {item.tickerName}
-                                        </Typography>
+                                            {/* Custom Round "Checkbox" */}
+                                            <Box
+                                                onClick={() => handleToggleIndustry(item.ticker)}
+                                                sx={{
+                                                    width: 14,
+                                                    height: 14,
+                                                    borderRadius: '50%',
+                                                    border: `2px solid ${isSelected ? dotColor : theme.palette.divider}`,
+                                                    bgcolor: isSelected ? dotColor : 'transparent',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    flexShrink: 0
+                                                }}
+                                            />
 
-                                        <Typography variant="body2" sx={{ width: 50, textAlign: 'right', fontWeight: fontWeight.medium, fontSize: getResponsiveFontSize('md') }}>
-                                            {(val > 0 ? '+' : '') + val.toFixed(1)}%
-                                        </Typography>
+                                            {/* Name with HREF placeholder handling */}
+                                            <Typography
+                                                component="a"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    // Placeholder for href
+                                                    // console.log("Navigate to", item.ticker);
+                                                }}
+                                                href={`#${item.ticker}`}
+                                                sx={{
+                                                    fontSize: getResponsiveFontSize('md'),
+                                                    flex: 1, // Allow text to take available space
+                                                    fontWeight: fontWeight.medium,
+                                                    whiteSpace: 'nowrap',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    textDecoration: 'none',
+                                                    color: isSelected ? dotColor : 'inherit',
+                                                    cursor: 'pointer',
+                                                    '&:hover': {
+                                                        textDecoration: 'underline'
+                                                    }
+                                                }}
+                                                title={item.tickerName}
+                                            >
+                                                {item.tickerName}
+                                            </Typography>
 
-                                        {/* Bar Chart Part - Increased width and height */}
-                                        <Box sx={{ width: '45%', display: 'flex', alignItems: 'center' }}>
-                                            <Box sx={{ height: 16, width: `${Math.max(widthPct, 1)}%`, bgcolor: barColor, borderRadius: 1 }} />
+                                            <Typography variant="body2" sx={{ width: 50, textAlign: 'right', fontWeight: fontWeight.medium, fontSize: getResponsiveFontSize('md') }}>
+                                                {(val > 0 ? '+' : '') + val.toFixed(1)}%
+                                            </Typography>
+
+                                            {/* Bar Chart Part - Increased width and height */}
+                                            <Box sx={{ width: '45%', display: 'flex', alignItems: 'center' }}>
+                                                <Box sx={{ height: 16, width: `${Math.max(widthPct, 1)}%`, bgcolor: barColor, borderRadius: 1 }} />
+                                            </Box>
                                         </Box>
-                                    </Box>
-                                );
-                            })
+                                    );
+                                })}
+                            </Box>
                         )}
                     </Box>
                 </Grid>
@@ -880,7 +976,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                         flex: 1,
                         display: 'flex',
                         flexDirection: 'column',
-                        height: sectionMinHeight,
+                        height: sectionHeight,
                         transition: 'height 0.3s ease',
                         '& .apexcharts-tooltip': {
                             boxShadow: 'none !important',
@@ -901,7 +997,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                             {isLoadingHistory ? (
                                 // Skeleton loading cho chart - chiều cao tương ứng với list
                                 <Box sx={{
-                                    height: sectionMinHeight,
+                                    height: sectionHeight,
                                     display: 'flex',
                                     flexDirection: 'column',
                                     justifyContent: 'space-between',
@@ -921,14 +1017,14 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                                 </Box>
                             ) : chartSeries.length > 0 ? (
                                 <ReactApexChart
-                                    key={`chart-${timeRange}-${sectionMinHeight}`}
+                                    key={`chart-${timeRange}-${sectionHeight}`}
                                     options={chartOptions}
                                     series={chartSeries}
                                     type="line"
-                                    height={sectionMinHeight}
+                                    height={sectionHeight}
                                 />
                             ) : (
-                                <Box sx={{ height: sectionMinHeight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Box sx={{ height: sectionHeight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <Typography color="text.secondary">Chọn ngành để xem biểu đồ</Typography>
                                 </Box>
                             )}

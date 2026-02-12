@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import MarketIndexChart, { ChartData, TimeRange } from './MarketIndexChart';
 import IndexTable from './IndexTable';
-import { getResponsiveFontSize } from 'theme/tokens';
+import { getResponsiveFontSize, getGlassCard } from 'theme/tokens';
 import { RawMarketData } from './MarketIndexChart';
 
 // Tab type cho bảng index
@@ -87,6 +87,12 @@ export default function MarketSection({
     const theme = useTheme();
     const router = useRouter();
 
+    const isDark = theme.palette.mode === 'dark';
+    const glassStyles = (() => {
+        const g = getGlassCard(isDark);
+        return { background: g.background, backdropFilter: g.backdropFilter, WebkitBackdropFilter: g.WebkitBackdropFilter, border: g.border };
+    })();
+
     // Colors for dropdown
     const dropdownColors = {
         background: theme.palette.component.chart.buttonBackground,
@@ -148,7 +154,7 @@ export default function MarketSection({
                                 sx={{
                                     fontSize: getResponsiveFontSize('md'),
                                     borderRadius: 2,
-                                    backgroundColor: dropdownColors.background,
+                                    ...glassStyles,
                                     color: dropdownColors.text,
                                     height: { xs: 34, md: 33 },
                                     '& .MuiSelect-select': {
@@ -161,7 +167,7 @@ export default function MarketSection({
                                         border: 'none',
                                     },
                                     '&:hover': {
-                                        backgroundColor: dropdownColors.background,
+                                        opacity: 0.8,
                                     },
                                     '&:hover .MuiOutlinedInput-notchedOutline': {
                                         border: 'none',
@@ -176,8 +182,19 @@ export default function MarketSection({
                                 MenuProps={{
                                     PaperProps: {
                                         sx: {
-                                            backgroundColor: `${dropdownColors.background} !important`,
+                                            backgroundColor: isDark
+                                                ? 'rgba(30, 30, 30, 0.95)'
+                                                : 'rgba(255, 255, 255, 0.95)',
+                                            backdropFilter: 'blur(20px)',
+                                            WebkitBackdropFilter: 'blur(20px)',
                                             backgroundImage: 'none',
+                                            border: isDark
+                                                ? '1px solid rgba(255, 255, 255, 0.1)'
+                                                : '1px solid rgba(0, 0, 0, 0.08)',
+                                            boxShadow: isDark
+                                                ? '0 8px 32px rgba(0, 0, 0, 0.4)'
+                                                : '0 8px 32px rgba(31, 38, 135, 0.1)',
+                                            borderRadius: 2,
                                             '& .MuiList-root': {
                                                 py: 0.5,
                                             },
