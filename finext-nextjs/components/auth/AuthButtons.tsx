@@ -12,11 +12,13 @@ import {
     PersonAdd as PersonAddIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
-import { buttonSize, borderRadius, transitions, shadows, getResponsiveFontSize } from 'theme/tokens';
+import { buttonSize, borderRadius, transitions, shadows, getResponsiveFontSize, getGlowButton } from 'theme/tokens';
 
 export default function AuthButtons() {
     const theme = useTheme();
     const router = useRouter();
+    const isDark = theme.palette.mode === 'dark';
+    const glowStyles = getGlowButton(isDark);
 
     const handleSignInClick = () => {
         router.push('/login');
@@ -35,18 +37,22 @@ export default function AuthButtons() {
                 sx={{
                     minWidth: 100,
                     height: buttonSize.sm.height,
-                    fontSize: getResponsiveFontSize('md'),
+                    fontSize: getResponsiveFontSize('sm'),
                     color: theme.palette.primary.main,
                     borderColor: theme.palette.primary.main,
                     borderRadius: `${borderRadius.md}px`,
                     textTransform: 'none',
                     whiteSpace: 'nowrap',
-                    transition: transitions.button,
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     '&:hover': {
                         backgroundColor: alpha(theme.palette.primary.main, 0.08),
                         borderColor: theme.palette.primary.dark,
                         color: theme.palette.primary.dark,
-                        boxShadow: shadows.button,
+                        boxShadow: (glowStyles as any)['&:hover']?.boxShadow,
+                        transform: 'translateY(-2px)',
+                    },
+                    '&:active': {
+                        transform: 'translateY(0)',
                     },
                 }}
             >
@@ -59,19 +65,14 @@ export default function AuthButtons() {
                 sx={{
                     minWidth: 100,
                     height: buttonSize.sm.height,
-                    fontSize: getResponsiveFontSize('md'),
+                    fontSize: getResponsiveFontSize('sm'),
                     backgroundColor: theme.palette.primary.main,
                     color: theme.palette.primary.contrastText,
                     borderRadius: `${borderRadius.md}px`,
                     textTransform: 'none',
                     whiteSpace: 'nowrap',
-                    boxShadow: shadows.button,
-                    transition: transitions.button,
-                    '&:hover': {
-                        backgroundColor: theme.palette.primary.dark,
-                        boxShadow: shadows.buttonHover,
-                        transform: 'translateY(-1px)',
-                    },
+                    ...glowStyles,
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 }}
             >
                 Đăng ký

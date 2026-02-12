@@ -819,7 +819,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                                   borderRadius: borderRadius.sm,
                                   '&:hover': {
                                     color: theme.palette.primary.main,
-                                    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                                    backgroundColor: 'transparent',
                                   },
                                 }}
                               >
@@ -945,7 +945,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                                 borderRadius: borderRadius.sm,
                                 '&:hover': {
                                   color: theme.palette.primary.main,
-                                  backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                                  backgroundColor: 'transparent',
                                 },
                               }}
                             >

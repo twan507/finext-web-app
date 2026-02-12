@@ -701,6 +701,37 @@ export const getGlassHighlight = (isDark: boolean) => isDark ? glassCard.highlig
 export const getGlassEdgeLight = (isDark: boolean) => isDark ? glassCard.edgeLightDark : glassCard.edgeLight;
 
 // --------------------
+// GLOW BUTTON TOKENS
+// --------------------
+// Modern glow effect for CTA buttons (inspired by glassmorphism design language)
+// Usage: sx={{ ...getGlowButton(isDark), transition: 'all 0.3s ease' }}
+export const glowButton = {
+  light: {
+    boxShadow: '0 0 10px rgba(139, 92, 246, 0.3), 0 0 20px rgba(139, 92, 246, 0.12), 0 4px 12px rgba(139, 92, 246, 0.2)',
+    '&:hover': {
+      boxShadow: '0 0 14px rgba(139, 92, 246, 0.45), 0 0 28px rgba(139, 92, 246, 0.2), 0 4px 16px rgba(139, 92, 246, 0.28)',
+      transform: 'translateY(-1px)',
+    },
+    '&:active': {
+      transform: 'translateY(0)',
+    },
+  },
+  dark: {
+    boxShadow: '0 0 10px rgba(180, 126, 255, 0.25), 0 0 20px rgba(180, 126, 255, 0.1), 0 4px 12px rgba(180, 126, 255, 0.18)',
+    '&:hover': {
+      boxShadow: '0 0 14px rgba(180, 126, 255, 0.4), 0 0 28px rgba(180, 126, 255, 0.18), 0 4px 16px rgba(180, 126, 255, 0.25)',
+      transform: 'translateY(-1px)',
+    },
+    '&:active': {
+      transform: 'translateY(0)',
+    },
+  },
+} as const;
+
+// Helper to get glow button styles based on dark mode
+export const getGlowButton = (isDark: boolean) => isDark ? glowButton.dark : glowButton.light;
+
+// --------------------
 // TRANSITION TOKENS
 // --------------------
 // Consistent animation timing across the app

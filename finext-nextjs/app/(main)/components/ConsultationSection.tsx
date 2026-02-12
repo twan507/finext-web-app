@@ -2,7 +2,7 @@
 
 import { Box, Typography, Button, Grid, useTheme } from '@mui/material';
 import Image from 'next/image';
-import { borderRadius, fontWeight, getResponsiveFontSize } from 'theme/tokens';
+import { borderRadius, fontWeight, getResponsiveFontSize, getGlowButton } from 'theme/tokens';
 
 export default function ConsultationSection() {
     const theme = useTheme();
@@ -86,7 +86,8 @@ export default function ConsultationSection() {
                                 fontWeight: fontWeight.semibold,
                                 fontSize: getResponsiveFontSize('md'),
                                 textTransform: 'none',
-                                boxShadow: theme.shadows[4],
+                                ...getGlowButton(isDark),
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                 width: { xs: '100%', sm: 'auto' }
                             }}
                         >

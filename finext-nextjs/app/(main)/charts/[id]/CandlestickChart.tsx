@@ -377,6 +377,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                         ...(lwOpts.crosshairMarkerBackgroundColor && { crosshairMarkerBackgroundColor: lwOpts.crosshairMarkerBackgroundColor }),
                         ...(lwOpts.title && { title: lwOpts.title }),
                         visible: false,
+                        autoscaleInfoProvider: () => null,
                     });
                     newIndicatorSeries.set(ind.key, [series]);
                 } else if (ind.type === 'area') {
@@ -389,6 +390,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                         lastValueVisible: true,
                         crosshairMarkerVisible: false,
                         visible: false,
+                        autoscaleInfoProvider: () => null,
                     });
                     const middleSeries = chart.addSeries(LineSeries, {
                         color: resolvedColor,
@@ -400,6 +402,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                         crosshairMarkerVisible: true,
                         crosshairMarkerRadius: 3,
                         visible: false,
+                        autoscaleInfoProvider: () => null,
                     });
                     const lowerSeries = chart.addSeries(LineSeries, {
                         color: resolvedColor,
@@ -409,6 +412,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                         lastValueVisible: true,
                         crosshairMarkerVisible: false,
                         visible: false,
+                        autoscaleInfoProvider: () => null,
                     });
                     newIndicatorSeries.set(ind.key, [upperSeries, middleSeries, lowerSeries]);
                 } else if (ind.type === 'band') {
@@ -427,6 +431,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                         lastValueVisible: true,
                         crosshairMarkerVisible: false,
                         visible: false,
+                        autoscaleInfoProvider: () => null,
                     });
                     // Lower price tag series
                     const lowerTag = chart.addSeries(LineSeries, {
@@ -437,6 +442,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                         lastValueVisible: true,
                         crosshairMarkerVisible: false,
                         visible: false,
+                        autoscaleInfoProvider: () => null,
                     });
                     newIndicatorSeries.set(ind.key, [upperTag, lowerTag]);
                 } else if (ind.type === 'volume-line') {
@@ -454,6 +460,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                         crosshairMarkerRadius: lwOpts.crosshairMarkerRadius ?? 3,
                         priceScaleId: 'volume',
                         visible: false,
+                        autoscaleInfoProvider: () => null,
                     });
                     newIndicatorSeries.set(ind.key, [series]);
                 }

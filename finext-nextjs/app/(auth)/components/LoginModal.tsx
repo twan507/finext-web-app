@@ -29,11 +29,23 @@ export default function SignInModal({ open, onClose, onSuccess }: SignInModalPro
         <Dialog
             open={open}
             onClose={onClose}
+            slotProps={{
+                backdrop: {
+                    sx: {
+                        backgroundColor: 'rgba(139, 92, 246, 0.08)',
+                        backdropFilter: 'blur(6px)',
+                        WebkitBackdropFilter: 'blur(6px)',
+                    },
+                },
+            }}
             PaperProps={{
                 sx: {
                     m: 0,
                     p: 0,
                     borderRadius: 3,
+                    backgroundColor: 'transparent',
+                    boxShadow: 'none',
+                    overflow: 'visible',
                 }
             }}
         >

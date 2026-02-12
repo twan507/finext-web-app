@@ -25,7 +25,7 @@ import { useGoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 
 import BrandLogo from '@/components/layout/BrandLogo';
 import { LoginResponse, UserSchema } from 'services/core/types';
-import { iconSize, layoutTokens, getResponsiveFontSize, borderRadius, fontWeight } from 'theme/tokens';
+import { iconSize, layoutTokens, getResponsiveFontSize, borderRadius, fontWeight, getGlowButton } from 'theme/tokens';
 
 interface UserInfoFromAuth extends UserSchema { }
 
@@ -442,7 +442,11 @@ function SignInFormContent() {
                     type="submit"
                     fullWidth
                     variant="contained"
-                    sx={{ mt: 0.5, mb: 1.5, py: 1, borderRadius: 2 }}
+                    sx={(t) => ({
+                        mt: 0.5, mb: 1.5, py: 1, borderRadius: 2,
+                        ...getGlowButton(t.palette.mode === 'dark'),
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    })}
                     disabled={loading || googleLoading || !!successMessage}
                 >
                     {loading ? <CircularProgress size={iconSize.progressMedium} color="inherit" /> : 'Đăng nhập'}
