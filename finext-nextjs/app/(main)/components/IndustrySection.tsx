@@ -171,7 +171,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
     const build1DTradingTimeline = useCallback((referenceTimestamp?: number): number[] => {
         const ref = referenceTimestamp != null
             ? new Date(referenceTimestamp)
-            : new Date(Date.now() + 7 * 60 * 60 * 1000); // fallback theo VN time logic đang dùng
+            : new Date(Date.now() + 7 * 60 * 60 * 1000);
 
         const y = ref.getUTCFullYear();
         const m = ref.getUTCMonth();
@@ -403,7 +403,8 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
             // Sort timestamps
             let sortedTimestamps = Array.from(allTimestamps).sort((a, b) => a - b);
 
-            // 1D: pin trục X theo full phiên giao dịch để line chỉ chạy tới thời điểm hiện tại
+            // 1D: dùng fixed timeline (09:00-11:30 + 13:00-15:00) để tạo hiệu ứng vẽ tới đâu data tới đó
+            // Bỏ nghỉ trưa: 11:30 nối thẳng 13:00, dùng sequential index
             if (timeRange === '1D') {
                 const latestDataTs = sortedTimestamps.length > 0 ? sortedTimestamps[sortedTimestamps.length - 1] : undefined;
                 const fixedTimeline = build1DTradingTimeline(latestDataTs);
@@ -412,32 +413,15 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                 }
             }
 
-            // Map timestamp -> continuous index
+            // Map timestamp -> sequential index (skip lunch break naturally)
             const timestampToIndex = new Map<number, number>();
             const idxToTs = new Map<number, number>();
+            sortedTimestamps.forEach((ts, index) => {
+                timestampToIndex.set(ts, index);
+                idxToTs.set(index, ts);
+            });
 
-            if (timeRange === '1D') {
-                // Virtual gap for lunch break: make 11:30 -> 13:00 equal 30 minutes on axis
-                // Morning: 09:00 -> 11:30  => index 0..150
-                // Afternoon starts at index 180 (30-minute virtual gap)
-                const LUNCH_SHIFT = 29; // 13:00 raw index 151 -> 180
-                sortedTimestamps.forEach((ts, rawIndex) => {
-                    const d = new Date(ts);
-                    const h = d.getUTCHours();
-                    const m = d.getUTCMinutes();
-                    const isAfternoon = h > 13 || (h === 13 && m >= 0);
-                    const finalIndex = isAfternoon ? rawIndex + LUNCH_SHIFT : rawIndex;
-                    timestampToIndex.set(ts, finalIndex);
-                    idxToTs.set(finalIndex, ts);
-                });
-            } else {
-                sortedTimestamps.forEach((ts, index) => {
-                    timestampToIndex.set(ts, index);
-                    idxToTs.set(index, ts);
-                });
-            }
-
-            // Update ref for formatter (using ref instead of state to avoid stale closure issues)
+            // Update ref for formatter
             indexToTimestampRef.current = idxToTs;
             const maxIndex = idxToTs.size > 0 ? Math.max(...Array.from(idxToTs.keys())) : undefined;
             setXAxisMax(maxIndex);
@@ -525,7 +509,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
 
         // Fixed tick count for consistent spacing across all timeranges
         const tickAmount = timeRange === '1D'
-            ? 10 // 0..300 with step 30m => 11 ticks
+            ? 10
             : (isMobile ? 4 : 5);
 
         return {
@@ -546,10 +530,6 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                         const d = new Date(ts);
                         const hours = d.getUTCHours().toString().padStart(2, '0');
                         const minutes = d.getUTCMinutes().toString().padStart(2, '0');
-
-                        // Chỉ hiện nhãn mỗi 30 phút theo trục đã nén (bao gồm 11:30, 14:30)
-                        if (index % 30 !== 0) return '';
-
                         return `${hours}:${minutes}`;
                     }
 
