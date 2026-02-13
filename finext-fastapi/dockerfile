@@ -29,4 +29,8 @@ EXPOSE 8000
 
 # Lệnh để chạy ứng dụng FastAPI bằng Uvicorn khi container khởi động
 # --host 0.0.0.0 cho phép truy cập từ bên ngoài container
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# --proxy-headers: Tin tưởng header X-Forwarded-Proto/X-Forwarded-For từ Nginx
+#   → Đảm bảo FastAPI tạo redirect URL với https:// thay vì http://
+#   → Ngăn chặn lỗi HTTPS→HTTP downgrade bị Safari/WebKit block hoàn toàn
+# --forwarded-allow-ips '*': Cho phép mọi IP gửi proxy headers (cần thiết trong Docker network)
+CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]

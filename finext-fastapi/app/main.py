@@ -142,6 +142,7 @@ app.include_router(features .router, prefix="/api/v1/features", tags=["features"
 
 
 @app.get("/api/v1")
+@app.get("/api/v1/")
 async def read_api_v1_root():
     return {"message": "Đây là gốc API v1 của Finext FastAPI!"}
 
