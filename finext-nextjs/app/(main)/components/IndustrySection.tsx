@@ -508,9 +508,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
         };
 
         // Fixed tick count for consistent spacing across all timeranges
-        const tickAmount = timeRange === '1D'
-            ? 10
-            : (isMobile ? 4 : 5);
+        const tickAmount = isMobile ? 6 : 10;
 
         return {
             ...baseConfig,

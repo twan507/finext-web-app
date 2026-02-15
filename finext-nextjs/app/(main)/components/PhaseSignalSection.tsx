@@ -647,7 +647,7 @@ export default function PhaseSignalSection({ hideTitle = false }: { hideTitle?: 
                         <Box sx={{
                             flex: 1,
                             width: '100%',
-                            minHeight: 400,
+                            minHeight: 350,
                             '& .apexcharts-tooltip': {
                                 boxShadow: 'none !important',
                                 filter: 'none !important',

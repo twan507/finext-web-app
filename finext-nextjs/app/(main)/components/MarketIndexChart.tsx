@@ -1087,44 +1087,62 @@ export default function MarketIndexChart({
 
                     {/* Pan/Zoom toggle button */}
                     <Tooltip title={panZoomEnabled ? 'Tắt kéo/thu phóng' : 'Bật kéo/thu phóng'} arrow>
-                        <IconButton
-                            onClick={handleTogglePanZoom}
-                            size="small"
-                            sx={{
-                                color: panZoomEnabled ? colors.buttonBackgroundActive : colors.buttonText,
-                                ...(() => {
-                                    const g = getGlassCard(isDarkMode);
-                                    return { background: g.background, backdropFilter: g.backdropFilter, WebkitBackdropFilter: g.WebkitBackdropFilter, border: g.border };
-                                })(),
-                                borderRadius: 2,
-                                height: 34,
-                                width: 34,
-                                '&:hover': { opacity: 0.8 },
-                            }}
-                        >
-                            <OpenWithIcon sx={{ fontSize: 18 }} />
-                        </IconButton>
+                        <Box sx={{
+                            ...(() => {
+                                const g = getGlassCard(isDarkMode);
+                                return { background: g.background, backdropFilter: g.backdropFilter, WebkitBackdropFilter: g.WebkitBackdropFilter, border: g.border };
+                            })(),
+                            borderRadius: 2,
+                            display: 'flex',
+                        }}>
+                            <IconButton
+                                onClick={handleTogglePanZoom}
+                                size="small"
+                                disableRipple
+                                disableFocusRipple
+                                sx={{
+                                    color: panZoomEnabled ? colors.buttonBackgroundActive : colors.buttonText,
+                                    backgroundColor: 'transparent',
+                                    borderRadius: 2,
+                                    height: 34,
+                                    width: 34,
+                                    '&:hover': { opacity: 0.8, backgroundColor: 'transparent' },
+                                    '&.Mui-focusVisible': { backgroundColor: 'transparent' },
+                                }}
+                            >
+                                <OpenWithIcon sx={{ fontSize: 18 }} />
+                            </IconButton>
+                        </Box>
                     </Tooltip>
 
                     {/* Open in new page button */}
                     <Tooltip title="Mở biểu đồ" arrow>
-                        <IconButton
-                            onClick={handleOpenChart}
-                            size="small"
-                            sx={{
-                                color: colors.buttonText,
-                                ...(() => {
-                                    const g = getGlassCard(isDarkMode);
-                                    return { background: g.background, backdropFilter: g.backdropFilter, WebkitBackdropFilter: g.WebkitBackdropFilter, border: g.border };
-                                })(),
-                                borderRadius: 2,
-                                height: 34,
-                                width: 34,
-                                '&:hover': { opacity: 0.8 },
-                            }}
-                        >
-                            <OpenInNewIcon sx={{ fontSize: 18 }} />
-                        </IconButton>
+                        <Box sx={{
+                            ...(() => {
+                                const g = getGlassCard(isDarkMode);
+                                return { background: g.background, backdropFilter: g.backdropFilter, WebkitBackdropFilter: g.WebkitBackdropFilter, border: g.border };
+                            })(),
+                            borderRadius: 2,
+                            display: 'flex',
+                        }}>
+                            <IconButton
+                                onClick={handleOpenChart}
+                                size="small"
+                                disableRipple
+                                disableFocusRipple
+                                sx={{
+                                    color: colors.buttonText,
+                                    backgroundColor: 'transparent',
+                                    borderRadius: 2,
+                                    height: 34,
+                                    width: 34,
+                                    '&:hover': { opacity: 0.8, backgroundColor: 'transparent' },
+                                    '&.Mui-focusVisible': { backgroundColor: 'transparent' },
+                                }}
+                            >
+                                <OpenInNewIcon sx={{ fontSize: 18 }} />
+                            </IconButton>
+                        </Box>
                     </Tooltip>
                 </Stack>
             </Stack>

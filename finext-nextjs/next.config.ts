@@ -8,6 +8,13 @@ const nextConfig = {
     optimizePackageImports: ['@mui/material', '@mui/icons-material', '@iconify/react', 'date-fns'],
   },
 
+  // Configure DevTools position
+  devIndicators: {
+    appIsrStatus: false,
+    buildActivity: true,
+    position: 'bottom-right',
+  },
+
   images: {
     // Định dạng ảnh tối ưu
     formats: ['image/avif', 'image/webp'],
