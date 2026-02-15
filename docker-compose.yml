@@ -56,7 +56,8 @@ services:
       context: ./finext-nextjs
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_API_URL_ARG=${NEXT_PUBLIC_API_URL}
+        # KHÔNG truyền NEXT_PUBLIC_API_URL → prod dùng relative URL (fix Safari)
+        # Dev dùng .env.development để set absolute URL
         - NEXT_PUBLIC_GOOGLE_CLIENT_ID_ARG=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
         - NEXT_PUBLIC_SYSTEM_LICENSE_KEYS_ARG=${NEXT_PUBLIC_SYSTEM_LICENSE_KEYS}
         - NEXT_PUBLIC_BASIC_FEATURE_ARG=${NEXT_PUBLIC_BASIC_FEATURE}
