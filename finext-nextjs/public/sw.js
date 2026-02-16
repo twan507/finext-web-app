@@ -29,7 +29,6 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - network-first strategy (pass-through)
 // This handler is required for Chrome to show the install prompt.
-// It uses a network-first approach: try network, fall back to cache if available.
 self.addEventListener('fetch', (event) => {
     // Only handle GET requests
     if (event.request.method !== 'GET') return;
@@ -37,19 +36,34 @@ self.addEventListener('fetch', (event) => {
     // Skip non-HTTP(S) requests (e.g., chrome-extension://)
     if (!event.request.url.startsWith('http')) return;
 
+    // *** CRITICAL: Skip SSE/streaming requests entirely ***
+    // SSE (Server-Sent Events) requires persistent connections.
+    // Intercepting them with respondWith() breaks the stream.
+    const url = new URL(event.request.url);
+    if (url.pathname.includes('/sse/') || url.pathname.includes('/stream')) {
+        return; // Let the browser handle SSE natively
+    }
+
+    // Skip requests that explicitly accept event-stream (SSE)
+    const acceptHeader = event.request.headers.get('Accept') || '';
+    if (acceptHeader.includes('text/event-stream')) {
+        return; // Let the browser handle SSE natively
+    }
+
+    // Skip API requests entirely — don't cache or intercept them
+    if (url.pathname.startsWith('/api/')) {
+        return;
+    }
+
+    // Skip Next.js RSC (React Server Component) requests
+    if (url.searchParams.has('_rsc') || url.pathname.includes('_rsc')) {
+        return;
+    }
+
+    // For remaining requests (static assets, pages), use network-first
     event.respondWith(
         fetch(event.request)
             .then((response) => {
-                // If we got a valid response, optionally cache it
-                if (response.ok && event.request.url.startsWith(self.location.origin)) {
-                    const responseClone = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => {
-                        // Only cache same-origin, non-API requests
-                        if (!event.request.url.includes('/api/')) {
-                            cache.put(event.request, responseClone);
-                        }
-                    });
-                }
                 return response;
             })
             .catch(() => {
