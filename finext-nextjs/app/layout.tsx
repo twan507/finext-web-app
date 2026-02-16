@@ -177,6 +177,18 @@ export default function RootLayout({
     <html lang="vi" suppressHydrationWarning className={roboto.variable}>
       <head>
         <meta charSet="utf-8" />
+        {/* Register Service Worker for PWA installability */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').catch(function() {});
+                });
+              }
+            `,
+          }}
+        />
       </head>
       <body className={roboto.className} style={{ margin: 0 }}>
         {/* AppRouterCacheProvider tối ưu emotion cache cho MUI */}
