@@ -1102,12 +1102,10 @@ export default function MarketIndexChart({
                                 disableFocusRipple
                                 sx={{
                                     color: panZoomEnabled ? colors.buttonBackgroundActive : colors.buttonText,
-                                    backgroundColor: 'transparent',
+                                    backgroundColor: 'transparent !important',
                                     borderRadius: 2,
                                     height: 34,
                                     width: 34,
-                                    '&:hover': { opacity: 0.8, backgroundColor: 'transparent' },
-                                    '&.Mui-focusVisible': { backgroundColor: 'transparent' },
                                 }}
                             >
                                 <OpenWithIcon sx={{ fontSize: 18 }} />
@@ -1132,12 +1130,10 @@ export default function MarketIndexChart({
                                 disableFocusRipple
                                 sx={{
                                     color: colors.buttonText,
-                                    backgroundColor: 'transparent',
+                                    backgroundColor: 'transparent !important',
                                     borderRadius: 2,
                                     height: 34,
                                     width: 34,
-                                    '&:hover': { opacity: 0.8, backgroundColor: 'transparent' },
-                                    '&.Mui-focusVisible': { backgroundColor: 'transparent' },
                                 }}
                             >
                                 <OpenInNewIcon sx={{ fontSize: 18 }} />
