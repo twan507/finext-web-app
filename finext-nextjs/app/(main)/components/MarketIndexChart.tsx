@@ -34,7 +34,7 @@ import TimeframeSelector from 'components/common/TimeframeSelector';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import CandlestickChartIcon from '@mui/icons-material/CandlestickChart';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import OpenWithIcon from '@mui/icons-material/OpenWith';
+import PanZoomToggle from 'components/common/PanZoomToggle';
 import { getResponsiveFontSize, fontWeight, getGlassCard } from 'theme/tokens';
 
 // Types - export để page có thể sử dụng
@@ -905,6 +905,8 @@ export default function MarketIndexChart({
                             chartRef.current.timeScale().setVisibleLogicalRange(visibleRange);
                         }
                     }
+                    // Reset vertical (price) axis
+                    chartRef.current.priceScale('right').applyOptions({ autoScale: true });
                 }
             }
             return next;
@@ -1086,32 +1088,7 @@ export default function MarketIndexChart({
                     </ToggleButtonGroup>
 
                     {/* Pan/Zoom toggle button */}
-                    <Tooltip title={panZoomEnabled ? 'Tắt kéo/thu phóng' : 'Bật kéo/thu phóng'} arrow>
-                        <Box sx={{
-                            ...(() => {
-                                const g = getGlassCard(isDarkMode);
-                                return { background: g.background, backdropFilter: g.backdropFilter, WebkitBackdropFilter: g.WebkitBackdropFilter, border: g.border };
-                            })(),
-                            borderRadius: 2,
-                            display: 'flex',
-                        }}>
-                            <IconButton
-                                onClick={handleTogglePanZoom}
-                                size="small"
-                                disableRipple
-                                disableFocusRipple
-                                sx={{
-                                    color: panZoomEnabled ? colors.buttonBackgroundActive : colors.buttonText,
-                                    backgroundColor: 'transparent !important',
-                                    borderRadius: 2,
-                                    height: 34,
-                                    width: 34,
-                                }}
-                            >
-                                <OpenWithIcon sx={{ fontSize: 18 }} />
-                            </IconButton>
-                        </Box>
-                    </Tooltip>
+                    <PanZoomToggle enabled={panZoomEnabled} onClick={handleTogglePanZoom} />
 
                     {/* Open in new page button */}
                     <Tooltip title="Mở biểu đồ" arrow>

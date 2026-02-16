@@ -21,11 +21,9 @@ import {
     useTheme,
     CircularProgress,
     alpha,
-    IconButton,
-    Tooltip,
     keyframes
 } from '@mui/material';
-import OpenWithIcon from '@mui/icons-material/OpenWith';
+import PanZoomToggle from 'components/common/PanZoomToggle';
 import TimeframeSelector from 'components/common/TimeframeSelector';
 import { getResponsiveFontSize, fontWeight, getGlassCard } from 'theme/tokens';
 
@@ -265,8 +263,9 @@ export default function MarketTrendChart({
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
     const seriesRefs = useRef<Map<string, ISeriesApi<'Line'>>>(new Map());
-    const prevTimeRangeRef = useRef<TrendTimeRange>(timeRange);
-    const savedLogicalRangeRef = useRef<{ from: number; to: number } | null>(null);
+
+    // Pan/Zoom toggle
+    const [panZoomEnabled, setPanZoomEnabled] = useState(false);
 
     // Tooltip state
     const [tooltipData, setTooltipData] = useState<{
@@ -431,34 +430,20 @@ export default function MarketTrendChart({
         };
     }, [height, colors, TREND_LINES]);
 
-    // Update series data
-    const updateSeries = useCallback(() => {
-        if (!chartRef.current) return;
+    // Refs to track changes (matching MarketIndexChart pattern)
+    const prevTimeRangeRef = useRef<TrendTimeRange>(timeRange);
+    const hasSetInitialRangeRef = useRef<boolean>(false);
+    const savedLogicalRangeRef = useRef<{ from: number; to: number } | null>(null);
 
-        const chart = chartRef.current;
-        const hasData = TREND_LINES.some((line) => chartData[line.key].length > 0);
-
-        if (!hasData) return;
-
-        // Save current visible range before removing series
-        let savedLogicalRange = null;
-        try {
-            savedLogicalRange = chart.timeScale().getVisibleLogicalRange();
-        } catch {
-            // Chart may not have data yet
-        }
-
-        // Remove existing series
+    // Helper: Create 4 line series (called once, or when series need recreation)
+    const createSeries = useCallback((chart: IChartApi) => {
+        // Remove existing series if any
         seriesRefs.current.forEach((series) => {
             chart.removeSeries(series);
         });
         seriesRefs.current.clear();
 
-        // Add 4 line series
         for (const line of TREND_LINES) {
-            const data = chartData[line.key];
-            if (data.length === 0) continue;
-
             const series = chart.addSeries(LineSeries, {
                 color: line.color,
                 lineWidth: 2,
@@ -477,74 +462,97 @@ export default function MarketTrendChart({
                     formatter: (price: number) => (price * 100).toFixed(1) + '%',
                 },
             });
-
-            try {
-                series.setData(data);
-            } catch (err) {
-                console.warn(`[MarketTrendChart] Error setting ${line.key} data:`, err);
-            }
-
             seriesRefs.current.set(line.key, series);
         }
+    }, [TREND_LINES, colors.chartBackground]);
 
-        // Determine if we should reset range or preserve user's pan position
+    // Update data on existing series — NO remove/recreate → no range jump
+    const updateSeriesData = useCallback(() => {
+        for (const line of TREND_LINES) {
+            const series = seriesRefs.current.get(line.key);
+            const data = chartData[line.key];
+            if (series && data.length > 0) {
+                try {
+                    series.setData(data);
+                } catch (err) {
+                    console.warn(`[MarketTrendChart] Error setting ${line.key} data:`, err);
+                }
+            }
+        }
+    }, [chartData, TREND_LINES]);
+
+    // Combined effect: Initialize chart, manage series, and update data
+    useEffect(() => {
+        // Initialize chart if not exists
+        if (!chartRef.current && chartContainerRef.current) {
+            initChart();
+        }
+        if (!chartRef.current) return;
+
+        const chart = chartRef.current;
+        const hasData = TREND_LINES.some((line) => chartData[line.key].length > 0);
+        if (!hasData) return;
+
+        // Create series if not yet created
+        const needsNewSeries = seriesRefs.current.size === 0;
+        if (needsNewSeries) {
+            createSeries(chart);
+        }
+
+        // Update data on existing series (no remove/recreate)
+        updateSeriesData();
+
+        // Handle visible range
+        const maxDataLength = Math.max(
+            ...TREND_LINES.map((l) => chartData[l.key].length)
+        );
         const isTimeRangeChanged = prevTimeRangeRef.current !== timeRange;
-        // First render: no saved range in ref AND no range captured from chart
-        const isFirstRender = savedLogicalRangeRef.current === null && !savedLogicalRange;
-        const shouldResetRange = isTimeRangeChanged || isFirstRender;
+        const shouldResetRange = isTimeRangeChanged || !hasSetInitialRangeRef.current;
 
         // Update refs
         prevTimeRangeRef.current = timeRange;
 
-        const maxDataLength = Math.max(
-            ...TREND_LINES.map((l) => chartData[l.key].length)
-        );
-
         if (shouldResetRange) {
-            // TimeRange changed or first render -> set range based on timeRange
+            // TimeRange changed or first render → set range based on timeRange
             if (maxDataLength > 0) {
                 const visibleRange = getVisibleRange(timeRange, maxDataLength);
                 chart.timeScale().setVisibleLogicalRange(visibleRange);
             }
-            // Clear saved range when reset
-            savedLogicalRangeRef.current = null;
-        } else if (savedLogicalRange) {
-            // Data update only -> restore saved range to avoid visual jump
-            try {
-                chart.timeScale().setVisibleLogicalRange(savedLogicalRange);
-            } catch {
-                if (maxDataLength > 0) {
-                    const visibleRange = getVisibleRange(timeRange, maxDataLength);
-                    chart.timeScale().setVisibleLogicalRange(visibleRange);
-                }
+            hasSetInitialRangeRef.current = true;
+        } else if (panZoomEnabled) {
+            // User is in Pan/Zoom mode → restore saved range if available
+            if (savedLogicalRangeRef.current) {
+                try {
+                    chart.timeScale().setVisibleLogicalRange(savedLogicalRangeRef.current);
+                } catch { /* ignore */ }
+            }
+        } else {
+            // Standard mode → always enforce correct range
+            if (maxDataLength > 0) {
+                const visibleRange = getVisibleRange(timeRange, maxDataLength);
+                chart.timeScale().setVisibleLogicalRange(visibleRange);
             }
         }
+    }, [initChart, createSeries, updateSeriesData, chartData, timeRange, panZoomEnabled, TREND_LINES]);
 
-        // Save range after render for next update
-        setTimeout(() => {
-            try {
-                if (chartRef.current) {
-                    savedLogicalRangeRef.current = chartRef.current.timeScale().getVisibleLogicalRange();
-                }
-            } catch {
-                // Ignore
-            }
-        }, 0);
-    }, [chartData, timeRange, isDarkMode, TREND_LINES]);
-
-    // Initialize and update
+    // Subscribe to visible range changes (only when Pan/Zoom is enabled)
     useEffect(() => {
-        if (!chartRef.current && chartContainerRef.current) {
-            initChart();
-        }
+        if (!chartRef.current) return;
+        const chart = chartRef.current;
 
-        const hasData = TREND_LINES.some((line) => chartData[line.key].length > 0);
-        if (!hasData) return;
+        const handler = () => {
+            if (panZoomEnabled) {
+                try {
+                    savedLogicalRangeRef.current = chart.timeScale().getVisibleLogicalRange();
+                } catch { /* ignore */ }
+            }
+        };
 
-        if (chartRef.current) {
-            updateSeries();
-        }
-    }, [initChart, updateSeries, chartData, timeRange]);
+        chart.timeScale().subscribeVisibleLogicalRangeChange(handler);
+        return () => {
+            chart.timeScale().unsubscribeVisibleLogicalRangeChange(handler);
+        };
+    }, [colors, panZoomEnabled]);
 
     // Theme change
     useEffect(() => {
@@ -578,13 +586,12 @@ export default function MarketTrendChart({
         });
     }, [colors, isDarkMode]);
 
-    // Pan/Zoom toggle
-    const [panZoomEnabled, setPanZoomEnabled] = useState(false);
 
     // Reset pan/zoom when timeRange changes — timeRange is always authoritative
     useEffect(() => {
         if (panZoomEnabled) {
             setPanZoomEnabled(false);
+            savedLogicalRangeRef.current = null;
             if (chartRef.current) {
                 chartRef.current.applyOptions({
                     handleScroll: {
@@ -630,6 +637,8 @@ export default function MarketTrendChart({
                         const visibleRange = getVisibleRange(timeRange, maxDataLength);
                         chartRef.current.timeScale().setVisibleLogicalRange(visibleRange);
                     }
+                    // Reset vertical (price) axis
+                    chartRef.current.priceScale('right').applyOptions({ autoScale: true });
                 }
             }
             return next;
@@ -762,32 +771,7 @@ export default function MarketTrendChart({
                     spacing={1}
                     sx={{ flexShrink: 0 }}
                 >
-                    <Tooltip title={panZoomEnabled ? 'Tắt kéo/thu phóng' : 'Bật kéo/thu phóng'} arrow>
-                        <Box sx={{
-                            ...(() => {
-                                const g = getGlassCard(isDarkMode);
-                                return { background: g.background, backdropFilter: g.backdropFilter, WebkitBackdropFilter: g.WebkitBackdropFilter, border: g.border };
-                            })(),
-                            borderRadius: 2,
-                            display: 'flex',
-                        }}>
-                            <IconButton
-                                onClick={handleTogglePanZoom}
-                                size="small"
-                                disableRipple
-                                disableFocusRipple
-                                sx={{
-                                    color: panZoomEnabled ? colors.buttonBackgroundActive : colors.buttonText,
-                                    backgroundColor: 'transparent !important',
-                                    borderRadius: 2,
-                                    height: 34,
-                                    width: 34,
-                                }}
-                            >
-                                <OpenWithIcon sx={{ fontSize: 18 }} />
-                            </IconButton>
-                        </Box>
-                    </Tooltip>
+                    <PanZoomToggle enabled={panZoomEnabled} onClick={handleTogglePanZoom} />
                     <TimeframeSelector
                         value={timeRange}
                         onChange={handleTimeRangeChange}
