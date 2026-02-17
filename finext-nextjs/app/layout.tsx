@@ -43,6 +43,19 @@ export const metadata: Metadata = {
   authors: [{ name: 'Finext Team' }],
   creator: 'Finext',
   metadataBase: new URL('https://finext.vn'),
+  // Apple Touch Icon for iOS "Add to Home Screen"
+  icons: {
+    icon: '/icons/icon-192x192.png',
+    apple: [
+      { url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
+  // iOS PWA configuration
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Finext',
+  },
   openGraph: {
     type: 'website',
     locale: 'vi_VN',
