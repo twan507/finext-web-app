@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Box, Typography, Skeleton, useTheme, useMediaQuery, Theme } from '@mui/material';
 import { transitions, getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
+import { getTrendColor } from 'theme/colorHelpers';
 
 interface RawMarketData {
     ticker: string;
@@ -24,20 +25,6 @@ interface IndexRowProps {
     isLast: boolean;
     todayData: RawMarketData[] | undefined;
 }
-
-// Helper outside component needs theme access, so move inside or assume theme is available in context/closure if needed.
-// But easier to just instantiate theme inside or pass it.
-// Actually `getChangeColor` is used inside component too.
-// Let's refactor it to accept theme or use the hex codes that match the tokens if we can't access theme here easily (which we can't outside hook).
-// BETTER: Move `getChangeColor` inside component or use a hook wrapper.
-// HOWEVER, let's keep it simple and just use the component logic.
-
-const getChangeColor = (value: number | null, theme: Theme): string => {
-    if (value == null) return theme.palette.trend.ref;
-    // Nếu biến động nằm trong khoảng ±0.005% thì tô màu vàng (ref)
-    if (Math.abs(value) <= 0.005) return theme.palette.trend.ref;
-    return value > 0 ? theme.palette.trend.up : theme.palette.trend.down;
-};
 
 // Component cho từng row - nhận data từ props (SSE today)
 function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowProps) {
@@ -99,12 +86,13 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
         return `${num.toFixed(2)}%`;
     };
 
-    const changeColor = getChangeColor(pctChange, theme);
-    const dividerColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+    const changeColor = getTrendColor(pctChange, theme);
+    const dividerColor = isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)';
     const isLoading = !todayData || todayData.length === 0;
 
     // Responsive padding
-    const rowPadding = isMobile ? { px: 1, py: 1.25 } : { px: 1.5, py: 1.5 };
+    // const rowPadding = isMobile ? { px: 1, py: 1.25 } : { px: 1.5, py: 1.5 };
+    const rowPadding = isMobile ? { px: 1, py: 1.25 } : { px: 1, py: 1.5 };
 
     if (isLoading && price == null) {
         return (
@@ -134,28 +122,26 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
                 cursor: 'pointer',
                 transition: transitions.colors,
                 borderBottom: isLast ? 'none' : `1px solid ${dividerColor}`,
-                bgcolor: isSelected
-                    ? (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)')
-                    : 'transparent',
+                bgcolor: 'transparent',
                 '&:hover': {
                     bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'
                 },
                 // Flash animation
                 animation: flashType ? `flash-${flashType} 0.5s ease` : 'none',
                 '@keyframes flash-up': {
-                    '0%': { bgcolor: `${theme.palette.trend.up}40` }, // 25% opacity
-                    '100%': { bgcolor: isSelected ? (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)') : 'transparent' }
+                    '0%': { bgcolor: `${theme.palette.trend.up}40` },
+                    '100%': { bgcolor: 'transparent' }
                 },
                 '@keyframes flash-down': {
-                    '0%': { bgcolor: `${theme.palette.trend.down}40` }, // 25% opacity
-                    '100%': { bgcolor: isSelected ? (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)') : 'transparent' }
+                    '0%': { bgcolor: `${theme.palette.trend.down}40` },
+                    '100%': { bgcolor: 'transparent' }
                 }
             }}
         >
             {/* Tên index */}
             <Typography sx={{
                 fontSize: cellFontSize,
-                fontWeight: isSelected ? fontWeight.semibold : fontWeight.medium,
+                fontWeight: fontWeight.medium,
                 color: 'text.primary',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
@@ -213,8 +199,8 @@ export default function IndexTable({ selectedTicker, onTickerChange, indexList, 
         <Box sx={{
             overflow: 'hidden',
             borderRadius: `${borderRadius.md}px`,
-            // border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-            // bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)'
+            // borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`,
+            // borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`,
         }}>
             {/* Rows */}
             {indexList.map((ticker, index) => (

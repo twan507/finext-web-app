@@ -84,8 +84,10 @@ function extractFieldData(
 }
 
 // Default number of candles to show on first render
-const DEFAULT_VISIBLE_BARS = 120;
-const INITIAL_RIGHT_MARGIN = 5; // Khoảng trống bên phải nến cuối khi render lần đầu
+const DEFAULT_VISIBLE_BARS_DESKTOP = 120;
+const DEFAULT_VISIBLE_BARS_MOBILE = 60;
+const INITIAL_RIGHT_MARGIN_DESKTOP = 5; // Khoảng trống bên phải nến cuối khi render lần đầu
+const INITIAL_RIGHT_MARGIN_MOBILE = 2;
 
 // Danh sách các index tickers (đồng bộ với BE)
 const INDEX_TICKERS = new Set([
@@ -579,10 +581,12 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
 
         if (!hasSetInitialRangeRef.current) {
             // First time: show last DEFAULT_VISIBLE_BARS candles + margin bên phải
-            const visibleBars = Math.min(DEFAULT_VISIBLE_BARS, dataLength);
+            const defaultBars = isMobile ? DEFAULT_VISIBLE_BARS_MOBILE : DEFAULT_VISIBLE_BARS_DESKTOP;
+            const rightMargin = isMobile ? INITIAL_RIGHT_MARGIN_MOBILE : INITIAL_RIGHT_MARGIN_DESKTOP;
+            const visibleBars = Math.min(defaultBars, dataLength);
             chartRef.current.timeScale().setVisibleLogicalRange({
                 from: dataLength - visibleBars - 0.5,
-                to: dataLength - 0.5 + INITIAL_RIGHT_MARGIN,
+                to: dataLength - 0.5 + rightMargin,
             });
             hasSetInitialRangeRef.current = true;
             setTimeout(() => {
@@ -600,10 +604,12 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
                     chartRef.current.timeScale().setVisibleLogicalRange(savedLogicalRangeRef.current);
                 }
             } catch {
-                const visibleBars = Math.min(DEFAULT_VISIBLE_BARS, dataLength);
+                const defaultBars = isMobile ? DEFAULT_VISIBLE_BARS_MOBILE : DEFAULT_VISIBLE_BARS_DESKTOP;
+                const rightMargin = isMobile ? INITIAL_RIGHT_MARGIN_MOBILE : INITIAL_RIGHT_MARGIN_DESKTOP;
+                const visibleBars = Math.min(defaultBars, dataLength);
                 chartRef.current.timeScale().setVisibleLogicalRange({
                     from: dataLength - visibleBars - 0.5,
-                    to: dataLength - 0.5 + INITIAL_RIGHT_MARGIN,
+                    to: dataLength - 0.5 + rightMargin,
                 });
             }
         } else if (currentRange) {

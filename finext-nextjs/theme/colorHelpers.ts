@@ -60,3 +60,14 @@ export const getVsiColor = (vsi: number, theme: Theme): string => {
     if (vsi < 1.5) return theme.palette.trend.up; // Green
     return theme.palette.trend.ceil; // Purple (Ceiling)
 };
+
+/**
+ * Get simple trend color for a numeric value (up/down/ref)
+ * Use for index pct_change, biến động %, or any value where
+ * only positive/negative/neutral matters (no ceil/floor logic)
+ */
+export const getTrendColor = (value: number | null | undefined, theme: Theme): string => {
+    if (value == null) return theme.palette.trend.ref;
+    if (Math.abs(value) <= 0.005) return theme.palette.trend.ref;
+    return value > 0 ? theme.palette.trend.up : theme.palette.trend.down;
+};

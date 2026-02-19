@@ -84,6 +84,9 @@ const MINI_CHART_INDEXES = [
 // Indexes bị ẩn ở tablet (md và nhỏ hơn)
 const HIDDEN_ON_TABLET = ['VNXALL', 'HNX30'];
 
+// Indexes bị ẩn ở mobile (xs) - chỉ giữ lại 3 cards
+const HIDDEN_ON_MOBILE = ['VNXALL', 'HNX30', 'UPINDEX'];
+
 // Tab type cho bảng index
 type IndexTabType = 'main' | 'derivative' | 'finext';
 
@@ -521,12 +524,12 @@ export default function HomeContent() {
 
 
     return (
-        <Box sx={{ py: 4 }}>
+        <Box sx={{ py: 2 }}>
             {/* Mini Index Cards */}
             <Box
                 sx={{
                     display: 'flex',
-                    flexWrap: { xs: 'wrap', md: 'nowrap' },
+                    flexWrap: 'nowrap',
                     justifyContent: 'space-between',
                     gap: 1.5,
                 }}
@@ -538,6 +541,7 @@ export default function HomeContent() {
                         itdData={itdAllData[indexSymbol] || []}
                         todayData={todayAllData[indexSymbol] || []}
                         hideOnTablet={HIDDEN_ON_TABLET.includes(indexSymbol)}
+                        hideOnMobile={HIDDEN_ON_MOBILE.includes(indexSymbol)}
                     />
                 ))}
             </Box>

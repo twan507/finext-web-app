@@ -1,60 +1,59 @@
 'use client';
 
-import { Box, Typography, FormControl, Select, MenuItem, SelectChangeEvent, useTheme } from '@mui/material';
 import { useRouter } from 'next/navigation';
+
+import { Dispatch, SetStateAction } from 'react';
+import dynamic from 'next/dynamic';
+import { Box, Typography, Skeleton, useTheme, useMediaQuery, Divider } from '@mui/material';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import MarketIndexChart, { ChartData, TimeRange } from './MarketIndexChart';
-import IndexTable from './IndexTable';
-import { getResponsiveFontSize, getGlassCard } from 'theme/tokens';
-import { RawMarketData } from './MarketIndexChart';
+
+import type { RawMarketData, ChartData, TimeRange } from '../components/MarketIndexChart';
+import IndexTable from '../components/IndexTable';
+import Carousel from 'components/common/Carousel';
+import InfoTooltip from 'components/common/InfoTooltip';
+import { getTrendColor, getVsiColor } from 'theme/colorHelpers';
+
+import {
+    getResponsiveFontSize,
+    fontWeight,
+    borderRadius,
+    spacing,
+    transitions,
+    getGlassCard,
+} from 'theme/tokens';
+
+// Lazy load heavy chart component
+const MarketIndexChart = dynamic(
+    () => import('../components/MarketIndexChart').then(mod => ({ default: mod.default })),
+    {
+        loading: () => <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 2 }} />,
+        ssr: false
+    }
+);
+
+// ========== INDEX LISTS ==========
+const MAIN_INDEXES = ['VNINDEX', 'VN30', 'HNXINDEX', 'UPINDEX'];
+const DERIVATIVE_INDEXES = ['VN30F1M', 'VN30F2M', 'VN100F1M', 'VN100F2M'];
+const FINEXT_INDEXES = ['FNXINDEX', 'LARGECAP', 'MIDCAP', 'SMALLCAP'];
+
+// Type cho SSE data
+type IndexDataByTicker = Record<string, RawMarketData[]>;
 
 // Tab type cho bảng index
 type IndexTabType = 'main' | 'derivative' | 'finext';
 
-// List 1: Main Indexes
-const MAIN_INDEXES = [
-    'VNINDEX',
-    'VN30',
-    'VNXALL',
-    'HNXINDEX',
-    'HNX30',
-    'UPINDEX',
-];
+// Extended type cho index data với các trường bổ sung từ home_today_index
+interface IndexRawData extends RawMarketData {
+    trading_value?: number;
+    w_pct?: number;
+    m_pct?: number;
+    q_pct?: number;
+    y_pct?: number;
+    vsi?: number;
+}
 
-// List 2: Derivatives (Phái sinh)
-const DERIVATIVE_INDEXES = [
-    'VN30F1M',
-    'VN30F2M',
-    'VN30F1Q',
-    'VN30F2Q',
-    'VN100F1M',
-    'VN100F2M',
-    'VN100F1Q',
-    'VN100F2Q',
-];
-
-// List 3: Special Indexes
-const FINEXT_INDEXES = [
-    'FNXINDEX',
-    'FNX100',
-    'LARGECAP',
-    'MIDCAP',
-    'SMALLCAP',
-    'VUOTTROI',
-    'ONDINH',
-    'SUKIEN',
-];
-
-// Map tab -> index list
-const INDEX_TAB_MAP: Record<IndexTabType, string[]> = {
-    main: MAIN_INDEXES,
-    derivative: DERIVATIVE_INDEXES,
-    finext: FINEXT_INDEXES,
-};
-
-// Type cho home_today_index response (grouped by ticker)
-type IndexDataByTicker = Record<string, RawMarketData[]>;
-
+// ========== PROPS INTERFACE ==========
 interface MarketSectionProps {
     ticker: string;
     indexName: string;
@@ -63,13 +62,199 @@ interface MarketSectionProps {
     isLoading: boolean;
     error: string | null;
     timeRange: TimeRange;
-    onTimeRangeChange: (range: TimeRange) => void;
+    onTimeRangeChange: Dispatch<SetStateAction<TimeRange>>;
     indexTab: IndexTabType;
-    onIndexTabChange: (tab: IndexTabType) => void;
-    onTickerChange: (ticker: string) => void;
+    onIndexTabChange: Dispatch<SetStateAction<IndexTabType>>;
+    onTickerChange: (newTicker: string) => void;
     todayAllData: IndexDataByTicker;
 }
 
+// ========== STAT ROW (label trái, value phải) ==========
+function StatRow({ label, value, color, tooltip }: { label: string; value: string; color?: string; tooltip?: string }) {
+    const theme = useTheme();
+    return (
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: { xs: 0.5, md: 1 }, px: 0.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Typography sx={{
+                    fontSize: getResponsiveFontSize('sm'),
+                    color: theme.palette.text.secondary,
+                    fontWeight: fontWeight.medium,
+                }}>
+                    {label}
+                </Typography>
+                {tooltip && <InfoTooltip title={tooltip} />}
+            </Box>
+            <Typography sx={{
+                fontSize: getResponsiveFontSize('sm'),
+                fontWeight: fontWeight.semibold,
+                color: color || theme.palette.text.primary,
+            }}>
+                {value}
+            </Typography>
+        </Box>
+    );
+}
+
+// ========== INDEX DETAIL PANEL ==========
+function IndexDetailPanel({ indexName, todayData }: { indexName: string; todayData: IndexRawData[] }) {
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
+
+    // Lấy record mới nhất (cuối mảng)
+    const latest = todayData.length > 0 ? todayData[todayData.length - 1] : null;
+
+    const glassStyles = (() => {
+        const g = getGlassCard(isDark);
+        return { background: g.background, backdropFilter: g.backdropFilter, WebkitBackdropFilter: g.WebkitBackdropFilter, border: g.border };
+    })();
+
+    const formatPct = (v: number | undefined | null) => {
+        if (v == null) return '—';
+        return `${v > 0 ? '+' : ''}${v.toFixed(2)}%`;
+    };
+    const formatPrice = (v: number | undefined | null) => {
+        if (v == null) return '—';
+        return v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+    const formatVolume = (v: number | undefined | null) => {
+        if (v == null) return '—';
+        return v.toLocaleString('en-US');
+    };
+    const formatValue = (v: number | undefined | null) => {
+        if (v == null) return '—';
+        return `${Math.round(v).toLocaleString('en-US')} Tỷ`;
+    };
+    const formatVsi = (v: number | undefined | null) => {
+        if (v == null) return '—';
+        return `${(v * 100).toFixed(2)}%`;
+    };
+
+    return (
+        <Box sx={{
+            ...glassStyles,
+            borderRadius: `${borderRadius.lg}px`,
+            p: { xs: 1.5, md: 2 },
+        }}>
+            {/* Title */}
+            <Typography sx={{
+                fontSize: getResponsiveFontSize('md'),
+                fontWeight: fontWeight.bold,
+                color: theme.palette.text.primary,
+                mb: { xs: 1, md: 1.5 },
+            }}>
+                Thông tin chi tiết {indexName}
+            </Typography>
+
+            {/* Section 1: OHLC — ẩn trên mobile */}
+            <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+                <StatRow label="Open" value={formatPrice(latest?.open)} />
+                <StatRow label="High" value={formatPrice(latest?.high)} color={theme.palette.trend.up} />
+                <StatRow label="Low" value={formatPrice(latest?.low)} color={theme.palette.trend.down} />
+                <StatRow
+                    label="Close"
+                    value={formatPrice(latest?.close)}
+                    tooltip="Giá đóng cửa phiên gần nhất, hoặc giá khớp lệnh mới nhất nếu phiên đang diễn ra."
+                />
+                <Divider sx={{ my: { xs: 0.75, md: 1 } }} />
+            </Box>
+
+            {/* Section 2: Biến động */}
+            <StatRow label="% Tuần" value={formatPct(latest?.w_pct)} color={latest?.w_pct != null ? getTrendColor(latest.w_pct, theme) : undefined} />
+            <StatRow label="% Tháng" value={formatPct(latest?.m_pct)} color={latest?.m_pct != null ? getTrendColor(latest.m_pct, theme) : undefined} />
+            <StatRow label="% Quý" value={formatPct(latest?.q_pct)} color={latest?.q_pct != null ? getTrendColor(latest.q_pct, theme) : undefined} />
+            <StatRow label="% Năm" value={formatPct(latest?.y_pct)} color={latest?.y_pct != null ? getTrendColor(latest.y_pct, theme) : undefined} />
+
+            {/* Section 3: Thanh khoản */}
+            <Divider sx={{ my: 1 }} />
+            <StatRow
+                label="Chỉ số thanh khoản"
+                value={formatVsi(latest?.vsi)}
+                color={latest?.vsi != null ? getVsiColor(latest.vsi, theme) : undefined}
+                tooltip="Tỉ lệ thanh khoản phiên hiện tại so với trung bình 5 phiên gần nhất. Giá trị > 120% cho thấy đột biến về mặt thanh khoản."
+            />
+            <StatRow label="Khối lượng giao dịch" value={formatVolume(latest?.volume)} />
+            <StatRow label="Giá trị giao dịch" value={formatValue(latest?.trading_value)} />
+        </Box>
+    );
+}
+
+// ========== INDEX TABLES SECTION (Carousel on mobile, Row on desktop) ==========
+function IndexTablesSection({ ticker, onTickerChange, todayAllData }: {
+    ticker: string;
+    onTickerChange: (t: string) => void;
+    todayAllData: IndexDataByTicker;
+}) {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+    const titleSx = {
+        fontSize: getResponsiveFontSize('md'),
+        fontWeight: fontWeight.semibold,
+        color: theme.palette.text.primary,
+        ml: 1,
+        mb: 1.5,
+        pb: 1,
+        borderBottom: `2px solid ${theme.palette.primary.main}`,
+        display: 'inline-block',
+    };
+
+    const tables = [
+        { id: 'coso', title: 'Cơ sở', list: MAIN_INDEXES },
+        { id: 'phaisinh', title: 'Phái sinh', list: DERIVATIVE_INDEXES },
+        { id: 'finext', title: 'Finext', list: FINEXT_INDEXES },
+    ];
+
+    if (isMobile) {
+        const slides = tables.map((t) => ({
+            id: t.id,
+            component: (
+                <Box sx={{ mb: 2 }}>
+                    <Typography sx={{ ...titleSx }}>{t.title}</Typography>
+                    <IndexTable
+                        selectedTicker={ticker}
+                        onTickerChange={onTickerChange}
+                        indexList={t.list}
+                        todayAllData={todayAllData}
+                    />
+                </Box>
+            ),
+        }));
+
+        return (
+            <Box sx={{ mt: 3 }}>
+                <Carousel slides={slides} autoPlayInterval={0} showDots minHeight="auto" />
+            </Box>
+        );
+    }
+
+    return (
+        <Box sx={{
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+            gap: 3,
+            mt: 3,
+            overflowX: 'auto',
+            '&::-webkit-scrollbar': { display: 'none' },
+            msOverflowStyle: 'none',
+            scrollbarWidth: 'none',
+        }}>
+            {tables.map((t) => (
+                <Box key={t.id} sx={{ width: 330, flexShrink: 0 }}>
+                    <Typography sx={titleSx}>{t.title}</Typography>
+                    <IndexTable
+                        selectedTicker={ticker}
+                        onTickerChange={onTickerChange}
+                        indexList={t.list}
+                        todayAllData={todayAllData}
+                    />
+                </Box>
+            ))}
+        </Box>
+    );
+}
+
+// ========== MAIN COMPONENT ==========
 export default function MarketSection({
     ticker,
     indexName,
@@ -85,22 +270,11 @@ export default function MarketSection({
     todayAllData,
 }: MarketSectionProps) {
     const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
     const router = useRouter();
 
-    const isDark = theme.palette.mode === 'dark';
-    const glassStyles = (() => {
-        const g = getGlassCard(isDark);
-        return { background: g.background, backdropFilter: g.backdropFilter, WebkitBackdropFilter: g.WebkitBackdropFilter, border: g.border };
-    })();
-
-    // Colors for dropdown
-    const dropdownColors = {
-        background: theme.palette.component.chart.buttonBackground,
-        text: theme.palette.text.primary,
-        textActive: theme.palette.component.chart.buttonBackgroundActive,
-    };
-
     return (
+
         <Box>
             {/* Title - Thị trường (clickable) */}
             <Box
@@ -118,14 +292,14 @@ export default function MarketSection({
                 <ChevronRightIcon sx={{ fontSize: getResponsiveFontSize('h2'), mt: 1, color: theme.palette.text.secondary }} />
             </Box>
 
-            {/* Main Content: Chart + Table */}
+            {/* ========== TOP SECTION: Chart + Detail Panel ========== */}
             <Box sx={{
                 display: 'flex',
                 flexDirection: { xs: 'column', md: 'row' },
                 gap: { xs: 2, md: 3 },
             }}>
-                {/* Chart */}
-                <Box sx={{ flex: 1, minWidth: 0, width: { xs: '100%', md: 'auto' } }}>
+                {/* Left: Chart */}
+                <Box sx={{ flex: 1, minWidth: 0 }}>
                     <MarketIndexChart
                         key={ticker}
                         symbol={ticker}
@@ -139,103 +313,21 @@ export default function MarketSection({
                     />
                 </Box>
 
-                {/* Index Table */}
+                {/* Right: Index Detail Panel */}
                 <Box sx={{
-                    width: { xs: '100%', md: 320, lg: 400 },
+                    width: { xs: '100%', md: 340 },
                     flexShrink: 0,
-                    mt: { xs: 0, md: 12.5 },
                 }}>
-                    {/* Dropdown chọn nhóm chỉ số - căn phải */}
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-                        <FormControl size="small">
-                            <Select
-                                value={indexTab}
-                                onChange={(e: SelectChangeEvent) => onIndexTabChange(e.target.value as IndexTabType)}
-                                sx={{
-                                    fontSize: getResponsiveFontSize('md'),
-                                    borderRadius: 2,
-                                    ...glassStyles,
-                                    color: dropdownColors.text,
-                                    height: { xs: 34, md: 33 },
-                                    '& .MuiSelect-select': {
-                                        py: 0,
-                                        px: 1.5,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                    },
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                        border: 'none',
-                                    },
-                                    '&:hover': {
-                                        opacity: 0.8,
-                                    },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                                        border: 'none',
-                                    },
-                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                        border: 'none',
-                                    },
-                                    '& .MuiSelect-icon': {
-                                        color: dropdownColors.text,
-                                    },
-                                }}
-                                MenuProps={{
-                                    PaperProps: {
-                                        sx: {
-                                            backgroundColor: isDark
-                                                ? 'rgba(30, 30, 30, 0.95)'
-                                                : 'rgba(255, 255, 255, 0.95)',
-                                            backdropFilter: 'blur(20px)',
-                                            WebkitBackdropFilter: 'blur(20px)',
-                                            backgroundImage: 'none',
-                                            border: isDark
-                                                ? '1px solid rgba(255, 255, 255, 0.1)'
-                                                : '1px solid rgba(0, 0, 0, 0.08)',
-                                            boxShadow: isDark
-                                                ? '0 8px 32px rgba(0, 0, 0, 0.4)'
-                                                : '0 8px 32px rgba(31, 38, 135, 0.1)',
-                                            borderRadius: 2,
-                                            '& .MuiList-root': {
-                                                py: 0.5,
-                                            },
-                                            '& .MuiMenuItem-root': {
-                                                fontSize: getResponsiveFontSize('md'),
-                                                color: dropdownColors.text,
-                                                backgroundColor: 'transparent !important',
-                                                '&:hover': {
-                                                    backgroundColor: 'transparent !important',
-                                                },
-                                                '&.Mui-selected': {
-                                                    backgroundColor: 'transparent !important',
-                                                    color: dropdownColors.textActive,
-                                                },
-                                                '&.Mui-selected:hover': {
-                                                    backgroundColor: 'transparent !important',
-                                                },
-                                                '&.Mui-focusVisible': {
-                                                    backgroundColor: 'transparent !important',
-                                                },
-                                            },
-                                        },
-                                    },
-                                }}
-                            >
-                                <MenuItem value="main">Chỉ số thị trường</MenuItem>
-                                <MenuItem value="finext">Chỉ số Finext</MenuItem>
-                                <MenuItem value="derivative">Chỉ số phái sinh</MenuItem>
-                            </Select>
-                        </FormControl>
-                    </Box>
-
-                    <IndexTable
-                        selectedTicker={ticker}
-                        onTickerChange={onTickerChange}
-                        indexList={INDEX_TAB_MAP[indexTab]}
-                        todayAllData={todayAllData}
-                    />
+                    <IndexDetailPanel indexName={indexName} todayData={todayAllData[ticker] || []} />
                 </Box>
             </Box>
+
+            {/* ========== BOTTOM SECTION: 3 Index Tables ========== */}
+            <IndexTablesSection
+                ticker={ticker}
+                onTickerChange={onTickerChange}
+                todayAllData={todayAllData}
+            />
         </Box>
     );
 }
-

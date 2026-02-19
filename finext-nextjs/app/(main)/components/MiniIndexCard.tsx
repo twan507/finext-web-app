@@ -23,6 +23,7 @@ interface MiniIndexCardProps {
     itdData: RawMarketData[]; // Data được truyền từ parent (page.tsx) qua SSE
     todayData?: RawMarketData[]; // Fallback data từ today_index khi chưa có ITD
     hideOnTablet?: boolean; // Ẩn card ở tablet (md breakpoint)
+    hideOnMobile?: boolean; // Ẩn card ở mobile (xs breakpoint)
 }
 
 // Can't access theme here easily for default params, so we'll refactor component to use theme inside.
@@ -63,7 +64,7 @@ interface ChartDataPoint {
     dateStr: string;
 }
 
-export default function MiniIndexCard({ symbol, itdData, todayData = [], hideOnTablet = false }: MiniIndexCardProps) {
+export default function MiniIndexCard({ symbol, itdData, todayData = [], hideOnTablet = false, hideOnMobile = false }: MiniIndexCardProps) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
 
@@ -236,21 +237,25 @@ export default function MiniIndexCard({ symbol, itdData, todayData = [], hideOnT
 
     // Responsive styles cho card
     const cardSx = {
-        p: 1.5,
+        p: { xs: 1, sm: 1.5 },
         borderRadius: '16px',
-        minWidth: 150,
+        minWidth: { xs: 0, sm: 150 },
         position: 'relative' as const,
         overflow: 'hidden',
         // Glass card base styles
         ...getGlassCard(isDark),
         // Desktop (lg+): 6 cards
         width: {
-            xs: 'calc(50% - 6px)', // Mobile: 2 cards per row (4 cards total, 2 rows)
+            xs: 'calc(33.333% - 8px)', // Mobile: 3 cards per row
             md: 'calc((100% - 36px) / 4)', // Tablet: 4 cards (hide 2)
             lg: 'calc((100% - 60px) / 6)', // Desktop: 6 cards
         },
-        // Ẩn card ở tablet và mobile nếu hideOnTablet = true
-        display: hideOnTablet ? { xs: 'none', lg: 'block' } : 'block',
+        // Ẩn card ở tablet và mobile nếu hideOnTablet/hideOnMobile = true
+        display: hideOnTablet
+            ? { xs: 'none', lg: 'block' }
+            : hideOnMobile
+                ? { xs: 'none', sm: 'block' }
+                : 'block',
         transition: transitions.all,
         // Top highlight line (::before)
         '&::before': getGlassHighlight(isDark),
@@ -274,28 +279,30 @@ export default function MiniIndexCard({ symbol, itdData, todayData = [], hideOnT
                 {tickerName}
             </Typography>
 
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.5, flexWrap: 'nowrap' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.5, flexWrap: 'wrap', rowGap: 0.5 }}>
                 <Typography sx={{ fontWeight: fontWeight.bold, color: 'text.primary', lineHeight: 1, fontSize: getResponsiveFontSize('md') }}>
                     {formatNumber(lastPrice)}
                 </Typography>
-                <Typography sx={{ color: changeColor, fontWeight: fontWeight.medium, fontSize: getResponsiveFontSize('xs'), lineHeight: 1, mt: 0.2 }}>
-                    {diff != null && diff !== 0 && (pctChange ?? 0) > 0 ? '+' : diff != null && diff !== 0 && (pctChange ?? 0) < 0 ? '-' : ''}{formatDiff(diff)}
-                </Typography>
-                <Box component="span" sx={{
-                    px: 0.5,
-                    py: 0.4,
-                    borderRadius: 1,
-                    bgcolor: chipBgColor,
-                    color: '#fff',
-                    fontSize: getResponsiveFontSize('xs'),
-                    fontWeight: fontWeight.semibold,
-                    whiteSpace: 'nowrap',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    lineHeight: 1,
-                }}>
-                    {arrow && <span style={{ fontSize: '0.65em', lineHeight: 1 }}>{arrow}</span>}
-                    {formatPctChange(pctChange)}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Typography sx={{ color: changeColor, fontWeight: fontWeight.medium, fontSize: getResponsiveFontSize('xs'), lineHeight: 1 }}>
+                        {diff != null && diff !== 0 && (pctChange ?? 0) > 0 ? '+' : diff != null && diff !== 0 && (pctChange ?? 0) < 0 ? '-' : ''}{formatDiff(diff)}
+                    </Typography>
+                    <Box component="span" sx={{
+                        px: 0.5,
+                        py: 0.4,
+                        borderRadius: 1,
+                        bgcolor: chipBgColor,
+                        color: '#fff',
+                        fontSize: getResponsiveFontSize('xs'),
+                        fontWeight: fontWeight.semibold,
+                        whiteSpace: 'nowrap',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        lineHeight: 1,
+                    }}>
+                        {arrow && <span style={{ fontSize: '0.65em', lineHeight: 1 }}>{arrow}</span>}
+                        {formatPctChange(pctChange)}
+                    </Box>
                 </Box>
             </Box>
 

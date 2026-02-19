@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, Typography, useTheme, Card, Skeleton } from '@mui/material';
+import { Box, Typography, useTheme, Card, Skeleton, useMediaQuery } from '@mui/material';
 import Carousel, { Slide } from 'components/common/Carousel';
 import { getResponsiveFontSize, fontWeight, transitions, getGlassCard, getGlassHighlight, getGlassEdgeLight } from 'theme/tokens';
 import { getPriceColor, getFlowColor, getVsiColor } from 'theme/colorHelpers';
@@ -36,6 +36,7 @@ interface MarketPhaseSectionProps {
 
 export default function MarketPhaseSection({ stockData = [], foreignData = [], isLoading = false }: MarketPhaseSectionProps) {
     const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
     // Skeleton components for loading state
     const renderTableSkeleton = (title: string) => (
@@ -460,50 +461,70 @@ export default function MarketPhaseSection({ stockData = [], foreignData = [], i
         { id: 'skeleton-foreign', component: renderNNSkeleton() }
     ];
 
+    // Mobile: all 6 slides in one carousel
+    const allSlides: Slide[] = [...breadthSlides, ...stockSlides, ...foreignSlides];
+    const allSkeletonSlides: Slide[] = [
+        { id: 'skeleton-all', component: renderBreadthSkeleton() }
+    ];
+
     return (
         <Box>
             <Typography sx={{ fontSize: getResponsiveFontSize('h4'), fontWeight: fontWeight.bold, mb: 2 }}>
                 Diễn biến thị trường
             </Typography>
 
-            <Box sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
-                gap: { xs: 2, md: 1.5, lg: 3 },
-            }}>
-                {/* Column 1: Market Breadth (Donut Charts) */}
+            {/* Mobile: Single carousel with all 6 slides */}
+            {isMobile ? (
                 <Card sx={cardStyle}>
                     <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
                         <Carousel
-                            slides={isLoading ? skeletonBreadthSlides : breadthSlides}
-                            minHeight="280px"
-                            autoPlayInterval={isLoading ? 0 : BREADTH_INTERVAL}
-                        />
-                    </Box>
-                </Card>
-
-                {/* Column 2: Top Biến Động (Gainers / Losers) */}
-                <Card sx={cardStyle}>
-                    <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
-                        <Carousel
-                            slides={isLoading ? skeletonStockSlides : stockSlides}
+                            slides={isLoading ? allSkeletonSlides : allSlides}
                             minHeight="280px"
                             autoPlayInterval={isLoading ? 0 : STOCKS_INTERVAL}
                         />
                     </Box>
                 </Card>
+            ) : (
+                /* Desktop: 3 columns */
+                <Box sx={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: { md: 1.5, lg: 3 },
+                }}>
+                    {/* Column 1: Market Breadth (Donut Charts) */}
+                    <Card sx={cardStyle}>
+                        <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <Carousel
+                                slides={isLoading ? skeletonBreadthSlides : breadthSlides}
+                                minHeight="280px"
+                                autoPlayInterval={isLoading ? 0 : BREADTH_INTERVAL}
+                            />
+                        </Box>
+                    </Card>
 
-                {/* Column 3: Khối Ngoại (Buy / Sell) */}
-                <Card sx={cardStyle}>
-                    <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
-                        <Carousel
-                            slides={isLoading ? skeletonForeignSlides : foreignSlides}
-                            minHeight="280px"
-                            autoPlayInterval={isLoading ? 0 : FOREIGN_INTERVAL}
-                        />
-                    </Box>
-                </Card>
-            </Box>
+                    {/* Column 2: Top Biến Động (Gainers / Losers) */}
+                    <Card sx={cardStyle}>
+                        <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <Carousel
+                                slides={isLoading ? skeletonStockSlides : stockSlides}
+                                minHeight="280px"
+                                autoPlayInterval={isLoading ? 0 : STOCKS_INTERVAL}
+                            />
+                        </Box>
+                    </Card>
+
+                    {/* Column 3: Khối Ngoại (Buy / Sell) */}
+                    <Card sx={cardStyle}>
+                        <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <Carousel
+                                slides={isLoading ? skeletonForeignSlides : foreignSlides}
+                                minHeight="280px"
+                                autoPlayInterval={isLoading ? 0 : FOREIGN_INTERVAL}
+                            />
+                        </Box>
+                    </Card>
+                </Box>
+            )}
         </Box>
     );
 }
