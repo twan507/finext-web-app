@@ -11,6 +11,7 @@ import CandlestickChart from './CandlestickChart';
 import ChartToolbar from './ChartToolbar';
 import ChartSkeleton from './ChartSkeleton';
 import type { TickerItem } from './ChartToolbar';
+import { aggregateByTimeframe, type Timeframe } from './aggregateTimeframe';
 
 // Raw data interface từ backend — đồng bộ với CHART_DATA_PROJECTION (sse.py)
 export interface ChartRawData {
@@ -130,6 +131,7 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
     const [showIndicatorsPanel, setShowIndicatorsPanel] = useState(!isMobile);
     const [showWatchlistPanel, setShowWatchlistPanel] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [timeframe, setTimeframe] = useState<Timeframe>('1D');
 
     // Handle ESC key to exit fullscreen
     useEffect(() => {
@@ -236,6 +238,12 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
         );
     }, [historyData, todayData]);
 
+    // Aggregate data theo timeframe (1D = nguyên gốc, 1W/1M = group by)
+    const aggregatedData = useMemo(
+        () => aggregateByTimeframe(mergedData, timeframe),
+        [mergedData, timeframe],
+    );
+
     const error = historyError || (todayError ? todayError.message : null);
 
     // Lần đầu: cần CẢ history + today data mới render chart
@@ -284,7 +292,8 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
         }
 
         return <CandlestickChart
-            data={mergedData}
+            data={aggregatedData}
+            timeframe={timeframe}
             ticker={ticker}
             chartType={chartType}
             showIndicators={showIndicators}
@@ -331,6 +340,8 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
                 showIndicatorsPanel={showIndicatorsPanel}
                 showWatchlistPanel={showWatchlistPanel}
                 isFullscreen={isFullscreen}
+                timeframe={timeframe}
+                onTimeframeChange={setTimeframe}
                 onTickerChange={handleTickerChange}
                 onChartTypeChange={setChartType}
                 onToggleIndicators={() => setShowIndicators(!showIndicators)}

@@ -31,6 +31,7 @@ import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import { getResponsiveFontSize } from 'theme/tokens';
+import type { Timeframe } from './aggregateTimeframe';
 
 export interface TickerItem {
     ticker: string;
@@ -47,8 +48,10 @@ interface ChartToolbarProps {
     showIndicatorsPanel?: boolean;
     showWatchlistPanel?: boolean;
     isFullscreen?: boolean;
+    timeframe?: Timeframe;
     onTickerChange?: (ticker: string) => void;
     onChartTypeChange?: (type: 'candlestick' | 'line') => void;
+    onTimeframeChange?: (tf: Timeframe) => void;
     onToggleIndicators?: () => void;
     onToggleVolume?: () => void;
     onToggleLegend?: () => void;
@@ -69,8 +72,10 @@ export default function ChartToolbar({
     showIndicatorsPanel = false,
     showWatchlistPanel = false,
     isFullscreen = false,
+    timeframe = '1D',
     onTickerChange,
     onChartTypeChange,
+    onTimeframeChange,
     onToggleIndicators,
     onToggleVolume,
     onToggleLegend,
@@ -185,7 +190,7 @@ export default function ChartToolbar({
                 overflow: 'hidden',
             }}
         >
-            {/* Left fixed group: Search + Chart Type */}
+            {/* Left fixed group: Search only */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
                 {/* Search Ticker with Autocomplete */}
                 <ClickAwayListener onClickAway={() => { setIsSearchOpen(false); setHighlightIndex(-1); setSearchValue(''); }}>
@@ -314,9 +319,81 @@ export default function ChartToolbar({
                         </Popper>
                     </Box>
                 </ClickAwayListener>
+            </Box>
+
+            <Divider orientation="vertical" flexItem sx={{ my: 0.5, mx: 0.5, flexShrink: 0 }} />
+
+            {/* Middle scrollable group: Timeframe + Chart Type + Toggle Buttons */}
+            <Box
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    flex: 1,
+                    minWidth: 0,
+                    overflowX: 'auto',
+                    scrollbarWidth: 'none',
+                    '&::-webkit-scrollbar': { display: 'none' },
+                }}
+            >
+                {/* Timeframe Selector: 1D / 1W / 1M */}
+                <ToggleButtonGroup
+                    value={timeframe}
+                    exclusive
+                    onChange={(e, newTf) => {
+                        if (newTf && onTimeframeChange) {
+                            onTimeframeChange(newTf);
+                        }
+                    }}
+                    size="small"
+                    sx={{
+                        height: 32,
+                        flexShrink: 0,
+                        '& .MuiToggleButton-root': {
+                            px: 1,
+                            py: 0.5,
+                            border: 'none',
+                            borderRadius: 0,
+                            fontSize: getResponsiveFontSize('xs'),
+                            fontWeight: 600,
+                            color: 'text.secondary',
+                            backgroundColor: 'transparent',
+                            position: 'relative',
+                            transition: 'color 0.2s',
+                            '&::after': {
+                                content: '""',
+                                position: 'absolute',
+                                bottom: 2,
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                width: '60%',
+                                height: '2px',
+                                backgroundColor: 'transparent',
+                                borderRadius: '1px',
+                                transition: 'background-color 0.2s',
+                            },
+                            '&.Mui-selected': {
+                                color: 'primary.main',
+                                backgroundColor: 'transparent',
+                                '&::after': {
+                                    backgroundColor: 'primary.main',
+                                },
+                                '&:hover': {
+                                    backgroundColor: 'transparent',
+                                },
+                            },
+                            '&:hover': {
+                                backgroundColor: 'transparent',
+                            },
+                        },
+                    }}
+                >
+                    <ToggleButton value="1D">1D</ToggleButton>
+                    <ToggleButton value="1W">1W</ToggleButton>
+                    <ToggleButton value="1M">1M</ToggleButton>
+                </ToggleButtonGroup>
 
                 <Divider orientation="vertical" flexItem sx={{ my: 0.5 }} />
-
                 {/* Chart Type Toggle */}
                 <ToggleButtonGroup
                     value={chartType}
@@ -329,6 +406,7 @@ export default function ChartToolbar({
                     size="small"
                     sx={{
                         height: 32,
+                        flexShrink: 0,
                         '& .MuiToggleButton-root': {
                             p: 0.5,
                             border: 'none',
@@ -377,23 +455,9 @@ export default function ChartToolbar({
                         </Tooltip>
                     </ToggleButton>
                 </ToggleButtonGroup>
-            </Box>
 
-            <Divider orientation="vertical" flexItem sx={{ my: 0.5, mx: 0.5, flexShrink: 0 }} />
+                <Divider orientation="vertical" flexItem sx={{ my: 0.5 }} />
 
-            {/* Middle scrollable group: Toggle Buttons */}
-            <Box
-                sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 0.5,
-                    flex: 1,
-                    minWidth: 0,
-                    overflowX: 'auto',
-                    scrollbarWidth: 'none',
-                    '&::-webkit-scrollbar': { display: 'none' },
-                }}
-            >
                 <Tooltip title={showIndicators ? "Ẩn chỉ báo" : "Hiện chỉ báo"}>
                     <IconButton
                         size="small"

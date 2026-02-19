@@ -1,6 +1,6 @@
 // Indicator configuration for chart rendering and panel toggles
 
-export type IndicatorType = 'line' | 'area' | 'band' | 'volume-line';
+export type IndicatorType = 'line' | 'area' | 'band' | 'dual-line' | 'volume-line';
 
 /**
  * Lightweight Charts LineStyle enum values
@@ -107,11 +107,19 @@ const LW_MA: LightweightLineOptions = {
     crosshairMarkerRadius: 3,
 };
 
-/** OPEN/HIGH/LOW: đường bậc thang, nét đứt, width 1 */
-const LW_LEVEL: LightweightLineOptions = {
-    lineWidth: 1,
+/** OPEN: đường bậc thang, nét đứt dài, width 1 */
+const LW_OPEN: LightweightLineOptions = {
+    lineWidth: 2,
     lineType: LINE_TYPE.WithSteps,
-    lineStyle: LINE_STYLE.LargeDashed,
+    lineStyle: LINE_STYLE.Solid,
+    priceLineVisible: false,
+};
+
+/** PREV HIGH/LOW: đường bậc thang, nét đứt, width 2 (giống pivot) */
+const LW_PREV_HL: LightweightLineOptions = {
+    lineWidth: 2,
+    lineType: LINE_TYPE.WithSteps,
+    lineStyle: LINE_STYLE.Dashed,
     priceLineVisible: false,
 };
 
@@ -120,6 +128,14 @@ const LW_PIVOT: LightweightLineOptions = {
     lineWidth: 2,
     lineType: LINE_TYPE.WithSteps,
     lineStyle: LINE_STYLE.Solid,
+    priceLineVisible: false,
+};
+
+/** PIVOT R1/S1: đường bậc thang, nét chấm thưa, width 2 */
+const LW_PIVOT_RS: LightweightLineOptions = {
+    lineWidth: 2,
+    lineType: LINE_TYPE.WithSteps,
+    lineStyle: LINE_STYLE.Dashed,
     priceLineVisible: false,
 };
 
@@ -136,14 +152,14 @@ const LW_FIBO: LightweightLineOptions = {
 const LW_POC: LightweightLineOptions = {
     lineWidth: 2,
     lineType: LINE_TYPE.Simple,
-    lineStyle: LINE_STYLE.Dotted,
+    lineStyle: LINE_STYLE.SparseDotted,
     priceLineVisible: false,
     lastValueVisible: true,
 };
 
 /** Volume MA: đường cong Curved, nét liền, width 1 */
 const LW_VOL_MA: LightweightLineOptions = {
-    lineWidth: 1,
+    lineWidth: 2,
     lineType: LINE_TYPE.Curved,
     lineStyle: LINE_STYLE.Solid,
     priceLineVisible: false,
@@ -188,6 +204,17 @@ export interface BandIndicator {
     color: ThemeColor;
 }
 
+export interface DualLineIndicator {
+    key: string;
+    label: string;
+    type: 'dual-line';
+    /** [line1_field, line2_field] */
+    fields: [string, string];
+    color: ThemeColor;
+    /** Full Lightweight Charts options applied to both lines */
+    lwOptions?: LightweightLineOptions;
+}
+
 export interface VolumeLineIndicator {
     key: string;
     label: string;
@@ -198,7 +225,7 @@ export interface VolumeLineIndicator {
     lwOptions?: LightweightLineOptions;
 }
 
-export type IndicatorDef = LineIndicator | AreaIndicator | BandIndicator | VolumeLineIndicator;
+export type IndicatorDef = LineIndicator | AreaIndicator | BandIndicator | DualLineIndicator | VolumeLineIndicator;
 
 export interface IndicatorGroup {
     key: string;
@@ -206,16 +233,16 @@ export interface IndicatorGroup {
     indicators: IndicatorDef[];
 }
 
-// ─── Standardized Dual-Color Palette ────────────────────────────────────────────
-// Dark theme  → bright/vivid (Material 400) — tương phản tốt trên nền tối
-// Light theme → deep/saturated (Material 800+) — tương phản tốt trên nền sáng
+// ─── Unified Timeframe Color Palette ────────────────────────────────────────────
+// Dark theme  → bright/vivid — tương phản tốt trên nền tối
+// Light theme → deep/saturated — tương phản tốt trên nền sáng
 //
-// Mỗi khung thời gian có 1 họ màu riêng (dễ phân biệt giữa W/M/Q/Y):
-//   W (tuần)  = Green      M (tháng) = Blue/Indigo
-//   Q (quý)   = Orange     Y (năm)   = Red/Pink
-//
-// Trong cùng 1 khung, OPEN/HIGH/LOW dùng 3 sắc độ khác nhau của họ màu.
-// ─── Modern Financial Color Palette ─────────────────────────────────────────────
+// Tất cả các nhóm (trừ MA & Volume MA) dùng chung 1 bộ màu theo khung thời gian:
+//   W (tuần)  = Green   { dark: '#69F0AE', light: '#2E7D32' }
+//   M (tháng) = Blue    { dark: '#40C4FF', light: '#0277BD' }
+//   Q (quý)   = Orange  { dark: '#FFAB40', light: '#EF6C00' }
+//   Y (năm)   = Red     { dark: '#FF5252', light: '#C62828' }
+// ─────────────────────────────────────────────────────────────────────────────────
 
 export const INDICATOR_GROUPS: IndicatorGroup[] = [
     {
@@ -224,15 +251,15 @@ export const INDICATOR_GROUPS: IndicatorGroup[] = [
         // Logic: Spectrum (Vàng -> Lục -> Lam -> Tím -> Đỏ) dễ phân biệt chồng chéo
         indicators: [
             // MA 5: Màu Vàng chanh (Highlight) - Nhanh nhất
-            { key: 'ma5', label: 'MA 5', type: 'line', field: 'ma5', color: { dark: '#FFFF00', light: '#FFD600' }, lwOptions: LW_MA },
+            { key: 'ma5', label: 'MA 5', type: 'line', field: 'ma5', color: { dark: '#69F0AE', light: '#2E7D32' }, lwOptions: LW_MA },
             // MA 20: Màu Xanh lá (Trend ngắn hạn)
-            { key: 'ma20', label: 'MA 20', type: 'line', field: 'ma20', color: { dark: '#00E5FF', light: '#0091EA' }, lwOptions: LW_MA },
+            { key: 'ma20', label: 'MA 20', type: 'line', field: 'ma20', color: { dark: '#40C4FF', light: '#0277BD' }, lwOptions: LW_MA },
             // MA 60: Màu Xanh dương (Trend trung hạn)
-            { key: 'ma60', label: 'MA 60', type: 'line', field: 'ma60', color: { dark: '#FF6D00', light: '#EF6C00' }, lwOptions: LW_MA },
+            { key: 'ma60', label: 'MA 60', type: 'line', field: 'ma60', color: { dark: '#FFAB40', light: '#EF6C00' }, lwOptions: LW_MA },
             // MA 120: Màu Tím (Hỗ trợ mạnh)
             { key: 'ma120', label: 'MA 120', type: 'line', field: 'ma120', color: { dark: '#E040FB', light: '#AA00FF' }, lwOptions: LW_MA },
             // MA 240: Màu Đỏ/Xám (Trend dài hạn - Đường 200/240 huyền thoại)
-            { key: 'ma240', label: 'MA 240', type: 'line', field: 'ma240', color: { dark: '#FF3D00', light: '#D50000' }, lwOptions: LW_MA },
+            { key: 'ma240', label: 'MA 240', type: 'line', field: 'ma240', color: { dark: '#FF5252', light: '#C62828' }, lwOptions: LW_MA },
         ],
     },
     {
@@ -241,33 +268,35 @@ export const INDICATOR_GROUPS: IndicatorGroup[] = [
         // Logic: Ưu tiên xếp theo loại (OPEN, HIGH, LOW) rồi mới tới khung thời gian (W, M, Q, Y)
         indicators: [
             // OPEN — W / M / Q / Y
-            { key: 'w_open', label: 'W - OPEN', type: 'line', field: 'w_open', color: { dark: '#69F0AE', light: '#2E7D32' }, lwOptions: LW_LEVEL },
-            { key: 'm_open', label: 'M - OPEN', type: 'line', field: 'm_open', color: { dark: '#40C4FF', light: '#0277BD' }, lwOptions: LW_LEVEL },
-            { key: 'q_open', label: 'Q - OPEN', type: 'line', field: 'q_open', color: { dark: '#FFAB40', light: '#EF6C00' }, lwOptions: LW_LEVEL },
-            { key: 'y_open', label: 'Y - OPEN', type: 'line', field: 'y_open', color: { dark: '#FF5252', light: '#C62828' }, lwOptions: LW_LEVEL },
+            { key: 'w_open', label: 'W - OPEN', type: 'line', field: 'w_open', color: { dark: '#69F0AE', light: '#2E7D32' }, lwOptions: LW_OPEN },
+            { key: 'm_open', label: 'M - OPEN', type: 'line', field: 'm_open', color: { dark: '#40C4FF', light: '#0277BD' }, lwOptions: LW_OPEN },
+            { key: 'q_open', label: 'Q - OPEN', type: 'line', field: 'q_open', color: { dark: '#FFAB40', light: '#EF6C00' }, lwOptions: LW_OPEN },
+            { key: 'y_open', label: 'Y - OPEN', type: 'line', field: 'y_open', color: { dark: '#FF5252', light: '#C62828' }, lwOptions: LW_OPEN },
 
-            // PREV HIGH — W / M / Q / Y
-            { key: 'w_ph', label: 'W - PREV HIGH', type: 'line', field: 'w_ph', color: { dark: '#B9F6CA', light: '#4CAF50' }, lwOptions: LW_LEVEL },
-            { key: 'm_ph', label: 'M - PREV HIGH', type: 'line', field: 'm_ph', color: { dark: '#80D8FF', light: '#039BE5' }, lwOptions: LW_LEVEL },
-            { key: 'q_ph', label: 'Q - PREV HIGH', type: 'line', field: 'q_ph', color: { dark: '#FFD180', light: '#FF9800' }, lwOptions: LW_LEVEL },
-            { key: 'y_ph', label: 'Y - PREV HIGH', type: 'line', field: 'y_ph', color: { dark: '#FF8A80', light: '#E53935' }, lwOptions: LW_LEVEL },
-
-            // PREV LOW — W / M / Q / Y
-            { key: 'w_pl', label: 'W - PREV LOW', type: 'line', field: 'w_pl', color: { dark: '#00C853', light: '#1B5E20' }, lwOptions: LW_LEVEL },
-            { key: 'm_pl', label: 'M - PREV LOW', type: 'line', field: 'm_pl', color: { dark: '#00B0FF', light: '#01579B' }, lwOptions: LW_LEVEL },
-            { key: 'q_pl', label: 'Q - PREV LOW', type: 'line', field: 'q_pl', color: { dark: '#FF6D00', light: '#E65100' }, lwOptions: LW_LEVEL },
-            { key: 'y_pl', label: 'Y - PREV LOW', type: 'line', field: 'y_pl', color: { dark: '#D50000', light: '#B71C1C' }, lwOptions: LW_LEVEL },
+            // PREV HIGH/LOW — W / M / Q / Y (dual-line: 1 toggle = 2 đường)
+            { key: 'w_phl', label: 'W - PREV HIGH/LOW', type: 'dual-line', fields: ['w_ph', 'w_pl'], color: { dark: '#69F0AE', light: '#2E7D32' }, lwOptions: LW_PREV_HL },
+            { key: 'm_phl', label: 'M - PREV HIGH/LOW', type: 'dual-line', fields: ['m_ph', 'm_pl'], color: { dark: '#40C4FF', light: '#0277BD' }, lwOptions: LW_PREV_HL },
+            { key: 'q_phl', label: 'Q - PREV HIGH/LOW', type: 'dual-line', fields: ['q_ph', 'q_pl'], color: { dark: '#FFAB40', light: '#EF6C00' }, lwOptions: LW_PREV_HL },
+            { key: 'y_phl', label: 'Y - PREV HIGH/LOW', type: 'dual-line', fields: ['y_ph', 'y_pl'], color: { dark: '#FF5252', light: '#C62828' }, lwOptions: LW_PREV_HL },
         ],
     },
     {
         key: 'pivot',
         name: 'Pivot',
         // Pivot dùng màu Solid (Liền mạch) tương ứng với Family ở trên để đồng bộ
+        // R1/S1 dùng cùng màu nhưng nét chấm thưa (SparseDotted)
         indicators: [
-            { key: 'w_pivot', label: 'W - PIVOT', type: 'line', field: 'w_pivot', color: { dark: '#00E676', light: '#2E7D32' }, lwOptions: LW_PIVOT },
-            { key: 'm_pivot', label: 'M - PIVOT', type: 'line', field: 'm_pivot', color: { dark: '#2979FF', light: '#1565C0' }, lwOptions: LW_PIVOT },
-            { key: 'q_pivot', label: 'Q - PIVOT', type: 'line', field: 'q_pivot', color: { dark: '#FF9100', light: '#EF6C00' }, lwOptions: LW_PIVOT },
-            { key: 'y_pivot', label: 'Y - PIVOT', type: 'line', field: 'y_pivot', color: { dark: '#FF1744', light: '#C62828' }, lwOptions: LW_PIVOT },
+            // PIVOT — W / M / Q / Y
+            { key: 'w_pivot', label: 'W - PIVOT', type: 'line', field: 'w_pivot', color: { dark: '#69F0AE', light: '#2E7D32' }, lwOptions: LW_PIVOT },
+            { key: 'm_pivot', label: 'M - PIVOT', type: 'line', field: 'm_pivot', color: { dark: '#40C4FF', light: '#0277BD' }, lwOptions: LW_PIVOT },
+            { key: 'q_pivot', label: 'Q - PIVOT', type: 'line', field: 'q_pivot', color: { dark: '#FFAB40', light: '#EF6C00' }, lwOptions: LW_PIVOT },
+            { key: 'y_pivot', label: 'Y - PIVOT', type: 'line', field: 'y_pivot', color: { dark: '#FF5252', light: '#C62828' }, lwOptions: LW_PIVOT },
+
+            // R1/S1 — W / M / Q / Y (dual-line: 1 toggle = 2 đường)
+            { key: 'w_rs', label: 'W - R1/S1', type: 'dual-line', fields: ['w_r1', 'w_s1'], color: { dark: '#69F0AE', light: '#2E7D32' }, lwOptions: LW_PIVOT_RS },
+            { key: 'm_rs', label: 'M - R1/S1', type: 'dual-line', fields: ['m_r1', 'm_s1'], color: { dark: '#40C4FF', light: '#0277BD' }, lwOptions: LW_PIVOT_RS },
+            { key: 'q_rs', label: 'Q - R1/S1', type: 'dual-line', fields: ['q_r1', 'q_s1'], color: { dark: '#FFAB40', light: '#EF6C00' }, lwOptions: LW_PIVOT_RS },
+            { key: 'y_rs', label: 'Y - R1/S1', type: 'dual-line', fields: ['y_r1', 'y_s1'], color: { dark: '#FF5252', light: '#C62828' }, lwOptions: LW_PIVOT_RS },
         ],
     },
     {
@@ -294,16 +323,16 @@ export const INDICATOR_GROUPS: IndicatorGroup[] = [
         // Ưu tiên xếp theo loại (POC, VAH/VAL) rồi mới tới khung thời gian (W, M, Q, Y)
         indicators: [
             // POC — W / M / Q / Y
-            { key: 'w_poc', label: 'W - POC', type: 'line', field: 'w_poc', color: { dark: '#1DE9B6', light: '#00695C' }, lwOptions: LW_POC },
-            { key: 'm_poc', label: 'M - POC', type: 'line', field: 'm_poc', color: { dark: '#00B0FF', light: '#01579B' }, lwOptions: LW_POC },
-            { key: 'q_poc', label: 'Q - POC', type: 'line', field: 'q_poc', color: { dark: '#FF9100', light: '#EF6C00' }, lwOptions: LW_POC },
-            { key: 'y_poc', label: 'Y - POC', type: 'line', field: 'y_poc', color: { dark: '#FF1744', light: '#B71C1C' }, lwOptions: LW_POC },
+            { key: 'w_poc', label: 'W - POC', type: 'line', field: 'w_poc', color: { dark: '#69F0AE', light: '#2E7D32' }, lwOptions: LW_POC },
+            { key: 'm_poc', label: 'M - POC', type: 'line', field: 'm_poc', color: { dark: '#40C4FF', light: '#0277BD' }, lwOptions: LW_POC },
+            { key: 'q_poc', label: 'Q - POC', type: 'line', field: 'q_poc', color: { dark: '#FFAB40', light: '#EF6C00' }, lwOptions: LW_POC },
+            { key: 'y_poc', label: 'Y - POC', type: 'line', field: 'y_poc', color: { dark: '#FF5252', light: '#C62828' }, lwOptions: LW_POC },
 
             // VAH/VAL — W / M / Q / Y
-            { key: 'w_va', label: 'W - VAH/VAL', type: 'band', fields: ['w_vah', 'w_val'], color: { dark: '#1DE9B6', light: '#00695C' } },
-            { key: 'm_va', label: 'M - VAH/VAL', type: 'band', fields: ['m_vah', 'm_val'], color: { dark: '#00B0FF', light: '#01579B' } },
-            { key: 'q_va', label: 'Q - VAH/VAL', type: 'band', fields: ['q_vah', 'q_val'], color: { dark: '#FF9100', light: '#EF6C00' } },
-            { key: 'y_va', label: 'Y - VAH/VAL', type: 'band', fields: ['y_vah', 'y_val'], color: { dark: '#FF1744', light: '#B71C1C' } },
+            { key: 'w_va', label: 'W - VAH/VAL', type: 'band', fields: ['w_vah', 'w_val'], color: { dark: '#69F0AE', light: '#2E7D32' } },
+            { key: 'm_va', label: 'M - VAH/VAL', type: 'band', fields: ['m_vah', 'm_val'], color: { dark: '#40C4FF', light: '#0277BD' } },
+            { key: 'q_va', label: 'Q - VAH/VAL', type: 'band', fields: ['q_vah', 'q_val'], color: { dark: '#FFAB40', light: '#EF6C00' } },
+            { key: 'y_va', label: 'Y - VAH/VAL', type: 'band', fields: ['y_vah', 'y_val'], color: { dark: '#FF5252', light: '#C62828' } },
         ],
     },
     {
@@ -311,9 +340,9 @@ export const INDICATOR_GROUPS: IndicatorGroup[] = [
         name: 'Volume MA',
         indicators: [
             // VOLUME MA 5: Màu Cam sáng (Sunset Orange)
-            { key: 'vsma5', label: 'VOLUME MA 5', type: 'volume-line', field: 'vsma5', color: { dark: '#00E5FF', light: '#0091EA' }, lwOptions: LW_VOL_MA },
+            { key: 'vsma5', label: 'VOLUME MA 5', type: 'volume-line', field: 'vsma5', color: { dark: '#40C4FF', light: '#0277BD' }, lwOptions: LW_VOL_MA },
             // VOLUME MA 60: Màu Xanh Cyan/Blue (Cyan Process) - Tương phản mạnh với màu Cam
-            { key: 'vsma60', label: 'VOLUME MA 60', type: 'volume-line', field: 'vsma60', color: { dark: '#FF6D00', light: '#EF6C00' }, lwOptions: LW_VOL_MA },
+            { key: 'vsma60', label: 'VOLUME MA 60', type: 'volume-line', field: 'vsma60', color: { dark: '#FFAB40', light: '#EF6C00' }, lwOptions: LW_VOL_MA },
         ],
     },
 ];

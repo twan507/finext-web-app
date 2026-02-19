@@ -199,6 +199,14 @@ export default function RootLayout({
                   navigator.serviceWorker.register('/sw.js').catch(function() {});
                 });
               }
+              (function() {
+                var isPWA = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+                if (!isPWA) return;
+                var p = 'Finext - ';
+                function strip() { if (document.title.indexOf(p) === 0) document.title = document.title.substring(p.length); }
+                strip();
+                new MutationObserver(strip).observe(document.querySelector('title') || document.head, { childList: true, subtree: true, characterData: true });
+              })();
             `,
           }}
         />

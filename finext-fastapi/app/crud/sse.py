@@ -80,7 +80,7 @@ async def get_collection_data(
             # Áp dụng sort nếu có
             if sort:
                 cursor.sort(sort)
-            
+
             # Áp dụng limit nếu có
             if limit:
                 cursor.limit(limit)
@@ -196,20 +196,15 @@ async def home_hist_index(ticker: Optional[str] = None, **kwargs) -> Dict[str, A
         "type": 1,
     }
     find_query = {"ticker": ticker} if ticker else {}
-    
+
     # Lấy limit từ kwargs nếu có
     limit = kwargs.get("limit")
-    
+
     # Nếu có limit, sort giảm dần theo date để lấy records mới nhất
     if limit:
         sort_criteria = [("date", -1)]
         history_df = await get_collection_data(
-            stock_db, 
-            "history_index", 
-            find_query=find_query, 
-            projection=projection,
-            sort=sort_criteria,
-            limit=limit
+            stock_db, "history_index", find_query=find_query, projection=projection, sort=sort_criteria, limit=limit
         )
         # Reverse lại để có thứ tự tăng dần theo date
         records = history_df.to_dict(orient="records")
@@ -917,26 +912,34 @@ CHART_DATA_PROJECTION = {
     "ma60": 1,
     "ma120": 1,
     "ma240": 1,
-    # Open / PH / PL / Pivot — Tuần
+    # Open / PH / PL / Pivot / R1 / S1 — Tuần
     "w_open": 1,
     "w_ph": 1,
     "w_pl": 1,
     "w_pivot": 1,
-    # Open / PH / PL / Pivot — Tháng
+    "w_r1": 1,
+    "w_s1": 1,
+    # Open / PH / PL / Pivot / R1 / S1 — Tháng
     "m_open": 1,
     "m_ph": 1,
     "m_pl": 1,
     "m_pivot": 1,
-    # Open / PH / PL / Pivot — Quý
+    "m_r1": 1,
+    "m_s1": 1,
+    # Open / PH / PL / Pivot / R1 / S1 — Quý
     "q_open": 1,
     "q_ph": 1,
     "q_pl": 1,
     "q_pivot": 1,
-    # Open / PH / PL / Pivot — Năm
+    "q_r1": 1,
+    "q_s1": 1,
+    # Open / PH / PL / Pivot / R1 / S1 — Năm
     "y_open": 1,
     "y_ph": 1,
     "y_pl": 1,
     "y_pivot": 1,
+    "y_r1": 1,
+    "y_s1": 1,
     # ─── Chỉ báo vẽ AREA (upper/middle/lower) trên biểu đồ giá ───
     # Fibonacci — Tuần / Tháng / Quý / Năm
     "w_f382": 1,
@@ -1044,30 +1047,30 @@ INDEX_TICKERS = {
 }
 
 INDUSTRY_TICKERS = {
-    'BANLE',
-    'BAOHIEM',
-    'BDS',
-    'CAOSU',
-    'CHUNGKHOAN',
-    'CONGNGHE',
-    'CONGNGHIEP',
-    'DAUKHI',
-    'DETMAY',
-    'DULICH',
-    'HOACHAT',
-    'KCN',
-    'KHOANGSAN',
-    'KIMLOAI',
-    'NGANHANG',
-    'NHUA',
-    'NONGNGHIEP',
-    'THUCPHAM',
-    'THUYSAN',
-    'TIENICH',
-    'VANTAI',
-    'VLXD',
-    'XAYDUNG',
-    'YTE'
+    "BANLE",
+    "BAOHIEM",
+    "BDS",
+    "CAOSU",
+    "CHUNGKHOAN",
+    "CONGNGHE",
+    "CONGNGHIEP",
+    "DAUKHI",
+    "DETMAY",
+    "DULICH",
+    "HOACHAT",
+    "KCN",
+    "KHOANGSAN",
+    "KIMLOAI",
+    "NGANHANG",
+    "NHUA",
+    "NONGNGHIEP",
+    "THUCPHAM",
+    "THUYSAN",
+    "TIENICH",
+    "VANTAI",
+    "VLXD",
+    "XAYDUNG",
+    "YTE",
 }
 
 

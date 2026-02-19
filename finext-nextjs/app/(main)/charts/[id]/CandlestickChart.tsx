@@ -26,12 +26,14 @@ import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import type { ChartRawData } from './PageContent';
 import IndicatorsPanel from './IndicatorsPanel';
 import WatchlistPanel from './WatchlistPanel';
-import { INDICATOR_GROUPS, getIndicatorColor, type AreaIndicator, type BandIndicator, type LineIndicator, type VolumeLineIndicator } from './indicatorConfig';
+import { INDICATOR_GROUPS, getIndicatorColor, type AreaIndicator, type BandIndicator, type DualLineIndicator, type LineIndicator, type VolumeLineIndicator } from './indicatorConfig';
 import { BandFillPrimitive } from './BandFillPrimitive';
+import type { Timeframe } from './aggregateTimeframe';
 
 interface CandlestickChartProps {
     data: ChartRawData[];
     ticker: string;
+    timeframe: Timeframe;
     chartType: 'candlestick' | 'line';
     showIndicators: boolean;
     showVolume: boolean;
@@ -121,7 +123,7 @@ const INDUSTRY_TICKERS = new Set([
     'YTE'
 ]);
 
-export default function CandlestickChart({ data, ticker, chartType, showIndicators, showVolume, showLegend, showIndicatorsPanel, showWatchlistPanel, enabledIndicators, onToggleIndicator, onClearAllIndicators, onResetDefaultIndicators, onCloseIndicatorsPanel, onCloseWatchlistPanel }: CandlestickChartProps) {
+export default function CandlestickChart({ data, ticker, timeframe, chartType, showIndicators, showVolume, showLegend, showIndicatorsPanel, showWatchlistPanel, enabledIndicators, onToggleIndicator, onClearAllIndicators, onResetDefaultIndicators, onCloseIndicatorsPanel, onCloseWatchlistPanel }: CandlestickChartProps) {
     const theme = useTheme();
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
@@ -463,6 +465,23 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                         autoscaleInfoProvider: () => null,
                     });
                     newIndicatorSeries.set(ind.key, [series]);
+                } else if (ind.type === 'dual-line') {
+                    // Dual-line: 2 visible lines sharing the same toggle
+                    const dlInd = ind as DualLineIndicator;
+                    const lwOpts = dlInd.lwOptions || {};
+                    const makeLineSeries = () => chart.addSeries(LineSeries, {
+                        color: lwOpts.color ?? resolvedColor,
+                        lineWidth: isMobile ? 1 : (lwOpts.lineWidth ?? 1),
+                        lineStyle: lwOpts.lineStyle ?? LineStyle.Solid,
+                        lineType: lwOpts.lineType ?? LineType.Simple,
+                        priceLineVisible: lwOpts.priceLineVisible ?? false,
+                        lastValueVisible: lwOpts.lastValueVisible ?? true,
+                        crosshairMarkerVisible: lwOpts.crosshairMarkerVisible ?? true,
+                        crosshairMarkerRadius: lwOpts.crosshairMarkerRadius ?? 3,
+                        visible: false,
+                        autoscaleInfoProvider: () => null,
+                    });
+                    newIndicatorSeries.set(ind.key, [makeLineSeries(), makeLineSeries()]);
                 }
             }
         }
@@ -600,6 +619,13 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
         }, 50);
     }, [transformData]);
 
+    // Reset chart range when timeframe changes (bar count changes significantly)
+    useEffect(() => {
+        hasSetInitialRangeRef.current = false;
+        savedLogicalRangeRef.current = null;
+        prevDataLengthRef.current = 0;
+    }, [timeframe]);
+
     // Subscribe to visible range changes to save pan/zoom state
     useEffect(() => {
         if (!chartRef.current) return;
@@ -687,6 +713,12 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                             seriesArr[0].applyOptions({ visible: true });
                             seriesArr[1].applyOptions({ visible: true });
                             seriesArr[2].applyOptions({ visible: true });
+                        } else if (ind.type === 'dual-line') {
+                            const dlInd = ind as DualLineIndicator;
+                            seriesArr[0].setData(extractFieldData(data, dlInd.fields[0]));
+                            seriesArr[1].setData(extractFieldData(data, dlInd.fields[1]));
+                            seriesArr[0].applyOptions({ visible: true });
+                            seriesArr[1].applyOptions({ visible: true });
                         }
                     } else {
                         for (const s of seriesArr) {
@@ -773,7 +805,7 @@ export default function CandlestickChart({ data, ticker, chartType, showIndicato
                                             whiteSpace: 'nowrap',
                                         }}
                                     >
-                                        1D
+                                        {timeframe}
                                     </Typography>
                                     <Typography
                                         sx={{

@@ -3,7 +3,7 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
     return {
-        name: 'Finext - Phân tích chứng khoán',
+        name: 'Finext',
         short_name: 'Finext',
         description:
             'Nền tảng phân tích chứng khoán thông minh cho nhà đầu tư Việt Nam',
