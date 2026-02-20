@@ -215,11 +215,12 @@ export default function MiniIndexCard({ symbol, itdData, todayData = [], hideOnT
 
     const chartSeries = useMemo(() => [{ name: symbol, data: paddedData }], [symbol, paddedData]);
 
-    const formatNumber = (num: number | null | undefined): string => {
+    // Desktop: 2 decimal places; Mobile: 1 decimal place
+    const formatNumber = (num: number | null | undefined, decimals = 2): string => {
         if (num == null) return '--';
         return num >= 1000
-            ? num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-            : num.toFixed(2);
+            ? num.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+            : num.toFixed(decimals);
     };
 
     const formatDiff = (num: number | null | undefined): string => {
@@ -279,12 +280,19 @@ export default function MiniIndexCard({ symbol, itdData, todayData = [], hideOnT
                 {tickerName}
             </Typography>
 
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.5, flexWrap: 'wrap', rowGap: 0.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.5, flexWrap: 'nowrap' }}>
+                {/* Điểm số: mobile dùng 1 chữ số thập phân, desktop dùng 2 */}
                 <Typography sx={{ fontWeight: fontWeight.bold, color: 'text.primary', lineHeight: 1, fontSize: getResponsiveFontSize('md') }}>
-                    {formatNumber(lastPrice)}
+                    <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                        {formatNumber(lastPrice, 2)}
+                    </Box>
+                    <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                        {formatNumber(lastPrice, 1)}
+                    </Box>
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Typography sx={{ color: changeColor, fontWeight: fontWeight.medium, fontSize: getResponsiveFontSize('xs'), lineHeight: 1 }}>
+                    {/* Biến động tuyệt đối: hiển thị trên mobile */}
+                    <Typography sx={{ color: changeColor, fontWeight: fontWeight.medium, fontSize: getResponsiveFontSize('xs'), lineHeight: 1, display: 'block' }}>
                         {diff != null && diff !== 0 && (pctChange ?? 0) > 0 ? '+' : diff != null && diff !== 0 && (pctChange ?? 0) < 0 ? '-' : ''}{formatDiff(diff)}
                     </Typography>
                     <Box component="span" sx={{
@@ -296,7 +304,7 @@ export default function MiniIndexCard({ symbol, itdData, todayData = [], hideOnT
                         fontSize: getResponsiveFontSize('xs'),
                         fontWeight: fontWeight.semibold,
                         whiteSpace: 'nowrap',
-                        display: 'inline-flex',
+                        display: { xs: 'none', sm: 'inline-flex' },
                         alignItems: 'center',
                         lineHeight: 1,
                     }}>

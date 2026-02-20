@@ -36,6 +36,8 @@ const MarketIndexChart = dynamic(
 const MAIN_INDEXES = ['VNINDEX', 'VN30', 'HNXINDEX', 'UPINDEX'];
 const DERIVATIVE_INDEXES = ['VN30F1M', 'VN30F2M', 'VN100F1M', 'VN100F2M'];
 const FINEXT_INDEXES = ['FNXINDEX', 'LARGECAP', 'MIDCAP', 'SMALLCAP'];
+const MOBILE_INDEXES = ['VNINDEX', 'HNXINDEX', 'UPINDEX', 'FNXINDEX', 'LARGECAP', 'MIDCAP', 'SMALLCAP', 'VN30', 'VN30F1M'];
+
 
 // Type cho SSE data
 type IndexDataByTicker = Record<string, RawMarketData[]>;
@@ -129,34 +131,87 @@ function IndexDetailPanel({ indexName, todayData }: { indexName: string; todayDa
         return `${(v * 100).toFixed(2)}%`;
     };
 
-    return (
-        <Box sx={{
-            ...glassStyles,
-            borderRadius: `${borderRadius.lg}px`,
-            p: { xs: 1.5, md: 2 },
-        }}>
+    // ── MOBILE layout ──────────────────────────────────────────────────
+    const MobilePanel = () => {
+        const pctItems = [
+            { label: '% Tuần', value: latest?.w_pct },
+            { label: '% Tháng', value: latest?.m_pct },
+            { label: '% Quý', value: latest?.q_pct },
+            { label: '% Năm', value: latest?.y_pct },
+        ];
+
+        return (
+            <Box sx={{ ...glassStyles, borderRadius: `${borderRadius.lg}px`, p: 1.5 }}>
+                {/* Biến động – 4 items 1 hàng ngang */}
+                <Box sx={{
+                    display: 'flex',
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    px: 0.5,
+                    pb: 0.5,
+                }}>
+                    {pctItems.map((item) => {
+                        const color = item.value != null ? getTrendColor(item.value, theme) : theme.palette.text.primary;
+                        return (
+                            <Box key={item.label} sx={{ textAlign: 'center' }}>
+                                <Typography sx={{
+                                    fontSize: getResponsiveFontSize('xs'),
+                                    color: theme.palette.text.secondary,
+                                    fontWeight: fontWeight.medium,
+                                    mb: 0.25,
+                                }}>
+                                    {item.label}
+                                </Typography>
+                                <Typography sx={{
+                                    fontSize: getResponsiveFontSize('sm'),
+                                    fontWeight: fontWeight.bold,
+                                    color,
+                                }}>
+                                    {formatPct(item.value)}
+                                </Typography>
+                            </Box>
+                        );
+                    })}
+                </Box>
+
+                {/* Thanh khoản */}
+                <Divider sx={{ my: 0.75 }} />
+                <StatRow
+                    label="Chỉ số thanh khoản"
+                    value={formatVsi(latest?.vsi)}
+                    color={latest?.vsi != null ? getVsiColor(latest.vsi, theme) : undefined}
+                    tooltip="Tỉ lệ thanh khoản phiên hiện tại so với trung bình 5 phiên gần nhất. Giá trị > 120% cho thấy đột biến về mặt thanh khoản."
+                />
+                <StatRow label="Khối lượng giao dịch" value={formatVolume(latest?.volume)} />
+                <StatRow label="Giá trị giao dịch" value={formatValue(latest?.trading_value)} />
+            </Box>
+        );
+    };
+
+    // ── DESKTOP layout ──────────────────────────────────────────────────
+    const DesktopPanel = () => (
+        <Box sx={{ ...glassStyles, borderRadius: `${borderRadius.lg}px`, p: 2 }}>
             {/* Title */}
             <Typography sx={{
                 fontSize: getResponsiveFontSize('md'),
                 fontWeight: fontWeight.bold,
                 color: theme.palette.text.primary,
-                mb: { xs: 1, md: 1.5 },
+                mb: 1.5,
             }}>
                 Thông tin chi tiết {indexName}
             </Typography>
 
-            {/* Section 1: OHLC — ẩn trên mobile */}
-            <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-                <StatRow label="Open" value={formatPrice(latest?.open)} />
-                <StatRow label="High" value={formatPrice(latest?.high)} color={theme.palette.trend.up} />
-                <StatRow label="Low" value={formatPrice(latest?.low)} color={theme.palette.trend.down} />
-                <StatRow
-                    label="Close"
-                    value={formatPrice(latest?.close)}
-                    tooltip="Giá đóng cửa phiên gần nhất, hoặc giá khớp lệnh mới nhất nếu phiên đang diễn ra."
-                />
-                <Divider sx={{ my: { xs: 0.75, md: 1 } }} />
-            </Box>
+            {/* Section 1: OHLC */}
+            <StatRow label="Open" value={formatPrice(latest?.open)} />
+            <StatRow label="High" value={formatPrice(latest?.high)} color={theme.palette.trend.up} />
+            <StatRow label="Low" value={formatPrice(latest?.low)} color={theme.palette.trend.down} />
+            <StatRow
+                label="Close"
+                value={formatPrice(latest?.close)}
+                tooltip="Giá đóng cửa phiên gần nhất, hoặc giá khớp lệnh mới nhất nếu phiên đang diễn ra."
+            />
+            <Divider sx={{ my: 1 }} />
 
             {/* Section 2: Biến động */}
             <StatRow label="% Tuần" value={formatPct(latest?.w_pct)} color={latest?.w_pct != null ? getTrendColor(latest.w_pct, theme) : undefined} />
@@ -176,9 +231,16 @@ function IndexDetailPanel({ indexName, todayData }: { indexName: string; todayDa
             <StatRow label="Giá trị giao dịch" value={formatValue(latest?.trading_value)} />
         </Box>
     );
+
+    return (
+        <>
+            <Box sx={{ display: { xs: 'block', md: 'none' } }}><MobilePanel /></Box>
+            <Box sx={{ display: { xs: 'none', md: 'block' } }}><DesktopPanel /></Box>
+        </>
+    );
 }
 
-// ========== INDEX TABLES SECTION (Carousel on mobile, Row on desktop) ==========
+// ========== INDEX TABLES SECTION (Single merged table on mobile, Row on desktop) ==========
 function IndexTablesSection({ ticker, onTickerChange, todayAllData }: {
     ticker: string;
     onTickerChange: (t: string) => void;
@@ -204,29 +266,21 @@ function IndexTablesSection({ ticker, onTickerChange, todayAllData }: {
         { id: 'finext', title: 'Finext', list: FINEXT_INDEXES },
     ];
 
+    // Mobile: gộp tất cả chỉ số thành 1 bảng duy nhất, bỏ tiêu đề
     if (isMobile) {
-        const slides = tables.map((t) => ({
-            id: t.id,
-            component: (
-                <Box sx={{ mb: 2 }}>
-                    <Typography sx={{ ...titleSx }}>{t.title}</Typography>
-                    <IndexTable
-                        selectedTicker={ticker}
-                        onTickerChange={onTickerChange}
-                        indexList={t.list}
-                        todayAllData={todayAllData}
-                    />
-                </Box>
-            ),
-        }));
-
         return (
             <Box sx={{ mt: 3 }}>
-                <Carousel slides={slides} autoPlayInterval={0} showDots minHeight="auto" />
+                <IndexTable
+                    selectedTicker={ticker}
+                    onTickerChange={onTickerChange}
+                    indexList={MOBILE_INDEXES}
+                    todayAllData={todayAllData}
+                />
             </Box>
         );
     }
 
+    // Desktop: 3 cột riêng biệt với tiêu đề
     return (
         <Box sx={{
             display: 'flex',

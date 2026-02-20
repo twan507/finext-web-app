@@ -88,6 +88,7 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
 
     const changeColor = getTrendColor(pctChange, theme);
     const dividerColor = isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)';
+    const hoverBg = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)';
     const isLoading = !todayData || todayData.length === 0;
 
     // Responsive padding
@@ -122,9 +123,9 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
                 cursor: 'pointer',
                 transition: transitions.colors,
                 borderBottom: isLast ? 'none' : `1px solid ${dividerColor}`,
-                bgcolor: 'transparent',
+                bgcolor: isSelected ? hoverBg : 'transparent',
                 '&:hover': {
-                    bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'
+                    bgcolor: hoverBg
                 },
                 // Flash animation
                 animation: flashType ? `flash-${flashType} 0.5s ease` : 'none',
@@ -198,7 +199,7 @@ export default function IndexTable({ selectedTicker, onTickerChange, indexList, 
     return (
         <Box sx={{
             overflow: 'hidden',
-            borderRadius: `${borderRadius.md}px`,
+            // borderRadius: `${borderRadius.md}px`,
             // borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`,
             // borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`,
         }}>

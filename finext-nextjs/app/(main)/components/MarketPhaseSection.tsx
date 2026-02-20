@@ -37,6 +37,8 @@ interface MarketPhaseSectionProps {
 export default function MarketPhaseSection({ stockData = [], foreignData = [], isLoading = false }: MarketPhaseSectionProps) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const isXsWidth = useMediaQuery(theme.breakpoints.only('xs'));
+    const breadthChartHeight = isXsWidth ? '246px' : '227px';
 
     // Skeleton components for loading state
     const renderTableSkeleton = (title: string) => (
@@ -336,7 +338,7 @@ export default function MarketPhaseSection({ stockData = [], foreignData = [], i
                 </Typography>
                 <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', my: -1 }}>
                     <Box sx={{
-                        width: '100%', maxWidth: '280px', height: '233px',
+                        width: '100%', maxWidth: '280px', height: breadthChartHeight,
                         '& .apexcharts-datalabels text, & .apexcharts-datalabel, & .apexcharts-data-labels text': {
                             stroke: theme.palette.background.default,
                             strokeWidth: 3,
@@ -347,7 +349,7 @@ export default function MarketPhaseSection({ stockData = [], foreignData = [], i
                         <Chart key={theme.palette.mode} options={chartOptions} series={series} type="polarArea" height="100%" width="100%" />
                     </Box>
                 </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 0, flexWrap: 'wrap' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 0, mb: 1, flexWrap: 'wrap' }}>
                     {labels.map((label, index) => (
                         <Box key={label} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                             <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: colors[index] }} />
@@ -476,10 +478,11 @@ export default function MarketPhaseSection({ stockData = [], foreignData = [], i
             {/* Mobile: Single carousel with all 6 slides */}
             {isMobile ? (
                 <Card sx={cardStyle}>
-                    <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <Box sx={{ px: 2, pt: 2, pb: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
                         <Carousel
                             slides={isLoading ? allSkeletonSlides : allSlides}
-                            minHeight="280px"
+                            minHeight="auto"
+                            height="100%"
                             autoPlayInterval={isLoading ? 0 : STOCKS_INTERVAL}
                         />
                     </Box>
@@ -493,10 +496,11 @@ export default function MarketPhaseSection({ stockData = [], foreignData = [], i
                 }}>
                     {/* Column 1: Market Breadth (Donut Charts) */}
                     <Card sx={cardStyle}>
-                        <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <Box sx={{ px: 2, pt: 2, pb: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
                             <Carousel
                                 slides={isLoading ? skeletonBreadthSlides : breadthSlides}
-                                minHeight="280px"
+                                minHeight="auto"
+                                height="100%"
                                 autoPlayInterval={isLoading ? 0 : BREADTH_INTERVAL}
                             />
                         </Box>
@@ -504,10 +508,11 @@ export default function MarketPhaseSection({ stockData = [], foreignData = [], i
 
                     {/* Column 2: Top Biến Động (Gainers / Losers) */}
                     <Card sx={cardStyle}>
-                        <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <Box sx={{ px: 2, pt: 2, pb: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
                             <Carousel
                                 slides={isLoading ? skeletonStockSlides : stockSlides}
-                                minHeight="280px"
+                                minHeight="auto"
+                                height="100%"
                                 autoPlayInterval={isLoading ? 0 : STOCKS_INTERVAL}
                             />
                         </Box>
@@ -515,10 +520,11 @@ export default function MarketPhaseSection({ stockData = [], foreignData = [], i
 
                     {/* Column 3: Khối Ngoại (Buy / Sell) */}
                     <Card sx={cardStyle}>
-                        <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <Box sx={{ px: 2, pt: 2, pb: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
                             <Carousel
                                 slides={isLoading ? skeletonForeignSlides : foreignSlides}
-                                minHeight="280px"
+                                minHeight="auto"
+                                height="100%"
                                 autoPlayInterval={isLoading ? 0 : FOREIGN_INTERVAL}
                             />
                         </Box>

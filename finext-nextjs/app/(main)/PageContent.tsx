@@ -84,8 +84,8 @@ const MINI_CHART_INDEXES = [
 // Indexes bị ẩn ở tablet (md và nhỏ hơn)
 const HIDDEN_ON_TABLET = ['VNXALL', 'HNX30'];
 
-// Indexes bị ẩn ở mobile (xs) - chỉ giữ lại 3 cards
-const HIDDEN_ON_MOBILE = ['VNXALL', 'HNX30', 'UPINDEX'];
+// Indexes bị ẩn ở mobile (xs) - chỉ giữ lại VNINDEX, HNXINDEX, UPINDEX
+const HIDDEN_ON_MOBILE = ['VN30', 'VNXALL', 'HNX30'];
 
 // Tab type cho bảng index
 type IndexTabType = 'main' | 'derivative' | 'finext';

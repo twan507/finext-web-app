@@ -1015,6 +1015,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 justifyContent: 'center',
                 minHeight: `calc(100dvh - ${layoutTokens.appBarHeight}px)`,
                 px: { xs: 1.5, md: 2, lg: 3 }, // Mobile: 12px, Tablet: 16px, Desktop: 24px
+                overflowX: 'clip', // Prevent horizontal scrollbar from full-width bleed elements (e.g. SubNavbar)
               }}
             >
               <Box sx={{

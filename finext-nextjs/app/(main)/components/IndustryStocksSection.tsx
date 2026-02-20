@@ -33,6 +33,8 @@ interface IndustryGroup {
 export default function IndustryStocksSection({ stockData = [], isLoading = false }: IndustryStocksSectionProps) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const isXsWidth = useMediaQuery(theme.breakpoints.only('xs'));
+    const carouselMinHeight = isXsWidth ? '278px' : '265px';
 
     const isDark = theme.palette.mode === 'dark';
 
@@ -262,10 +264,11 @@ export default function IndustryStocksSection({ stockData = [], isLoading = fals
             {/* Mobile: Single carousel with all 18 industries */}
             {isMobile ? (
                 <Card sx={cardStyle}>
-                    <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <Box sx={{ px: 2, pt: 2, pb: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
                         <Carousel
                             slides={isLoading ? skeletonSlides : allSlides}
-                            minHeight="280px"
+                            height="100%"
+                            minHeight={carouselMinHeight}
                             autoPlayInterval={isLoading ? 0 : COLUMN1_INTERVAL}
                         />
                     </Box>
@@ -280,10 +283,11 @@ export default function IndustryStocksSection({ stockData = [], isLoading = fals
                     {/* Column 1 */}
                     {(isLoading || column1Slides.length > 0) && (
                         <Card sx={cardStyle}>
-                            <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <Box sx={{ px: 2, pt: 2, pb: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
                                 <Carousel
                                     slides={isLoading ? skeletonSlides : column1Slides}
-                                    minHeight="280px"
+                                    height="100%"
+                                    minHeight={carouselMinHeight}
                                     autoPlayInterval={isLoading ? 0 : COLUMN1_INTERVAL}
                                 />
                             </Box>
@@ -293,10 +297,11 @@ export default function IndustryStocksSection({ stockData = [], isLoading = fals
                     {/* Column 2 */}
                     {(isLoading || column2Slides.length > 0) && (
                         <Card sx={cardStyle}>
-                            <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <Box sx={{ px: 2, pt: 2, pb: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
                                 <Carousel
                                     slides={isLoading ? skeletonSlides : column2Slides}
-                                    minHeight="280px"
+                                    height="100%"
+                                    minHeight={carouselMinHeight}
                                     autoPlayInterval={isLoading ? 0 : COLUMN2_INTERVAL}
                                 />
                             </Box>
@@ -306,10 +311,11 @@ export default function IndustryStocksSection({ stockData = [], isLoading = fals
                     {/* Column 3 */}
                     {(isLoading || column3Slides.length > 0) && (
                         <Card sx={cardStyle}>
-                            <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <Box sx={{ px: 2, pt: 2, pb: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
                                 <Carousel
                                     slides={isLoading ? skeletonSlides : column3Slides}
-                                    minHeight="280px"
+                                    height="100%"
+                                    minHeight={carouselMinHeight}
                                     autoPlayInterval={isLoading ? 0 : COLUMN3_INTERVAL}
                                 />
                             </Box>

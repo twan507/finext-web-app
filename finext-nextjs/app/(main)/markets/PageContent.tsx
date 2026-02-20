@@ -1,43 +1,34 @@
 'use client';
 
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import dynamic from 'next/dynamic';
-import { Box, Typography, Skeleton, useTheme, useMediaQuery, Divider } from '@mui/material';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import { Box, Typography, useTheme, Divider, alpha } from '@mui/material';
 
-import type { RawMarketData, ChartData, TimeRange } from '../components/MarketIndexChart';
-import { transformToChartData } from '../components/MarketIndexChart';
+import type { RawMarketData } from '../components/MarketIndexChart';
 import IndexTable from '../components/IndexTable';
-import Carousel from 'components/common/Carousel';
+
 import InfoTooltip from 'components/common/InfoTooltip';
 import { getTrendColor, getVsiColor } from 'theme/colorHelpers';
 
-import { apiClient } from 'services/apiClient';
+import TongQuanSection from './components/TongQuanSection';
+import DongTienSection from './components/DongTienSection';
+import NuocNgoaiSection from './components/NuocNgoaiSection';
+import TuDoanhSection from './components/TuDoanhSection';
+
 import { ISseRequest } from 'services/core/types';
 import { sseClient, getFromCache } from 'services/sseClient';
 import {
   getResponsiveFontSize,
   fontWeight,
   borderRadius,
-  spacing,
-  transitions,
   getGlassCard,
+  transitions,
+  layoutTokens,
 } from 'theme/tokens';
 
-// Lazy load heavy chart component
-const MarketIndexChart = dynamic(
-  () => import('../components/MarketIndexChart').then(mod => ({ default: mod.default })),
-  {
-    loading: () => <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 2 }} />,
-    ssr: false
-  }
-);
-
 // ========== INDEX LISTS ==========
-const MAIN_INDEXES = ['VNINDEX', 'VN30', 'HNXINDEX', 'UPINDEX'];
-const DERIVATIVE_INDEXES = ['VN30F1M', 'VN30F2M', 'VN100F1M', 'VN100F2M'];
-const FINEXT_INDEXES = ['FNXINDEX', 'LARGECAP', 'MIDCAP', 'SMALLCAP'];
+const MAIN_INDEXES = ['VNINDEX', 'VN30', 'VNXALL', 'HNXINDEX', 'HNX30', 'UPINDEX'];
+const DERIVATIVE_INDEXES = ['VN30F1M', 'VN30F2M', 'VN30F1Q', 'VN30F2Q', 'VN100F1M', 'VN100F2M', 'VN100F1Q', 'VN100F2Q'];
+const FINEXT_INDEXES = ['FNXINDEX', 'FNX100', 'LARGECAP', 'MIDCAP', 'SMALLCAP', 'VUOTTROI', 'ONDINH', 'SUKIEN'];
 
 // Type cho SSE data
 type IndexDataByTicker = Record<string, RawMarketData[]>;
@@ -52,14 +43,11 @@ interface IndexRawData extends RawMarketData {
   vsi?: number;
 }
 
-// Empty chart data
-const emptyChartData: ChartData = { areaData: [], candleData: [], volumeData: [] };
-
 // ========== STAT ROW (label trái, value phải) ==========
 function StatRow({ label, value, color, tooltip }: { label: string; value: string; color?: string; tooltip?: string }) {
   const theme = useTheme();
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: { xs: 0.5, md: 1 }, px: 0.5 }}>
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.55, px: 0.5 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
         <Typography sx={{
           fontSize: getResponsiveFontSize('xs'),
@@ -119,14 +107,14 @@ function IndexDetailPanel({ indexName, todayData }: { indexName: string; todayDa
     <Box sx={{
       ...glassStyles,
       borderRadius: `${borderRadius.lg}px`,
-      p: { xs: 1.5, md: 2 },
+      p: 1.5,
     }}>
       {/* Title */}
       <Typography sx={{
         fontSize: getResponsiveFontSize('md'),
         fontWeight: fontWeight.bold,
         color: theme.palette.text.primary,
-        mb: { xs: 1, md: 1.5 },
+        mb: 1,
       }}>
         Thông tin chi tiết {indexName}
       </Typography>
@@ -141,7 +129,7 @@ function IndexDetailPanel({ indexName, todayData }: { indexName: string; todayDa
           value={formatPrice(latest?.close)}
           tooltip="Giá đóng cửa phiên gần nhất, hoặc giá khớp lệnh mới nhất nếu phiên đang diễn ra."
         />
-        <Divider sx={{ my: { xs: 0.75, md: 1 } }} />
+        <Divider sx={{ my: 1 }} />
       </Box>
 
       {/* Section 2: Biến động */}
@@ -164,20 +152,20 @@ function IndexDetailPanel({ indexName, todayData }: { indexName: string; todayDa
   );
 }
 
-// ========== INDEX TABLES SECTION (Carousel on mobile, Row on desktop) ==========
+// ========== INDEX TABLES SECTION (always 3 tables side-by-side, with horizontal scroll) ==========
 function IndexTablesSection({ ticker, onTickerChange, todayAllData }: {
   ticker: string;
   onTickerChange: (t: string) => void;
   todayAllData: IndexDataByTicker;
 }) {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const titleSx = {
     fontSize: getResponsiveFontSize('md'),
     fontWeight: fontWeight.semibold,
     color: theme.palette.text.primary,
     mb: 1.5,
+    ml: 1,
     pb: 1,
     borderBottom: `2px solid ${theme.palette.primary.main}`,
     display: 'inline-block',
@@ -189,55 +177,112 @@ function IndexTablesSection({ ticker, onTickerChange, todayAllData }: {
     { id: 'finext', title: 'Finext', list: FINEXT_INDEXES },
   ];
 
-  if (isMobile) {
-    const slides = tables.map((t) => ({
-      id: t.id,
-      component: (
-        <Box>
-          <Typography sx={{ ...titleSx, ml: 1 }}>{t.title}</Typography>
-          <IndexTable
-            selectedTicker={ticker}
-            onTickerChange={onTickerChange}
-            indexList={t.list}
-            todayAllData={todayAllData}
-          />
-        </Box>
-      ),
-    }));
-
-    return (
-      <Box sx={{ mt: 3 }}>
-        <Carousel slides={slides} autoPlayInterval={0} showDots minHeight="auto" />
-      </Box>
-    );
-  }
-
   return (
     <Box sx={{
-      display: 'flex',
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: 6,
-      mt: 3,
       overflowX: 'auto',
-      '&::-webkit-scrollbar': { display: 'none' },
-      msOverflowStyle: 'none',
-      scrollbarWidth: 'none',
+      // Hidden scrollbar but still scrollable
+      scrollbarWidth: 'none',          // Firefox
+      '&::-webkit-scrollbar': { display: 'none' }, // Chrome/Safari
+      msOverflowStyle: 'none',         // IE/Edge
     }}>
-      {tables.map((t) => (
-        <Box key={t.id} sx={{ width: 350, flexShrink: 0 }}>
-          <Typography sx={titleSx}>{t.title}</Typography>
-          <IndexTable
-            selectedTicker={ticker}
-            onTickerChange={onTickerChange}
-            indexList={t.list}
-            todayAllData={todayAllData}
-          />
-        </Box>
-      ))}
+      <Box sx={{
+        display: 'flex',
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 4,
+        width: 'fit-content',
+        minWidth: '100%',
+      }}>
+        {tables.map((t) => (
+          <Box key={t.id} sx={{ minWidth: 320, flex: 1 }}>
+            <Typography sx={titleSx}>{t.title}</Typography>
+            <IndexTable
+              selectedTicker={ticker}
+              onTickerChange={onTickerChange}
+              indexList={t.list}
+              todayAllData={todayAllData}
+            />
+          </Box>
+        ))}
+      </Box>
     </Box>
   );
 }
+
+// ========== SUB-NAVBAR TABS CONFIG ==========
+const MARKET_TABS = [
+  { id: 'overview', label: 'Tổng quan' },
+  { id: 'cashflow', label: 'Dòng tiền' },
+  { id: 'foreign', label: 'Nước ngoài' },
+  { id: 'proprietary', label: 'Tự doanh' },
+] as const;
+
+type MarketTabId = typeof MARKET_TABS[number]['id'];
+
+// ========== SUB-NAVBAR (full-width bleed) ==========
+function SubNavbar({ activeTab, onTabChange }: {
+  activeTab: MarketTabId;
+  onTabChange: (tab: MarketTabId) => void;
+}) {
+  const theme = useTheme();
+
+  return (
+    <Box sx={{
+      // Full-width bleed: stretch to <main> edges using viewport calc
+      // calc(-50vw + 50%) centers element relative to viewport
+      // On desktop (lg+), offset by half sidebar width (25px) since <main> is shifted by sidebar
+      // overflow-x: clip on <main> in LayoutContent handles scrollbar width differences
+      mx: { xs: 'calc(-50vw + 50%)', lg: `calc(-50vw + 50% + ${layoutTokens.compactDrawerWidth / 2}px)` },
+      borderBottom: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+      borderTop: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+      bgcolor: theme.palette.background.default,
+    }}>
+      <Box sx={{
+        maxWidth: 1400,
+        mx: 'auto',
+        px: { xs: 1.5, md: 2, lg: 3 },
+        display: 'flex',
+        overflowX: 'auto',
+        scrollbarWidth: 'none',
+        '&::-webkit-scrollbar': { display: 'none' },
+        msOverflowStyle: 'none',
+      }}>
+        {MARKET_TABS.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <Box
+              key={tab.id}
+              onClick={() => onTabChange(tab.id)}
+              sx={{
+                px: { xs: 2, md: 2.5 },
+                py: 1.5,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                position: 'relative',
+                borderBottom: isActive ? `3px solid ${theme.palette.primary.main}` : '3px solid transparent',
+                transition: transitions.colors,
+                '&:hover': {
+                  color: theme.palette.primary.main,
+                },
+              }}
+            >
+              <Typography sx={{
+                fontSize: getResponsiveFontSize('md'),
+                fontWeight: isActive ? fontWeight.semibold : fontWeight.medium,
+                color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
+                transition: transitions.colors,
+              }}>
+                {tab.label}
+              </Typography>
+            </Box>
+          );
+        })}
+      </Box>
+    </Box>
+  );
+}
+
+
 
 // ========== MAIN COMPONENT ==========
 export default function MarketsContent() {
@@ -245,11 +290,10 @@ export default function MarketsContent() {
   const isDark = theme.palette.mode === 'dark';
 
   const [ticker, setTicker] = useState<string>('VNINDEX');
-  const [timeRange, setTimeRange] = useState<TimeRange>('3M');
+  const [activeTab, setActiveTab] = useState<MarketTabId>('overview');
 
   const isMountedRef = useRef<boolean>(true);
   const todaySseRef = useRef<{ unsubscribe: () => void } | null>(null);
-  const itdSseRef = useRef<{ unsubscribe: () => void } | null>(null);
 
   // ========== STATE ==========
   const [todayAllData, setTodayAllData] = useState<IndexDataByTicker>(() => {
@@ -265,46 +309,7 @@ export default function MarketsContent() {
     return {};
   });
 
-  const [itdAllData, setItdAllData] = useState<IndexDataByTicker>(() => {
-    const cached = getFromCache<RawMarketData[]>('home_itd_index');
-    if (cached && Array.isArray(cached)) {
-      const grouped: IndexDataByTicker = {};
-      cached.forEach((item: RawMarketData) => {
-        const t = item.ticker;
-        if (t) { if (!grouped[t]) grouped[t] = []; grouped[t].push(item); }
-      });
-      return grouped;
-    }
-    return {};
-  });
 
-  const [eodData, setEodData] = useState<ChartData>(emptyChartData);
-  const [intradayData, setIntradayData] = useState<ChartData>(emptyChartData);
-
-  const [isLoading, setIsLoading] = useState<boolean>(() => {
-    const todayCache = getFromCache<RawMarketData[]>('home_today_index');
-    if (todayCache && Array.isArray(todayCache)) {
-      return !todayCache.some(item => item.ticker === 'VNINDEX');
-    }
-    return true;
-  });
-  const [error, setError] = useState<string | null>(null);
-
-  // ========== REST - History Data ==========
-  const { data: historyData = [], isLoading: historyLoading } = useQuery({
-    queryKey: ['market', 'history', ticker],
-    queryFn: async () => {
-      const response = await apiClient<RawMarketData[]>({
-        url: '/api/v1/sse/rest/home_hist_index',
-        method: 'GET',
-        queryParams: { ticker },
-        requireAuth: false
-      });
-      return response.data || [];
-    },
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
 
   // ========== SSE - Today All Indexes ==========
   useEffect(() => {
@@ -331,105 +336,72 @@ export default function MarketsContent() {
     return () => { isMountedRef.current = false; if (todaySseRef.current) todaySseRef.current.unsubscribe(); };
   }, []);
 
-  // ========== SSE - ITD All Indexes ==========
-  useEffect(() => {
-    isMountedRef.current = true;
-    if (itdSseRef.current) { itdSseRef.current.unsubscribe(); itdSseRef.current = null; }
-
-    const requestProps: ISseRequest = { url: '/api/v1/sse/stream', queryParams: { keyword: 'home_itd_index' } };
-    itdSseRef.current = sseClient<RawMarketData[]>(requestProps, {
-      onOpen: () => { },
-      onData: (receivedData) => {
-        if (isMountedRef.current && receivedData && Array.isArray(receivedData)) {
-          const grouped: IndexDataByTicker = {};
-          receivedData.forEach((item: RawMarketData) => {
-            const t = item.ticker;
-            if (t) { if (!grouped[t]) grouped[t] = []; grouped[t].push(item); }
-          });
-          setItdAllData(grouped);
-        }
-      },
-      onError: (sseError) => { if (isMountedRef.current) console.warn('[SSE ITD] Error:', sseError.message); },
-      onClose: () => { }
-    }, { cacheTtl: 5 * 60 * 1000, useCache: true });
-
-    return () => { isMountedRef.current = false; if (itdSseRef.current) itdSseRef.current.unsubscribe(); };
-  }, []);
-
-  // Transform ITD cho ticker hiện tại
-  useEffect(() => {
-    const itdDataForTicker = itdAllData[ticker] || [];
-    if (itdDataForTicker.length > 0) {
-      setIntradayData(transformToChartData(itdDataForTicker, true));
-    } else {
-      setIntradayData(emptyChartData);
-    }
-  }, [itdAllData, ticker]);
-
-  // Combine History + Today -> EOD
-  useEffect(() => {
-    const todayDataForTicker = todayAllData[ticker] || [];
-    const hasHistoryData = !historyLoading && historyData.length > 0;
-    const hasTodayData = todayDataForTicker.length > 0;
-    if (!hasHistoryData || !hasTodayData) return;
-
-    const combinedRawData = [...historyData, ...todayDataForTicker];
-    setEodData(transformToChartData(combinedRawData, false));
-    setIsLoading(false);
-  }, [historyData, todayAllData, ticker, historyLoading]);
-
   // Handle ticker change
   const handleTableTickerChange = (newTicker: string) => {
     setTicker(newTicker);
-    setIsLoading(true);
-    setEodData(emptyChartData);
-    setIntradayData(emptyChartData);
   };
 
   // Get display name for ticker
   const indexName = useMemo(() => {
-    const firstRecord = historyData[0] || todayAllData[ticker]?.[0] || itdAllData[ticker]?.[0];
+    const firstRecord = todayAllData[ticker]?.[0];
     return firstRecord?.ticker_name || ticker;
-  }, [historyData, todayAllData, itdAllData, ticker]);
+  }, [todayAllData, ticker]);
+
+  // Render active section based on tab
+  const renderActiveSection = () => {
+    switch (activeTab) {
+      case 'overview':
+        return <TongQuanSection />;
+      case 'cashflow':
+        return <DongTienSection />;
+      case 'foreign':
+        return <NuocNgoaiSection />;
+      case 'proprietary':
+        return <TuDoanhSection />;
+      default:
+        return null;
+    }
+  };
 
   return (
     <Box sx={{ py: 3 }}>
-      {/* ========== TOP SECTION: Chart + Detail Panel ========== */}
+      {/* Title */}
+      <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1'), mb: 4 }}>
+        Thị trường
+      </Typography>
+
+      {/* ========== MAIN SECTION: Detail Panel (left) + 3 Index Tables (right) ========== */}
       <Box sx={{
         display: 'flex',
         flexDirection: { xs: 'column', md: 'row' },
         gap: { xs: 2, md: 3 },
       }}>
-        {/* Left: Chart */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <MarketIndexChart
-            key={ticker}
-            symbol={ticker}
-            title={`Chỉ số ${indexName}`}
-            eodData={eodData}
-            intradayData={intradayData}
-            isLoading={isLoading}
-            error={error}
-            timeRange={timeRange}
-            onTimeRangeChange={setTimeRange}
-          />
-        </Box>
-
-        {/* Right: Index Detail Panel */}
+        {/* Left: Index Detail Panel — hidden on mobile */}
         <Box sx={{
-          width: { xs: '100%', md: 340 },
+          width: 340,
           flexShrink: 0,
+          display: { xs: 'none', md: 'block' },
         }}>
           <IndexDetailPanel indexName={indexName} todayData={todayAllData[ticker] || []} />
         </Box>
+
+        {/* Right: 3 Index Tables */}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <IndexTablesSection
+            ticker={ticker}
+            onTickerChange={handleTableTickerChange}
+            todayAllData={todayAllData}
+          />
+        </Box>
       </Box>
 
-      {/* ========== BOTTOM SECTION: 3 Index Tables ========== */}
-      <IndexTablesSection
-        ticker={ticker}
-        onTickerChange={handleTableTickerChange}
-        todayAllData={todayAllData}
-      />
+      {/* ========== SUB-NAVBAR (full-width bleed) ========== */}
+      <Box sx={{ mt: 4 }}>
+        <SubNavbar activeTab={activeTab} onTabChange={setActiveTab} />
+      </Box>
+
+      {/* ========== TAB CONTENT ========== */}
+      {renderActiveSection()}
     </Box>
   );
 }

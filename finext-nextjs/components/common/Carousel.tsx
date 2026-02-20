@@ -15,6 +15,7 @@ interface CarouselProps {
     showDots?: boolean;
     sx?: SxProps<Theme>;
     minHeight?: string | number;
+    height?: string | number;
 }
 
 export default function Carousel({
@@ -23,6 +24,7 @@ export default function Carousel({
     showDots = true,
     sx,
     minHeight = '400px',
+    height,
 }: CarouselProps) {
     const theme = useTheme();
 
@@ -158,7 +160,7 @@ export default function Carousel({
     }
 
     return (
-        <Box sx={sx}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: height, ...sx as object }}>
             <Box
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
@@ -171,6 +173,8 @@ export default function Carousel({
                 sx={{
                     transition: `opacity ${durations.slow} ${easings.easeInOut}, transform ${durations.slow} ${easings.easeInOut}`,
                     minHeight: minHeight,
+                    height: height ? '100%' : undefined,
+                    flex: height ? 1 : undefined,
                     ...animationStyle,
                     cursor: 'grab',
                     '&:active': {
@@ -184,14 +188,16 @@ export default function Carousel({
 
             {/* Dots Navigation */}
             {showDots && (
-                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1.5 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', gap: { xs: 0.75, sm: 1.5 }, py: { xs: 0.75, sm: 1 } }}>
                     {slides.map((_, i) => (
                         <Box
                             key={i}
                             onClick={() => triggerSlideChange(i)}
                             sx={{
-                                width: i === currentSlide ? layoutTokens.dotSize.large : layoutTokens.dotSize.small,
-                                height: layoutTokens.dotSize.small,
+                                width: i === currentSlide
+                                    ? { xs: layoutTokens.dotSize.large * 0.7, sm: layoutTokens.dotSize.large }
+                                    : { xs: layoutTokens.dotSize.small * 0.7, sm: layoutTokens.dotSize.small },
+                                height: { xs: layoutTokens.dotSize.small * 0.7, sm: layoutTokens.dotSize.small },
                                 borderRadius: 999,
                                 backgroundColor: i === currentSlide
                                     ? theme.palette.primary.main
