@@ -10,7 +10,15 @@ import { NewsArticle } from './types';
 // FETCH ARTICLE BY SLUG (cho generateMetadata)
 // ============================================================================
 
-interface ArticleResponse {
+// Response wrapping theo StandardApiResponse của backend:
+// { status: 200, message: "...", data: { article: {...} } }
+interface StandardApiResponse<T> {
+    status: number;
+    message?: string;
+    data: T;
+}
+
+interface ArticleData {
     article: NewsArticle | null;
     error?: string;
 }
@@ -18,7 +26,6 @@ interface ArticleResponse {
 /**
  * Fetch 1 bài viết theo slug — dùng cho generateMetadata (server-side only).
  * Cache 5 phút (revalidate: 300) để không gọi API lặp lại cho cùng bài viết.
- * Chỉ cần title + sapo cho metadata, không cần html_content.
  */
 export async function fetchArticleBySlug(slug: string): Promise<NewsArticle | null> {
     try {
@@ -30,8 +37,8 @@ export async function fetchArticleBySlug(slug: string): Promise<NewsArticle | nu
 
         if (!res.ok) return null;
 
-        const data: ArticleResponse = await res.json();
-        return data.article || null;
+        const response: StandardApiResponse<ArticleData> = await res.json();
+        return response.data?.article || null;
     } catch (error) {
         console.error('[serverFetch] fetchArticleBySlug failed:', error);
         return null;
@@ -42,7 +49,7 @@ export async function fetchArticleBySlug(slug: string): Promise<NewsArticle | nu
 // FETCH NEWS LIST FOR SITEMAP
 // ============================================================================
 
-interface NewsListResponse {
+interface NewsListData {
     items: Array<{ article_slug: string; created_at: string }>;
     pagination: { total: number; total_pages: number };
 }
@@ -62,8 +69,9 @@ export async function fetchNewsListForSitemap(): Promise<Array<{ slug: string; l
 
         if (!res.ok) return [];
 
-        const data: NewsListResponse = await res.json();
-        return (data.items || []).map((item) => ({
+        const response: StandardApiResponse<NewsListData> = await res.json();
+        const items = response.data?.items || [];
+        return items.map((item) => ({
             slug: item.article_slug,
             lastModified: item.created_at,
         }));

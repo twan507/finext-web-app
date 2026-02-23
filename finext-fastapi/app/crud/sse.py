@@ -773,6 +773,7 @@ async def phase_signal(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]
 
 async def news_article(
     article_slug: Optional[str] = None,
+    projection: Optional[Dict[str, Any]] = None,
     **kwargs,
 ) -> Dict[str, Any]:
     """
@@ -782,6 +783,7 @@ async def news_article(
 
     Args:
         article_slug: Slug của bài viết (URL-friendly title, đã lưu trong DB)
+        projection: MongoDB projection để chỉ lấy các field cần thiết
 
     Returns:
         Dict chứa thông tin bài viết hoặc None nếu không tìm thấy
@@ -792,8 +794,9 @@ async def news_article(
     stock_db = get_database(STOCK_DB)
     collection = stock_db.get_collection("news_daily")
 
-    # Lấy đầy đủ thông tin cho hiển thị
-    projection = {"_id": 0}
+    # Sử dụng projection truyền vào hoặc mặc định
+    if projection is None:
+        projection = {"_id": 0}
 
     # Query trực tiếp theo article_slug
     doc = await collection.find_one({"article_slug": article_slug}, projection)
