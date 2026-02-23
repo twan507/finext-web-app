@@ -178,7 +178,7 @@ function IndexTablesSection({ ticker, onTickerChange, todayAllData }: {
   ];
 
   return (
-    <Box sx={{
+    <Box className="no-scrollbar" sx={{
       overflowX: 'auto',
       // Hidden scrollbar but still scrollable
       scrollbarWidth: 'none',          // Firefox

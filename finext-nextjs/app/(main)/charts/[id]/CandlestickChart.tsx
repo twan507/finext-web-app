@@ -139,6 +139,7 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
     const savedLogicalRangeRef = useRef<{ from: number; to: number } | null>(null);
     const hasSetInitialRangeRef = useRef(false);
     const prevDataLengthRef = useRef(0);
+    const isResettingTimeframeRef = useRef(false);
 
     // Ticker name (fixed, không thay đổi khi hover)
     const [tickerName, setTickerName] = useState<string>('');
@@ -554,6 +555,15 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [bgColor, textColor, gridColor, crosshairColor, upColor, downColor, isDark, primaryColor, lineColor]);
 
+    // Reset chart range when timeframe changes (bar count changes significantly)
+    // IMPORTANT: Must be declared BEFORE data update effect so React runs it first
+    useEffect(() => {
+        isResettingTimeframeRef.current = true;
+        hasSetInitialRangeRef.current = false;
+        savedLogicalRangeRef.current = null;
+        prevDataLengthRef.current = 0;
+    }, [timeframe]);
+
     // Update data when it changes - preserve pan/zoom state
     useEffect(() => {
         if (!candleSeriesRef.current || !lineSeriesRef.current || !volumeSeriesRef.current || !chartRef.current) return;
@@ -584,11 +594,16 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
             const defaultBars = isMobile ? DEFAULT_VISIBLE_BARS_MOBILE : DEFAULT_VISIBLE_BARS_DESKTOP;
             const rightMargin = isMobile ? INITIAL_RIGHT_MARGIN_MOBILE : INITIAL_RIGHT_MARGIN_DESKTOP;
             const visibleBars = Math.min(defaultBars, dataLength);
+            // Reset horizontal range
             chartRef.current.timeScale().setVisibleLogicalRange({
                 from: dataLength - visibleBars - 0.5,
                 to: dataLength - 0.5 + rightMargin,
             });
+            // Reset vertical zoom/pan — re-enable auto-scale for price axis
+            chartRef.current.priceScale('right').applyOptions({ autoScale: true });
+            chartRef.current.priceScale('volume').applyOptions({ autoScale: true });
             hasSetInitialRangeRef.current = true;
+            isResettingTimeframeRef.current = false;
             setTimeout(() => {
                 try {
                     if (chartRef.current) {
@@ -618,19 +633,12 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
 
         setTimeout(() => {
             try {
-                if (chartRef.current) {
+                if (chartRef.current && !isResettingTimeframeRef.current) {
                     savedLogicalRangeRef.current = chartRef.current.timeScale().getVisibleLogicalRange();
                 }
             } catch { /* ignore */ }
         }, 50);
     }, [transformData]);
-
-    // Reset chart range when timeframe changes (bar count changes significantly)
-    useEffect(() => {
-        hasSetInitialRangeRef.current = false;
-        savedLogicalRangeRef.current = null;
-        prevDataLengthRef.current = 0;
-    }, [timeframe]);
 
     // Subscribe to visible range changes to save pan/zoom state
     useEffect(() => {
@@ -638,6 +646,7 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
         const chart = chartRef.current;
 
         const handler = () => {
+            if (isResettingTimeframeRef.current) return;
             try {
                 savedLogicalRangeRef.current = chart.timeScale().getVisibleLogicalRange();
             } catch { /* ignore */ }

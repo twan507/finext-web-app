@@ -71,6 +71,18 @@ svg {
   }
 }
 
+/* Utility class: hide scrollbar at ALL breakpoints (including desktop) */
+.no-scrollbar::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+
+.no-scrollbar {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
 /* Desktop only (>= 1200px) - Show styled scrollbar */
 @media (min-width: 1200px) {
 

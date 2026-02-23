@@ -1031,7 +1031,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
 
             {/* FOOTER */}
-            {currentPathname === '/' && <ConsultationSection />}
+            {/* {currentPathname === '/' && <ConsultationSection />} */}
+            <ConsultationSection />
             <Footer />
           </>
         )}
