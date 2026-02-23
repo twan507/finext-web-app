@@ -63,6 +63,10 @@ services:
         - NEXT_PUBLIC_SYSTEM_FEATURES_ARG=${NEXT_PUBLIC_SYSTEM_FEATURES}
         - NEXT_PUBLIC_SYSTEM_USERS_ARG=${NEXT_PUBLIC_SYSTEM_USERS}
     restart: always
+    environment:
+      # Runtime-only env var (không phải NEXT_PUBLIC_) — chỉ dùng trên server.
+      # Server-side fetch gọi API qua Docker internal network thay vì public URL.
+      - INTERNAL_API_URL=http://fastapi:8000
     deploy:
       resources:
         limits:

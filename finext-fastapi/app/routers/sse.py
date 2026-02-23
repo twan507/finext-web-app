@@ -180,7 +180,7 @@ async def rest_query_endpoint(
     limit: Optional[int] = Query(None, ge=1, le=1000, description="Số lượng bản ghi (tối đa 1000)"),
     sort_by: Optional[str] = Query(None, description="Tên field để sắp xếp"),
     sort_order: Optional[str] = Query(None, regex="^(asc|desc)$", description="Thứ tự sắp xếp: asc hoặc desc"),
-    exclude_fields: Optional[str] = Query(None, description="Danh sách fields cần loại bỏ, cách nhau bởi dấu phẩy (VD: html_content,plain_content)"),
+    projection: Optional[str] = Query(None, description='MongoDB projection dạng JSON (VD: {"title":1,"sapo":1})'),
 ):
     """
     REST endpoint để query dữ liệu một lần.
@@ -199,14 +199,18 @@ async def rest_query_endpoint(
         )
 
     try:
-        # Build projection từ exclude_fields
-        projection = None
-        if exclude_fields:
-            projection = {"_id": 0}
-            for field in exclude_fields.split(","):
-                field = field.strip()
-                if field and field != "_id":
-                    projection[field] = 0
+        # Parse projection từ JSON string
+        parsed_projection = None
+        if projection:
+            try:
+                parsed_projection = json.loads(projection)
+                # Luôn exclude _id
+                parsed_projection["_id"] = 0
+            except json.JSONDecodeError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid projection JSON format",
+                )
 
         # Tạo dict chứa các tham số tuỳ chọn
         query_params = {
@@ -220,7 +224,7 @@ async def rest_query_endpoint(
             "limit": limit,
             "sort_by": sort_by,
             "sort_order": sort_order,
-            "projection": projection,
+            "projection": parsed_projection,
         }
 
         result = await execute_sse_query(keyword, **query_params)

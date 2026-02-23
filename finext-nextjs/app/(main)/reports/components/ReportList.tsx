@@ -119,7 +119,7 @@ export default function ReportList({
                 limit: String(pageSize),
                 sort_by: REPORT_SORT_FIELD,
                 sort_order: REPORT_SORT_ORDER,
-                exclude_fields: 'report_html,report_markdown',
+                projection: JSON.stringify({ title: 1, sapo: 1, report_slug: 1, report_type: 1, source: 1, category: 1, category_name: 1, created_at: 1 }),
             };
 
             // Thêm filter type nếu có (daily, weekly, monthly)

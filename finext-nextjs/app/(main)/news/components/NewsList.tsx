@@ -124,7 +124,7 @@ export default function NewsList({
                 limit: String(pageSize),
                 sort_by: NEWS_SORT_FIELD,
                 sort_order: NEWS_SORT_ORDER,
-                exclude_fields: 'html_content,plain_content',
+                projection: JSON.stringify({ title: 1, sapo: 1, article_slug: 1, news_type: 1, source: 1, category_name: 1, created_at: 1, tickers: 1 }),
             };
 
             // Thêm filter type nếu có
