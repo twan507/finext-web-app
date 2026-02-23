@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next';
+import { fetchNewsListForSitemap } from './(main)/news/serverFetch';
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://finext.vn';
     const currentDate = new Date();
 
@@ -68,5 +69,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
         },
     ];
 
-    return staticPages;
+    // Dynamic pages - bài viết tin tức (cached 1 giờ bởi fetchNewsListForSitemap)
+    let articlePages: MetadataRoute.Sitemap = [];
+    try {
+        const articles = await fetchNewsListForSitemap();
+        articlePages = articles.map((article) => ({
+            url: `${baseUrl}/news/${article.slug}`,
+            lastModified: new Date(article.lastModified),
+            changeFrequency: 'daily' as const,
+            priority: 0.6,
+        }));
+    } catch (error) {
+        // Nếu API lỗi, chỉ trả về static pages — không block sitemap generation
+        console.error('[sitemap] Failed to fetch news articles:', error);
+    }
+
+    return [...staticPages, ...articlePages];
 }
