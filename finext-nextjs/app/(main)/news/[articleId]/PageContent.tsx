@@ -115,12 +115,14 @@ export default function PageContent({ articleId }: PageContentProps) {
     const handleCopyContent = async () => {
         if (!article) return;
         try {
-            // Extract plain text from HTML content
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = article.html_content || '';
-            const plainText = `${article.title}\n\n${article.sapo || ''}\n\n${tempDiv.textContent || tempDiv.innerText || ''}`;
+            const copyData = {
+                title: article.title,
+                sapo: article.sapo || '',
+                content: article.plain_content || '',
+                created_at: article.created_at,
+            };
 
-            await navigator.clipboard.writeText(plainText);
+            await navigator.clipboard.writeText(JSON.stringify(copyData));
             setCopiedContent(true);
             setTimeout(() => setCopiedContent(false), 2000);
         } catch (err) {
@@ -199,220 +201,225 @@ export default function PageContent({ articleId }: PageContentProps) {
                 Quay lại
             </Button>
 
-            {/* Loading */}
-            {loading && <ArticleSkeleton />}
+            {/* Content area - max 1000px centered */}
+            <Box sx={{ maxWidth: 1000, mx: 'auto' }}>
 
-            {/* Article content */}
-            {!loading && article && (
-                <Box>
-                    {/* Header */}
-                    <Box sx={{}}>
-                        {/* Title */}
+                {/* Loading */}
+                {loading && <ArticleSkeleton />}
+
+                {/* Article content */}
+                {!loading && article && (
+                    <Box>
+                        {/* Header */}
+                        <Box sx={{}}>
+                            {/* Title */}
+                            <Typography
+                                variant="h4"
+                                component="h1"
+                                sx={{
+                                    fontWeight: fontWeight.extrabold,
+                                    fontSize: getResponsiveFontSize('h3'),
+                                    lineHeight: 1.3,
+                                    mb: spacing.xxs,
+                                }}
+                            >
+                                {article.title}
+                            </Typography>
+
+                            {/* Meta info */}
+                            <Stack
+                                direction={{ xs: 'column', sm: 'row' }}
+                                justifyContent="space-between"
+                                alignItems={{ xs: 'flex-start', sm: 'center' }}
+                                spacing={2}
+                            >
+                                <Stack direction="row" alignItems="center" spacing={1}>
+                                    <AccessTime sx={{ fontSize: getResponsiveFontSize('md'), color: 'text.secondary' }} />
+                                    <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                        sx={{ fontSize: getResponsiveFontSize('md') }}
+                                    >
+                                        {formatDate(article.created_at)}
+                                    </Typography>
+                                </Stack>
+
+                                {/* Actions */}
+                                <Stack direction="row" spacing={1}>
+                                    <Tooltip title={copiedContent ? 'Đã sao chép!' : 'Sao chép nội dung'}>
+                                        <IconButton
+                                            size="small"
+                                            onClick={handleCopyContent}
+                                            sx={{
+                                                bgcolor: 'action.hover',
+                                                '&:hover': { bgcolor: 'action.selected' },
+                                            }}
+                                        >
+                                            <ContentCopy sx={{ fontSize: 18 }} />
+                                        </IconButton>
+                                    </Tooltip>
+                                    <Tooltip title={copiedLink ? 'Đã sao chép!' : 'Sao chép link'}>
+                                        <IconButton
+                                            size="small"
+                                            onClick={handleCopyLink}
+                                            sx={{
+                                                bgcolor: 'action.hover',
+                                                '&:hover': { bgcolor: 'action.selected' },
+                                            }}
+                                        >
+                                            <Share sx={{ fontSize: 18 }} />
+                                        </IconButton>
+                                    </Tooltip>
+                                    <Tooltip title="Xem bài gốc">
+                                        <IconButton
+                                            size="small"
+                                            component="a"
+                                            href={article.link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            sx={{
+                                                bgcolor: 'action.hover',
+                                                '&:hover': { bgcolor: 'action.selected' },
+                                            }}
+                                        >
+                                            <Launch sx={{ fontSize: 18 }} />
+                                        </IconButton>
+                                    </Tooltip>
+                                </Stack>
+                            </Stack>
+                        </Box>
+
+                        <Divider sx={{ my: spacing.xs }} />
+
+                        {/* Ảnh đại diện */}
+                        {article.image && (
+                            <Box
+                                component="img"
+                                src={article.image}
+                                alt={article.title}
+                                sx={{
+                                    display: 'block',
+                                    width: '100%',
+                                    height: 'auto',
+                                    borderRadius: `${borderRadius.md}px`,
+                                    mb: spacing.xs,
+                                }}
+                            />
+                        )}
+
+
+                        {/* Sapo */}
                         <Typography
-                            variant="h4"
-                            component="h1"
+                            variant="subtitle1"
                             sx={{
-                                fontWeight: fontWeight.extrabold,
-                                fontSize: getResponsiveFontSize('h3'),
-                                lineHeight: 1.3,
-                                mb: spacing.xxs,
-                            }}
-                        >
-                            {article.title}
-                        </Typography>
-
-                        {/* Meta info */}
-                        <Stack
-                            direction={{ xs: 'column', sm: 'row' }}
-                            justifyContent="space-between"
-                            alignItems={{ xs: 'flex-start', sm: 'center' }}
-                            spacing={2}
-                        >
-                            <Stack direction="row" alignItems="center" spacing={1}>
-                                <AccessTime sx={{ fontSize: getResponsiveFontSize('md'), color: 'text.secondary' }} />
-                                <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                    sx={{ fontSize: getResponsiveFontSize('md') }}
-                                >
-                                    {formatDate(article.created_at)}
-                                </Typography>
-                            </Stack>
-
-                            {/* Actions */}
-                            <Stack direction="row" spacing={1}>
-                                <Tooltip title={copiedContent ? 'Đã sao chép!' : 'Sao chép nội dung'}>
-                                    <IconButton
-                                        size="small"
-                                        onClick={handleCopyContent}
-                                        sx={{
-                                            bgcolor: 'action.hover',
-                                            '&:hover': { bgcolor: 'action.selected' },
-                                        }}
-                                    >
-                                        <ContentCopy sx={{ fontSize: 18 }} />
-                                    </IconButton>
-                                </Tooltip>
-                                <Tooltip title={copiedLink ? 'Đã sao chép!' : 'Sao chép link'}>
-                                    <IconButton
-                                        size="small"
-                                        onClick={handleCopyLink}
-                                        sx={{
-                                            bgcolor: 'action.hover',
-                                            '&:hover': { bgcolor: 'action.selected' },
-                                        }}
-                                    >
-                                        <Share sx={{ fontSize: 18 }} />
-                                    </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Xem bài gốc">
-                                    <IconButton
-                                        size="small"
-                                        component="a"
-                                        href={article.link}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        sx={{
-                                            bgcolor: 'action.hover',
-                                            '&:hover': { bgcolor: 'action.selected' },
-                                        }}
-                                    >
-                                        <Launch sx={{ fontSize: 18 }} />
-                                    </IconButton>
-                                </Tooltip>
-                            </Stack>
-                        </Stack>
-                    </Box>
-
-                    <Divider sx={{ my: spacing.xs }} />
-
-                    {/* Ảnh đại diện */}
-                    {article.image && (
-                        <Box
-                            component="img"
-                            src={article.image}
-                            alt={article.title}
-                            sx={{
-                                display: 'block',
-                                width: '100%',
-                                maxHeight: 800,
-                                objectFit: 'cover',
-                                borderRadius: `${borderRadius.md}px`,
-                                mb: spacing.xs,
-                            }}
-                        />
-                    )}
-
-                    {/* Sapo */}
-                    <Typography
-                        variant="subtitle1"
-                        sx={{
-                            fontWeight: fontWeight.semibold,
-                            fontSize: getResponsiveFontSize('md'),
-                            lineHeight: 1.7,
-                            mb: spacing.xs,
-                            color: 'text.primary',
-                            fontStyle: 'italic',
-                        }}
-                    >
-                        {article.sapo}
-                    </Typography>
-
-                    {/* Content */}
-                    <Box
-                        sx={{
-                            fontSize: getResponsiveFontSize('md'),
-                            lineHeight: 1.8,
-                            color: 'text.primary',
-                            '& h2': {
-                                fontSize: getResponsiveFontSize('xl'),
-                                fontWeight: fontWeight.bold,
-                                mt: 4,
-                                mb: 2,
-                            },
-                            '& h3': {
-                                fontSize: getResponsiveFontSize('lg'),
                                 fontWeight: fontWeight.semibold,
-                                mt: 3,
-                                mb: 2,
-                            },
-                            '& p': {
-                                mb: 2,
-                            },
-                            '& img': {
-                                maxWidth: '100%',
-                                height: 'auto',
-                                borderRadius: `${borderRadius.md}px`,
-                                my: 2,
-                            },
-                            '& a': {
-                                color: 'primary.main',
-                                textDecoration: 'none',
-                                '&:hover': {
-                                    textDecoration: 'underline',
-                                },
-                            },
-                            '& ul, & ol': {
-                                pl: 3,
-                                mb: 2,
-                            },
-                            '& li': {
-                                mb: 1,
-                            },
-                            '& blockquote': {
-                                borderLeft: '4px solid',
-                                borderColor: 'primary.main',
-                                pl: 2,
-                                py: 1,
-                                my: 2,
-                                bgcolor: 'action.hover',
-                                borderRadius: `0 ${borderRadius.sm}px ${borderRadius.sm}px 0`,
-                            },
-                        }}
-                        dangerouslySetInnerHTML={{ __html: article.html_content || '' }}
-                    />
-
-                    {/* Tickers as hashtags */}
-                    {article.tickers && article.tickers.length > 0 && (
-                        <Stack
-                            direction="row"
-                            spacing={1}
-                            flexWrap="wrap"
-                            useFlexGap
-                            sx={{ mt: spacing.sm }}
-                        >
-                            {article.tickers.map((ticker) => (
-                                <Typography
-                                    key={ticker}
-                                    component="span"
-                                    sx={{
-                                        fontSize: getResponsiveFontSize('sm'),
-                                        fontWeight: fontWeight.medium,
-                                        color: 'text.secondary',
-                                    }}
-                                >
-                                    #{ticker}
-                                </Typography>
-                            ))}
-                        </Stack>
-                    )}
-
-                    {/* Source - nguồn tin */}
-                    {article.source && (
-                        <Typography
-                            variant="caption"
-                            color="text.disabled"
-                            sx={{
-                                fontSize: getResponsiveFontSize('sm'),
-                                mt: spacing.sm,
-                                display: 'block',
+                                fontSize: getResponsiveFontSize('md'),
+                                lineHeight: 1.7,
+                                mb: spacing.xs,
+                                color: 'text.primary',
                             }}
                         >
-                            Nguồn: {article.source}
+                            {article.sapo}
                         </Typography>
-                    )}
-                </Box>
-            )}
+
+                        {/* Content */}
+                        <Box
+                            sx={{
+                                fontSize: getResponsiveFontSize('md'),
+                                lineHeight: 1.8,
+                                color: 'text.primary',
+                                '& h2': {
+                                    fontSize: getResponsiveFontSize('xl'),
+                                    fontWeight: fontWeight.bold,
+                                    mt: 4,
+                                    mb: 2,
+                                },
+                                '& h3': {
+                                    fontSize: getResponsiveFontSize('lg'),
+                                    fontWeight: fontWeight.semibold,
+                                    mt: 3,
+                                    mb: 2,
+                                },
+                                '& p': {
+                                    mb: 2,
+                                },
+                                '& img': {
+                                    maxWidth: '100%',
+                                    height: 'auto',
+                                    borderRadius: `${borderRadius.md}px`,
+                                    my: 2,
+                                },
+                                '& a': {
+                                    color: 'primary.main',
+                                    textDecoration: 'none',
+                                    '&:hover': {
+                                        textDecoration: 'underline',
+                                    },
+                                },
+                                '& ul, & ol': {
+                                    pl: 3,
+                                    mb: 2,
+                                },
+                                '& li': {
+                                    mb: 1,
+                                },
+                                '& blockquote': {
+                                    borderLeft: '4px solid',
+                                    borderColor: 'primary.main',
+                                    pl: 2,
+                                    py: 1,
+                                    my: 2,
+                                    bgcolor: 'action.hover',
+                                    borderRadius: `0 ${borderRadius.sm}px ${borderRadius.sm}px 0`,
+                                },
+                            }}
+                            dangerouslySetInnerHTML={{ __html: article.html_content || '' }}
+                        />
+
+                        {/* Tickers as hashtags */}
+                        {article.tickers && article.tickers.length > 0 && (
+                            <Stack
+                                direction="row"
+                                spacing={1}
+                                flexWrap="wrap"
+                                useFlexGap
+                                sx={{ mt: spacing.sm }}
+                            >
+                                {article.tickers.map((ticker) => (
+                                    <Typography
+                                        key={ticker}
+                                        component="span"
+                                        sx={{
+                                            fontSize: getResponsiveFontSize('sm'),
+                                            fontWeight: fontWeight.medium,
+                                            color: 'text.secondary',
+                                        }}
+                                    >
+                                        #{ticker}
+                                    </Typography>
+                                ))}
+                            </Stack>
+                        )}
+
+                        {/* Source - nguồn tin */}
+                        {article.source && (
+                            <Typography
+                                variant="caption"
+                                color="text.disabled"
+                                sx={{
+                                    fontSize: getResponsiveFontSize('sm'),
+                                    mt: spacing.sm,
+                                    display: 'block',
+                                }}
+                            >
+                                Nguồn: {article.source}
+                            </Typography>
+                        )}
+
+
+                    </Box>
+                )}
+            </Box>
         </Box>
     );
 }

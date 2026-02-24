@@ -126,18 +126,25 @@ export default function PageContent({ reportId }: PageContentProps) {
     const handleCopyContent = async () => {
         if (!report) return;
         try {
-            // Use report_markdown if available, otherwise extract from HTML
-            let content = '';
+            // Build JSON object with title, sapo, content (from report_markdown), and created_at
+            let markdownContent = '';
             if (report.report_markdown) {
-                content = report.report_markdown;
+                markdownContent = report.report_markdown;
             } else {
                 // Fallback: extract plain text from HTML
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = report.report_html || '';
-                content = `${getTitle(report)}\n\n${report.sapo || ''}\n\n${tempDiv.textContent || tempDiv.innerText || ''}`;
+                markdownContent = tempDiv.textContent || tempDiv.innerText || '';
             }
 
-            await navigator.clipboard.writeText(content);
+            const copyData = {
+                title: getTitle(report),
+                sapo: report.sapo || '',
+                content: markdownContent,
+                created_at: report.created_at,
+            };
+
+            await navigator.clipboard.writeText(JSON.stringify(copyData));
             setCopiedContent(true);
             setTimeout(() => setCopiedContent(false), 2000);
         } catch (err) {
@@ -219,223 +226,226 @@ export default function PageContent({ reportId }: PageContentProps) {
                 Quay lại
             </Button>
 
-            {/* Loading */}
-            {loading && <ReportSkeleton />}
+            {/* Content area - max 1000px centered */}
+            <Box sx={{ maxWidth: 1000, mx: 'auto' }}>
 
-            {/* Report content */}
-            {!loading && report && (
-                <Box>
-                    {/* Header */}
-                    <Box sx={{}}>
-                        {/* Title */}
-                        <Typography
-                            variant="h4"
-                            component="h1"
-                            sx={{
-                                fontWeight: fontWeight.bold,
-                                fontSize: getResponsiveFontSize('h3'),
-                                lineHeight: 1.3,
-                                mb: spacing.xxs,
-                            }}
-                        >
-                            {title}
-                        </Typography>
+                {/* Loading */}
+                {loading && <ReportSkeleton />}
 
-                        {/* Meta info */}
-                        <Stack
-                            direction={{ xs: 'column', sm: 'row' }}
-                            justifyContent="space-between"
-                            alignItems={{ xs: 'flex-start', sm: 'center' }}
-                            spacing={2}
-                        >
-                            <Stack direction="row" alignItems="center" spacing={1}>
-                                <AccessTime sx={{ fontSize: getResponsiveFontSize('md'), color: 'text.secondary' }} />
-                                <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                    sx={{ fontSize: getResponsiveFontSize('md') }}
-                                >
-                                    {formatDate(report.created_at)}
-                                </Typography>
-                            </Stack>
-
-                            {/* Actions */}
-                            <Stack direction="row" spacing={1}>
-                                <Tooltip title={copiedContent ? 'Đã sao chép!' : 'Sao chép nội dung'}>
-                                    <IconButton
-                                        size="small"
-                                        onClick={handleCopyContent}
-                                        sx={{
-                                            bgcolor: 'action.hover',
-                                            '&:hover': { bgcolor: 'action.selected' },
-                                        }}
-                                    >
-                                        <ContentCopy sx={{ fontSize: 18 }} />
-                                    </IconButton>
-                                </Tooltip>
-                                <Tooltip title={copiedLink ? 'Đã sao chép!' : 'Sao chép link'}>
-                                    <IconButton
-                                        size="small"
-                                        onClick={handleCopyLink}
-                                        sx={{
-                                            bgcolor: 'action.hover',
-                                            '&:hover': { bgcolor: 'action.selected' },
-                                        }}
-                                    >
-                                        <Share sx={{ fontSize: 18 }} />
-                                    </IconButton>
-                                </Tooltip>
-                            </Stack>
-                        </Stack>
-                    </Box>
-
-                    <Divider sx={{ my: spacing.xs }} />
-
-                    {/* Sapo */}
-                    {report.sapo && (
-                        <Typography
-                            variant="subtitle1"
-                            sx={{
-                                fontWeight: fontWeight.medium,
-                                fontSize: getResponsiveFontSize('md'),
-                                lineHeight: 1.7,
-                                mb: spacing.xs,
-                                color: 'text.primary',
-                                fontStyle: 'italic',
-                            }}
-                        >
-                            {report.sapo}
-                        </Typography>
-                    )}
-
-                    {/* Content - Render HTML directly */}
-                    <Box
-                        sx={{
-                            fontSize: getResponsiveFontSize('md'),
-                            lineHeight: 1.8,
-                            color: 'text.primary',
-                            '& h2': {
-                                fontSize: getResponsiveFontSize('xl'),
-                                fontWeight: fontWeight.bold,
-                                mt: 4,
-                                mb: 2,
-                            },
-                            '& h3': {
-                                fontSize: getResponsiveFontSize('lg'),
-                                fontWeight: fontWeight.bold,
-                                mt: 3,
-                                mb: 2,
-                            },
-                            '& p': {
-                                mb: 2,
-                            },
-                            '& img': {
-                                maxWidth: '100%',
-                                height: 'auto',
-                                borderRadius: `${borderRadius.md}px`,
-                                my: 2,
-                            },
-                            '& a': {
-                                color: 'primary.main',
-                                textDecoration: 'none',
-                                '&:hover': {
-                                    textDecoration: 'underline',
-                                },
-                            },
-                            '& ul, & ol': {
-                                pl: 3,
-                                mb: 2,
-                            },
-                            '& li': {
-                                mb: 1,
-                            },
-                            '& blockquote': {
-                                borderLeft: '4px solid',
-                                borderColor: 'primary.main',
-                                pl: 2,
-                                py: 1,
-                                my: 2,
-                                bgcolor: 'action.hover',
-                                borderRadius: `0 ${borderRadius.sm}px ${borderRadius.sm}px 0`,
-                            },
-                            '& strong': {
-                                fontWeight: fontWeight.bold,
-                            },
-                            '& hr': {
-                                my: 3,
-                                border: 'none',
-                                borderTop: '1px solid',
-                                borderColor: 'divider',
-                            },
-                        }}
-                        dangerouslySetInnerHTML={{ __html: report.report_html || '' }}
-                    />
-
-                    {/* Tickers as hashtags */}
-                    {report.tickers && report.tickers.length > 0 && (
-                        <Stack
-                            direction="row"
-                            spacing={1}
-                            flexWrap="wrap"
-                            useFlexGap
-                            sx={{ mt: spacing.sm }}
-                        >
-                            {report.tickers.map((ticker) => (
-                                <Typography
-                                    key={ticker}
-                                    component="span"
-                                    sx={{
-                                        fontSize: getResponsiveFontSize('sm'),
-                                        fontWeight: fontWeight.medium,
-                                        color: 'text.secondary',
-                                    }}
-                                >
-                                    #{ticker}
-                                </Typography>
-                            ))}
-                        </Stack>
-                    )}
-
-                    {/* Links */}
-                    {report.links && report.links.length > 0 && (
-                        <Box sx={{ mt: spacing.sm }}>
-                            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: fontWeight.medium }}>
-                                Liên kết liên quan:
+                {/* Report content */}
+                {!loading && report && (
+                    <Box>
+                        {/* Header */}
+                        <Box sx={{}}>
+                            {/* Title */}
+                            <Typography
+                                variant="h4"
+                                component="h1"
+                                sx={{
+                                    fontWeight: fontWeight.bold,
+                                    fontSize: getResponsiveFontSize('h3'),
+                                    lineHeight: 1.3,
+                                    mb: spacing.xxs,
+                                }}
+                            >
+                                {title}
                             </Typography>
-                            <Stack spacing={0.5}>
-                                {report.links.map((link, index) => {
-                                    // Handle both string and object formats
-                                    const linkUrl = typeof link === 'string' ? link : link.url;
-                                    const linkTitle = typeof link === 'string' ? link : (link.title || link.url);
 
-                                    if (!linkUrl) return null;
+                            {/* Meta info */}
+                            <Stack
+                                direction={{ xs: 'column', sm: 'row' }}
+                                justifyContent="space-between"
+                                alignItems={{ xs: 'flex-start', sm: 'center' }}
+                                spacing={2}
+                            >
+                                <Stack direction="row" alignItems="center" spacing={1}>
+                                    <AccessTime sx={{ fontSize: getResponsiveFontSize('md'), color: 'text.secondary' }} />
+                                    <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                        sx={{ fontSize: getResponsiveFontSize('md') }}
+                                    >
+                                        {formatDate(report.created_at)}
+                                    </Typography>
+                                </Stack>
 
-                                    return (
-                                        <Typography
-                                            key={index}
-                                            component="a"
-                                            href={linkUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
+                                {/* Actions */}
+                                <Stack direction="row" spacing={1}>
+                                    <Tooltip title={copiedContent ? 'Đã sao chép!' : 'Sao chép nội dung'}>
+                                        <IconButton
+                                            size="small"
+                                            onClick={handleCopyContent}
                                             sx={{
-                                                color: 'primary.main',
-                                                textDecoration: 'none',
-                                                fontSize: getResponsiveFontSize('sm'),
-                                                display: 'block',
-                                                '&:hover': {
-                                                    textDecoration: 'underline',
-                                                },
+                                                bgcolor: 'action.hover',
+                                                '&:hover': { bgcolor: 'action.selected' },
                                             }}
                                         >
-                                            • {linkTitle}
-                                        </Typography>
-                                    );
-                                })}
+                                            <ContentCopy sx={{ fontSize: 18 }} />
+                                        </IconButton>
+                                    </Tooltip>
+                                    <Tooltip title={copiedLink ? 'Đã sao chép!' : 'Sao chép link'}>
+                                        <IconButton
+                                            size="small"
+                                            onClick={handleCopyLink}
+                                            sx={{
+                                                bgcolor: 'action.hover',
+                                                '&:hover': { bgcolor: 'action.selected' },
+                                            }}
+                                        >
+                                            <Share sx={{ fontSize: 18 }} />
+                                        </IconButton>
+                                    </Tooltip>
+                                </Stack>
                             </Stack>
                         </Box>
-                    )}
-                </Box>
-            )}
+
+                        <Divider sx={{ my: spacing.xs }} />
+
+                        {/* Sapo */}
+                        {report.sapo && (
+                            <Typography
+                                variant="subtitle1"
+                                sx={{
+                                    fontWeight: fontWeight.medium,
+                                    fontSize: getResponsiveFontSize('md'),
+                                    lineHeight: 1.7,
+                                    mb: spacing.xs,
+                                    color: 'text.primary',
+                                }}
+                            >
+                                {report.sapo}
+                            </Typography>
+                        )}
+
+                        {/* Content - Render HTML directly */}
+                        <Box
+                            sx={{
+                                fontSize: getResponsiveFontSize('md'),
+                                lineHeight: 1.8,
+                                color: 'text.primary',
+                                '& h2': {
+                                    fontSize: getResponsiveFontSize('xl'),
+                                    fontWeight: fontWeight.bold,
+                                    mt: 4,
+                                    mb: 2,
+                                },
+                                '& h3': {
+                                    fontSize: getResponsiveFontSize('lg'),
+                                    fontWeight: fontWeight.bold,
+                                    mt: 3,
+                                    mb: 2,
+                                },
+                                '& p': {
+                                    mb: 2,
+                                },
+                                '& img': {
+                                    maxWidth: '100%',
+                                    height: 'auto',
+                                    borderRadius: `${borderRadius.md}px`,
+                                    my: 2,
+                                },
+                                '& a': {
+                                    color: 'primary.main',
+                                    textDecoration: 'none',
+                                    '&:hover': {
+                                        textDecoration: 'underline',
+                                    },
+                                },
+                                '& ul, & ol': {
+                                    pl: 3,
+                                    mb: 2,
+                                },
+                                '& li': {
+                                    mb: 1,
+                                },
+                                '& blockquote': {
+                                    borderLeft: '4px solid',
+                                    borderColor: 'primary.main',
+                                    pl: 2,
+                                    py: 1,
+                                    my: 2,
+                                    bgcolor: 'action.hover',
+                                    borderRadius: `0 ${borderRadius.sm}px ${borderRadius.sm}px 0`,
+                                },
+                                '& strong': {
+                                    fontWeight: fontWeight.bold,
+                                },
+                                '& hr': {
+                                    my: 3,
+                                    border: 'none',
+                                    borderTop: '1px solid',
+                                    borderColor: 'divider',
+                                },
+                            }}
+                            dangerouslySetInnerHTML={{ __html: report.report_html || '' }}
+                        />
+
+                        {/* Tickers as hashtags */}
+                        {report.tickers && report.tickers.length > 0 && (
+                            <Stack
+                                direction="row"
+                                spacing={1}
+                                flexWrap="wrap"
+                                useFlexGap
+                                sx={{ mt: spacing.sm }}
+                            >
+                                {report.tickers.map((ticker) => (
+                                    <Typography
+                                        key={ticker}
+                                        component="span"
+                                        sx={{
+                                            fontSize: getResponsiveFontSize('sm'),
+                                            fontWeight: fontWeight.medium,
+                                            color: 'text.secondary',
+                                        }}
+                                    >
+                                        #{ticker}
+                                    </Typography>
+                                ))}
+                            </Stack>
+                        )}
+
+                        {/* Links */}
+                        {report.links && report.links.length > 0 && (
+                            <Box sx={{ mt: spacing.sm }}>
+                                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: fontWeight.medium }}>
+                                    Liên kết liên quan:
+                                </Typography>
+                                <Stack spacing={0.5}>
+                                    {report.links.map((link, index) => {
+                                        // Handle both string and object formats
+                                        const linkUrl = typeof link === 'string' ? link : link.url;
+                                        const linkTitle = typeof link === 'string' ? link : (link.title || link.url);
+
+                                        if (!linkUrl) return null;
+
+                                        return (
+                                            <Typography
+                                                key={index}
+                                                component="a"
+                                                href={linkUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                sx={{
+                                                    color: 'primary.main',
+                                                    textDecoration: 'none',
+                                                    fontSize: getResponsiveFontSize('sm'),
+                                                    display: 'block',
+                                                    '&:hover': {
+                                                        textDecoration: 'underline',
+                                                    },
+                                                }}
+                                            >
+                                                • {linkTitle}
+                                            </Typography>
+                                        );
+                                    })}
+                                </Stack>
+                            </Box>
+                        )}
+                    </Box>
+                )}
+            </Box>
         </Box>
     );
 }
