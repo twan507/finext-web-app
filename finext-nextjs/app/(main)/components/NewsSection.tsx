@@ -192,16 +192,16 @@ function NewsStatsBar({ totalNews, thongcaoCount, trongnuocCount, doanhnghiepCou
             color: theme.palette.info.main,
         },
         {
-            label: 'Trong nước',
-            count: trongnuocCount,
-            icon: <NewspaperIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />,
-            color: theme.palette.success.main,
-        },
-        {
             label: 'Doanh nghiệp',
             count: doanhnghiepCount,
             icon: <BusinessCenterIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />,
             color: theme.palette.primary.main,
+        },
+        {
+            label: 'Trong nước',
+            count: trongnuocCount,
+            icon: <NewspaperIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />,
+            color: theme.palette.success.main,
         },
         {
             label: 'Thông cáo',
@@ -1083,17 +1083,6 @@ export default function NewsSection() {
             )
         },
         {
-            id: 'trongnuoc',
-            component: (
-                <NewsColumnContent
-                    title="VĨ MÔ TRONG NƯỚC"
-                    href="/news/type/trong_nuoc"
-                    loading={trongnuocLoading}
-                    newsItems={trongnuocNews}
-                />
-            )
-        },
-        {
             id: 'doanhnghiep',
             component: (
                 <NewsColumnContent
@@ -1101,6 +1090,17 @@ export default function NewsSection() {
                     href="/news/type/doanh_nghiep"
                     loading={doanhnghiepLoading}
                     newsItems={doanhnghiepNews}
+                />
+            )
+        },
+        {
+            id: 'trongnuoc',
+            component: (
+                <NewsColumnContent
+                    title="VĨ MÔ TRONG NƯỚC"
+                    href="/news/type/trong_nuoc"
+                    loading={trongnuocLoading}
+                    newsItems={trongnuocNews}
                 />
             )
         },
@@ -1167,24 +1167,24 @@ export default function NewsSection() {
                         />
                     </Box>
 
-                    {/* Row 1, Col 2 (2/3): Vĩ mô trong nước */}
-                    <Box sx={{ gridColumn: 'span 2' }}>
-                        <NewspaperWideColumn
-                            title="Vĩ mô trong nước"
-                            href="/news/type/trong_nuoc"
-                            loading={trongnuocLoading}
-                            newsItems={trongnuocNews.slice(0, 4)}
-                            position="right"
-                        />
-                    </Box>
-
-                    {/* Row 2, Col 1 (2/3): Doanh nghiệp niêm yết */}
+                    {/* Row 1, Col 2 (2/3): Doanh nghiệp niêm yết */}
                     <Box sx={{ gridColumn: 'span 2' }}>
                         <NewspaperWideColumn
                             title="Doanh nghiệp niêm yết"
                             href="/news/type/doanh_nghiep"
                             loading={doanhnghiepLoading}
                             newsItems={doanhnghiepNews.slice(0, 4)}
+                            position="right"
+                        />
+                    </Box>
+
+                    {/* Row 2, Col 1 (2/3): Vĩ mô trong nước */}
+                    <Box sx={{ gridColumn: 'span 2' }}>
+                        <NewspaperWideColumn
+                            title="Vĩ mô trong nước"
+                            href="/news/type/trong_nuoc"
+                            loading={trongnuocLoading}
+                            newsItems={trongnuocNews.slice(0, 4)}
                             position="left"
                         />
                     </Box>
