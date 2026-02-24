@@ -28,6 +28,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             : article.sapo
         : 'Cập nhật tin tức tài chính và thị trường chứng khoán Việt Nam.';
 
+    const ogImage = article.image
+        ? { url: article.image, alt: article.title }
+        : { url: 'https://finext.vn/finext-panel.png', width: 1200, height: 630, alt: 'Finext - Nền tảng phân tích chứng khoán thông minh' };
+
     return {
         title: article.title,
         description,
@@ -38,19 +42,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             locale: 'vi_VN',
             siteName: 'Finext',
             url: `https://finext.vn/news/${articleId}`,
-            images: [
-                {
-                    url: 'https://finext.vn/finext-panel.png',
-                    width: 1200,
-                    height: 630,
-                    alt: 'Finext - Nền tảng phân tích chứng khoán thông minh',
-                },
-            ],
+            images: [ogImage],
         },
         twitter: {
-            card: 'summary',
+            card: article.image ? 'summary_large_image' : 'summary',
             title: article.title,
             description,
+            images: article.image ? [article.image] : undefined,
         },
     };
 }

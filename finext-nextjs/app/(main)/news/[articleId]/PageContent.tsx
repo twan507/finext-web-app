@@ -286,6 +286,23 @@ export default function PageContent({ articleId }: PageContentProps) {
 
                     <Divider sx={{ my: spacing.xs }} />
 
+                    {/* Ảnh đại diện */}
+                    {article.image && (
+                        <Box
+                            component="img"
+                            src={article.image}
+                            alt={article.title}
+                            sx={{
+                                display: 'block',
+                                width: '100%',
+                                maxHeight: 800,
+                                objectFit: 'cover',
+                                borderRadius: `${borderRadius.md}px`,
+                                mb: spacing.xs,
+                            }}
+                        />
+                    )}
+
                     {/* Sapo */}
                     <Typography
                         variant="subtitle1"

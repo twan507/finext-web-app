@@ -22,6 +22,7 @@ export interface NewsArticle {
     category_name: string;
     title: string;
     sapo: string;
+    image?: string | null; // URL ảnh đại diện
     html_content?: string;
     plain_content?: string;
     link: string;

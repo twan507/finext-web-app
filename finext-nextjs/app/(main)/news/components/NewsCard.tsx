@@ -1,7 +1,7 @@
 // finext-nextjs/app/(main)/news/components/NewsCard.tsx
 'use client';
 
-import { Box, Stack, Typography, useTheme } from '@mui/material';
+import { Box, Typography, useTheme } from '@mui/material';
 import Link from 'next/link';
 
 import { NewsArticle, getTypeConfigByType } from '../types';
@@ -88,7 +88,7 @@ export default function NewsCard({ article }: NewsCardProps) {
                 </Typography>
             </Box>
 
-            {/* Cột phải: Tiêu đề + Sapo */}
+            {/* Cột giữa: Tiêu đề + Sapo */}
             <Box sx={{ flex: 1, minWidth: 0 }}>
                 {/* Tiêu đề */}
                 <Typography
@@ -140,6 +140,32 @@ export default function NewsCard({ article }: NewsCardProps) {
                     </Typography>
                 )}
             </Box>
+
+            {/* Cột phải: Ảnh đại diện */}
+            {article.image && (
+                <Box
+                    sx={{
+                        flexShrink: 0,
+                        width: { xs: 100, sm: 140, md: 180 },
+                        height: { xs: 70, sm: 90, md: 110 },
+                        borderRadius: `${theme.shape.borderRadius}px`,
+                        overflow: 'hidden',
+                        alignSelf: 'center',
+                    }}
+                >
+                    <Box
+                        component="img"
+                        src={article.image}
+                        alt={article.title}
+                        sx={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            display: 'block',
+                        }}
+                    />
+                </Box>
+            )}
         </Box>
     );
 }

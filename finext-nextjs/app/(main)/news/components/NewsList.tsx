@@ -55,6 +55,15 @@ function NewsCardSkeleton() {
                 <Skeleton variant="text" width="100%" height={18} />
                 <Skeleton variant="text" width="70%" height={18} />
             </Box>
+            <Skeleton
+                variant="rounded"
+                sx={{
+                    flexShrink: 0,
+                    width: { xs: 100, sm: 140, md: 180 },
+                    height: { xs: 70, sm: 90, md: 110 },
+                    alignSelf: 'center',
+                }}
+            />
         </Box>
     );
 }
@@ -124,7 +133,7 @@ export default function NewsList({
                 limit: String(pageSize),
                 sort_by: NEWS_SORT_FIELD,
                 sort_order: NEWS_SORT_ORDER,
-                projection: JSON.stringify({ title: 1, sapo: 1, article_slug: 1, news_type: 1, source: 1, category_name: 1, created_at: 1, tickers: 1 }),
+                projection: JSON.stringify({ title: 1, sapo: 1, article_slug: 1, news_type: 1, source: 1, category_name: 1, created_at: 1, tickers: 1, image: 1 }),
             };
 
             // Thêm filter type nếu có

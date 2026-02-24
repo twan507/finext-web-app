@@ -36,7 +36,7 @@ interface ArticleData {
  */
 export async function fetchArticleBySlug(slug: string): Promise<NewsArticle | null> {
     try {
-        const url = `${INTERNAL_API_URL}/api/v1/sse/rest/news_article?article_slug=${encodeURIComponent(slug)}&projection=${encodeURIComponent('{"title":1,"sapo":1}')}`;
+        const url = `${INTERNAL_API_URL}/api/v1/sse/rest/news_article?article_slug=${encodeURIComponent(slug)}&projection=${encodeURIComponent('{"title":1,"sapo":1,"image":1}')}`;
 
         // Timeout 3 giây — nếu API chậm, trả fallback metadata thay vì block page
         const controller = new AbortController();
