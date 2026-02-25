@@ -6,21 +6,12 @@ import dynamic from 'next/dynamic';
 import { Box, Skeleton } from '@mui/material';
 
 // Import types từ MarketIndexChart (types được export riêng, không ảnh hưởng bundle)
-import type { RawMarketData, ChartData, TimeRange } from './components/MarketIndexChart';
-import { transformToChartData } from './components/MarketIndexChart';
+import type { RawMarketData, ChartData, TimeRange } from './components/marketSection/MarketIndexChart';
+import { transformToChartData } from './components/marketSection/MarketIndexChart';
 
 // Import types từ MarketTrendChart
-import type { RawTrendData, TrendChartData } from './components/MarketTrendChart';
-import { transformTrendData } from './components/MarketTrendChart';
-
-// Lazy load heavy chart components để giảm initial bundle size
-const MarketIndexChart = dynamic(
-    () => import('./components/MarketIndexChart').then(mod => ({ default: mod.default })),
-    {
-        loading: () => <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 2 }} />,
-        ssr: false
-    }
-);
+import type { RawTrendData, TrendChartData } from './components/trendSection/MarketTrendChart';
+import { transformTrendData } from './components/trendSection/MarketTrendChart';
 
 const MiniIndexCard = dynamic(
     () => import('./components/MiniIndexCard'),
@@ -31,17 +22,12 @@ const MiniIndexCard = dynamic(
 );
 
 const MarketSection = dynamic(
-    () => import('./components/MarketSection'),
+    () => import('./components/marketSection/MarketSection'),
     { loading: () => <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, my: 2 }} /> }
 );
 
 const IndustrySection = dynamic(
-    () => import('./components/IndustrySection'),
-    { loading: () => <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, my: 2 }} /> }
-);
-
-const StockSection = dynamic(
-    () => import('./components/StockSection'),
+    () => import('./components/industrySection/IndustrySection'),
     { loading: () => <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, my: 2 }} /> }
 );
 
@@ -51,17 +37,12 @@ const NewsSection = dynamic(
 );
 
 const MarketTrendSection = dynamic(
-    () => import('./components/MarketPhaseSection'),
-    { loading: () => <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, my: 2 }} /> }
-);
-
-const MarketTrendLineSection = dynamic(
-    () => import('./components/MarketTrendSection'),
+    () => import('./components/trendSection/MarketTrendSection'),
     { loading: () => <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 2, my: 2 }} /> }
 );
 
 const IndustryStocksSection = dynamic(
-    () => import('./components/IndustryStocksSection'),
+    () => import('./components/industrySection/IndustryStocksSection'),
     { loading: () => <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, my: 2 }} /> }
 );
 
@@ -69,7 +50,7 @@ const IndustryStocksSection = dynamic(
 import { apiClient } from 'services/apiClient';
 import { ISseRequest } from 'services/core/types';
 import { sseClient, getFromCache } from 'services/sseClient';
-import MarketPhaseSection from './components/MarketPhaseSection';
+import MarketVolatility from './components/marketSection/MarketVolatility';
 
 // Danh sách các index cho mini charts
 const MINI_CHART_INDEXES = [
@@ -566,7 +547,7 @@ export default function HomeContent() {
 
             {/* Section 1.5: Diễn biến thị trường */}
             <Box sx={{ mt: 5 }}>
-                <MarketPhaseSection
+                <MarketVolatility
                     stockData={todayStockData}
                     foreignData={nnStockData}
                     isLoading={isStockDataLoading || isNnLoading}
@@ -575,7 +556,7 @@ export default function HomeContent() {
 
             {/* Section 2: Xu hướng thị trường (Trend Lines + Tín hiệu) */}
             <Box sx={{ mt: 5 }}>
-                <MarketTrendLineSection
+                <MarketTrendSection
                     chartData={trendChartData}
                     isLoading={isTrendLoading}
                 />

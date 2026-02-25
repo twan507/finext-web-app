@@ -346,7 +346,7 @@ export default function PhaseSignalSection({ hideTitle = false }: { hideTitle?: 
                     position: 'right',
                     textAnchor: 'start',
                     offsetX: 15.5,
-                    offsetY: 0,
+                    offsetY: 8,
                 }
             };
         }).filter(Boolean) as any[];

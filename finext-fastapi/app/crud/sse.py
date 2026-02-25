@@ -134,7 +134,7 @@ async def home_itd_index(ticker: Optional[str] = None, **kwargs) -> Dict[str, An
     stock_db = get_database(STOCK_DB)
 
     # ITD chỉ cần close để vẽ line chart, không cần open/high/low
-    projection = {"_id": 0, "ticker": 1, "ticker_name": 1, "date": 1, "close": 1, "volume": 1, "diff": 1, "pct_change": 1}
+    projection = {"_id": 0, "ticker": 1, "ticker_name": 1, "date": 1, "close": 1, "volume": 1, "diff": 1, "pct_change": 1, "vsi": 1}
     find_query = {"ticker": ticker} if ticker else {}
     itd_df = await get_collection_data(stock_db, "itd_index", find_query=find_query, projection=projection)
 
@@ -171,6 +171,7 @@ async def home_today_index(ticker: Optional[str] = None, **kwargs) -> Dict[str, 
         "q_pct": 1,
         "y_pct": 1,
         "vsi": 1,
+        "t0_score": 1,
         "type": 1,
     }
     find_query = {}
@@ -199,6 +200,7 @@ async def home_hist_index(ticker: Optional[str] = None, **kwargs) -> Dict[str, A
         "volume": 1,
         "diff": 1,
         "pct_change": 1,
+        "t0_score": 1,
         "type": 1,
     }
     find_query = {"ticker": ticker} if ticker else {}
@@ -282,6 +284,7 @@ async def home_today_stock(ticker: Optional[str] = None, **kwargs) -> Dict[str, 
         "low": 1,
         "close": 1,
         "volume": 1,
+        "trading_value": 1,
         "industry_name": 1,
         "pct_change": 1,
         "t0_score": 1,

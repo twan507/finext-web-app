@@ -5,10 +5,8 @@ import Carousel, { Slide } from 'components/common/Carousel';
 import { getResponsiveFontSize, fontWeight, transitions, getGlassCard, getGlassHighlight, getGlassEdgeLight } from 'theme/tokens';
 import { getPriceColor, getFlowColor, getVsiColor } from 'theme/colorHelpers';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
-import { ApexOptions } from 'apexcharts';
-
-const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
+import BreadthPolarChart from './BreadthPolarChart';
+import FlowBarChart from './FlowBarChart';
 
 export interface StockData {
     ticker: string;
@@ -16,6 +14,7 @@ export interface StockData {
     industry_name: string;
     pct_change: number;
     volume: number;
+    trading_value: number;
     close: number;
     vsi: number;
     t0_score: number;
@@ -28,17 +27,17 @@ export interface NNStockData {
     net_volume: number;
 }
 
-interface MarketPhaseSectionProps {
+interface MarketVolatilityProps {
     stockData?: StockData[];
     foreignData?: NNStockData[];
     isLoading?: boolean;
 }
 
-export default function MarketPhaseSection({ stockData = [], foreignData = [], isLoading = false }: MarketPhaseSectionProps) {
+export default function MarketVolatility({ stockData = [], foreignData = [], isLoading = false }: MarketVolatilityProps) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isXsWidth = useMediaQuery(theme.breakpoints.only('xs'));
-    const breadthChartHeight = isXsWidth ? '246px' : '227px';
+    const chartHeight = isXsWidth ? '251.5px' : '250px';
 
     // Skeleton components for loading state
     const renderTableSkeleton = (title: string) => (
@@ -264,104 +263,7 @@ export default function MarketPhaseSection({ stockData = [], foreignData = [], i
     };
 
 
-    const renderBreadthSlide = (title: string, series: number[], labels: string[], colors: string[]) => {
-        const total = series.reduce((a, b) => a + b, 0);
-        const hasData = total > 0 && series.some(v => !isNaN(v));
 
-        const chartOptions: ApexOptions = {
-            chart: {
-                type: 'polarArea',
-                background: 'transparent',
-                toolbar: { show: false },
-                fontFamily: 'inherit',
-                animations: { enabled: false },
-                sparkline: { enabled: false }
-            },
-            labels: labels,
-            colors: colors,
-            stroke: {
-                show: false,
-                width: 0
-            },
-            fill: {
-                opacity: 1
-            },
-            legend: {
-                show: false
-            },
-            dataLabels: {
-                enabled: hasData,
-                formatter: function (val: number) {
-                    if (isNaN(val) || val === null || val === undefined) return '';
-                    return val.toFixed(1) + '%';
-                },
-                style: {
-                    fontSize: '0.75rem',
-                    fontWeight: String(fontWeight.semibold),
-                    colors: [theme.palette.text.primary],
-                },
-                background: {
-                    enabled: false,
-                },
-                dropShadow: {
-                    enabled: false
-                },
-            },
-            plotOptions: {
-                pie: {
-                    dataLabels: {
-                        offset: 0,
-                        minAngleToShowLabel: 5
-                    }
-                },
-                polarArea: {
-                    rings: {
-                        strokeWidth: 0
-                    },
-                    spokes: {
-                        strokeWidth: 0
-                    },
-                }
-            },
-            yaxis: {
-                show: false
-            },
-            tooltip: {
-                enabled: false,
-            }
-        };
-
-        return (
-            <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('lg'), fontWeight: fontWeight.semibold, mb: 0, textTransform: 'uppercase' }}>
-                    {title}
-                </Typography>
-                <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', my: -1 }}>
-                    <Box sx={{
-                        width: '100%', maxWidth: '280px', height: breadthChartHeight,
-                        '& .apexcharts-datalabels text, & .apexcharts-datalabel, & .apexcharts-data-labels text': {
-                            stroke: theme.palette.background.default,
-                            strokeWidth: 3,
-                            strokeLinejoin: 'round',
-                            paintOrder: 'stroke',
-                        },
-                    }}>
-                        <Chart key={theme.palette.mode} options={chartOptions} series={series} type="polarArea" height="100%" width="100%" />
-                    </Box>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 0, mb: 1, flexWrap: 'wrap' }}>
-                    {labels.map((label, index) => (
-                        <Box key={label} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: colors[index] }} />
-                            <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium }}>
-                                {label}
-                            </Typography>
-                        </Box>
-                    ))}
-                </Box>
-            </Box>
-        );
-    };
 
     // ===== DATA PROCESSING =====
 
@@ -420,29 +322,35 @@ export default function MarketPhaseSection({ stockData = [], foreignData = [], i
     const priceDecrease = stockData.filter(s => s.pct_change < 0).length;
     const priceUnchanged = stockData.filter(s => s.pct_change === 0).length;
 
-    // 3b. Flow Score (t0_score)
-    const flowPositive = stockData.filter(s => s.t0_score > 0).length;
-    const flowNegative = stockData.filter(s => s.t0_score < 0).length;
-    const flowNeutral = stockData.filter(s => s.t0_score === 0).length;
+    // 3b. Flow Distribution (trading_value grouped by t0_score)
+    const flowIn = stockData.filter(s => s.t0_score > 0).reduce((sum, s) => sum + (s.trading_value || 0), 0);
+    const flowOut = stockData.filter(s => s.t0_score < 0).reduce((sum, s) => sum + (s.trading_value || 0), 0);
+    const flowNeutral = stockData.filter(s => s.t0_score === 0).reduce((sum, s) => sum + (s.trading_value || 0), 0);
 
     const breadthSlides: Slide[] = [
         {
             id: 'breadth-price',
-            component: renderBreadthSlide(
-                "Độ rộng thị trường",
-                [priceIncrease, priceUnchanged, priceDecrease],
-                ['Tăng giá', 'Không đổi', 'Giảm giá'],
-                [theme.palette.trend.up, theme.palette.trend.ref, theme.palette.trend.down]
-            )
+            component: <BreadthPolarChart
+                title="Độ rộng thị trường"
+                series={[priceIncrease, priceUnchanged, priceDecrease]}
+                labels={['Tăng giá', 'Không đổi', 'Giảm giá']}
+                colors={[theme.palette.trend.up, theme.palette.trend.ref, theme.palette.trend.down]}
+                chartHeight={chartHeight}
+            />
         },
         {
-            id: 'breadth-flow',
-            component: renderBreadthSlide(
-                "Độ rộng dòng tiền",
-                [flowPositive, flowNeutral, flowNegative],
-                ['Tiền vào', 'Không đổi', 'Tiền ra'],
-                [theme.palette.trend.up, theme.palette.trend.ref, theme.palette.trend.down]
-            )
+            id: 'flow-distribution',
+            component: <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('lg'), fontWeight: fontWeight.semibold, mb: 0, textTransform: 'uppercase' }}>
+                    Phân bổ dòng tiền
+                </Typography>
+                <FlowBarChart
+                    flowIn={flowIn}
+                    flowOut={flowOut}
+                    flowNeutral={flowNeutral}
+                    chartHeight={chartHeight}
+                />
+            </Box>
         }
     ];
 

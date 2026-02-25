@@ -10,7 +10,7 @@ import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
 import { getResponsiveFontSize, borderRadius, transitions, fontWeight, getGlassCard } from 'theme/tokens';
 import { apiClient } from 'services/apiClient';
-import type { RawMarketData } from './MarketIndexChart';
+import type { RawMarketData } from '../marketSection/MarketIndexChart';
 
 // Dynamic import for ApexCharts to avoid SSR issues
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
@@ -569,7 +569,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                     position: 'right',
                     textAnchor: 'start',
                     offsetX: 15.5,
-                    offsetY: 0,
+                    offsetY: 8,
                     borderRadius: 2,
                 }
             };

@@ -1,21 +1,23 @@
 'use client';
 
 import { useEffect, useRef, useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Box, Typography, useTheme, Divider, alpha } from '@mui/material';
 
-import type { RawMarketData } from '../components/MarketIndexChart';
-import IndexTable from '../components/IndexTable';
+import type { RawMarketData } from '../components/marketSection/MarketIndexChart';
+import IndexTable from '../components/marketSection/IndexTable';
 
 import InfoTooltip from 'components/common/InfoTooltip';
 import { getTrendColor, getVsiColor } from 'theme/colorHelpers';
 
-import TongQuanSection from './components/TongQuanSection';
+import BienDongSection from './components/BienDongSection';
 import DongTienSection from './components/DongTienSection';
 import NuocNgoaiSection from './components/NuocNgoaiSection';
 import TuDoanhSection from './components/TuDoanhSection';
 
 import { ISseRequest } from 'services/core/types';
 import { sseClient, getFromCache } from 'services/sseClient';
+import { apiClient } from 'services/apiClient';
 import {
   getResponsiveFontSize,
   fontWeight,
@@ -211,7 +213,7 @@ function IndexTablesSection({ ticker, onTickerChange, todayAllData }: {
 
 // ========== SUB-NAVBAR TABS CONFIG ==========
 const MARKET_TABS = [
-  { id: 'overview', label: 'Tổng quan' },
+  { id: 'volatility', label: 'Biến động' },
   { id: 'cashflow', label: 'Dòng tiền' },
   { id: 'foreign', label: 'Nước ngoài' },
   { id: 'proprietary', label: 'Tự doanh' },
@@ -290,7 +292,7 @@ export default function MarketsContent() {
   const isDark = theme.palette.mode === 'dark';
 
   const [ticker, setTicker] = useState<string>('VNINDEX');
-  const [activeTab, setActiveTab] = useState<MarketTabId>('overview');
+  const [activeTab, setActiveTab] = useState<MarketTabId>('volatility');
 
   const isMountedRef = useRef<boolean>(true);
   const todaySseRef = useRef<{ unsubscribe: () => void } | null>(null);
@@ -336,6 +338,43 @@ export default function MarketsContent() {
     return () => { isMountedRef.current = false; if (todaySseRef.current) todaySseRef.current.unsubscribe(); };
   }, []);
 
+  // ========== REST - History Index for DongTien (VNINDEX + FNXINDEX, 240 records for 1Y) ==========
+  const { data: histVnindex = [] } = useQuery({
+    queryKey: ['markets', 'hist_index', 'VNINDEX', 240],
+    queryFn: async () => {
+      const response = await apiClient<RawMarketData[]>({
+        url: '/api/v1/sse/rest/home_hist_index',
+        method: 'GET',
+        queryParams: { ticker: 'VNINDEX', limit: 240 },
+        requireAuth: false,
+      });
+      return response.data || [];
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: histFnxindex = [] } = useQuery({
+    queryKey: ['markets', 'hist_index', 'FNXINDEX', 240],
+    queryFn: async () => {
+      const response = await apiClient<RawMarketData[]>({
+        url: '/api/v1/sse/rest/home_hist_index',
+        method: 'GET',
+        queryParams: { ticker: 'FNXINDEX', limit: 240 },
+        requireAuth: false,
+      });
+      return response.data || [];
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  // Build histIndexData grouped by ticker
+  const histIndexData = useMemo<IndexDataByTicker>(() => ({
+    VNINDEX: histVnindex,
+    FNXINDEX: histFnxindex,
+  }), [histVnindex, histFnxindex]);
+
   // Handle ticker change
   const handleTableTickerChange = (newTicker: string) => {
     setTicker(newTicker);
@@ -350,10 +389,10 @@ export default function MarketsContent() {
   // Render active section based on tab
   const renderActiveSection = () => {
     switch (activeTab) {
-      case 'overview':
-        return <TongQuanSection />;
+      case 'volatility':
+        return <BienDongSection />;
       case 'cashflow':
-        return <DongTienSection />;
+        return <DongTienSection histIndexData={histIndexData} todayAllData={todayAllData} />;
       case 'foreign':
         return <NuocNgoaiSection />;
       case 'proprietary':

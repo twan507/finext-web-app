@@ -8,8 +8,8 @@ import { Box, Typography, Skeleton, useTheme, useMediaQuery, Divider } from '@mu
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
-import type { RawMarketData, ChartData, TimeRange } from '../components/MarketIndexChart';
-import IndexTable from '../components/IndexTable';
+import type { RawMarketData, ChartData, TimeRange } from './MarketIndexChart';
+import IndexTable from './IndexTable';
 import Carousel from 'components/common/Carousel';
 import InfoTooltip from 'components/common/InfoTooltip';
 import { getTrendColor, getVsiColor } from 'theme/colorHelpers';
@@ -25,7 +25,7 @@ import {
 
 // Lazy load heavy chart component
 const MarketIndexChart = dynamic(
-    () => import('../components/MarketIndexChart').then(mod => ({ default: mod.default })),
+    () => import('./MarketIndexChart').then(mod => ({ default: mod.default })),
     {
         loading: () => <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 2 }} />,
         ssr: false
