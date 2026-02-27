@@ -53,8 +53,8 @@ function pickColor(pctChange: number, maxNeg: number, maxPos: number): string {
     }
 }
 
-// Max number of stocks to display per industry
-const MAX_STOCKS_PER_INDUSTRY = 15;
+// Max number of stocks to display globally (top by trading value)
+const MAX_STOCKS_GLOBAL = 200;
 
 // ── Chart options (fully static — no theme dependency) ────────────────────────
 
@@ -185,9 +185,13 @@ export default function StockTreemap({ data, chartHeight = '550px' }: StockTreem
             }
         }
 
+        // Keep only top N stocks by trading value globally
+        uniqueData.sort((a, b) => (b.trading_value || 0) - (a.trading_value || 0));
+        const topData = uniqueData.slice(0, MAX_STOCKS_GLOBAL);
+
         // Group by industry
         const grouped = new Map<string, StockData[]>();
-        for (const stock of uniqueData) {
+        for (const stock of topData) {
             const industry = stock.industry_name || 'Khác';
             if (!grouped.has(industry)) grouped.set(industry, []);
             grouped.get(industry)!.push(stock);
@@ -197,15 +201,10 @@ export default function StockTreemap({ data, chartHeight = '550px' }: StockTreem
             .map(([name, stocks]) => {
                 const totalValue = stocks.reduce((s, st) => s + (st.trading_value || 0), 0);
 
-                // Limit stocks per industry for performance
-                const topStocks = stocks
-                    .sort((a, b) => (b.trading_value || 0) - (a.trading_value || 0))
-                    .slice(0, MAX_STOCKS_PER_INDUSTRY);
-
                 // Per-industry: separate max for positive and negative sides
                 let maxNeg = 0.001;
                 let maxPos = 0.001;
-                for (const s of topStocks) {
+                for (const s of stocks) {
                     const pct = s.pct_change || 0;
                     if (pct < 0 && Math.abs(pct) > maxNeg) maxNeg = Math.abs(pct);
                     if (pct > 0 && pct > maxPos) maxPos = pct;
@@ -214,7 +213,7 @@ export default function StockTreemap({ data, chartHeight = '550px' }: StockTreem
                 return {
                     name,
                     totalValue,
-                    data: topStocks.map((stock) => ({
+                    data: stocks.map((stock) => ({
                         x: stock.ticker,
                         y: Math.max(stock.trading_value || 0, 1),
                         fillColor: pickColor(stock.pct_change, maxNeg, maxPos),
