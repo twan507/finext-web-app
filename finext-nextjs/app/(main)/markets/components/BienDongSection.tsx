@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Box, Typography, useTheme, Divider, useMediaQuery } from '@mui/material';
 import BreadthPolarChart from '../../components/marketSection/BreadthPolarChart';
-import FlowBarChart from '../../components/marketSection/FlowBarChart';
+import FlowBarChart from './BienDongSection/FlowBarChart';
 import VsiITDLineChart from './BienDongSection/VsiITDLineChart';
 import StockTreemap from './BienDongSection/StockTreemap';
 import type { StockData } from '../../components/marketSection/MarketVolatility';
@@ -260,7 +260,7 @@ export default function BienDongSection() {
                 </Box>
 
                 {/* FlowBarChart - 50% */}
-                <Box sx={{ flex: 3, minWidth: 0, mt: isMobile ? 1 : 0}}>
+                <Box sx={{ flex: 3, minWidth: 0, mt: isMobile ? 1 : 0 }}>
                     <Typography
                         color="text.secondary"
                         sx={{

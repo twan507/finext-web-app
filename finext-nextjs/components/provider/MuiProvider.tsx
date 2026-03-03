@@ -50,8 +50,8 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
         body1: { fontSize: getResponsiveFontSize('md').md }, // Was base (0.9375rem). New md is 1rem.
         body2: { fontSize: getResponsiveFontSize('sm').md }, // Was sm (0.875rem). New sm is 0.875rem.
         button: { fontSize: getResponsiveFontSize('md').md, textTransform: 'none', fontWeight: fontWeight.medium }, // Was base.
-        caption: { fontSize: getResponsiveFontSize('xs').md }, // Was xs.
-        overline: { fontSize: getResponsiveFontSize('xs').md, textTransform: 'uppercase' },
+        caption: { fontSize: getResponsiveFontSize('sm').md }, // Was xs.
+        overline: { fontSize: getResponsiveFontSize('sm').md, textTransform: 'uppercase' },
       },
       // shape, spacing, breakpoints use MUI defaults
       components: {

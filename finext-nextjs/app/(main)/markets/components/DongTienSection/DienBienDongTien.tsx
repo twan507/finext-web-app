@@ -8,17 +8,21 @@ import { ApexOptions } from 'apexcharts';
 
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
-interface DongTienLineChartProps {
+interface NhomCPLineChartProps {
     chartHeight?: string;
+    title?: string;
     dates: string[];
     series: { name: string; data: number[] }[];
+    unit?: 'percent' | 'number';
 }
 
-export default function DongTienLineChart({
-    chartHeight = '250px',
+export default function NhomCPLineChart({
+    chartHeight = '230px',
+    title,
     dates,
     series,
-}: DongTienLineChartProps) {
+    unit = 'percent',
+}: NhomCPLineChartProps) {
     const theme = useTheme();
     const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
 
@@ -26,39 +30,8 @@ export default function DongTienLineChart({
         theme.palette.primary.main,
         theme.palette.secondary.main,
         theme.palette.trend.up,
+        theme.palette.trend.down,
     ], [theme]);
-
-    // Generate y-axis annotations (price tags) at the last data point of each series
-    const yAxisAnnotations = useMemo(() => {
-        return series.map((s, index) => {
-            const data = s.data;
-            if (!data || data.length === 0) return null;
-            const lastValue = data[data.length - 1];
-            const color = colors[index % colors.length];
-
-            return {
-                y: lastValue,
-                borderColor: 'transparent',
-                strokeDashArray: 0,
-                label: {
-                    borderColor: 'transparent',
-                    style: {
-                        color: '#fff',
-                        background: color,
-                        fontSize: getResponsiveFontSize('sm').md,
-                        fontWeight: fontWeight.medium,
-                        padding: { left: 6, right: 6, top: 2, bottom: 2 },
-                    },
-                    text: `${lastValue.toFixed(1)}%`,
-                    position: 'right' as const,
-                    textAnchor: 'start' as const,
-                    offsetX: 15.5,
-                    offsetY: 8,
-                    borderRadius: 2,
-                },
-            };
-        }).filter(Boolean);
-    }, [series, colors]);
 
     const handleLegendClick = useCallback((seriesName: string) => {
         setHiddenSeries(prev => {
@@ -98,7 +71,7 @@ export default function DongTienLineChart({
                             fontWeight: fontWeight.medium,
                             padding: { left: 6, right: 6, top: 2, bottom: 2 },
                         },
-                        text: `${lastValue.toFixed(1)}%`,
+                        text: unit === 'percent' ? `${lastValue.toFixed(1)}%` : `${lastValue.toFixed(1)}`,
                         position: 'right' as const,
                         textAnchor: 'start' as const,
                         offsetX: 15.5,
@@ -156,7 +129,7 @@ export default function DongTienLineChart({
                 rotate: 0,
                 hideOverlappingLabels: true,
             },
-            tickAmount: 8,
+            tickAmount: 4,
         },
         yaxis: {
             opposite: true,
@@ -165,7 +138,7 @@ export default function DongTienLineChart({
                     colors: theme.palette.text.secondary,
                     fontSize: getResponsiveFontSize('sm').md,
                 },
-                formatter: (val: number) => `${val.toFixed(1)}%\u00A0\u00A0\u00A0`,
+                formatter: (val: number) => unit === 'percent' ? `${val.toFixed(1)}%\u00A0\u00A0\u00A0` : `${val.toFixed(1)}\u00A0\u00A0\u00A0`,
                 offsetX: -10,
             },
         },
@@ -191,7 +164,9 @@ export default function DongTienLineChart({
                     if (value == null) return;
                     const color = w.globals.colors[idx];
                     const name = w.globals.seriesNames[idx];
-                    const formattedValue = `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+                    const formattedValue = unit === 'percent'
+                        ? `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`
+                        : `${value >= 0 ? '+' : ''}${value.toFixed(1)}`;
 
                     seriesHTML += `
                         <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0;">
@@ -239,17 +214,28 @@ export default function DongTienLineChart({
         },
     }), [theme, displayColors, displayAnnotations, dates]);
 
-    const legendLabels = ['VNINDEX', 'FNXINDEX', 'Dòng tiền'];
-
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 0.5, flexWrap: 'wrap' }}>
-                {legendLabels.map((label, index) => {
-                    const isHidden = hiddenSeries.has(label);
+            {title && (
+                <Typography
+                    color="text.secondary"
+                    sx={{
+                        fontSize: getResponsiveFontSize('md'),
+                        fontWeight: fontWeight.semibold,
+                        textAlign: 'center',
+                        mb: 0.5,
+                    }}
+                >
+                    {title}
+                </Typography>
+            )}
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 0, flexWrap: 'wrap' }}>
+                {series.map((s, index) => {
+                    const isHidden = hiddenSeries.has(s.name);
                     return (
                         <Box
-                            key={label}
-                            onClick={() => handleLegendClick(label)}
+                            key={s.name}
+                            onClick={() => handleLegendClick(s.name)}
                             sx={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -260,7 +246,7 @@ export default function DongTienLineChart({
                                 '&:hover': { opacity: isHidden ? 0.5 : 0.8 },
                             }}
                         >
-                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: colors[index] }} />
+                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: colors[index % colors.length] }} />
                             <Typography
                                 color="text.secondary"
                                 sx={{
@@ -269,13 +255,14 @@ export default function DongTienLineChart({
                                     textDecoration: isHidden ? 'line-through' : 'none',
                                 }}
                             >
-                                {label}
+                                {s.name}
                             </Typography>
                         </Box>
                     );
                 })}
             </Box>
             <Box sx={{
+                mt: -2,
                 width: '100%',
                 height: chartHeight,
                 '& .apexcharts-tooltip': {

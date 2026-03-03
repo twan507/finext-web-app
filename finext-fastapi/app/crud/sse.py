@@ -172,6 +172,7 @@ async def home_today_index(ticker: Optional[str] = None, **kwargs) -> Dict[str, 
         "y_pct": 1,
         "vsi": 1,
         "t0_score": 1,
+        "t5_score": 1,
         "type": 1,
     }
     find_query = {}
@@ -201,6 +202,7 @@ async def home_hist_index(ticker: Optional[str] = None, **kwargs) -> Dict[str, A
         "diff": 1,
         "pct_change": 1,
         "t0_score": 1,
+        "t5_score": 1,
         "type": 1,
     }
     find_query = {"ticker": ticker} if ticker else {}

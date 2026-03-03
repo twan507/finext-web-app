@@ -41,7 +41,7 @@ const PerformanceChart = () => {
                 show: true,
                 style: {
                     colors: '#9ca3af',
-                    fontSize: getResponsiveFontSize('xs').md,
+                    fontSize: getResponsiveFontSize('sm').md,
                 },
             },
             axisBorder: { show: false },

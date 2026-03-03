@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useCallback } from 'react';
-import { Box, Typography, useTheme } from '@mui/material';
+import { Box, Typography, useTheme, useMediaQuery } from '@mui/material';
 import { fontWeight, getResponsiveFontSize } from 'theme/tokens';
 import dynamic from 'next/dynamic';
 import { ApexOptions } from 'apexcharts';
@@ -10,18 +10,24 @@ const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 const STACK_COUNT = 5; // T-4 → T-0
 
-interface DongTienStackedBarChartProps {
+interface NhomCPStackedBarChartProps {
     chartHeight?: string;
-    dates: string[];
-    series: { name: string; data: number[] }[];
+    title?: string;
+    categories: string[];
+    /** Raw series per category (before stacking). Each series has `data` with length = number of days. */
+    daySeriesData: { dayLabel: string; data: number[] }[];
+    unit?: 'percent' | 'number';
 }
 
-export default function DongTienStackedBarChart({
-    chartHeight = '250px',
-    dates,
-    series,
-}: DongTienStackedBarChartProps) {
+export default function NhomCPStackedBarChart({
+    chartHeight = '230px',
+    title,
+    categories,
+    daySeriesData,
+    unit = 'percent',
+}: NhomCPStackedBarChartProps) {
     const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
 
     // Colors: T-4 (bottom) → T-0 (top)
@@ -32,40 +38,6 @@ export default function DongTienStackedBarChart({
         theme.palette.trend.up,      // T-1
         theme.palette.primary.main,  // T-0
     ], [theme]);
-
-    // Build stacked series: each layer = one day (T-4 to T-0)
-    // Each layer has 3 data points: [VNINDEX_val, FNXINDEX_val, DongTien_val]
-    const stackedSeries = useMemo(() => {
-        if (!series || series.length === 0 || !dates || dates.length === 0) return [];
-
-        const totalDates = dates.length;
-        const layers: { name: string; data: number[] }[] = [];
-
-        for (let i = 0; i < STACK_COUNT; i++) {
-            const dayIndex = totalDates - STACK_COUNT + i; // oldest first (T-4, T-3, ..., T-0)
-            const label = `T-${STACK_COUNT - 1 - i}`;
-
-            if (dayIndex < 0) {
-                // Not enough data, fill with 0
-                layers.push({
-                    name: label,
-                    data: series.map(() => 0),
-                });
-            } else {
-                layers.push({
-                    name: label,
-                    data: series.map(s => {
-                        const val = s.data[dayIndex] ?? 0;
-                        return Math.abs(val);
-                    }),
-                });
-            }
-        }
-
-        return layers;
-    }, [series, dates]);
-
-    const categories = useMemo(() => series.map(s => s.name), [series]);
 
     const handleLegendClick = useCallback((seriesName: string) => {
         setHiddenSeries(prev => {
@@ -81,15 +53,15 @@ export default function DongTienStackedBarChart({
 
     // Filter out hidden series entirely
     const { displaySeries, displayColors } = useMemo(() => {
-        const filtered = stackedSeries
-            .map((s, i) => ({ series: s, color: colors[i], index: i }))
-            .filter(item => !hiddenSeries.has(item.series.name));
+        const filtered = daySeriesData
+            .map((s, i) => ({ series: s, color: colors[i % colors.length], index: i }))
+            .filter(item => !hiddenSeries.has(item.series.dayLabel));
 
         return {
-            displaySeries: filtered.map(item => item.series),
+            displaySeries: filtered.map(item => ({ name: item.series.dayLabel, data: item.series.data })),
             displayColors: filtered.map(item => item.color),
         };
-    }, [stackedSeries, colors, hiddenSeries]);
+    }, [daySeriesData, colors, hiddenSeries]);
 
     const chartOptions: ApexOptions = useMemo(() => ({
         chart: {
@@ -100,9 +72,18 @@ export default function DongTienStackedBarChart({
             fontFamily: 'inherit',
             animations: { enabled: true, speed: 300 },
         },
+        annotations: {
+            xaxis: [{
+                x: 0,
+                borderColor: theme.palette.text.secondary,
+                strokeDashArray: 0,
+                borderWidth: 2,
+            }],
+        },
         plotOptions: {
             bar: {
-                columnWidth: '55%',
+                horizontal: true,
+                barHeight: '55%',
                 borderRadius: 3,
                 borderRadiusApplication: 'end',
                 borderRadiusWhenStacked: 'last',
@@ -112,37 +93,38 @@ export default function DongTienStackedBarChart({
         dataLabels: { enabled: false },
         xaxis: {
             categories,
+            tickAmount: 4,
             labels: {
                 style: {
                     colors: theme.palette.text.secondary,
                     fontSize: getResponsiveFontSize('sm').md,
-                    fontWeight: fontWeight.medium,
                 },
+                formatter: (val: string) => unit === 'percent' ? `${parseFloat(val).toFixed(1)}%` : `${parseFloat(val).toFixed(1)}`,
+                offsetY: -3.2,
             },
             axisBorder: {
                 show: true,
                 color: theme.palette.divider,
             },
             axisTicks: { show: false },
-            crosshairs: {
-                show: false,
-            },
+            crosshairs: { show: false },
         },
         yaxis: {
             labels: {
+                show: isMobile,
                 style: {
                     colors: theme.palette.text.secondary,
-                    fontSize: '0.6875rem',
+                    fontSize: getResponsiveFontSize('sm').md,
+                    fontWeight: fontWeight.medium,
                 },
-                formatter: (val: number) => `${val.toFixed(1)}%`,
             },
         },
         grid: {
             borderColor: theme.palette.divider,
             strokeDashArray: 0,
-            xaxis: { lines: { show: false } },
-            yaxis: { lines: { show: true } },
-            padding: { top: 0, bottom: 0, left: 15, right: 0 },
+            xaxis: { lines: { show: true } },
+            yaxis: { lines: { show: false } },
+            padding: { top: 0, bottom: 0, left: 5, right: 5 },
         },
         legend: { show: false },
         tooltip: {
@@ -156,7 +138,9 @@ export default function DongTienStackedBarChart({
 
                 const color = w.globals.colors[seriesIndex];
                 const name = w.globals.seriesNames[seriesIndex];
-                const formattedValue = `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+                const formattedValue = unit === 'percent'
+                    ? `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`
+                    : `${value >= 0 ? '+' : ''}${value.toFixed(1)}`;
 
                 const bgColor = theme.palette.mode === 'dark' ? 'rgba(26, 26, 26, 0.9)' : 'rgba(255, 255, 255, 0.9)';
                 const textColor = theme.palette.mode === 'dark' ? '#e0e0e0' : '#333333';
@@ -190,13 +174,26 @@ export default function DongTienStackedBarChart({
             hover: { filter: { type: 'darken', value: 0.9 } },
             active: { filter: { type: 'none' } },
         },
-    }), [theme, displayColors, categories]);
+    }), [theme, displayColors, categories, isMobile]);
 
-    const legendLabels = Array.from({ length: STACK_COUNT }, (_, i) => `T-${STACK_COUNT - 1 - i}`);
+    const legendLabels = daySeriesData.map(s => s.dayLabel);
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 0.5, flexWrap: 'wrap' }}>
+            {title && (
+                <Typography
+                    color="text.secondary"
+                    sx={{
+                        fontSize: getResponsiveFontSize('md'),
+                        fontWeight: fontWeight.semibold,
+                        textAlign: 'center',
+                        mb: 0.5,
+                    }}
+                >
+                    {title}
+                </Typography>
+            )}
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 0, flexWrap: 'wrap' }}>
                 {legendLabels.map((label, index) => {
                     const isHidden = hiddenSeries.has(label);
                     return (
@@ -213,7 +210,7 @@ export default function DongTienStackedBarChart({
                                 '&:hover': { opacity: isHidden ? 0.5 : 0.8 },
                             }}
                         >
-                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: colors[index] }} />
+                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: colors[index % colors.length] }} />
                             <Typography
                                 color="text.secondary"
                                 sx={{
@@ -229,6 +226,7 @@ export default function DongTienStackedBarChart({
                 })}
             </Box>
             <Box sx={{
+                mt: -2,
                 width: '100%',
                 height: chartHeight,
                 '& .apexcharts-tooltip': {
@@ -239,7 +237,7 @@ export default function DongTienStackedBarChart({
                     background: 'transparent !important',
                     border: 'none !important',
                     padding: '0 !important',
-                    transform: 'translateX(20px)',
+                    transform: 'translateY(-20px)',
                 },
                 '& .apexcharts-tooltip.apexcharts-theme-light, & .apexcharts-tooltip.apexcharts-theme-dark': {
                     boxShadow: 'none !important',

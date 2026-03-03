@@ -1,7 +1,7 @@
 'use client';
 
 import { Box, useTheme } from '@mui/material';
-import { fontWeight } from 'theme/tokens';
+import { fontWeight, getResponsiveFontSize } from 'theme/tokens';
 import dynamic from 'next/dynamic';
 import { ApexOptions } from 'apexcharts';
 
@@ -29,7 +29,7 @@ export default function FlowBarChart({ flowIn, flowOut, flowNeutral, chartHeight
         },
         plotOptions: {
             bar: {
-                columnWidth: '50%',
+                columnWidth: '25%',
                 distributed: true,
                 borderRadius: 4,
                 borderRadiusApplication: 'end',
@@ -45,7 +45,7 @@ export default function FlowBarChart({ flowIn, flowOut, flowNeutral, chartHeight
                 return val.toFixed(1) + ' tỷ';
             },
             style: {
-                fontSize: '0.75rem',
+                fontSize: getResponsiveFontSize('sm').md,
                 fontWeight: String(fontWeight.semibold),
                 colors: [theme.palette.text.primary],
             },
@@ -58,7 +58,7 @@ export default function FlowBarChart({ flowIn, flowOut, flowNeutral, chartHeight
             labels: {
                 style: {
                     colors: theme.palette.text.secondary,
-                    fontSize: '0.8125rem',
+                    fontSize: getResponsiveFontSize('sm').md,
                     fontWeight: fontWeight.medium,
                 },
             },
@@ -74,7 +74,7 @@ export default function FlowBarChart({ flowIn, flowOut, flowNeutral, chartHeight
             labels: {
                 style: {
                     colors: theme.palette.text.secondary,
-                    fontSize: '0.6875rem',
+                    fontSize: getResponsiveFontSize('sm').md,
                 },
                 formatter: function (val: number) {
                     return val.toFixed(0) + ' tỷ';

@@ -38,6 +38,18 @@ interface UsePollingResult<T> {
 }
 
 /**
+ * Kiểm tra dữ liệu nhận được có phải "trống" không.
+ * Khi DB đang ghi đè collection, API có thể trả về [] hoặc {}.
+ * Trong trường hợp này, giữ nguyên data cũ thay vì ghi đè bằng dữ liệu trống.
+ */
+function isEmptyData(data: any): boolean {
+    if (data === null || data === undefined) return true;
+    if (Array.isArray(data) && data.length === 0) return true;
+    if (typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length === 0) return true;
+    return false;
+}
+
+/**
  * Hook để polling REST API với interval và cache tích hợp
  * 
  * Cache behavior:
@@ -116,7 +128,7 @@ export function usePollingClient<T = any>(
             });
 
             if (isMountedRef.current) {
-                if (response.data !== undefined) {
+                if (response.data !== undefined && !isEmptyData(response.data)) {
                     setData(response.data);
                     setError(null);
                 }
@@ -150,7 +162,7 @@ export function usePollingClient<T = any>(
             });
 
             if (isMountedRef.current) {
-                if (response.data !== undefined) {
+                if (response.data !== undefined && !isEmptyData(response.data)) {
                     setData(response.data);
                     setError(null);
                 }

@@ -14,6 +14,7 @@ export default function manifest(): MetadataRoute.Manifest {
         orientation: 'any',
         categories: ['finance', 'business'],
         icons: [
+            // Desktop/Windows: pre-rounded icon (displayed as-is)
             {
                 src: '/icons/icon-192x192.png',
                 sizes: '192x192',
@@ -26,17 +27,25 @@ export default function manifest(): MetadataRoute.Manifest {
                 type: 'image/png',
                 purpose: 'any'
             },
+            // Android/iOS: square icon (OS auto-crops to shape)
             {
-                src: '/icons/icon-192x192.png',
+                src: '/icons/icon-maskable-192x192.png',
                 sizes: '192x192',
                 type: 'image/png',
                 purpose: 'maskable'
             },
             {
-                src: '/icons/icon-512x512.png',
+                src: '/icons/icon-maskable-512x512.png',
                 sizes: '512x512',
                 type: 'image/png',
                 purpose: 'maskable'
+            },
+            // Apple touch icon
+            {
+                src: '/icons/apple-touch-icon.png',
+                sizes: '180x180',
+                type: 'image/png',
+                purpose: 'any'
             }
         ]
     };

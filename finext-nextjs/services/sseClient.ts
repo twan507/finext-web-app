@@ -73,6 +73,18 @@ function getReconnectDelay(attempts: number): number {
   return delay;
 }
 
+/**
+ * Kiểm tra dữ liệu nhận được có phải "trống" không.
+ * Khi DB đang ghi đè collection, server trả về [] hoặc {}.
+ * Trong trường hợp này, giữ nguyên cache cũ thay vì ghi đè bằng dữ liệu trống.
+ */
+function isEmptyData(data: any): boolean {
+  if (data === null || data === undefined) return true;
+  if (Array.isArray(data) && data.length === 0) return true;
+  if (typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length === 0) return true;
+  return false;
+}
+
 // ========== Core Functions ==========
 
 /**
@@ -242,6 +254,13 @@ export function sseClient<DataType = any>(
       eventSource.onmessage = (event: MessageEvent) => {
         try {
           const parsedData = JSON.parse(event.data);
+
+          // ===== Skip empty data (DB overwrite protection) =====
+          // Khi DB đang ghi đè collection, server trả về [] hoặc {}.
+          // Giữ nguyên cache cũ, không broadcast dữ liệu trống.
+          if (isEmptyData(parsedData)) {
+            return;
+          }
 
           // Check for server error in data
           if (parsedData && parsedData.error) {

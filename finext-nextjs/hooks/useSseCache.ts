@@ -136,6 +136,14 @@ export function useSseCache<T = any>(
                 },
                 onData: (receivedData) => {
                     if (isMountedRef.current) {
+                        // Skip empty data — giữ nguyên state cũ (defense-in-depth)
+                        if (
+                            receivedData === null || receivedData === undefined ||
+                            (Array.isArray(receivedData) && receivedData.length === 0) ||
+                            (typeof receivedData === 'object' && !Array.isArray(receivedData) && Object.keys(receivedData).length === 0)
+                        ) {
+                            return;
+                        }
                         const processedData = transform ? transform(receivedData) : receivedData;
                         setData(processedData);
                         setIsLoading(false);
