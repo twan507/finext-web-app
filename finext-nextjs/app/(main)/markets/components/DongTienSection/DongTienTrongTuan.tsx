@@ -28,6 +28,7 @@ export default function NhomCPStackedBarChart({
 }: NhomCPStackedBarChartProps) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
     const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
 
     // Colors: T-4 (bottom) → T-0 (top)
@@ -110,7 +111,8 @@ export default function NhomCPStackedBarChart({
         },
         yaxis: {
             labels: {
-                show: isMobile,
+                show: isTablet,
+                offsetY: 3,
                 style: {
                     colors: theme.palette.text.secondary,
                     fontSize: getResponsiveFontSize('sm').md,
@@ -173,7 +175,7 @@ export default function NhomCPStackedBarChart({
             hover: { filter: { type: 'darken', value: 0.9 } },
             active: { filter: { type: 'none' } },
         },
-    }), [theme, displayColors, categories, isMobile]);
+    }), [theme, displayColors, categories, isTablet]);
 
     const legendLabels = daySeriesData.map(s => s.dayLabel);
 

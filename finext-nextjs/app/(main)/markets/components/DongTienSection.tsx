@@ -87,6 +87,7 @@ function buildRawValues(data: RawMarketData[], fieldExtractor: (d: RawMarketData
 export default function DongTienSection({ histIndexData, todayAllData }: DongTienSectionProps) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
     const [timeRange, setTimeRange] = useState<TimeRange>('1M');
 
     const handleTimeRangeChange = (_event: React.MouseEvent<HTMLElement>, newRange: TimeRange | null) => {
@@ -466,7 +467,7 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
                     gridTemplateColumns: {
                         xs: '1fr',                    // Mobile (< 768px): 1 cột
                         md: '1fr 1fr',                // Tablet (768px – 1199px): 2×2
-                        lg: '30% 20% 25% 25%',       // Desktop (≥ 1200px): 4 cột
+                        lg: '25% 15% 25% 35%',       // Desktop (≥ 1200px): 4 cột
                     },
                     gap: 2,
                 }}
@@ -479,7 +480,7 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
                         unit="number"
                     />
                 </Box>
-                <Box sx={{ minWidth: 0 }}>
+                <Box sx={{ minWidth: 0, ...(!isTablet && { mr: 2 }) }}>
                     <ChiSoThanhKhoan
                         title="Chỉ số thanh khoản"
                         categories={nhomCpCategories}
@@ -487,7 +488,7 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
                         unit="percent"
                     />
                 </Box>
-                <Box sx={{ minWidth: 0 }}>
+                <Box sx={{ minWidth: 0, ...(!isTablet && { mr: 2 }) }}>
                     <DongTienTrongTuan
                         title="Dòng tiền trong tuần"
                         categories={nhomCpCategories}
@@ -495,7 +496,7 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
                         unit="number"
                     />
                 </Box>
-                <Box sx={{ minWidth: 0 }}>
+                <Box sx={{ minWidth: 0, ...(!isTablet && { mr: 6 }) }}>
                     <DienBienDongTien
                         title="Diễn biến dòng tiền"
                         dates={nhomCpLineDates}
@@ -524,7 +525,7 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
                     gridTemplateColumns: {
                         xs: '1fr',                    // Mobile (<768px): 1 cột
                         md: '1fr 1fr',                // Tablet (768px – 1199px): 2×2
-                        lg: '30% 20% 25% 25%',       // Desktop (≥ 1200px): 4 cột
+                        lg: '25% 15% 25% 35%',       // Desktop (≥ 1200px): 4 cột
                     },
                     gap: 2,
                 }}
@@ -537,7 +538,7 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
                         unit="number"
                     />
                 </Box>
-                <Box sx={{ minWidth: 0 }}>
+                <Box sx={{ minWidth: 0, ...(!isTablet && { mr: 2 }) }}>
                     <ChiSoThanhKhoan
                         title="Chỉ số thanh khoản"
                         categories={mcCategories}
@@ -545,7 +546,7 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
                         unit="percent"
                     />
                 </Box>
-                <Box sx={{ minWidth: 0 }}>
+                <Box sx={{ minWidth: 0, ...(!isTablet && { mr: 2 }) }}>
                     <DongTienTrongTuan
                         title="Dòng tiền trong tuần"
                         categories={mcCategories}
@@ -553,7 +554,7 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
                         unit="number"
                     />
                 </Box>
-                <Box sx={{ minWidth: 0 }}>
+                <Box sx={{ minWidth: 0, ...(!isTablet && { mr: 6 }) }}>
                     <DienBienDongTien
                         title="Diễn biến dòng tiền"
                         dates={mcLineDates}

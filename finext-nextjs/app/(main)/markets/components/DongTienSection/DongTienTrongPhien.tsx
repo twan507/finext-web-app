@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useRef } from 'react';
 import { Box, Typography, useTheme } from '@mui/material';
 import { fontWeight, getResponsiveFontSize } from 'theme/tokens';
 import dynamic from 'next/dynamic';
@@ -29,6 +29,9 @@ export default function NhomCPBarChart1({
     const trendUpColor = theme.palette.trend.up;
     const trendDownColor = theme.palette.trend.down;
 
+    // Ref to hold current series data for DOM label adjustment
+    const seriesDataRef = useRef<number[]>([]);
+
     const handleLegendClick = useCallback((seriesName: string) => {
         setHiddenSeries(prev => {
             const next = new Set(prev);
@@ -51,6 +54,31 @@ export default function NhomCPBarChart1({
         };
     }, [series, hiddenSeries]);
 
+    // Keep ref in sync with latest display data
+    seriesDataRef.current = displaySeries.length > 0 ? displaySeries[0].data : [];
+
+    // Detect if any data point is negative
+    const hasNegative = seriesDataRef.current.some(v => v < 0);
+
+    // Adjust labels for negative values: shift them to the left of the bar end
+    const adjustNegativeLabels = useCallback((el: HTMLElement) => {
+        requestAnimationFrame(() => {
+            const currentData = seriesDataRef.current;
+            const labels = el.querySelectorAll('.apexcharts-datalabels .apexcharts-datalabel');
+            labels.forEach((label, index) => {
+                if (currentData[index] != null && currentData[index] < 0) {
+                    const currentX = parseFloat(label.getAttribute('x') || '0');
+                    if (!label.getAttribute('data-adjusted')) {
+                        // Shift label further left so it appears outside the negative bar
+                        label.setAttribute('x', String(currentX - 5));
+                        label.setAttribute('text-anchor', 'end');
+                        label.setAttribute('data-adjusted', 'true');
+                    }
+                }
+            });
+        });
+    }, []);
+
     const chartOptions: ApexOptions = useMemo(() => ({
         chart: {
             type: 'bar',
@@ -59,6 +87,16 @@ export default function NhomCPBarChart1({
             toolbar: { show: false },
             fontFamily: 'inherit',
             animations: { enabled: true, speed: 300 },
+            events: {
+                mounted: function (chartContext: any) {
+                    adjustNegativeLabels(chartContext.el);
+                },
+                updated: function (chartContext: any) {
+                    const labels = chartContext.el.querySelectorAll('.apexcharts-datalabels .apexcharts-datalabel');
+                    labels.forEach((label: Element) => label.removeAttribute('data-adjusted'));
+                    adjustNegativeLabels(chartContext.el);
+                },
+            },
         },
         annotations: {
             xaxis: [{
@@ -74,6 +112,9 @@ export default function NhomCPBarChart1({
                 barHeight: '55%',
                 borderRadius: 3,
                 borderRadiusApplication: 'end',
+                dataLabels: {
+                    position: 'top',
+                },
                 colors: {
                     ranges: [
                         { from: -Infinity, to: -0.0001, color: trendDownColor },
@@ -83,9 +124,21 @@ export default function NhomCPBarChart1({
             },
         },
         colors: [trendUpColor],
-        dataLabels: { enabled: false },
+        dataLabels: {
+            enabled: true,
+            textAnchor: 'start',
+            offsetX: 5,
+            offsetY: 7,
+            style: {
+                colors: [theme.palette.text.secondary],
+                fontSize: getResponsiveFontSize('sm').md,
+                fontWeight: fontWeight.medium,
+            },
+            formatter: (val: number) => unit === 'percent' ? `${val.toFixed(1)}%` : `${val.toFixed(1)}`,
+        },
         xaxis: {
             categories,
+            tickAmount: 4,
             labels: {
                 style: {
                     colors: theme.palette.text.secondary,
@@ -103,6 +156,8 @@ export default function NhomCPBarChart1({
         },
         yaxis: {
             labels: {
+                ...(hasNegative && { offsetX: -25 }),
+                offsetY: 3,
                 style: {
                     colors: theme.palette.text.secondary,
                     fontSize: getResponsiveFontSize('sm').md,
@@ -115,7 +170,7 @@ export default function NhomCPBarChart1({
             strokeDashArray: 0,
             xaxis: { lines: { show: true } },
             yaxis: { lines: { show: false } },
-            padding: { top: 0, bottom: 0, left: 5, right: 5 },
+            padding: { top: 0, bottom: 0, left: hasNegative ? 25 : 5, right: 50 },
         },
         legend: { show: false },
         tooltip: {
