@@ -213,7 +213,7 @@ export default function NNTDBarChart({
             <Box sx={{
                 flex: 1,
                 width: '100%',
-                minHeight: 300,
+                minHeight: 250,
                 height: chartHeight,
                 '& .apexcharts-tooltip': {
                     boxShadow: 'none !important',

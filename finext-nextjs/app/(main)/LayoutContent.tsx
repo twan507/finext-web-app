@@ -67,8 +67,11 @@ const topNavTabs: TopNavTab[] = [
     description: 'Tổng quan xu hướng, đánh giá rủi ro và xác định chu kỳ thị trường.',
     icon: 'fluent-color:poll-32',
     submenu: [
-      { label: 'Diễn biến thị trường', href: '/markets', icon: 'fluent-color:poll-16', description: 'Theo dõi diễn biến và xu hướng thị trường chứng khoán' },
-      { label: 'Xu hướng thị trường', href: '/markets/trends', icon: 'fluent-color:data-area-20', description: 'Phân tích xu hướng, tín hiệu và giai đoạn chu kỳ thị trường' },
+      { label: 'Biến động', href: '/markets?tab=volatility', icon: 'fluent-color:poll-16' },
+      { label: 'Dòng tiền', href: '/markets?tab=cashflow', icon: 'fluent-color:data-area-20' },
+      { label: 'Tín hiệu', href: '/markets?tab=signal', icon: 'fluent-color:gauge-32' },
+      { label: 'Nước ngoài', href: '/markets?tab=foreign', icon: 'fluent-color:globe-24' },
+      { label: 'Tự doanh', href: '/markets?tab=proprietary', icon: 'fluent-color:building-people-24' },
     ]
   },
   {
@@ -303,8 +306,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   {/* Sub-items always visible */}
                   <List component="div" disablePadding>
                     {tab.submenu!.map((subItem) => {
-                      const isSubActive = currentPathname === subItem.href ||
-                        (subItem.href !== '/news' && subItem.href !== '/reports' && subItem.href !== '/markets' && currentPathname.startsWith(subItem.href));
                       return (
                         <Link key={subItem.href} href={subItem.href} passHref style={{ textDecoration: 'none', color: 'inherit' }}>
                           <ListItemButton
@@ -312,7 +313,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                             sx={{
                               pl: 3,
                               borderRadius: borderRadius.sm,
-                              color: isSubActive ? theme.palette.primary.main : theme.palette.text.primary,
+                              color: theme.palette.text.primary,
                               backgroundColor: 'transparent',
                               '&:hover': {
                                 backgroundColor: 'transparent',
@@ -486,8 +487,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   {/* Sub-items always visible */}
                   <List component="div" disablePadding>
                     {tab.submenu!.map((subItem) => {
-                      const isSubActive = currentPathname === subItem.href ||
-                        (subItem.href !== '/news' && subItem.href !== '/reports' && subItem.href !== '/markets' && currentPathname.startsWith(subItem.href));
                       return (
                         <Link key={subItem.href} href={subItem.href} passHref style={{ textDecoration: 'none', color: 'inherit' }}>
                           <ListItemButton
@@ -496,7 +495,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                               pl: 3,
                               py: 0.75,
                               borderRadius: borderRadius.sm,
-                              color: isSubActive ? theme.palette.primary.main : theme.palette.text.primary,
+                              color: theme.palette.text.primary,
                               backgroundColor: 'transparent',
                               '&:hover': {
                                 backgroundColor: 'transparent',
@@ -835,7 +834,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                                 top: '100%',
                                 left: 0,
                                 mt: 0.5,
-                                minWidth: 280,
+                                minWidth: 'auto',
+                                whiteSpace: 'nowrap',
                                 bgcolor: 'background.paper',
                                 borderRadius: `${borderRadius.md}px`,
                                 boxShadow: shadows.lg,
@@ -848,8 +848,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                               }}
                             >
                               {tab.submenu!.map((subItem) => {
-                                const isSubActive = currentPathname === subItem.href ||
-                                  (subItem.href !== '/news' && subItem.href !== '/reports' && currentPathname.startsWith(subItem.href));
                                 return (
                                   <Link
                                     key={subItem.href}
@@ -859,7 +857,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                                     <Box
                                       sx={{
                                         display: 'flex',
-                                        alignItems: 'flex-start',
+                                        alignItems: 'center',
                                         gap: 1.5,
                                         px: 2,
                                         py: 1,
@@ -870,13 +868,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                                         transition: transitions.colors,
                                       }}
                                     >
-                                      <Icon icon={subItem.icon} width="24" height="24" style={{ marginTop: '2px', flexShrink: 0 }} />
+                                      <Icon icon={subItem.icon} width="24" height="24" style={{ flexShrink: 0 }} />
                                       <Box>
-                                        <Typography variant="subtitle2" sx={{ fontWeight: fontWeight.semibold, mb: 0.5 }}>
+                                        <Typography variant="subtitle2" sx={{ fontWeight: fontWeight.semibold, color: 'inherit' }}>
                                           {subItem.label}
                                         </Typography>
                                         {subItem.description && (
-                                          <Typography variant="body2" sx={{ fontSize: getResponsiveFontSize('sm') }}>
+                                          <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mt: 0.25, whiteSpace: 'normal', minWidth: 200, maxWidth: 320 }}>
                                             {subItem.description}
                                           </Typography>
                                         )}

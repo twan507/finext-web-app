@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useMemo } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Box, Typography, useTheme, Divider, alpha } from '@mui/material';
 
@@ -293,8 +294,29 @@ export default function MarketsContent() {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const tabParam = searchParams.get('tab') as MarketTabId | null;
+
   const [ticker, setTicker] = useState<string>('VNINDEX');
-  const [activeTab, setActiveTab] = useState<MarketTabId>('volatility');
+  const [activeTab, setActiveTab] = useState<MarketTabId>(() => {
+    const validTabs: MarketTabId[] = ['volatility', 'cashflow', 'signal', 'foreign', 'proprietary'];
+    if (tabParam && validTabs.includes(tabParam)) return tabParam;
+    return 'volatility';
+  });
+
+  // Sync activeTab when URL search param changes (e.g. from nav dropdown)
+  useEffect(() => {
+    const validTabs: MarketTabId[] = ['volatility', 'cashflow', 'signal', 'foreign', 'proprietary'];
+    if (tabParam && validTabs.includes(tabParam) && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+
+  const handleTabChange = (newTab: MarketTabId) => {
+    setActiveTab(newTab);
+    router.push(`?tab=${newTab}`, { scroll: false });
+  };
 
   const isMountedRef = useRef<boolean>(true);
   const todaySseRef = useRef<{ unsubscribe: () => void } | null>(null);
@@ -440,7 +462,7 @@ export default function MarketsContent() {
 
       {/* ========== SUB-NAVBAR (full-width bleed) ========== */}
       <Box sx={{ mt: 4 }}>
-        <SubNavbar activeTab={activeTab} onTabChange={setActiveTab} />
+        <SubNavbar activeTab={activeTab} onTabChange={handleTabChange} />
       </Box>
 
       {/* ========== TAB CONTENT ========== */}
