@@ -62,6 +62,7 @@ function formatVolume(val: number | null | undefined): string {
 }
 
 // Extract indicator field data from raw chart data
+// Uses pre-computed _ts from mergedData to avoid repeated new Date() calls
 function extractFieldData(
     data: ChartRawData[],
     field: string,
@@ -69,15 +70,13 @@ function extractFieldData(
     const result: Array<{ time: UTCTimestamp; value: number }> = [];
     const seenTimestamps = new Set<number>();
     for (const item of data) {
-        if (!item.date) continue;
-        const dateObj = new Date(item.date);
-        const utcDate = Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
-        const timestamp = Math.floor(utcDate / 1000) as UTCTimestamp;
+        const timestamp = item._ts;
+        if (!timestamp) continue;
         if (seenTimestamps.has(timestamp)) continue;
         seenTimestamps.add(timestamp);
         const value = (item as any)[field];
         if (value != null && !isNaN(value)) {
-            result.push({ time: timestamp, value });
+            result.push({ time: timestamp as UTCTimestamp, value });
         }
     }
     return result;
@@ -172,19 +171,19 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
     const lineColor = chartColors?.line || primaryColor;
 
     // Build a lookup map: timestamp -> raw data for crosshair legend
+    // Uses pre-computed _ts — no new Date() needed
     const dataByTimestamp = useMemo(() => {
         const map = new Map<number, ChartRawData>();
         for (const item of data) {
-            if (!item.date) continue;
-            const dateObj = new Date(item.date);
-            const utcDate = Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
-            const ts = Math.floor(utcDate / 1000);
+            const ts = item._ts;
+            if (!ts) continue;
             map.set(ts, item);
         }
         return map;
     }, [data]);
 
     // Transform data to lightweight-charts format
+    // Uses pre-computed _ts — no new Date() needed
     const transformData = useCallback(() => {
         if (!data || data.length === 0) return { candles: [], volumes: [], lineData: [] };
 
@@ -194,14 +193,13 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
         const lineData: Array<{ time: UTCTimestamp; value: number }> = [];
 
         for (const item of data) {
-            if (!item.date || typeof item.close !== 'number' || isNaN(item.close)) continue;
+            if (typeof item.close !== 'number' || isNaN(item.close)) continue;
             if (typeof item.open !== 'number' || isNaN(item.open)) continue;
             if (typeof item.high !== 'number' || isNaN(item.high)) continue;
             if (typeof item.low !== 'number' || isNaN(item.low)) continue;
 
-            const dateObj = new Date(item.date);
-            const utcDate = Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
-            const timestamp = Math.floor(utcDate / 1000) as UTCTimestamp;
+            const timestamp = item._ts as UTCTimestamp;
+            if (!timestamp) continue;
 
             if (seenTimestamps.has(timestamp)) continue;
             seenTimestamps.add(timestamp);

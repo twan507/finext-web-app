@@ -8,6 +8,7 @@ from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 
 from app.utils.response_wrapper import StandardApiResponse
@@ -31,7 +32,7 @@ from .routers import (
     otps,
     watchlists,
     uploads,
-    features 
+    features,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -50,17 +51,17 @@ async def lifespan(app: FastAPI):
         else:
             logger.error("Không thể lấy user_db instance để khởi tạo dữ liệu ban đầu (get_database trả về None).")
     except RuntimeError as e:
-         logger.error(f"Lỗi khi lấy database để seeding: {e}")
+        logger.error(f"Lỗi khi lấy database để seeding: {e}")
     except Exception as e:
         logger.error(f"Lỗi không xác định trong quá trình seeding: {e}", exc_info=True)
 
     # KHỞI ĐỘNG SCHEDULER
-    await start_scheduler() #
+    await start_scheduler()  #
 
     yield
     logger.info("Ứng dụng FastAPI đang tắt...")
     # TẮT SCHEDULER
-    await shutdown_scheduler() #
+    await shutdown_scheduler()  #
     await close_mongo_connection()
 
 
@@ -90,16 +91,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# GZip nén response ≥ 1000 bytes — giảm payload chart data ~80-90%
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+
 @app.exception_handler(HTTPException)
 async def custom_http_exception_handler(request: Request, exc: HTTPException):
     error_response_payload = StandardApiResponse[Any](
-        status=exc.status_code, message=str(exc.detail), data=None,
+        status=exc.status_code,
+        message=str(exc.detail),
+        data=None,
     )
     return JSONResponse(
         status_code=exc.status_code,
         content=error_response_payload.model_dump(exclude_none=True),
         headers=getattr(exc, "headers", None),
     )
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -108,20 +116,17 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     except Exception:
         loggable_error_details = str(exc.errors())
 
-    logger.warning(
-        f"RequestValidationError: Path: {request.url.path}, Details: {loggable_error_details}"
-    )
+    logger.warning(f"RequestValidationError: Path: {request.url.path}, Details: {loggable_error_details}")
 
     serializable_errors = jsonable_encoder(exc.errors())
 
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=StandardApiResponse[Any](
-            status=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            message="Lỗi xác thực dữ liệu đầu vào.",
-            data={"errors": serializable_errors}
+            status=status.HTTP_422_UNPROCESSABLE_ENTITY, message="Lỗi xác thực dữ liệu đầu vào.", data={"errors": serializable_errors}
         ).model_dump(exclude_none=True),
     )
+
 
 # Include routers
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["authentication"])
@@ -139,7 +144,7 @@ app.include_router(emails.router, prefix="/api/v1/emails", tags=["emails"])
 app.include_router(otps.router, prefix="/api/v1/otps", tags=["otps"])
 app.include_router(watchlists.router, prefix="/api/v1/watchlists", tags=["watchlists"])
 app.include_router(uploads.router, prefix="/api/v1/uploads", tags=["uploads"])
-app.include_router(features .router, prefix="/api/v1/features", tags=["features"])
+app.include_router(features.router, prefix="/api/v1/features", tags=["features"])
 
 
 @app.get("/api/v1")

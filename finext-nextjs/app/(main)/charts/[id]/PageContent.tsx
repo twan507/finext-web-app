@@ -103,6 +103,9 @@ export interface ChartRawData {
     y_vah: number | null;
     y_poc: number | null;
     y_val: number | null;
+
+    // ─── Pre-computed timestamp (tính 1 lần, dùng lại ở chart) ───
+    _ts?: number;
 }
 
 interface ChartPageContentProps {
@@ -196,16 +199,52 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
         return () => { cancelled = true; };
     }, [ticker]);
 
-    // ─── Today: SSE real-time (cập nhật liên tục trong phiên giao dịch) ───
-    const {
-        data: todayData,
-        isLoading: isTodayLoading,
-        error: todayError,
-    } = useSseCache<ChartRawData[]>({
-        keyword: 'chart_today_data',
-        queryParams: { ticker },
-        enabled: !!ticker,
-    });
+    // ─── Today: REST polling mỗi 5s (thay vì SSE — nhanh hơn cho initial load) ───
+    const [todayData, setTodayData] = useState<ChartRawData[] | null>(null);
+    const [isTodayLoading, setIsTodayLoading] = useState(true);
+    const [todayError, setTodayError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!ticker) return;
+
+        let cancelled = false;
+
+        const fetchToday = () => {
+            apiClient<ChartRawData[]>({
+                url: '/api/v1/sse/rest/chart_today_data',
+                method: 'GET',
+                queryParams: { ticker },
+                requireAuth: false,
+                useCache: false, // luôn fetch mới cho today data
+            })
+                .then((res) => {
+                    if (!cancelled) {
+                        const data = res.data ?? [];
+                        if (data.length > 0) {
+                            setTodayData(data);
+                        }
+                        setIsTodayLoading(false);
+                    }
+                })
+                .catch((err: any) => {
+                    if (!cancelled) {
+                        setTodayError(err.message || 'Lỗi tải dữ liệu hôm nay');
+                        setIsTodayLoading(false);
+                    }
+                });
+        };
+
+        // Fetch ngay lần đầu
+        fetchToday();
+
+        // Polling mỗi 5 giây
+        const intervalId = setInterval(fetchToday, 5000);
+
+        return () => {
+            cancelled = true;
+            clearInterval(intervalId);
+        };
+    }, [ticker]);
 
     // Data guard: một khi chart đã render đủ data lần đầu, không bao giờ quay lại loading
     const initialRenderDoneRef = useRef(false);
@@ -215,27 +254,35 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
         initialRenderDoneRef.current = false;
     }, [ticker]);
 
-    // Ghép history + today thành 1 mảng duy nhất, sắp xếp theo date
+    // Ghép history + today thành 1 mảng duy nhất
+    // Backend đã sort sẵn theo date ASC → không cần sort lại trên FE
     const mergedData = useMemo(() => {
         const history = historyData || [];
         const today = todayData || [];
-        const all = [...history, ...today];
 
-        if (all.length === 0) return [];
+        if (history.length === 0 && today.length === 0) return [];
 
-        // Sort theo date tăng dần
-        all.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-        // Deduplicate theo date (giữ bản mới nhất - today override history)
+        // Dedup: today overrides history nếu trùng date
+        // Pre-compute _ts (UTCTimestamp) cho mỗi item — chỉ tính 1 lần
         const dateMap = new Map<string, ChartRawData>();
-        for (const item of all) {
+
+        for (const item of history) {
             const dateKey = item.date?.split('T')[0] || item.date;
-            dateMap.set(dateKey, item);
+            const dateObj = new Date(item.date);
+            const ts = Math.floor(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()) / 1000);
+            dateMap.set(dateKey, { ...item, _ts: ts });
         }
 
-        return Array.from(dateMap.values()).sort(
-            (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-        );
+        // Today data ghi đè history nếu trùng date
+        for (const item of today) {
+            const dateKey = item.date?.split('T')[0] || item.date;
+            const dateObj = new Date(item.date);
+            const ts = Math.floor(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()) / 1000);
+            dateMap.set(dateKey, { ...item, _ts: ts });
+        }
+
+        // Map giữ nguyên insertion order → đã sorted vì history sorted + today appended cuối
+        return Array.from(dateMap.values());
     }, [historyData, todayData]);
 
     // Aggregate data theo timeframe (1D = nguyên gốc, 1W/1M = group by)
@@ -244,7 +291,7 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
         [mergedData, timeframe],
     );
 
-    const error = historyError || (todayError ? todayError.message : null);
+    const error = historyError || todayError;
 
     // Lần đầu: cần CẢ history + today data mới render chart
     const hasHistoryData = !isHistoryLoading && Array.isArray(historyData) && historyData.length > 0;

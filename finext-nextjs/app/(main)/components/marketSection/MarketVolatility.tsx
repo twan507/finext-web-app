@@ -138,7 +138,7 @@ export default function MarketVolatility({ stockData = [], foreignData = [], isL
             </Typography>
 
             {/* Table Layout */}
-            <Box sx={{ flex: 1, overflow: 'auto' }}>
+            <Box sx={{ flex: 1, overflow: 'hidden' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                         <tr>
@@ -150,10 +150,10 @@ export default function MarketVolatility({ stockData = [], foreignData = [], isL
                         </tr>
                     </thead>
                     <tbody>
-                        {stocks.map((stock) => {
+                        {stocks.map((stock, index) => {
                             const stockColor = getPriceColor(stock.pct_change, stock.exchange, theme);
                             return (
-                                <tr key={stock.ticker}>
+                                <tr key={`${stock.ticker}-${index}`}>
                                     <td style={{ padding: '8px 0', border: 'none' }}>
                                         <Link href={`/stocks/${stock.ticker}`} style={{ textDecoration: 'none' }}>
                                             <Typography
@@ -208,7 +208,7 @@ export default function MarketVolatility({ stockData = [], foreignData = [], isL
                 <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('lg'), fontWeight: fontWeight.semibold, mb: 1, textTransform: 'uppercase' }}>
                     {title}
                 </Typography>
-                <Box sx={{ flex: 1, overflow: 'auto' }}>
+                <Box sx={{ flex: 1, overflow: 'hidden' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr>
@@ -218,8 +218,8 @@ export default function MarketVolatility({ stockData = [], foreignData = [], isL
                             </tr>
                         </thead>
                         <tbody>
-                            {stocks.map((stock) => (
-                                <tr key={stock.ticker}>
+                            {stocks.map((stock, index) => (
+                                <tr key={`${stock.ticker}-${index}`}>
                                     <td style={{ padding: '8px 0', border: 'none' }}>
                                         <Link href={`/stocks/${stock.ticker}`} style={{ textDecoration: 'none' }}>
                                             <Typography
@@ -276,7 +276,12 @@ export default function MarketVolatility({ stockData = [], foreignData = [], isL
         return s.pct_change * vsi;
     };
 
-    const filteredStockData = stockData.filter(s => (s.vsi || 0) < 5 && (s.vsma5 || 0) > 500000);
+    // Dedupe by ticker (SSE can send duplicate records), keep last occurrence (most recent data)
+    const deduped = stockData.reduce<Record<string, StockData>>((acc, s) => {
+        acc[s.ticker] = s;
+        return acc;
+    }, {});
+    const filteredStockData = Object.values(deduped).filter(s => (s.vsi || 0) < 5 && (s.vsma5 || 0) > 500000);
 
     // For gainers: positive pct_change, sorted by score descending
     const topGainers = [...filteredStockData]
@@ -301,9 +306,14 @@ export default function MarketVolatility({ stockData = [], foreignData = [], isL
         },
     ];
 
-    // 2. Foreign Data (Buy / Sell)
-    const topNetBuy = [...foreignData].filter(x => x.net_value > 0).sort((a, b) => b.net_value - a.net_value).slice(0, 5);
-    const topNetSell = [...foreignData].filter(x => x.net_value < 0).sort((a, b) => a.net_value - b.net_value).slice(0, 5);
+    // 2. Foreign Data (Buy / Sell) - dedupe by ticker
+    const dedupedForeign = foreignData.reduce<Record<string, NNStockData>>((acc, s) => {
+        acc[s.ticker] = s;
+        return acc;
+    }, {});
+    const uniqueForeignData = Object.values(dedupedForeign);
+    const topNetBuy = [...uniqueForeignData].filter(x => x.net_value > 0).sort((a, b) => b.net_value - a.net_value).slice(0, 5);
+    const topNetSell = [...uniqueForeignData].filter(x => x.net_value < 0).sort((a, b) => a.net_value - b.net_value).slice(0, 5);
 
     const foreignSlides: Slide[] = [
         {

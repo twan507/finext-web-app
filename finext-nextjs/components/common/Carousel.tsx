@@ -1,7 +1,7 @@
 'use client';
 
 import { Box, useTheme, SxProps, Theme } from '@mui/material';
-import { useState, useCallback, useEffect, ReactNode } from 'react';
+import { useState, useCallback, useEffect, useRef, ReactNode } from 'react';
 import { layoutTokens, durations, easings } from '../../theme/tokens';
 
 export interface Slide {
@@ -35,6 +35,22 @@ export default function Carousel({
         transform: 'translateX(0px)',
     });
     const [isPaused, setIsPaused] = useState(false);
+    const transitionRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Reset currentSlide when slides length changes to prevent out-of-bounds
+    const prevSlidesLengthRef = useRef(slides.length);
+    useEffect(() => {
+        if (slides.length !== prevSlidesLengthRef.current) {
+            prevSlidesLengthRef.current = slides.length;
+            // Cancel any in-flight transitions only when slides actually changed
+            if (transitionRef.current) {
+                clearTimeout(transitionRef.current);
+                transitionRef.current = null;
+            }
+            setCurrentSlide(0);
+            setAnimationStyle({ opacity: 1, transform: 'translateX(0px)' });
+        }
+    }, [slides.length]);
 
     // Swipe State
     const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -54,7 +70,12 @@ export default function Carousel({
             transform: `translateX(${direction * 20}px)`,
         });
 
-        setTimeout(() => {
+        // Cancel any previous transition
+        if (transitionRef.current) {
+            clearTimeout(transitionRef.current);
+        }
+
+        transitionRef.current = setTimeout(() => {
             setCurrentSlide(nextIndex);
             // Prepare next slide from opposite side
             setAnimationStyle({
@@ -62,12 +83,13 @@ export default function Carousel({
                 transform: `translateX(${direction * -20}px)`,
             });
 
-            setTimeout(() => {
+            transitionRef.current = setTimeout(() => {
                 // Slide in
                 setAnimationStyle({
                     opacity: 1,
                     transform: 'translateX(0px)',
                 });
+                transitionRef.current = null;
             }, 50);
         }, 300); // Wait for transition out
     }, [currentSlide]);
@@ -183,7 +205,7 @@ export default function Carousel({
                     userSelect: 'none',
                 }}
             >
-                {slides[currentSlide].component}
+                {slides[Math.min(currentSlide, slides.length - 1)]?.component}
             </Box>
 
             {/* Dots Navigation */}

@@ -1145,11 +1145,13 @@ async def chart_history_data(ticker: Optional[str] = None, **kwargs) -> Dict[str
     - Index tickers (VNINDEX, VN30, ...) → collection: history_index
     - Stock tickers (VNM, FPT, ...) → collection: history_stock
 
+    Tối ưu: query trực tiếp MongoDB với sort, không qua pandas.
+
     Args:
         ticker: Mã ticker (bắt buộc). Mặc định: VNINDEX
 
     Returns:
-        List[Dict] - dữ liệu OHLCV + indicators theo ticker
+        List[Dict] - dữ liệu OHLCV + indicators theo ticker, sorted by date ASC
     """
     if not ticker:
         ticker = "VNINDEX"
@@ -1165,9 +1167,14 @@ async def chart_history_data(ticker: Optional[str] = None, **kwargs) -> Dict[str
 
     logger.debug(f"chart_history_data: ticker={ticker}, collection={collection_name}")
 
-    history_df = await get_collection_data(stock_db, collection_name, find_query=find_query, projection=CHART_DATA_PROJECTION)
+    # Query trực tiếp với sort, không qua pandas DataFrame
+    collection = stock_db.get_collection(collection_name)
+    cursor = collection.find(find_query, CHART_DATA_PROJECTION)
+    cursor.sort("date", 1)  # Sort ascending by date — tận dụng MongoDB index
+    cursor.max_time_ms(OPERATION_TIMEOUT_MS)
+    docs = await cursor.to_list(length=None)
 
-    return history_df.to_dict(orient="records")
+    return docs
 
 
 async def chart_today_data(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
@@ -1177,11 +1184,13 @@ async def chart_today_data(ticker: Optional[str] = None, **kwargs) -> Dict[str, 
     - Index tickers (VNINDEX, VN30, ...) → collection: today_index
     - Stock tickers (VNM, FPT, ...) → collection: today_stock
 
+    Tối ưu: query trực tiếp MongoDB với sort, không qua pandas.
+
     Args:
         ticker: Mã ticker (bắt buộc). Mặc định: VNINDEX
 
     Returns:
-        List[Dict] - dữ liệu OHLCV + indicators hôm nay theo ticker
+        List[Dict] - dữ liệu OHLCV + indicators hôm nay theo ticker, sorted by date ASC
     """
     if not ticker:
         ticker = "VNINDEX"
@@ -1197,9 +1206,14 @@ async def chart_today_data(ticker: Optional[str] = None, **kwargs) -> Dict[str, 
 
     logger.debug(f"chart_today_data: ticker={ticker}, collection={collection_name}")
 
-    today_df = await get_collection_data(stock_db, collection_name, find_query=find_query, projection=CHART_DATA_PROJECTION)
+    # Query trực tiếp với sort, không qua pandas DataFrame
+    collection = stock_db.get_collection(collection_name)
+    cursor = collection.find(find_query, CHART_DATA_PROJECTION)
+    cursor.sort("date", 1)  # Sort ascending by date
+    cursor.max_time_ms(OPERATION_TIMEOUT_MS)
+    docs = await cursor.to_list(length=None)
 
-    return today_df.to_dict(orient="records")
+    return docs
 
 
 # ==============================================================================

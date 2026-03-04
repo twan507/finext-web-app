@@ -57,6 +57,7 @@ function aggregateGroup(items: ChartRawData[], prevClose: number | null): ChartR
 
     // Override with correct aggregation rules
     result.date = first.date;                                       // date of first bar in group
+    result._ts = first._ts;                                         // keep _ts in sync with date
     result.open = first.open;                                       // first open
     result.close = last.close;                                      // last close
     result.high = Math.max(...items.map((d) => d.high));            // max high
