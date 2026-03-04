@@ -51,15 +51,14 @@ export default function NhomCPStackedBarChart({
         });
     }, []);
 
-    // Filter out hidden series entirely
+    // Keep all series but set hidden ones' data to zero — prevents full chart re-mount
     const { displaySeries, displayColors } = useMemo(() => {
-        const filtered = daySeriesData
-            .map((s, i) => ({ series: s, color: colors[i % colors.length], index: i }))
-            .filter(item => !hiddenSeries.has(item.series.dayLabel));
-
         return {
-            displaySeries: filtered.map(item => ({ name: item.series.dayLabel, data: item.series.data })),
-            displayColors: filtered.map(item => item.color),
+            displaySeries: daySeriesData.map(s => ({
+                name: s.dayLabel,
+                data: hiddenSeries.has(s.dayLabel) ? s.data.map(() => 0) : s.data,
+            })),
+            displayColors: colors,
         };
     }, [daySeriesData, colors, hiddenSeries]);
 
@@ -193,7 +192,7 @@ export default function NhomCPStackedBarChart({
                     {title}
                 </Typography>
             )}
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 0, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 0, flexWrap: 'wrap', position: 'relative', zIndex: 2 }}>
                 {legendLabels.map((label, index) => {
                     const isHidden = hiddenSeries.has(label);
                     return (

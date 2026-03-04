@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, useTheme } from '@mui/material';
+import { Box, useTheme, Skeleton } from '@mui/material';
 import { fontWeight, getResponsiveFontSize } from 'theme/tokens';
 import dynamic from 'next/dynamic';
 import { ApexOptions } from 'apexcharts';
@@ -29,7 +29,7 @@ export default function FlowBarChart({ flowIn, flowOut, flowNeutral, chartHeight
         },
         plotOptions: {
             bar: {
-                columnWidth: '25%',
+                columnWidth: '50%',
                 distributed: true,
                 borderRadius: 4,
                 borderRadiusApplication: 'end',
@@ -47,7 +47,7 @@ export default function FlowBarChart({ flowIn, flowOut, flowNeutral, chartHeight
             style: {
                 fontSize: getResponsiveFontSize('sm').md,
                 fontWeight: String(fontWeight.semibold),
-                colors: [theme.palette.text.primary],
+                colors: [theme.palette.text.secondary],
             },
             offsetY: -10,
             dropShadow: { enabled: false },
@@ -61,6 +61,7 @@ export default function FlowBarChart({ flowIn, flowOut, flowNeutral, chartHeight
                     fontSize: getResponsiveFontSize('sm').md,
                     fontWeight: fontWeight.medium,
                 },
+                offsetY: 4.1,
             },
             axisBorder: {
                 show: true,
@@ -70,6 +71,7 @@ export default function FlowBarChart({ flowIn, flowOut, flowNeutral, chartHeight
         },
         yaxis: {
             min: 0,
+            tickAmount: 4,
             forceNiceScale: true,
             labels: {
                 style: {
@@ -101,13 +103,49 @@ export default function FlowBarChart({ flowIn, flowOut, flowNeutral, chartHeight
         data: [flowIn, flowOut, flowNeutral],
     }];
 
+    const isLoading = flowIn === 0 && flowOut === 0 && flowNeutral === 0;
+
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', my: -1 }}>
                 <Box sx={{ width: '100%', height: chartHeight }}>
-                    <Chart key={theme.palette.mode} options={chartOptions} series={series} type="bar" height="100%" width="100%" />
+                    {isLoading ? (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', pt: 2 }}>
+                            <Box sx={{ display: 'flex', flex: 1, gap: 1 }}>
+                                {/* Y-axis labels */}
+                                <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', py: 1 }}>
+                                    {[...Array(5)].map((_, i) => (
+                                        <Skeleton key={i} variant="text" width={45} height={16} />
+                                    ))}
+                                </Box>
+                                {/* Bars */}
+                                <Box sx={{ display: 'flex', flex: 1, alignItems: 'flex-end', gap: 2, pb: 1, justifyContent: 'center' }}>
+                                    {[65, 50, 35].map((h, i) => (
+                                        <Skeleton
+                                            key={i}
+                                            variant="rectangular"
+                                            sx={{
+                                                width: '22%',
+                                                height: `${h}%`,
+                                                borderRadius: '4px 4px 0 0',
+                                            }}
+                                        />
+                                    ))}
+                                </Box>
+                            </Box>
+                            {/* X-axis labels */}
+                            <Box sx={{ display: 'flex', gap: 2, pl: 6, justifyContent: 'center' }}>
+                                {[1, 2, 3].map((i) => (
+                                    <Skeleton key={i} variant="text" width={60} height={16} />
+                                ))}
+                            </Box>
+                        </Box>
+                    ) : (
+                        <Chart key={theme.palette.mode} options={chartOptions} series={series} type="bar" height="100%" width="100%" />
+                    )}
                 </Box>
             </Box>
         </Box>
     );
 }
+

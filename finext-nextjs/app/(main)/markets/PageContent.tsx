@@ -14,6 +14,7 @@ import BienDongSection from './components/BienDongSection';
 import DongTienSection from './components/DongTienSection';
 import NuocNgoaiSection from './components/NuocNgoaiSection';
 import TuDoanhSection from './components/TuDoanhSection';
+import TinHieuSection from './components/TinHieuSection';
 
 import { ISseRequest } from 'services/core/types';
 import { sseClient, getFromCache } from 'services/sseClient';
@@ -215,6 +216,7 @@ function IndexTablesSection({ ticker, onTickerChange, todayAllData }: {
 const MARKET_TABS = [
   { id: 'volatility', label: 'Biến động' },
   { id: 'cashflow', label: 'Dòng tiền' },
+  { id: 'signal', label: 'Tín hiệu' },
   { id: 'foreign', label: 'Nước ngoài' },
   { id: 'proprietary', label: 'Tự doanh' },
 ] as const;
@@ -393,6 +395,8 @@ export default function MarketsContent() {
         return <BienDongSection />;
       case 'cashflow':
         return <DongTienSection histIndexData={histIndexData} todayAllData={todayAllData} />;
+      case 'signal':
+        return <TinHieuSection />;
       case 'foreign':
         return <NuocNgoaiSection />;
       case 'proprietary':

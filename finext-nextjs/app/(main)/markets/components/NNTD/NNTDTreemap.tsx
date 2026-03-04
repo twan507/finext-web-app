@@ -1,62 +1,58 @@
 'use client';
 
-import { useMemo, memo, useCallback } from 'react';
+import { useMemo, memo } from 'react';
 import { Box, useTheme, Skeleton } from '@mui/material';
 import dynamic from 'next/dynamic';
 import { ApexOptions } from 'apexcharts';
-import type { StockData } from '../../../components/marketSection/MarketVolatility';
 import { fontWeight } from 'theme/tokens';
+import type { NNTDRecord } from './NNTDSummaryPanel';
 
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface StockTreemapProps {
-    data: StockData[];
+interface NNTDTreemapProps {
+    data: NNTDRecord[];
     chartHeight?: string;
+    seriesName?: string;
 }
 
-// ── 11-stop heatmap palette ───────────────────────────────────────────────────
-// 3 fixed anchor colors: index 0 = trend.down, index 5 = trend.ref, index 10 = trend.up
-// Intermediate colors are softer transitions — never darker than the anchors
-// Fixed values — NO theme dependency
+// ── 11-stop heatmap palette (same as StockTreemap) ────────────────────────────
 const HEATMAP_COLORS = [
-    '#e11d1d', // 0:  trend.down — đỏ đậm (FIXED)
-    '#e3431a', // 1:  cam đỏ đậm
-    '#e56916', // 2:  cam đỏ
-    '#e78f12', // 3:  cam
-    '#e9b50d', // 4:  cam vàng
-    '#eadb08', // 5:  trend.ref — vàng (FIXED, chính giữa)
-    '#c2d40e', // 6:  vàng xanh
-    '#99ce14', // 7:  xanh nhạt
-    '#71c71a', // 8:  xanh lá nhạt
-    '#48c020', // 9:  xanh lá trung
-    '#20b927', // 10: trend.up — xanh đậm (FIXED)
+    '#e11d1d', // 0:  trend.down
+    '#e3431a', // 1
+    '#e56916', // 2
+    '#e78f12', // 3
+    '#e9b50d', // 4
+    '#eadb08', // 5:  trend.ref (mid)
+    '#c2d40e', // 6
+    '#99ce14', // 7
+    '#71c71a', // 8
+    '#48c020', // 9
+    '#20b927', // 10: trend.up
 ];
 
 /**
- * Pick color from 11-stop palette, per-industry normalized.
- * Positive and negative sides are normalized INDEPENDENTLY.
+ * Pick color from 11-stop palette, normalized independently for positive/negative.
  */
-function pickColor(pctChange: number, maxNeg: number, maxPos: number): string {
+function pickColor(netValue: number, maxNeg: number, maxPos: number): string {
     const MID = 5;
-    if (Math.abs(pctChange) < 0.0003) return HEATMAP_COLORS[MID];
+    if (Math.abs(netValue) < 0.001) return HEATMAP_COLORS[MID];
 
-    if (pctChange < 0) {
-        const t = maxNeg < 0.0001 ? 0 : Math.min(Math.abs(pctChange) / maxNeg, 1);
+    if (netValue < 0) {
+        const t = maxNeg < 0.001 ? 0 : Math.min(Math.abs(netValue) / maxNeg, 1);
         const index = MID - Math.round(t * MID);
         return HEATMAP_COLORS[Math.max(0, index)];
     } else {
-        const t = maxPos < 0.0001 ? 0 : Math.min(pctChange / maxPos, 1);
+        const t = maxPos < 0.001 ? 0 : Math.min(netValue / maxPos, 1);
         const index = MID + Math.round(t * MID);
         return HEATMAP_COLORS[Math.min(10, index)];
     }
 }
 
-// Max number of stocks to display globally (top by trading value)
-const MAX_STOCKS_GLOBAL = 200;
+const MAX_STOCKS = 100;
 
-// ── Chart options (fully static — no theme dependency) ────────────────────────
+// ── Static chart options ──────────────────────────────────────────────────────
 
 const STATIC_OPTIONS: ApexOptions = {
     chart: {
@@ -76,11 +72,11 @@ const STATIC_OPTIONS: ApexOptions = {
             colors: ['#fff'],
         },
         formatter: function (text: string, op: any) {
-            const pctChange =
-                op.w?.config?.series?.[op.seriesIndex]?.data?.[op.dataPointIndex]?.pctChange;
-            if (pctChange === undefined) return [text];
-            const pctStr = `${pctChange >= 0 ? '+' : ''}${(pctChange * 100).toFixed(2)}%`;
-            return [text, pctStr];
+            const netValue =
+                op.w?.config?.series?.[op.seriesIndex]?.data?.[op.dataPointIndex]?.netValue;
+            if (netValue === undefined) return [text];
+            const valStr = `${netValue >= 0 ? '+' : ''}${netValue.toFixed(2)} tỷ`;
+            return [text, valStr];
         },
         offsetY: -2,
     },
@@ -106,7 +102,7 @@ const STATIC_OPTIONS: ApexOptions = {
     },
 };
 
-// ── Inner chart component (memoized to prevent re-renders) ────────────────────
+// ── Inner chart (memoized) ────────────────────────────────────────────────────
 
 const TreemapChart = memo(function TreemapChart({
     series,
@@ -123,26 +119,18 @@ const TreemapChart = memo(function TreemapChart({
             tooltip: {
                 enabled: true,
                 custom: function ({ seriesIndex, dataPointIndex, w }: any) {
-                    const seriesConfig = w.config.series[seriesIndex];
-                    const dp = seriesConfig?.data?.[dataPointIndex];
+                    const dp = w.config.series[seriesIndex]?.data?.[dataPointIndex];
                     if (!dp) return '';
 
                     const ticker = dp.x || '';
-                    const industryName = seriesConfig?.name || '';
-                    const pctChange = dp.pctChange;
-                    const tradingValue = dp.y || 0;
+                    const netValue = dp.netValue || 0;
+                    const buyValue = dp.buyValue || 0;
+                    const sellValue = dp.sellValue || 0;
 
-                    const pctStr =
-                        pctChange !== undefined
-                            ? `${pctChange >= 0 ? '+' : ''}${(pctChange * 100).toFixed(2)}%`
-                            : '—';
-
-                    const valueStr =
-                        tradingValue >= 1e9
-                            ? `${(tradingValue / 1e9).toFixed(1)} tỷ`
-                            : tradingValue >= 1e6
-                                ? `${(tradingValue / 1e6).toFixed(0)} triệu`
-                                : tradingValue.toLocaleString('vi-VN');
+                    const fmtVal = (v: number) =>
+                        `${v >= 0 ? '+' : ''}${v.toFixed(2)} tỷ`;
+                    const fmtAbsVal = (v: number) =>
+                        `${Math.abs(v).toFixed(2)} tỷ`;
 
                     const bgColor = isDark ? 'rgba(26,26,26,0.95)' : 'rgba(255,255,255,0.95)';
                     const textColor = isDark ? '#e0e0e0' : '#333';
@@ -151,10 +139,10 @@ const TreemapChart = memo(function TreemapChart({
                         <div style="font-weight:700;font-size:14px;margin-bottom:6px;display:flex;align-items:center;gap:8px;">
                             <span style="width:12px;height:12px;border-radius:3px;background:${dp.fillColor};display:inline-block;"></span>
                             ${ticker}
-                            <span style="font-weight:600;font-size:12px;color:${dp.fillColor};">${pctStr}</span>
+                            <span style="font-weight:600;font-size:12px;color:${dp.fillColor};">${fmtVal(netValue)}</span>
                         </div>
-                        <div style="font-size:12px;opacity:0.7;margin-bottom:4px;">${industryName}</div>
-                        <div style="font-size:12px;">GTGD: <b>${valueStr}</b></div>
+                        <div style="font-size:12px;padding:2px 0;">Mua: <b>${fmtAbsVal(buyValue)}</b></div>
+                        <div style="font-size:12px;padding:2px 0;">Bán: <b>${fmtAbsVal(sellValue)}</b></div>
                     </div>`;
                 },
             },
@@ -167,62 +155,62 @@ const TreemapChart = memo(function TreemapChart({
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
-export default function StockTreemap({ data, chartHeight = '550px' }: StockTreemapProps) {
+export default function NNTDTreemap({ data, chartHeight = '550px', seriesName = 'NN mua ròng' }: NNTDTreemapProps) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
 
-    // Series: only depends on data (not theme) → stable on theme switch
     const series = useMemo(() => {
         if (!data || data.length === 0) return [];
 
-        // Deduplicate by ticker (keep first occurrence)
+        // Lấy ngày mới nhất có dữ liệu thực (không phải toàn 0)
+        const uniqueDates = Array.from(new Set(data.map((r) => r.date))).sort((a, b) => b.localeCompare(a));
+        let targetDate = uniqueDates[0];
+        for (const date of uniqueDates) {
+            const records = data.filter((r) => r.date === date);
+            const hasData = records.some(
+                (r) => r.buy_value !== 0 || r.sell_value !== 0 || r.net_value !== 0
+            );
+            if (hasData) {
+                targetDate = date;
+                break;
+            }
+        }
+        const latestRecords = data.filter((r) => r.date === targetDate);
+
+        // Deduplicate by ticker (keep first)
         const seen = new Set<string>();
-        const uniqueData: StockData[] = [];
-        for (const stock of data) {
-            if (!seen.has(stock.ticker)) {
-                seen.add(stock.ticker);
-                uniqueData.push(stock);
+        const unique: NNTDRecord[] = [];
+        for (const r of latestRecords) {
+            if (!seen.has(r.ticker)) {
+                seen.add(r.ticker);
+                unique.push(r);
             }
         }
 
-        // Keep only top N stocks by trading value globally
-        uniqueData.sort((a, b) => (b.trading_value || 0) - (a.trading_value || 0));
-        const topData = uniqueData.slice(0, MAX_STOCKS_GLOBAL);
+        // Sort by abs(net_value) descending, keep top N
+        unique.sort((a, b) => Math.abs(b.net_value || 0) - Math.abs(a.net_value || 0));
+        const topData = unique.slice(0, MAX_STOCKS);
 
-        // Group by industry
-        const grouped = new Map<string, StockData[]>();
-        for (const stock of topData) {
-            const industry = stock.industry_name || 'Khác';
-            if (!grouped.has(industry)) grouped.set(industry, []);
-            grouped.get(industry)!.push(stock);
+        // Compute max positive / negative for color normalization
+        let maxNeg = 0.001;
+        let maxPos = 0.001;
+        for (const r of topData) {
+            const v = r.net_value || 0;
+            if (v < 0 && Math.abs(v) > maxNeg) maxNeg = Math.abs(v);
+            if (v > 0 && v > maxPos) maxPos = v;
         }
 
-        return Array.from(grouped.entries())
-            .map(([name, stocks]) => {
-                const totalValue = stocks.reduce((s, st) => s + (st.trading_value || 0), 0);
+        // Single series (no industry grouping)
+        const seriesData = topData.map((r) => ({
+            x: r.ticker,
+            y: Math.max(Math.abs(r.net_value || 0), 1),
+            fillColor: pickColor(r.net_value || 0, maxNeg, maxPos),
+            netValue: r.net_value || 0,
+            buyValue: r.buy_value || 0,
+            sellValue: r.sell_value || 0,
+        }));
 
-                // Per-industry: separate max for positive and negative sides
-                let maxNeg = 0.001;
-                let maxPos = 0.001;
-                for (const s of stocks) {
-                    const pct = s.pct_change || 0;
-                    if (pct < 0 && Math.abs(pct) > maxNeg) maxNeg = Math.abs(pct);
-                    if (pct > 0 && pct > maxPos) maxPos = pct;
-                }
-
-                return {
-                    name,
-                    totalValue,
-                    data: stocks.map((stock) => ({
-                        x: stock.ticker,
-                        y: Math.max(stock.trading_value || 0, 1),
-                        fillColor: pickColor(stock.pct_change, maxNeg, maxPos),
-                        pctChange: stock.pct_change,
-                    })),
-                };
-            })
-            .sort((a, b) => b.totalValue - a.totalValue)
-            .map(({ name, data: d }) => ({ name, data: d }));
+        return [{ name: seriesName, data: seriesData }];
     }, [data]);
 
     const isLoading = !data || data.length === 0 || series.length === 0;
@@ -245,7 +233,6 @@ export default function StockTreemap({ data, chartHeight = '550px' }: StockTreem
                     filter: 'none !important',
                     background: 'transparent !important',
                 },
-                // Remove border-radius from all treemap rects (including industry headers)
                 '& rect': {
                     rx: '0 !important',
                     ry: '0 !important',

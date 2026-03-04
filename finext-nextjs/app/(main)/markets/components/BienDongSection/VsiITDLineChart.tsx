@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Box, useTheme, useMediaQuery } from '@mui/material';
+import { Box, useTheme, useMediaQuery, Skeleton } from '@mui/material';
 import dynamic from 'next/dynamic';
 import { ApexOptions } from 'apexcharts';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
@@ -29,7 +29,8 @@ export default function VsiITDLineChart({
     chartHeight = '280px',
 }: VsiITDLineChartProps) {
     const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'));
 
     const upColor = theme.palette.trend.up;
     const downColor = theme.palette.trend.down;
@@ -76,7 +77,7 @@ export default function VsiITDLineChart({
             type: 'numeric',
             min: 0,
             max: xAxisMax,
-            tickAmount: isMobile ? 6 : 10,
+            tickAmount: isMobile ? 6 : 6,
             tooltip: { enabled: false },
             axisBorder: { show: false },
             axisTicks: { show: false },
@@ -251,10 +252,13 @@ export default function VsiITDLineChart({
         },
     ], [seriesData]);
 
+    const isLoading = !seriesData || seriesData.length === 0;
+
     return (
         <Box sx={{
             width: '100%',
             height: chartHeight,
+            ml: (isMobile || isTablet) ? 0 : -4,
             '& .apexcharts-tooltip': {
                 boxShadow: 'none !important',
                 filter: 'none !important',
@@ -273,13 +277,43 @@ export default function VsiITDLineChart({
                 filter: `drop-shadow(0 0 4px ${theme.palette.text.secondary})`,
             },
         }}>
-            <Chart
-                options={chartOptions}
-                series={series}
-                type="area"
-                height="100%"
-                width="100%"
-            />
+            {isLoading ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', pt: 2 }}>
+                    <Box sx={{ display: 'flex', flex: 1, gap: 1 }}>
+                        {/* Chart area placeholder */}
+                        <Box sx={{ flex: 1, position: 'relative' }}>
+                            <Skeleton
+                                variant="rectangular"
+                                sx={{
+                                    width: '100%',
+                                    height: '100%',
+                                    borderRadius: 1,
+                                }}
+                            />
+                        </Box>
+                        {/* Y-axis labels */}
+                        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', py: 1 }}>
+                            {[...Array(5)].map((_, i) => (
+                                <Skeleton key={i} variant="text" width={40} height={16} />
+                            ))}
+                        </Box>
+                    </Box>
+                    {/* X-axis labels */}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', pr: 6 }}>
+                        {[...Array(7)].map((_, i) => (
+                            <Skeleton key={i} variant="text" width={35} height={16} />
+                        ))}
+                    </Box>
+                </Box>
+            ) : (
+                <Chart
+                    options={chartOptions}
+                    series={series}
+                    type="area"
+                    height="100%"
+                    width="100%"
+                />
+            )}
         </Box>
     );
 }

@@ -45,16 +45,20 @@ export default function NhomCPLineChart({
         });
     }, []);
 
-    // Filter out hidden series entirely
-    const { displaySeries, displayColors, displayAnnotations } = useMemo(() => {
-        const filtered = series
-            .map((s, i) => ({ series: s, color: colors[i % colors.length], index: i }))
-            .filter(item => !hiddenSeries.has(item.series.name));
+    // Keep all series but set hidden ones' data to empty — prevents full chart re-mount
+    const displaySeries = useMemo(() =>
+        series.map(s => ({
+            ...s,
+            data: hiddenSeries.has(s.name) ? [] : s.data,
+        })),
+        [series, hiddenSeries]
+    );
 
-        return {
-            displaySeries: filtered.map(item => item.series),
-            displayColors: filtered.map(item => item.color),
-            displayAnnotations: filtered.map(item => {
+    const displayAnnotations = useMemo(() =>
+        series
+            .map((s, i) => ({ series: s, color: colors[i % colors.length] }))
+            .filter(item => !hiddenSeries.has(item.series.name))
+            .map(item => {
                 const data = item.series.data;
                 if (!data || data.length === 0) return null;
                 const lastValue = data[data.length - 1];
@@ -80,8 +84,8 @@ export default function NhomCPLineChart({
                     },
                 };
             }).filter(Boolean),
-        };
-    }, [series, colors, hiddenSeries]);
+        [series, colors, hiddenSeries, unit]
+    );
 
     const chartOptions: ApexOptions = useMemo(() => ({
         chart: {
@@ -98,13 +102,13 @@ export default function NhomCPLineChart({
                 left: 0,
                 blur: 5,
                 opacity: 0.8,
-                color: displayColors as unknown as string,
+                color: colors as unknown as string,
             },
         },
         annotations: {
             yaxis: displayAnnotations as any[],
         },
-        colors: displayColors,
+        colors,
         stroke: {
             width: 2.5,
             curve: 'smooth',
@@ -204,7 +208,7 @@ export default function NhomCPLineChart({
         markers: {
             size: 0,
             colors: [theme.palette.mode === 'dark' ? '#000000' : '#ffffff'],
-            strokeColors: displayColors,
+            strokeColors: colors,
             strokeWidth: 2,
             hover: { size: 6 },
         },
@@ -212,7 +216,7 @@ export default function NhomCPLineChart({
             hover: { filter: { type: 'none' } },
             active: { filter: { type: 'none' } },
         },
-    }), [theme, displayColors, displayAnnotations, dates]);
+    }), [theme, colors, displayAnnotations, dates]);
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -229,7 +233,7 @@ export default function NhomCPLineChart({
                     {title}
                 </Typography>
             )}
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 0, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 0, flexWrap: 'wrap', position: 'relative', zIndex: 2 }}>
                 {series.map((s, index) => {
                     const isHidden = hiddenSeries.has(s.name);
                     return (

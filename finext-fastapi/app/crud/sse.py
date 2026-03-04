@@ -349,6 +349,42 @@ async def home_nn_stock(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any
     return nntd_df.to_dict(orient="records")
 
 
+async def nntd_stock(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+    """
+    Lấy dữ liệu giao dịch NNTD (Nhà nước/Tự doanh) theo ticker.
+    Database: stock_db. Collection: nntd_stock.
+    Trả về toàn bộ lịch sử giao dịch NNTD cho ticker được chỉ định.
+
+    Args:
+        ticker: Mã ticker để filter (optional)
+
+    Returns:
+        List[Dict] - danh sách các records từ nntd_stock
+    """
+    stock_db = get_database(STOCK_DB)
+
+    projection = {
+        "_id": 0,
+        "date": 1,
+        "ticker": 1,
+        "sell_volume": 1,
+        "buy_volume": 1,
+        "sell_value": 1,
+        "buy_value": 1,
+        "net_volume": 1,
+        "net_value": 1,
+        "type": 1,
+    }
+
+    find_query = {}
+    if ticker:
+        find_query["ticker"] = ticker
+
+    nntd_df = await get_collection_data(stock_db, "nntd_stock", find_query=find_query, projection=projection)
+
+    return nntd_df.to_dict(orient="records")
+
+
 async def news_daily(
     ticker: Optional[str] = None,
     news_type: Optional[str] = None,
@@ -1178,6 +1214,7 @@ SSE_QUERY_REGISTRY: Dict[str, Any] = {
     # Stock queries
     "home_today_stock": home_today_stock,
     "home_nn_stock": home_nn_stock,
+    "nntd_stock": nntd_stock,
     # Phase signal
     "phase_signal": phase_signal,
     # Trend queries

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Box, Typography, useTheme, Divider, useMediaQuery } from '@mui/material';
-import BreadthPolarChart from '../../components/marketSection/BreadthPolarChart';
+import BreadthPolarChart from './BienDongSection/BreadthPolarChart';
 import FlowBarChart from './BienDongSection/FlowBarChart';
 import VsiITDLineChart from './BienDongSection/VsiITDLineChart';
 import StockTreemap from './BienDongSection/StockTreemap';
@@ -60,6 +60,7 @@ function build1DTradingTimeline(referenceTimestamp?: number): number[] {
 export default function BienDongSection() {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'));
     const chartHeight = '250px';
 
     const isMountedRef = useRef<boolean>(true);
@@ -227,30 +228,39 @@ export default function BienDongSection() {
         };
     }, [itdData]);
 
+    // ========== Chart title component ==========
+    const chartTitle = (title: string) => (
+        <Typography
+            color="text.secondary"
+            sx={{
+                fontSize: getResponsiveFontSize('lg'),
+                fontWeight: fontWeight.semibold,
+                mb: 0,
+                textTransform: 'uppercase',
+            }}
+        >
+            {title}
+        </Typography>
+    );
+
     return (
         <Box sx={{ py: 3 }}>
             <Box
                 sx={{
                     display: 'flex',
                     flexDirection: isMobile ? 'column' : 'row',
+                    flexWrap: isTablet ? 'wrap' : 'nowrap',
                     gap: isMobile ? 2 : 3,
                 }}
             >
-                {/* BreadthPolarChart - 50% */}
-                <Box sx={{ flex: 2, minWidth: 0 }}>
-                    <Typography
-                        color="text.secondary"
-                        sx={{
-                            fontSize: getResponsiveFontSize('lg'),
-                            fontWeight: fontWeight.semibold,
-                            mb: 0,
-                            textTransform: 'uppercase',
-                            // display: 'flex',
-                            // justifyContent: 'center',
-                        }}
-                    >
-                        Độ rộng thị trường
-                    </Typography>
+                {/* Độ rộng thị trường — Desktop: 25%, Tablet: 50%, Mobile: 100% */}
+                <Box
+                    sx={{
+                        flex: isMobile ? '1 1 100%' : isTablet ? '1 1 calc(50% - 12px)' : '0 0 25%',
+                        minWidth: 0,
+                    }}
+                >
+                    {chartTitle('Độ rộng thị trường')}
                     <BreadthPolarChart
                         series={[priceIncrease, priceUnchanged, priceDecrease]}
                         labels={['Tăng giá', 'Không đổi', 'Giảm giá']}
@@ -259,21 +269,16 @@ export default function BienDongSection() {
                     />
                 </Box>
 
-                {/* FlowBarChart - 50% */}
-                <Box sx={{ flex: 3, minWidth: 0, mt: isMobile ? 1 : 0 }}>
-                    <Typography
-                        color="text.secondary"
-                        sx={{
-                            fontSize: getResponsiveFontSize('lg'),
-                            fontWeight: fontWeight.semibold,
-                            mb: 0,
-                            textTransform: 'uppercase',
-                            // display: 'flex',
-                            // justifyContent: 'center',
-                        }}
-                    >
-                        Phân bổ dòng tiền
-                    </Typography>
+                {/* Phân bổ dòng tiền — Desktop: 30%, Tablet: 50%, Mobile: 100% */}
+                <Box
+                    sx={{
+                        flex: isMobile ? '1 1 100%' : isTablet ? '1 1 calc(50% - 12px)' : '0 0 30%',
+                        minWidth: 0,
+                        ml: (isMobile || isTablet) ? 0 : -2,
+                        mr: (isMobile || isTablet) ? 0 : 2,
+                    }}
+                >
+                    {chartTitle('Phân bổ dòng tiền')}
                     <FlowBarChart
                         flowIn={flowIn}
                         flowOut={flowOut}
@@ -281,25 +286,22 @@ export default function BienDongSection() {
                         chartHeight={chartHeight}
                     />
                 </Box>
-            </Box>
 
-            <Box sx={{ mt: isMobile ? 3 : 7 }}>
-                <Typography
-                    color="text.secondary"
+                {/* Chỉ số thanh khoản — Desktop: 45%, Tablet: 100%, Mobile: 100% */}
+                <Box
                     sx={{
-                        fontSize: getResponsiveFontSize('lg'),
-                        fontWeight: fontWeight.semibold,
-                        textTransform: 'uppercase',
-                        // textAlign: 'flex-start',
+                        flex: isMobile ? '1 1 100%' : isTablet ? '1 1 100%' : '0 0 45%',
+                        minWidth: 0,
+                        mt: isTablet ? 1 : 0,
                     }}
                 >
-                    Diễn biến chỉ số thanh khoản
-                </Typography>
-                <VsiITDLineChart
-                    seriesData={vsiSeriesData}
-                    indexToTimestamp={vsiIndexToTimestamp}
-                    xAxisMax={vsiXAxisMax}
-                />
+                    {chartTitle('Chỉ số thanh khoản')}
+                    <VsiITDLineChart
+                        seriesData={vsiSeriesData}
+                        indexToTimestamp={vsiIndexToTimestamp}
+                        xAxisMax={vsiXAxisMax}
+                    />
+                </Box>
             </Box>
 
             <Box sx={{ mt: 3 }}>

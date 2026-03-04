@@ -80,15 +80,14 @@ export default function DongTienStackedBarChart({
         });
     }, []);
 
-    // Filter out hidden series entirely
+    // Keep all series but set hidden ones' data to empty — prevents full chart re-mount
     const { displaySeries, displayColors } = useMemo(() => {
-        const filtered = stackedSeries
-            .map((s, i) => ({ series: s, color: colors[i], index: i }))
-            .filter(item => !hiddenSeries.has(item.series.name));
-
         return {
-            displaySeries: filtered.map(item => item.series),
-            displayColors: filtered.map(item => item.color),
+            displaySeries: stackedSeries.map(s => ({
+                ...s,
+                data: hiddenSeries.has(s.name) ? s.data.map(() => 0) : s.data,
+            })),
+            displayColors: colors,
         };
     }, [stackedSeries, colors, hiddenSeries]);
 
@@ -202,13 +201,13 @@ export default function DongTienStackedBarChart({
             hover: { filter: { type: 'darken', value: 0.9 } },
             active: { filter: { type: 'none' } },
         },
-    }), [theme, displayColors, categories]);
+    }), [theme, displayColors, categories, isMobile]);
 
     const legendLabels = Array.from({ length: STACK_COUNT }, (_, i) => `T-${STACK_COUNT - 1 - i}`);
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 0, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 0, flexWrap: 'wrap', position: 'relative', zIndex: 2 }}>
                 {legendLabels.map((label, index) => {
                     const isHidden = hiddenSeries.has(label);
                     return (

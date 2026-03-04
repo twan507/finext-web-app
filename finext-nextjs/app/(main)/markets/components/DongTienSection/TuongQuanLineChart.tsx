@@ -29,37 +29,7 @@ export default function DongTienLineChart({
         theme.palette.trend.up,
     ], [theme]);
 
-    // Generate y-axis annotations (price tags) at the last data point of each series
-    const yAxisAnnotations = useMemo(() => {
-        return series.map((s, index) => {
-            const data = s.data;
-            if (!data || data.length === 0) return null;
-            const lastValue = data[data.length - 1];
-            const color = colors[index % colors.length];
 
-            return {
-                y: lastValue,
-                borderColor: 'transparent',
-                strokeDashArray: 0,
-                label: {
-                    borderColor: 'transparent',
-                    style: {
-                        color: '#fff',
-                        background: color,
-                        fontSize: getResponsiveFontSize('sm').md,
-                        fontWeight: fontWeight.medium,
-                        padding: { left: 6, right: 6, top: 2, bottom: 2 },
-                    },
-                    text: `${lastValue.toFixed(1)}%`,
-                    position: 'right' as const,
-                    textAnchor: 'start' as const,
-                    offsetX: 15.5,
-                    offsetY: 8,
-                    borderRadius: 2,
-                },
-            };
-        }).filter(Boolean);
-    }, [series, colors]);
 
     const handleLegendClick = useCallback((seriesName: string) => {
         setHiddenSeries(prev => {
@@ -73,16 +43,20 @@ export default function DongTienLineChart({
         });
     }, []);
 
-    // Filter out hidden series entirely
-    const { displaySeries, displayColors, displayAnnotations } = useMemo(() => {
-        const filtered = series
-            .map((s, i) => ({ series: s, color: colors[i % colors.length], index: i }))
-            .filter(item => !hiddenSeries.has(item.series.name));
+    // Keep all series but set hidden ones' data to empty — prevents full chart re-mount
+    const displaySeries = useMemo(() =>
+        series.map(s => ({
+            ...s,
+            data: hiddenSeries.has(s.name) ? [] : s.data,
+        })),
+        [series, hiddenSeries]
+    );
 
-        return {
-            displaySeries: filtered.map(item => item.series),
-            displayColors: filtered.map(item => item.color),
-            displayAnnotations: filtered.map(item => {
+    const displayAnnotations = useMemo(() =>
+        series
+            .map((s, i) => ({ series: s, color: colors[i % colors.length] }))
+            .filter(item => !hiddenSeries.has(item.series.name))
+            .map(item => {
                 const data = item.series.data;
                 if (!data || data.length === 0) return null;
                 const lastValue = data[data.length - 1];
@@ -108,8 +82,8 @@ export default function DongTienLineChart({
                     },
                 };
             }).filter(Boolean),
-        };
-    }, [series, colors, hiddenSeries]);
+        [series, colors, hiddenSeries]
+    );
 
     const chartOptions: ApexOptions = useMemo(() => ({
         chart: {
@@ -126,13 +100,13 @@ export default function DongTienLineChart({
                 left: 0,
                 blur: 5,
                 opacity: 0.8,
-                color: displayColors as unknown as string,
+                color: colors as unknown as string,
             },
         },
         annotations: {
             yaxis: displayAnnotations as any[],
         },
-        colors: displayColors,
+        colors,
         stroke: {
             width: 2.5,
             curve: 'smooth',
@@ -230,7 +204,7 @@ export default function DongTienLineChart({
         markers: {
             size: 0,
             colors: [theme.palette.mode === 'dark' ? '#000000' : '#ffffff'],
-            strokeColors: displayColors,
+            strokeColors: colors,
             strokeWidth: 2,
             hover: { size: 6 },
         },
@@ -238,13 +212,13 @@ export default function DongTienLineChart({
             hover: { filter: { type: 'none' } },
             active: { filter: { type: 'none' } },
         },
-    }), [theme, displayColors, displayAnnotations, dates]);
+    }), [theme, colors, displayAnnotations, dates, isMobile]);
 
     const legendLabels = ['VNINDEX', 'FNXINDEX', 'Dòng tiền'];
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 0, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 0, flexWrap: 'wrap', position: 'relative', zIndex: 2 }}>
                 {legendLabels.map((label, index) => {
                     const isHidden = hiddenSeries.has(label);
                     return (
