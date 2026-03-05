@@ -117,7 +117,7 @@ export default function BreadthPolarChart({ title, series, labels, colors, chart
                     <Chart key={theme.palette.mode} options={chartOptions} series={series} type="polarArea" height="100%" width="100%" />
                 </Box>
             </Box>
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 0.5, mb: 1, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 0.6, mb: 1, flexWrap: 'wrap' }}>
                 {labels.map((label, index) => (
                     <Box key={label} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: colors[index] }} />

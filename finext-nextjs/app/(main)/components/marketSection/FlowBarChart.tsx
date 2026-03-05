@@ -12,9 +12,10 @@ interface FlowBarChartProps {
     flowOut: number;
     flowNeutral: number;
     chartHeight: string;
+    isLoading?: boolean;
 }
 
-export default function FlowBarChart({ flowIn, flowOut, flowNeutral, chartHeight }: FlowBarChartProps) {
+export default function FlowBarChart({ flowIn, flowOut, flowNeutral, chartHeight, isLoading = false }: FlowBarChartProps) {
     const theme = useTheme();
 
     const colors = [theme.palette.trend.up, theme.palette.trend.down, theme.palette.trend.ref];
@@ -102,14 +103,14 @@ export default function FlowBarChart({ flowIn, flowOut, flowNeutral, chartHeight
         data: [flowIn, flowOut, flowNeutral],
     }];
 
-    const isLoading = flowIn === 0 && flowOut === 0 && flowNeutral === 0;
+
 
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', my: -1 }}>
                 <Box sx={{ width: '100%', height: chartHeight }}>
                     {isLoading ? (
-                        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', pt: 2 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', pt: 2, pb: 2 }}>
                             <Box sx={{ display: 'flex', flex: 1, gap: 1 }}>
                                 {/* Y-axis labels */}
                                 <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', py: 1 }}>

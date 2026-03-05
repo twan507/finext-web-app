@@ -158,52 +158,57 @@ export default function DongTienStackedBarChart({
         legend: { show: false },
         tooltip: {
             enabled: true,
-            shared: false,
-            intersect: true,
-            custom: function ({ series: seriesData, seriesIndex, dataPointIndex, w }) {
+            shared: true,
+            intersect: false,
+            custom: function ({ series: seriesData, dataPointIndex, w }) {
                 const categoryName = w.globals.labels[dataPointIndex] || '';
-                const value = seriesData[seriesIndex]?.[dataPointIndex];
-                if (value == null) return '';
-
-                const color = w.globals.colors[seriesIndex];
-                const name = w.globals.seriesNames[seriesIndex];
-                const formattedValue = `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
-
                 const bgColor = theme.palette.mode === 'dark' ? 'rgba(26, 26, 26, 0.9)' : 'rgba(255, 255, 255, 0.9)';
                 const textColor = theme.palette.mode === 'dark' ? '#e0e0e0' : '#333333';
+
+                const rows = seriesData.map((sd: number[], si: number) => {
+                    const value = sd[dataPointIndex];
+                    if (value == null) return '';
+                    const color = w.globals.colors[si];
+                    const name = w.globals.seriesNames[si];
+                    const formattedValue = `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+                    return `
+                        <div style="display: flex; align-items: center; gap: 6px; padding: 2px 0;">
+                            <span style="width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; background: ${color};"></span>
+                            <span style="font-size: 12px; color: ${textColor};">${name}:</span>
+                            <span style="font-weight: 600; font-size: 12px; color: ${textColor};">${formattedValue}</span>
+                        </div>`;
+                }).join('');
 
                 return `
                     <div style="
                         background: ${bgColor};
                         border: none;
                         border-radius: 6px;
-                        padding: 12px;
+                        padding: 10px 12px;
                         color: ${textColor};
-                        min-width: 140px;
+                        min-width: auto;
                         box-shadow: none !important;
                         filter: none !important;
                         -webkit-box-shadow: none !important;
                         -moz-box-shadow: none !important;
                     ">
-                        <div style="font-weight: 600; margin-bottom: 8px; font-size: 13px; color: ${textColor};">
+                        <div style="font-weight: 600; margin-bottom: 6px; font-size: 13px; color: ${textColor};">
                             ${categoryName}
                         </div>
-                        <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0;">
-                            <span style="width: 10px; height: 10px; border-radius: 50%; background: ${color};"></span>
-                            <span style="flex: 1; font-size: 12px;">${name}:</span>
-                            <span style="font-weight: 600; font-size: 12px;">${formattedValue}</span>
-                        </div>
+                        ${rows}
                     </div>
                 `;
             },
         },
         states: {
-            hover: { filter: { type: 'darken', value: 0.9 } },
+            hover: { filter: { type: 'none' } },
             active: { filter: { type: 'none' } },
         },
     }), [theme, displayColors, categories, isMobile]);
 
-    const legendLabels = Array.from({ length: STACK_COUNT }, (_, i) => `T-${STACK_COUNT - 1 - i}`);
+    // Reversed: T-0 on the left → T-4 on the right
+    const legendLabels = Array.from({ length: STACK_COUNT }, (_, i) => `T-${i}`);
+    const legendColors = [...colors].reverse();
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -224,7 +229,7 @@ export default function DongTienStackedBarChart({
                                 '&:hover': { opacity: isHidden ? 0.5 : 0.8 },
                             }}
                         >
-                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: colors[index] }} />
+                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: legendColors[index] }} />
                             <Typography
                                 color="text.secondary"
                                 sx={{
@@ -257,10 +262,7 @@ export default function DongTienStackedBarChart({
                     boxShadow: 'none !important',
                     filter: 'none !important',
                     background: 'transparent !important',
-                },
-                '& .apexcharts-xcrosshairs, & .apexcharts-ycrosshairs, & .apexcharts-xcrosshairs-fill': {
-                    display: 'none !important',
-                },
+                }
             }}>
                 <Chart
                     key={theme.palette.mode}

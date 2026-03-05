@@ -8,37 +8,36 @@ import { ApexOptions } from 'apexcharts';
 
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
-const STACK_COUNT = 5; // T-4 → T-0
-
-interface NhomCPStackedBarChartProps {
+interface PhanBoDongTienProps {
     chartHeight?: string;
     title?: string;
     categories: string[];
-    /** Raw series per category (before stacking). Each series has `data` with length = number of days. */
-    daySeriesData: { dayLabel: string; data: number[] }[];
-    unit?: 'percent' | 'number';
+    flowData: {
+        flowIn: number;
+        flowOut: number;
+        flowNeutral: number;
+    }[];
 }
 
-export default function NhomCPStackedBarChart({
+export default function PhanBoDongTien({
     chartHeight = '230px',
     title,
     categories,
-    daySeriesData,
-    unit = 'percent',
-}: NhomCPStackedBarChartProps) {
+    flowData,
+}: PhanBoDongTienProps) {
     const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
     const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
 
-    // Colors: T-4 (bottom) → T-0 (top)
-    const colors = useMemo(() => [
-        theme.palette.trend.down,    // T-4
-        theme.palette.trend.ref,     // T-3
-        theme.palette.info.main,     // T-2
-        theme.palette.trend.up,      // T-1
-        theme.palette.primary.main,  // T-0
-    ], [theme]);
+    const trendUpColor = theme.palette.trend.up;
+    const trendDownColor = theme.palette.trend.down;
+    const trendRefColor = theme.palette.trend.ref;
+
+    const baseSeries = useMemo(() => [
+        { name: 'Tiền vào', color: trendUpColor, data: flowData.map(d => d.flowIn) },
+        { name: 'Không đổi', color: trendRefColor, data: flowData.map(d => d.flowNeutral) },
+        { name: 'Tiền ra', color: trendDownColor, data: flowData.map(d => d.flowOut) },
+    ], [flowData, trendUpColor, trendRefColor, trendDownColor]);
 
     const handleLegendClick = useCallback((seriesName: string) => {
         setHiddenSeries(prev => {
@@ -52,45 +51,50 @@ export default function NhomCPStackedBarChart({
         });
     }, []);
 
-    // Keep all series but set hidden ones' data to zero — prevents full chart re-mount
     const { displaySeries, displayColors } = useMemo(() => {
         return {
-            displaySeries: daySeriesData.map(s => ({
-                name: s.dayLabel,
-                data: hiddenSeries.has(s.dayLabel) ? s.data.map(() => 0) : s.data,
+            displaySeries: baseSeries.map(s => ({
+                name: s.name,
+                data: hiddenSeries.has(s.name) ? s.data.map(() => 0) : s.data,
             })),
-            displayColors: colors,
+            displayColors: baseSeries.map(s => s.color),
         };
-    }, [daySeriesData, colors, hiddenSeries]);
+    }, [baseSeries, hiddenSeries]);
 
     const chartOptions: ApexOptions = useMemo(() => ({
         chart: {
             type: 'bar',
             stacked: true,
+            stackType: '100%',
             background: 'transparent',
             toolbar: { show: false },
             fontFamily: 'inherit',
             animations: { enabled: true, speed: 300 },
-        },
-        annotations: {
-            xaxis: [{
-                x: 0,
-                borderColor: theme.palette.text.secondary,
-                strokeDashArray: 0,
-                borderWidth: 2,
-            }],
         },
         plotOptions: {
             bar: {
                 horizontal: true,
                 barHeight: '55%',
                 borderRadius: 3,
-                borderRadiusApplication: 'end',
-                borderRadiusWhenStacked: 'last',
+                borderRadiusApplication: 'around' as const,
+                borderRadiusWhenStacked: 'all' as const,
             },
         },
         colors: displayColors,
-        dataLabels: { enabled: false },
+        dataLabels: {
+            enabled: true,
+            offsetY: 7,
+            style: {
+                colors: [theme.palette.text.secondary],
+                fontSize: getResponsiveFontSize('xs').md,
+                fontWeight: fontWeight.semibold,
+            },
+            formatter: function (val: number) {
+                if (val < 10) return '';
+                return `${val.toFixed(0)}%`;
+            },
+            dropShadow: { enabled: false },
+        },
         xaxis: {
             categories,
             tickAmount: 4,
@@ -99,7 +103,7 @@ export default function NhomCPStackedBarChart({
                     colors: theme.palette.text.secondary,
                     fontSize: getResponsiveFontSize('sm').md,
                 },
-                formatter: (val: string) => unit === 'percent' ? `${parseFloat(val).toFixed(1)}%` : `${parseFloat(val).toFixed(1)}`,
+                formatter: (val: string) => `${parseFloat(val).toFixed(0)}%`,
                 offsetY: -3.2,
             },
             axisBorder: {
@@ -111,7 +115,7 @@ export default function NhomCPStackedBarChart({
         },
         yaxis: {
             labels: {
-                show: isMobile,
+                show: isTablet,
                 offsetY: 3,
                 style: {
                     colors: theme.palette.text.secondary,
@@ -132,25 +136,24 @@ export default function NhomCPStackedBarChart({
             enabled: true,
             shared: true,
             intersect: false,
-            custom: function ({ series: seriesData, dataPointIndex, w }) {
+            custom: function ({ series: seriesData, dataPointIndex, w }: any) {
                 const categoryName = w.globals.labels[dataPointIndex] || '';
+                const total = seriesData.reduce((sum: number, s: number[]) => sum + (s[dataPointIndex] || 0), 0);
+
                 const bgColor = theme.palette.mode === 'dark' ? 'rgba(26, 26, 26, 0.9)' : 'rgba(255, 255, 255, 0.9)';
                 const textColor = theme.palette.mode === 'dark' ? '#e0e0e0' : '#333333';
 
-                const rows = seriesData.map((sd: number[], si: number) => {
-                    const value = sd[dataPointIndex];
-                    if (value == null) return '';
-                    const color = w.globals.colors[si];
-                    const name = w.globals.seriesNames[si];
-                    const formattedValue = unit === 'percent'
-                        ? `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`
-                        : `${value >= 0 ? '+' : ''}${value.toFixed(1)}`;
+                const items = w.globals.seriesNames.map((name: string, idx: number) => {
+                    const value = seriesData[idx]?.[dataPointIndex] || 0;
+                    const pct = total > 0 ? (value / total * 100).toFixed(1) : '0.0';
+                    const color = w.globals.colors[idx];
                     return `
-                        <div style="display: flex; align-items: center; gap: 6px; padding: 2px 0;">
-                            <span style="width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; background: ${color};"></span>
-                            <span style="font-size: 12px; color: ${textColor};">${name}:</span>
-                            <span style="font-weight: 600; font-size: 12px; color: ${textColor};">${formattedValue}</span>
-                        </div>`;
+                        <div style="display: flex; align-items: center; gap: 8px; padding: 3px 0;">
+                            <span style="width: 10px; height: 10px; border-radius: 50%; background: ${color}; flex-shrink: 0;"></span>
+                            <span style="flex: 1; font-size: 12px;">${name}:</span>
+                            <span style="font-weight: 600; font-size: 12px;">${pct}%</span>
+                        </div>
+                    `;
                 }).join('');
 
                 return `
@@ -158,18 +161,16 @@ export default function NhomCPStackedBarChart({
                         background: ${bgColor};
                         border: none;
                         border-radius: 6px;
-                        padding: 10px 12px;
+                        padding: 12px;
                         color: ${textColor};
-                        min-width: auto;
+                        min-width: 160px;
                         box-shadow: none !important;
                         filter: none !important;
-                        -webkit-box-shadow: none !important;
-                        -moz-box-shadow: none !important;
                     ">
-                        <div style="font-weight: 600; margin-bottom: 6px; font-size: 13px; color: ${textColor};">
+                        <div style="font-weight: 600; margin-bottom: 8px; font-size: 13px; color: ${textColor};">
                             ${categoryName}
                         </div>
-                        ${rows}
+                        ${items}
                     </div>
                 `;
             },
@@ -178,10 +179,7 @@ export default function NhomCPStackedBarChart({
             hover: { filter: { type: 'none' } },
             active: { filter: { type: 'none' } },
         },
-    }), [theme, displayColors, categories, isMobile]);
-
-    const legendLabels = [...daySeriesData].reverse().map(s => s.dayLabel);
-    const legendColors = [...colors].reverse();
+    }), [theme, displayColors, categories, isTablet]);
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -198,13 +196,14 @@ export default function NhomCPStackedBarChart({
                     {title}
                 </Typography>
             )}
+            {/* Legend */}
             <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 0, flexWrap: 'wrap', position: 'relative', zIndex: 2 }}>
-                {legendLabels.map((label, index) => {
-                    const isHidden = hiddenSeries.has(label);
+                {baseSeries.map(item => {
+                    const isHidden = hiddenSeries.has(item.name);
                     return (
                         <Box
-                            key={label}
-                            onClick={() => handleLegendClick(label)}
+                            key={item.name}
+                            onClick={() => handleLegendClick(item.name)}
                             sx={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -215,7 +214,7 @@ export default function NhomCPStackedBarChart({
                                 '&:hover': { opacity: isHidden ? 0.5 : 0.8 },
                             }}
                         >
-                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: legendColors[index % legendColors.length] }} />
+                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: item.color }} />
                             <Typography
                                 color="text.secondary"
                                 sx={{
@@ -224,7 +223,7 @@ export default function NhomCPStackedBarChart({
                                     textDecoration: isHidden ? 'line-through' : 'none',
                                 }}
                             >
-                                {label}
+                                {item.name}
                             </Typography>
                         </Box>
                     );
@@ -233,6 +232,7 @@ export default function NhomCPStackedBarChart({
             <Box sx={{
                 mt: -2,
                 width: '100%',
+                px: { lg: 2 },
                 height: chartHeight,
                 '& .apexcharts-tooltip': {
                     boxShadow: 'none !important',

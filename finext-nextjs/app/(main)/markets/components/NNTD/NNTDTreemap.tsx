@@ -97,7 +97,7 @@ const STATIC_OPTIONS: ApexOptions = {
     },
     title: { text: undefined },
     states: {
-        hover: { filter: { type: 'darken', value: 0.08 } as any },
+        hover: { filter: { type: 'darken', value: 0.09 } as any },
         active: { filter: { type: 'none' } },
     },
 };

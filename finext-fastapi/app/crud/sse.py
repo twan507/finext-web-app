@@ -173,6 +173,9 @@ async def home_today_index(ticker: Optional[str] = None, **kwargs) -> Dict[str, 
         "vsi": 1,
         "t0_score": 1,
         "t5_score": 1,
+        'breadth_in': 1,
+        'breadth_out': 1,
+        'breadth_neu': 1,
         "type": 1,
     }
     find_query = {}

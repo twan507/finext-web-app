@@ -63,7 +63,7 @@ export default function BreadthPolarChart({ series, labels, colors, chartHeight 
             style: {
                 fontSize: getResponsiveFontSize('sm').md,
                 fontWeight: String(fontWeight.semibold),
-                colors: [theme.palette.text.secondary],
+                colors: [theme.palette.text.primary],
             },
             background: {
                 enabled: false,

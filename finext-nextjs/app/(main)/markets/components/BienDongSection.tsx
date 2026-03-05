@@ -284,6 +284,7 @@ export default function BienDongSection() {
                         flowOut={flowOut}
                         flowNeutral={flowNeutral}
                         chartHeight={chartHeight}
+                        isLoading={stockData.length === 0}
                     />
                 </Box>
 

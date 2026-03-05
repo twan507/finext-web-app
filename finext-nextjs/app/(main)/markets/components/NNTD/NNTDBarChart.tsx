@@ -29,15 +29,19 @@ export default function NNTDBarChart({
     // Use ref to always have fresh seriesData in event callbacks (fixes stale closure)
     const seriesDataRef = useRef<number[]>([]);
 
-    // Aggregate net_value by date
-    const { categories, seriesData, colors } = useMemo(() => {
-        if (!data || data.length === 0) return { categories: [], seriesData: [], colors: [] };
+    // Aggregate buy_value, sell_value, net_value by date
+    const { categories, seriesData, buyData, sellData, colors } = useMemo(() => {
+        if (!data || data.length === 0) return { categories: [], seriesData: [], buyData: [], sellData: [], colors: [] };
 
-        // Group by date → sum net_value
-        const dateMap = new Map<string, number>();
+        // Group by date → sum net_value, buy_value, sell_value
+        const dateMap = new Map<string, { net: number; buy: number; sell: number }>();
         for (const r of data) {
-            const prev = dateMap.get(r.date) || 0;
-            dateMap.set(r.date, prev + (r.net_value || 0));
+            const prev = dateMap.get(r.date) || { net: 0, buy: 0, sell: 0 };
+            dateMap.set(r.date, {
+                net: prev.net + (r.net_value || 0),
+                buy: prev.buy + (r.buy_value || 0),
+                sell: prev.sell + (r.sell_value || 0),
+            });
         }
 
         // Sort by date ascending, take last N
@@ -53,14 +57,16 @@ export default function NNTDBarChart({
         });
 
         // Values are already in tỷ (billions VND)
-        const values = entries.map(([, val]) => parseFloat(val.toFixed(2)));
+        const values = entries.map(([, agg]) => parseFloat(agg.net.toFixed(2)));
+        const buys = entries.map(([, agg]) => parseFloat(agg.buy.toFixed(2)));
+        const sells = entries.map(([, agg]) => parseFloat(agg.sell.toFixed(2)));
 
         // Color per bar: up if positive, down if negative
         const barColors = values.map((v) =>
             v >= 0 ? theme.palette.trend.up : theme.palette.trend.down
         );
 
-        return { categories: cats, seriesData: values, colors: barColors };
+        return { categories: cats, seriesData: values, buyData: buys, sellData: sells, colors: barColors };
     }, [data, theme, barCount]);
 
     // Keep ref in sync
@@ -143,6 +149,7 @@ export default function NNTDBarChart({
                 color: theme.palette.divider,
             },
             axisTicks: { show: false },
+            crosshairs: { show: false },
         },
         yaxis: {
             tickAmount: 4,
@@ -165,30 +172,48 @@ export default function NNTDBarChart({
         legend: { show: false },
         tooltip: {
             enabled: true,
-            custom: function ({ series: s, seriesIndex, dataPointIndex, w }: any) {
-                const value = s[seriesIndex]?.[dataPointIndex];
-                if (value == null) return '';
+            shared: true,
+            intersect: false,
+            custom: function ({ series: s, dataPointIndex, w }: any) {
+                const netVal = s[0]?.[dataPointIndex];
+                if (netVal == null) return '';
                 const cat = w.globals.labels[dataPointIndex] || '';
                 const color = w.globals.colors[dataPointIndex];
+                const buyVal = buyData[dataPointIndex] ?? 0;
+                const sellVal = sellData[dataPointIndex] ?? 0;
 
                 const bgColor = theme.palette.mode === 'dark' ? 'rgba(26,26,26,0.95)' : 'rgba(255,255,255,0.95)';
                 const textColor = theme.palette.mode === 'dark' ? '#e0e0e0' : '#333';
+                const upColor = theme.palette.trend.up;
+                const downColor = theme.palette.trend.down;
 
-                return `<div style="background:${bgColor};border:none;border-radius:6px;padding:12px;color:${textColor};min-width:130px;box-shadow:none!important;">
-                    <div style="font-weight:600;font-size:13px;margin-bottom:6px;">${cat}</div>
+                const fmtVal = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(2)} tỷ`;
+
+                return `<div style="background:${bgColor};border:none;border-radius:6px;padding:12px 14px;color:${textColor};min-width:160px;box-shadow:none!important;">
+                    <div style="font-weight:600;font-size:13px;margin-bottom:8px;">${cat}</div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                        <span style="width:10px;height:10px;border-radius:50%;background:${upColor};display:inline-block;"></span>
+                        <span style="font-size:12px;">GT Mua:</span>
+                        <span style="font-weight:600;font-size:12px;color:${upColor};">${buyVal.toFixed(2)} tỷ</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                        <span style="width:10px;height:10px;border-radius:50%;background:${downColor};display:inline-block;"></span>
+                        <span style="font-size:12px;">GT Bán:</span>
+                        <span style="font-weight:600;font-size:12px;color:${downColor};">${sellVal.toFixed(2)} tỷ</span>
+                    </div>
                     <div style="display:flex;align-items:center;gap:8px;">
                         <span style="width:10px;height:10px;border-radius:50%;background:${color};display:inline-block;"></span>
-                        <span style="font-size:12px;">GT ròng:</span>
-                        <span style="font-weight:600;font-size:12px;">${value >= 0 ? '+' : ''}${value.toLocaleString('en-US')} tỷ</span>
+                        <span style="font-size:12px;">GT Ròng:</span>
+                        <span style="font-weight:600;font-size:12px;color:${color};">${fmtVal(netVal)}</span>
                     </div>
                 </div>`;
             },
         },
         states: {
-            hover: { filter: { type: 'darken', value: 0.08 } as any },
+            hover: { filter: { type: 'none' } },
             active: { filter: { type: 'none' } },
         },
-    }), [theme, categories, colors, adjustNegativeLabels]);
+    }), [theme, categories, colors, buyData, sellData, adjustNegativeLabels]);
 
     const series = useMemo(() => [{ name: 'GT NN ròng', data: seriesData }], [seriesData]);
 

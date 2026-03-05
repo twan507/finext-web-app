@@ -42,7 +42,7 @@ export default function MarketVolatility({ stockData = [], foreignData = [], isL
     // Skeleton components for loading state
     const renderTableSkeleton = (title: string) => (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <Skeleton variant="text" width={180} height={28} sx={{ mb: 1 }} />
+            <Skeleton variant="text" width={180} height={28} sx={{ mb: 2 }} />
             <Box sx={{ flex: 1, overflow: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
@@ -131,77 +131,95 @@ export default function MarketVolatility({ stockData = [], foreignData = [], isL
     };
 
     // Helper to render slide content (data only, no Card wrapper)
-    const renderStockSlide = (title: string, stocks: StockData[], color: string) => (
-        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('lg'), fontWeight: fontWeight.semibold, mb: 1, textTransform: 'uppercase' }}>
-                {title}
-            </Typography>
+    const FIXED_ROW_COUNT = 5;
 
-            {/* Table Layout */}
-            <Box sx={{ flex: 1, overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr>
-                            <th style={{ textAlign: 'left', padding: '4px 0', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Mã cổ phiếu</th>
-                            <th style={{ textAlign: 'center', padding: '4px 15px', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Giá</th>
-                            <th style={{ textAlign: 'center', padding: '4px 10px', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Biến động</th>
-                            <th style={{ textAlign: 'center', padding: '4px 0px', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Dòng tiền</th>
-                            <th style={{ textAlign: 'right', padding: '4px 0', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Thanh khoản</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {stocks.map((stock, index) => {
-                            const stockColor = getPriceColor(stock.pct_change, stock.exchange, theme);
-                            return (
-                                <tr key={`${stock.ticker}-${index}`}>
-                                    <td style={{ padding: '8px 0', border: 'none' }}>
-                                        <Link href={`/stocks/${stock.ticker}`} style={{ textDecoration: 'none' }}>
-                                            <Typography
-                                                sx={{
-                                                    fontSize: getResponsiveFontSize('sm'),
-                                                    fontWeight: fontWeight.semibold,
-                                                    color: 'text.primary',
-                                                    '&:hover': {
-                                                        color: 'primary.main',
-                                                        cursor: 'pointer'
-                                                    }
-                                                }}
-                                            >
-                                                {stock.ticker}
+    const renderStockSlide = (title: string, stocks: StockData[], color: string) => {
+        const emptyRowCount = Math.max(0, FIXED_ROW_COUNT - stocks.length);
+        return (
+            <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('lg'), fontWeight: fontWeight.semibold, mb: 1, textTransform: 'uppercase' }}>
+                    {title}
+                </Typography>
+
+                {/* Table Layout */}
+                <Box sx={{ flex: 1, overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr>
+                                <th style={{ textAlign: 'left', padding: '4px 0', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Mã cổ phiếu</th>
+                                <th style={{ textAlign: 'center', padding: '4px 15px', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Giá</th>
+                                <th style={{ textAlign: 'center', padding: '4px 10px', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Biến động</th>
+                                <th style={{ textAlign: 'center', padding: '4px 0px', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Dòng tiền</th>
+                                <th style={{ textAlign: 'right', padding: '4px 0', color: theme.palette.text.secondary, fontWeight: fontWeight.medium, border: 'none', fontSize: '0.8125rem' }}>Thanh khoản</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {stocks.map((stock, index) => {
+                                const stockColor = getPriceColor(stock.pct_change, stock.exchange, theme);
+                                return (
+                                    <tr key={`${stock.ticker}-${index}`}>
+                                        <td style={{ padding: '8px 0', border: 'none' }}>
+                                            <Link href={`/stocks/${stock.ticker}`} style={{ textDecoration: 'none' }}>
+                                                <Typography
+                                                    sx={{
+                                                        fontSize: getResponsiveFontSize('sm'),
+                                                        fontWeight: fontWeight.semibold,
+                                                        color: 'text.primary',
+                                                        '&:hover': {
+                                                            color: 'primary.main',
+                                                            cursor: 'pointer'
+                                                        }
+                                                    }}
+                                                >
+                                                    {stock.ticker}
+                                                </Typography>
+                                            </Link>
+                                        </td>
+                                        <td style={{ padding: '8px 0', textAlign: 'center', border: 'none' }}>
+                                            <Typography color="text.primary" sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium }}>
+                                                {stock.close.toFixed(1)}
                                             </Typography>
-                                        </Link>
+                                        </td>
+                                        <td style={{ padding: '8px 0', textAlign: 'center', border: 'none' }}>
+                                            <Typography color={stockColor} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                                                {(stock.pct_change * 100).toFixed(2)}%
+                                            </Typography>
+                                        </td>
+                                        <td style={{ padding: '8px 0', textAlign: 'center', border: 'none' }}>
+                                            <Typography color={getFlowColor(stock.t0_score, theme)} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                                                {stock.t0_score > 0 ? '+' : ''}{(stock.t0_score).toFixed(1)}
+                                            </Typography>
+                                        </td>
+                                        <td style={{ padding: '8px 0', textAlign: 'right', border: 'none' }}>
+                                            <Typography color={stock.vsi ? getVsiColor(stock.vsi, theme) : 'text.secondary'} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium }}>
+                                                {stock.vsi ? `${(stock.vsi * 100).toFixed(2)}%` : '-'}
+                                            </Typography>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                            {/* Placeholder rows to always maintain 5 rows */}
+                            {Array.from({ length: emptyRowCount }).map((_, i) => (
+                                <tr key={`empty-${i}`}>
+                                    <td style={{ padding: '8px 0', border: 'none' }}>
+                                        <Typography sx={{ fontSize: getResponsiveFontSize('sm'), visibility: 'hidden' }}>&nbsp;</Typography>
                                     </td>
-                                    <td style={{ padding: '8px 0', textAlign: 'center', border: 'none' }}>
-                                        <Typography color="text.primary" sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium }}>
-                                            {stock.close.toFixed(1)}
-                                        </Typography>
-                                    </td>
-                                    <td style={{ padding: '8px 0', textAlign: 'center', border: 'none' }}>
-                                        <Typography color={stockColor} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                                            {(stock.pct_change * 100).toFixed(2)}%
-                                        </Typography>
-                                    </td>
-                                    <td style={{ padding: '8px 0', textAlign: 'center', border: 'none' }}>
-                                        <Typography color={getFlowColor(stock.t0_score, theme)} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                                            {stock.t0_score > 0 ? '+' : ''}{(stock.t0_score).toFixed(1)}
-                                        </Typography>
-                                    </td>
-                                    <td style={{ padding: '8px 0', textAlign: 'right', border: 'none' }}>
-                                        <Typography color={stock.vsi ? getVsiColor(stock.vsi, theme) : 'text.secondary'} sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium }}>
-                                            {stock.vsi ? `${(stock.vsi * 100).toFixed(2)}%` : '-'}
-                                        </Typography>
-                                    </td>
+                                    <td style={{ padding: '8px 0', border: 'none' }}>&nbsp;</td>
+                                    <td style={{ padding: '8px 0', border: 'none' }}>&nbsp;</td>
+                                    <td style={{ padding: '8px 0', border: 'none' }}>&nbsp;</td>
+                                    <td style={{ padding: '8px 0', border: 'none' }}>&nbsp;</td>
                                 </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
+                            ))}
+                        </tbody>
+                    </table>
+                </Box>
             </Box>
-        </Box>
-    );
+        );
+    };
 
     const renderNNSlide = (title: string, stocks: NNStockData[], color: string) => {
-        const maxVal = Math.max(...stocks.map(s => Math.abs(s.net_value)));
+        const maxVal = stocks.length > 0 ? Math.max(...stocks.map(s => Math.abs(s.net_value))) : 1;
+        const emptyRowCount = Math.max(0, FIXED_ROW_COUNT - stocks.length);
 
         return (
             <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -253,6 +271,16 @@ export default function MarketVolatility({ stockData = [], foreignData = [], isL
                                             {stock.net_value.toFixed(2)}T
                                         </Typography>
                                     </td>
+                                </tr>
+                            ))}
+                            {/* Placeholder rows to always maintain 5 rows */}
+                            {Array.from({ length: emptyRowCount }).map((_, i) => (
+                                <tr key={`empty-nn-${i}`}>
+                                    <td style={{ padding: '8px 0', border: 'none' }}>
+                                        <Typography sx={{ fontSize: getResponsiveFontSize('sm'), visibility: 'hidden' }}>&nbsp;</Typography>
+                                    </td>
+                                    <td style={{ padding: '8px 0', border: 'none' }}>&nbsp;</td>
+                                    <td style={{ padding: '8px 0', border: 'none' }}>&nbsp;</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -359,6 +387,7 @@ export default function MarketVolatility({ stockData = [], foreignData = [], isL
                     flowOut={flowOut}
                     flowNeutral={flowNeutral}
                     chartHeight={chartHeight}
+                    isLoading={isLoading}
                 />
             </Box>
         }

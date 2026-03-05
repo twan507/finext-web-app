@@ -5,7 +5,7 @@ import { Box, useTheme, Skeleton } from '@mui/material';
 import dynamic from 'next/dynamic';
 import { ApexOptions } from 'apexcharts';
 import type { StockData } from '../../../components/marketSection/MarketVolatility';
-import { fontWeight } from 'theme/tokens';
+import { fontWeight, trendColors } from 'theme/tokens';
 
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
@@ -34,13 +34,31 @@ const HEATMAP_COLORS = [
     '#20b927', // 10: trend.up — xanh đậm (FIXED)
 ];
 
+// Ceil (trần) & Floor (sàn) fixed colors — matching theme trendColors
+const CEIL_COLOR = trendColors.ceil.light;
+const FLOOR_COLOR = trendColors.floor.dark;
+
+/** Get ceil/floor limit (as decimal) based on exchange */
+function getExchangeLimit(exchange: string | undefined): number {
+    const ex = (exchange || 'HSX').toUpperCase();
+    if (ex === 'HNX' || ex.includes('HNX')) return 0.09;
+    if (ex === 'UPCOM' || ex.includes('UPCOM')) return 0.135;
+    return 0.065; // HSX default
+}
+
 /**
  * Pick color from 11-stop palette, per-industry normalized.
  * Positive and negative sides are normalized INDEPENDENTLY.
+ * Checks ceil/floor limits by exchange first.
  */
-function pickColor(pctChange: number, maxNeg: number, maxPos: number): string {
+function pickColor(pctChange: number, maxNeg: number, maxPos: number, exchange?: string): string {
     const MID = 5;
     if (Math.abs(pctChange) < 0.0003) return HEATMAP_COLORS[MID];
+
+    // Check ceil/floor based on exchange
+    const limit = getExchangeLimit(exchange);
+    if (pctChange >= limit) return CEIL_COLOR;
+    if (pctChange <= -limit) return FLOOR_COLOR;
 
     if (pctChange < 0) {
         const t = maxNeg < 0.0001 ? 0 : Math.min(Math.abs(pctChange) / maxNeg, 1);
@@ -101,7 +119,7 @@ const STATIC_OPTIONS: ApexOptions = {
     },
     title: { text: undefined },
     states: {
-        hover: { filter: { type: 'darken', value: 0.08 } as any },
+        hover: { filter: { type: 'darken', value: 0.09 } as any },
         active: { filter: { type: 'none' } },
     },
 };
@@ -137,12 +155,7 @@ const TreemapChart = memo(function TreemapChart({
                             ? `${pctChange >= 0 ? '+' : ''}${(pctChange * 100).toFixed(2)}%`
                             : '—';
 
-                    const valueStr =
-                        tradingValue >= 1e9
-                            ? `${(tradingValue / 1e9).toFixed(1)} tỷ`
-                            : tradingValue >= 1e6
-                                ? `${(tradingValue / 1e6).toFixed(0)} triệu`
-                                : tradingValue.toLocaleString('vi-VN');
+                    const valueStr = `${(tradingValue).toFixed(2)} tỷ`;
 
                     const bgColor = isDark ? 'rgba(26,26,26,0.95)' : 'rgba(255,255,255,0.95)';
                     const textColor = isDark ? '#e0e0e0' : '#333';
@@ -216,7 +229,7 @@ export default function StockTreemap({ data, chartHeight = '550px' }: StockTreem
                     data: stocks.map((stock) => ({
                         x: stock.ticker,
                         y: Math.max(stock.trading_value || 0, 1),
-                        fillColor: pickColor(stock.pct_change, maxNeg, maxPos),
+                        fillColor: pickColor(stock.pct_change, maxNeg, maxPos, stock.exchange),
                         pctChange: stock.pct_change,
                     })),
                 };

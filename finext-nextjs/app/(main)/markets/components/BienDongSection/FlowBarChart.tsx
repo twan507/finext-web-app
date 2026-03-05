@@ -12,9 +12,10 @@ interface FlowBarChartProps {
     flowOut: number;
     flowNeutral: number;
     chartHeight: string;
+    isLoading?: boolean;
 }
 
-export default function FlowBarChart({ flowIn, flowOut, flowNeutral, chartHeight }: FlowBarChartProps) {
+export default function FlowBarChart({ flowIn, flowOut, flowNeutral, chartHeight, isLoading = false }: FlowBarChartProps) {
     const theme = useTheme();
 
     const colors = [theme.palette.trend.up, theme.palette.trend.down, theme.palette.trend.ref];
@@ -103,7 +104,7 @@ export default function FlowBarChart({ flowIn, flowOut, flowNeutral, chartHeight
         data: [flowIn, flowOut, flowNeutral],
     }];
 
-    const isLoading = flowIn === 0 && flowOut === 0 && flowNeutral === 0;
+
 
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>

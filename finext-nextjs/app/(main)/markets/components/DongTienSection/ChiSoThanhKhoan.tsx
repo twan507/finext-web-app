@@ -176,21 +176,34 @@ export default function NhomCPBarChart2({
         legend: { show: false },
         tooltip: {
             enabled: true,
-            shared: false,
-            intersect: true,
-            custom: function ({ series: seriesData, seriesIndex, dataPointIndex, w }) {
+            shared: true,
+            intersect: false,
+            custom: function ({ series: seriesData, dataPointIndex, w }) {
                 const categoryName = w.globals.labels[dataPointIndex] || '';
-                const value = seriesData[seriesIndex]?.[dataPointIndex];
-                if (value == null) return '';
-
-                const color = w.globals.colors[seriesIndex];
-                const name = w.globals.seriesNames[seriesIndex];
-                const formattedValue = unit === 'percent'
-                    ? `${value.toFixed(1)}%`
-                    : `${Math.round(value)}`;
-
                 const bgColor = theme.palette.mode === 'dark' ? 'rgba(26, 26, 26, 0.9)' : 'rgba(255, 255, 255, 0.9)';
                 const textColor = theme.palette.mode === 'dark' ? '#e0e0e0' : '#333333';
+
+                const rows = seriesData.map((sd: number[], si: number) => {
+                    const value = sd[dataPointIndex];
+                    if (value == null) return '';
+
+                    const isDistributed = w.config.plotOptions.bar?.distributed;
+                    const color = isDistributed ? w.globals.colors[dataPointIndex] : w.globals.colors[si];
+                    const name = w.globals.seriesNames[si];
+                    const formattedValue = unit === 'percent'
+                        ? `${value.toFixed(1)}%`
+                        : `${Math.round(value)}`;
+
+                    return `
+                        <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0;">
+                            <span style="width: 10px; height: 10px; border-radius: 50%; background: ${color};"></span>
+                            <span style="flex: 1; font-size: 12px;">${name}:</span>
+                            <span style="font-weight: 600; font-size: 12px;">${formattedValue}</span>
+                        </div>
+                    `;
+                }).join('');
+
+                if (!rows) return '';
 
                 return `
                     <div style="
@@ -208,17 +221,13 @@ export default function NhomCPBarChart2({
                         <div style="font-weight: 600; margin-bottom: 8px; font-size: 13px; color: ${textColor};">
                             ${categoryName}
                         </div>
-                        <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0;">
-                            <span style="width: 10px; height: 10px; border-radius: 50%; background: ${color};"></span>
-                            <span style="flex: 1; font-size: 12px;">${name}:</span>
-                            <span style="font-weight: 600; font-size: 12px;">${formattedValue}</span>
-                        </div>
+                        ${rows}
                     </div>
                 `;
             },
         },
         states: {
-            hover: { filter: { type: 'darken', value: 0.9 } },
+            hover: { filter: { type: 'none' } },
             active: { filter: { type: 'none' } },
         },
     }), [theme, displayBarColors, categories, unit, isMobile]);
@@ -272,9 +281,7 @@ export default function NhomCPBarChart2({
                     filter: 'none !important',
                     background: 'transparent !important',
                 },
-                '& .apexcharts-xcrosshairs, & .apexcharts-ycrosshairs, & .apexcharts-xcrosshairs-fill': {
-                    display: 'none !important',
-                },
+
             }}>
                 <Chart
                     key={theme.palette.mode}

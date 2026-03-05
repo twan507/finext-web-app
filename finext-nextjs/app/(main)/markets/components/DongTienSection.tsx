@@ -12,7 +12,7 @@ import DongTienLineChart from './DongTienSection/TuongQuanLineChart';
 import DongTienTrongPhien from './DongTienSection/DongTienTrongPhien';
 import ChiSoThanhKhoan from './DongTienSection/ChiSoThanhKhoan';
 import DongTienTrongTuan from './DongTienSection/DongTienTrongTuan';
-import DienBienDongTien from './DongTienSection/DienBienDongTien';
+import PhanBoDongTien from './DongTienSection/PhanBoDongTien';
 
 type TimeRange = '1W' | '1M' | '3M' | '6M' | '1Y';
 
@@ -230,54 +230,19 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
         });
     }, [categoryTickers, categoryHistQueries, todayAllData]);
 
-    // ========== Chart 4: Diễn biến dòng tiền — t5_score last 20 sessions ==========
-    const categoryHistQueries20 = useQueries({
-        queries: categoryTickers.map(ticker => ({
-            queryKey: ['markets', 'hist_index', ticker, 20],
-            queryFn: async () => {
-                const response = await apiClient<RawMarketData[]>({
-                    url: '/api/v1/sse/rest/home_hist_index',
-                    method: 'GET',
-                    queryParams: { ticker, limit: 20 },
-                    requireAuth: false,
-                });
-                return response.data || [];
-            },
-            staleTime: 5 * 60 * 1000,
-            refetchOnWindowFocus: false,
-        })),
-    });
-
-    const { nhomCpLineDates, nhomCpLineSeries } = useMemo(() => {
-        const LINE_SESSIONS = 20;
-
-        // Find the ticker with the most data to use as reference for dates
-        let refMerged: RawMarketData[] = [];
-        categoryTickers.forEach((ticker, idx) => {
-            const hist = categoryHistQueries20[idx]?.data || [];
-            const today = todayAllData[ticker] || [];
-            const merged = mergeData(hist, today).slice(-LINE_SESSIONS);
-            if (merged.length > refMerged.length) refMerged = merged;
-        });
-
-        const dateLabels = refMerged.map(d => {
-            const date = new Date(d.date);
-            const dd = date.getDate().toString().padStart(2, '0');
-            const mm = (date.getMonth() + 1).toString().padStart(2, '0');
-            return `${dd}/${mm}`;
-        });
-
-        const series = categoryTickers.map((ticker, idx) => {
-            const hist = categoryHistQueries20[idx]?.data || [];
-            const today = todayAllData[ticker] || [];
-            const merged = mergeData(hist, today).slice(-LINE_SESSIONS);
-            const name = (merged.length > 0 && merged[0].ticker_name) ? merged[0].ticker_name : ticker;
-            const data = merged.map(d => parseFloat(((d as any).t5_score ?? 0).toFixed(2)));
-            return { name, data };
-        });
-
-        return { nhomCpLineDates: dateLabels, nhomCpLineSeries: series };
-    }, [categoryTickers, categoryHistQueries20, todayAllData]);
+    // ========== Chart 4: Phân bổ dòng tiền — breadth_in, breadth_out, breadth_neu ==========
+    const nhomCpFlowData = useMemo(() =>
+        categoryTickers.map(t => {
+            const r = todayAllData[t] || [];
+            const latest = r.length > 0 ? r[r.length - 1] : null;
+            return {
+                flowIn: (latest as any)?.breadth_in ?? 0,
+                flowOut: (latest as any)?.breadth_out ?? 0,
+                flowNeutral: (latest as any)?.breadth_neu ?? 0,
+            };
+        }),
+        [categoryTickers, todayAllData],
+    );
 
     // ========== NHÓM VỐN HOÁ: chart 1 & 2 from todayAllData ==========
     const mcTickers = useMemo(() => {
@@ -352,53 +317,19 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
         });
     }, [mcTickers, mcHistQueries, todayAllData]);
 
-    // ========== MC Chart 4: Diễn biến dòng tiền — t5_score last 20 sessions ==========
-    const mcHistQueries20 = useQueries({
-        queries: mcTickers.map(ticker => ({
-            queryKey: ['markets', 'hist_index_mc', ticker, 20],
-            queryFn: async () => {
-                const response = await apiClient<RawMarketData[]>({
-                    url: '/api/v1/sse/rest/home_hist_index',
-                    method: 'GET',
-                    queryParams: { ticker, limit: 20 },
-                    requireAuth: false,
-                });
-                return response.data || [];
-            },
-            staleTime: 5 * 60 * 1000,
-            refetchOnWindowFocus: false,
-        })),
-    });
-
-    const { mcLineDates, mcLineSeries } = useMemo(() => {
-        const LINE_SESSIONS = 20;
-
-        let refMerged: RawMarketData[] = [];
-        mcTickers.forEach((ticker, idx) => {
-            const hist = mcHistQueries20[idx]?.data || [];
-            const today = todayAllData[ticker] || [];
-            const merged = mergeData(hist, today).slice(-LINE_SESSIONS);
-            if (merged.length > refMerged.length) refMerged = merged;
-        });
-
-        const dateLabels = refMerged.map(d => {
-            const date = new Date(d.date);
-            const dd = date.getDate().toString().padStart(2, '0');
-            const mm = (date.getMonth() + 1).toString().padStart(2, '0');
-            return `${dd}/${mm}`;
-        });
-
-        const series = mcTickers.map((ticker, idx) => {
-            const hist = mcHistQueries20[idx]?.data || [];
-            const today = todayAllData[ticker] || [];
-            const merged = mergeData(hist, today).slice(-LINE_SESSIONS);
-            const name = (merged.length > 0 && merged[0].ticker_name) ? merged[0].ticker_name : ticker;
-            const data = merged.map(d => parseFloat(((d as any).t5_score ?? 0).toFixed(2)));
-            return { name, data };
-        });
-
-        return { mcLineDates: dateLabels, mcLineSeries: series };
-    }, [mcTickers, mcHistQueries20, todayAllData]);
+    // ========== MC Chart 4: Phân bổ dòng tiền — breadth_in, breadth_out, breadth_neu ==========
+    const mcFlowData = useMemo(() =>
+        mcTickers.map(t => {
+            const r = todayAllData[t] || [];
+            const latest = r.length > 0 ? r[r.length - 1] : null;
+            return {
+                flowIn: (latest as any)?.breadth_in ?? 0,
+                flowOut: (latest as any)?.breadth_out ?? 0,
+                flowNeutral: (latest as any)?.breadth_neu ?? 0,
+            };
+        }),
+        [mcTickers, todayAllData],
+    );
 
     return (
         <Box sx={{ py: 3 }}>
@@ -467,7 +398,7 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
                     gridTemplateColumns: {
                         xs: '1fr',                    // Mobile (< 768px): 1 cột
                         md: '1fr 1fr',                // Tablet (768px – 1199px): 2×2
-                        lg: '25% 15% 25% 35%',       // Desktop (≥ 1200px): 4 cột
+                        lg: '30% 20% 20% 30%',       // Desktop (≥ 1200px): 4 cột
                     },
                     gap: 2,
                 }}
@@ -480,7 +411,7 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
                         unit="number"
                     />
                 </Box>
-                <Box sx={{ minWidth: 0, ...(!isTablet && { mr: 2 }) }}>
+                <Box sx={{ minWidth: 0 }}>
                     <ChiSoThanhKhoan
                         title="Chỉ số thanh khoản"
                         categories={nhomCpCategories}
@@ -488,19 +419,18 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
                         unit="percent"
                     />
                 </Box>
-                <Box sx={{ minWidth: 0, ...(!isTablet && { mr: 2 }) }}>
+                <Box sx={{ minWidth: 0, ...(!isTablet && { ml: -2 }) }}>
+                    <PhanBoDongTien
+                        title="Phân bổ dòng tiền"
+                        categories={nhomCpCategories}
+                        flowData={nhomCpFlowData}
+                    />
+                </Box>
+                <Box sx={{ minWidth: 0 }}>
                     <DongTienTrongTuan
                         title="Dòng tiền trong tuần"
                         categories={nhomCpCategories}
                         daySeriesData={nhomCpStackedData}
-                        unit="number"
-                    />
-                </Box>
-                <Box sx={{ minWidth: 0, ...(!isTablet && { mr: 6 }) }}>
-                    <DienBienDongTien
-                        title="Diễn biến dòng tiền"
-                        dates={nhomCpLineDates}
-                        series={nhomCpLineSeries}
                         unit="number"
                     />
                 </Box>
@@ -525,7 +455,7 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
                     gridTemplateColumns: {
                         xs: '1fr',                    // Mobile (<768px): 1 cột
                         md: '1fr 1fr',                // Tablet (768px – 1199px): 2×2
-                        lg: '25% 15% 25% 35%',       // Desktop (≥ 1200px): 4 cột
+                        lg: '30% 20% 20% 30%',       // Desktop (≥ 1200px): 4 cột
                     },
                     gap: 2,
                 }}
@@ -538,7 +468,7 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
                         unit="number"
                     />
                 </Box>
-                <Box sx={{ minWidth: 0, ...(!isTablet && { mr: 2 }) }}>
+                <Box sx={{ minWidth: 0 }}>
                     <ChiSoThanhKhoan
                         title="Chỉ số thanh khoản"
                         categories={mcCategories}
@@ -546,19 +476,18 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
                         unit="percent"
                     />
                 </Box>
-                <Box sx={{ minWidth: 0, ...(!isTablet && { mr: 2 }) }}>
+                <Box sx={{ minWidth: 0, ...(!isTablet && { ml: -2 }) }}>
+                    <PhanBoDongTien
+                        title="Phân bổ dòng tiền"
+                        categories={mcCategories}
+                        flowData={mcFlowData}
+                    />
+                </Box>
+                <Box sx={{ minWidth: 0 }}>
                     <DongTienTrongTuan
                         title="Dòng tiền trong tuần"
                         categories={mcCategories}
                         daySeriesData={mcStackedData}
-                        unit="number"
-                    />
-                </Box>
-                <Box sx={{ minWidth: 0, ...(!isTablet && { mr: 6 }) }}>
-                    <DienBienDongTien
-                        title="Diễn biến dòng tiền"
-                        dates={mcLineDates}
-                        series={mcLineSeries}
                         unit="number"
                     />
                 </Box>

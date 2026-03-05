@@ -19,7 +19,7 @@ export const getPriceColor = (pctChange: number, exchange: string | undefined, t
     if (ex === 'HNX' || ex.includes('HNX')) {
         limit = 9;
     } else if (ex === 'UPCOM' || ex.includes('UPCOM')) {
-        limit = 14;
+        limit = 13.5;
     }
 
     // Check ceil/floor first
