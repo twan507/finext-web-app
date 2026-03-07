@@ -264,13 +264,14 @@ export default function NNTDBarChart({
                                 ))}
                             </Box>
                             {/* Bars */}
-                            <Box sx={{ display: 'flex', flex: 1, alignItems: 'flex-end', gap: 1, pb: 1 }}>
+                            <Box sx={{ display: 'flex', flex: 1, alignItems: 'flex-end', gap: 1, pb: 1, justifyContent: 'space-around' }}>
                                 {[35, 70, 50, 80, 40, 65, 55, 75, 45, 60].slice(0, barCount).map((h, i) => (
                                     <Skeleton
                                         key={i}
                                         variant="rectangular"
                                         sx={{
                                             flex: 1,
+                                            maxWidth: `${Math.floor(50 / barCount)}%`,
                                             height: `${h}%`,
                                             borderRadius: '3px 3px 0 0',
                                         }}

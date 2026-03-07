@@ -46,27 +46,34 @@ function getExchangeLimit(exchange: string | undefined): number {
     return 0.065; // HSX default
 }
 
+// Fixed global range: ±5% — shared across ALL industries
+// index 0 = -6%, index 5 = 0%, index 10 = +6%
+const FIXED_RANGE = 0.06;
+
 /**
- * Pick color from 11-stop palette, per-industry normalized.
- * Positive and negative sides are normalized INDEPENDENTLY.
- * Checks ceil/floor limits by exchange first.
+ * Pick color from 11-stop palette using a FIXED global range of ±5%.
+ * index 0 → -5%, index 5 → 0%, index 10 → +5%.
+ * Values beyond ±5% are clamped to index 0 or index 10.
+ * Ceil/floor by exchange takes priority (CEIL_COLOR / FLOOR_COLOR).
  */
-function pickColor(pctChange: number, maxNeg: number, maxPos: number, exchange?: string): string {
+function pickColor(pctChange: number, exchange?: string): string {
     const MID = 5;
     if (Math.abs(pctChange) < 0.0003) return HEATMAP_COLORS[MID];
 
-    // Check ceil/floor based on exchange
+    // Check ceil/floor based on exchange — highest priority
     const limit = getExchangeLimit(exchange);
     if (pctChange >= limit) return CEIL_COLOR;
     if (pctChange <= -limit) return FLOOR_COLOR;
 
     if (pctChange < 0) {
-        const t = maxNeg < 0.0001 ? 0 : Math.min(Math.abs(pctChange) / maxNeg, 1);
-        const index = MID - Math.round(t * MID);
+        // t=0 → index 4 (nhạt); t=1 → index 0 (đỏ đậm = -5%)
+        const t = Math.min(Math.abs(pctChange) / FIXED_RANGE, 1);
+        const index = MID - Math.round(t * MID); // maps 4..0
         return HEATMAP_COLORS[Math.max(0, index)];
     } else {
-        const t = maxPos < 0.0001 ? 0 : Math.min(pctChange / maxPos, 1);
-        const index = MID + Math.round(t * MID);
+        // t=0 → index 6 (nhạt); t=1 → index 10 (xanh đậm = +5%)
+        const t = Math.min(pctChange / FIXED_RANGE, 1);
+        const index = MID + Math.round(t * MID); // maps 6..10
         return HEATMAP_COLORS[Math.min(10, index)];
     }
 }
@@ -214,22 +221,14 @@ export default function StockTreemap({ data, chartHeight = '550px' }: StockTreem
             .map(([name, stocks]) => {
                 const totalValue = stocks.reduce((s, st) => s + (st.trading_value || 0), 0);
 
-                // Per-industry: separate max for positive and negative sides
-                let maxNeg = 0.001;
-                let maxPos = 0.001;
-                for (const s of stocks) {
-                    const pct = s.pct_change || 0;
-                    if (pct < 0 && Math.abs(pct) > maxNeg) maxNeg = Math.abs(pct);
-                    if (pct > 0 && pct > maxPos) maxPos = pct;
-                }
-
                 return {
                     name,
                     totalValue,
                     data: stocks.map((stock) => ({
                         x: stock.ticker,
                         y: Math.max(stock.trading_value || 0, 1),
-                        fillColor: pickColor(stock.pct_change, maxNeg, maxPos, stock.exchange),
+                        // Fixed global range ±6.5% — same scale for all industries
+                        fillColor: pickColor(stock.pct_change, stock.exchange),
                         pctChange: stock.pct_change,
                     })),
                 };

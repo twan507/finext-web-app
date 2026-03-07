@@ -126,7 +126,7 @@ export default function FlowBarChart({ flowIn, flowOut, flowNeutral, chartHeight
                                             key={i}
                                             variant="rectangular"
                                             sx={{
-                                                width: '22%',
+                                                width: '12%',
                                                 height: `${h}%`,
                                                 borderRadius: '4px 4px 0 0',
                                             }}
