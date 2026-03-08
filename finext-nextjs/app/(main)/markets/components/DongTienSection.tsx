@@ -398,7 +398,7 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
                     gridTemplateColumns: {
                         xs: '1fr',                    // Mobile (< 768px): 1 cột
                         md: '1fr 1fr',                // Tablet (768px – 1199px): 2×2
-                        lg: '30% 20% 20% 30%',       // Desktop (≥ 1200px): 4 cột
+                        lg: '3fr 2fr 2fr 3fr',       // Desktop (≥ 1200px): 4 cột
                     },
                     gap: 2,
                 }}
@@ -455,7 +455,7 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
                     gridTemplateColumns: {
                         xs: '1fr',                    // Mobile (<768px): 1 cột
                         md: '1fr 1fr',                // Tablet (768px – 1199px): 2×2
-                        lg: '30% 20% 20% 30%',       // Desktop (≥ 1200px): 4 cột
+                        lg: '3fr 2fr 2fr 3fr',       // Desktop (≥ 1200px): 4 cột
                     },
                     gap: 2,
                 }}

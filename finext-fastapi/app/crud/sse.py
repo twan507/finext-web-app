@@ -352,7 +352,7 @@ async def home_nn_stock(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any
     return nntd_df.to_dict(orient="records")
 
 
-async def nntd_stock(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+async def nntd_stock(ticker: Optional[str] = None, nntd_type: Optional[str] = None, **kwargs) -> Dict[str, Any]:
     """
     Lấy dữ liệu giao dịch NNTD (Nhà nước/Tự doanh) theo ticker.
     Database: stock_db. Collection: nntd_stock.
@@ -360,6 +360,7 @@ async def nntd_stock(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
 
     Args:
         ticker: Mã ticker để filter (optional)
+        nntd_type: Loại giao dịch để filter: 'NN' (nước ngoài) hoặc 'TD' (tự doanh) (optional)
 
     Returns:
         List[Dict] - danh sách các records từ nntd_stock
@@ -382,6 +383,8 @@ async def nntd_stock(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
     find_query = {}
     if ticker:
         find_query["ticker"] = ticker
+    if nntd_type:
+        find_query["type"] = nntd_type
 
     nntd_df = await get_collection_data(stock_db, "nntd_stock", find_query=find_query, projection=projection)
 
@@ -1261,6 +1264,7 @@ def get_available_keywords() -> List[str]:
 async def execute_sse_query(
     keyword: str,
     ticker: Optional[str] = None,
+    nntd_type: Optional[str] = None,
     news_type: Optional[str] = None,
     report_type: Optional[str] = None,
     categories: Optional[str] = None,
@@ -1308,6 +1312,7 @@ async def execute_sse_query(
     # Tạo dict params để truyền vào hàm query
     query_params = {
         "ticker": ticker,
+        "nntd_type": nntd_type,
         "news_type": news_type,
         "report_type": report_type,
         "categories": categories,

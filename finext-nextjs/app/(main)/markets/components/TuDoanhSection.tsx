@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 import { Box, Typography, useTheme, useMediaQuery } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
@@ -22,11 +21,10 @@ export default function TuDoanhSection() {
             const response = await apiClient<NNTDRecord[]>({
                 url: '/api/v1/sse/rest/nntd_stock',
                 method: 'GET',
+                queryParams: { nntd_type: 'TD' },
                 requireAuth: false,
             });
-            const allData = response.data || [];
-            // Filter type='TD' only
-            return allData.filter((r) => r.type === 'TD');
+            return response.data || [];
         },
         refetchInterval: 10_000,
         staleTime: 5_000,

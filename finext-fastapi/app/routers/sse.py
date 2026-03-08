@@ -169,6 +169,7 @@ async def get_keywords():
 async def rest_query_endpoint(
     keyword: str,
     ticker: Optional[str] = Query(None, description="Mã ticker (VD: VNINDEX, VN30, ...)"),
+    nntd_type: Optional[str] = Query(None, description="Loại giao dịch NNTD: 'NN' (nước ngoài) hoặc 'TD' (tự doanh)"),
     news_type: Optional[str] = Query(None, description="Loại tin tức (VD: thong_cao, trong_nuoc, doanh_nghiep, quoc_te)"),
     categories: Optional[str] = Query(
         None, description="Danh mục, có thể 1 hoặc nhiều cách nhau bởi dấu phẩy (VD: thi-truong hoặc thi-truong,doanh-nghiep)"
@@ -215,6 +216,7 @@ async def rest_query_endpoint(
         # Tạo dict chứa các tham số tuỳ chọn
         query_params = {
             "ticker": ticker,
+            "nntd_type": nntd_type,
             "news_type": news_type,
             "categories": categories,
             "report_type": report_type,
