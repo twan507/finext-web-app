@@ -46,14 +46,18 @@ export default function TuongQuanDongTien({
         });
     }, []);
 
-    // Keep all series but set hidden ones' data to empty — prevents full chart re-mount
-    const displaySeries = useMemo(() =>
-        series.map(s => ({
+    const displaySeries = useMemo(() => {
+        const dummy = {
+            name: '0% Reference',
+            type: 'line',
+            data: dates.map(() => 0),
+        };
+        const active = series.map(s => ({
             ...s,
             data: hiddenSeries.has(s.name) ? [] : s.data,
-        })),
-        [series, hiddenSeries]
-    );
+        }));
+        return [dummy, ...active];
+    }, [series, hiddenSeries, dates]);
 
     const displayAnnotations = useMemo(() =>
         series
@@ -107,12 +111,14 @@ export default function TuongQuanDongTien({
             },
         },
         annotations: {
+            position: 'back',
             yaxis: displayAnnotations as any[],
         },
-        colors,
+        colors: [theme.palette.text.secondary, ...colors],
         stroke: {
-            width: 2.5,
+            width: [2, 2.5, 2.5, 2.5, 2.5, 2.5],
             curve: 'smooth',
+            dashArray: [4, 0, 0, 0, 0, 0],
         },
         xaxis: {
             categories: dates,
@@ -164,10 +170,12 @@ export default function TuongQuanDongTien({
 
                 let seriesHTML = '';
                 seriesData.forEach((sd: any, idx: number) => {
+                    const name = w.globals.seriesNames[idx];
+                    if (name === '0% Reference') return;
+
                     const value = sd[dataPointIndex];
                     if (value == null) return;
                     const color = w.globals.colors[idx];
-                    const name = w.globals.seriesNames[idx];
                     const formattedValue = unit === 'percent'
                         ? `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
                         : `${value >= 0 ? '+' : ''}${value.toFixed(1)}`;

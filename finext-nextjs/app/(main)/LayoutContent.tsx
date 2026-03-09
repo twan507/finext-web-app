@@ -80,8 +80,10 @@ const topNavTabs: TopNavTab[] = [
     description: 'Đánh giá sức mạnh nhóm ngành và đón đầu sự luân chuyển dòng tiền.',
     icon: 'fluent-color:diversity-16',
     submenu: [
-      { label: 'Tổng quan Nhóm & Ngành', href: '/groups', icon: 'fluent-color:diversity-48', description: 'Tổng quan sức mạnh và phân bổ dòng tiền nhóm ngành' },
-      { label: 'Phân tích Nhóm & Ngành', href: '/groups/FNXINDEX', icon: 'fluent-color:data-scatter-20', description: 'Phân tích chi tiết và so sánh hiệu suất nhóm ngành' },
+      { label: 'Nhóm cổ phiếu', href: '/groups', icon: 'fluent-color:diversity-48' },
+      { label: 'Phân tích nhóm', href: '/groups/FNXINDEX', icon: 'fluent-color:molecule-48' },
+      { label: 'Ngành nghề', href: '/sectors', icon: 'fluent-color:data-pie-20' },
+      { label: 'Phân tích ngành', href: '/sectors/FNXINDEX', icon: 'fluent-color:chart-multiple-24' },
     ]
   },
   {

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { Box, Typography, useTheme, useMediaQuery } from '@mui/material';
 import { useQueries } from '@tanstack/react-query';
-import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
+import { getResponsiveFontSize, fontWeight, getGlassCard, getGlassHighlight, getGlassEdgeLight, borderRadius } from 'theme/tokens';
 import { ISseRequest } from 'services/core/types';
 import { sseClient, getFromCache } from 'services/sseClient';
 import { apiClient } from 'services/apiClient';
@@ -120,6 +120,7 @@ interface GroupChartRowProps {
 
 function GroupChartRow({ title, tickers, rawDataMap, histQueries5, histQueriesLine }: GroupChartRowProps) {
     const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
 
@@ -129,7 +130,7 @@ function GroupChartRow({ title, tickers, rawDataMap, histQueries5, histQueriesLi
             const item = rawDataMap.get(t);
             return item?.ticker_name || t;
         }),
-    [tickers, rawDataMap]);
+        [tickers, rawDataMap]);
 
     // Chart 1: Dòng tiền trong phiên (t0_score)
     const bar1Series = useMemo(() => [{
@@ -159,7 +160,7 @@ function GroupChartRow({ title, tickers, rawDataMap, histQueries5, histQueriesLi
                 flowNeutral: item?.breadth_neu ?? 0,
             };
         }),
-    [tickers, rawDataMap]);
+        [tickers, rawDataMap]);
 
     // Chart 4: Dòng tiền trong tuần (t0_score last 5 sessions)
     const stackedData = useMemo(() => {
@@ -193,7 +194,7 @@ function GroupChartRow({ title, tickers, rawDataMap, histQueries5, histQueriesLi
             const today: RawMarketData[] = todayItem ? [toRawMarketData(todayItem)] : [];
             return mergeData(hist, today);
         }),
-    [tickers, rawDataMap, histQueriesLine]);
+        [tickers, rawDataMap, histQueriesLine]);
 
     // Reference data for date labels (use first ticker that has data)
     const refMerged = useMemo(() => {
@@ -211,7 +212,7 @@ function GroupChartRow({ title, tickers, rawDataMap, histQueries5, histQueriesLi
             const mm = (date.getMonth() + 1).toString().padStart(2, '0');
             return `${dd}/${mm}`;
         }),
-    [refMerged]);
+        [refMerged]);
 
     // Left chart: TuongQuanLineChart — cumulative t0_score
     const cumsumLineSeries = useMemo(() =>
@@ -219,7 +220,7 @@ function GroupChartRow({ title, tickers, rawDataMap, histQueries5, histQueriesLi
             name: categories[idx],
             data: buildCumsum(mergedPerTicker[idx], d => ((d as any)?.t0_score ?? 0) / 1000),
         })),
-    [tickers, categories, mergedPerTicker]);
+        [tickers, categories, mergedPerTicker]);
 
     // Right chart: DienBienDongTien — raw t5_score per session
     const t5LineSeries = useMemo(() =>
@@ -227,16 +228,16 @@ function GroupChartRow({ title, tickers, rawDataMap, histQueries5, histQueriesLi
             name: categories[idx],
             data: mergedPerTicker[idx].map(d => parseFloat(((d as any)?.t5_score ?? 0).toFixed(1))),
         })),
-    [tickers, categories, mergedPerTicker]);
+        [tickers, categories, mergedPerTicker]);
 
     return (
-        <Box sx={{ mt: 4 }}>
+        <Box sx={{ mt: 4, ...getGlassCard(isDark), borderRadius: `${borderRadius.lg}px`, p: 2, position: 'relative', overflow: 'hidden', '&::before': getGlassHighlight(isDark), '&::after': getGlassEdgeLight(isDark) }}>
             <Typography
                 color="text.secondary"
                 sx={{
                     fontSize: getResponsiveFontSize('lg'),
                     fontWeight: fontWeight.semibold,
-                    mb: 1,
+                    mb: 3,
                     textTransform: 'uppercase',
                 }}
             >
@@ -308,7 +309,7 @@ function GroupChartRow({ title, tickers, rawDataMap, histQueries5, histQueriesLi
                 </Box>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                     <NhomCPLineChart
-                        title="Diễn biến dòng tiền tuần"
+                        title="Diễn biến dòng tiền"
                         dates={lineDates}
                         series={t5LineSeries}
                         unit="number"
@@ -451,7 +452,7 @@ export default function GroupsContent() {
                 <>
                     {/* Nhóm Thị trường: FNXINDEX, FNX100 */}
                     <GroupChartRow
-                        title="Dòng tiền nhóm thị trường"
+                        title="Nhóm thị trường"
                         tickers={GROUP_MARKET}
                         rawDataMap={rawDataMap}
                         histQueries5={marketHist5}
@@ -460,7 +461,7 @@ export default function GroupsContent() {
 
                     {/* Nhóm Dòng tiền: VUOTTROI, ONDINH, SUKIEN */}
                     <GroupChartRow
-                        title="Dòng tiền nhóm cổ phiếu"
+                        title="Nhóm dòng tiền"
                         tickers={GROUP_FLOW}
                         rawDataMap={rawDataMap}
                         histQueries5={flowHist5}
@@ -469,7 +470,7 @@ export default function GroupsContent() {
 
                     {/* Nhóm Vốn hóa: LARGECAP, MIDCAP, SMALLCAP */}
                     <GroupChartRow
-                        title="Dòng tiền nhóm vốn hóa"
+                        title="Nhóm vốn hoá"
                         tickers={GROUP_CAP}
                         rawDataMap={rawDataMap}
                         histQueries5={capHist5}

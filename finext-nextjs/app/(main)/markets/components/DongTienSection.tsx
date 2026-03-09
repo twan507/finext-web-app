@@ -386,11 +386,11 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
                     fontSize: getResponsiveFontSize('lg'),
                     fontWeight: fontWeight.semibold,
                     mt: 4,
-                    mb: 1,
+                    mb: 3,
                     textTransform: 'uppercase',
                 }}
             >
-                Dòng tiền nhóm cổ phiếu
+                Nhóm dòng tiền
             </Typography>
             <Box
                 sx={{
@@ -443,11 +443,11 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
                     fontSize: getResponsiveFontSize('lg'),
                     fontWeight: fontWeight.semibold,
                     mt: 4,
-                    mb: 1,
+                    mb: 3,
                     textTransform: 'uppercase',
                 }}
             >
-                Dòng tiền nhóm vốn hoá
+                Nhóm vốn hoá
             </Typography>
             <Box
                 sx={{

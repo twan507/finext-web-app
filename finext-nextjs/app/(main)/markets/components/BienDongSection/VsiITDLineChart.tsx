@@ -60,11 +60,12 @@ export default function VsiITDLineChart({
         },
         stroke: {
             curve: 'smooth',
-            width: 2.5,
+            width: [2, 2.5],
+            dashArray: [4, 0],
         },
-        colors: chartColors,
+        colors: [theme.palette.text.secondary, ...chartColors],
         fill: {
-            type: 'gradient',
+            type: ['solid', 'gradient'],
             gradient: {
                 shade: 'dark',
                 type: 'vertical',
@@ -126,37 +127,10 @@ export default function VsiITDLineChart({
             yaxis: { lines: { show: true } },
             padding: { top: 0, bottom: 0, left: 20, right: 5 },
         },
-        // Reference line at 100% + price tag for last value
+        // Price tag for last data point
         annotations: {
+            position: 'back',
             yaxis: [
-                // 100% reference line with price tag
-                {
-                    y: 100,
-                    borderColor: theme.palette.text.secondary,
-                    borderWidth: 2,
-                    strokeDashArray: 4,
-                    label: {
-                        borderColor: 'transparent',
-                        style: {
-                            color: '#fff',
-                            background: theme.palette.text.secondary,
-                            fontSize: getResponsiveFontSize('sm').md,
-                            fontWeight: fontWeight.medium,
-                            padding: {
-                                left: 6,
-                                right: 6,
-                                top: 2,
-                                bottom: 2,
-                            },
-                        },
-                        text: '100%',
-                        position: 'right' as const,
-                        textAnchor: 'start',
-                        offsetX: 15.5,
-                        offsetY: 8,
-                    },
-                },
-                // Price tag for last data point
                 ...(seriesData.length > 0 ? [{
                     y: seriesData[seriesData.length - 1].y,
                     borderColor: 'transparent',
@@ -201,9 +175,9 @@ export default function VsiITDLineChart({
                     timeStr = `${hours}:${minutes}`;
                 }
 
-                const value = series[0]?.[dataPointIndex];
+                const value = series[1]?.[dataPointIndex];
                 const formattedValue = value != null ? `${value.toFixed(2)}%` : '—';
-                const color = w.globals.colors[0];
+                const color = w.globals.colors[1];
 
                 const bgColor = theme.palette.mode === 'dark' ? 'rgba(26, 26, 26, 0.9)' : 'rgba(255, 255, 255, 0.9)';
                 const textColor = theme.palette.mode === 'dark' ? '#e0e0e0' : '#333333';
@@ -245,6 +219,11 @@ export default function VsiITDLineChart({
     }), [theme, chartColors, indexToTimestamp, isMobile, crosshairColor, upColor, refColor]);
 
     const series = useMemo(() => [
+        {
+            name: '100% Reference',
+            type: 'line',
+            data: seriesData.map(d => ({ x: d.x, y: 100 })),
+        },
         {
             name: 'Chỉ số thanh khoản',
             type: 'area',

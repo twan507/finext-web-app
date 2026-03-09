@@ -5,42 +5,39 @@ import { Box, Typography, Skeleton, useTheme, useMediaQuery } from '@mui/materia
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import Link from 'next/link';
 import {
     getResponsiveFontSize,
     fontWeight,
     borderRadius,
     transitions,
 } from 'theme/tokens';
-import { getTrendColor, getFlowColor, getVsiColor } from 'theme/colorHelpers';
+import { getPriceColor, getFlowColor, getVsiColor } from 'theme/colorHelpers';
 
 // ========== TYPES ==========
-export interface IndexRowData {
+export interface GroupStockRowData {
     ticker: string;
-    ticker_name?: string;
     close: number;
     diff?: number;
-    pct_change: number;
-    w_pct?: number;
-    m_pct?: number;
-    q_pct?: number;
-    y_pct?: number;
+    pct_change?: number;
+    industry_name?: string;
+    category_name?: string;
+    marketcap_name?: string;
     t0_score?: number;
     t5_score?: number;
     vsi?: number;
-    type?: string;
+    exchange?: string;
 }
 
 type SortDirection = 'asc' | 'desc' | null;
 
 interface SortConfig {
-    key: keyof IndexRowData | null;
+    key: keyof GroupStockRowData | null;
     direction: SortDirection;
 }
 
 // ========== COLUMN DEFINITION ==========
 interface ColumnDef {
-    key: keyof IndexRowData;
+    key: keyof GroupStockRowData;
     label: string;
     align: 'left' | 'center' | 'right';
     minWidth: number;
@@ -67,11 +64,6 @@ const formatPct = (val: number | null | undefined): string => {
     return `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`;
 };
 
-const formatPctDirect = (val: number | null | undefined): string => {
-    if (val == null) return '—';
-    return `${val >= 0 ? '+' : ''}${val.toFixed(2)}%`;
-};
-
 const formatScore = (val: number | null | undefined): string => {
     if (val == null) return '—';
     return `${val > 0 ? '+' : ''}${val.toFixed(1)}`;
@@ -86,67 +78,58 @@ const formatVsi = (val: number | null | undefined): string => {
 const getColumns = (): ColumnDef[] => [
     {
         key: 'ticker',
-        label: 'Chỉ số',
+        label: 'Mã CP',
         align: 'left',
         minWidth: 80,
         sortable: true,
     },
     {
+        key: 'industry_name',
+        label: 'Ngành nghề',
+        align: 'left',
+        minWidth: 140,
+        sortable: true,
+        hideOnMobile: true,
+        hideOnTablet: true,
+    },
+    {
+        key: 'category_name',
+        label: 'Nhóm',
+        align: 'left',
+        minWidth: 100,
+        sortable: true,
+        hideOnMobile: true,
+        hideOnTablet: true,
+    },
+    {
+        key: 'marketcap_name',
+        label: 'Vốn hoá',
+        align: 'left',
+        minWidth: 120,
+        sortable: true,
+        hideOnMobile: true,
+        hideOnTablet: true,
+    },
+    {
         key: 'close',
-        label: 'Giá trị',
+        label: 'Giá hiện tại',
         align: 'right',
         minWidth: 90,
         sortable: true,
     },
     {
         key: 'diff',
-        label: '+/-',
+        label: 'Thay đổi (+/-)',
         align: 'right',
-        minWidth: 75,
+        minWidth: 70,
         sortable: true,
     },
     {
         key: 'pct_change',
-        label: '% Thay đổi',
+        label: 'Thay đổi (%)',
         align: 'right',
         minWidth: 95,
         sortable: true,
-    },
-    {
-        key: 'w_pct',
-        label: '% Tuần',
-        align: 'right',
-        minWidth: 80,
-        sortable: true,
-        hideOnMobile: true,
-        hideOnTablet: true,
-    },
-    {
-        key: 'm_pct',
-        label: '% Tháng',
-        align: 'right',
-        minWidth: 80,
-        sortable: true,
-        hideOnMobile: true,
-        hideOnTablet: true,
-    },
-    {
-        key: 'q_pct',
-        label: '% Quý',
-        align: 'right',
-        minWidth: 80,
-        sortable: true,
-        hideOnMobile: true,
-        hideOnTablet: true,
-    },
-    {
-        key: 'y_pct',
-        label: '% Năm',
-        align: 'right',
-        minWidth: 80,
-        sortable: true,
-        hideOnMobile: true,
-        hideOnTablet: true,
     },
     {
         key: 't0_score',
@@ -194,7 +177,7 @@ function HeaderCell({
 }: {
     column: ColumnDef;
     sortConfig: SortConfig;
-    onSort: (key: keyof IndexRowData) => void;
+    onSort: (key: keyof GroupStockRowData) => void;
 }) {
     const theme = useTheme();
     const isSorted = sortConfig.key === column.key;
@@ -222,6 +205,8 @@ function HeaderCell({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 0.25,
+                justifyContent: column.align === 'right' ? 'flex-end' : column.align === 'center' ? 'center' : 'flex-start',
+                width: '100%',
             }}>
                 <Typography
                     sx={{
@@ -249,7 +234,7 @@ function IndexRow({
     isMobile,
     isTablet,
 }: {
-    row: IndexRowData;
+    row: GroupStockRowData;
     columns: ColumnDef[];
     isLast: boolean;
     isMobile: boolean;
@@ -265,33 +250,15 @@ function IndexRow({
         switch (column.key) {
             case 'ticker':
                 return (
-                    <Box>
-                        <Typography
-                            sx={{
-                                fontSize: getResponsiveFontSize('sm'),
-                                fontWeight: fontWeight.bold,
-                                color: 'text.primary',
-                                lineHeight: 1.3,
-                            }}
-                        >
-                            {row.ticker}
-                        </Typography>
-                        {row.ticker_name && (
-                            <Typography
-                                sx={{
-                                    fontSize: getResponsiveFontSize('xxs'),
-                                    color: 'text.secondary',
-                                    lineHeight: 1.3,
-                                    maxWidth: 140,
-                                    whiteSpace: 'nowrap',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                }}
-                            >
-                                {row.ticker_name}
-                            </Typography>
-                        )}
-                    </Box>
+                    <Typography
+                        sx={{
+                            fontSize: getResponsiveFontSize('sm'),
+                            fontWeight: fontWeight.bold,
+                            color: 'text.primary',
+                        }}
+                    >
+                        {row.ticker}
+                    </Typography>
                 );
 
             case 'close':
@@ -310,7 +277,7 @@ function IndexRow({
                     <Typography sx={{
                         fontSize: getResponsiveFontSize('sm'),
                         fontWeight: fontWeight.medium,
-                        color: getTrendColor(row.pct_change != null ? row.pct_change * 100 : null, theme),
+                        color: row.pct_change != null ? getPriceColor(row.pct_change, row.exchange, theme) : 'text.secondary',
                     }}>
                         {formatDiff(row.diff)}
                     </Typography>
@@ -321,24 +288,32 @@ function IndexRow({
                     <Typography sx={{
                         fontSize: getResponsiveFontSize('sm'),
                         fontWeight: fontWeight.medium,
-                        color: getTrendColor(row.pct_change != null ? row.pct_change * 100 : null, theme),
+                        color: row.pct_change != null ? getPriceColor(row.pct_change, row.exchange, theme) : 'text.secondary',
                     }}>
                         {formatPct(row.pct_change)}
                     </Typography>
                 );
 
-            case 'w_pct':
-            case 'm_pct':
-            case 'q_pct':
-            case 'y_pct': {
-                const val = row[column.key] as number | undefined;
+            case 'industry_name':
+            case 'category_name':
+            case 'marketcap_name': {
+                const textValue = row[column.key];
+                const displayStr = (textValue !== null && textValue !== undefined && textValue !== '')
+                    ? String(textValue)
+                    : '—';
                 return (
-                    <Typography sx={{
-                        fontSize: getResponsiveFontSize('sm'),
-                        fontWeight: fontWeight.medium,
-                        color: getTrendColor(val ?? null, theme),
-                    }}>
-                        {formatPctDirect(val)}
+                    <Typography
+                        title={displayStr !== '—' ? displayStr : ''}
+                        sx={{
+                            fontSize: getResponsiveFontSize('sm'),
+                            color: 'text.primary',
+                            maxWidth: 160,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                        }}
+                    >
+                        {displayStr}
                     </Typography>
                 );
             }
@@ -372,7 +347,6 @@ function IndexRow({
                 return (
                     <Typography sx={{
                         fontSize: getResponsiveFontSize('sm'),
-                        fontWeight: fontWeight.medium,
                         color: 'text.primary',
                     }}>
                         {row[column.key] != null ? String(row[column.key]) : '—'}
@@ -454,17 +428,17 @@ function SkeletonRow({ columns, isMobile, isTablet }: { columns: ColumnDef[]; is
 }
 
 // ========== MAIN COMPONENT ==========
-interface StockTableProps {
-    data: IndexRowData[];
+interface GroupStockTableProps {
+    data: GroupStockRowData[];
     isLoading?: boolean;
     skeletonRows?: number;
 }
 
-export default function StockTable({
+export default function GroupStockTable({
     data,
     isLoading = false,
-    skeletonRows = 8,
-}: StockTableProps) {
+    skeletonRows = 10,
+}: GroupStockTableProps) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -474,7 +448,7 @@ export default function StockTable({
 
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: null });
 
-    const handleSort = useCallback((key: keyof IndexRowData) => {
+    const handleSort = useCallback((key: keyof GroupStockRowData) => {
         setSortConfig((prev) => {
             if (prev.key !== key) {
                 return { key, direction: 'desc' };

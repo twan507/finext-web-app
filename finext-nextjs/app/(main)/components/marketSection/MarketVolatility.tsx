@@ -12,12 +12,16 @@ export interface StockData {
     ticker: string;
     exchange: string;
     industry_name: string;
+    category_name?: string;
+    marketcap_name?: string;
+    diff?: number;
     pct_change: number;
     volume: number;
     trading_value: number;
     close: number;
     vsi: number;
     t0_score: number;
+    t5_score?: number;
     vsma5: number;
 }
 

@@ -1,6 +1,5 @@
 'use client';
 
-
 import { useMemo, useState, useCallback } from 'react';
 import { Box, Typography, useTheme } from '@mui/material';
 import { fontWeight, getResponsiveFontSize } from 'theme/tokens';
@@ -9,30 +8,27 @@ import { ApexOptions } from 'apexcharts';
 
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
-interface NhomCPLineChartProps {
+interface SucManhDongTienProps {
     chartHeight?: string;
     title?: string;
     dates: string[];
-    series: { name: string; data: number[] }[];
-    unit?: 'percent' | 'number';
+    t5ScoreData: number[];  // line series
+    t0ScoreData: number[];  // bar series
 }
 
-export default function NhomCPLineChart({
-    chartHeight = '230px',
+export default function SucManhDongTien({
+    chartHeight = '250px',
     title,
     dates,
-    series,
-    unit = 'percent',
-}: NhomCPLineChartProps) {
+    t5ScoreData,
+    t0ScoreData,
+}: SucManhDongTienProps) {
     const theme = useTheme();
     const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
 
-    const colors = useMemo(() => [
-        theme.palette.primary.main,
-        theme.palette.secondary.main,
-        theme.palette.trend.up,
-        theme.palette.trend.down,
-    ], [theme]);
+    const lineColor = theme.palette.primary.main;
+    const barColorPositive = theme.palette.trend.up;
+    const barColorNegative = theme.palette.trend.down;
 
     const handleLegendClick = useCallback((seriesName: string) => {
         setHiddenSeries(prev => {
@@ -46,51 +42,31 @@ export default function NhomCPLineChart({
         });
     }, []);
 
-    const displaySeries = useMemo(() => {
-        const dummy = {
-            name: '0% Reference',
-            type: 'line',
-            data: dates.map(() => 0),
-        };
-        const active = series.map(s => ({
-            ...s,
-            data: hiddenSeries.has(s.name) ? [] : s.data,
-        }));
-        return [dummy, ...active];
-    }, [series, hiddenSeries, dates]);
+    const legendItems = useMemo(() => [
+        { name: 'Dòng tiền trong tuần', color: lineColor },
+        { name: 'Dòng tiền trong phiên', color: barColorPositive },
+    ], [lineColor, barColorPositive]);
 
-    const displayAnnotations = useMemo(() =>
-        series
-            .map((s, i) => ({ series: s, color: colors[i % colors.length] }))
-            .filter(item => !hiddenSeries.has(item.series.name))
-            .map(item => {
-                const data = item.series.data;
-                if (!data || data.length === 0) return null;
-                const lastValue = data[data.length - 1];
-                return {
-                    y: lastValue,
-                    borderColor: 'transparent',
-                    strokeDashArray: 0,
-                    label: {
-                        borderColor: 'transparent',
-                        style: {
-                            color: '#fff',
-                            background: item.color,
-                            fontSize: getResponsiveFontSize('sm').md,
-                            fontWeight: fontWeight.medium,
-                            padding: { left: 6, right: 6, top: 2, bottom: 2 },
-                        },
-                        text: unit === 'percent' ? `${lastValue.toFixed(1)}%` : `${lastValue.toFixed(1)}`,
-                        position: 'right' as const,
-                        textAnchor: 'start' as const,
-                        offsetX: 15.5,
-                        offsetY: 8,
-                        borderRadius: 2,
-                    },
-                };
-            }).filter(Boolean),
-        [series, colors, hiddenSeries, unit]
-    );
+    // Build series: line (t5_score) + bar (t0_score)
+    const displaySeries = useMemo(() => {
+        return [
+            {
+                name: 'Dòng tiền trong tuần',
+                type: 'line',
+                data: hiddenSeries.has('Dòng tiền trong tuần') ? [] : t5ScoreData,
+            },
+            {
+                name: 'Dòng tiền trong phiên',
+                type: 'column',
+                data: hiddenSeries.has('Dòng tiền trong phiên') ? [] : t0ScoreData,
+            },
+        ];
+    }, [t5ScoreData, t0ScoreData, hiddenSeries]);
+
+    // Bar colors based on positive/negative
+    const barFillColors = useMemo(() =>
+        t0ScoreData.map(v => v >= 0 ? barColorPositive : barColorNegative),
+        [t0ScoreData, barColorPositive, barColorNegative]);
 
     const chartOptions: ApexOptions = useMemo(() => ({
         chart: {
@@ -107,18 +83,29 @@ export default function NhomCPLineChart({
                 left: 0,
                 blur: 5,
                 opacity: 0.8,
-                color: colors as unknown as string,
+                color: [lineColor, 'transparent'] as unknown as string,
             },
         },
-        annotations: {
-            position: 'back',
-            yaxis: displayAnnotations as any[],
-        },
-        colors: [theme.palette.text.secondary, ...colors],
+        colors: [lineColor, barColorPositive],
         stroke: {
-            width: [2, 2.5, 2.5, 2.5, 2.5, 2.5],
+            width: [2.5, 0],
             curve: 'smooth',
-            dashArray: [4, 0, 0, 0, 0, 0],
+        },
+        fill: {
+            colors: [lineColor, barColorPositive],
+        },
+        plotOptions: {
+            bar: {
+                columnWidth: '60%',
+                borderRadius: 2,
+                colors: {
+                    ranges: [
+                        { from: -Infinity, to: -0.001, color: barColorNegative },
+                        { from: -0.001, to: 0.001, color: theme.palette.trend.ref },
+                        { from: 0.001, to: Infinity, color: barColorPositive },
+                    ],
+                },
+            },
         },
         xaxis: {
             categories: dates,
@@ -142,19 +129,33 @@ export default function NhomCPLineChart({
             },
             tickAmount: 4,
         },
-        yaxis: {
-            opposite: true,
-            labels: {
-                style: {
-                    colors: theme.palette.text.secondary,
-                    fontSize: getResponsiveFontSize('sm').md,
+        yaxis: [
+            {
+                // Left y-axis for t5_score (line)
+                seriesName: 'Dòng tiền trong tuần',
+                labels: {
+                    style: {
+                        colors: theme.palette.text.secondary,
+                        fontSize: getResponsiveFontSize('sm').md,
+                    },
+                    formatter: (val: number) => `${val.toFixed(1)}\u00A0\u00A0`,
                 },
-                formatter: (val: number) => unit === 'percent' ? `${val.toFixed(1)}%\u00A0\u00A0\u00A0` : `${val.toFixed(1)}\u00A0\u00A0\u00A0`,
-                offsetX: -10,
             },
-        },
+            {
+                // Right y-axis for t0_score (bar)
+                opposite: true,
+                seriesName: 'Dòng tiền trong phiên',
+                labels: {
+                    style: {
+                        colors: theme.palette.text.secondary,
+                        fontSize: getResponsiveFontSize('sm').md,
+                    },
+                    formatter: (val: number) => `\u00A0\u00A0${val.toFixed(1)}`,
+                },
+            },
+        ],
         grid: {
-            padding: { left: 20, right: 5, bottom: 0, top: 0 },
+            padding: { left: 10, right: 5, bottom: 0, top: 0 },
             borderColor: theme.palette.divider,
             strokeDashArray: 0,
             xaxis: { lines: { show: false } },
@@ -165,22 +166,15 @@ export default function NhomCPLineChart({
             enabled: true,
             shared: true,
             intersect: false,
-            custom: function ({ series: seriesData, seriesIndex, dataPointIndex, w }) {
+            custom: function ({ series: seriesData, dataPointIndex, w }) {
                 const dateStr = dates[dataPointIndex] || '';
-
-                // Build series rows
                 let seriesHTML = '';
                 seriesData.forEach((sd: any, idx: number) => {
                     const name = w.globals.seriesNames[idx];
-                    if (name === '0% Reference') return;
-
                     const value = sd[dataPointIndex];
                     if (value == null) return;
-                    const color = w.globals.colors[idx];
-                    const formattedValue = unit === 'percent'
-                        ? `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`
-                        : `${value >= 0 ? '+' : ''}${value.toFixed(1)}`;
-
+                    const color = idx === 0 ? lineColor : (value >= 0 ? barColorPositive : barColorNegative);
+                    const formattedValue = `${value >= 0 ? '+' : ''}${value.toFixed(2)}`;
                     seriesHTML += `
                         <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0;">
                             <span style="width: 10px; height: 10px; border-radius: 50%; background: ${color};"></span>
@@ -217,7 +211,7 @@ export default function NhomCPLineChart({
         markers: {
             size: 0,
             colors: [theme.palette.mode === 'dark' ? '#000000' : '#ffffff'],
-            strokeColors: colors,
+            strokeColors: [lineColor],
             strokeWidth: 2,
             hover: { size: 6 },
         },
@@ -225,7 +219,8 @@ export default function NhomCPLineChart({
             hover: { filter: { type: 'none' } },
             active: { filter: { type: 'none' } },
         },
-    }), [theme, colors, displayAnnotations, dates]);
+        dataLabels: { enabled: false },
+    }), [theme, lineColor, barColorPositive, barColorNegative, dates]);
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -243,12 +238,12 @@ export default function NhomCPLineChart({
                 </Typography>
             )}
             <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 0, flexWrap: 'wrap', position: 'relative', zIndex: 2 }}>
-                {series.map((s, index) => {
-                    const isHidden = hiddenSeries.has(s.name);
+                {legendItems.map((item) => {
+                    const isHidden = hiddenSeries.has(item.name);
                     return (
                         <Box
-                            key={s.name}
-                            onClick={() => handleLegendClick(s.name)}
+                            key={item.name}
+                            onClick={() => handleLegendClick(item.name)}
                             sx={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -259,7 +254,7 @@ export default function NhomCPLineChart({
                                 '&:hover': { opacity: isHidden ? 0.5 : 0.8 },
                             }}
                         >
-                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: colors[index % colors.length] }} />
+                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: item.color }} />
                             <Typography
                                 color="text.secondary"
                                 sx={{
@@ -268,7 +263,7 @@ export default function NhomCPLineChart({
                                     textDecoration: isHidden ? 'line-through' : 'none',
                                 }}
                             >
-                                {s.name}
+                                {item.name}
                             </Typography>
                         </Box>
                     );

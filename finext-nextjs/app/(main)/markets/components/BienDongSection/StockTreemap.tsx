@@ -156,13 +156,18 @@ const TreemapChart = memo(function TreemapChart({
                     const industryName = seriesConfig?.name || '';
                     const pctChange = dp.pctChange;
                     const tradingValue = dp.y || 0;
+                    const closePrice = dp.closePrice;
 
                     const pctStr =
                         pctChange !== undefined
                             ? `${pctChange >= 0 ? '+' : ''}${(pctChange * 100).toFixed(2)}%`
                             : '—';
 
-                    const valueStr = `${(tradingValue).toFixed(2)} tỷ`;
+                    const priceStr = closePrice !== undefined
+                        ? closePrice.toFixed(2)
+                        : '—';
+
+                    const valueStr = `${new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(tradingValue)} tỷ`;
 
                     const bgColor = isDark ? 'rgba(26,26,26,0.95)' : 'rgba(255,255,255,0.95)';
                     const textColor = isDark ? '#e0e0e0' : '#333';
@@ -171,6 +176,7 @@ const TreemapChart = memo(function TreemapChart({
                         <div style="font-weight:700;font-size:14px;margin-bottom:6px;display:flex;align-items:center;gap:8px;">
                             <span style="width:12px;height:12px;border-radius:3px;background:${dp.fillColor};display:inline-block;"></span>
                             ${ticker}
+                            <span style="font-weight:600;font-size:12px;opacity:0.6;">${priceStr}</span>
                             <span style="font-weight:600;font-size:12px;color:${dp.fillColor};">${pctStr}</span>
                         </div>
                         <div style="font-size:12px;opacity:0.7;margin-bottom:4px;">${industryName}</div>
@@ -230,6 +236,7 @@ export default function StockTreemap({ data, chartHeight = '550px' }: StockTreem
                         // Fixed global range ±6.5% — same scale for all industries
                         fillColor: pickColor(stock.pct_change, stock.exchange),
                         pctChange: stock.pct_change,
+                        closePrice: stock.close,
                     })),
                 };
             })
