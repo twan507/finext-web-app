@@ -153,7 +153,7 @@ export default function DongTienStackedBarChart({
             strokeDashArray: 0,
             xaxis: { lines: { show: true } },
             yaxis: { lines: { show: false } },
-            padding: { top: 0, bottom: 0, left: 5, right: 5 },
+            padding: { top: 0, bottom: 0, left: 6, right: 5 },
         },
         legend: { show: false },
         tooltip: {
