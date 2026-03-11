@@ -4,11 +4,11 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Box, Typography, useTheme, Grid, Checkbox, CircularProgress, alpha, Skeleton, useMediaQuery, Button, Tooltip, Stack } from '@mui/material';
 import { useRouter } from 'next/navigation';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+
 import DeselectIcon from '@mui/icons-material/Deselect';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
-import { getResponsiveFontSize, borderRadius, transitions, fontWeight, getGlassCard } from 'theme/tokens';
+import { getResponsiveFontSize, borderRadius, transitions, fontWeight, getGlassCard, durations, easings } from 'theme/tokens';
 import { apiClient } from 'services/apiClient';
 import type { RawMarketData } from '../marketSection/MarketIndexChart';
 
@@ -761,10 +761,27 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                         display: 'inline-flex',
                         alignItems: 'center',
                         cursor: 'pointer',
+                        '&:hover .page-chevron': {
+                            color: 'primary.main',
+                        },
                     }}
                 >
                     <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1') }}>Nhóm ngành</Typography>
-                    <ChevronRightIcon sx={{ fontSize: getResponsiveFontSize('h2').md, mt: 1, color: theme.palette.text.secondary }} />
+                    <Box
+                        className="page-chevron"
+                        sx={{
+                            fontSize: getResponsiveFontSize('h1'),
+                            fontWeight: fontWeight.semibold,
+                            color: 'text.secondary',
+                            lineHeight: 1.2,
+                            ml: 0.75,
+                            display: 'flex',
+                            alignItems: 'center',
+                            transition: `color ${durations.fastest} ${easings.easeOut}`,
+                        }}
+                    >
+                        ›
+                    </Box>
                 </Box>
             </Box>
 

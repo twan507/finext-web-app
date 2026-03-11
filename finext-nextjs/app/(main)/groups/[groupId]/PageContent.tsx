@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { Box, Typography, Skeleton, useTheme, useMediaQuery } from '@mui/material';
@@ -13,7 +13,7 @@ import IndexDetailPanel from '../../components/marketSection/IndexDetailPanel';
 import { ISseRequest } from 'services/core/types';
 import { sseClient, getFromCache } from 'services/sseClient';
 import { apiClient } from 'services/apiClient';
-import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
+import { getResponsiveFontSize, fontWeight, getGlassCard, borderRadius, durations, easings } from 'theme/tokens';
 
 // Reuse components
 import TuongQuanDongTien from '../components/TuongQuanDongTien';
@@ -56,6 +56,18 @@ const emptyChartData: ChartData = {
 
 // Sessions for line charts
 const LINE_SESSIONS = 20;
+
+// Danh sách index để chọn trong dropdown
+const INDEX_LIST: { ticker: string; name: string }[] = [
+    { ticker: 'FNXINDEX', name: 'Finext Index' },
+    { ticker: 'FNX100',   name: 'Finext 100' },
+    { ticker: 'VUOTTROI', name: 'Finext Vượt trội' },
+    { ticker: 'ONDINH',   name: 'Finext Ổn định' },
+    { ticker: 'SUKIEN',   name: 'Finext Sự kiện' },
+    { ticker: 'LARGECAP', name: 'Finext LargeCap' },
+    { ticker: 'MIDCAP',   name: 'Finext MidCap' },
+    { ticker: 'SMALLCAP', name: 'Finext SmallCap' },
+];
 
 // ========== HELPERS ==========
 function mergeData(hist: RawMarketData[], today: RawMarketData[]): RawMarketData[] {
@@ -105,9 +117,35 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 export default function GroupDetailContent() {
     const params = useParams();
+    const router = useRouter();
     const ticker = (params.groupId as string).toUpperCase();
     const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+    // Dropdown state
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        if (!dropdownOpen) return;
+        function handleClickOutside(event: MouseEvent) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setDropdownOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [dropdownOpen]);
+
+    function handleSelectIndex(selectedTicker: string) {
+        setDropdownOpen(false);
+        if (selectedTicker !== ticker) {
+            router.push(`/groups/${selectedTicker.toLowerCase()}`);
+        }
+    }
+
 
     const isMountedRef = useRef<boolean>(true);
     const todaySseRef = useRef<{ unsubscribe: () => void } | null>(null);
@@ -478,10 +516,120 @@ export default function GroupDetailContent() {
 
     return (
         <Box sx={{ py: 3 }}>
-            {/* Title */}
-            <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1'), mb: 2 }}>
-                {indexName}
-            </Typography>
+            {/* Title with dropdown index selector */}
+            <Box ref={dropdownRef} sx={{ position: 'relative', display: 'inline-block', mb: 2 }}>
+                {/* Clickable title */}
+                <Box
+                    component="button"
+                    onClick={() => setDropdownOpen(prev => !prev)}
+                    sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        cursor: 'pointer',
+                        color: 'text.primary',
+                        '&:hover .index-chevron': {
+                            color: 'primary.main',
+                        },
+                    }}
+                >
+                    <Typography
+                        variant="h1"
+                        sx={{
+                            fontSize: getResponsiveFontSize('h1'),
+                            lineHeight: 1.2,
+                            userSelect: 'none',
+                        }}
+                    >
+                        {indexName}
+                    </Typography>
+                    {/* Chevron indicator */}
+                    <Box
+                        className="index-chevron"
+                        sx={{
+                            fontSize: getResponsiveFontSize('h1'),
+                            fontWeight: fontWeight.semibold,
+                            color: 'text.secondary',
+                            lineHeight: 1.2,
+                            transform: dropdownOpen ? 'rotate(90deg) translateX(5px) translateY(-5px)' : 'rotate(0deg) translateY(0)',
+                            transition: `transform ${durations.normal} ${easings.easeOut}`,
+                            display: 'flex',
+                            alignItems: 'center',
+                        }}
+                    >
+                        ›
+                    </Box>
+                </Box>
+
+                {/* Dropdown menu */}
+                {dropdownOpen && (
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            top: 'calc(100% + 8px)',
+                            left: 0,
+                            zIndex: 1300,
+                            minWidth: 220,
+                            borderRadius: `${borderRadius.lg}px`,
+                            overflow: 'hidden',
+                            ...getGlassCard(isDark),
+                            animation: `dropdownFadeIn ${durations.fast} ${easings.easeOut}`,
+                            '@keyframes dropdownFadeIn': {
+                                from: { opacity: 0, transform: 'translateY(-6px)' },
+                                to:   { opacity: 1, transform: 'translateY(0)' },
+                            },
+                        }}
+                    >
+                        {INDEX_LIST.map((item) => {
+                            const isActive = item.ticker === ticker;
+                            return (
+                                <Box
+                                    key={item.ticker}
+                                    component="button"
+                                    onClick={() => handleSelectIndex(item.ticker)}
+                                    sx={{
+                                        display: 'block',
+                                        width: '100%',
+                                        textAlign: 'left',
+                                        background: isActive
+                                            ? isDark
+                                                ? 'rgba(180, 126, 255, 0.15)'
+                                                : 'rgba(139, 92, 246, 0.08)'
+                                            : 'transparent',
+                                        border: 'none',
+                                        borderBottom: '1px solid',
+                                        borderColor: 'divider',
+                                        cursor: 'pointer',
+                                        px: 2,
+                                        py: 1.25,
+                                        transition: `background ${durations.fastest} ${easings.easeOut}`,
+                                        '&:last-child': { borderBottom: 'none' },
+                                        '&:hover': {
+                                            background: isDark
+                                                ? 'rgba(255, 255, 255, 0.06)'
+                                                : 'rgba(0, 0, 0, 0.04)',
+                                        },
+                                    }}
+                                >
+                                    <Typography
+                                        sx={{
+                                            fontSize: getResponsiveFontSize('md'),
+                                            fontWeight: isActive ? fontWeight.semibold : fontWeight.medium,
+                                            color: isActive ? 'primary.main' : 'text.primary',
+                                            lineHeight: 1.4,
+                                        }}
+                                    >
+                                        {item.name}
+                                    </Typography>
+                                </Box>
+                            );
+                        })}
+                    </Box>
+                )}
+            </Box>
 
             {/* ========== TOP SECTION: Chart (left) + Detail Panel (right) ========== */}
             <Box sx={{
@@ -530,6 +678,7 @@ export default function GroupDetailContent() {
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                         <SucManhDongTien
                             title=""
+                            chartHeight="300px"
                             dates={dongTienDates}
                             t5ScoreData={t5ScoreData}
                             t0ScoreData={t0ScoreData}
@@ -539,6 +688,7 @@ export default function GroupDetailContent() {
                     {/* Right: Tương quan biến động giá và dòng tiền */}
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                         <TuongQuanDongTien
+                            chartHeight="300px"
                             dates={tuongQuanDates}
                             series={tuongQuanSeries}
                             unit="percent"

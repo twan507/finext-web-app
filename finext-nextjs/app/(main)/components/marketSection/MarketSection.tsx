@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Dispatch, SetStateAction } from 'react';
 import dynamic from 'next/dynamic';
 import { Box, Typography, Skeleton, useTheme, useMediaQuery } from '@mui/material';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+
 
 import type { RawMarketData, ChartData, TimeRange } from './MarketIndexChart';
 import IndexTable from './IndexTable';
@@ -15,6 +15,8 @@ import {
     getResponsiveFontSize,
     fontWeight,
     transitions,
+    durations,
+    easings,
 } from 'theme/tokens';
 
 // Lazy load heavy chart component
@@ -153,12 +155,29 @@ export default function MarketSection({
                     alignItems: 'center',
                     cursor: 'pointer',
                     mb: 2,
+                    '&:hover .page-chevron': {
+                        color: 'primary.main',
+                    },
                 }}
             >
                 <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1') }}>
                     Thị trường
                 </Typography>
-                <ChevronRightIcon sx={{ fontSize: getResponsiveFontSize('h2'), mt: 1, color: theme.palette.text.secondary }} />
+                <Box
+                    className="page-chevron"
+                    sx={{
+                        fontSize: getResponsiveFontSize('h1'),
+                        fontWeight: fontWeight.semibold,
+                        color: 'text.secondary',
+                        lineHeight: 1.2,
+                        ml: 0.75,
+                        display: 'flex',
+                        alignItems: 'center',
+                        transition: `color ${durations.fastest} ${easings.easeOut}`,
+                    }}
+                >
+                    ›
+                </Box>
             </Box>
 
             {/* ========== TOP SECTION: Chart + Detail Panel ========== */}

@@ -107,7 +107,7 @@ export default function TuongQuanDongTien({
                 left: 0,
                 blur: 5,
                 opacity: 0.8,
-                color: colors as unknown as string,
+                color: [theme.palette.text.secondary, ...colors] as unknown as string,
             },
         },
         annotations: {

@@ -14,6 +14,7 @@ import IndexTable from '../components/marketSection/IndexTable';
 
 import BienDongSection from './components/BienDongSection';
 import DongTienSection from './components/DongTienSection';
+import DinhGiaSection from './components/DinhGiaSection';
 import NuocNgoaiSection from './components/NuocNgoaiSection';
 import TuDoanhSection from './components/TuDoanhSection';
 import TinHieuSection from './components/TinHieuSection';
@@ -54,10 +55,25 @@ const emptyChartData: ChartData = {
   volumeData: []
 };
 
+// ========== DUMMY DATA: PE Ngành (still needed) ==========
+const DUMMY_PE_NGANH_DATA = [
+  { nganh: 'Chăm sóc sức khỏe', peChange: -2.0 },
+  { nganh: 'Nguyên vật liệu', peChange: -3.9 },
+  { nganh: 'Tiện ích', peChange: -4.5 },
+  { nganh: 'Tài chính', peChange: -5.0 },
+  { nganh: 'Hàng hóa thiết yếu', peChange: -6.1 },
+  { nganh: 'Bất động sản', peChange: -6.4 },
+  { nganh: 'Công nghệ', peChange: -7.2 },
+  { nganh: 'Công nghiệp', peChange: -8.1 },
+  { nganh: 'Hàng hóa không thiết yếu', peChange: -13.6 },
+  { nganh: 'Năng lượng', peChange: -18.6 },
+];
+
 // ========== SUB-NAVBAR TABS CONFIG ==========
 const MARKET_TABS = [
   { id: 'volatility', label: 'Biến động' },
   { id: 'cashflow', label: 'Dòng tiền' },
+  { id: 'valuation', label: 'Định giá' },
   { id: 'signal', label: 'Tín hiệu' },
   { id: 'foreign', label: 'Nước ngoài' },
   { id: 'proprietary', label: 'Tự doanh' },
@@ -135,7 +151,7 @@ export default function MarketsContent() {
 
   const [ticker, setTicker] = useState<string>('VNINDEX');
   const [activeTab, setActiveTab] = useState<MarketTabId>(() => {
-    const validTabs: MarketTabId[] = ['volatility', 'cashflow', 'signal', 'foreign', 'proprietary'];
+    const validTabs: MarketTabId[] = ['volatility', 'cashflow', 'valuation', 'signal', 'foreign', 'proprietary'];
     if (tabParam && validTabs.includes(tabParam)) return tabParam;
     return 'volatility';
   });
@@ -145,7 +161,7 @@ export default function MarketsContent() {
 
   // Sync activeTab when URL search param changes (e.g. from nav dropdown)
   useEffect(() => {
-    const validTabs: MarketTabId[] = ['volatility', 'cashflow', 'signal', 'foreign', 'proprietary'];
+    const validTabs: MarketTabId[] = ['volatility', 'cashflow', 'valuation', 'signal', 'foreign', 'proprietary'];
     if (tabParam && validTabs.includes(tabParam) && tabParam !== activeTab) {
       setActiveTab(tabParam);
     }
@@ -354,6 +370,8 @@ export default function MarketsContent() {
         return <BienDongSection />;
       case 'cashflow':
         return <DongTienSection histIndexData={histIndexData} todayAllData={todayAllData} />;
+      case 'valuation':
+        return <DinhGiaSection peNganhData={DUMMY_PE_NGANH_DATA} />;
       case 'signal':
         return <TinHieuSection />;
       case 'foreign':

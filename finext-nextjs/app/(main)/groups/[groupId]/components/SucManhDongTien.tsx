@@ -96,7 +96,7 @@ export default function SucManhDongTien({
         },
         plotOptions: {
             bar: {
-                columnWidth: '60%',
+                columnWidth: '80%',
                 borderRadius: 2,
                 colors: {
                     ranges: [

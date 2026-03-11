@@ -3,7 +3,7 @@
 import { Box, Typography, useTheme, Skeleton, Divider, keyframes, alpha } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+
 import PublicIcon from '@mui/icons-material/Public';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import DescriptionIcon from '@mui/icons-material/Description';
@@ -12,7 +12,7 @@ import BusinessCenterIcon from '@mui/icons-material/BusinessCenter';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import NewspaperIcon from '@mui/icons-material/Newspaper';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import { spacing, getResponsiveFontSize, transitions, borderRadius, fontWeight } from 'theme/tokens';
+import { spacing, getResponsiveFontSize, transitions, borderRadius, fontWeight, durations, easings } from 'theme/tokens';
 
 // ============================================================================
 // KEYFRAME ANIMATIONS
@@ -1127,12 +1127,29 @@ export default function NewsSection() {
                     alignItems: 'center',
                     cursor: 'pointer',
                     mb: spacing.xs,
+                    '&:hover .page-chevron': {
+                        color: 'primary.main',
+                    },
                 }}
             >
                 <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1') }}>
                     Tin tức
                 </Typography>
-                <ChevronRightIcon sx={{ fontSize: getResponsiveFontSize('h2').md, mt: 1, color: theme.palette.text.secondary }} />
+                <Box
+                    className="page-chevron"
+                    sx={{
+                        fontSize: getResponsiveFontSize('h1'),
+                        fontWeight: fontWeight.semibold,
+                        color: 'text.secondary',
+                        lineHeight: 1.2,
+                        ml: 0.75,
+                        display: 'flex',
+                        alignItems: 'center',
+                        transition: `color ${durations.fastest} ${easings.easeOut}`,
+                    }}
+                >
+                    ›
+                </Box>
             </Box>
 
             {/* News Stats Bar */}
@@ -1222,12 +1239,29 @@ export default function NewsSection() {
                     color: 'inherit',
                     mt: spacing.xs,
                     mb: 2,
+                    '&:hover .sub-page-chevron': {
+                        color: 'primary.main',
+                    },
                 }}
             >
                 <Typography className="sub-section-title" sx={{ fontSize: getResponsiveFontSize('h4'), fontWeight: fontWeight.bold }}>
                     Báo cáo tổng hợp
                 </Typography>
-                <ChevronRightIcon sx={{ fontSize: getResponsiveFontSize('h4').md, color: 'text.secondary' }} />
+                <Box
+                    className="sub-page-chevron"
+                    sx={{
+                        fontSize: getResponsiveFontSize('h3'),
+                        fontWeight: fontWeight.semibold,
+                        color: 'text.secondary',
+                        lineHeight: 1.2,
+                        ml: 0.5,
+                        display: 'flex',
+                        alignItems: 'center',
+                        transition: `color ${durations.fastest} ${easings.easeOut}`,
+                    }}
+                >
+                    ›
+                </Box>
             </Box>
 
             <Box>
