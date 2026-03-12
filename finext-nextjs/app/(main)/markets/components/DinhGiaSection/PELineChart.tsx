@@ -48,16 +48,16 @@ export default function PELineChart({
             try {
                 const el = chartContext?.el;
                 if (!el) return;
-                
+
                 const path = el.querySelector('.apexcharts-line-series .apexcharts-series path');
                 const inner = el.querySelector('.apexcharts-inner');
                 if (!path || !inner) return;
-                
+
                 const pathLength = path.getTotalLength();
                 if (pathLength === 0) return; // avoid errors if not rendered
-                
+
                 const lastPoint = path.getPointAtLength(pathLength);
-                
+
                 // Get the translation offset of the chart's inner group area
                 const transformAttr = inner.getAttribute('transform') || '';
                 const transformMatch = transformAttr.match(/translate\(([-\d.]+),\s*([-\d.]+)\)/);
@@ -67,10 +67,10 @@ export default function PELineChart({
                     translateX = parseFloat(transformMatch[1]) || 0;
                     translateY = parseFloat(transformMatch[2]) || 0;
                 }
-                
-                setEndpointPos({ 
-                    x: lastPoint.x + 2 + translateX, 
-                    y: lastPoint.y + translateY 
+
+                setEndpointPos({
+                    x: lastPoint.x + 2 + translateX,
+                    y: lastPoint.y + translateY
                 });
             } catch {
                 // ignore
@@ -124,7 +124,7 @@ export default function PELineChart({
                 mounted: function (chartContext: any) {
                     updateEndpointPosition(chartContext);
                     // Fallback to show endpoint if animationEnd doesn't fire
-                    setTimeout(() => setShowEndpoint(true), 500); 
+                    setTimeout(() => setShowEndpoint(true), 500);
                 },
                 updated: function (chartContext: any) {
                     updateEndpointPosition(chartContext);
@@ -160,7 +160,6 @@ export default function PELineChart({
                     dashArray: 3,
                 },
             },
-            tickAmount: isMobile ? 4 : 6,
         },
         yaxis: {
             show: false,
@@ -221,7 +220,7 @@ export default function PELineChart({
             hover: { filter: { type: 'none' } },
             active: { filter: { type: 'none' } },
         },
-    }), [theme, peColor, avgPE, dates, chartId, chartGroup, isMobile, updateEndpointPosition]);
+    }), [theme, peColor, avgPE, dates, chartId, chartGroup, updateEndpointPosition]);
 
     return (
         <Box sx={{

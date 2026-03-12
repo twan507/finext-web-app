@@ -126,7 +126,6 @@ export default function FinancialsLineChart({
                 },
             },
             labels: { show: false },
-            tickAmount: isMobile ? 4 : 6,
         },
         yaxis: {
             show: false,
@@ -197,7 +196,7 @@ export default function FinancialsLineChart({
             hover: { filter: { type: 'none' } },
             active: { filter: { type: 'none' } },
         },
-    }), [theme, colors, dates, chartId, chartGroup, isMobile]);
+    }), [theme, colors, dates, chartId, chartGroup]);
 
     return (
         <Box sx={{
