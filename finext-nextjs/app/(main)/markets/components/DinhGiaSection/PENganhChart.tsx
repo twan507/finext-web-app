@@ -10,24 +10,25 @@ const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 export interface PENganhDataPoint {
     nganh: string;      // Industry name
-    peChange: number;   // % change
+    peChange: number;   // PE value
 }
 
 interface PENganhChartProps {
     data: PENganhDataPoint[];
+    marketPE?: number;
     chartHeight?: string;
     title?: string;
 }
 
 export default function PENganhChart({
     data,
-    chartHeight = '340px',
+    marketPE,
+    chartHeight = '700px',
     title,
 }: PENganhChartProps) {
     const theme = useTheme();
 
-    const trendUpColor = theme.palette.trend.up;
-    const trendDownColor = theme.palette.trend.down;
+    const barColor = theme.palette.warning.main;
 
     // Sort by peChange descending (least negative first = top)
     const sortedData = useMemo(() =>
@@ -36,14 +37,22 @@ export default function PENganhChart({
     );
 
     const categories = useMemo(() => sortedData.map(d => d.nganh), [sortedData]);
-    const seriesData = useMemo(() => sortedData.map(d => d.peChange), [sortedData]);
+    // Original PE values for display
+    const originalValues = useMemo(() => sortedData.map(d => d.peChange), [sortedData]);
 
-    // Ref to hold current series data for DOM label adjustment
+    // Log-scaled values for bar widths (visual proportion)
+    // Using log10 so e.g. PE=10 → 1, PE=100 → 2, PE=200 → 2.3
+    const seriesData = useMemo(() =>
+        originalValues.map(v => v > 0 ? Math.log10(v) : 0),
+        [originalValues]
+    );
+
+    // Ref to hold current original data for DOM label adjustment
     const seriesDataRef = useRef<number[]>([]);
-    seriesDataRef.current = seriesData;
+    seriesDataRef.current = originalValues;
 
     // Detect if any data point is negative
-    const hasNegative = seriesData.some(v => v < 0);
+    const hasNegative = originalValues.some(v => v < 0);
 
     // Adjust labels for negative values
     const adjustNegativeLabels = useCallback((el: HTMLElement) => {
@@ -54,8 +63,8 @@ export default function PENganhChart({
                 if (currentData[index] != null && currentData[index] < 0) {
                     const currentX = parseFloat(label.getAttribute('x') || '0');
                     if (!label.getAttribute('data-adjusted')) {
-                        label.setAttribute('x', String(currentX - 5));
-                        label.setAttribute('text-anchor', 'end');
+                        label.setAttribute('x', String(currentX + 10));
+                        label.setAttribute('text-anchor', 'start');
                         label.setAttribute('data-adjusted', 'true');
                     }
                 }
@@ -64,7 +73,7 @@ export default function PENganhChart({
     }, []);
 
     const displaySeries = useMemo(() => [{
-        name: 'PE Ngành',
+        name: 'P/E',
         data: seriesData,
     }], [seriesData]);
 
@@ -87,53 +96,66 @@ export default function PENganhChart({
                 },
             },
         },
-        annotations: {
+        annotations: marketPE && marketPE > 0 ? {
             xaxis: [{
-                x: 0,
-                borderColor: theme.palette.text.secondary,
-                strokeDashArray: 0,
-                borderWidth: 2,
+                x: Math.log10(marketPE),
+                borderColor: theme.palette.text.primary,
+                strokeDashArray: 4,
+                borderWidth: 1,
+                label: {
+                    text: `PE thị trường ${marketPE.toFixed(2)}`,
+                    position: 'bottom',
+                    orientation: 'horizontal',
+                    borderWidth: 0,
+                    style: {
+                        color: theme.palette.text.primary,
+                        background: 'transparent',
+                        fontSize: getResponsiveFontSize('sm').md,
+                        // fontWeight: Number(fontWeight.semibold),
+                        padding: { left: 4, right: 4, top: 2, bottom: 2 },
+                    },
+                    offsetY: 20,
+                },
             }],
-        },
+        } : {},
         plotOptions: {
             bar: {
                 horizontal: true,
-                barHeight: '55%',
+                barHeight: '70%',
                 borderRadius: 3,
                 borderRadiusApplication: 'end',
                 dataLabels: {
                     position: 'top',
                 },
-                colors: {
-                    ranges: [
-                        { from: -Infinity, to: -0.0001, color: trendDownColor },
-                        { from: 0, to: Infinity, color: trendUpColor },
-                    ],
-                },
+
             },
         },
-        colors: [trendUpColor],
+        colors: [barColor],
         dataLabels: {
             enabled: true,
-            textAnchor: 'start',
-            offsetX: 5,
+            textAnchor: 'end',
+            offsetX: -5,
             offsetY: 7,
             style: {
-                colors: [theme.palette.text.secondary],
-                fontSize: getResponsiveFontSize('sm').md,
+                colors: ['#ffffff'],
+                fontSize: getResponsiveFontSize('xs').md,
                 fontWeight: fontWeight.medium,
             },
-            formatter: (val: number) => `${val.toFixed(1)}%`,
+            formatter: (_val: number, opts: any) => {
+                const idx = opts.dataPointIndex;
+                const orig = originalValues[idx];
+                return orig != null ? orig.toFixed(1) : '';
+            },
         },
         xaxis: {
             categories,
             tickAmount: 4,
             labels: {
+                show: false,
                 style: {
                     colors: theme.palette.text.secondary,
                     fontSize: getResponsiveFontSize('sm').md,
                 },
-                formatter: (val: string) => `${parseFloat(val).toFixed(1)}%`,
                 offsetY: -3.2,
             },
             axisBorder: {
@@ -159,7 +181,7 @@ export default function PENganhChart({
             strokeDashArray: 0,
             xaxis: { lines: { show: true } },
             yaxis: { lines: { show: false } },
-            padding: { top: 0, bottom: 0, left: hasNegative ? 25 : 5, right: 50 },
+            padding: { top: 0, bottom: 10, left: 20, right: 0 },
         },
         legend: { show: false },
         tooltip: {
@@ -172,11 +194,13 @@ export default function PENganhChart({
                 const textColor = theme.palette.mode === 'dark' ? '#e0e0e0' : '#333333';
 
                 const rows = seriesData.map((sd: number[], si: number) => {
-                    const value = sd[dataPointIndex];
-                    if (value == null) return '';
+                    const logValue = sd[dataPointIndex];
+                    if (logValue == null) return '';
                     const color = w.globals.colors[si];
                     const name = w.globals.seriesNames[si];
-                    const formattedValue = `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+                    // Show original PE value, not log
+                    const origValue = originalValues[dataPointIndex];
+                    const formattedValue = origValue != null ? origValue.toFixed(2) : logValue.toFixed(2);
 
                     return `
                         <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0;">
@@ -214,7 +238,7 @@ export default function PENganhChart({
             hover: { filter: { type: 'none' } },
             active: { filter: { type: 'none' } },
         },
-    }), [theme, trendUpColor, trendDownColor, categories, hasNegative, adjustNegativeLabels]);
+    }), [theme, barColor, categories, hasNegative, adjustNegativeLabels, originalValues]);
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column' }}>

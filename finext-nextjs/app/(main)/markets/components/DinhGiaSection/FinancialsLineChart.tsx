@@ -26,7 +26,7 @@ export default function FinancialsLineChart({
     doanhThu,
     chartGroup = 'dinh-gia-sync',
     chartId = 'financials-line',
-    chartHeight = '220px',
+    chartHeight = '340px',
     onDataPointHover,
 }: FinancialsLineChartProps) {
     const theme = useTheme();
@@ -36,12 +36,12 @@ export default function FinancialsLineChart({
     hoverRef.current = onDataPointHover;
 
     const colors = useMemo(() => [
-        theme.palette.trend.down,    // Vốn hóa - đỏ
         theme.palette.trend.up,      // Lợi nhuận - xanh lá
         theme.palette.info.main,     // Doanh thu - xanh dương
+        theme.palette.trend.down,    // Vốn hóa - đỏ (render sau cùng = nằm trên)
     ], [theme]);
 
-    const legendLabels = ['Vốn hóa', 'Lợi nhuận', 'Doanh thu'];
+    const legendLabels = ['Lợi nhuận', 'Doanh thu', 'Vốn hóa'];
 
     const handleLegendClick = useCallback((seriesName: string) => {
         setHiddenSeries(prev => {
@@ -68,9 +68,9 @@ export default function FinancialsLineChart({
 
     const displaySeries = useMemo(() => {
         const allSeries = [
-            { name: legendLabels[0], data: toCumsumPctChange(vonHoa) },
-            { name: legendLabels[1], data: toCumsumPctChange(loiNhuan) },
-            { name: legendLabels[2], data: toCumsumPctChange(doanhThu) },
+            { name: legendLabels[0], data: toCumsumPctChange(loiNhuan) },
+            { name: legendLabels[1], data: toCumsumPctChange(doanhThu) },
+            { name: legendLabels[2], data: toCumsumPctChange(vonHoa) },
         ];
         return allSeries.map(s => ({
             ...s,
@@ -110,8 +110,8 @@ export default function FinancialsLineChart({
         },
         colors,
         stroke: {
-            width: [2.5, 2.5, 2.5],
-            curve: 'stepline',
+            width: [1.5, 1.5, 1.5],
+            curve: ['stepline', 'stepline', 'smooth'],
         },
         xaxis: {
             categories: dates,
@@ -138,7 +138,7 @@ export default function FinancialsLineChart({
             axisTicks: { show: false },
         },
         grid: {
-            padding: { left: 0, right: 0, bottom: 0, top: 0 },
+            padding: { left: 0, right: 0, bottom: -20, top: -20 },
             borderColor: 'transparent',
             strokeDashArray: 0,
             xaxis: { lines: { show: false } },

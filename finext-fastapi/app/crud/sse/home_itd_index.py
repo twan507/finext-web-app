@@ -10,7 +10,7 @@ async def home_itd_index(ticker: Optional[str] = None, **kwargs) -> Dict[str, An
     stock_db = get_database(STOCK_DB)
 
     # ITD chỉ cần close để vẽ line chart, không cần open/high/low
-    projection = {"_id": 0, "ticker": 1, "ticker_name": 1, "date": 1, "close": 1, "volume": 1, "diff": 1, "pct_change": 1, "vsi": 1}
+    projection = {"_id": 0, "ticker": 1, "ticker_name": 1, "date": 1, "close": 1, "volume": 1, "diff": 1, "pct_change": 1, "t0_score": 1, "vsi": 1}
     find_query = {"ticker": ticker} if ticker else {}
     itd_df = await get_collection_data(stock_db, "itd_index", find_query=find_query, projection=projection)
 

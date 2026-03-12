@@ -141,7 +141,7 @@ export const trendColors = {
   },
   down: {
     light: '#e11d1d', // Rose-600
-    dark: '#d45d5d',  // Rose-400
+    dark: '#d45050',  // Rose-400
   },
   ref: {
     light: '#eadb08', // Yellow-600

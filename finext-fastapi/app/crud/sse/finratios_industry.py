@@ -7,6 +7,8 @@ from app.crud.sse._helpers import get_collection_data, STOCK_DB
 
 async def finratios_industry(
     ticker: Optional[str] = None,
+    limit: Optional[int] = None,
+    projection: Optional[Dict[str, Any]] = None,
     **kwargs,
 ) -> Dict[str, Any]:
     """
@@ -19,35 +21,44 @@ async def finratios_industry(
         ryq76, ryd28, ryd30
 
     Args:
-        ticker: Mã ngành để filter (VD: BAOHIEM, XAYDUNG) (optional)
+        ticker: Mã ngành để filter, hỗ trợ comma-separated (VD: BAOHIEM,XAYDUNG) (optional)
+        limit: Giới hạn số lượng records (optional)
+        projection: MongoDB projection để chỉ lấy các field cần thiết (optional)
 
     Returns:
         List[Dict] - danh sách các records từ finratios_industry
     """
     stock_db = get_database(STOCK_DB)
 
-    projection = {
-        "_id": 0,
-        "date": 1,
-        "ticker": 1,
-        "ticker_name": 1,
-        "type": 1,
-        "isa22": 1,
-        "rev": 1,
-        "ryd11": 1,
-        "ryd21": 1,
-        "ryd25": 1,
-        "ryd26": 1,
-        "ryd14": 1,
-        "ryd7": 1,
-        "ryq76": 1,
-        "ryd28": 1,
-        "ryd30": 1,
-    }
+    # Sử dụng projection truyền vào hoặc mặc định
+    if projection is None:
+        projection = {
+            "_id": 0,
+            "date": 1,
+            "ticker": 1,
+            "ticker_name": 1,
+            "type": 1,
+            "isa22": 1,
+            "rev": 1,
+            "ryd11": 1,
+            "ryd21": 1,
+            "ryd25": 1,
+            "ryd26": 1,
+            "ryd14": 1,
+            "ryd7": 1,
+            "ryq76": 1,
+            "ryd28": 1,
+            "ryd30": 1,
+        }
 
-    find_query = {}
+    find_query: Dict[str, Any] = {}
     if ticker:
-        find_query["ticker"] = ticker
+        # Hỗ trợ comma-separated tickers (VD: "BAOHIEM,NGANHANG,BDS")
+        ticker_list = [t.strip() for t in ticker.split(",") if t.strip()]
+        if len(ticker_list) == 1:
+            find_query["ticker"] = ticker_list[0]
+        elif len(ticker_list) > 1:
+            find_query["ticker"] = {"$in": ticker_list}
 
     finratios_industry_df = await get_collection_data(
         stock_db,
@@ -55,6 +66,7 @@ async def finratios_industry(
         find_query=find_query,
         projection=projection,
         sort=[("date", 1)],
+        limit=limit,
     )
 
     return finratios_industry_df.to_dict(orient="records")

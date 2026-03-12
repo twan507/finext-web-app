@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Box, useTheme, useMediaQuery, Skeleton } from '@mui/material';
+import { Box, useTheme, useMediaQuery } from '@mui/material';
 import dynamic from 'next/dynamic';
 import { ApexOptions } from 'apexcharts';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
@@ -29,8 +29,7 @@ export default function VsiITDLineChart({
     chartHeight = '280px',
 }: VsiITDLineChartProps) {
     const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-    const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'));
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
     const upColor = theme.palette.trend.up;
     const downColor = theme.palette.trend.down;
@@ -60,12 +59,11 @@ export default function VsiITDLineChart({
         },
         stroke: {
             curve: 'smooth',
-            width: [2, 2.5],
-            dashArray: [4, 0],
+            width: 2.5,
         },
-        colors: [theme.palette.text.secondary, ...chartColors],
+        colors: chartColors,
         fill: {
-            type: ['solid', 'gradient'],
+            type: 'gradient',
             gradient: {
                 shade: 'dark',
                 type: 'vertical',
@@ -78,7 +76,7 @@ export default function VsiITDLineChart({
             type: 'numeric',
             min: 0,
             max: xAxisMax,
-            tickAmount: isMobile ? 6 : 6,
+            tickAmount: isMobile ? 6 : 10,
             tooltip: { enabled: false },
             axisBorder: { show: false },
             axisTicks: { show: false },
@@ -111,6 +109,7 @@ export default function VsiITDLineChart({
         },
         yaxis: {
             opposite: true,
+            max: (max) => Math.max(100, max), // Đảm bảo trục y hiển thị ít nhất đến 100%
             labels: {
                 style: {
                     colors: theme.palette.text.secondary,
@@ -127,10 +126,37 @@ export default function VsiITDLineChart({
             yaxis: { lines: { show: true } },
             padding: { top: 0, bottom: 0, left: 20, right: 5 },
         },
-        // Price tag for last data point
+        // Reference line at 100% + price tag for last value
         annotations: {
-            position: 'back',
             yaxis: [
+                // 100% reference line with price tag
+                {
+                    y: 100,
+                    borderColor: theme.palette.text.secondary,
+                    borderWidth: 2,
+                    strokeDashArray: 4,
+                    label: {
+                        borderColor: 'transparent',
+                        style: {
+                            color: '#fff',
+                            background: theme.palette.text.secondary,
+                            fontSize: getResponsiveFontSize('sm').md,
+                            fontWeight: fontWeight.medium,
+                            padding: {
+                                left: 6,
+                                right: 6,
+                                top: 2,
+                                bottom: 2,
+                            },
+                        },
+                        text: '100%',
+                        position: 'right' as const,
+                        textAnchor: 'start',
+                        offsetX: 15.5,
+                        offsetY: 8,
+                    },
+                },
+                // Price tag for last data point
                 ...(seriesData.length > 0 ? [{
                     y: seriesData[seriesData.length - 1].y,
                     borderColor: 'transparent',
@@ -175,9 +201,9 @@ export default function VsiITDLineChart({
                     timeStr = `${hours}:${minutes}`;
                 }
 
-                const value = series[1]?.[dataPointIndex];
+                const value = series[0]?.[dataPointIndex];
                 const formattedValue = value != null ? `${value.toFixed(2)}%` : '—';
-                const color = w.globals.colors[1];
+                const color = w.globals.colors[0];
 
                 const bgColor = theme.palette.mode === 'dark' ? 'rgba(26, 26, 26, 0.9)' : 'rgba(255, 255, 255, 0.9)';
                 const textColor = theme.palette.mode === 'dark' ? '#e0e0e0' : '#333333';
@@ -220,24 +246,16 @@ export default function VsiITDLineChart({
 
     const series = useMemo(() => [
         {
-            name: '100% Reference',
-            type: 'line',
-            data: seriesData.map(d => ({ x: d.x, y: 100 })),
-        },
-        {
             name: 'Chỉ số thanh khoản',
             type: 'area',
             data: seriesData,
         },
     ], [seriesData]);
 
-    const isLoading = !seriesData || seriesData.length === 0;
-
     return (
         <Box sx={{
             width: '100%',
             height: chartHeight,
-            ml: (isMobile || isTablet) ? 0 : -4,
             '& .apexcharts-tooltip': {
                 boxShadow: 'none !important',
                 filter: 'none !important',
@@ -256,43 +274,13 @@ export default function VsiITDLineChart({
                 filter: `drop-shadow(0 0 4px ${theme.palette.text.secondary})`,
             },
         }}>
-            {isLoading ? (
-                <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', pt: 2 }}>
-                    <Box sx={{ display: 'flex', flex: 1, gap: 1 }}>
-                        {/* Chart area placeholder */}
-                        <Box sx={{ flex: 1, position: 'relative' }}>
-                            <Skeleton
-                                variant="rectangular"
-                                sx={{
-                                    width: '100%',
-                                    height: '100%',
-                                    borderRadius: 1,
-                                }}
-                            />
-                        </Box>
-                        {/* Y-axis labels */}
-                        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', py: 1 }}>
-                            {[...Array(5)].map((_, i) => (
-                                <Skeleton key={i} variant="text" width={40} height={16} />
-                            ))}
-                        </Box>
-                    </Box>
-                    {/* X-axis labels */}
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', pr: 6 }}>
-                        {[...Array(7)].map((_, i) => (
-                            <Skeleton key={i} variant="text" width={35} height={16} />
-                        ))}
-                    </Box>
-                </Box>
-            ) : (
-                <Chart
-                    options={chartOptions}
-                    series={series}
-                    type="area"
-                    height="100%"
-                    width="100%"
-                />
-            )}
+            <Chart
+                options={chartOptions}
+                series={series}
+                type="area"
+                height="100%"
+                width="100%"
+            />
         </Box>
     );
 }

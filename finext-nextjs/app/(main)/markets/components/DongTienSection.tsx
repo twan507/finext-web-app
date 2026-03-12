@@ -14,13 +14,14 @@ import ChiSoThanhKhoan from './DongTienSection/ChiSoThanhKhoan';
 import DongTienTrongTuan from './DongTienSection/DongTienTrongTuan';
 import PhanBoDongTien from './DongTienSection/PhanBoDongTien';
 
-type TimeRange = '1W' | '1M' | '3M' | '6M' | '1Y';
+type TimeRange = '1D' | '1W' | '1M' | '3M' | '6M' | '1Y';
 
 type IndexDataByTicker = Record<string, RawMarketData[]>;
 
 interface DongTienSectionProps {
     histIndexData: IndexDataByTicker;
     todayAllData: IndexDataByTicker;
+    itdAllData?: IndexDataByTicker;
 }
 
 /**
@@ -82,13 +83,41 @@ function buildRawValues(data: RawMarketData[], fieldExtractor: (d: RawMarketData
     });
 }
 
+/**
+ * Build a fixed 1D trading timeline: 09:00–11:30 + 13:00–15:00 (skip lunch break).
+ * Returns array of UTC timestamps at minute resolution.
+ */
+function build1DTradingTimeline(referenceTimestamp?: number): number[] {
+    const ref = referenceTimestamp != null
+        ? new Date(referenceTimestamp)
+        : new Date(Date.now() + 7 * 60 * 60 * 1000);
+
+    const y = ref.getUTCFullYear();
+    const m = ref.getUTCMonth();
+    const d = ref.getUTCDate();
+
+    const timeline: number[] = [];
+
+    const pushMinuteRange = (startHour: number, startMinute: number, endHour: number, endMinute: number) => {
+        const start = Date.UTC(y, m, d, startHour, startMinute, 0, 0);
+        const end = Date.UTC(y, m, d, endHour, endMinute, 0, 0);
+        for (let ts = start; ts <= end; ts += 60 * 1000) {
+            timeline.push(ts);
+        }
+    };
+
+    pushMinuteRange(9, 0, 11, 30);
+    pushMinuteRange(13, 0, 15, 0);
+
+    return timeline;
+}
 
 
-export default function DongTienSection({ histIndexData, todayAllData }: DongTienSectionProps) {
+export default function DongTienSection({ histIndexData, todayAllData, itdAllData = {} }: DongTienSectionProps) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
-    const [timeRange, setTimeRange] = useState<TimeRange>('1M');
+    const [timeRange, setTimeRange] = useState<TimeRange>('1D');
 
     const handleTimeRangeChange = (_event: React.MouseEvent<HTMLElement>, newRange: TimeRange | null) => {
         if (newRange !== null) setTimeRange(newRange);
@@ -133,7 +162,83 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
     }, [vnMerged, fnxMerged]);
 
     // Line chart: filtered by selected timeRange
-    const { lineDates, lineSeries } = useMemo(() => {
+    const { lineDates, lineSeries, itdSeries, indexToTimestamp, xAxisMax } = useMemo(() => {
+        // ========== 1D MODE: ITD data, numeric x-axis ==========
+        if (timeRange === '1D') {
+            const vnItd = itdAllData['VNINDEX'] || [];
+            const fnxItd = itdAllData['FNXINDEX'] || [];
+
+            // Sort and deduplicate by minute-normalized timestamp
+            const processItd = (items: RawMarketData[]) => {
+                const sorted = [...items]
+                    .filter(item => item.date)
+                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+                const seen = new Set<number>();
+                return sorted
+                    .map(item => ({
+                        ts: Math.floor((new Date(item.date).getTime() + 7 * 60 * 60 * 1000) / (60 * 1000)) * (60 * 1000),
+                        item,
+                    }))
+                    .filter(p => {
+                        if (seen.has(p.ts)) return false;
+                        seen.add(p.ts);
+                        return true;
+                    });
+            };
+
+            const vnProcessed = processItd(vnItd);
+            const fnxProcessed = processItd(fnxItd);
+
+            // Build fixed trading timeline (09:00-11:30 + 13:00-15:00)
+            const allDataTs = [...vnProcessed.map(p => p.ts), ...fnxProcessed.map(p => p.ts)];
+            const latestDataTs = allDataTs.length > 0 ? Math.max(...allDataTs) : undefined;
+            const fixedTimeline = build1DTradingTimeline(latestDataTs);
+
+            // Map timestamp → sequential index
+            const timestampToIndex = new Map<number, number>();
+            const idxToTs = new Map<number, number>();
+            fixedTimeline.forEach((ts, index) => {
+                timestampToIndex.set(ts, index);
+                idxToTs.set(index, ts);
+            });
+
+            const maxIndex = idxToTs.size > 0 ? Math.max(...Array.from(idxToTs.keys())) : undefined;
+
+            const toPercentValue = (val?: number): number => {
+                const raw = val || 0;
+                return Math.abs(raw) < 1 ? raw * 100 : raw;
+            };
+
+            // Build {x, y}[] series aligned to fixed timeline
+            const buildItdXYSeries = (
+                processed: { ts: number; item: RawMarketData }[],
+                extractor: (item: RawMarketData) => number
+            ): { x: number; y: number }[] => {
+                return processed
+                    .map(p => {
+                        const index = timestampToIndex.get(p.ts);
+                        if (index === undefined) return null;
+                        return { x: index, y: parseFloat(extractor(p.item).toFixed(2)) };
+                    })
+                    .filter((p): p is { x: number; y: number } => p !== null)
+                    .sort((a, b) => a.x - b.x);
+            };
+
+            return {
+                lineDates: [] as string[],
+                lineSeries: [] as { name: string; data: number[] }[],
+                itdSeries: [
+                    { name: 'VNINDEX', data: buildItdXYSeries(vnProcessed, d => toPercentValue(d.pct_change)) },
+                    { name: 'FNXINDEX', data: buildItdXYSeries(fnxProcessed, d => toPercentValue(d.pct_change)) },
+                    { name: 'Dòng tiền', data: buildItdXYSeries(fnxProcessed, d => toPercentValue(((d as any).t0_score || 0) / 1000)) },
+                ],
+                indexToTimestamp: idxToTs,
+                xAxisMax: maxIndex,
+            };
+        }
+
+        // ========== HISTORY MODE: cumsum ==========
         const sessions = getSessionCount(timeRange);
         const vnFiltered = vnMerged.slice(-sessions);
         const fnxFiltered = fnxMerged.slice(-sessions);
@@ -153,8 +258,11 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
                 { name: 'FNXINDEX', data: buildCumsum(fnxFiltered, d => d.pct_change || 0) },
                 { name: 'Dòng tiền', data: buildCumsum(fnxFiltered, d => ((d as any).t0_score || 0) / 1000) },
             ],
+            itdSeries: undefined as undefined,
+            indexToTimestamp: undefined as undefined,
+            xAxisMax: undefined as undefined,
         };
-    }, [vnMerged, fnxMerged, timeRange]);
+    }, [vnMerged, fnxMerged, timeRange, itdAllData, isMobile]);
 
     // ========== NHÓM CỔ PHIẾU: chart 1 & 2 from todayAllData ==========
     const categoryTickers = useMemo(() => {
@@ -349,7 +457,7 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
                     <TimeframeSelector
                         value={timeRange}
                         onChange={handleTimeRangeChange}
-                        options={['1W', '1M', '3M', '6M', '1Y']}
+                        options={['1D', '1W', '1M', '3M', '6M', '1Y']}
                         sx={{ my: 1, display: 'inline-flex', width: 'fit-content' }}
                     />
                 </Box>
@@ -369,13 +477,22 @@ export default function DongTienSection({ histIndexData, todayAllData }: DongTie
                         <TimeframeSelector
                             value={timeRange}
                             onChange={handleTimeRangeChange}
-                            options={['1W', '1M', '3M', '6M', '1Y']}
+                            options={['1D', '1W', '1M', '3M', '6M', '1Y']}
                             sx={{ display: 'inline-flex', width: 'fit-content' }}
                         />
                     </Box>
                 )}
                 <Box sx={{ flex: 3, minWidth: 0 }}>
-                    <DongTienLineChart dates={lineDates} series={lineSeries} />
+                    {timeRange === '1D' ? (
+                        <DongTienLineChart
+                            mode="itd"
+                            itdSeries={itdSeries!}
+                            indexToTimestamp={indexToTimestamp!}
+                            xAxisMax={xAxisMax}
+                        />
+                    ) : (
+                        <DongTienLineChart dates={lineDates} series={lineSeries} />
+                    )}
                 </Box>
             </Box>
 

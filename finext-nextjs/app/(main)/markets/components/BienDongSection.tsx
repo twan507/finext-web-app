@@ -77,7 +77,7 @@ export default function BienDongSection() {
     const [itdData, setItdData] = useState<ItdRecord[]>(() => {
         const cached = getFromCache<ItdRecord[]>('home_itd_index');
         if (cached && Array.isArray(cached)) {
-            return cached.filter((r) => r.ticker === 'VNINDEX');
+            return cached.filter((r) => r.ticker === 'FNXINDEX');
         }
         return [];
     });
@@ -130,7 +130,7 @@ export default function BienDongSection() {
 
         const requestProps: ISseRequest = {
             url: '/api/v1/sse/stream',
-            queryParams: { keyword: 'home_itd_index', ticker: 'VNINDEX' },
+            queryParams: { keyword: 'home_itd_index', ticker: 'FNXINDEX' },
         };
 
         itdIndexSseRef.current = sseClient<ItdRecord[]>(
@@ -139,7 +139,7 @@ export default function BienDongSection() {
                 onOpen: () => { },
                 onData: (receivedData) => {
                     if (isMountedRef.current && receivedData && Array.isArray(receivedData)) {
-                        const filtered = receivedData.filter((r) => r.ticker === 'VNINDEX');
+                        const filtered = receivedData.filter((r) => r.ticker === 'FNXINDEX');
                         setItdData(filtered);
                     }
                 },

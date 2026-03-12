@@ -55,20 +55,6 @@ const emptyChartData: ChartData = {
   volumeData: []
 };
 
-// ========== DUMMY DATA: PE Ngành (still needed) ==========
-const DUMMY_PE_NGANH_DATA = [
-  { nganh: 'Chăm sóc sức khỏe', peChange: -2.0 },
-  { nganh: 'Nguyên vật liệu', peChange: -3.9 },
-  { nganh: 'Tiện ích', peChange: -4.5 },
-  { nganh: 'Tài chính', peChange: -5.0 },
-  { nganh: 'Hàng hóa thiết yếu', peChange: -6.1 },
-  { nganh: 'Bất động sản', peChange: -6.4 },
-  { nganh: 'Công nghệ', peChange: -7.2 },
-  { nganh: 'Công nghiệp', peChange: -8.1 },
-  { nganh: 'Hàng hóa không thiết yếu', peChange: -13.6 },
-  { nganh: 'Năng lượng', peChange: -18.6 },
-];
-
 // ========== SUB-NAVBAR TABS CONFIG ==========
 const MARKET_TABS = [
   { id: 'volatility', label: 'Biến động' },
@@ -369,9 +355,9 @@ export default function MarketsContent() {
       case 'volatility':
         return <BienDongSection />;
       case 'cashflow':
-        return <DongTienSection histIndexData={histIndexData} todayAllData={todayAllData} />;
+        return <DongTienSection histIndexData={histIndexData} todayAllData={todayAllData} itdAllData={itdAllData} />;
       case 'valuation':
-        return <DinhGiaSection peNganhData={DUMMY_PE_NGANH_DATA} />;
+        return <DinhGiaSection />;
       case 'signal':
         return <TinHieuSection />;
       case 'foreign':
