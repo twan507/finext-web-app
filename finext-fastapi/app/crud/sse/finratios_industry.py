@@ -65,7 +65,7 @@ async def finratios_industry(
         "finratios_industry",
         find_query=find_query,
         projection=projection,
-        sort=[("date", 1)],
+        sort=[("date", -1)],
         limit=limit,
     )
 

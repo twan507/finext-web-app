@@ -194,7 +194,6 @@ export default function DinhGiaSection() {
                 method: 'GET',
                 queryParams: {
                     ticker: PE_NGANH_TICKERS.join(','),
-                    limit: PE_NGANH_TICKERS.length,
                     projection: JSON.stringify({ ryd21: 1, ticker: 1, ticker_name: 1 }),
                 },
                 requireAuth: false,
@@ -208,12 +207,20 @@ export default function DinhGiaSection() {
     // Transform PE Nganh data to chart format
     const peNganhData = useMemo<PENganhDataPoint[]>(() => {
         if (!rawPeNganh.length) return [];
-        return rawPeNganh
-            .filter(r => r.ryd21 != null && r.ticker_name)
-            .map(r => ({
-                nganh: r.ticker_name!,
-                peChange: r.ryd21!,
-            }));
+
+        // Lọc lấy bản ghi mới nhất (đầu tiên) cho mỗi ngành
+        const latestByTicker = new Map<string, FinratiosNganhRecord>();
+
+        for (const record of rawPeNganh) {
+            if (record.ryd21 != null && record.ticker_name && !latestByTicker.has(record.ticker)) {
+                latestByTicker.set(record.ticker, record);
+            }
+        }
+
+        return Array.from(latestByTicker.values()).map(r => ({
+            nganh: r.ticker_name!,
+            peChange: r.ryd21!,
+        }));
     }, [rawPeNganh]);
 
     // Transform raw data to chart data points
