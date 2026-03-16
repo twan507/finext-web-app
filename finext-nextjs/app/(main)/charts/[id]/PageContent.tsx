@@ -3,7 +3,6 @@
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { Box, Typography, useTheme, useMediaQuery } from '@mui/material';
 import { useRouter } from 'next/navigation';
-import useSseCache from 'hooks/useSseCache';
 import { apiClient } from 'services/apiClient';
 import useChartStore from 'hooks/useChartStore';
 import { zIndex } from 'theme/tokens';
@@ -116,6 +115,7 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
     const theme = useTheme();
     const router = useRouter();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'));
 
     // Persistent chart state (survives reload / tab switch)
     const { enabledIndicators, toggleIndicator, clearAll, resetToDefault, setLastTicker } = useChartStore();
@@ -147,13 +147,24 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isFullscreen]);
 
-    // Lấy danh sách tickers cho tìm kiếm
-    const { data: tickerList } = useSseCache<TickerItem[]>({
-        keyword: 'chart_ticker',
-        enabled: true,
-    });
+    // Lấy danh sách tickers cho tìm kiếm (dữ liệu tĩnh — REST + cache 24h)
+    const [tickers, setTickers] = useState<TickerItem[]>([]);
 
-    const tickers = useMemo(() => tickerList || [], [tickerList]);
+    useEffect(() => {
+        let cancelled = false;
+        apiClient<TickerItem[]>({
+            url: '/api/v1/sse/rest/chart_ticker',
+            method: 'GET',
+            requireAuth: false,
+            useCache: true,
+            cacheTtl: 24 * 60 * 60 * 1000,
+        })
+            .then((res) => {
+                if (!cancelled) setTickers(res.data ?? []);
+            })
+            .catch(() => { /* ignore — ticker list is non-critical */ });
+        return () => { cancelled = true; };
+    }, []);
 
     // Handler đổi ticker → navigate sang URL mới
     const handleTickerChange = useCallback(
@@ -163,41 +174,84 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
         [router],
     );
 
-    // ─── History: REST one-time fetch (dữ liệu lịch sử không đổi trong ngày) ───
+    // ─── History: REST lazy-load (responsive chunks, newest first) ───
+    const baseChunk = isMobile ? 120 : isTablet ? 180 : 240;
+    const chunkSize = timeframe === '1M' ? baseChunk * 3 : timeframe === '1W' ? baseChunk * 2 : baseChunk;
+    const chunkSizeRef = useRef(chunkSize);
+    chunkSizeRef.current = chunkSize;
+
     const [historyData, setHistoryData] = useState<ChartRawData[] | null>(null);
     const [isHistoryLoading, setIsHistoryLoading] = useState(true);
     const [historyError, setHistoryError] = useState<string | null>(null);
+    const [hasMoreHistory, setHasMoreHistory] = useState(true);
+    const [loadedBars, setLoadedBars] = useState(0);
+    const isLoadingMoreRef = useRef(false);
 
+    // Fetch initial chunk
     useEffect(() => {
         if (!ticker) return;
 
         let cancelled = false;
         setIsHistoryLoading(true);
         setHistoryError(null);
+        setHistoryData(null);
+        setLoadedBars(0);
+        setHasMoreHistory(true);
 
         apiClient<ChartRawData[]>({
             url: '/api/v1/sse/rest/chart_history_data',
             method: 'GET',
-            queryParams: { ticker },
+            queryParams: { ticker, limit: baseChunk, skip: 0 },
             requireAuth: false,
             useCache: true,
-            cacheTtl: 24 * 60 * 60 * 1000, // cache cả ngày
+            cacheTtl: 24 * 60 * 60 * 1000,
         })
             .then((res) => {
-                if (!cancelled) {
-                    setHistoryData(res.data ?? []);
-                    setIsHistoryLoading(false);
-                }
+                if (cancelled) return;
+                const data = res.data ?? [];
+                setHistoryData(data);
+                setLoadedBars(data.length);
+                setHasMoreHistory(data.length > 0);
+                setIsHistoryLoading(false);
             })
             .catch((err: any) => {
-                if (!cancelled) {
-                    setHistoryError(err.message || 'Lỗi tải dữ liệu lịch sử');
-                    setIsHistoryLoading(false);
-                }
+                if (cancelled) return;
+                setHistoryError(err.message || 'Lỗi tải dữ liệu lịch sử');
+                setIsHistoryLoading(false);
             });
 
         return () => { cancelled = true; };
     }, [ticker]);
+
+    // Load more history (called when user scrolls to left edge)
+    const loadMoreHistory = useCallback(() => {
+        if (isLoadingMoreRef.current || !hasMoreHistory) return;
+
+        isLoadingMoreRef.current = true;
+
+        apiClient<ChartRawData[]>({
+            url: '/api/v1/sse/rest/chart_history_data',
+            method: 'GET',
+            queryParams: { ticker, limit: chunkSizeRef.current, skip: loadedBars },
+            requireAuth: false,
+            useCache: true,
+            cacheTtl: 24 * 60 * 60 * 1000,
+        })
+            .then((res) => {
+                const olderData = res.data ?? [];
+                if (olderData.length > 0) {
+                    setHistoryData((prev) => [...olderData, ...(prev || [])]);
+                    setLoadedBars((prev) => prev + olderData.length);
+                }
+                if (olderData.length === 0) {
+                    setHasMoreHistory(false);
+                }
+                isLoadingMoreRef.current = false;
+            })
+            .catch(() => {
+                isLoadingMoreRef.current = false;
+            });
+    }, [ticker, hasMoreHistory, loadedBars]);
 
     // ─── Today: REST polling mỗi 5s (thay vì SSE — nhanh hơn cho initial load) ───
     const [todayData, setTodayData] = useState<ChartRawData[] | null>(null);
@@ -354,6 +408,8 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
             onResetDefaultIndicators={resetToDefault}
             onCloseIndicatorsPanel={() => setShowIndicatorsPanel(false)}
             onCloseWatchlistPanel={() => setShowWatchlistPanel(false)}
+            onLoadMore={loadMoreHistory}
+            hasMoreData={hasMoreHistory}
         />;
     };
 

@@ -46,6 +46,8 @@ interface CandlestickChartProps {
     onResetDefaultIndicators?: () => void;
     onCloseIndicatorsPanel?: () => void;
     onCloseWatchlistPanel?: () => void;
+    onLoadMore?: () => void;
+    hasMoreData?: boolean;
 }
 
 // Format number with locale
@@ -83,10 +85,13 @@ function extractFieldData(
 }
 
 // Default number of candles to show on first render
-const DEFAULT_VISIBLE_BARS_DESKTOP = 120;
+const DEFAULT_VISIBLE_BARS_DESKTOP = 180;
+const DEFAULT_VISIBLE_BARS_TABLET = 120;
 const DEFAULT_VISIBLE_BARS_MOBILE = 60;
 const INITIAL_RIGHT_MARGIN_DESKTOP = 5; // Khoảng trống bên phải nến cuối khi render lần đầu
 const INITIAL_RIGHT_MARGIN_MOBILE = 2;
+// Lazy load: trigger loadMore khi scroll gần cạnh trái (logical index < threshold)
+const LOAD_MORE_THRESHOLD = 50;
 
 // Danh sách các index tickers (đồng bộ với BE)
 const INDEX_TICKERS = new Set([
@@ -124,7 +129,7 @@ const INDUSTRY_TICKERS = new Set([
     'YTE'
 ]);
 
-export default function CandlestickChart({ data, ticker, timeframe, chartType, showIndicators, showVolume, showLegend, showIndicatorsPanel, showWatchlistPanel, enabledIndicators, onToggleIndicator, onClearAllIndicators, onResetDefaultIndicators, onCloseIndicatorsPanel, onCloseWatchlistPanel }: CandlestickChartProps) {
+export default function CandlestickChart({ data, ticker, timeframe, chartType, showIndicators, showVolume, showLegend, showIndicatorsPanel, showWatchlistPanel, enabledIndicators, onToggleIndicator, onClearAllIndicators, onResetDefaultIndicators, onCloseIndicatorsPanel, onCloseWatchlistPanel, onLoadMore, hasMoreData }: CandlestickChartProps) {
     const theme = useTheme();
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
@@ -139,6 +144,10 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
     const hasSetInitialRangeRef = useRef(false);
     const prevDataLengthRef = useRef(0);
     const isResettingTimeframeRef = useRef(false);
+
+    // Keep a ref to latest data for use in the indicator toggle effect (avoids stale closures)
+    const dataRef = useRef(data);
+    dataRef.current = data;
 
     // Ticker name (fixed, không thay đổi khi hover)
     const [tickerName, setTickerName] = useState<string>('');
@@ -159,6 +168,7 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
 
     const isDark = theme.palette.mode === 'dark';
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'));
     const chartColors = (theme.palette as any).component?.chart;
 
     const primaryColor = theme.palette.primary.main;
@@ -563,6 +573,8 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
     }, [timeframe]);
 
     // Update data when it changes - preserve pan/zoom state
+    // IMPORTANT: Also updates ALL visible indicator series atomically to prevent
+    // lightweight-charts from rendering stale indicator timestamps during re-aggregation
     useEffect(() => {
         if (!candleSeriesRef.current || !lineSeriesRef.current || !volumeSeriesRef.current || !chartRef.current) return;
 
@@ -577,19 +589,62 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
             // Chart may not have data yet
         }
 
-        // Set data for all series
+        // Set data for main series + all visible indicator series atomically
+        // (prevents chart from rendering with mismatched timestamps between series)
         candleSeriesRef.current.setData(candles);
         lineSeriesRef.current.setData(lineData);
         volumeSeriesRef.current.setData(volumes);
 
+        // Update indicator data atomically in the same cycle
+        const seriesMap = indicatorSeriesRef.current;
+        const bandPrimitives = bandPrimitivesRef.current;
+        for (const group of INDICATOR_GROUPS) {
+            for (const ind of group.indicators) {
+                try {
+                    const isVisible = showIndicators && (enabledIndicators[ind.key] ?? false);
+                    if (ind.type === 'band') {
+                        const primitive = bandPrimitives.get(ind.key);
+                        if (!primitive) continue;
+                        if (isVisible) {
+                            const bandInd = ind as BandIndicator;
+                            const upperData = extractFieldData(data, bandInd.fields[0]);
+                            const lowerData = extractFieldData(data, bandInd.fields[1]);
+                            primitive.setData(upperData, lowerData);
+                            const tagSeries = seriesMap.get(ind.key);
+                            if (tagSeries) {
+                                tagSeries[0]?.setData(upperData);
+                                tagSeries[1]?.setData(lowerData);
+                            }
+                        }
+                    } else {
+                        const seriesArr = seriesMap.get(ind.key);
+                        if (!seriesArr?.length || !isVisible) continue;
+                        if (ind.type === 'line' || ind.type === 'volume-line') {
+                            seriesArr[0]?.setData(extractFieldData(data, (ind as any).field));
+                        } else if (ind.type === 'area') {
+                            const areaInd = ind as AreaIndicator;
+                            seriesArr[0]?.setData(extractFieldData(data, areaInd.fields[0]));
+                            seriesArr[1]?.setData(extractFieldData(data, areaInd.fields[1]));
+                            seriesArr[2]?.setData(extractFieldData(data, areaInd.fields[2]));
+                        } else if (ind.type === 'dual-line') {
+                            const dlInd = ind as DualLineIndicator;
+                            seriesArr[0]?.setData(extractFieldData(data, dlInd.fields[0]));
+                            seriesArr[1]?.setData(extractFieldData(data, dlInd.fields[1]));
+                        }
+                    }
+                } catch { /* skip stale/destroyed series */ }
+            }
+        }
+
         // Determine visible range
         const dataLength = candles.length;
-        const isDataGrowth = dataLength > prevDataLengthRef.current && prevDataLengthRef.current > 0;
+        const growthDelta = prevDataLengthRef.current > 0 ? dataLength - prevDataLengthRef.current : 0;
+        const isDataGrowth = growthDelta > 0;
         prevDataLengthRef.current = dataLength;
 
         if (!hasSetInitialRangeRef.current) {
             // First time: show last DEFAULT_VISIBLE_BARS candles + margin bên phải
-            const defaultBars = isMobile ? DEFAULT_VISIBLE_BARS_MOBILE : DEFAULT_VISIBLE_BARS_DESKTOP;
+            const defaultBars = isMobile ? DEFAULT_VISIBLE_BARS_MOBILE : isTablet ? DEFAULT_VISIBLE_BARS_TABLET : DEFAULT_VISIBLE_BARS_DESKTOP;
             const rightMargin = isMobile ? INITIAL_RIGHT_MARGIN_MOBILE : INITIAL_RIGHT_MARGIN_DESKTOP;
             const visibleBars = Math.min(defaultBars, dataLength);
             // Reset horizontal range
@@ -609,15 +664,22 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
                     }
                 } catch { /* ignore */ }
             }, 0);
+        } else if (isDataGrowth && currentRange) {
+            // Data grew — shift visible range to keep same candles visible
+            // When older data is prepended, all indices shift right by growthDelta
+            const shiftedRange = {
+                from: currentRange.from + growthDelta,
+                to: currentRange.to + growthDelta,
+            };
+            try {
+                chartRef.current.timeScale().setVisibleLogicalRange(shiftedRange);
+            } catch { /* fallback */ }
+            savedLogicalRangeRef.current = shiftedRange;
         } else if (savedLogicalRangeRef.current) {
             try {
-                if (isDataGrowth && currentRange) {
-                    chartRef.current.timeScale().setVisibleLogicalRange(currentRange);
-                } else {
-                    chartRef.current.timeScale().setVisibleLogicalRange(savedLogicalRangeRef.current);
-                }
+                chartRef.current.timeScale().setVisibleLogicalRange(savedLogicalRangeRef.current);
             } catch {
-                const defaultBars = isMobile ? DEFAULT_VISIBLE_BARS_MOBILE : DEFAULT_VISIBLE_BARS_DESKTOP;
+                const defaultBars = isMobile ? DEFAULT_VISIBLE_BARS_MOBILE : isTablet ? DEFAULT_VISIBLE_BARS_TABLET : DEFAULT_VISIBLE_BARS_DESKTOP;
                 const rightMargin = isMobile ? INITIAL_RIGHT_MARGIN_MOBILE : INITIAL_RIGHT_MARGIN_DESKTOP;
                 const visibleBars = Math.min(defaultBars, dataLength);
                 chartRef.current.timeScale().setVisibleLogicalRange({
@@ -638,7 +700,7 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
         }, 50);
     }, [transformData]);
 
-    // Subscribe to visible range changes to save pan/zoom state
+    // Subscribe to visible range changes to save pan/zoom state + trigger lazy load
     useEffect(() => {
         if (!chartRef.current) return;
         const chart = chartRef.current;
@@ -646,7 +708,12 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
         const handler = () => {
             if (isResettingTimeframeRef.current) return;
             try {
-                savedLogicalRangeRef.current = chart.timeScale().getVisibleLogicalRange();
+                const range = chart.timeScale().getVisibleLogicalRange();
+                savedLogicalRangeRef.current = range;
+                // Trigger lazy load when scrolling near the left edge
+                if (range && hasMoreData && onLoadMore && range.from < LOAD_MORE_THRESHOLD) {
+                    onLoadMore();
+                }
             } catch { /* ignore */ }
         };
 
@@ -654,7 +721,7 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
         return () => {
             chart.timeScale().unsubscribeVisibleLogicalRangeChange(handler);
         };
-    }, [bgColor]);
+    }, [bgColor, hasMoreData, onLoadMore]);
 
     // Toggle chart type visibility - EXCLUSIVE: only one visible at a time
     useEffect(() => {
@@ -675,73 +742,74 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
         volumeSeriesRef.current.applyOptions({ visible: showVolume });
     }, [showVolume, isDark]);
 
-    // Sync indicator series visibility and data
+    // Sync indicator series visibility (toggle on/off)
+    // Data is set atomically in the data update effect above; this only handles visibility changes
     useEffect(() => {
         if (!chartRef.current) return;
         const seriesMap = indicatorSeriesRef.current;
         const bandPrimitives = bandPrimitivesRef.current;
+        const currentData = dataRef.current;
 
         for (const group of INDICATOR_GROUPS) {
             for (const ind of group.indicators) {
-                const seriesArr = seriesMap.get(ind.key);
+                try {
+                    const isVisible = showIndicators && (enabledIndicators[ind.key] ?? false);
 
-                const isVisible = showIndicators && (enabledIndicators[ind.key] ?? false);
-
-                if (ind.type === 'band') {
-                    // Band uses canvas primitive + 2 tag series
-                    const primitive = bandPrimitives.get(ind.key);
-                    if (!primitive) continue;
-                    const tagSeries = seriesArr; // [0]=upper tag, [1]=lower tag
-                    if (isVisible) {
-                        const bandInd = ind as BandIndicator;
-                        const upperData = extractFieldData(data, bandInd.fields[0]);
-                        const lowerData = extractFieldData(data, bandInd.fields[1]);
-                        primitive.setData(upperData, lowerData);
-                        primitive.setVisible(true);
-                        if (tagSeries) {
-                            tagSeries[0].setData(upperData);
-                            tagSeries[1].setData(lowerData);
-                            tagSeries[0].applyOptions({ visible: true });
-                            tagSeries[1].applyOptions({ visible: true });
+                    if (ind.type === 'band') {
+                        const primitive = bandPrimitives.get(ind.key);
+                        if (!primitive) continue;
+                        const tagSeries = seriesMap.get(ind.key);
+                        if (isVisible) {
+                            const bandInd = ind as BandIndicator;
+                            const upperData = extractFieldData(currentData, bandInd.fields[0]);
+                            const lowerData = extractFieldData(currentData, bandInd.fields[1]);
+                            primitive.setData(upperData, lowerData);
+                            primitive.setVisible(true);
+                            if (tagSeries) {
+                                tagSeries[0]?.setData(upperData);
+                                tagSeries[1]?.setData(lowerData);
+                                tagSeries[0]?.applyOptions({ visible: true });
+                                tagSeries[1]?.applyOptions({ visible: true });
+                            }
+                        } else {
+                            primitive.setVisible(false);
+                            if (tagSeries) {
+                                tagSeries[0]?.applyOptions({ visible: false });
+                                tagSeries[1]?.applyOptions({ visible: false });
+                            }
                         }
                     } else {
-                        primitive.setVisible(false);
-                        if (tagSeries) {
-                            tagSeries[0].applyOptions({ visible: false });
-                            tagSeries[1].applyOptions({ visible: false });
+                        const seriesArr = seriesMap.get(ind.key);
+                        if (!seriesArr?.length) continue;
+                        if (isVisible) {
+                            if (ind.type === 'line' || ind.type === 'volume-line') {
+                                seriesArr[0]?.setData(extractFieldData(currentData, (ind as any).field));
+                                seriesArr[0]?.applyOptions({ visible: true });
+                            } else if (ind.type === 'area') {
+                                const areaInd = ind as AreaIndicator;
+                                seriesArr[0]?.setData(extractFieldData(currentData, areaInd.fields[0]));
+                                seriesArr[1]?.setData(extractFieldData(currentData, areaInd.fields[1]));
+                                seriesArr[2]?.setData(extractFieldData(currentData, areaInd.fields[2]));
+                                seriesArr[0]?.applyOptions({ visible: true });
+                                seriesArr[1]?.applyOptions({ visible: true });
+                                seriesArr[2]?.applyOptions({ visible: true });
+                            } else if (ind.type === 'dual-line') {
+                                const dlInd = ind as DualLineIndicator;
+                                seriesArr[0]?.setData(extractFieldData(currentData, dlInd.fields[0]));
+                                seriesArr[1]?.setData(extractFieldData(currentData, dlInd.fields[1]));
+                                seriesArr[0]?.applyOptions({ visible: true });
+                                seriesArr[1]?.applyOptions({ visible: true });
+                            }
+                        } else {
+                            for (const s of seriesArr) {
+                                s?.applyOptions({ visible: false });
+                            }
                         }
                     }
-                } else {
-                    if (!seriesArr) continue;
-                    if (isVisible) {
-                        if (ind.type === 'line' || ind.type === 'volume-line') {
-                            const fieldData = extractFieldData(data, (ind as any).field);
-                            seriesArr[0].setData(fieldData);
-                            seriesArr[0].applyOptions({ visible: true });
-                        } else if (ind.type === 'area') {
-                            const areaInd = ind as AreaIndicator;
-                            seriesArr[0].setData(extractFieldData(data, areaInd.fields[0]));
-                            seriesArr[1].setData(extractFieldData(data, areaInd.fields[1]));
-                            seriesArr[2].setData(extractFieldData(data, areaInd.fields[2]));
-                            seriesArr[0].applyOptions({ visible: true });
-                            seriesArr[1].applyOptions({ visible: true });
-                            seriesArr[2].applyOptions({ visible: true });
-                        } else if (ind.type === 'dual-line') {
-                            const dlInd = ind as DualLineIndicator;
-                            seriesArr[0].setData(extractFieldData(data, dlInd.fields[0]));
-                            seriesArr[1].setData(extractFieldData(data, dlInd.fields[1]));
-                            seriesArr[0].applyOptions({ visible: true });
-                            seriesArr[1].applyOptions({ visible: true });
-                        }
-                    } else {
-                        for (const s of seriesArr) {
-                            s.applyOptions({ visible: false });
-                        }
-                    }
-                }
+                } catch { /* skip stale/destroyed series */ }
             }
         }
-    }, [showIndicators, enabledIndicators, data, isDark]);
+    }, [showIndicators, enabledIndicators, isDark]);
 
     // Determine color for OHLC values based on close vs open
     const isUp = legendData ? (legendData.close ?? 0) >= (legendData.open ?? 0) : true;

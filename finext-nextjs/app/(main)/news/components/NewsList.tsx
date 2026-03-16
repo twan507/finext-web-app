@@ -24,6 +24,8 @@ interface NewsListProps {
     type?: NewsType;
     /** Lọc theo categories (multiple) */
     categories?: string[];
+    /** Lọc theo ticker */
+    ticker?: string;
     /** Tiêu đề section */
     title?: string;
     /** Mô tả section */
@@ -101,6 +103,7 @@ function EmptyState() {
 export default function NewsList({
     type,
     categories,
+    ticker,
     title,
     description,
     pageSize = NEWS_PAGE_SIZE,
@@ -119,6 +122,7 @@ export default function NewsList({
         limit: pageSize,
         type,
         categories: categories?.join(','),
+        ticker,
         sort_by: NEWS_SORT_FIELD,
         sort_order: NEWS_SORT_ORDER
     }];
@@ -144,6 +148,11 @@ export default function NewsList({
             // Gửi categories (backend hỗ trợ multiple với comma-separated)
             if (categories && categories.length > 0) {
                 queryParams.categories = categories.join(',');
+            }
+
+            // Filter theo ticker
+            if (ticker) {
+                queryParams.ticker = ticker;
             }
 
             const response = await apiClient<NewsApiResponse>({
