@@ -30,8 +30,12 @@ import TuneIcon from '@mui/icons-material/Tune';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
+import LabelIcon from '@mui/icons-material/Label';
+import LabelOffIcon from '@mui/icons-material/LabelOff';
+import SellIcon from '@mui/icons-material/Sell';
 import { getResponsiveFontSize } from 'theme/tokens';
 import type { Timeframe } from './aggregateTimeframe';
+import type { PriceTagMode } from 'hooks/useChartStore';
 
 export interface TickerItem {
     ticker: string;
@@ -47,6 +51,7 @@ interface ChartToolbarProps {
     showLegend?: boolean;
     showIndicatorsPanel?: boolean;
     showWatchlistPanel?: boolean;
+    priceTagMode?: PriceTagMode;
     isFullscreen?: boolean;
     timeframe?: Timeframe;
     onTickerChange?: (ticker: string) => void;
@@ -55,6 +60,7 @@ interface ChartToolbarProps {
     onToggleIndicators?: () => void;
     onToggleVolume?: () => void;
     onToggleLegend?: () => void;
+    onCyclePriceTagMode?: () => void;
     onToggleIndicatorsPanel?: () => void;
     onToggleWatchlistPanel?: () => void;
     onToggleFullscreen?: () => void;
@@ -71,6 +77,7 @@ export default function ChartToolbar({
     showLegend = true,
     showIndicatorsPanel = false,
     showWatchlistPanel = false,
+    priceTagMode = 'value',
     isFullscreen = false,
     timeframe = '1D',
     onTickerChange,
@@ -79,6 +86,7 @@ export default function ChartToolbar({
     onToggleIndicators,
     onToggleVolume,
     onToggleLegend,
+    onCyclePriceTagMode,
     onToggleIndicatorsPanel,
     onToggleWatchlistPanel,
     onToggleFullscreen,
@@ -554,6 +562,39 @@ export default function ChartToolbar({
                         }}
                     >
                         <TextFieldsIcon fontSize="small" />
+                    </IconButton>
+                </Tooltip>
+
+                <Tooltip title={priceTagMode === 'value' ? 'Hiện giá + Tên chỉ báo' : priceTagMode === 'both' ? 'Ẩn Tag chỉ báo' : 'Hiện giá chỉ báo'}>
+                    <IconButton
+                        size="small"
+                        onClick={onCyclePriceTagMode}
+                        sx={{
+                            p: 0.5,
+                            color: priceTagMode !== 'none' ? 'primary.main' : 'text.secondary',
+                            borderRadius: 0,
+                            flexShrink: 0,
+                            position: 'relative',
+                            transition: 'color 0.2s',
+                            '&::after': {
+                                content: '""',
+                                position: 'absolute',
+                                bottom: 2,
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                width: '60%',
+                                height: '2px',
+                                backgroundColor: priceTagMode !== 'none' ? 'primary.main' : 'transparent',
+                                borderRadius: '1px',
+                                transition: 'background-color 0.2s',
+                            },
+                            '&:hover': {
+                                color: 'primary.main',
+                                backgroundColor: 'transparent',
+                            },
+                        }}
+                    >
+                        {priceTagMode === 'both' ? <LabelIcon fontSize="small" /> : priceTagMode === 'value' ? <SellIcon fontSize="small" /> : <LabelOffIcon fontSize="small" />}
                     </IconButton>
                 </Tooltip>
             </Box>

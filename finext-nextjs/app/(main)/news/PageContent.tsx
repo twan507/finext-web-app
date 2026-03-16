@@ -64,7 +64,7 @@ export default function NewsContent() {
                 {/* Ticker Filter */}
                 <TextField
                     size="small"
-                    placeholder="Lọc theo Ngành hoặc mã CK"
+                    placeholder="Lọc theo Mã Chứng khoán"
                     value={tickerFilter}
                     onChange={(e) => setTickerFilter(e.target.value)}
                     onKeyDown={handleKeyDown}

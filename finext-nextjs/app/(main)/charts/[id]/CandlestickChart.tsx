@@ -29,6 +29,7 @@ import WatchlistPanel from './WatchlistPanel';
 import { INDICATOR_GROUPS, getIndicatorColor, type AreaIndicator, type BandIndicator, type DualLineIndicator, type LineIndicator, type VolumeLineIndicator } from './indicatorConfig';
 import { BandFillPrimitive } from './BandFillPrimitive';
 import type { Timeframe } from './aggregateTimeframe';
+import type { PriceTagMode } from 'hooks/useChartStore';
 
 interface CandlestickChartProps {
     data: ChartRawData[];
@@ -38,6 +39,7 @@ interface CandlestickChartProps {
     showIndicators: boolean;
     showVolume: boolean;
     showLegend: boolean;
+    priceTagMode: PriceTagMode;
     showIndicatorsPanel: boolean;
     showWatchlistPanel: boolean;
     enabledIndicators: Record<string, boolean>;
@@ -129,7 +131,7 @@ const INDUSTRY_TICKERS = new Set([
     'YTE'
 ]);
 
-export default function CandlestickChart({ data, ticker, timeframe, chartType, showIndicators, showVolume, showLegend, showIndicatorsPanel, showWatchlistPanel, enabledIndicators, onToggleIndicator, onClearAllIndicators, onResetDefaultIndicators, onCloseIndicatorsPanel, onCloseWatchlistPanel, onLoadMore, hasMoreData }: CandlestickChartProps) {
+export default function CandlestickChart({ data, ticker, timeframe, chartType, showIndicators, showVolume, showLegend, priceTagMode, showIndicatorsPanel, showWatchlistPanel, enabledIndicators, onToggleIndicator, onClearAllIndicators, onResetDefaultIndicators, onCloseIndicatorsPanel, onCloseWatchlistPanel, onLoadMore, hasMoreData }: CandlestickChartProps) {
     const theme = useTheme();
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
@@ -357,6 +359,7 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
         const volumeSeries = chart.addSeries(HistogramSeries, {
             priceFormat: { type: 'volume' },
             priceScaleId: 'volume',
+            title: 'VOL',
         });
 
         chart.priceScale('volume').applyOptions({
@@ -644,7 +647,8 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
 
         if (!hasSetInitialRangeRef.current) {
             // First time: show last DEFAULT_VISIBLE_BARS candles + margin bên phải
-            const defaultBars = isMobile ? DEFAULT_VISIBLE_BARS_MOBILE : isTablet ? DEFAULT_VISIBLE_BARS_TABLET : DEFAULT_VISIBLE_BARS_DESKTOP;
+            const baseBars = isMobile ? DEFAULT_VISIBLE_BARS_MOBILE : isTablet ? DEFAULT_VISIBLE_BARS_TABLET : DEFAULT_VISIBLE_BARS_DESKTOP;
+            const defaultBars = timeframe === '1M' ? baseBars * 3 : timeframe === '1W' ? baseBars * 2 : baseBars;
             const rightMargin = isMobile ? INITIAL_RIGHT_MARGIN_MOBILE : INITIAL_RIGHT_MARGIN_DESKTOP;
             const visibleBars = Math.min(defaultBars, dataLength);
             // Reset horizontal range
@@ -679,7 +683,8 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
             try {
                 chartRef.current.timeScale().setVisibleLogicalRange(savedLogicalRangeRef.current);
             } catch {
-                const defaultBars = isMobile ? DEFAULT_VISIBLE_BARS_MOBILE : isTablet ? DEFAULT_VISIBLE_BARS_TABLET : DEFAULT_VISIBLE_BARS_DESKTOP;
+                const baseBars = isMobile ? DEFAULT_VISIBLE_BARS_MOBILE : isTablet ? DEFAULT_VISIBLE_BARS_TABLET : DEFAULT_VISIBLE_BARS_DESKTOP;
+                const defaultBars = timeframe === '1M' ? baseBars * 3 : timeframe === '1W' ? baseBars * 2 : baseBars;
                 const rightMargin = isMobile ? INITIAL_RIGHT_MARGIN_MOBILE : INITIAL_RIGHT_MARGIN_DESKTOP;
                 const visibleBars = Math.min(defaultBars, dataLength);
                 chartRef.current.timeScale().setVisibleLogicalRange({
@@ -810,6 +815,34 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
             }
         }
     }, [showIndicators, enabledIndicators, isDark]);
+
+    // Toggle indicator price tag mode: 'value' = price only, 'both' = price + name, 'none' = hidden
+    // Main candlestick/line series is NOT affected — always shows ticker
+    useEffect(() => {
+        if (!chartRef.current) return;
+        const seriesMap = indicatorSeriesRef.current;
+
+        const showValue = priceTagMode !== 'none';
+        const showTitle = priceTagMode === 'both';
+
+        for (const group of INDICATOR_GROUPS) {
+            for (const ind of group.indicators) {
+                try {
+                    const seriesArr = seriesMap.get(ind.key);
+                    if (!seriesArr?.length) continue;
+                    const hasPerLabels = 'labels' in ind && Array.isArray((ind as any).labels);
+                    const perLabels: string[] | undefined = hasPerLabels ? (ind as any).labels : undefined;
+                    for (let i = 0; i < seriesArr.length; i++) {
+                        const title = showTitle ? (perLabels?.[i] ?? ind.label) : '';
+                        seriesArr[i]?.applyOptions({
+                            lastValueVisible: showValue,
+                            title,
+                        });
+                    }
+                } catch { /* skip stale/destroyed series */ }
+            }
+        }
+    }, [priceTagMode, isDark]);
 
     // Determine color for OHLC values based on close vs open
     const isUp = legendData ? (legendData.close ?? 0) >= (legendData.open ?? 0) : true;

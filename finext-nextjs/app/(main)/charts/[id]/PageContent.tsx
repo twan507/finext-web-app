@@ -118,23 +118,24 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
     const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'));
 
     // Persistent chart state (survives reload / tab switch)
-    const { enabledIndicators, toggleIndicator, clearAll, resetToDefault, setLastTicker } = useChartStore();
+    const { enabledIndicators, toggleIndicator, clearAll, resetToDefault, setLastTicker, toolbarPrefs, updateToolbarPrefs } = useChartStore();
 
     // Save current ticker as last viewed
     useEffect(() => {
         setLastTicker(ticker);
     }, [ticker, setLastTicker]);
 
-    // Chart control state (lifted from CandlestickChart so toolbar stays visible during loading)
-    const [chartType, setChartType] = useState<'candlestick' | 'line'>('candlestick');
-    const [showIndicators, setShowIndicators] = useState(true);
-    const [showVolume, setShowVolume] = useState(true);
-    const [showLegend, setShowLegend] = useState(true);
-    // Default: show indicator panel on desktop & tablet, hide on mobile
+    // Chart control state — persisted toolbar prefs
+    const chartType = toolbarPrefs.chartType;
+    const showIndicators = toolbarPrefs.showIndicators;
+    const showVolume = toolbarPrefs.showVolume;
+    const showLegend = toolbarPrefs.showLegend;
+    const priceTagMode = toolbarPrefs.priceTagMode;
+    const timeframe = toolbarPrefs.timeframe as Timeframe;
+    // Non-persisted UI state
     const [showIndicatorsPanel, setShowIndicatorsPanel] = useState(!isMobile);
     const [showWatchlistPanel, setShowWatchlistPanel] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
-    const [timeframe, setTimeframe] = useState<Timeframe>('1D');
 
     // Handle ESC key to exit fullscreen
     useEffect(() => {
@@ -201,7 +202,7 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
         apiClient<ChartRawData[]>({
             url: '/api/v1/sse/rest/chart_history_data',
             method: 'GET',
-            queryParams: { ticker, limit: baseChunk, skip: 0 },
+            queryParams: { ticker, limit: chunkSizeRef.current, skip: 0 },
             requireAuth: false,
             useCache: true,
             cacheTtl: 24 * 60 * 60 * 1000,
@@ -400,6 +401,7 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
             showIndicators={showIndicators}
             showVolume={showVolume}
             showLegend={showLegend}
+            priceTagMode={priceTagMode}
             showIndicatorsPanel={showIndicatorsPanel}
             showWatchlistPanel={showWatchlistPanel}
             enabledIndicators={enabledIndicators}
@@ -440,16 +442,18 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
                 showIndicators={showIndicators}
                 showVolume={showVolume}
                 showLegend={showLegend}
+                priceTagMode={priceTagMode}
                 showIndicatorsPanel={showIndicatorsPanel}
                 showWatchlistPanel={showWatchlistPanel}
                 isFullscreen={isFullscreen}
                 timeframe={timeframe}
-                onTimeframeChange={setTimeframe}
+                onTimeframeChange={(tf) => updateToolbarPrefs({ timeframe: tf })}
                 onTickerChange={handleTickerChange}
-                onChartTypeChange={setChartType}
-                onToggleIndicators={() => setShowIndicators(!showIndicators)}
-                onToggleVolume={() => setShowVolume(!showVolume)}
-                onToggleLegend={() => setShowLegend(!showLegend)}
+                onChartTypeChange={(t) => updateToolbarPrefs({ chartType: t })}
+                onToggleIndicators={() => updateToolbarPrefs({ showIndicators: !showIndicators })}
+                onToggleVolume={() => updateToolbarPrefs({ showVolume: !showVolume })}
+                onToggleLegend={() => updateToolbarPrefs({ showLegend: !showLegend })}
+                onCyclePriceTagMode={() => updateToolbarPrefs({ priceTagMode: priceTagMode === 'value' ? 'both' : priceTagMode === 'both' ? 'none' : 'value' })}
                 onToggleIndicatorsPanel={() => setShowIndicatorsPanel(!showIndicatorsPanel)}
                 onToggleWatchlistPanel={() => setShowWatchlistPanel(!showWatchlistPanel)}
                 onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}

@@ -23,6 +23,8 @@ interface ReportListProps {
     type?: ReportType;
     /** Lọc theo categories (multiple) */
     categories?: string[];
+    /** Lọc theo ticker */
+    ticker?: string;
     /** Tiêu đề section */
     title?: string;
     /** Mô tả section */
@@ -88,6 +90,7 @@ function EmptyState() {
 export default function ReportList({
     type,
     categories,
+    ticker,
     title,
     description,
     pageSize = REPORT_PAGE_SIZE,
@@ -105,6 +108,7 @@ export default function ReportList({
         limit: pageSize,
         type,
         categories: categories?.join(','),
+        ticker,
         sort_by: REPORT_SORT_FIELD,
         sort_order: REPORT_SORT_ORDER
     }];
@@ -130,6 +134,11 @@ export default function ReportList({
             // Gửi categories (backend hỗ trợ multiple với comma-separated)
             if (categories && categories.length > 0) {
                 queryParams.categories = categories.join(',');
+            }
+
+            // Filter theo ticker
+            if (ticker) {
+                queryParams.ticker = ticker;
             }
 
             const response = await apiClient<ReportApiResponse>({

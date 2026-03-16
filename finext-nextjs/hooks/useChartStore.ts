@@ -19,7 +19,44 @@ import { getDefaultEnabledIndicators, getAllIndicatorsOff, INDICATOR_GROUPS, typ
 // ─── Storage keys ────────────────────────────────────────────────────────────────
 const INDICATOR_KEY = 'finext-indicator-state';
 const TICKER_KEY = 'finext-last-ticker';
+const TOOLBAR_KEY = 'finext-toolbar-prefs';
 const DEFAULT_TICKER = 'VNINDEX';
+
+// ─── Toolbar preferences ─────────────────────────────────────────────────────────
+export type PriceTagMode = 'value' | 'both' | 'none';
+
+export interface ToolbarPrefs {
+    chartType: 'candlestick' | 'line';
+    showIndicators: boolean;
+    showVolume: boolean;
+    showLegend: boolean;
+    priceTagMode: PriceTagMode;
+    timeframe: string;
+}
+
+const DEFAULT_TOOLBAR_PREFS: ToolbarPrefs = {
+    chartType: 'candlestick',
+    showIndicators: true,
+    showVolume: true,
+    showLegend: true,
+    priceTagMode: 'value',
+    timeframe: '1D',
+};
+
+function loadToolbarPrefs(): ToolbarPrefs {
+    if (typeof window === 'undefined') return DEFAULT_TOOLBAR_PREFS;
+    try {
+        const raw = localStorage.getItem(TOOLBAR_KEY);
+        if (!raw) return DEFAULT_TOOLBAR_PREFS;
+        const parsed = JSON.parse(raw);
+        return { ...DEFAULT_TOOLBAR_PREFS, ...parsed };
+    } catch { return DEFAULT_TOOLBAR_PREFS; }
+}
+
+function saveToolbarPrefs(prefs: ToolbarPrefs) {
+    if (typeof window === 'undefined') return;
+    try { localStorage.setItem(TOOLBAR_KEY, JSON.stringify(prefs)); } catch { /* ignore */ }
+}
 
 // ─── Indicator helpers ───────────────────────────────────────────────────────────
 function isValidIndicatorState(obj: unknown): obj is Record<string, boolean> {
@@ -75,6 +112,10 @@ export interface UseChartStoreReturn {
     resetToDefault: () => void;
     /** Save the current ticker as last viewed */
     setLastTicker: (ticker: string) => void;
+    /** Persisted toolbar preferences */
+    toolbarPrefs: ToolbarPrefs;
+    /** Update one or more toolbar preferences */
+    updateToolbarPrefs: (patch: Partial<ToolbarPrefs>) => void;
 }
 
 // ─── Hook ────────────────────────────────────────────────────────────────────────
@@ -107,5 +148,18 @@ export default function useChartStore(): UseChartStoreReturn {
         saveLastTicker(ticker);
     }, []);
 
-    return { enabledIndicators, toggleIndicator, clearAll, resetToDefault, setLastTicker };
+    // --- Toolbar preferences ---
+    const [toolbarPrefs, setToolbarPrefs] = useState<ToolbarPrefs>(loadToolbarPrefs);
+
+    const isFirstToolbarRender = useRef(true);
+    useEffect(() => {
+        if (isFirstToolbarRender.current) { isFirstToolbarRender.current = false; return; }
+        saveToolbarPrefs(toolbarPrefs);
+    }, [toolbarPrefs]);
+
+    const updateToolbarPrefs = useCallback((patch: Partial<ToolbarPrefs>) => {
+        setToolbarPrefs(prev => ({ ...prev, ...patch }));
+    }, []);
+
+    return { enabledIndicators, toggleIndicator, clearAll, resetToDefault, setLastTicker, toolbarPrefs, updateToolbarPrefs };
 }

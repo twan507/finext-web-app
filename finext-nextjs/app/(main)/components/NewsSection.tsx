@@ -1,6 +1,7 @@
 'use client';
 
-import { Box, Typography, useTheme, Skeleton, Divider, keyframes, alpha } from '@mui/material';
+import { useState } from 'react';
+import { Box, Snackbar, Typography, useTheme, Skeleton, Divider, keyframes, alpha } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 
@@ -119,6 +120,64 @@ interface NewsCountResponse {
         'news_report'?: number;
     };
     total: number;
+}
+
+// ============================================================================
+// HELPER: Copy news/report content via API
+// ============================================================================
+
+async function copyNewsContent(articleSlug: string): Promise<boolean> {
+    try {
+        const response = await apiClient<{ article: { title: string; sapo?: string; plain_content?: string; created_at: string } | null }>({
+            url: '/api/v1/sse/rest/news_article',
+            method: 'GET',
+            queryParams: { article_slug: articleSlug },
+            requireAuth: false,
+        });
+        const full = response.data?.article;
+        if (!full) return false;
+        await navigator.clipboard.writeText(JSON.stringify({
+            title: full.title,
+            sapo: full.sapo || '',
+            content: full.plain_content || '',
+            created_at: full.created_at,
+        }));
+        return true;
+    } catch (err) {
+        console.error('Failed to copy news content:', err);
+        return false;
+    }
+}
+
+async function copyReportContent(reportSlug: string): Promise<boolean> {
+    try {
+        const response = await apiClient<{ report: { title?: string; sapo?: string; report_markdown?: string; report_html?: string; created_at: string } | null }>({
+            url: '/api/v1/sse/rest/report_article',
+            method: 'GET',
+            queryParams: { report_slug: reportSlug },
+            requireAuth: false,
+        });
+        const full = response.data?.report;
+        if (!full) return false;
+        let content = '';
+        if (full.report_markdown) {
+            content = full.report_markdown;
+        } else if (full.report_html) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = full.report_html;
+            content = tempDiv.textContent || tempDiv.innerText || '';
+        }
+        await navigator.clipboard.writeText(JSON.stringify({
+            title: full.title || 'Báo cáo',
+            sapo: full.sapo || '',
+            content,
+            created_at: full.created_at,
+        }));
+        return true;
+    } catch (err) {
+        console.error('Failed to copy report content:', err);
+        return false;
+    }
 }
 
 // ============================================================================
@@ -342,10 +401,15 @@ function NewsStatsBar({ totalNews, thongcaoCount, trongnuocCount, doanhnghiepCou
 
 interface MiniNewsCardProps {
     article: NewsArticle;
+    onCopySuccess?: () => void;
 }
 
-function MiniNewsCard({ article }: MiniNewsCardProps) {
+function MiniNewsCard({ article, onCopySuccess }: MiniNewsCardProps) {
     const theme = useTheme();
+
+    const handleCopy = async () => {
+        if (await copyNewsContent(article.article_slug)) onCopySuccess?.();
+    };
 
     return (
         <Box
@@ -392,10 +456,11 @@ function MiniNewsCard({ article }: MiniNewsCardProps) {
                     </Typography>
                 </Link>
 
-                {/* Sapo */}
+                {/* Sapo - double click để copy */}
                 <Typography
                     variant="body2"
                     className="news-card-sapo"
+                    onDoubleClick={article.sapo ? handleCopy : undefined}
                     sx={{
                         fontSize: getResponsiveFontSize('sm'),
                         lineHeight: 1.5,
@@ -405,21 +470,24 @@ function MiniNewsCard({ article }: MiniNewsCardProps) {
                         WebkitBoxOrient: 'vertical',
                         overflow: 'hidden',
                         mt: 0.5,
+                        userSelect: 'none',
                     }}
                 >
                     {article.sapo}
                 </Typography>
 
-                {/* Source + time */}
+                {/* Source + time - double click để copy */}
                 <Typography
                     variant="caption"
                     color="text.disabled"
+                    onDoubleClick={handleCopy}
                     sx={{
                         fontSize: getResponsiveFontSize('xs'),
                         mt: 0.5,
                         display: 'flex',
                         alignItems: 'center',
                         gap: 0.5,
+                        userSelect: 'none',
                     }}
                 >
                     {article.created_at && (
@@ -443,10 +511,15 @@ function MiniNewsCard({ article }: MiniNewsCardProps) {
 
 interface MiniReportCardProps {
     report: NewsReport;
+    onCopySuccess?: () => void;
 }
 
-function MiniReportCard({ report }: MiniReportCardProps) {
+function MiniReportCard({ report, onCopySuccess }: MiniReportCardProps) {
     const theme = useTheme();
+
+    const handleCopy = async () => {
+        if (await copyReportContent(report.report_slug)) onCopySuccess?.();
+    };
 
     // Calculate fixed heights based on HOVER font sizes to prevent layout shift
     const titleHeight = {
@@ -503,10 +576,11 @@ function MiniReportCard({ report }: MiniReportCardProps) {
                     </Typography>
                 </Link>
 
-                {/* Sapo */}
+                {/* Sapo - double click để copy */}
                 <Typography
                     variant="body2"
                     className="report-card-sapo"
+                    onDoubleClick={(report.sapo || report.category_name) ? handleCopy : undefined}
                     sx={{
                         fontSize: getResponsiveFontSize('xs'),
                         lineHeight: 1.6,
@@ -517,6 +591,7 @@ function MiniReportCard({ report }: MiniReportCardProps) {
                         overflow: 'hidden',
                         height: sapoHeight,
                         mt: 0.5,
+                        userSelect: 'none',
                     }}
                 >
                     {report.sapo || report.category_name || ''}
@@ -555,10 +630,11 @@ interface NewsColumnProps {
     loading: boolean;
     newsItems?: NewsArticle[];
     reportItems?: NewsReport[];
+    onCopySuccess?: () => void;
 }
 
 // Content only (no background wrapper) - for use inside Carousel
-function NewsColumnContent({ title, href, loading, newsItems, reportItems }: NewsColumnProps) {
+function NewsColumnContent({ title, href, loading, newsItems, reportItems, onCopySuccess }: NewsColumnProps) {
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             {/* Column Header */}
@@ -597,10 +673,10 @@ function NewsColumnContent({ title, href, loading, newsItems, reportItems }: New
                 ) : (
                     <>
                         {newsItems?.map((article) => (
-                            <MiniNewsCard key={article.article_slug} article={article} />
+                            <MiniNewsCard key={article.article_slug} article={article} onCopySuccess={onCopySuccess} />
                         ))}
                         {reportItems?.map((report) => (
-                            <MiniReportCard key={report.report_slug} report={report} />
+                            <MiniReportCard key={report.report_slug} report={report} onCopySuccess={onCopySuccess} />
                         ))}
                     </>
                 )}
@@ -767,8 +843,9 @@ interface NewspaperNarrowColumnProps {
     loading: boolean;
     newsItems: NewsArticle[];
     position?: 'left' | 'right';
+    onCopySuccess?: () => void;
 }
-function NewspaperNarrowColumn({ title, href, loading, newsItems, position }: NewspaperNarrowColumnProps) {
+function NewspaperNarrowColumn({ title, href, loading, newsItems, position, onCopySuccess }: NewspaperNarrowColumnProps) {
     return (
         <Box sx={{
             py: { md: 1.5, lg: spacing.xs },
@@ -814,7 +891,8 @@ function NewspaperNarrowColumn({ title, href, loading, newsItems, position }: Ne
                             <Typography
                                 variant="caption"
                                 color="text.disabled"
-                                sx={{ fontSize: getResponsiveFontSize('sm'), mt: 0.25, display: 'flex', alignItems: 'center', gap: 0.5 }}
+                                onDoubleClick={async () => { if (await copyNewsContent(article.article_slug)) onCopySuccess?.(); }}
+                                sx={{ fontSize: getResponsiveFontSize('sm'), mt: 0.25, display: 'flex', alignItems: 'center', gap: 0.5, userSelect: 'none' }}
                             >
                                 {article.created_at && (
                                     <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
@@ -841,8 +919,9 @@ interface NewspaperWideColumnProps {
     loading: boolean;
     newsItems: NewsArticle[];
     position?: 'left' | 'right';
+    onCopySuccess?: () => void;
 }
-function NewspaperWideColumn({ title, href, loading, newsItems, position }: NewspaperWideColumnProps) {
+function NewspaperWideColumn({ title, href, loading, newsItems, position, onCopySuccess }: NewspaperWideColumnProps) {
     return (
         <Box sx={{
             py: { md: 1.5, lg: spacing.xs },
@@ -883,6 +962,7 @@ function NewspaperWideColumn({ title, href, loading, newsItems, position }: News
                             </Link>
                             <Typography
                                 color="text.secondary"
+                                onDoubleClick={article.sapo ? async () => { if (await copyNewsContent(article.article_slug)) onCopySuccess?.(); } : undefined}
                                 sx={{
                                     fontSize: getResponsiveFontSize('sm'),
                                     lineHeight: 1.5,
@@ -890,6 +970,7 @@ function NewspaperWideColumn({ title, href, loading, newsItems, position }: News
                                     WebkitLineClamp: 2,
                                     WebkitBoxOrient: 'vertical',
                                     overflow: 'hidden',
+                                    userSelect: 'none',
                                 }}
                             >
                                 {article.sapo}
@@ -897,7 +978,8 @@ function NewspaperWideColumn({ title, href, loading, newsItems, position }: News
                             <Typography
                                 variant="caption"
                                 color="text.disabled"
-                                sx={{ fontSize: getResponsiveFontSize('sm'), mt: 0.5, display: 'flex', alignItems: 'center', gap: 0.5 }}
+                                onDoubleClick={async () => { if (await copyNewsContent(article.article_slug)) onCopySuccess?.(); }}
+                                sx={{ fontSize: getResponsiveFontSize('sm'), mt: 0.5, display: 'flex', alignItems: 'center', gap: 0.5, userSelect: 'none' }}
                             >
                                 {article.created_at && (
                                     <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
@@ -924,6 +1006,9 @@ function NewspaperWideColumn({ title, href, loading, newsItems, position }: News
 export default function NewsSection() {
     const theme = useTheme();
     const router = useRouter();
+    const [copied, setCopied] = useState(false);
+
+    const handleCopySuccess = () => setCopied(true);
 
     // ========================================================================
     // STATS API CALL - Fetch news counts for today from BE
@@ -1079,6 +1164,7 @@ export default function NewsSection() {
                     href="/news/type/quoc_te"
                     loading={quocteLoading}
                     newsItems={quocteNews.slice(0, 5)}
+                    onCopySuccess={handleCopySuccess}
                 />
             )
         },
@@ -1090,6 +1176,7 @@ export default function NewsSection() {
                     href="/news/type/doanh_nghiep"
                     loading={doanhnghiepLoading}
                     newsItems={doanhnghiepNews}
+                    onCopySuccess={handleCopySuccess}
                 />
             )
         },
@@ -1101,6 +1188,7 @@ export default function NewsSection() {
                     href="/news/type/trong_nuoc"
                     loading={trongnuocLoading}
                     newsItems={trongnuocNews}
+                    onCopySuccess={handleCopySuccess}
                 />
             )
         },
@@ -1112,6 +1200,7 @@ export default function NewsSection() {
                     href="/news/type/thong_cao"
                     loading={thongcaoLoading}
                     newsItems={thongcaoNews.slice(0, 5)}
+                    onCopySuccess={handleCopySuccess}
                 />
             )
         }
@@ -1181,6 +1270,7 @@ export default function NewsSection() {
                             loading={quocteLoading}
                             newsItems={quocteNews}
                             position="left"
+                            onCopySuccess={handleCopySuccess}
                         />
                     </Box>
 
@@ -1192,6 +1282,7 @@ export default function NewsSection() {
                             loading={doanhnghiepLoading}
                             newsItems={doanhnghiepNews.slice(0, 4)}
                             position="right"
+                            onCopySuccess={handleCopySuccess}
                         />
                     </Box>
 
@@ -1203,6 +1294,7 @@ export default function NewsSection() {
                             loading={trongnuocLoading}
                             newsItems={trongnuocNews.slice(0, 4)}
                             position="left"
+                            onCopySuccess={handleCopySuccess}
                         />
                     </Box>
 
@@ -1214,6 +1306,7 @@ export default function NewsSection() {
                             loading={thongcaoLoading}
                             newsItems={thongcaoNews}
                             position="right"
+                            onCopySuccess={handleCopySuccess}
                         />
                     </Box>
                 </Box>
@@ -1312,30 +1405,23 @@ export default function NewsSection() {
                         return (
                             <Box
                                 key={report.report_slug}
-                                component={Link}
-                                href={`/reports/${report.report_slug}`}
                                 sx={{
                                     display: 'flex',
                                     gap: { xs: spacing.xs, md: spacing.sm },
                                     py: spacing.xxs,
-                                    textDecoration: 'none',
-                                    color: 'inherit',
                                     borderBottom: index < latestReports.length - 1 ? '1px solid' : 'none',
                                     borderColor: 'divider',
                                     transition: transitions.colors,
-                                    '&:hover': {
-                                        '& .report-title': {
-                                            textDecoration: 'underline',
-                                        },
-                                    },
                                 }}
                             >
-                                {/* Cột trái: Ngày + Giờ */}
+                                {/* Cột trái: Ngày + Giờ - double click để copy */}
                                 <Box
+                                    onDoubleClick={async () => { if (await copyReportContent(report.report_slug)) setCopied(true); }}
                                     sx={{
                                         flexShrink: 0,
                                         width: { xs: 80, md: 100 },
                                         textAlign: 'left',
+                                        userSelect: 'none',
                                     }}
                                 >
                                     <Typography
@@ -1363,6 +1449,8 @@ export default function NewsSection() {
                                 <Box sx={{ flex: 1, minWidth: 0 }}>
                                     <Typography
                                         className="report-title"
+                                        component={Link}
+                                        href={`/reports/${report.report_slug}`}
                                         variant="h6"
                                         sx={{
                                             fontWeight: fontWeight.semibold,
@@ -1374,6 +1462,12 @@ export default function NewsSection() {
                                             WebkitLineClamp: 2,
                                             WebkitBoxOrient: 'vertical',
                                             overflow: 'hidden',
+                                            textDecoration: 'none',
+                                            color: 'inherit',
+                                            cursor: 'pointer',
+                                            '&:hover': {
+                                                textDecoration: 'underline',
+                                            },
                                         }}
                                     >
                                         {report.title || 'Báo cáo'}
@@ -1383,6 +1477,7 @@ export default function NewsSection() {
                                         <Typography
                                             variant="body2"
                                             color="text.secondary"
+                                            onDoubleClick={async () => { if (await copyReportContent(report.report_slug)) setCopied(true); }}
                                             sx={{
                                                 fontSize: getResponsiveFontSize('sm'),
                                                 lineHeight: 1.5,
@@ -1390,6 +1485,7 @@ export default function NewsSection() {
                                                 WebkitLineClamp: 2,
                                                 WebkitBoxOrient: 'vertical',
                                                 overflow: 'hidden',
+                                                userSelect: 'none',
                                             }}
                                         >
                                             {report.category_name ? `(${report.category_name}) - ` : ''}{report.sapo || report.category_name}
@@ -1401,6 +1497,14 @@ export default function NewsSection() {
                     })
                 )}
             </Box>
+
+            <Snackbar
+                open={copied}
+                autoHideDuration={1500}
+                onClose={() => setCopied(false)}
+                message="Đã copy nội dung"
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            />
         </Box>
     );
 }

@@ -201,6 +201,8 @@ export interface BandIndicator {
     type: 'band';
     /** [upper_boundary, lower_boundary] */
     fields: [string, string];
+    /** Per-series labels for price tags [upper_label, lower_label] */
+    labels: [string, string];
     color: ThemeColor;
 }
 
@@ -210,6 +212,8 @@ export interface DualLineIndicator {
     type: 'dual-line';
     /** [line1_field, line2_field] */
     fields: [string, string];
+    /** Per-series labels for price tags [line1_label, line2_label] */
+    labels: [string, string];
     color: ThemeColor;
     /** Full Lightweight Charts options applied to both lines */
     lwOptions?: LightweightLineOptions;
@@ -274,10 +278,10 @@ export const INDICATOR_GROUPS: IndicatorGroup[] = [
             { key: 'y_open', label: 'Y - OPEN', type: 'line', field: 'y_open', color: { dark: '#FF5252', light: '#C62828' }, lwOptions: LW_OPEN },
 
             // PREV HIGH/LOW — W / M / Q / Y (dual-line: 1 toggle = 2 đường)
-            { key: 'w_phl', label: 'W - PREV HIGH/LOW', type: 'dual-line', fields: ['w_ph', 'w_pl'], color: { dark: '#69F0AE', light: '#2E7D32' }, lwOptions: LW_PREV_HL },
-            { key: 'm_phl', label: 'M - PREV HIGH/LOW', type: 'dual-line', fields: ['m_ph', 'm_pl'], color: { dark: '#40C4FF', light: '#0277BD' }, lwOptions: LW_PREV_HL },
-            { key: 'q_phl', label: 'Q - PREV HIGH/LOW', type: 'dual-line', fields: ['q_ph', 'q_pl'], color: { dark: '#FFAB40', light: '#EF6C00' }, lwOptions: LW_PREV_HL },
-            { key: 'y_phl', label: 'Y - PREV HIGH/LOW', type: 'dual-line', fields: ['y_ph', 'y_pl'], color: { dark: '#FF5252', light: '#C62828' }, lwOptions: LW_PREV_HL },
+            { key: 'w_phl', label: 'W - PREV HIGH/LOW', type: 'dual-line', fields: ['w_ph', 'w_pl'], labels: ['W - PH', 'W - PL'], color: { dark: '#69F0AE', light: '#2E7D32' }, lwOptions: LW_PREV_HL },
+            { key: 'm_phl', label: 'M - PREV HIGH/LOW', type: 'dual-line', fields: ['m_ph', 'm_pl'], labels: ['M - PH', 'M - PL'], color: { dark: '#40C4FF', light: '#0277BD' }, lwOptions: LW_PREV_HL },
+            { key: 'q_phl', label: 'Q - PREV HIGH/LOW', type: 'dual-line', fields: ['q_ph', 'q_pl'], labels: ['Q - PH', 'Q - PL'], color: { dark: '#FFAB40', light: '#EF6C00' }, lwOptions: LW_PREV_HL },
+            { key: 'y_phl', label: 'Y - PREV HIGH/LOW', type: 'dual-line', fields: ['y_ph', 'y_pl'], labels: ['Y - PH', 'Y - PL'], color: { dark: '#FF5252', light: '#C62828' }, lwOptions: LW_PREV_HL },
         ],
     },
     {
@@ -293,10 +297,10 @@ export const INDICATOR_GROUPS: IndicatorGroup[] = [
             { key: 'y_pivot', label: 'Y - PIVOT', type: 'line', field: 'y_pivot', color: { dark: '#FF5252', light: '#C62828' }, lwOptions: LW_PIVOT },
 
             // R1/S1 — W / M / Q / Y (dual-line: 1 toggle = 2 đường)
-            { key: 'w_rs', label: 'W - R1/S1', type: 'dual-line', fields: ['w_r1', 'w_s1'], color: { dark: '#69F0AE', light: '#2E7D32' }, lwOptions: LW_PIVOT_RS },
-            { key: 'm_rs', label: 'M - R1/S1', type: 'dual-line', fields: ['m_r1', 'm_s1'], color: { dark: '#40C4FF', light: '#0277BD' }, lwOptions: LW_PIVOT_RS },
-            { key: 'q_rs', label: 'Q - R1/S1', type: 'dual-line', fields: ['q_r1', 'q_s1'], color: { dark: '#FFAB40', light: '#EF6C00' }, lwOptions: LW_PIVOT_RS },
-            { key: 'y_rs', label: 'Y - R1/S1', type: 'dual-line', fields: ['y_r1', 'y_s1'], color: { dark: '#FF5252', light: '#C62828' }, lwOptions: LW_PIVOT_RS },
+            { key: 'w_rs', label: 'W - R1/S1', type: 'dual-line', fields: ['w_r1', 'w_s1'], labels: ['W - R1', 'W - S1'], color: { dark: '#69F0AE', light: '#2E7D32' }, lwOptions: LW_PIVOT_RS },
+            { key: 'm_rs', label: 'M - R1/S1', type: 'dual-line', fields: ['m_r1', 'm_s1'], labels: ['M - R1', 'M - S1'], color: { dark: '#40C4FF', light: '#0277BD' }, lwOptions: LW_PIVOT_RS },
+            { key: 'q_rs', label: 'Q - R1/S1', type: 'dual-line', fields: ['q_r1', 'q_s1'], labels: ['Q - R1', 'Q - S1'], color: { dark: '#FFAB40', light: '#EF6C00' }, lwOptions: LW_PIVOT_RS },
+            { key: 'y_rs', label: 'Y - R1/S1', type: 'dual-line', fields: ['y_r1', 'y_s1'], labels: ['Y - R1', 'Y - S1'], color: { dark: '#FF5252', light: '#C62828' }, lwOptions: LW_PIVOT_RS },
         ],
     },
     {
@@ -311,10 +315,10 @@ export const INDICATOR_GROUPS: IndicatorGroup[] = [
             { key: 'y_f500', label: 'Y - F500', type: 'line', field: 'y_f500', color: { dark: '#FF5252', light: '#C62828' }, lwOptions: LW_FIBO },
 
             // F382/F618 — W / M / Q / Y
-            { key: 'w_fibo', label: 'W - F382/F618', type: 'band', fields: ['w_f618', 'w_f382'], color: { dark: '#69F0AE', light: '#2E7D32' } },
-            { key: 'm_fibo', label: 'M - F382/F618', type: 'band', fields: ['m_f618', 'm_f382'], color: { dark: '#40C4FF', light: '#0277BD' } },
-            { key: 'q_fibo', label: 'Q - F382/F618', type: 'band', fields: ['q_f618', 'q_f382'], color: { dark: '#FFAB40', light: '#EF6C00' } },
-            { key: 'y_fibo', label: 'Y - F382/F618', type: 'band', fields: ['y_f618', 'y_f382'], color: { dark: '#FF5252', light: '#C62828' } },
+            { key: 'w_fibo', label: 'W - F382/F618', type: 'band', fields: ['w_f618', 'w_f382'], labels: ['W - F618', 'W - F382'], color: { dark: '#69F0AE', light: '#2E7D32' } },
+            { key: 'm_fibo', label: 'M - F382/F618', type: 'band', fields: ['m_f618', 'm_f382'], labels: ['M - F618', 'M - F382'], color: { dark: '#40C4FF', light: '#0277BD' } },
+            { key: 'q_fibo', label: 'Q - F382/F618', type: 'band', fields: ['q_f618', 'q_f382'], labels: ['Q - F618', 'Q - F382'], color: { dark: '#FFAB40', light: '#EF6C00' } },
+            { key: 'y_fibo', label: 'Y - F382/F618', type: 'band', fields: ['y_f618', 'y_f382'], labels: ['Y - F618', 'Y - F382'], color: { dark: '#FF5252', light: '#C62828' } },
         ],
     },
     {
@@ -329,10 +333,10 @@ export const INDICATOR_GROUPS: IndicatorGroup[] = [
             { key: 'y_poc', label: 'Y - POC', type: 'line', field: 'y_poc', color: { dark: '#FF5252', light: '#C62828' }, lwOptions: LW_POC },
 
             // VAH/VAL — W / M / Q / Y
-            { key: 'w_va', label: 'W - VAH/VAL', type: 'band', fields: ['w_vah', 'w_val'], color: { dark: '#69F0AE', light: '#2E7D32' } },
-            { key: 'm_va', label: 'M - VAH/VAL', type: 'band', fields: ['m_vah', 'm_val'], color: { dark: '#40C4FF', light: '#0277BD' } },
-            { key: 'q_va', label: 'Q - VAH/VAL', type: 'band', fields: ['q_vah', 'q_val'], color: { dark: '#FFAB40', light: '#EF6C00' } },
-            { key: 'y_va', label: 'Y - VAH/VAL', type: 'band', fields: ['y_vah', 'y_val'], color: { dark: '#FF5252', light: '#C62828' } },
+            { key: 'w_va', label: 'W - VAH/VAL', type: 'band', fields: ['w_vah', 'w_val'], labels: ['W - VAH', 'W - VAL'], color: { dark: '#69F0AE', light: '#2E7D32' } },
+            { key: 'm_va', label: 'M - VAH/VAL', type: 'band', fields: ['m_vah', 'm_val'], labels: ['M - VAH', 'M - VAL'], color: { dark: '#40C4FF', light: '#0277BD' } },
+            { key: 'q_va', label: 'Q - VAH/VAL', type: 'band', fields: ['q_vah', 'q_val'], labels: ['Q - VAH', 'Q - VAL'], color: { dark: '#FFAB40', light: '#EF6C00' } },
+            { key: 'y_va', label: 'Y - VAH/VAL', type: 'band', fields: ['y_vah', 'y_val'], labels: ['Y - VAH', 'Y - VAL'], color: { dark: '#FF5252', light: '#C62828' } },
         ],
     },
     {
@@ -340,9 +344,9 @@ export const INDICATOR_GROUPS: IndicatorGroup[] = [
         name: 'Volume MA',
         indicators: [
             // VOLUME MA 5: Màu Cam sáng (Sunset Orange)
-            { key: 'vsma5', label: 'VOLUME MA 5', type: 'volume-line', field: 'vsma5', color: { dark: '#40C4FF', light: '#0277BD' }, lwOptions: LW_VOL_MA },
+            { key: 'vsma5', label: 'VOL MA 5', type: 'volume-line', field: 'vsma5', color: { dark: '#40C4FF', light: '#0277BD' }, lwOptions: LW_VOL_MA },
             // VOLUME MA 60: Màu Xanh Cyan/Blue (Cyan Process) - Tương phản mạnh với màu Cam
-            { key: 'vsma60', label: 'VOLUME MA 60', type: 'volume-line', field: 'vsma60', color: { dark: '#FFAB40', light: '#EF6C00' }, lwOptions: LW_VOL_MA },
+            { key: 'vsma60', label: 'VOL MA 60', type: 'volume-line', field: 'vsma60', color: { dark: '#FFAB40', light: '#EF6C00' }, lwOptions: LW_VOL_MA },
         ],
     },
 ];

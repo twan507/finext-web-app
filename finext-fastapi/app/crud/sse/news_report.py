@@ -6,6 +6,7 @@ from app.crud.sse._helpers import STOCK_DB, OPERATION_TIMEOUT_MS
 
 
 async def news_report(
+    ticker: Optional[str] = None,
     report_type: Optional[str] = None,
     categories: Optional[str] = None,
     page: Optional[int] = None,
@@ -20,6 +21,7 @@ async def news_report(
     Database: temp_stock.
 
     Args:
+        ticker: Mã ticker để filter (tuỳ chọn)
         report_type: Loại bản tin để filter (VD: daily, weekly, monthly)
         categories: Danh mục để filter, có thể 1 hoặc nhiều cách nhau bởi dấu phẩy (VD: trong_nuoc hoặc trong_nuoc,thong_cao)
         page: Số trang (bắt đầu từ 1)
@@ -35,6 +37,9 @@ async def news_report(
 
     # Build query
     find_query = {}
+    if ticker:
+        # Filter theo tickers array
+        find_query["tickers"] = ticker
     if report_type:
         find_query["report_type"] = report_type
 

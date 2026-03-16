@@ -1,9 +1,11 @@
 // finext-nextjs/app/(main)/news/components/NewsCard.tsx
 'use client';
 
-import { Box, Typography, useTheme } from '@mui/material';
+import { useState } from 'react';
+import { Box, Snackbar, Typography, useTheme } from '@mui/material';
 import Link from 'next/link';
 
+import { apiClient } from 'services/apiClient';
 import { NewsArticle, getTypeConfigByType } from '../types';
 import { spacing, transitions, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 
@@ -35,25 +37,40 @@ export default function NewsCard({ article }: NewsCardProps) {
     const theme = useTheme();
     const typeConfig = getTypeConfigByType(article.news_type);
     const { date, time } = parseDateTime(article.created_at);
+    const [copied, setCopied] = useState(false);
+
+    const handleCopyContent = async () => {
+        try {
+            const response = await apiClient<{ article: NewsArticle | null }>({
+                url: '/api/v1/sse/rest/news_article',
+                method: 'GET',
+                queryParams: { article_slug: article.article_slug },
+                requireAuth: false,
+            });
+            const full = response.data?.article;
+            if (!full) return;
+            const copyData = {
+                title: full.title,
+                sapo: full.sapo || '',
+                content: full.plain_content || '',
+                created_at: full.created_at,
+            };
+            await navigator.clipboard.writeText(JSON.stringify(copyData));
+            setCopied(true);
+        } catch (err) {
+            console.error('Failed to copy content:', err);
+        }
+    };
 
     return (
         <Box
-            component={Link}
-            href={`/news/${article.article_slug}`}
             sx={{
                 display: 'flex',
                 gap: { xs: spacing.xs, md: spacing.sm },
                 py: spacing.xxs,
-                textDecoration: 'none',
-                color: 'inherit',
                 borderBottom: '1px solid',
                 borderColor: 'divider',
                 transition: transitions.colors,
-                '&:hover': {
-                    '& .news-title': {
-                        textDecoration: 'underline',
-                    },
-                },
                 '&:last-child': {
                     borderBottom: 'none',
                 },
@@ -90,9 +107,11 @@ export default function NewsCard({ article }: NewsCardProps) {
 
             {/* Cột giữa: Tiêu đề + Sapo */}
             <Box sx={{ flex: 1, minWidth: 0 }}>
-                {/* Tiêu đề */}
+                {/* Tiêu đề - click để vào bài */}
                 <Typography
                     className="news-title"
+                    component={Link}
+                    href={`/news/${article.article_slug}`}
                     variant="h6"
                     sx={{
                         fontWeight: fontWeight.semibold,
@@ -104,15 +123,22 @@ export default function NewsCard({ article }: NewsCardProps) {
                         WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical',
                         overflow: 'hidden',
+                        textDecoration: 'none',
+                        color: 'inherit',
+                        cursor: 'pointer',
+                        '&:hover': {
+                            textDecoration: 'underline',
+                        },
                     }}
                 >
                     {article.title}
                 </Typography>
 
-                {/* Sapo */}
+                {/* Sapo - double click để copy */}
                 <Typography
                     variant="body2"
                     color="text.secondary"
+                    onDoubleClick={handleCopyContent}
                     sx={{
                         fontSize: getResponsiveFontSize('sm'),
                         lineHeight: 1.5,
@@ -120,6 +146,7 @@ export default function NewsCard({ article }: NewsCardProps) {
                         WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical',
                         overflow: 'hidden',
+                        userSelect: 'none',
                     }}
                 >
                     {article.category_name ? `(${article.category_name}) - ` : ''}{article.sapo}
@@ -166,6 +193,14 @@ export default function NewsCard({ article }: NewsCardProps) {
                     />
                 </Box>
             )}
+
+            <Snackbar
+                open={copied}
+                autoHideDuration={1500}
+                onClose={() => setCopied(false)}
+                message="Đã copy nội dung bài viết"
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            />
         </Box>
     );
 }
