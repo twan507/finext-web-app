@@ -261,6 +261,16 @@ function IndexRow({
     const dividerColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
     const hoverBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)';
 
+    // Clickable indicator columns - only ticker (Chỉ số) column is clickable
+    const clickableKeys = ['ticker'] as const;
+    const isClickable = (key: keyof IndexRowData) => clickableKeys.includes(key as typeof clickableKeys[number]);
+
+    const handleCellClick = (key: keyof IndexRowData) => {
+        if (isClickable(key)) {
+            window.location.href = `/groups/${row.ticker.toLowerCase()}`;
+        }
+    };
+
     const renderCellContent = (column: ColumnDef): React.ReactNode => {
         switch (column.key) {
             case 'ticker':
@@ -347,11 +357,14 @@ function IndexRow({
             case 't5_score': {
                 const score = row[column.key] as number | undefined;
                 return (
-                    <Typography sx={{
-                        fontSize: getResponsiveFontSize('sm'),
-                        fontWeight: fontWeight.medium,
-                        color: score != null ? getFlowColor(score, theme) : 'text.secondary',
-                    }}>
+                    <Typography
+                        component="span"
+                        sx={{
+                            fontSize: getResponsiveFontSize('sm'),
+                            fontWeight: fontWeight.medium,
+                            color: score != null ? getFlowColor(score, theme) : 'text.secondary',
+                        }}
+                    >
                         {formatScore(score)}
                     </Typography>
                 );
@@ -359,11 +372,14 @@ function IndexRow({
 
             case 'vsi':
                 return (
-                    <Typography sx={{
-                        fontSize: getResponsiveFontSize('sm'),
-                        fontWeight: fontWeight.medium,
-                        color: row.vsi != null ? getVsiColor(row.vsi, theme) : 'text.secondary',
-                    }}>
+                    <Typography
+                        component="span"
+                        sx={{
+                            fontSize: getResponsiveFontSize('sm'),
+                            fontWeight: fontWeight.medium,
+                            color: row.vsi != null ? getVsiColor(row.vsi, theme) : 'text.secondary',
+                        }}
+                    >
                         {formatVsi(row.vsi)}
                     </Typography>
                 );
@@ -395,16 +411,20 @@ function IndexRow({
                 if (isMobile && col.hideOnMobile) return null;
                 if (isTablet && col.hideOnTablet) return null;
 
+                const clickable = isClickable(col.key);
+
                 return (
                     <Box
                         component="td"
                         key={col.key}
+                        onClick={() => handleCellClick(col.key)}
                         sx={{
                             textAlign: col.align,
                             px: 1.5,
                             py: 1.25,
                             borderBottom: isLast ? 'none' : `1px solid ${dividerColor}`,
                             verticalAlign: 'middle',
+                            cursor: clickable ? 'pointer' : 'default',
                         }}
                     >
                         {renderCellContent(col)}

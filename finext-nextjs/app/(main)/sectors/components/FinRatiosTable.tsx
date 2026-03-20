@@ -132,14 +132,25 @@ export default function FinRatiosTable({ data, isLoading }: FinRatiosTableProps)
 
                 {/* Rows */}
                 {rows.map((row) => (
-                    <Box key={row.ticker} sx={{
-                        display: 'grid',
-                        gridTemplateColumns: '220px repeat(8, 1fr)',
-                        gap: 0,
-                        py: 1,
-                        borderBottom: `1px solid ${theme.palette.divider}`,
-                        '&:last-child': { borderBottom: 'none' },
-                    }}>
+                    <Box
+                        key={row.ticker}
+                        component="a"
+                        href={`/sectors/${row.ticker.toLowerCase()}`}
+                        sx={{
+                            display: 'grid',
+                            gridTemplateColumns: '220px repeat(8, 1fr)',
+                            gap: 0,
+                            py: 1,
+                            borderBottom: `1px solid ${theme.palette.divider}`,
+                            '&:last-child': { borderBottom: 'none' },
+                            cursor: 'pointer',
+                            textDecoration: 'none',
+                            color: 'inherit',
+                            '&:hover': {
+                                bgcolor: theme.palette.action.hover,
+                            },
+                        }}
+                    >
                         <Typography sx={{
                             fontSize: getResponsiveFontSize('sm'),
                             fontWeight: fontWeight.medium,

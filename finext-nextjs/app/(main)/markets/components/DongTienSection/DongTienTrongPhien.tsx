@@ -185,7 +185,8 @@ export default function NhomCPBarChart1({
                 const rows = seriesData.map((sd: number[], si: number) => {
                     const value = sd[dataPointIndex];
                     if (value == null) return '';
-                    const color = w.globals.colors[si];
+                    // Compute color based on value (matching plotOptions.bar.colors.ranges logic)
+                    const color = value < 0 ? trendDownColor : trendUpColor;
                     const name = w.globals.seriesNames[si];
                     const formattedValue = unit === 'percent'
                         ? `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
