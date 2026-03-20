@@ -677,6 +677,11 @@ export default function SectorDetailContent() {
                                 placeholder="Tìm ngành..."
                                 value={searchQuery}
                                 onChange={(e: any) => setSearchQuery(e.target.value)}
+                                onKeyDown={(e: any) => {
+                                    if (e.key === 'Enter' && filteredIndustryList.length > 0) {
+                                        handleSelectSector(filteredIndustryList[0].ticker);
+                                    }
+                                }}
                                 autoFocus
                                 sx={{
                                     width: '100%',

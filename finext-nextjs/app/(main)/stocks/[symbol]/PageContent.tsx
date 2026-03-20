@@ -397,7 +397,6 @@ export default function StockDetailContent() {
         if (!searchQuery.trim()) return stockList;
         const q = searchQuery.toLowerCase();
         return stockList.filter(item =>
-            item.name.toLowerCase().includes(q) ||
             item.ticker.toLowerCase().includes(q)
         );
     }, [stockList, searchQuery]);
@@ -479,6 +478,11 @@ export default function StockDetailContent() {
                                 placeholder="Tìm mã cổ phiếu..."
                                 value={searchQuery}
                                 onChange={(e: any) => setSearchQuery(e.target.value)}
+                                onKeyDown={(e: any) => {
+                                    if (e.key === 'Enter' && filteredStockList.length > 0) {
+                                        handleSelectStock(filteredStockList[0].ticker);
+                                    }
+                                }}
                                 autoFocus
                                 sx={{
                                     width: '100%',
