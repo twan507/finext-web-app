@@ -60,12 +60,12 @@ const LINE_SESSIONS = 20;
 // Danh sách index để chọn trong dropdown
 const INDEX_LIST: { ticker: string; name: string }[] = [
     { ticker: 'FNXINDEX', name: 'Finext Index' },
-    { ticker: 'FNX100',   name: 'Finext 100' },
+    { ticker: 'FNX100', name: 'Finext 100' },
     { ticker: 'VUOTTROI', name: 'Finext Vượt trội' },
-    { ticker: 'ONDINH',   name: 'Finext Ổn định' },
-    { ticker: 'SUKIEN',   name: 'Finext Sự kiện' },
+    { ticker: 'ONDINH', name: 'Finext Ổn định' },
+    { ticker: 'SUKIEN', name: 'Finext Sự kiện' },
     { ticker: 'LARGECAP', name: 'Finext LargeCap' },
-    { ticker: 'MIDCAP',   name: 'Finext MidCap' },
+    { ticker: 'MIDCAP', name: 'Finext MidCap' },
     { ticker: 'SMALLCAP', name: 'Finext SmallCap' },
 ];
 
@@ -375,11 +375,12 @@ export default function GroupDetailContent() {
     useEffect(() => {
         const todayDataForTicker = todayAllData[ticker] || [];
         const hasHistoryData = !historyLoading && historyData.length > 0;
-        const hasTodayData = todayDataForTicker.length > 0;
 
-        if (!hasHistoryData || !hasTodayData) return;
+        if (!hasHistoryData) return;
 
-        const combinedRawData = [...historyData, ...todayDataForTicker];
+        const combinedRawData = todayDataForTicker.length > 0
+            ? [...historyData, ...todayDataForTicker]
+            : [...historyData];
         const transformedData = transformToChartData(combinedRawData, false);
         setEodData(transformedData);
         setIsLoading(false);
@@ -579,7 +580,7 @@ export default function GroupDetailContent() {
                             animation: `dropdownFadeIn ${durations.fast} ${easings.easeOut}`,
                             '@keyframes dropdownFadeIn': {
                                 from: { opacity: 0, transform: 'translateY(-6px)' },
-                                to:   { opacity: 1, transform: 'translateY(0)' },
+                                to: { opacity: 1, transform: 'translateY(0)' },
                             },
                         }}
                     >

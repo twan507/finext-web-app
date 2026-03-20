@@ -467,11 +467,12 @@ export default function SectorDetailContent() {
     useEffect(() => {
         const todayDataForTicker = todayAllData[ticker] || [];
         const hasHistoryData = !historyLoading && historyData.length > 0;
-        const hasTodayData = todayDataForTicker.length > 0;
 
-        if (!hasHistoryData || !hasTodayData) return;
+        if (!hasHistoryData) return;
 
-        const combinedRawData = [...historyData, ...todayDataForTicker];
+        const combinedRawData = todayDataForTicker.length > 0
+            ? [...historyData, ...todayDataForTicker]
+            : [...historyData];
         const transformedData = transformToChartData(combinedRawData, false);
         setEodData(transformedData);
         setIsLoading(false);
@@ -663,7 +664,7 @@ export default function SectorDetailContent() {
                             animation: `dropdownFadeIn ${durations.fast} ${easings.easeOut}`,
                             '@keyframes dropdownFadeIn': {
                                 from: { opacity: 0, transform: 'translateY(-6px)' },
-                                to:   { opacity: 1, transform: 'translateY(0)' },
+                                to: { opacity: 1, transform: 'translateY(0)' },
                             },
                         }}
                     >

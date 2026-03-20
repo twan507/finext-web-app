@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 from app.crud.sse.home_itd_index import home_itd_index
 from app.crud.sse.home_today_index import home_today_index
 from app.crud.sse.home_hist_index import home_hist_index
+from app.crud.sse.home_hist_stock import home_hist_stock
 from app.crud.sse.home_today_stock import home_today_stock
 from app.crud.sse.home_nn_stock import home_nn_stock
 from app.crud.sse.nntd_stock import nntd_stock
@@ -46,6 +47,7 @@ SSE_QUERY_REGISTRY: Dict[str, Any] = {
     "home_itd_index": home_itd_index,
     "home_hist_index": home_hist_index,
     # Stock queries
+    "home_hist_stock": home_hist_stock,
     "home_today_stock": home_today_stock,
     "home_nn_stock": home_nn_stock,
     "nntd_stock": nntd_stock,
