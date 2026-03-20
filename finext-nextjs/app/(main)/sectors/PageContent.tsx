@@ -268,7 +268,7 @@ export default function SectorsContent() {
 
             {/* ========== BIỂU ĐỒ NGÀNH ========== */}
             {!isLoading && industryTickers.length > 0 && (
-                <Box sx={{ mt: 4, ...getGlassCard(isDark), borderRadius: `${borderRadius.lg}px`, p: 2, position: 'relative', overflow: 'hidden', '&::before': getGlassHighlight(isDark), '&::after': getGlassEdgeLight(isDark) }}>
+                <Box sx={{ mt: 4, ...getGlassCard(isDark), borderRadius: `${borderRadius.lg}px`, p: 2, position: 'relative', '&::before': getGlassHighlight(isDark), '&::after': getGlassEdgeLight(isDark) }}>
                     <Typography
                         color="text.secondary"
                         sx={{
@@ -291,7 +291,6 @@ export default function SectorsContent() {
                                 lg: '4fr 2fr 2fr 3fr',
                             },
                             gap: 2,
-                            overflow: 'hidden',
                         }}
                     >
                         <Box sx={{ minWidth: 0 }}>

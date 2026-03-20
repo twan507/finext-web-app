@@ -231,7 +231,7 @@ function GroupChartRow({ title, tickers, rawDataMap, histQueries5, histQueriesLi
         [tickers, categories, mergedPerTicker]);
 
     return (
-        <Box sx={{ mt: 4, ...getGlassCard(isDark), borderRadius: `${borderRadius.lg}px`, p: 2, position: 'relative', overflow: 'hidden', '&::before': getGlassHighlight(isDark), '&::after': getGlassEdgeLight(isDark) }}>
+        <Box sx={{ mt: 4, ...getGlassCard(isDark), borderRadius: `${borderRadius.lg}px`, p: 2, position: 'relative', '&::before': getGlassHighlight(isDark), '&::after': getGlassEdgeLight(isDark) }}>
             <Typography
                 color="text.secondary"
                 sx={{
@@ -254,7 +254,6 @@ function GroupChartRow({ title, tickers, rawDataMap, histQueries5, histQueriesLi
                         lg: '3fr 2fr 2fr 3fr',
                     },
                     gap: 2,
-                    overflow: 'hidden',
                 }}
             >
                 <Box sx={{ minWidth: 0 }}>
