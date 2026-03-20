@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { Box, Typography, useTheme, useMediaQuery } from '@mui/material';
-import { useQueries } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { getResponsiveFontSize, fontWeight, getGlassCard, getGlassHighlight, getGlassEdgeLight, borderRadius } from 'theme/tokens';
 import { ISseRequest } from 'services/core/types';
 import { sseClient, getFromCache } from 'services/sseClient';
 import { apiClient } from 'services/apiClient';
 import type { RawMarketData } from '../components/marketSection/MarketIndexChart';
 import StockTable, { IndexRowData } from '../groups/components/StockTable';
+import FinRatiosTable from './components/FinRatiosTable';
 
 // Reuse chart components from markets page
 import DongTienTrongPhien from '../markets/components/DongTienSection/DongTienTrongPhien';
@@ -177,6 +178,22 @@ export default function SectorsContent() {
         })),
     });
 
+    // ========== Finratios Industry Query ==========
+    const { data: finratiosData = [], isLoading: finratiosLoading } = useQuery({
+        queryKey: ['sectors', 'finratios_industry'],
+        queryFn: async () => {
+            const response = await apiClient<any[]>({
+                url: '/api/v1/sse/rest/finratios_industry',
+                method: 'GET',
+                queryParams: {},
+                requireAuth: false
+            });
+            return response.data || [];
+        },
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+    });
+
     // Category labels
     const categories = useMemo(() =>
         industryTickers.map(t => {
@@ -313,6 +330,16 @@ export default function SectorsContent() {
                             />
                         </Box>
                     </Box>
+                </Box>
+            )}
+
+            {/* ========== CHỈ SỐ ĐỊNH GIÁ NGÀNH ========== */}
+            {!finratiosLoading && finratiosData.length > 0 && (
+                <Box sx={{ mt: 6, ...getGlassCard(isDark), borderRadius: `${borderRadius.lg}px`, p: 2, position: 'relative', overflow: 'hidden', '&::before': getGlassHighlight(isDark), '&::after': getGlassEdgeLight(isDark) }}>
+                    <FinRatiosTable
+                        data={finratiosData}
+                        isLoading={finratiosLoading}
+                    />
                 </Box>
             )}
         </Box>

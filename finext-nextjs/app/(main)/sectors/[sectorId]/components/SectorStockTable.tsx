@@ -625,18 +625,6 @@ export default function SectorStockTable({
                     />
                 </Stack>
             )}
-
-            {/* Total count */}
-            {!isLoading && data.length > 0 && (
-                <Box sx={{ mt: 1, textAlign: 'center' }}>
-                    <Typography sx={{
-                        fontSize: getResponsiveFontSize('xs'),
-                        color: 'text.secondary',
-                    }}>
-                        Hiển thị {paginatedData.length} / {data.length} cổ phiếu
-                    </Typography>
-                </Box>
-            )}
         </Box>
     );
 }

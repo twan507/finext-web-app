@@ -18,6 +18,7 @@ import { getResponsiveFontSize, fontWeight, getGlassCard, borderRadius, duration
 import DongTienSection from './components/Sectors/DongTienSection';
 import StocksSection from './components/Sectors/StocksSection';
 import NewsSection from './components/Sectors/NewsSection';
+import FinRatiosSection from './components/Sectors/FinRatiosSection';
 
 import type { StockData } from '../../components/marketSection/MarketVolatility';
 import { transformTrendData, type RawTrendData, type TrendChartData } from '../../markets/components/TinHieuSecion/MarketTrendChart';
@@ -548,6 +549,22 @@ export default function SectorDetailContent() {
         setIsTrendLoading(false);
     }, [historyTrendData, trendTodayData, historyTrendLoading]);
 
+    // ========== REST - Finratios Industry Data ==========
+    const { data: finratiosData = [] } = useQuery({
+        queryKey: ['sector', 'finratios_industry', ticker],
+        queryFn: async () => {
+            const response = await apiClient<any[]>({
+                url: '/api/v1/sse/rest/finratios_industry',
+                method: 'GET',
+                queryParams: { ticker },
+                requireAuth: false
+            });
+            return response.data || [];
+        },
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+    });
+
     // ========== SSE - Today Stock Data ==========
     const [stockData, setStockData] = useState<StockData[]>(() => {
         const cached = getFromCache<StockData[]>('home_today_stock');
@@ -743,6 +760,13 @@ export default function SectorDetailContent() {
                         timeRange={timeRange}
                         onTimeRangeChange={setTimeRange}
                     />
+
+                    {/* FinRatios Section - same width as chart */}
+                    <FinRatiosSection
+                        ticker={ticker}
+                        indexName={indexName}
+                        rawData={finratiosData}
+                    />
                 </Box>
 
                 {/* Right: Index Detail Panel */}
@@ -751,7 +775,7 @@ export default function SectorDetailContent() {
                     flexShrink: 0,
                 }}>
                     <IndexDetailPanel
-                        indexName={indexName}
+                        indexName={''}
                         todayData={todayAllData[ticker] || []}
                     />
                 </Box>

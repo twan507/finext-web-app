@@ -172,7 +172,7 @@ export default function DongTienSection({
 
     return (
         <Box>
-            <SectionTitle>Dòng tiền ngành {indexName}</SectionTitle>
+            <SectionTitle>Diễn biến dòng tiền</SectionTitle>
             <Box sx={{
                 display: 'flex',
                 flexDirection: isMobile ? 'column' : 'row',
@@ -203,7 +203,7 @@ export default function DongTienSection({
 
             {/* Bottom: Cấu trúc sóng */}
             <Box sx={{ mt: 3 }}>
-                <SectionTitle>Xu hướng ngành {indexName}</SectionTitle>
+                <SectionTitle>Cấu trúc xu hướng</SectionTitle>
                 <MarketTrendChart
                     chartData={trendChartData}
                     isLoading={isTrendLoading}
