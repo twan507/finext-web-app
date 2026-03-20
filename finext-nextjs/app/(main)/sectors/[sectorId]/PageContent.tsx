@@ -15,14 +15,12 @@ import { sseClient, getFromCache } from 'services/sseClient';
 import { apiClient } from 'services/apiClient';
 import { getResponsiveFontSize, fontWeight, getGlassCard, borderRadius, durations, easings } from 'theme/tokens';
 
-// Reuse components
-import TuongQuanDongTien from '../components/TuongQuanDongTien';
+import TuongQuanDongTien from '../../groups/components/TuongQuanDongTien';
 import GroupStockTable, { GroupStockRowData } from './components/GroupStockTable';
 import type { StockData } from '../../components/marketSection/MarketVolatility';
 import type { RawTrendData, TrendChartData, TrendTimeRange } from '../../markets/components/TinHieuSecion/MarketTrendChart';
 import { transformTrendData } from '../../markets/components/TinHieuSecion/MarketTrendChart';
 
-// Lazy load heavy chart components
 const MarketIndexChart = dynamic(
     () => import('../../components/marketSection/MarketIndexChart').then(mod => ({ default: mod.default })),
     {
@@ -44,30 +42,16 @@ const MarketTrendChart = dynamic(
     }
 );
 
-// Type cho SSE data
+// Type for SSE data
 type IndexDataByTicker = Record<string, RawMarketData[]>;
 
-// Empty chart data for initial state
 const emptyChartData: ChartData = {
     areaData: [],
     candleData: [],
     volumeData: []
 };
 
-// Sessions for line charts
 const LINE_SESSIONS = 20;
-
-// Danh sách index để chọn trong dropdown
-const INDEX_LIST: { ticker: string; name: string }[] = [
-    { ticker: 'FNXINDEX', name: 'Finext Index' },
-    { ticker: 'FNX100',   name: 'Finext 100' },
-    { ticker: 'VUOTTROI', name: 'Finext Vượt trội' },
-    { ticker: 'ONDINH',   name: 'Finext Ổn định' },
-    { ticker: 'SUKIEN',   name: 'Finext Sự kiện' },
-    { ticker: 'LARGECAP', name: 'Finext LargeCap' },
-    { ticker: 'MIDCAP',   name: 'Finext MidCap' },
-    { ticker: 'SMALLCAP', name: 'Finext SmallCap' },
-];
 
 // ========== HELPERS ==========
 function mergeData(hist: RawMarketData[], today: RawMarketData[]): RawMarketData[] {
@@ -115,17 +99,19 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
     );
 }
 
-export default function GroupDetailContent() {
+export default function SectorDetailContent() {
     const params = useParams();
     const router = useRouter();
-    const ticker = (params.groupId as string).toUpperCase();
+    const ticker = (params.sectorId as string).toUpperCase();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
     // Dropdown state
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
     // Close dropdown on outside click
     useEffect(() => {
@@ -139,13 +125,23 @@ export default function GroupDetailContent() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [dropdownOpen]);
 
-    function handleSelectIndex(selectedTicker: string) {
+    function handleSelectSector(selectedTicker: string) {
         setDropdownOpen(false);
+        setSearchQuery('');
         if (selectedTicker !== ticker) {
-            router.push(`/groups/${selectedTicker.toLowerCase()}`);
+            router.push(`/sectors/${selectedTicker.toLowerCase()}`);
         }
     }
 
+    // Focus search input when dropdown opens
+    useEffect(() => {
+        if (dropdownOpen && searchInputRef.current) {
+            setTimeout(() => searchInputRef.current?.focus(), 50);
+        }
+        if (!dropdownOpen) {
+            setSearchQuery('');
+        }
+    }, [dropdownOpen]);
 
     const isMountedRef = useRef<boolean>(true);
     const todaySseRef = useRef<{ unsubscribe: () => void } | null>(null);
@@ -177,7 +173,7 @@ export default function GroupDetailContent() {
         return {};
     });
 
-    // ITD data (từ SSE home_itd_index)
+    // ITD data
     const [itdAllData, setItdAllData] = useState<IndexDataByTicker>(() => {
         const cached = getFromCache<RawMarketData[]>('home_itd_index');
         if (cached && Array.isArray(cached)) {
@@ -191,13 +187,13 @@ export default function GroupDetailContent() {
         return {};
     });
 
-    // Combined EOD data (history + today)
+    // Combined EOD data
     const [eodData, setEodData] = useState<ChartData>(emptyChartData);
 
     // Intraday data
     const [intradayData, setIntradayData] = useState<ChartData>(emptyChartData);
 
-    // Loading & Error states
+    // Loading state
     const [isLoading, setIsLoading] = useState<boolean>(() => {
         const todayCache = getFromCache<RawMarketData[]>('home_today_index');
         if (todayCache && Array.isArray(todayCache)) {
@@ -206,11 +202,34 @@ export default function GroupDetailContent() {
         }
         return true;
     });
-    const [error, setError] = useState<string | null>(null);
+    const [error] = useState<string | null>(null);
 
-    // ========== REST - History Data (for main chart) ==========
+    // Dynamic industry list from today data
+    const industryList = useMemo(() => {
+        const list: { ticker: string; name: string }[] = [];
+        todayAllData && Object.keys(todayAllData).forEach(t => {
+            const item = todayAllData[t]?.[0] as any;
+            if (item?.type === 'industry') {
+                list.push({ ticker: t, name: item.ticker_name || t });
+            }
+        });
+        list.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+        return list;
+    }, [todayAllData]);
+
+    // Filtered industry list by search
+    const filteredIndustryList = useMemo(() => {
+        if (!searchQuery.trim()) return industryList;
+        const q = searchQuery.toLowerCase();
+        return industryList.filter(item =>
+            item.name.toLowerCase().includes(q) ||
+            item.ticker.toLowerCase().includes(q)
+        );
+    }, [industryList, searchQuery]);
+
+    // ========== REST - History Data ==========
     const { data: historyData = [], isLoading: historyLoading } = useQuery({
-        queryKey: ['market', 'history', ticker],
+        queryKey: ['sector', 'history', ticker],
         queryFn: async () => {
             const response = await apiClient<RawMarketData[]>({
                 url: '/api/v1/sse/rest/home_hist_index',
@@ -224,9 +243,9 @@ export default function GroupDetailContent() {
         refetchOnWindowFocus: false,
     });
 
-    // ========== REST - History Data for line charts (ticker, ~20 sessions) ==========
+    // ========== REST - History Data for line charts ==========
     const { data: histLineTicker = [] } = useQuery({
-        queryKey: ['groups', 'hist_index_line', ticker, LINE_SESSIONS],
+        queryKey: ['sectors', 'hist_index_line', ticker, LINE_SESSIONS],
         queryFn: async () => {
             const response = await apiClient<RawMarketData[]>({
                 url: '/api/v1/sse/rest/home_hist_index',
@@ -240,9 +259,9 @@ export default function GroupDetailContent() {
         refetchOnWindowFocus: false,
     });
 
-    // ========== REST - History Data for VNINDEX (~20 sessions) ==========
+    // ========== REST - History Data for VNINDEX ==========
     const { data: histLineVNINDEX = [] } = useQuery({
-        queryKey: ['groups', 'hist_index_line', 'VNINDEX', LINE_SESSIONS],
+        queryKey: ['sectors', 'hist_index_line', 'VNINDEX', LINE_SESSIONS],
         queryFn: async () => {
             const response = await apiClient<RawMarketData[]>({
                 url: '/api/v1/sse/rest/home_hist_index',
@@ -258,7 +277,7 @@ export default function GroupDetailContent() {
 
     // ========== REST - Trend History Data ==========
     const { data: historyTrendData = [], isLoading: historyTrendLoading } = useQuery({
-        queryKey: ['groups', 'history_trend', ticker],
+        queryKey: ['sectors', 'history_trend', ticker],
         queryFn: async () => {
             const response = await apiClient<RawTrendData[]>({
                 url: '/api/v1/sse/rest/home_history_trend',
@@ -360,7 +379,7 @@ export default function GroupDetailContent() {
         };
     }, [ticker]);
 
-    // Transform ITD data cho ticker hiện tại
+    // Transform ITD data
     useEffect(() => {
         const itdDataForTicker = itdAllData[ticker] || [];
         if (itdDataForTicker.length > 0) {
@@ -391,7 +410,7 @@ export default function GroupDetailContent() {
         return firstRecord?.ticker_name || ticker;
     }, [historyData, todayAllData, itdAllData, ticker]);
 
-    // ========== CHART 1: Sức mạnh dòng tiền (line t5_score + bar t0_score) ==========
+    // ========== CHART 1: Sức mạnh dòng tiền ==========
     const { dongTienDates, t5ScoreData, t0ScoreData } = useMemo(() => {
         const todayForTicker = todayAllData[ticker] || [];
         const todayArr: RawMarketData[] = todayForTicker.length > 0 ? [todayForTicker[todayForTicker.length - 1]] : [];
@@ -411,7 +430,7 @@ export default function GroupDetailContent() {
         };
     }, [histLineTicker, todayAllData, ticker]);
 
-    // ========== CHART 2: Tương quan biến động giá và dòng tiền ==========
+    // ========== CHART 2: Tương quan ==========
     const { tuongQuanDates, tuongQuanSeries } = useMemo(() => {
         const todayForTicker = todayAllData[ticker] || [];
         const todayTickerArr: RawMarketData[] = todayForTicker.length > 0 ? [todayForTicker[todayForTicker.length - 1]] : [];
@@ -421,7 +440,6 @@ export default function GroupDetailContent() {
         const todayVNArr: RawMarketData[] = todayForVN.length > 0 ? [todayForVN[todayForVN.length - 1]] : [];
         const mergedVNINDEX = mergeData(histLineVNINDEX, todayVNArr);
 
-        // Use ticker merged as reference for dates
         const refData = mergedTicker.length > 0 ? mergedTicker : mergedVNINDEX;
         const dateLabels = refData.map(d => {
             const date = new Date(d.date);
@@ -440,7 +458,7 @@ export default function GroupDetailContent() {
         };
     }, [histLineTicker, histLineVNINDEX, todayAllData, ticker]);
 
-    // ========== CHART 3: Cấu trúc sóng (Trend) ==========
+    // ========== CHART 3: Cấu trúc sóng ==========
     const [trendChartData, setTrendChartData] = useState<TrendChartData>({
         wTrend: [], mTrend: [], qTrend: [], yTrend: [],
     });
@@ -492,11 +510,16 @@ export default function GroupDetailContent() {
         };
     }, []);
 
-    // Top 10 stocks by trading_value
-    const topStocks: GroupStockRowData[] = useMemo(() => {
+    // Filter stocks by this sector's industry_name
+    const sectorStocks: GroupStockRowData[] = useMemo(() => {
         if (stockData.length === 0) return [];
 
-        return [...stockData]
+        return stockData
+            .filter(s => {
+                // Match by industry_name (sector ticker_name)
+                const industryName = s.industry_name || '';
+                return industryName.toUpperCase() === ticker || industryName.toUpperCase() === indexName.toUpperCase();
+            })
             .sort((a, b) => (b.trading_value || 0) - (a.trading_value || 0))
             .slice(0, 10)
             .map(s => ({
@@ -512,13 +535,12 @@ export default function GroupDetailContent() {
                 t5_score: s.t5_score,
                 vsi: s.vsi,
             }));
-    }, [stockData]);
+    }, [stockData, ticker, indexName]);
 
     return (
         <Box sx={{ py: 2 }}>
-            {/* Title with dropdown index selector */}
+            {/* Title with dropdown sector selector */}
             <Box ref={dropdownRef} sx={{ position: 'relative', display: 'inline-block', mb: 2 }}>
-                {/* Clickable title */}
                 <Box
                     component="button"
                     onClick={() => setDropdownOpen(prev => !prev)}
@@ -546,7 +568,6 @@ export default function GroupDetailContent() {
                     >
                         {indexName}
                     </Typography>
-                    {/* Chevron indicator */}
                     <Box
                         className="index-chevron"
                         sx={{
@@ -573,8 +594,9 @@ export default function GroupDetailContent() {
                             left: 0,
                             zIndex: 1300,
                             minWidth: 220,
+                            maxHeight: 400,
+                            overflowY: 'auto',
                             borderRadius: `${borderRadius.lg}px`,
-                            overflow: 'hidden',
                             ...getGlassCard(isDark),
                             animation: `dropdownFadeIn ${durations.fast} ${easings.easeOut}`,
                             '@keyframes dropdownFadeIn': {
@@ -583,13 +605,39 @@ export default function GroupDetailContent() {
                             },
                         }}
                     >
-                        {INDEX_LIST.map((item) => {
+                        {/* Search input */}
+                        <Box sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+                            <Box
+                                component="input"
+                                ref={searchInputRef}
+                                type="text"
+                                placeholder="Tìm ngành..."
+                                value={searchQuery}
+                                onChange={(e: any) => setSearchQuery(e.target.value)}
+                                autoFocus
+                                sx={{
+                                    width: '100%',
+                                    bgcolor: 'transparent',
+                                    border: 'none',
+                                    outline: 'none',
+                                    color: 'text.primary',
+                                    fontSize: getResponsiveFontSize('md'),
+                                    fontFamily: 'inherit',
+                                    '&::placeholder': {
+                                        color: 'text.secondary',
+                                        opacity: 0.7,
+                                    },
+                                }}
+                            />
+                        </Box>
+
+                        {filteredIndustryList.map((item) => {
                             const isActive = item.ticker === ticker;
                             return (
                                 <Box
                                     key={item.ticker}
                                     component="button"
-                                    onClick={() => handleSelectIndex(item.ticker)}
+                                    onClick={() => handleSelectSector(item.ticker)}
                                     sx={{
                                         display: 'block',
                                         width: '100%',
@@ -642,7 +690,7 @@ export default function GroupDetailContent() {
                     <MarketIndexChart
                         key={ticker}
                         symbol={ticker}
-                        title={`Chỉ số ${indexName}`}
+                        title={`Chỉ số ngành ${indexName}`}
                         eodData={eodData}
                         intradayData={intradayData}
                         isLoading={isLoading}
@@ -667,7 +715,7 @@ export default function GroupDetailContent() {
             {/* ========== BOTTOM SECTION: 3 Charts ========== */}
             <Box sx={{ mt: 4 }}>
                 {/* Top row: 2 charts side by side */}
-                <SectionTitle>Dòng tiền nhóm {indexName}</SectionTitle>
+                <SectionTitle>Dòng tiền ngành {indexName}</SectionTitle>
                 <Box sx={{
                     display: 'flex',
                     flexDirection: isMobile ? 'column' : 'row',
@@ -685,7 +733,7 @@ export default function GroupDetailContent() {
                         />
                     </Box>
 
-                    {/* Right: Tương quan biến động giá và dòng tiền */}
+                    {/* Right: Tương quan */}
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                         <TuongQuanDongTien
                             chartHeight="300px"
@@ -698,7 +746,7 @@ export default function GroupDetailContent() {
 
                 {/* Bottom: Cấu trúc sóng */}
                 <Box sx={{ mt: 3 }}>
-                    <SectionTitle>Xu hướng nhóm {indexName}</SectionTitle>
+                    <SectionTitle>Xu hướng ngành {indexName}</SectionTitle>
                     <MarketTrendChart
                         chartData={trendChartData}
                         isLoading={isTrendLoading}
@@ -709,11 +757,11 @@ export default function GroupDetailContent() {
                 </Box>
             </Box>
 
-            {/* ========== STOCK TABLE: Top 10 cổ phiếu giao dịch cao nhất ========== */}
+            {/* ========== STOCK TABLE ========== */}
             <Box sx={{ mt: 4 }}>
-                <Box sx={{ mb: 2 }}><SectionTitle>Cổ phiếu nổi bật</SectionTitle></Box>
+                <Box sx={{ mb: 2 }}><SectionTitle>Cổ phiếu ngành {indexName}</SectionTitle></Box>
                 <GroupStockTable
-                    data={topStocks}
+                    data={sectorStocks}
                     isLoading={stockData.length === 0}
                     skeletonRows={10}
                 />

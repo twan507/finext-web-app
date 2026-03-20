@@ -84,7 +84,7 @@ const topNavTabs: TopNavTab[] = [
       { label: 'Nhóm cổ phiếu', href: '/groups', icon: 'fluent-color:diversity-48' },
       { label: 'Phân tích nhóm', href: '/groups/FNXINDEX', icon: 'fluent-color:molecule-48' },
       { label: 'Ngành nghề', href: '/sectors', icon: 'fluent-color:data-pie-20' },
-      { label: 'Phân tích ngành', href: '/sectors/FNXINDEX', icon: 'fluent-color:chart-multiple-24' },
+      { label: 'Phân tích ngành', href: '/sectors/NGANHANG', icon: 'fluent-color:chart-multiple-24' },
     ]
   },
   {
