@@ -90,7 +90,7 @@ function extractFieldData(
 const DEFAULT_VISIBLE_BARS_DESKTOP = 180;
 const DEFAULT_VISIBLE_BARS_TABLET = 120;
 const DEFAULT_VISIBLE_BARS_MOBILE = 60;
-const INITIAL_RIGHT_MARGIN_DESKTOP = 5; // Khoảng trống bên phải nến cuối khi render lần đầu
+const INITIAL_RIGHT_MARGIN_DESKTOP = 10; // Khoảng trống bên phải nến cuối khi render lần đầu
 const INITIAL_RIGHT_MARGIN_MOBILE = 2;
 // Lazy load: trigger loadMore khi scroll gần cạnh trái (logical index < threshold)
 const LOAD_MORE_THRESHOLD = 50;

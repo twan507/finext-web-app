@@ -7,6 +7,23 @@ import { ApexOptions } from 'apexcharts';
 import type { StockData } from '../../../components/marketSection/MarketVolatility';
 import { fontWeight, trendColors } from 'theme/tokens';
 
+/** Get VSI color hex based on VSI value (mirrors colorHelpers.ts getVsiColor logic) */
+function getVsiColorHex(vsi: number, isDark: boolean): string {
+    if (vsi === 0) return isDark ? '#e0e0a0' : '#eadb08'; // ref
+    if (vsi < 0.6) return isDark ? trendColors.floor.dark : trendColors.floor.light; // floor (cyan)
+    if (vsi < 0.9) return isDark ? trendColors.down.dark : trendColors.down.light; // down (red)
+    if (vsi < 1.2) return isDark ? '#e0e0a0' : '#eadb08'; // ref (yellow)
+    if (vsi < 1.5) return isDark ? trendColors.up.dark : trendColors.up.light; // up (green)
+    return isDark ? trendColors.ceil.dark : trendColors.ceil.light; // ceil (purple)
+}
+
+/** Get flow color hex based on t0_score value (mirrors colorHelpers.ts getFlowColor logic) */
+function getFlowColorHex(t0Score: number, isDark: boolean): string {
+    if (t0Score > -1 && t0Score < 1) return isDark ? '#e0e0a0' : '#eadb08'; // ref (yellow)
+    if (t0Score >= 1) return isDark ? trendColors.up.dark : trendColors.up.light; // up (green)
+    return isDark ? trendColors.down.dark : trendColors.down.light; // down (red)
+}
+
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -169,18 +186,34 @@ const TreemapChart = memo(function TreemapChart({
 
                     const valueStr = `${new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(tradingValue)} tỷ`;
 
+                    const t0Score = dp.t0Score;
+                    const vsi = dp.vsi;
+
                     const bgColor = isDark ? 'rgba(26,26,26,0.95)' : 'rgba(255,255,255,0.95)';
                     const textColor = isDark ? '#e0e0e0' : '#333';
+                    const labelColor = isDark ? '#9e9e9e' : '#757575';
+
+                    const vsiPct = vsi !== undefined ? (vsi * 100).toFixed(1) : '—';
+                    const vsiColor = vsi !== undefined ? getVsiColorHex(vsi, isDark) : textColor;
+                    const flowColor = t0Score !== undefined ? getFlowColorHex(t0Score, isDark) : textColor;
 
                     return `<div style="background:${bgColor};border:none;border-radius:8px;padding:12px 14px;color:${textColor};min-width:180px;box-shadow:none!important;">
-                        <div style="font-weight:700;font-size:14px;margin-bottom:6px;display:flex;align-items:center;gap:8px;">
+                        <div style="font-weight:700;font-size:14px;margin-bottom:4px;display:flex;align-items:center;gap:8px;">
                             <span style="width:12px;height:12px;border-radius:3px;background:${dp.fillColor};display:inline-block;"></span>
                             ${ticker}
-                            <span style="font-weight:600;font-size:12px;opacity:0.6;">${priceStr}</span>
+                            <span style="font-weight:600;font-size:12px;opacity:0.7;">${priceStr}</span>
                             <span style="font-weight:600;font-size:12px;color:${dp.fillColor};">${pctStr}</span>
                         </div>
-                        <div style="font-size:12px;opacity:0.7;margin-bottom:4px;">${industryName}</div>
-                        <div style="font-size:12px;">GTGD: <b>${valueStr}</b></div>
+                        <div style="font-size:12px;opacity:0.6;margin-bottom:6px;">${industryName}</div>
+                        <div style="font-size:12px;margin-bottom:3px;">
+                            <span style="color:${labelColor};">GTGD:</span> <b>${valueStr}</b>
+                        </div>
+                        <div style="font-size:12px;margin-bottom:3px;">
+                            <span style="color:${labelColor};">Dòng tiền:</span> <b style="color:${flowColor};">${t0Score !== undefined ? t0Score.toFixed(2) : '—'}</b>
+                        </div>
+                        <div style="font-size:12px;">
+                            <span style="color:${labelColor};">Thanh khoản:</span> <b style="color:${vsiColor};">${vsiPct}%</b>
+                        </div>
                     </div>`;
                 },
             },
@@ -237,6 +270,8 @@ export default function StockTreemap({ data, chartHeight = '550px' }: StockTreem
                         fillColor: pickColor(stock.pct_change, stock.exchange),
                         pctChange: stock.pct_change,
                         closePrice: stock.close,
+                        vsi: stock.vsi,
+                        t0Score: stock.t0_score,
                     })),
                 };
             })
