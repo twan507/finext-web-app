@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Box, Typography, Skeleton, useTheme } from '@mui/material';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { transitions, getResponsiveFontSize, fontWeight, getGlassCard, getGlassHighlight, getGlassEdgeLight } from 'theme/tokens';
 import { ApexOptions } from 'apexcharts';
 
@@ -24,7 +25,11 @@ interface MiniIndexCardProps {
     todayData?: RawMarketData[]; // Fallback data từ today_index khi chưa có ITD
     hideOnTablet?: boolean; // Ẩn card ở tablet (md breakpoint)
     hideOnMobile?: boolean; // Ẩn card ở mobile (xs breakpoint)
+    hasDetailPage?: boolean; // Index có trang chi tiết hay không (Finext indexes mới có)
 }
+
+// Các index không có trang chi tiết
+const INDEXES_WITHOUT_DETAIL = ['VNINDEX', 'VN30', 'VNXALL', 'HNXINDEX', 'HNX30', 'UPINDEX'];
 
 // Can't access theme here easily for default params, so we'll refactor component to use theme inside.
 // Or we can pass theme to these functions.
@@ -64,9 +69,13 @@ interface ChartDataPoint {
     dateStr: string;
 }
 
-export default function MiniIndexCard({ symbol, itdData, todayData = [], hideOnTablet = false, hideOnMobile = false }: MiniIndexCardProps) {
+export default function MiniIndexCard({ symbol, itdData, todayData = [], hideOnTablet = false, hideOnMobile = false, hasDetailPage = false }: MiniIndexCardProps) {
     const theme = useTheme();
+    const router = useRouter();
     const isDark = theme.palette.mode === 'dark';
+
+    // Index không có trang chi tiết thì không cho click
+    const isClickable = hasDetailPage && !INDEXES_WITHOUT_DETAIL.includes(symbol);
 
     const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
     const [tickerName, setTickerName] = useState<string>(symbol);
@@ -258,6 +267,7 @@ export default function MiniIndexCard({ symbol, itdData, todayData = [], hideOnT
                 ? { xs: 'none', sm: 'block' }
                 : 'block',
         transition: transitions.all,
+        cursor: isClickable ? 'pointer' : 'default',
         // Top highlight line (::before)
         '&::before': getGlassHighlight(isDark),
         // Left edge light (::after)
@@ -266,7 +276,7 @@ export default function MiniIndexCard({ symbol, itdData, todayData = [], hideOnT
 
     if (isLoading && chartData.length === 0) {
         return (
-            <Box sx={cardSx}>
+            <Box sx={cardSx} onClick={isClickable ? () => router.push(`/groups/${symbol}`) : undefined}>
                 <Skeleton variant="text" width="60%" height={22} />
                 <Skeleton variant="text" width="90%" height={30} sx={{ mt: 0.5 }} />
                 <Skeleton variant="rectangular" width="100%" height={60} sx={{ mt: 1, borderRadius: 1 }} />
@@ -275,7 +285,7 @@ export default function MiniIndexCard({ symbol, itdData, todayData = [], hideOnT
     }
 
     return (
-        <Box sx={cardSx}>
+        <Box sx={cardSx} onClick={isClickable ? () => router.push(`/groups/${symbol}`) : undefined}>
             <Typography variant="body2" sx={{ fontWeight: fontWeight.semibold, color: 'text.secondary', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {tickerName}
             </Typography>

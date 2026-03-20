@@ -22,15 +22,17 @@ export interface StockData {
 interface IndustryStocksSectionProps {
     stockData?: StockData[];
     isLoading?: boolean;
+    industryTickers?: Record<string, string>; // Map from industry name to ticker
 }
 
 // Group stocks by industry and get top gainers
 interface IndustryGroup {
     industryName: string;
+    industryTicker?: string;
     stocks: StockData[];
 }
 
-export default function IndustryStocksSection({ stockData = [], isLoading = false }: IndustryStocksSectionProps) {
+export default function IndustryStocksSection({ stockData = [], isLoading = false, industryTickers = {} }: IndustryStocksSectionProps) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isXsWidth = useMediaQuery(theme.breakpoints.only('xs'));
@@ -120,6 +122,7 @@ export default function IndustryStocksSection({ stockData = [], isLoading = fals
             if (filteredStocks.length > 0) {
                 groups.push({
                     industryName,
+                    industryTicker: industryTickers[industryName],
                     stocks: filteredStocks
                 });
             }
@@ -129,12 +132,12 @@ export default function IndustryStocksSection({ stockData = [], isLoading = fals
         groups.sort((a, b) => a.industryName.localeCompare(b.industryName, 'vi'));
 
         return groups;
-    }, [stockData]);
+    }, [stockData, industryTickers]);
 
     // Render slide content for a single industry
     const renderIndustrySlide = (group: IndustryGroup) => (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <Link href={`/industry/${encodeURIComponent(group.industryName)}`} style={{ textDecoration: 'none' }}>
+            <Link href={group.industryTicker ? `/sectors/${group.industryTicker}` : '#'} style={{ textDecoration: 'none' }}>
                 <Typography
                     color="text.secondary"
                     sx={{

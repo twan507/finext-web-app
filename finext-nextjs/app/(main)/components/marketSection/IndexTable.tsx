@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { Box, Typography, Skeleton, useTheme, useMediaQuery, Theme } from '@mui/material';
+import { useRouter } from 'next/navigation';
 import { transitions, getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
 import { getTrendColor } from 'theme/colorHelpers';
 
@@ -24,13 +25,20 @@ interface IndexRowProps {
     onClick: () => void;
     isLast: boolean;
     todayData: RawMarketData[] | undefined;
+    hasDetailPage?: boolean;
 }
 
+// Các index có trang chi tiết (Finext indexes)
+const INDEXES_WITH_DETAIL = ['FNXINDEX', 'LARGECAP', 'MIDCAP', 'SMALLCAP', 'VUOTTROI', 'ONDINH', 'SUKIEN', 'FNX100'];
+
 // Component cho từng row - nhận data từ props (SSE today)
-function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowProps) {
+function IndexRow({ ticker, isSelected, onClick, isLast, todayData, hasDetailPage = false }: IndexRowProps) {
     const theme = useTheme();
+    const router = useRouter();
     const isDark = theme.palette.mode === 'dark';
     const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'));
+
+    const isClickable = hasDetailPage && INDEXES_WITH_DETAIL.includes(ticker);
 
     // Responsive font size
     const cellFontSize = getResponsiveFontSize('sm');
@@ -120,7 +128,7 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
                 gridTemplateColumns: '1.8fr 1fr 0.8fr 0.8fr',
                 gap: isMobile ? 0.5 : 1,
                 ...rowPadding,
-                cursor: 'pointer',
+                cursor: isClickable ? 'pointer' : 'default',
                 transition: transitions.colors,
                 borderBottom: isLast ? 'none' : `1px solid ${dividerColor}`,
                 bgcolor: isSelected ? hoverBg : 'transparent',
@@ -139,15 +147,22 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData }: IndexRowPr
                 }
             }}
         >
-            {/* Tên index */}
-            <Typography sx={{
-                fontSize: cellFontSize,
-                fontWeight: fontWeight.medium,
-                color: 'text.primary',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-            }}>
+            {/* Tên index - clickable để mở detail page */}
+            <Typography
+                onClick={isClickable ? () => router.push(`/groups/${ticker}`) : undefined}
+                sx={{
+                    fontSize: cellFontSize,
+                    fontWeight: fontWeight.medium,
+                    color: 'text.primary',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    cursor: isClickable ? 'pointer' : 'default',
+                    '&:hover': isClickable ? {
+                        textDecoration: 'underline'
+                    } : {}
+                }}
+            >
                 {tickerName}
             </Typography>
 
@@ -212,6 +227,7 @@ export default function IndexTable({ selectedTicker, onTickerChange, indexList, 
                     onClick={() => onTickerChange(ticker)}
                     isLast={index === indexList.length - 1}
                     todayData={todayAllData[ticker]}
+                    hasDetailPage={INDEXES_WITH_DETAIL.includes(ticker)}
                 />
             ))}
         </Box>

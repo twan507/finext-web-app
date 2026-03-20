@@ -921,15 +921,10 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                                                 }}
                                             />
 
-                                            {/* Name with HREF placeholder handling */}
+                                            {/* Name - clickable to navigate to sector detail */}
                                             <Typography
-                                                component="a"
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    // Placeholder for href
-                                                    // console.log("Navigate to", item.ticker);
-                                                }}
-                                                href={`#${item.ticker}`}
+                                                component="div"
+                                                onClick={() => router.push(`/sectors/${item.ticker}`)}
                                                 sx={{
                                                     fontSize: getResponsiveFontSize('md'),
                                                     flex: 1, // Allow text to take available space

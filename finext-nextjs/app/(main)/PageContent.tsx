@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { Box, Skeleton } from '@mui/material';
@@ -435,6 +435,7 @@ export default function HomeContent() {
                         todayData={todayAllData[indexSymbol] || []}
                         hideOnTablet={HIDDEN_ON_TABLET.includes(indexSymbol)}
                         hideOnMobile={HIDDEN_ON_MOBILE.includes(indexSymbol)}
+                        hasDetailPage={false}
                     />
                 ))}
             </Box>
@@ -475,7 +476,20 @@ export default function HomeContent() {
 
             {/* Section 3.5: Cổ phiếu nổi bật theo ngành */}
             <Box sx={{ mt: 5 }}>
-                <IndustryStocksSection stockData={todayStockData} isLoading={isStockDataLoading} />
+                <IndustryStocksSection
+                    stockData={todayStockData}
+                    isLoading={isStockDataLoading}
+                    industryTickers={useMemo(() => {
+                        const map: Record<string, string> = {};
+                        Object.entries(todayAllData).forEach(([ticker, items]) => {
+                            const indItem = (items as any[]).find((i: any) => i.type === 'industry');
+                            if (indItem?.ticker_name) {
+                                map[indItem.ticker_name] = ticker;
+                            }
+                        });
+                        return map;
+                    }, [todayAllData])}
+                />
             </Box>
 
             {/* Section 5: Tin tức */}
