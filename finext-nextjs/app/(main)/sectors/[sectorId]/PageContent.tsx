@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
-import { Box, Typography, Skeleton, useTheme, useMediaQuery } from '@mui/material';
+import { Box, Typography, Skeleton, useTheme, alpha } from '@mui/material';
 
 import type { RawMarketData, ChartData, TimeRange } from '../../components/marketSection/MarketIndexChart';
 import { transformToChartData } from '../../components/marketSection/MarketIndexChart';
@@ -13,32 +13,20 @@ import IndexDetailPanel from '../../components/marketSection/IndexDetailPanel';
 import { ISseRequest } from 'services/core/types';
 import { sseClient, getFromCache } from 'services/sseClient';
 import { apiClient } from 'services/apiClient';
-import { getResponsiveFontSize, fontWeight, getGlassCard, borderRadius, durations, easings } from 'theme/tokens';
+import { getResponsiveFontSize, fontWeight, getGlassCard, borderRadius, durations, easings, transitions, layoutTokens } from 'theme/tokens';
 
-import TuongQuanDongTien from '../../groups/components/TuongQuanDongTien';
-import GroupStockTable, { GroupStockRowData } from './components/GroupStockTable';
+import DongTienSection from './components/Sectors/DongTienSection';
+import StocksSection from './components/Sectors/StocksSection';
+import NewsSection from './components/Sectors/NewsSection';
+
 import type { StockData } from '../../components/marketSection/MarketVolatility';
-import type { RawTrendData, TrendChartData, TrendTimeRange } from '../../markets/components/TinHieuSecion/MarketTrendChart';
-import { transformTrendData } from '../../markets/components/TinHieuSecion/MarketTrendChart';
+import { transformTrendData, type RawTrendData, type TrendChartData } from '../../markets/components/TinHieuSecion/MarketTrendChart';
 
 const MarketIndexChart = dynamic(
     () => import('../../components/marketSection/MarketIndexChart').then(mod => ({ default: mod.default })),
     {
         loading: () => <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 2 }} />,
         ssr: false
-    }
-);
-
-const SucManhDongTien = dynamic(
-    () => import('./components/SucManhDongTien'),
-    { ssr: false }
-);
-
-const MarketTrendChart = dynamic(
-    () => import('../../markets/components/TinHieuSecion/MarketTrendChart'),
-    {
-        loading: () => <Skeleton variant="rectangular" height={345} sx={{ borderRadius: 2 }} />,
-        ssr: false,
     }
 );
 
@@ -52,6 +40,74 @@ const emptyChartData: ChartData = {
 };
 
 const LINE_SESSIONS = 20;
+
+// ========== SUB-NAVBAR TABS CONFIG ==========
+const SECTOR_TABS = [
+    { id: 'cashflow', label: 'Dòng tiền' },
+    { id: 'stocks', label: 'Cổ phiếu' },
+    { id: 'news', label: 'Tin tức' },
+] as const;
+
+type SectorTabId = typeof SECTOR_TABS[number]['id'];
+
+// ========== SUB-NAVBAR (full-width bleed) ==========
+function SubNavbar({ activeTab, onTabChange }: {
+    activeTab: SectorTabId;
+    onTabChange: (tab: SectorTabId) => void;
+}) {
+    const theme = useTheme();
+
+    return (
+        <Box sx={{
+            mx: { xs: 'calc(-50vw + 50%)', lg: `calc(-50vw + 50% + ${layoutTokens.compactDrawerWidth / 2}px)` },
+            borderBottom: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+            borderTop: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+            bgcolor: theme.palette.background.default,
+        }}>
+            <Box sx={{
+                maxWidth: 1400,
+                mx: 'auto',
+                px: { xs: 1.5, md: 2, lg: 3 },
+                display: 'flex',
+                overflowX: 'auto',
+                scrollbarWidth: 'none',
+                '&::-webkit-scrollbar': { display: 'none' },
+                msOverflowStyle: 'none',
+            }}>
+                {SECTOR_TABS.map((tab) => {
+                    const isActive = activeTab === tab.id;
+                    return (
+                        <Box
+                            key={tab.id}
+                            onClick={() => onTabChange(tab.id)}
+                            sx={{
+                                px: { xs: 2, md: 2.5 },
+                                py: 1.5,
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                                position: 'relative',
+                                borderBottom: isActive ? `3px solid ${theme.palette.primary.main}` : '3px solid transparent',
+                                transition: transitions.colors,
+                                '&:hover': {
+                                    color: theme.palette.primary.main,
+                                },
+                            }}
+                        >
+                            <Typography sx={{
+                                fontSize: getResponsiveFontSize('md'),
+                                fontWeight: isActive ? fontWeight.semibold : fontWeight.medium,
+                                color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
+                                transition: transitions.colors,
+                            }}>
+                                {tab.label}
+                            </Typography>
+                        </Box>
+                    );
+                })}
+            </Box>
+        </Box>
+    );
+}
 
 // ========== HELPERS ==========
 function mergeData(hist: RawMarketData[], today: RawMarketData[]): RawMarketData[] {
@@ -102,10 +158,33 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 export default function SectorDetailContent() {
     const params = useParams();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const ticker = (params.sectorId as string).toUpperCase();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
-    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+    // Tab param from URL
+    const tabParam = searchParams.get('tab') as SectorTabId | null;
+
+    // Active tab state - sync with URL
+    const [activeTab, setActiveTab] = useState<SectorTabId>(() => {
+        const validTabs: SectorTabId[] = ['cashflow', 'stocks', 'news'];
+        if (tabParam && validTabs.includes(tabParam)) return tabParam;
+        return 'cashflow';
+    });
+
+    // Sync activeTab when URL search param changes
+    useEffect(() => {
+        const validTabs: SectorTabId[] = ['cashflow', 'stocks', 'news'];
+        if (tabParam && validTabs.includes(tabParam) && tabParam !== activeTab) {
+            setActiveTab(tabParam);
+        }
+    }, [tabParam]);
+
+    const handleTabChange = (newTab: SectorTabId) => {
+        setActiveTab(newTab);
+        router.push(`?tab=${newTab}`, { scroll: false });
+    };
 
     // Dropdown state
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -151,13 +230,6 @@ export default function SectorDetailContent() {
 
     // Lifted timeRange state for chart
     const [timeRange, setTimeRange] = useState<TimeRange>('3M');
-
-    // Trend chart timeRange
-    const [trendTimeRange, setTrendTimeRange] = useState<TrendTimeRange>(isMobile ? '1M' : '3M');
-
-    useEffect(() => {
-        setTrendTimeRange(isMobile ? '1M' : '3M');
-    }, [isMobile]);
 
     // ========== STATE ==========
     const [todayAllData, setTodayAllData] = useState<IndexDataByTicker>(() => {
@@ -510,33 +582,6 @@ export default function SectorDetailContent() {
         };
     }, []);
 
-    // Filter stocks by this sector's industry_name
-    const sectorStocks: GroupStockRowData[] = useMemo(() => {
-        if (stockData.length === 0) return [];
-
-        return stockData
-            .filter(s => {
-                // Match by industry_name (sector ticker_name)
-                const industryName = s.industry_name || '';
-                return industryName.toUpperCase() === ticker || industryName.toUpperCase() === indexName.toUpperCase();
-            })
-            .sort((a, b) => (b.trading_value || 0) - (a.trading_value || 0))
-            .slice(0, 10)
-            .map(s => ({
-                ticker: s.ticker,
-                exchange: s.exchange,
-                close: s.close,
-                diff: s.diff,
-                pct_change: s.pct_change,
-                industry_name: s.industry_name,
-                category_name: s.category_name,
-                marketcap_name: s.marketcap_name,
-                t0_score: s.t0_score,
-                t5_score: s.t5_score,
-                vsi: s.vsi,
-            }));
-    }, [stockData, ticker, indexName]);
-
     return (
         <Box sx={{ py: 2 }}>
             {/* Title with dropdown sector selector */}
@@ -712,60 +757,42 @@ export default function SectorDetailContent() {
                 </Box>
             </Box>
 
-            {/* ========== BOTTOM SECTION: 3 Charts ========== */}
+            {/* ========== SUB-NAVBAR (full-width bleed) ========== */}
             <Box sx={{ mt: 4 }}>
-                {/* Top row: 2 charts side by side */}
-                <SectionTitle>Dòng tiền ngành {indexName}</SectionTitle>
-                <Box sx={{
-                    display: 'flex',
-                    flexDirection: isMobile ? 'column' : 'row',
-                    gap: isMobile ? 2 : 5,
-                    mt: 2
-                }}>
-                    {/* Left: Sức mạnh dòng tiền */}
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <SucManhDongTien
-                            title=""
-                            chartHeight="300px"
-                            dates={dongTienDates}
-                            t5ScoreData={t5ScoreData}
-                            t0ScoreData={t0ScoreData}
-                        />
-                    </Box>
+                <SubNavbar activeTab={activeTab} onTabChange={handleTabChange} />
+            </Box>
 
-                    {/* Right: Tương quan */}
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <TuongQuanDongTien
-                            chartHeight="300px"
-                            dates={tuongQuanDates}
-                            series={tuongQuanSeries}
-                            unit="percent"
-                        />
-                    </Box>
-                </Box>
-
-                {/* Bottom: Cấu trúc sóng */}
-                <Box sx={{ mt: 3 }}>
-                    <SectionTitle>Xu hướng ngành {indexName}</SectionTitle>
-                    <MarketTrendChart
-                        chartData={trendChartData}
-                        isLoading={isTrendLoading}
-                        timeRange={trendTimeRange}
-                        onTimeRangeChange={setTrendTimeRange}
-                        height={345}
+            {/* ========== TAB CONTENT ========== */}
+            {activeTab === 'cashflow' && (
+                <Box sx={{ mt: 4 }}>
+                    <DongTienSection
+                        ticker={ticker}
+                        indexName={indexName}
+                        todayAllData={todayAllData}
+                        histLineTicker={histLineTicker}
+                        histLineVNINDEX={histLineVNINDEX}
+                        historyTrendData={historyTrendData}
+                        trendTodayData={trendTodayData}
+                        historyTrendLoading={historyTrendLoading}
                     />
                 </Box>
-            </Box>
+            )}
 
-            {/* ========== STOCK TABLE ========== */}
-            <Box sx={{ mt: 4 }}>
-                <Box sx={{ mb: 2 }}><SectionTitle>Cổ phiếu ngành {indexName}</SectionTitle></Box>
-                <GroupStockTable
-                    data={sectorStocks}
-                    isLoading={stockData.length === 0}
-                    skeletonRows={10}
-                />
-            </Box>
+            {activeTab === 'stocks' && (
+                <Box sx={{ mt: 4 }}>
+                    <StocksSection
+                        ticker={ticker}
+                        indexName={indexName}
+                        stockData={stockData}
+                    />
+                </Box>
+            )}
+
+            {activeTab === 'news' && (
+                <Box sx={{ mt: 4 }}>
+                    <NewsSection ticker={ticker} />
+                </Box>
+            )}
         </Box>
     );
 }

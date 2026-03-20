@@ -232,7 +232,7 @@ export default function NewsList({
                             {description}
                         </Typography>
                     )}
-                    {!loading && total > 0 && (
+                    {/* {!loading && total > 0 && (
                         <Typography
                             variant="caption"
                             color="text.disabled"
@@ -240,7 +240,7 @@ export default function NewsList({
                         >
                             Tổng cộng {total} bài viết
                         </Typography>
-                    )}
+                    )} */}
                 </Box>
             )}
 

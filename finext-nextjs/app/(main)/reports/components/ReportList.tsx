@@ -201,7 +201,7 @@ export default function ReportList({
                             {description}
                         </Typography>
                     )}
-                    {!loading && total > 0 && (
+                    {/* {!loading && total > 0 && (
                         <Typography
                             variant="caption"
                             color="text.disabled"
@@ -209,7 +209,7 @@ export default function ReportList({
                         >
                             Tổng cộng {total} bản tin
                         </Typography>
-                    )}
+                    )} */}
                 </Box>
             )}
 
