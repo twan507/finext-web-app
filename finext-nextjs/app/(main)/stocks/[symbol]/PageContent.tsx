@@ -169,6 +169,42 @@ export default function StockDetailContent() {
         router.push(`?tab=${newTab}`, { scroll: false });
     };
 
+    // Dropdown state
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        if (!dropdownOpen) return;
+        function handleClickOutside(event: MouseEvent) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setDropdownOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [dropdownOpen]);
+
+    // Focus search input when dropdown opens
+    useEffect(() => {
+        if (dropdownOpen && searchInputRef.current) {
+            setTimeout(() => searchInputRef.current?.focus(), 50);
+        }
+        if (!dropdownOpen) {
+            setSearchQuery('');
+        }
+    }, [dropdownOpen]);
+
+    function handleSelectStock(selectedTicker: string) {
+        setDropdownOpen(false);
+        setSearchQuery('');
+        if (selectedTicker !== ticker) {
+            router.push(`/stocks/${selectedTicker.toLowerCase()}`);
+        }
+    }
+
     const isMountedRef = useRef<boolean>(true);
     const todaySseRef = useRef<{ unsubscribe: () => void } | null>(null);
 
@@ -346,19 +382,177 @@ export default function StockDetailContent() {
         return allStocks;
     }, [todayAllData]);
 
+    // Stock list for dropdown
+    const stockList = useMemo(() => {
+        const list: { ticker: string; name: string }[] = [];
+        Object.keys(todayAllData).forEach(t => {
+            const item = todayAllData[t]?.[0] as any;
+            list.push({ ticker: t, name: item?.ticker_name || t });
+        });
+        list.sort((a, b) => a.ticker.localeCompare(b.ticker));
+        return list;
+    }, [todayAllData]);
+
+    const filteredStockList = useMemo(() => {
+        if (!searchQuery.trim()) return stockList;
+        const q = searchQuery.toLowerCase();
+        return stockList.filter(item =>
+            item.name.toLowerCase().includes(q) ||
+            item.ticker.toLowerCase().includes(q)
+        );
+    }, [stockList, searchQuery]);
+
     return (
         <Box sx={{ py: 2 }}>
-            {/* Title */}
-            <Box sx={{ mb: 2 }}>
-                <Typography
-                    variant="h1"
+            {/* Title with dropdown stock selector */}
+            <Box ref={dropdownRef} sx={{ position: 'relative', display: 'inline-block', mb: 2 }}>
+                <Box
+                    component="button"
+                    onClick={() => setDropdownOpen(prev => !prev)}
                     sx={{
-                        fontSize: getResponsiveFontSize('h1'),
-                        lineHeight: 1.2,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        cursor: 'pointer',
+                        color: 'text.primary',
+                        '&:hover .stock-chevron': {
+                            color: 'primary.main',
+                        },
                     }}
                 >
-                    {`Cổ phiếu ${ticker}`}
-                </Typography>
+                    <Typography
+                        variant="h1"
+                        sx={{
+                            fontSize: getResponsiveFontSize('h1'),
+                            lineHeight: 1.2,
+                            userSelect: 'none',
+                        }}
+                    >
+                        {`Cổ phiếu ${ticker}`}
+                    </Typography>
+                    <Box
+                        className="stock-chevron"
+                        sx={{
+                            fontSize: getResponsiveFontSize('h1'),
+                            fontWeight: fontWeight.semibold,
+                            color: 'text.secondary',
+                            lineHeight: 1.2,
+                            transform: dropdownOpen ? 'rotate(90deg) translateX(5px) translateY(-5px)' : 'rotate(0deg)',
+                            transition: `transform ${durations.normal} ${easings.easeOut}`,
+                            display: 'flex',
+                            alignItems: 'center',
+                        }}
+                    >
+                        ›
+                    </Box>
+                </Box>
+
+                {/* Dropdown menu */}
+                {dropdownOpen && (
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            top: 'calc(100% + 8px)',
+                            left: 0,
+                            zIndex: 1300,
+                            minWidth: 240,
+                            maxHeight: 400,
+                            overflowY: 'auto',
+                            borderRadius: `${borderRadius.lg}px`,
+                            ...getGlassCard(isDark),
+                            animation: `dropdownFadeIn ${durations.fast} ${easings.easeOut}`,
+                            '@keyframes dropdownFadeIn': {
+                                from: { opacity: 0, transform: 'translateY(-6px)' },
+                                to: { opacity: 1, transform: 'translateY(0)' },
+                            },
+                        }}
+                    >
+                        {/* Search input */}
+                        <Box sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+                            <Box
+                                component="input"
+                                ref={searchInputRef}
+                                type="text"
+                                placeholder="Tìm mã cổ phiếu..."
+                                value={searchQuery}
+                                onChange={(e: any) => setSearchQuery(e.target.value)}
+                                autoFocus
+                                sx={{
+                                    width: '100%',
+                                    bgcolor: 'transparent',
+                                    border: 'none',
+                                    outline: 'none',
+                                    color: 'text.primary',
+                                    fontSize: getResponsiveFontSize('md'),
+                                    fontFamily: 'inherit',
+                                    '&::placeholder': {
+                                        color: 'text.secondary',
+                                        opacity: 0.7,
+                                    },
+                                }}
+                            />
+                        </Box>
+
+                        {filteredStockList.map((item) => {
+                            const isActive = item.ticker === ticker;
+                            return (
+                                <Box
+                                    key={item.ticker}
+                                    component="button"
+                                    onClick={() => handleSelectStock(item.ticker)}
+                                    sx={{
+                                        display: 'block',
+                                        width: '100%',
+                                        textAlign: 'left',
+                                        background: isActive
+                                            ? isDark
+                                                ? 'rgba(180, 126, 255, 0.15)'
+                                                : 'rgba(139, 92, 246, 0.08)'
+                                            : 'transparent',
+                                        border: 'none',
+                                        borderBottom: '1px solid',
+                                        borderColor: 'divider',
+                                        cursor: 'pointer',
+                                        px: 2,
+                                        py: 1.25,
+                                        transition: `background ${durations.fastest} ${easings.easeOut}`,
+                                        '&:last-child': { borderBottom: 'none' },
+                                        '&:hover': {
+                                            background: isDark
+                                                ? 'rgba(255, 255, 255, 0.06)'
+                                                : 'rgba(0, 0, 0, 0.04)',
+                                        },
+                                    }}
+                                >
+                                    <Typography
+                                        sx={{
+                                            fontSize: getResponsiveFontSize('sm'),
+                                            fontWeight: fontWeight.semibold,
+                                            color: isActive ? 'primary.main' : 'text.secondary',
+                                            lineHeight: 1.2,
+                                        }}
+                                    >
+                                        {item.ticker}
+                                    </Typography>
+                                    <Typography
+                                        sx={{
+                                            fontSize: getResponsiveFontSize('xs'),
+                                            fontWeight: isActive ? fontWeight.semibold : fontWeight.medium,
+                                            color: isActive ? 'primary.main' : 'text.primary',
+                                            lineHeight: 1.4,
+                                            mt: 0.25,
+                                        }}
+                                    >
+                                        {item.name}
+                                    </Typography>
+                                </Box>
+                            );
+                        })}
+                    </Box>
+                )}
             </Box>
 
             {/* ========== TOP SECTION: Chart (left) + Detail Panel (right) ========== */}

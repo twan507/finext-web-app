@@ -80,7 +80,7 @@ export default function IndexDetailPanel({ indexName, todayData }: IndexDetailPa
     };
     const formatValue = (v: number | undefined | null) => {
         if (v == null) return '—';
-        return `${Math.round(v).toLocaleString('en-US')} Tỷ`;
+        return `${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Tỷ`;
     };
     const formatVsi = (v: number | undefined | null) => {
         if (v == null) return '—';
