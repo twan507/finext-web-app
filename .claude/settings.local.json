@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(cp \"d:/twan_projects/finext-web-app/finext-nextjs/app/\\(main\\)/groups/[groupId]/components/SucManhDongTien.tsx\" \"d:/twan_projects/finext-web-app/finext-nextjs/app/\\(main\\)/sectors/[sectorId]/components/\")",
-      "Bash(cp \"d:/twan_projects/finext-web-app/finext-nextjs/app/\\(main\\)/groups/[groupId]/components/GroupStockTable.tsx\" \"d:/twan_projects/finext-web-app/finext-nextjs/app/\\(main\\)/sectors/[sectorId]/components/\")"
+      "Bash(cp \"d:/twan_projects/finext-web-app/finext-nextjs/app/\\(main\\)/groups/[groupId]/components/GroupStockTable.tsx\" \"d:/twan_projects/finext-web-app/finext-nextjs/app/\\(main\\)/sectors/[sectorId]/components/\")",
+      "Bash(ls \"d:/twan-projects/finext-web-app/finext-nextjs/app/\\(main\\)/stocks/[symbol]/\")",
+      "Bash(ls \"d:/twan-projects/finext-web-app/finext-nextjs/app/\\(main\\)/stocks/\")"
     ]
   }
 }

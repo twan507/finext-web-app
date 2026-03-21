@@ -607,10 +607,11 @@ export default function StockDetailContent() {
             {activeTab === 'cashflow' && (
                 <Box sx={{ mt: 4 }}>
                     <DongTienSection
-                        ticker={ticker}
-                        indexName={stockName}
-                        todayAllData={todayAllData}
-                        histLineTicker={histLineTicker}
+                        dongTienDates={dongTienDates}
+                        t5ScoreData={t5ScoreData}
+                        t0ScoreData={t0ScoreData}
+                        tuongQuanDates={tuongQuanDates}
+                        tuongQuanSeries={tuongQuanSeries}
                     />
                 </Box>
             )}
