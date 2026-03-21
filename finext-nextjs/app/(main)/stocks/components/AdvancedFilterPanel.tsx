@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Box, Typography, TextField, Chip, useTheme, alpha, IconButton, Tooltip, Collapse, Slider } from '@mui/material';
+import { Box, Typography, TextField, Chip, useTheme, alpha, IconButton, Collapse, Slider } from '@mui/material';
+import CleaningServicesOutlinedIcon from '@mui/icons-material/CleaningServicesOutlined';
 import { Icon } from '@iconify/react';
 import { getResponsiveFontSize, fontWeight, borderRadius, getGlassCard, durations, easings } from 'theme/tokens';
 import type { RangeFilter, AdvancedFilter } from 'hooks/useScreenerStore';
@@ -112,10 +113,10 @@ interface AccordionGroupConfig {
 
 // Detail accordion groups only (indicator is a separate zone)
 const ACCORDION_GROUPS: AccordionGroupConfig[] = [
-    { key: 'pricevol', label: 'Biến động',          icon: 'solar:graph-up-bold-duotone',  color: 'success' },
-    { key: 'change',   label: '% Thay đổi',         icon: 'solar:chart-bold-duotone',     color: '#ec4899' },
+    { key: 'pricevol', label: 'Trong phiên',          icon: 'solar:graph-up-bold-duotone',  color: 'success' },
+    { key: 'change',   label: 'Biến động',         icon: 'solar:chart-bold-duotone',     color: '#ec4899' },
     { key: 'cashflow', label: 'Dòng tiền',           icon: 'solar:dollar-bold-duotone',    color: 'info' },
-    { key: 'zones',    label: 'Vùng giá kỹ thuật',  icon: 'solar:layers-bold-duotone',    color: 'warning' },
+    { key: 'zones',    label: 'Vùng giá',  icon: 'solar:layers-bold-duotone',    color: 'warning' },
 ];
 
 // ─── Slider Range Row ────────────────────────────────────────────────────────
@@ -649,9 +650,7 @@ function IndicatorSection({
     const isDark = theme.palette.mode === 'dark';
 
     const [newField, setNewField] = useState('');
-    const [newCompare, setNewCompare] = useState<AdvancedCompare>('above');
-    const [newLowerPct, setNewLowerPct] = useState('');
-    const [newUpperPct, setNewUpperPct] = useState('');
+    const [sliderValue, setSliderValue] = useState<[number, number]>([-20, 20]);
     const [indicatorOpen, setIndicatorOpen] = useState(false);
     const [indicatorSearch, setIndicatorSearch] = useState('');
     const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
@@ -693,41 +692,31 @@ function IndicatorSection({
 
     const handleAdd = () => {
         if (!newField) return;
-        if (newCompare === 'range') {
-            const lower = newLowerPct === '' ? undefined : Number(newLowerPct);
-            const upper = newUpperPct === '' ? undefined : Number(newUpperPct);
-            if (lower == null && upper == null) return;
-            onAddAdvancedFilter({ field: newField, compare: 'range', lowerPct: lower, upperPct: upper });
-        } else {
-            const offset = newLowerPct === '' ? undefined : Number(newLowerPct);
-            onAddAdvancedFilter({ field: newField, compare: newCompare, lowerPct: offset });
-        }
+        const [lo, hi] = sliderValue;
+        onAddAdvancedFilter({
+            field: newField,
+            compare: 'range',
+            lowerPct: lo === -20 ? undefined : lo,
+            upperPct: hi === 20 ? undefined : hi,
+        });
         setNewField('');
-        setNewLowerPct('');
-        setNewUpperPct('');
+        setSliderValue([-20, 20]);
     };
 
-    const formatOffset = (pct: number) => pct >= 0 ? `+${pct}%` : `${pct}%`;
+    const handleReset = () => {
+        setNewField('');
+        setSliderValue([-20, 20]);
+    };
 
     const getChipLabel = (af: AdvancedFilter): string => {
         const def = ADVANCED_FILTER_DEFS.find(d => d.field === af.field);
         const name = def?.label ?? af.field;
-        const offset = af.lowerPct != null ? ` ${formatOffset(af.lowerPct)}` : '';
-        if (af.compare === 'above') return `Giá > ${name}${offset}`;
-        if (af.compare === 'below') return `Giá < ${name}${offset}`;
-        if (af.lowerPct != null && af.upperPct != null) return `${name} ${af.lowerPct}% → +${af.upperPct}%`;
-        if (af.lowerPct != null) return `Giá ≥ ${name} ${af.lowerPct}%`;
-        if (af.upperPct != null) return `Giá ≤ ${name} +${af.upperPct}%`;
+        const fmt = (v: number) => v >= 0 ? `+${v}%` : `${v}%`;
+        if (af.lowerPct != null && af.upperPct != null) return `${name} (${fmt(af.lowerPct)} → ${fmt(af.upperPct)})`;
+        if (af.lowerPct != null) return `${name} (Giá > ${fmt(af.lowerPct)})`;
+        if (af.upperPct != null) return `${name} (Giá < ${fmt(af.upperPct)})`;
         return name;
     };
-
-    const COMPARE_OPTIONS: { value: AdvancedCompare; label: string; icon: string }[] = [
-        { value: 'above', label: 'Lớn hơn', icon: 'solar:arrow-up-bold' },
-        { value: 'below', label: 'Nhỏ hơn', icon: 'solar:arrow-down-bold' },
-        { value: 'range', label: 'Trong khoảng', icon: 'solar:move-to-folder-bold' },
-    ];
-
-    const canAdd = !!newField && (newCompare !== 'range' || newLowerPct !== '' || newUpperPct !== '');
 
     const filteredDefs = useMemo(() => {
         if (!indicatorSearch) return ADVANCED_FILTER_DEFS;
@@ -735,115 +724,79 @@ function IndicatorSection({
         return ADVANCED_FILTER_DEFS.filter(d => d.label.toLowerCase().includes(q) || d.field.toLowerCase().includes(q));
     }, [indicatorSearch]);
 
-    const smallInputSx = {
-        width: 62,
-        '& .MuiOutlinedInput-root': {
-            borderRadius: `${borderRadius.sm}px`,
-            fontSize: getResponsiveFontSize('xs'),
-        },
-        '& .MuiOutlinedInput-input': { py: 0.45, px: 0.75, fontSize: getResponsiveFontSize('xs'), textAlign: 'center' },
-    };
 
     return (
-        <Box sx={{ px: 1.5, pt: 1.5, pb: 1.5 }}>
-            {advancedFilters.length > 0 && (
-                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1.5 }}>
-                    {advancedFilters.map(af => (
-                        <Chip
-                            key={af.field}
-                            label={getChipLabel(af)}
-                            size="small"
-                            onDelete={() => onRemoveAdvancedFilter(af.field)}
-                            sx={{
-                                fontSize: getResponsiveFontSize('xs'),
-                                fontWeight: fontWeight.semibold,
-                                height: 24,
-                                bgcolor: alpha(theme.palette.primary.main, 0.1),
-                                color: theme.palette.primary.main,
-                                border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                                '& .MuiChip-deleteIcon': {
-                                    fontSize: 13,
-                                    color: alpha(theme.palette.primary.main, 0.5),
-                                    '&:hover': { color: theme.palette.error.main },
-                                },
-                            }}
-                        />
-                    ))}
+        <Box sx={{ px: 1.5, pt: 1, pb: 1.25, display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {/* Chips row */}
+            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', alignItems: 'center' }}>
+                {advancedFilters.map(af => (
                     <Chip
-                        label="Xóa tất cả"
+                        key={af.field}
+                        label={getChipLabel(af)}
                         size="small"
-                        variant="outlined"
-                        onClick={onClearAdvancedFilters}
+                        onDelete={() => onRemoveAdvancedFilter(af.field)}
                         sx={{
                             fontSize: getResponsiveFontSize('xs'),
+                            fontWeight: fontWeight.semibold,
                             height: 24,
-                            color: theme.palette.error.main,
-                            borderColor: alpha(theme.palette.error.main, 0.3),
-                            cursor: 'pointer',
-                            '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.08) },
+                            bgcolor: alpha(theme.palette.primary.main, 0.1),
+                            color: theme.palette.primary.main,
+                            border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                            '& .MuiChip-deleteIcon': {
+                                fontSize: 13,
+                                color: alpha(theme.palette.primary.main, 0.5),
+                                '&:hover': { color: theme.palette.error.main },
+                            },
                         }}
                     />
-                </Box>
-            )}
+                ))}
+                {advancedFilters.length > 0 && (
+                    <IconButton
+                        size="small"
+                        onClick={onClearAdvancedFilters}
+                        sx={{
+                            p: 0.5,
+                            mt: 0.1,
+                            color: alpha(theme.palette.error.main, 0.85),
+                            border: `1px solid ${alpha(theme.palette.error.main, 0.35)}`,
+                            borderRadius: '20%',
+                            '&:hover': { color: theme.palette.error.main, bgcolor: 'transparent', borderColor: theme.palette.error.main },
+                        }}
+                    >
+                        <CleaningServicesOutlinedIcon sx={{ fontSize: 14 }} />
+                    </IconButton>
+                )}
+            </Box>
 
-            {/* Builder card */}
-            <Box sx={{
-                border: `1px dashed ${alpha(theme.palette.primary.main, 0.2)}`,
-                borderRadius: `${borderRadius.md}px`,
-                p: 1.25,
-                bgcolor: alpha(theme.palette.primary.main, 0.03),
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 1,
-            }}>
-                {/* Row 1: GIÁ label + segmented compare */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                    <Box sx={{
-                        px: 0.875, py: 0.25,
-                        borderRadius: `${borderRadius.sm}px`,
-                        bgcolor: alpha(theme.palette.text.primary, 0.06),
-                        border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
-                    }}>
-                        <Typography sx={{ fontSize: getResponsiveFontSize('xxs'), fontWeight: fontWeight.bold, color: 'text.secondary', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                            GIÁ
-                        </Typography>
-                    </Box>
-                    <Box sx={{
-                        display: 'flex',
-                        borderRadius: `${borderRadius.sm}px`,
-                        border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
-                        overflow: 'hidden',
-                    }}>
-                        {COMPARE_OPTIONS.map((opt, idx) => (
-                            <Box
-                                key={opt.value}
-                                component="button"
-                                onClick={() => setNewCompare(opt.value)}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {/* Row 1: + button + dropdown + slider + inputs */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.25, sm: 1.5 }, px: 0.75 }}>
+                    {/* + Add button */}
+                    {(() => {
+                        const canAdd = !!newField && (sliderValue[0] !== -20 || sliderValue[1] !== 20);
+                        return (
+                            <IconButton
+                                size="small"
+                                onClick={handleAdd}
+                                disabled={!canAdd}
                                 sx={{
-                                    display: 'flex', alignItems: 'center', gap: 0.4,
-                                    px: 0.875, py: 0.4,
-                                    border: 'none',
-                                    borderLeft: idx > 0 ? `1px solid ${alpha(theme.palette.divider, 0.3)}` : 'none',
-                                    bgcolor: newCompare === opt.value ? alpha(theme.palette.primary.main, 0.15) : 'transparent',
-                                    color: newCompare === opt.value ? theme.palette.primary.main : theme.palette.text.secondary,
-                                    cursor: 'pointer',
-                                    fontSize: getResponsiveFontSize('xs'),
-                                    fontWeight: newCompare === opt.value ? fontWeight.bold : fontWeight.medium,
-                                    transition: `all ${durations.fast} ${easings.easeOut}`,
-                                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.08) },
-                                    whiteSpace: 'nowrap',
+                                    p: 0,
+                                    width: 28, height: 27,
+                                    alignSelf: 'center',
+                                    flexShrink: 0,
+                                    bgcolor: canAdd ? theme.palette.primary.main : alpha(theme.palette.text.disabled, 0.1),
+                                    color: canAdd ? '#fff' : theme.palette.text.disabled,
+                                    opacity: canAdd ? 0.7 : 1,
+                                    borderRadius: `${borderRadius.sm}px`,
+                                    '&:hover:not(:disabled)': { opacity: 1, bgcolor: theme.palette.primary.main },
+                                    '&.Mui-disabled': { bgcolor: alpha(theme.palette.text.disabled, 0.1), color: theme.palette.text.disabled },
                                 }}
                             >
-                                <Icon icon={opt.icon} width={11} />
-                                {opt.label}
-                            </Box>
-                        ))}
-                    </Box>
-                </Box>
-
-                {/* Row 2: Indicator + % input + Add */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-                    <Box ref={indicatorRef} sx={{ position: 'relative', flex: '1 1 150px', maxWidth: 210 }}>
+                                <Icon icon="mingcute:add-line" width={14} />
+                            </IconButton>
+                        );
+                    })()}
+                    <Box ref={indicatorRef} sx={{ position: 'relative', width: { xs: 140, sm: 160 }, flexShrink: 0 }}>
                         {/* Trigger */}
                         <Box
                             component="button"
@@ -862,7 +815,7 @@ function IndicatorSection({
                                 gap: 0.75,
                                 width: '100%',
                                 px: 1,
-                                py: 0.45,
+                                height: 30,
                                 borderRadius: `${borderRadius.sm}px`,
                                 border: `1px solid ${newField
                                     ? alpha(theme.palette.primary.main, 0.5)
@@ -1020,71 +973,96 @@ function IndicatorSection({
                         , document.body)}
                     </Box>
 
-                    {/* % offset inputs */}
-                    <Box sx={{
-                        display: 'flex', alignItems: 'center', gap: 0.4,
-                        px: 0.875, py: 0.35,
-                        borderRadius: `${borderRadius.sm}px`,
-                        border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
-                        bgcolor: alpha(theme.palette.background.paper, 0.5),
-                    }}>
-                        <Typography sx={{ fontSize: getResponsiveFontSize('xxs'), color: 'text.disabled', mr: 0.25 }}>±%</Typography>
-                        <TextField
-                            size="small"
-                            placeholder={newCompare === 'range' ? '−%' : '%'}
-                            type="number"
-                            value={newLowerPct}
-                            onChange={(e) => setNewLowerPct(e.target.value)}
-                            sx={smallInputSx}
-                            inputProps={{ style: { textAlign: 'center' } }}
-                        />
-                        {newCompare === 'range' && (
-                            <>
-                                <Typography sx={{ fontSize: getResponsiveFontSize('xxs'), color: 'text.disabled' }}>→</Typography>
-                                <TextField
-                                    size="small"
-                                    placeholder="+%"
-                                    type="number"
-                                    value={newUpperPct}
-                                    onChange={(e) => setNewUpperPct(e.target.value)}
-                                    sx={smallInputSx}
-                                    inputProps={{ style: { textAlign: 'center' } }}
-                                />
-                            </>
-                        )}
-                    </Box>
+                    {/* Min input */}
+                    <TextField
+                        size="small"
+                        placeholder="Min"
+                        type="number"
+                        value={sliderValue[0] === -20 ? '' : sliderValue[0]}
+                        onChange={(e) => {
+                            const v = e.target.value === '' ? -20 : Math.max(-20, Math.min(20, Number(e.target.value)));
+                            setSliderValue([v, sliderValue[1]]);
+                        }}
+                        sx={{
+                            width: { xs: 56, sm: 64 }, flexShrink: 0,
+                            '& .MuiOutlinedInput-root': { borderRadius: `${borderRadius.sm}px`, fontSize: getResponsiveFontSize('xs'), height: 30 },
+                            '& .MuiOutlinedInput-input': { py: 0, px: 0.5, fontSize: getResponsiveFontSize('xs'), textAlign: 'center', '&::placeholder': { opacity: 0.4 } },
+                        }}
+                    />
 
-                    <Tooltip title={canAdd ? 'Thêm điều kiện' : 'Chọn chỉ báo'}>
-                        <span>
-                            <Box
-                                component="button"
-                                onClick={handleAdd}
-                                disabled={!canAdd}
+                    {/* Slider */}
+                    {(() => {
+                        const isAdjusted = sliderValue[0] !== -20 || sliderValue[1] !== 20;
+                        const accentColor = theme.palette.primary.main;
+                        return (
+                            <Slider
+                                value={sliderValue}
+                                onChange={(_, v) => { if (newField) setSliderValue(v as [number, number]); }}
+                                min={-20} max={20} step={0.5}
+                                disableSwap
+                                disabled={!newField}
                                 sx={{
-                                    display: 'flex', alignItems: 'center', gap: 0.4,
-                                    px: 1.125, py: 0.5,
-                                    border: 'none',
-                                    borderRadius: `${borderRadius.sm}px`,
-                                    bgcolor: canAdd ? theme.palette.primary.main : alpha(theme.palette.text.disabled, 0.1),
-                                    color: canAdd ? '#fff' : theme.palette.text.disabled,
-                                    cursor: canAdd ? 'pointer' : 'not-allowed',
-                                    fontSize: getResponsiveFontSize('xs'),
-                                    fontWeight: fontWeight.semibold,
-                                    transition: `all ${durations.fast} ${easings.easeOut}`,
-                                    '&:hover:not(:disabled)': { opacity: 0.88 },
-                                    flexShrink: 0,
+                                    flex: 1, mx: 1.5, height: 4,
+                                    color: isAdjusted ? accentColor : accentColor,
+                                    opacity: !newField ? 0.2 : isAdjusted ? 1 : 0.3,
+                                    '& .MuiSlider-track': { border: 'none' },
+                                    '& .MuiSlider-rail': { opacity: 0.25, bgcolor: theme.palette.text.secondary },
+                                    '& .MuiSlider-thumb': {
+                                        width: 14, height: 14,
+                                        bgcolor: theme.palette.background.paper,
+                                        border: `2px solid ${accentColor}`,
+                                        boxShadow: `0 0 0 3px ${alpha(accentColor, 0.12)}`,
+                                        '&:hover, &.Mui-focusVisible': { boxShadow: `0 0 0 5px ${alpha(accentColor, 0.2)}` },
+                                    },
+                                    '&.Mui-disabled': { color: theme.palette.text.secondary, opacity: 0.2 },
                                 }}
-                            >
-                                <Icon icon="solar:add-square-bold" width={14} />
-                                Thêm
-                            </Box>
-                        </span>
-                    </Tooltip>
+                            />
+                        );
+                    })()}
+
+                    {/* Max input */}
+                    <TextField
+                        size="small"
+                        placeholder="Max"
+                        type="number"
+                        value={sliderValue[1] === 20 ? '' : sliderValue[1]}
+                        onChange={(e) => {
+                            const v = e.target.value === '' ? 20 : Math.max(-20, Math.min(20, Number(e.target.value)));
+                            setSliderValue([sliderValue[0], v]);
+                        }}
+                        sx={{
+                            width: { xs: 56, sm: 64 }, flexShrink: 0,
+                            '& .MuiOutlinedInput-root': { borderRadius: `${borderRadius.sm}px`, fontSize: getResponsiveFontSize('xs'), height: 30 },
+                            '& .MuiOutlinedInput-input': { py: 0, px: 0.5, fontSize: getResponsiveFontSize('xs'), textAlign: 'center', '&::placeholder': { opacity: 0.4 } },
+                        }}
+                    />
+
+                    {/* X button — visibility:hidden when nothing selected */}
+                    <IconButton
+                        size="small"
+                        onClick={handleReset}
+                        sx={{
+                            p: 0.2,
+                            flexShrink: 0,
+                            visibility: newField ? 'visible' : 'hidden',
+                            color: alpha(theme.palette.text.secondary, 0.4),
+                            '&:hover': { color: theme.palette.error.main },
+                        }}
+                    >
+                        <Icon icon="solar:close-circle-bold" width={13} />
+                    </IconButton>
                 </Box>
             </Box>
         </Box>
     );
 }
+
+const INDICATOR_GROUP: AccordionGroupConfig = {
+    key: 'indicator',
+    label: 'Lọc kỹ thuật',
+    icon: 'solar:chart-square-bold-duotone',
+    color: 'primary',
+};
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
@@ -1200,7 +1178,14 @@ export default function AdvancedFilterPanel({
                     borderRadius: `${borderRadius.md}px`,
                     border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
                     overflow: 'visible',
+                    transition: `border-color ${durations.fast} ${easings.easeOut}`,
                 }}>
+                    <AccordionHeader
+                        group={INDICATOR_GROUP}
+                        isOpen={true}
+                        activeCount={advancedFilters.length}
+                        onClick={() => {}}
+                    />
                     <IndicatorSection
                         advancedFilters={advancedFilters}
                         onAddAdvancedFilter={onAddAdvancedFilter}

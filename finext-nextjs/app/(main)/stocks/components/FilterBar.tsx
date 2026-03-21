@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Box, Typography, useTheme, alpha } from '@mui/material';
+import CancelIcon from '@mui/icons-material/Cancel';
 import { Icon } from '@iconify/react';
 import { getResponsiveFontSize, fontWeight, borderRadius, getGlassCard, durations, easings } from 'theme/tokens';
 
@@ -252,7 +253,7 @@ export default function FilterBar({ meta, selectFilters, onSetSelectFilter, onCl
     const theme = useTheme();
 
     return (
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center', width: '100%' }}>
             {FILTER_FIELDS.map(({ field, label, metaKey }) => (
                 <GlassDropdown
                     key={field}
@@ -269,13 +270,13 @@ export default function FilterBar({ meta, selectFilters, onSetSelectFilter, onCl
                 <Box
                     component="button"
                     onClick={onClearAll}
-                    title="Xóa tất cả bộ lọc"
                     sx={{
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: 0.5,
+                        ml: 'auto',
                         px: 1.25,
-                        py: 0.6,
+                        py: 0.8,
                         borderRadius: `${borderRadius.md}px`,
                         border: `1px solid ${alpha(theme.palette.error.main, 0.35)}`,
                         bgcolor: 'transparent',
@@ -288,8 +289,8 @@ export default function FilterBar({ meta, selectFilters, onSetSelectFilter, onCl
                         '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.08) },
                     }}
                 >
-                    <Icon icon="solar:close-circle-bold" width={14} />
-                    Xóa ({filterCount})
+                    <CancelIcon sx={{ fontSize: 14 }} />
+                    Xóa tất cả
                 </Box>
             )}
         </Box>

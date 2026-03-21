@@ -234,10 +234,10 @@ export default function StocksContent() {
             {/* ─── Header ─── */}
             <Box sx={{ mb: 2.5, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5 }}>
                 <Box>
-                    <Typography variant="h4" sx={{ fontWeight: fontWeight.bold, lineHeight: 1.2 }}>
+                    <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1'), lineHeight: 1.2 }}>
                         Bộ lọc cổ phiếu
                     </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 1 }}>
                         {dataLoading && !dataError && (
                             <Icon icon="svg-spinners:ring-resize" width={14} color={theme.palette.text.secondary} />
                         )}
@@ -247,7 +247,7 @@ export default function StocksContent() {
                         <Typography
                             variant="body2"
                             color={dataError ? 'error' : 'text.secondary'}
-                            sx={{ fontSize: getResponsiveFontSize('xs') }}
+                            sx={{ fontSize: getResponsiveFontSize('sm') }}
                         >
                             {statusText}
                         </Typography>
@@ -257,7 +257,7 @@ export default function StocksContent() {
                 {/* Search */}
                 <TextField
                     size="small"
-                    placeholder="Tìm mã CK hoặc tên..."
+                    placeholder="Lọc theo mã CK"
                     value={store.state.searchQuery}
                     onChange={(e) => store.setSearchQuery(e.target.value)}
                     InputProps={{
@@ -322,14 +322,14 @@ export default function StocksContent() {
                         {
                             active: showDetail,
                             onToggle: () => setShowDetail((v: boolean) => !v),
-                            label: 'Lọc chi tiết',
+                            label: 'Lọc nâng cao',
                             color: theme.palette.warning.main,
                             badge: Object.keys(store.state.rangeFilters).length + Object.values(store.state.selectFilters).filter(v => v.length > 0).length,
                         },
                         {
                             active: showIndicator,
                             onToggle: () => setShowIndicator((v: boolean) => !v),
-                            label: 'Lọc nâng cao',
+                            label: 'Lọc kỹ thuật',
                             color: theme.palette.primary.main,
                             badge: store.state.advancedFilters.length,
                         },
@@ -454,19 +454,19 @@ export default function StocksContent() {
                                             setCurrentPage(1);
                                         }}
                                         sx={{
-                                            fontSize: getResponsiveFontSize('xs').lg,
+                                            fontSize: getResponsiveFontSize('xs'),
                                             height: 26,
-                                            '.MuiSelect-select': { py: 0.2, pl: 1.5, pr: 0, fontSize: getResponsiveFontSize('xs').lg },
+                                            '.MuiSelect-select': { py: 0.2, pl: 1.5, pr: 0, fontSize: getResponsiveFontSize('xs') },
                                             '.MuiOutlinedInput-notchedOutline': {
                                                 borderColor: alpha(theme.palette.divider, 0.4),
                                             },
                                             borderRadius: `${borderRadius.sm}px`,
                                         }}
-                                        MenuProps={{ PaperProps: { sx: { fontSize: getResponsiveFontSize('xs').lg } } }}
+                                        MenuProps={{ PaperProps: { sx: { fontSize: getResponsiveFontSize('xs') } } }}
                                     >
                                         {[20, 50, 100, 0].map(n => (
-                                            <MenuItem key={n} value={n} sx={{ fontSize: getResponsiveFontSize('xs').lg }}>
-                                                {n === 0 ? 'Tất cả' : `${n}`}
+                                            <MenuItem key={n} value={n} sx={{ fontSize: getResponsiveFontSize('xs') }}>
+                                                {n === 0 ? 'Tất cả' : `${n} hàng`}
                                             </MenuItem>
                                         ))}
                                     </Select>
