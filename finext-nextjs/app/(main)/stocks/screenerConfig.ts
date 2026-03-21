@@ -218,7 +218,7 @@ export const FILTER_PRESETS: FilterPreset[] = [
 
 // ─── Advanced Filter Definitions ─────────────────────────────────────────────
 
-export type AdvancedCompare = 'above' | 'below';
+export type AdvancedCompare = 'above' | 'below' | 'range';
 
 export interface AdvancedFilterDef {
     field: string;       // field to compare (e.g., 'ma5', 'w_pivot')

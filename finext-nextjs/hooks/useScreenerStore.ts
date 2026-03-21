@@ -30,7 +30,9 @@ export interface RangeFilter {
 
 export interface AdvancedFilter {
     field: string;       // e.g. 'ma20', 'w_pivot'
-    compare: AdvancedCompare; // 'above' | 'below'
+    compare: AdvancedCompare; // 'above' | 'below' | 'range'
+    lowerPct?: number;   // lower bound % for range mode (e.g. -1 means -1%)
+    upperPct?: number;   // upper bound % for range mode (e.g. 3 means +3%)
 }
 
 export interface ScreenerState {

@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { getResponsiveFontSize, fontWeight, borderRadius, getGlassCard, durations, easings } from 'theme/tokens';
 import { useSseCache } from 'hooks/useSseCache';
 import useScreenerStore from 'hooks/useScreenerStore';
-import type { RangeFilter } from 'hooks/useScreenerStore';
+import type { RangeFilter, AdvancedFilter } from 'hooks/useScreenerStore';
 import FilterBar from './components/FilterBar';
 import AdvancedFilterPanel from './components/AdvancedFilterPanel';
 import TableViewSelector from './components/TableViewSelector';
@@ -30,7 +30,7 @@ function applyFilters(
     data: Record<string, any>[],
     selectFilters: Record<string, string[]>,
     rangeFilters: Record<string, RangeFilter>,
-    advancedFilters: { field: string; compare: 'above' | 'below' }[],
+    advancedFilters: AdvancedFilter[],
     searchQuery: string,
 ): Record<string, any>[] {
     let result = data;
@@ -68,7 +68,20 @@ function applyFilters(
             const price = row.close;
             const indicatorVal = row[af.field];
             if (typeof price !== 'number' || typeof indicatorVal !== 'number') return false;
-            return af.compare === 'above' ? price > indicatorVal : price < indicatorVal;
+            if (af.compare === 'above') {
+                const threshold = af.lowerPct != null ? indicatorVal * (1 + af.lowerPct / 100) : indicatorVal;
+                return price > threshold;
+            }
+            if (af.compare === 'below') {
+                const threshold = af.lowerPct != null ? indicatorVal * (1 + af.lowerPct / 100) : indicatorVal;
+                return price < threshold;
+            }
+            // range mode: price within [indicator*(1+lowerPct/100), indicator*(1+upperPct/100)]
+            const lower = af.lowerPct != null ? indicatorVal * (1 + af.lowerPct / 100) : null;
+            const upper = af.upperPct != null ? indicatorVal * (1 + af.upperPct / 100) : null;
+            if (lower != null && price < lower) return false;
+            if (upper != null && price > upper) return false;
+            return lower != null || upper != null; // at least one bound must be set
         });
     }
 
@@ -148,7 +161,8 @@ export default function StocksContent() {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const store = useScreenerStore();
-    const [showAdvanced, setShowAdvanced] = useState(false);
+    const [showDetail, setShowDetail] = useState(false);
+    const [showIndicator, setShowIndicator] = useState(false);
     const [showColumnCustomizer, setShowColumnCustomizer] = useState(false);
 
     // Pagination state
@@ -302,61 +316,84 @@ export default function StocksContent() {
                     onClearAll={store.clearAllFilters}
                 />
 
-                {/* Advanced toggle */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5 }}>
-                    <Box
-                        component="button"
-                        onClick={() => setShowAdvanced(v => !v)}
-                        sx={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 0.5,
-                            px: 1.25,
-                            py: 0.5,
-                            borderRadius: `${borderRadius.pill}px`,
-                            border: `1px solid ${showAdvanced ? alpha(theme.palette.warning.main, 0.4) : alpha(theme.palette.divider, 0.4)}`,
-                            bgcolor: showAdvanced ? alpha(theme.palette.warning.main, 0.08) : 'transparent',
-                            color: showAdvanced ? theme.palette.warning.main : theme.palette.text.secondary,
-                            cursor: 'pointer',
-                            background: showAdvanced ? alpha(theme.palette.warning.main, 0.08) : 'transparent',
-                            fontSize: getResponsiveFontSize('xs'),
-                            fontWeight: fontWeight.medium,
-                            transition: `all ${durations.fast} ${easings.easeOut}`,
-                        }}
-                    >
-                        <Icon
-                            icon={showAdvanced ? 'solar:filter-bold' : 'solar:filter-linear'}
-                            width={14}
-                        />
-                        {showAdvanced ? 'Ẩn lọc nâng cao' : 'Lọc nâng cao'}
-                        {store.state.advancedFilters.length > 0 && (
-                            <Box sx={{
-                                ml: 0.25,
-                                px: 0.75,
-                                py: 0.1,
+                {/* Filter toggle buttons */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 1.5 }}>
+                    {[
+                        {
+                            active: showDetail,
+                            onToggle: () => setShowDetail((v: boolean) => !v),
+                            label: 'Lọc chi tiết',
+                            color: theme.palette.warning.main,
+                            badge: Object.keys(store.state.rangeFilters).length + Object.values(store.state.selectFilters).filter(v => v.length > 0).length,
+                        },
+                        {
+                            active: showIndicator,
+                            onToggle: () => setShowIndicator((v: boolean) => !v),
+                            label: 'Lọc nâng cao',
+                            color: theme.palette.primary.main,
+                            badge: store.state.advancedFilters.length,
+                        },
+                    ].map(({ active, onToggle, label, color, badge }) => (
+                        <Box
+                            key={label}
+                            component="button"
+                            onClick={onToggle}
+                            sx={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                px: 1.25,
+                                py: 0.5,
                                 borderRadius: `${borderRadius.pill}px`,
-                                bgcolor: theme.palette.warning.main,
-                                color: '#fff',
-                                fontSize: getResponsiveFontSize('xxs'),
-                                fontWeight: fontWeight.bold,
-                                lineHeight: 1.6,
-                            }}>
-                                {store.state.advancedFilters.length}
-                            </Box>
-                        )}
-                    </Box>
+                                border: `1px solid ${active ? alpha(color, 0.4) : alpha(theme.palette.divider, 0.4)}`,
+                                bgcolor: active ? alpha(color, 0.08) : 'transparent',
+                                color: active ? color : theme.palette.text.secondary,
+                                cursor: 'pointer',
+                                fontSize: getResponsiveFontSize('xs'),
+                                fontWeight: active ? fontWeight.semibold : fontWeight.medium,
+                                transition: `all ${durations.fast} ${easings.easeOut}`,
+                                '&:hover': {
+                                    bgcolor: alpha(color, 0.06),
+                                    borderColor: alpha(color, 0.3),
+                                },
+                            }}
+                        >
+                            <Icon icon={active ? 'solar:filter-bold' : 'solar:filter-linear'} width={13} />
+                            {label}
+                            {badge > 0 && (
+                                <Box sx={{
+                                    ml: 0.25, px: 0.625, py: 0.1,
+                                    borderRadius: `${borderRadius.pill}px`,
+                                    bgcolor: color,
+                                    color: '#fff',
+                                    fontSize: '0.6rem',
+                                    fontWeight: fontWeight.bold,
+                                    lineHeight: 1.6,
+                                    minWidth: 16,
+                                    textAlign: 'center',
+                                }}>
+                                    {badge}
+                                </Box>
+                            )}
+                        </Box>
+                    ))}
                 </Box>
 
-                {showAdvanced && (
-                    <Box sx={{ mt: 2 }}>
+                {(showDetail || showIndicator) && (
+                    <Box sx={{ mt: 1.5 }}>
                         <AdvancedFilterPanel
                             rangeFilters={store.state.rangeFilters}
                             advancedFilters={store.state.advancedFilters}
+                            selectFilters={store.state.selectFilters}
+                            showDetail={showDetail}
+                            showIndicator={showIndicator}
                             onSetRangeFilter={store.setRangeFilter}
                             onClearRangeFilter={store.clearRangeFilter}
                             onAddAdvancedFilter={store.addAdvancedFilter}
                             onRemoveAdvancedFilter={store.removeAdvancedFilter}
                             onClearAdvancedFilters={store.clearAdvancedFilters}
+                            onSetSelectFilter={store.setSelectFilter}
+                            onClearSelectFilter={store.clearSelectFilter}
                         />
                     </Box>
                 )}
