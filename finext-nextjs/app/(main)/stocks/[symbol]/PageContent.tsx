@@ -15,10 +15,10 @@ import { sseClient, getFromCache } from 'services/sseClient';
 import { apiClient } from 'services/apiClient';
 import { getResponsiveFontSize, fontWeight, getGlassCard, borderRadius, durations, easings, transitions, layoutTokens } from 'theme/tokens';
 
-import DongTienSection from './components/Sectors/DongTienSection';
-import StocksSection from './components/Sectors/StocksSection';
-import NewsSection from './components/Sectors/NewsSection';
-import FinRatiosSection from '../../sectors/[sectorId]/components/Sectors/FinRatiosSection';
+import DongTienSection from './components/DongTienSection';
+import StocksSection from './components/StocksSection';
+import NewsSection from './components/NewsSection';
+import StockFinRatiosSection from './components/StockFinRatiosSection';
 
 import type { StockData } from '../../components/marketSection/MarketVolatility';
 
@@ -580,10 +580,9 @@ export default function StockDetailContent() {
                     />
 
                     {/* FinRatios Section - same width as chart */}
-                    <FinRatiosSection
-                        ticker={ticker}
-                        indexName={stockName}
+                    <StockFinRatiosSection
                         rawData={finratiosData}
+                        todayStockData={todayAllData[ticker]?.[0]}
                     />
                 </Box>
 

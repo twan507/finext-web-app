@@ -2,7 +2,7 @@
 
 import { Box, Typography, useTheme, alpha } from '@mui/material';
 import { getResponsiveFontSize, fontWeight, borderRadius, getGlassCard } from 'theme/tokens';
-import type { StockData } from '../../../../components/marketSection/MarketVolatility';
+import type { StockData } from '../../../components/marketSection/MarketVolatility';
 
 interface StocksSectionProps {
     ticker: string;

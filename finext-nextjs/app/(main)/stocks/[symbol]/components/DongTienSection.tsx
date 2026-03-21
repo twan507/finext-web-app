@@ -2,7 +2,7 @@
 
 import { Box, Typography, useTheme, alpha, Skeleton } from '@mui/material';
 import { getResponsiveFontSize, fontWeight, borderRadius, durations, easings, transitions, getGlassCard } from 'theme/tokens';
-import type { RawMarketData } from '../../../../components/marketSection/MarketIndexChart';
+import type { RawMarketData } from '../../../components/marketSection/MarketIndexChart';
 
 interface DongTienSectionProps {
     ticker: string;
