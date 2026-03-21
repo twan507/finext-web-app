@@ -27,10 +27,10 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 export default function NewsSection({ ticker }: NewsSectionProps) {
     return (
         <Box>
-            <Box sx={{ mb: 2 }}><SectionTitle>TIN TỨC</SectionTitle></Box>
+            <Box sx={{ mb: 2 }}><SectionTitle>TIN TỨC CỔ PHIẾU {ticker}</SectionTitle></Box>
             <NewsList
                 ticker={ticker}
-                pageSize={5}
+                pageSize={10}
             />
         </Box>
     );

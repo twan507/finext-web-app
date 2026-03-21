@@ -37,7 +37,7 @@ export default function RankingLineChart({
 
     const legendItems = useMemo(() => [
         { name: 'Xếp hạng thị trường', color: colors[0] },
-        { name: 'Xếp hạng ngành', color: colors[1] },
+        { name: 'Xếp hạng trong ngành', color: colors[1] },
     ], [colors]);
 
     const handleLegendClick = useCallback((name: string) => {
@@ -51,7 +51,7 @@ export default function RankingLineChart({
 
     const seriesData = useMemo(() => [
         { name: 'Xếp hạng thị trường', data: marketRankData },
-        { name: 'Xếp hạng ngành', data: industryRankData },
+        { name: 'Xếp hạng trong ngành', data: industryRankData },
     ], [marketRankData, industryRankData]);
 
     // Stable key to force re-mount when legend toggles

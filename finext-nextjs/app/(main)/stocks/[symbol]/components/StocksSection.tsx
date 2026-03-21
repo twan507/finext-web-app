@@ -26,7 +26,7 @@ export default function StocksSection({ ticker, indexName, stockData }: StocksSe
                     fontWeight: fontWeight.semibold,
                     mb: 2,
                 }}>
-                    Danh sách cổ phiếu
+                    Bản đồ
                 </Typography>
                 <Box sx={{
                     minHeight: 200,
@@ -38,7 +38,7 @@ export default function StocksSection({ ticker, indexName, stockData }: StocksSe
                     py: 6,
                 }}>
                     <Typography color="text.secondary">
-                        [Danh sách cổ phiếu liên quan đến {indexName}]
+                        [PriceMap - {indexName}]
                     </Typography>
                 </Box>
             </Box>

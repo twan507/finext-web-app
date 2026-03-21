@@ -16,7 +16,7 @@ import { apiClient } from 'services/apiClient';
 import { getResponsiveFontSize, fontWeight, getGlassCard, borderRadius, durations, easings, transitions, layoutTokens } from 'theme/tokens';
 
 import DongTienSection from './components/DongTienSection';
-import StocksSection from './components/StocksSection';
+import PriceMapSection from './components/PriceMapSection';
 import NewsSection from './components/NewsSection';
 import StockFinRatiosSection from './components/StockFinRatiosSection';
 
@@ -44,7 +44,7 @@ const LINE_SESSIONS = 20;
 // ========== SUB-NAVBAR TABS CONFIG ==========
 const STOCK_TABS = [
     { id: 'cashflow', label: 'Dòng tiền' },
-    { id: 'stocks', label: 'Cổ phiếu' },
+    { id: 'pricemap', label: 'PTKT' },
     { id: 'news', label: 'Tin tức' },
 ] as const;
 
@@ -151,14 +151,14 @@ export default function StockDetailContent() {
 
     // Active tab state - sync with URL
     const [activeTab, setActiveTab] = useState<StockTabId>(() => {
-        const validTabs: StockTabId[] = ['cashflow', 'stocks', 'news'];
+        const validTabs: StockTabId[] = ['cashflow', 'pricemap', 'news'];
         if (tabParam && validTabs.includes(tabParam)) return tabParam;
         return 'cashflow';
     });
 
     // Sync activeTab when URL search param changes
     useEffect(() => {
-        const validTabs: StockTabId[] = ['cashflow', 'stocks', 'news'];
+        const validTabs: StockTabId[] = ['cashflow', 'pricemap', 'news'];
         if (tabParam && validTabs.includes(tabParam) && tabParam !== activeTab) {
             setActiveTab(tabParam);
         }
@@ -201,7 +201,7 @@ export default function StockDetailContent() {
         setDropdownOpen(false);
         setSearchQuery('');
         if (selectedTicker !== ticker) {
-            router.push(`/stocks/${selectedTicker.toLowerCase()}`);
+            router.push(`/stocks/${selectedTicker.toLowerCase()}?tab=${activeTab}`);
         }
     }
 
@@ -303,6 +303,24 @@ export default function StockDetailContent() {
                 requireAuth: false
             });
             return response.data || [];
+        },
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+    });
+
+    // ========== REST - Chart Indicator Data (for PriceMap) ==========
+    const { data: chartIndicatorData = null } = useQuery({
+        queryKey: ['stock', 'chart_history_data', ticker],
+        queryFn: async () => {
+            const response = await apiClient<any[]>({
+                url: '/api/v1/sse/rest/chart_history_data',
+                method: 'GET',
+                queryParams: { ticker, limit: 1 },
+                requireAuth: false
+            });
+            const data = response.data;
+            if (data && Array.isArray(data) && data.length > 0) return data[data.length - 1];
+            return null;
         },
         staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
@@ -640,12 +658,14 @@ export default function StockDetailContent() {
                 </Box>
             )}
 
-            {activeTab === 'stocks' && (
+            {activeTab === 'pricemap' && (
                 <Box sx={{ mt: 4 }}>
-                    <StocksSection
+                    <PriceMapSection
                         ticker={ticker}
-                        indexName={stockName}
-                        stockData={stockData}
+                        chartIndicatorData={chartIndicatorData}
+                        currentPrice={todayAllData[ticker]?.[todayAllData[ticker].length - 1]?.close ?? 0}
+                        currentDiff={todayAllData[ticker]?.[todayAllData[ticker].length - 1]?.diff}
+                        currentPctChange={todayAllData[ticker]?.[todayAllData[ticker].length - 1]?.pct_change}
                     />
                 </Box>
             )}
