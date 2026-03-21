@@ -36,16 +36,13 @@ interface RangeFilterDef {
 }
 
 const RANGE_FILTER_DEFS: RangeFilterDef[] = [
-    { field: 'close',            label: 'Giá',              group: 'price',    unit: '×1000đ' },
-    { field: 'pct_change',       label: '% Phiên',          group: 'price',    unit: '%',     isPct: true },
+    { field: 'pct_change',       label: '% Phiên',          group: 'pricevol', unit: '%',     isPct: true },
+    { field: 'trading_value',    label: 'GTGD',             group: 'pricevol', unit: 'Tỷ',   scaleTo: 1e9 },
+    { field: 'vsi',              label: 'Chỉ số TK',        group: 'pricevol', unit: '%' },
     { field: 'w_pct',            label: '% Tuần',           group: 'change',   unit: '%',     isPct: true },
     { field: 'm_pct',            label: '% Tháng',          group: 'change',   unit: '%',     isPct: true },
     { field: 'q_pct',            label: '% Quý',            group: 'change',   unit: '%',     isPct: true },
     { field: 'y_pct',            label: '% Năm',            group: 'change',   unit: '%',     isPct: true },
-    { field: 'volume',           label: 'Khối lượng',       group: 'volume',   unit: 'CP' },
-    { field: 'trading_value',    label: 'GTGD',             group: 'volume',   unit: 'Tỷ',   scaleTo: 1e9 },
-    { field: 'cap_value',        label: 'Vốn hóa TT',      group: 'volume',   unit: 'Tỷ',   scaleTo: 1e9 },
-    { field: 'vsi',              label: 'Chỉ số TK',        group: 'volume',   unit: '%' },
     { field: 't0_score',         label: 'T0 Score',         group: 'cashflow', unit: 'điểm' },
     { field: 't5_score',         label: 'T5 Score',         group: 'cashflow', unit: 'điểm' },
     { field: 'market_rank_pct',  label: 'Rank TT',          group: 'cashflow', unit: '%',     isPct: true },
@@ -57,12 +54,20 @@ const RANGE_FILTER_DEFS: RangeFilterDef[] = [
 const ZONE_VALUES = ['AAA', 'AA', 'A', 'B', 'C'] as const;
 type ZoneValue = typeof ZONE_VALUES[number];
 
-const ZONE_CHIP_COLORS: Record<ZoneValue, string> = {
+// Dark mode: vibrant/pastel, Light mode: saturated & readable
+const ZONE_CHIP_COLORS_DARK: Record<ZoneValue, string> = {
     AAA: '#22c55e',
     AA:  '#86efac',
     A:   '#facc15',
     B:   '#f97316',
     C:   '#ef4444',
+};
+const ZONE_CHIP_COLORS_LIGHT: Record<ZoneValue, string> = {
+    AAA: '#16a34a',  // green-600
+    AA:  '#0d9488',  // teal-600
+    A:   '#b45309',  // amber-700
+    B:   '#c2410c',  // orange-700
+    C:   '#b91c1c',  // red-700
 };
 
 interface ZoneFilterDef {
@@ -90,7 +95,6 @@ const ZONE_FILTER_DEFS: ZoneFilterDef[] = [
     { field: 'y_vp_zone',   label: 'Năm',      subgroup: 'VP Zone' },
 ];
 
-const ZONE_SUBGROUPS = ['Tổng hợp', 'MA Zone', 'Fibo Zone', 'VP Zone'];
 
 // ─── Accordion group config ──────────────────────────────────────────────────
 
@@ -103,11 +107,10 @@ interface AccordionGroupConfig {
 
 // Detail accordion groups only (indicator is a separate zone)
 const ACCORDION_GROUPS: AccordionGroupConfig[] = [
-    { key: 'price',    label: 'Giá',              icon: 'solar:tag-price-bold-duotone', color: 'success' },
-    { key: 'change',   label: '% Thay đổi',       icon: 'solar:chart-bold-duotone',     color: 'warning' },
-    { key: 'volume',   label: 'KL & Thanh khoản', icon: 'solar:graph-up-bold-duotone',  color: 'secondary' },
-    { key: 'cashflow', label: 'Dòng tiền',        icon: 'solar:dollar-bold-duotone',    color: 'info' },
-    { key: 'zones',    label: 'Vùng giá kỹ thuật',icon: 'solar:layers-bold-duotone',    color: 'warning' },
+    { key: 'pricevol', label: 'Giá & Thanh khoản', icon: 'solar:graph-up-bold-duotone',  color: 'success' },
+    { key: 'change',   label: '% Thay đổi',         icon: 'solar:chart-bold-duotone',     color: '#ec4899' },
+    { key: 'cashflow', label: 'Dòng tiền',           icon: 'solar:dollar-bold-duotone',    color: 'info' },
+    { key: 'zones',    label: 'Vùng giá kỹ thuật',  icon: 'solar:layers-bold-duotone',    color: 'warning' },
 ];
 
 // ─── Compact Range Input ─────────────────────────────────────────────────────
@@ -216,6 +219,13 @@ function CompactRangeInput({
 
 // ─── Zone Filter Section ─────────────────────────────────────────────────────
 
+const ZONE_TAB_CONFIGS = [
+    { key: 'Tổng hợp', label: 'Tổng hợp', icon: 'solar:layers-minimalistic-bold-duotone' },
+    { key: 'MA Zone',   label: 'Moving Average',        icon: 'solar:chart-2-bold-duotone' },
+    { key: 'Fibo Zone', label: 'Fibonacci', icon: 'solar:infinity-bold-duotone' },
+    { key: 'VP Zone',   label: 'Volume Profile',icon: 'solar:graph-new-bold-duotone' },
+] as const;
+
 function ZoneFilterSection({
     selectFilters,
     onSetSelectFilter,
@@ -226,106 +236,183 @@ function ZoneFilterSection({
     onClearSelectFilter: (field: string) => void;
 }) {
     const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
+    const [activeTab, setActiveTab] = useState<typeof ZONE_TAB_CONFIGS[number]['key']>('Tổng hợp');
 
     const toggleZone = (field: string, value: ZoneValue) => {
         const current = selectFilters[field] ?? [];
-        if (current.includes(value)) {
-            const next = current.filter(v => v !== value);
-            if (next.length === 0) onClearSelectFilter(field);
-            else onSetSelectFilter(field, next);
-        } else {
-            onSetSelectFilter(field, [...current, value]);
-        }
+        const next = current.includes(value)
+            ? current.filter(v => v !== value)
+            : [...current, value];
+        if (next.length === 0) onClearSelectFilter(field);
+        else onSetSelectFilter(field, next);
+    };
+
+    const getTabCount = (tabKey: string) =>
+        ZONE_FILTER_DEFS.filter(d => d.subgroup === tabKey && (selectFilters[d.field] ?? []).length > 0).length;
+
+    const accentColor = theme.palette.warning.main;
+    const zoneValuesByTab: Record<string, ZoneValue[]> = {
+        'Tổng hợp': [...ZONE_VALUES],
+        'MA Zone':   ['A', 'B', 'C'],
+        'Fibo Zone': ['A', 'B', 'C'],
+        'VP Zone':   ['A', 'B', 'C'],
     };
 
     return (
-        <Box sx={{ px: 1.5, pb: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
-            {ZONE_SUBGROUPS.map(subgroup => {
-                const defs = ZONE_FILTER_DEFS.filter(d => d.subgroup === subgroup);
+        <Box sx={{ px: 1.5, pb: 1.5 }}>
+            {/* Tab selector */}
+            <Box sx={{
+                display: 'flex',
+                gap: 0.5,
+                mb: 1.5,
+                mt: 1.5,
+                p: 0.4,
+                borderRadius: `${borderRadius.md}px`,
+                bgcolor: alpha(theme.palette.divider, isDark ? 0.08 : 0.06),
+            }}>
+                {ZONE_TAB_CONFIGS.map(tab => {
+                    const isActive = activeTab === tab.key;
+                    const count = getTabCount(tab.key);
+                    return (
+                        <Box
+                            key={tab.key}
+                            component="button"
+                            onClick={() => setActiveTab(tab.key)}
+                            sx={{
+                                flex: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 0.5,
+                                py: 0.55,
+                                px: 0.5,
+                                border: 'none',
+                                borderRadius: `${borderRadius.sm}px`,
+                                bgcolor: isActive
+                                    ? theme.palette.background.paper
+                                    : 'transparent',
+                                boxShadow: isActive
+                                    ? `0 1px 4px ${alpha('#000', isDark ? 0.4 : 0.12)}`
+                                    : 'none',
+                                color: isActive ? accentColor : theme.palette.text.secondary,
+                                cursor: 'pointer',
+                                fontSize: '0.68rem',
+                                fontWeight: isActive ? fontWeight.bold : fontWeight.medium,
+                                transition: `all ${durations.fast} ${easings.easeOut}`,
+                                whiteSpace: 'nowrap',
+                                '&:hover': {
+                                    color: isActive ? accentColor : theme.palette.text.primary,
+                                },
+                            }}
+                        >
+                            <Icon icon={tab.icon} width={13} />
+                            {tab.label}
+                            {count > 0 && (
+                                <Box sx={{
+                                    width: 16, height: 16,
+                                    borderRadius: '50%',
+                                    bgcolor: accentColor,
+                                    color: '#fff',
+                                    fontSize: '0.58rem',
+                                    fontWeight: fontWeight.bold,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0,
+                                }}>
+                                    {count}
+                                </Box>
+                            )}
+                        </Box>
+                    );
+                })}
+            </Box>
+
+            {/* Render all tab panels — show/hide via display to avoid unmount flicker */}
+            {ZONE_TAB_CONFIGS.map(tab => {
+                const tabDefs = ZONE_FILTER_DEFS.filter(d => d.subgroup === tab.key);
+                const tabValues = zoneValuesByTab[tab.key];
                 return (
-                    <Box key={subgroup}>
-                        <Typography sx={{
-                            fontSize: '0.6rem',
-                            fontWeight: fontWeight.bold,
-                            color: 'text.disabled',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.6px',
-                            mb: 0.5,
-                        }}>
-                            {subgroup}
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.4 }}>
-                            {defs.map(def => {
-                                const selected = selectFilters[def.field] ?? [];
-                                const hasAny = selected.length > 0;
-                                return (
-                                    <Box key={def.field} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                                        <Typography sx={{
-                                            fontSize: '0.7rem',
-                                            color: hasAny ? theme.palette.warning.main : 'text.secondary',
-                                            fontWeight: hasAny ? fontWeight.semibold : fontWeight.medium,
-                                            minWidth: 46,
-                                            textAlign: 'right',
-                                            transition: `color ${durations.fast} ${easings.easeOut}`,
-                                        }}>
-                                            {def.label}
-                                        </Typography>
-                                        <Box sx={{ display: 'flex', gap: 0.4, flexWrap: 'wrap' }}>
-                                            {ZONE_VALUES.map(val => {
-                                                const isSelected = selected.includes(val);
-                                                const chipColor = ZONE_CHIP_COLORS[val];
-                                                return (
-                                                    <Box
-                                                        key={val}
-                                                        component="button"
-                                                        onClick={() => toggleZone(def.field, val)}
-                                                        sx={{
-                                                            px: 0.75,
-                                                            py: 0.25,
-                                                            border: `1px solid ${isSelected ? chipColor : alpha(theme.palette.divider, 0.3)}`,
-                                                            borderRadius: `${borderRadius.pill}px`,
-                                                            bgcolor: isSelected ? alpha(chipColor, 0.18) : 'transparent',
-                                                            color: isSelected ? chipColor : theme.palette.text.disabled,
-                                                            cursor: 'pointer',
-                                                            fontSize: '0.65rem',
-                                                            fontWeight: isSelected ? fontWeight.bold : fontWeight.medium,
-                                                            transition: `all ${durations.fast} ${easings.easeOut}`,
-                                                            '&:hover': {
-                                                                bgcolor: alpha(chipColor, 0.12),
-                                                                borderColor: chipColor,
-                                                                color: chipColor,
-                                                            },
-                                                        }}
-                                                    >
-                                                        {val}
-                                                    </Box>
-                                                );
-                                            })}
-                                            {hasAny && (
+                    <Box
+                        key={tab.key}
+                        sx={{ display: activeTab === tab.key ? 'flex' : 'none', flexDirection: 'column', gap: 0.625 }}
+                    >
+                        {tabDefs.map((def: ZoneFilterDef) => {
+                            const selected = selectFilters[def.field] ?? [];
+                            const hasAny = selected.length > 0;
+                            return (
+                                <Box key={def.field} sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                    px: 0.75,
+                                    py: 0.5,
+                                    borderRadius: `${borderRadius.sm}px`,
+                                    bgcolor: hasAny ? alpha(accentColor, 0.04) : 'transparent',
+                                    transition: `background ${durations.fast} ${easings.easeOut}`,
+                                }}>
+                                    <Typography sx={{
+                                        fontSize: '0.72rem',
+                                        fontWeight: hasAny ? fontWeight.bold : fontWeight.medium,
+                                        color: hasAny ? accentColor : theme.palette.text.secondary,
+                                        minWidth: 40,
+                                        transition: `color ${durations.fast} ${easings.easeOut}`,
+                                    }}>
+                                        {def.label}
+                                    </Typography>
+
+                                    <Box sx={{ display: 'flex', gap: 0.5, flex: 1 }}>
+                                        {tabValues.map((val: ZoneValue) => {
+                                            const isSelected = selected.includes(val);
+                                            const chipColor = isDark ? ZONE_CHIP_COLORS_DARK[val] : ZONE_CHIP_COLORS_LIGHT[val];
+                                            return (
                                                 <Box
+                                                    key={val}
                                                     component="button"
-                                                    onClick={() => onClearSelectFilter(def.field)}
+                                                    onClick={() => toggleZone(def.field, val)}
                                                     sx={{
-                                                        px: 0.5,
-                                                        py: 0.25,
-                                                        border: 'none',
-                                                        bgcolor: 'transparent',
-                                                        color: alpha(theme.palette.text.secondary, 0.4),
+                                                        flex: 1,
+                                                        py: 0.35,
+                                                        border: `1.5px solid ${isSelected ? chipColor : alpha(chipColor, 0.25)}`,
+                                                        borderRadius: `${borderRadius.sm}px`,
+                                                        bgcolor: isSelected
+                                                            ? alpha(chipColor, isDark ? 0.22 : 0.15)
+                                                            : isDark ? alpha(chipColor, 0.1) : theme.palette.grey[100],
+                                                        color: isSelected ? chipColor : alpha(chipColor, isDark ? 0.9 : 0.7),
                                                         cursor: 'pointer',
-                                                        fontSize: '0.65rem',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        '&:hover': { color: theme.palette.error.main },
+                                                        fontSize: '0.68rem',
+                                                        fontWeight: isSelected ? fontWeight.bold : fontWeight.medium,
+                                                        textAlign: 'center',
+                                                        transition: `all ${durations.fast} ${easings.easeOut}`,
+                                                        '&:hover': {
+                                                            bgcolor: alpha(chipColor, 0.15),
+                                                            borderColor: alpha(chipColor, 0.6),
+                                                            color: chipColor,
+                                                        },
                                                     }}
                                                 >
-                                                    <Icon icon="solar:close-circle-bold" width={12} />
+                                                    {val}
                                                 </Box>
-                                            )}
-                                        </Box>
+                                            );
+                                        })}
                                     </Box>
-                                );
-                            })}
-                        </Box>
+
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => onClearSelectFilter(def.field)}
+                                        sx={{
+                                            p: 0.2, flexShrink: 0,
+                                            visibility: hasAny ? 'visible' : 'hidden',
+                                            color: alpha(theme.palette.text.secondary, 0.35),
+                                            '&:hover': { color: theme.palette.error.main },
+                                        }}
+                                    >
+                                        <Icon icon="solar:close-circle-bold" width={13} />
+                                    </IconButton>
+                                </Box>
+                            );
+                        })}
                     </Box>
                 );
             })}
@@ -347,7 +434,9 @@ function AccordionHeader({
     onClick: () => void;
 }) {
     const theme = useTheme();
-    const paletteColor = (theme.palette as Record<string, any>)[group.color]?.main ?? theme.palette.primary.main;
+    const paletteColor = group.color.startsWith('#')
+        ? group.color
+        : (theme.palette as Record<string, any>)[group.color]?.main ?? theme.palette.primary.main;
 
     return (
         <Box
@@ -741,7 +830,9 @@ export default function AdvancedFilterPanel({
                     {ACCORDION_GROUPS.map(group => {
                         const isOpen = openGroups.has(group.key);
                         const activeCount = getActiveCount(group.key);
-                        const paletteColor = (theme.palette as Record<string, any>)[group.color]?.main ?? theme.palette.primary.main;
+                        const paletteColor = group.color.startsWith('#')
+                            ? group.color
+                            : (theme.palette as Record<string, any>)[group.color]?.main ?? theme.palette.primary.main;
 
                         return (
                             <Box
