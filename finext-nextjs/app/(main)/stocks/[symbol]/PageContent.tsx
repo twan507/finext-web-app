@@ -371,6 +371,26 @@ export default function StockDetailContent() {
         };
     }, [histLineTicker, todayAllData, ticker]);
 
+    // ========== CHART 3: Xếp hạng ==========
+    const { rankingDates, marketRankData, industryRankData } = useMemo(() => {
+        const todayForTicker = todayAllData[ticker] || [];
+        const todayArr: RawMarketData[] = todayForTicker.length > 0 ? [todayForTicker[todayForTicker.length - 1]] : [];
+        const merged = mergeData(histLineTicker, todayArr);
+
+        const dateLabels = merged.map(d => {
+            const date = new Date(d.date);
+            const dd = date.getDate().toString().padStart(2, '0');
+            const mm = (date.getMonth() + 1).toString().padStart(2, '0');
+            return `${dd}-${mm}`;
+        });
+
+        return {
+            rankingDates: dateLabels,
+            marketRankData: merged.map(d => parseFloat((((d as any)?.market_rank_pct ?? 0) * 100).toFixed(1))),
+            industryRankData: merged.map(d => parseFloat((((d as any)?.industry_rank_pct ?? 0) * 100).toFixed(1))),
+        };
+    }, [histLineTicker, todayAllData, ticker]);
+
     // Derive stockData from todayAllData (reuse single SSE subscription)
     const stockData = useMemo<StockData[]>(() => {
         const allStocks: StockData[] = [];
@@ -607,11 +627,15 @@ export default function StockDetailContent() {
             {activeTab === 'cashflow' && (
                 <Box sx={{ mt: 4 }}>
                     <DongTienSection
+                        ticker={ticker}
                         dongTienDates={dongTienDates}
                         t5ScoreData={t5ScoreData}
                         t0ScoreData={t0ScoreData}
                         tuongQuanDates={tuongQuanDates}
                         tuongQuanSeries={tuongQuanSeries}
+                        rankingDates={rankingDates}
+                        marketRankData={marketRankData}
+                        industryRankData={industryRankData}
                     />
                 </Box>
             )}

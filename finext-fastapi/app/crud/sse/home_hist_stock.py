@@ -27,6 +27,8 @@ async def home_hist_stock(ticker: Optional[str] = None, **kwargs) -> Dict[str, A
         "pct_change": 1,
         "t0_score": 1,
         "t5_score": 1,
+        "market_rank_pct": 1,
+        "industry_rank_pct": 1,
         "type": 1,
     }
     find_query = {"ticker": ticker} if ticker else {}

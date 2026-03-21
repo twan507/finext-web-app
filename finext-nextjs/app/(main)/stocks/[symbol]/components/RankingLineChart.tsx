@@ -1,67 +1,73 @@
 'use client';
 
 import { useMemo, useState, useCallback } from 'react';
-import { Box, Typography, useTheme, useMediaQuery } from '@mui/material';
+import { Box, Typography, useTheme } from '@mui/material';
 import { fontWeight, getResponsiveFontSize } from 'theme/tokens';
 import dynamic from 'next/dynamic';
 import { ApexOptions } from 'apexcharts';
 
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
-interface TuongQuanDongTienProps {
-    chartHeight?: string;
-    title?: string;
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface RankingLineChartProps {
     dates: string[];
-    series: { name: string; data: number[] }[];
-    unit?: 'percent' | 'number';
+    marketRankData: number[];
+    industryRankData: number[];
+    chartHeight?: string;
 }
 
-export default function TuongQuanDongTien({
-    chartHeight = '250px',
-    title,
+// ── Component ─────────────────────────────────────────────────────────────────
+
+export default function RankingLineChart({
     dates,
-    series,
-    unit = 'percent',
-}: TuongQuanDongTienProps) {
+    marketRankData,
+    industryRankData,
+    chartHeight = '280px',
+}: RankingLineChartProps) {
     const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
 
     const colors = useMemo(() => [
         theme.palette.primary.main,
-        theme.palette.secondary.main,
-        theme.palette.trend.up,
-        theme.palette.trend.down,
+        theme.palette.warning.main,
     ], [theme]);
 
-    const handleLegendClick = useCallback((seriesName: string) => {
+    const crosshairColor = (theme.palette as any).component?.chart?.crosshair || theme.palette.divider;
+
+    const legendItems = useMemo(() => [
+        { name: 'Xếp hạng thị trường', color: colors[0] },
+        { name: 'Xếp hạng ngành', color: colors[1] },
+    ], [colors]);
+
+    const handleLegendClick = useCallback((name: string) => {
         setHiddenSeries(prev => {
             const next = new Set(prev);
-            if (next.has(seriesName)) {
-                next.delete(seriesName);
-            } else {
-                next.add(seriesName);
-            }
+            if (next.has(name)) next.delete(name);
+            else next.add(name);
             return next;
         });
     }, []);
 
-    const displaySeries = useMemo(() => {
-        const dummy = {
-            name: '0% Reference',
-            type: 'line',
-            data: dates.map(() => 0),
-        };
-        const active = series.map(s => ({
+    const seriesData = useMemo(() => [
+        { name: 'Xếp hạng thị trường', data: marketRankData },
+        { name: 'Xếp hạng ngành', data: industryRankData },
+    ], [marketRankData, industryRankData]);
+
+    // Stable key to force re-mount when legend toggles
+    const seriesKey = useMemo(() => `${theme.palette.mode}-${Array.from(hiddenSeries).sort().join(',')}`, [theme.palette.mode, hiddenSeries]);
+
+    const displaySeries = useMemo(() =>
+        seriesData.map(s => ({
             ...s,
             data: hiddenSeries.has(s.name) ? [] : s.data,
-        }));
-        return [dummy, ...active];
-    }, [series, hiddenSeries, dates]);
+        }))
+    , [seriesData, hiddenSeries]);
 
+    // Price tag annotations for each visible series' last value
     const displayAnnotations = useMemo(() =>
-        series
-            .map((s, i) => ({ series: s, color: colors[i % colors.length] }))
+        seriesData
+            .map((s, i) => ({ series: s, color: colors[i] }))
             .filter(item => !hiddenSeries.has(item.series.name))
             .map(item => {
                 const data = item.series.data;
@@ -80,17 +86,15 @@ export default function TuongQuanDongTien({
                             fontWeight: fontWeight.medium,
                             padding: { left: 6, right: 6, top: 2, bottom: 2 },
                         },
-                        text: unit === 'percent' ? `${lastValue.toFixed(1)}%` : `${lastValue.toFixed(1)}`,
+                        text: `${lastValue.toFixed(1)}%`,
                         position: 'right' as const,
                         textAnchor: 'start' as const,
                         offsetX: 15.5,
                         offsetY: 8,
-                        borderRadius: 2,
                     },
                 };
-            }).filter(Boolean),
-        [series, colors, hiddenSeries, unit]
-    );
+            }).filter(Boolean)
+    , [seriesData, colors, hiddenSeries]);
 
     const chartOptions: ApexOptions = useMemo(() => ({
         chart: {
@@ -107,18 +111,17 @@ export default function TuongQuanDongTien({
                 left: 0,
                 blur: 5,
                 opacity: 0.8,
-                color: [theme.palette.text.secondary, ...colors] as unknown as string,
+                color: colors as unknown as string,
             },
         },
         annotations: {
             position: 'back',
             yaxis: displayAnnotations as any[],
         },
-        colors: [theme.palette.text.secondary, ...colors],
+        colors,
         stroke: {
-            width: [2, 2.5, 2.5, 2.5, 2.5, 2.5],
-            curve: 'smooth',
-            dashArray: [4, 0, 0, 0, 0, 0],
+            curve: 'straight',
+            width: 2.5,
         },
         xaxis: {
             categories: dates,
@@ -127,7 +130,7 @@ export default function TuongQuanDongTien({
             axisTicks: { show: false },
             crosshairs: {
                 stroke: {
-                    color: (theme.palette as any).component?.chart?.crosshair || theme.palette.divider,
+                    color: crosshairColor,
                     width: 1,
                     dashArray: 3,
                 },
@@ -139,17 +142,20 @@ export default function TuongQuanDongTien({
                 },
                 rotate: 0,
                 hideOverlappingLabels: true,
+                offsetY: 5,
             },
-            tickAmount: isMobile ? 4 : 7,
         },
         yaxis: {
             opposite: true,
+            min: 0,
+            max: 100,
+            tickAmount: 5,
             labels: {
                 style: {
                     colors: theme.palette.text.secondary,
                     fontSize: getResponsiveFontSize('sm').md,
                 },
-                formatter: (val: number) => unit === 'percent' ? `${val.toFixed(1)}%\u00A0\u00A0\u00A0` : `${val.toFixed(1)}\u00A0\u00A0\u00A0`,
+                formatter: (val: number) => `${val.toFixed(0)}%\u00A0\u00A0\u00A0`,
                 offsetX: -10,
             },
         },
@@ -165,26 +171,19 @@ export default function TuongQuanDongTien({
             enabled: true,
             shared: true,
             intersect: false,
-            custom: function ({ series: seriesData, seriesIndex, dataPointIndex, w }) {
+            custom: function ({ series: s, dataPointIndex, w }) {
                 const dateStr = dates[dataPointIndex] || '';
-
                 let seriesHTML = '';
-                seriesData.forEach((sd: any, idx: number) => {
+                s.forEach((sd: any, idx: number) => {
                     const name = w.globals.seriesNames[idx];
-                    if (name === '0% Reference') return;
-
                     const value = sd[dataPointIndex];
                     if (value == null) return;
                     const color = w.globals.colors[idx];
-                    const formattedValue = unit === 'percent'
-                        ? `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
-                        : `${value >= 0 ? '+' : ''}${value.toFixed(1)}`;
-
                     seriesHTML += `
                         <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0;">
                             <span style="width: 10px; height: 10px; border-radius: 50%; background: ${color};"></span>
                             <span style="flex: 1; font-size: 12px;">${name}:</span>
-                            <span style="font-weight: 600; font-size: 12px;">${formattedValue}</span>
+                            <span style="font-weight: 600; font-size: 12px;">${value.toFixed(1)}%</span>
                         </div>
                     `;
                 });
@@ -199,7 +198,7 @@ export default function TuongQuanDongTien({
                         border-radius: 6px;
                         padding: 12px;
                         color: ${textColor};
-                        min-width: 160px;
+                        min-width: 180px;
                         box-shadow: none !important;
                         filter: none !important;
                         -webkit-box-shadow: none !important;
@@ -213,10 +212,11 @@ export default function TuongQuanDongTien({
                 `;
             },
         },
+        // Dot on market rank series (index 0), no dot on industry (index 1)
         markers: {
-            size: 0,
+            size: [4, 4],
             colors: [theme.palette.mode === 'dark' ? '#000000' : '#ffffff'],
-            strokeColors: [theme.palette.text.secondary, ...colors],
+            strokeColors: colors,
             strokeWidth: 2,
             hover: { size: 6 },
         },
@@ -224,33 +224,19 @@ export default function TuongQuanDongTien({
             hover: { filter: { type: 'none' } },
             active: { filter: { type: 'none' } },
         },
-    }), [theme, colors, displayAnnotations, dates, isMobile, unit]);
-
-    // Dynamic legend labels from series names
-    const legendLabels = useMemo(() => series.map(s => s.name), [series]);
+        dataLabels: { enabled: false },
+    }), [theme, colors, crosshairColor, displayAnnotations, dates]);
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-            {title && (
-                <Typography
-                    color="text.secondary"
-                    sx={{
-                        fontSize: getResponsiveFontSize('md'),
-                        fontWeight: fontWeight.semibold,
-                        textAlign: 'center',
-                        mb: 0.5,
-                    }}
-                >
-                    {title}
-                </Typography>
-            )}
+            {/* Custom legend — toggleable */}
             <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 0, flexWrap: 'wrap', position: 'relative', zIndex: 2 }}>
-                {legendLabels.map((label, index) => {
-                    const isHidden = hiddenSeries.has(label);
+                {legendItems.map((item) => {
+                    const isHidden = hiddenSeries.has(item.name);
                     return (
                         <Box
-                            key={label}
-                            onClick={() => handleLegendClick(label)}
+                            key={item.name}
+                            onClick={() => handleLegendClick(item.name)}
                             sx={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -261,7 +247,7 @@ export default function TuongQuanDongTien({
                                 '&:hover': { opacity: isHidden ? 0.5 : 0.8 },
                             }}
                         >
-                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: colors[index % colors.length] }} />
+                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: item.color }} />
                             <Typography
                                 color="text.secondary"
                                 sx={{
@@ -270,7 +256,7 @@ export default function TuongQuanDongTien({
                                     textDecoration: isHidden ? 'line-through' : 'none',
                                 }}
                             >
-                                {label}
+                                {item.name}
                             </Typography>
                         </Box>
                     );
@@ -296,7 +282,7 @@ export default function TuongQuanDongTien({
                 },
             }}>
                 <Chart
-                    key={theme.palette.mode}
+                    key={seriesKey}
                     options={chartOptions}
                     series={displaySeries}
                     type="line"

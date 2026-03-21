@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 
 # Import tất cả keyword functions từ các sub-modules
 from app.crud.sse.home_itd_index import home_itd_index
+from app.crud.sse.home_itd_stock import home_itd_stock
 from app.crud.sse.home_today_index import home_today_index
 from app.crud.sse.home_hist_index import home_hist_index
 from app.crud.sse.home_hist_stock import home_hist_stock
@@ -45,6 +46,7 @@ SSE_QUERY_REGISTRY: Dict[str, Any] = {
     # Index queries
     "home_today_index": home_today_index,
     "home_itd_index": home_itd_index,
+    "home_itd_stock": home_itd_stock,
     "home_hist_index": home_hist_index,
     # Stock queries
     "home_hist_stock": home_hist_stock,
