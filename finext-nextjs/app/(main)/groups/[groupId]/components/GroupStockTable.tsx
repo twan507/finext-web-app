@@ -565,7 +565,7 @@ export default function GroupStockTable({
                             ? Array.from({ length: skeletonRows }).map((_, idx) => (
                                 <SkeletonRow
                                     key={`skeleton-${idx}`}
-                                    columns={columns}
+                                    columns={visibleColumns}
                                     isMobile={isMobile}
                                     isTablet={isTablet}
                                 />
