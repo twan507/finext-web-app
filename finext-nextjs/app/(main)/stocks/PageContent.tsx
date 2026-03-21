@@ -343,7 +343,7 @@ export default function StocksContent() {
                                 alignItems: 'center',
                                 gap: 0.5,
                                 px: 1.25,
-                                py: 0.5,
+                                height: 28,
                                 borderRadius: `${borderRadius.pill}px`,
                                 border: `1px solid ${active ? alpha(color, 0.4) : alpha(theme.palette.divider, 0.4)}`,
                                 bgcolor: active ? alpha(color, 0.08) : 'transparent',

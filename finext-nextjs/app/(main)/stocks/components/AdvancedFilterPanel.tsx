@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Box, Typography, TextField, Chip, useTheme, alpha, Select, MenuItem, FormControl, InputLabel, IconButton, Tooltip, Collapse } from '@mui/material';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { Box, Typography, TextField, Chip, useTheme, alpha, IconButton, Tooltip, Collapse, Slider } from '@mui/material';
 import { Icon } from '@iconify/react';
-import { getResponsiveFontSize, fontWeight, borderRadius, durations, easings } from 'theme/tokens';
+import { getResponsiveFontSize, fontWeight, borderRadius, getGlassCard, durations, easings } from 'theme/tokens';
 import type { RangeFilter, AdvancedFilter } from 'hooks/useScreenerStore';
 import { ADVANCED_FILTER_DEFS, ADVANCED_FILTER_GROUPS, type AdvancedCompare } from '../screenerConfig';
 
@@ -33,20 +34,24 @@ interface RangeFilterDef {
     unit?: string;        // display unit suffix
     isPct?: boolean;      // stored as 0-1, display as 0-100
     scaleTo?: number;     // divide stored by this to display (e.g. 1e9 for Tỷ)
+    sliderMin: number;    // display-space min for slider
+    sliderMax: number;    // display-space max for slider
+    step: number;         // slider step in display-space
+    logScale?: boolean;   // quadratic scale: internal 0-1000 ↔ display sliderMin-sliderMax
 }
 
 const RANGE_FILTER_DEFS: RangeFilterDef[] = [
-    { field: 'pct_change',       label: '% Phiên',          group: 'pricevol', unit: '%',     isPct: true },
-    { field: 'trading_value',    label: 'GTGD',             group: 'pricevol', unit: 'Tỷ',   scaleTo: 1e9 },
-    { field: 'vsi',              label: 'Chỉ số TK',        group: 'pricevol', unit: '%' },
-    { field: 'w_pct',            label: '% Tuần',           group: 'change',   unit: '%',     isPct: true },
-    { field: 'm_pct',            label: '% Tháng',          group: 'change',   unit: '%',     isPct: true },
-    { field: 'q_pct',            label: '% Quý',            group: 'change',   unit: '%',     isPct: true },
-    { field: 'y_pct',            label: '% Năm',            group: 'change',   unit: '%',     isPct: true },
-    { field: 't0_score',         label: 'T0 Score',         group: 'cashflow', unit: 'điểm' },
-    { field: 't5_score',         label: 'T5 Score',         group: 'cashflow', unit: 'điểm' },
-    { field: 'market_rank_pct',  label: 'Rank TT',          group: 'cashflow', unit: '%',     isPct: true },
-    { field: 'industry_rank_pct',label: 'Rank Ngành',       group: 'cashflow', unit: '%',     isPct: true },
+    { field: 'pct_change',       label: 'Giá',          group: 'pricevol', unit: '%',     isPct: true,  sliderMin: -7,   sliderMax: 7,    step: 0.1 },
+    { field: 'trading_value',    label: 'Giá trị GD',  group: 'pricevol', unit: 'Tỷ',                sliderMin: 0,    sliderMax: 100,  step: 0.1, logScale: true },
+    { field: 'vsi',              label: 'Thanh Khoản', group: 'pricevol', unit: '%',                   sliderMin: 0,    sliderMax: 150,  step: 5 },
+    { field: 'w_pct',            label: '% Tuần',      group: 'change',   unit: '%',     isPct: true,  sliderMin: -20,  sliderMax: 20,   step: 0.5 },
+    { field: 'm_pct',            label: '% Tháng',     group: 'change',   unit: '%',     isPct: true,  sliderMin: -20,  sliderMax: 20,   step: 0.5 },
+    { field: 'q_pct',            label: '% Quý',       group: 'change',   unit: '%',     isPct: true,  sliderMin: -20,  sliderMax: 20,   step: 0.5 },
+    { field: 'y_pct',            label: '% Năm',       group: 'change',   unit: '%',     isPct: true,  sliderMin: -20,  sliderMax: 20,   step: 0.5 },
+    { field: 't0_score',         label: 'Trong Phiên',     group: 'cashflow', unit: 'điểm',                sliderMin: -100, sliderMax: 100,  step: 5 },
+    { field: 't5_score',         label: 'Trong Tuần',      group: 'cashflow', unit: 'điểm',                sliderMin: -100, sliderMax: 100,  step: 5 },
+    { field: 'market_rank_pct',  label: 'Xếp hạng TT',    group: 'cashflow', unit: '%',     isPct: true,  sliderMin: 0,    sliderMax: 100,  step: 1 },
+    { field: 'industry_rank_pct',label: 'Xếp hạng Ngành', group: 'cashflow', unit: '%',     isPct: true,  sliderMin: 0,    sliderMax: 100,  step: 1 },
 ];
 
 // ─── Zone filter definitions ─────────────────────────────────────────────────
@@ -107,15 +112,15 @@ interface AccordionGroupConfig {
 
 // Detail accordion groups only (indicator is a separate zone)
 const ACCORDION_GROUPS: AccordionGroupConfig[] = [
-    { key: 'pricevol', label: 'Giá & Thanh khoản', icon: 'solar:graph-up-bold-duotone',  color: 'success' },
+    { key: 'pricevol', label: 'Biến động',          icon: 'solar:graph-up-bold-duotone',  color: 'success' },
     { key: 'change',   label: '% Thay đổi',         icon: 'solar:chart-bold-duotone',     color: '#ec4899' },
     { key: 'cashflow', label: 'Dòng tiền',           icon: 'solar:dollar-bold-duotone',    color: 'info' },
     { key: 'zones',    label: 'Vùng giá kỹ thuật',  icon: 'solar:layers-bold-duotone',    color: 'warning' },
 ];
 
-// ─── Compact Range Input ─────────────────────────────────────────────────────
+// ─── Slider Range Row ────────────────────────────────────────────────────────
 
-function CompactRangeInput({
+function SliderRangeRow({
     def,
     current,
     onSet,
@@ -129,28 +134,87 @@ function CompactRangeInput({
     accentColor: string;
 }) {
     const theme = useTheme();
-    const hasValue = current != null && (current.min != null || current.max != null);
 
-    const toDisplay = (stored: number | null) => {
+    // ── conversion helpers ──
+    const toDisplay = useCallback((stored: number | null): number | '' => {
         if (stored == null) return '';
-        if (def.isPct) return stored * 100;
+        if (def.isPct) return Math.round(stored * 10000) / 100; // avoid float drift
         if (def.scaleTo) return stored / def.scaleTo;
         return stored;
-    };
+    }, [def.isPct, def.scaleTo]);
 
-    const toStore = (display: string): number | null => {
+    const toStore = useCallback((display: string): number | null => {
         if (display === '') return null;
         const val = Number(display);
+        if (isNaN(val)) return null;
         if (def.isPct) return val / 100;
         if (def.scaleTo) return val * def.scaleTo;
         return val;
+    }, [def.isPct, def.scaleTo]);
+
+    const displayMin = toDisplay(current?.min ?? null);
+    const displayMax = toDisplay(current?.max ?? null);
+    const hasValue = current != null && (current.min != null || current.max != null);
+
+    // ── Piecewise linear scale helpers for logScale fields ──
+    // Internal slider: 0–1000 | first half (0–500) → 0–20 Tỷ | second half (500–1000) → 20–100 Tỷ
+    const LOG_INTERNAL_MAX = 1000;
+    const posToDisplay = (pos: number): number => {
+        if (pos <= 0) return 0;
+        if (pos >= LOG_INTERNAL_MAX) return def.sliderMax;
+        if (pos <= 500) return Math.round(pos / 500 * 20 * 10) / 10;
+        return Math.round((20 + (pos - 500) / 500 * 80) * 10) / 10;
+    };
+    const displayToPos = (val: number): number => {
+        if (val <= 0) return 0;
+        if (val >= def.sliderMax) return LOG_INTERNAL_MAX;
+        if (val <= 20) return Math.round(val / 20 * 500);
+        return Math.round(500 + (val - 20) / 80 * 500);
+    };
+
+    // Slider value: clamp to slider bounds (or quadratic-mapped positions for logScale)
+    const clamp = (v: number) => Math.min(def.sliderMax, Math.max(def.sliderMin, v));
+    const sliderValue: [number, number] = def.logScale
+        ? [
+            displayMin === '' ? 0 : displayToPos(displayMin),
+            displayMax === '' ? LOG_INTERNAL_MAX : displayToPos(displayMax),
+          ]
+        : [
+            displayMin === '' ? def.sliderMin : clamp(displayMin),
+            displayMax === '' ? def.sliderMax : clamp(displayMax),
+          ];
+
+    const handleSliderChange = (_: unknown, val: number | number[]) => {
+        const [lo, hi] = val as [number, number];
+        if (def.logScale) {
+            const loDisplay = posToDisplay(lo);
+            const hiDisplay = posToDisplay(hi);
+            const minStore = lo <= 0 ? null : toStore(String(loDisplay));
+            const maxStore = hi >= LOG_INTERNAL_MAX ? null : toStore(String(hiDisplay));
+            if (minStore == null && maxStore == null) onClear(def.field);
+            else onSet(def.field, { min: minStore, max: maxStore });
+        } else {
+            const minStore = lo === def.sliderMin ? null : toStore(String(lo));
+            const maxStore = hi === def.sliderMax ? null : toStore(String(hi));
+            if (minStore == null && maxStore == null) onClear(def.field);
+            else onSet(def.field, { min: minStore, max: maxStore });
+        }
+    };
+
+    const handleMinInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+        onSet(def.field, { min: toStore(e.target.value), max: current?.max ?? null });
+    };
+
+    const handleMaxInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+        onSet(def.field, { min: current?.min ?? null, max: toStore(e.target.value) });
     };
 
     const inputSx = {
-        width: { xs: 60, sm: 68 },
+        width: { xs: 56, sm: 64 },
+        flexShrink: 0,
         '& .MuiOutlinedInput-root': {
             borderRadius: `${borderRadius.sm}px`,
-            fontSize: '0.7rem',
+            fontSize: getResponsiveFontSize('xs'),
             transition: `border-color ${durations.fast} ${easings.easeOut}`,
             '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                 borderColor: accentColor,
@@ -159,17 +223,34 @@ function CompactRangeInput({
         },
         '& .MuiOutlinedInput-input': {
             py: 0.45,
-            px: 0.75,
+            px: 0.5,
+            fontSize: getResponsiveFontSize('xs'),
             textAlign: 'center',
-            '&::placeholder': { opacity: 0.35, fontSize: '0.68rem' },
+            '&::placeholder': { opacity: 0.4, fontSize: '0.75rem' },
         },
     };
 
     return (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, py: 0.4 }}>
-            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.25, minWidth: { xs: 72, sm: 82 }, justifyContent: 'flex-end' }}>
+        <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: { xs: 0.75, sm: 1 },
+            px: 0.75,
+            py: 0.5,
+            borderRadius: `${borderRadius.sm}px`,
+        }}>
+            {/* Label */}
+            <Box sx={{
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: 0.25,
+                width: { xs: 96, sm: 112 },
+                justifyContent: 'flex-start',
+                flexShrink: 0,
+                mr: { xs: 0.75, sm: 1 },
+            }}>
                 <Typography sx={{
-                    fontSize: '0.7rem',
+                    fontSize: getResponsiveFontSize('xs'),
                     color: hasValue ? accentColor : 'text.secondary',
                     fontWeight: hasValue ? fontWeight.semibold : fontWeight.medium,
                     transition: `color ${durations.fast} ${easings.easeOut}`,
@@ -178,41 +259,84 @@ function CompactRangeInput({
                     {def.label}
                 </Typography>
                 {def.unit && (
-                    <Typography sx={{ fontSize: '0.6rem', color: 'text.disabled', whiteSpace: 'nowrap' }}>
+                    <Typography sx={{ fontSize: getResponsiveFontSize('xxs'), color: 'text.disabled', whiteSpace: 'nowrap' }}>
                         ({def.unit})
                     </Typography>
                 )}
             </Box>
+
+            {/* Min input */}
             <TextField
                 size="small"
                 placeholder="Min"
                 type="number"
-                value={toDisplay(current?.min ?? null)}
-                onChange={(e) => onSet(def.field, { min: toStore(e.target.value), max: current?.max ?? null })}
+                value={displayMin}
+                onChange={handleMinInput}
                 sx={inputSx}
             />
-            <Box sx={{ width: 10, height: 1, bgcolor: alpha(theme.palette.divider, 0.5), borderRadius: 1, flexShrink: 0 }} />
+
+            {/* Dual-handle slider */}
+            <Slider
+                value={sliderValue}
+                onChange={handleSliderChange}
+                min={def.logScale ? 0 : def.sliderMin}
+                max={def.logScale ? LOG_INTERNAL_MAX : def.sliderMax}
+                step={def.logScale ? 1 : def.step}
+                scale={def.logScale ? posToDisplay : undefined}
+                disableSwap
+                sx={{
+                    flex: 1,
+                    mx: 1.5,
+                    height: 4,
+                    color: accentColor,
+                    opacity: hasValue ? 1 : 0.3,
+                    '& .MuiSlider-track': {
+                        border: 'none',
+                    },
+                    '& .MuiSlider-rail': {
+                        opacity: 0.25,
+                        bgcolor: theme.palette.text.secondary,
+                    },
+                    '& .MuiSlider-thumb': {
+                        width: 14,
+                        height: 14,
+                        bgcolor: theme.palette.background.paper,
+                        border: `2px solid ${accentColor}`,
+                        boxShadow: `0 0 0 3px ${alpha(accentColor, 0.12)}`,
+                        '&:hover, &.Mui-focusVisible': {
+                            boxShadow: `0 0 0 5px ${alpha(accentColor, 0.2)}`,
+                        },
+                        '&.Mui-active': {
+                            boxShadow: `0 0 0 6px ${alpha(accentColor, 0.25)}`,
+                        },
+                    },
+                }}
+            />
+
+            {/* Max input */}
             <TextField
                 size="small"
                 placeholder="Max"
                 type="number"
-                value={toDisplay(current?.max ?? null)}
-                onChange={(e) => onSet(def.field, { min: current?.min ?? null, max: toStore(e.target.value) })}
+                value={displayMax}
+                onChange={handleMaxInput}
                 sx={inputSx}
             />
-            {hasValue && (
-                <IconButton
-                    size="small"
-                    onClick={() => onClear(def.field)}
-                    sx={{
-                        p: 0.2,
-                        color: alpha(theme.palette.text.secondary, 0.4),
-                        '&:hover': { color: theme.palette.error.main },
-                    }}
-                >
-                    <Icon icon="solar:close-circle-bold" width={13} />
-                </IconButton>
-            )}
+
+            {/* Clear button — visibility hidden to reserve space */}
+            <IconButton
+                size="small"
+                onClick={() => onClear(def.field)}
+                sx={{
+                    p: 0.2,
+                    flexShrink: 0,
+                    visibility: hasValue ? 'visible' : 'hidden',
+                    color: alpha(theme.palette.text.secondary, 0.4),
+                    '&:hover': { color: theme.palette.error.main },
+                }}
+            >
+                <Icon icon="solar:close-circle-bold" width={13} />
+            </IconButton>
         </Box>
     );
 }
@@ -297,7 +421,7 @@ function ZoneFilterSection({
                                     : 'none',
                                 color: isActive ? accentColor : theme.palette.text.secondary,
                                 cursor: 'pointer',
-                                fontSize: '0.68rem',
+                                fontSize: getResponsiveFontSize('xs'),
                                 fontWeight: isActive ? fontWeight.bold : fontWeight.medium,
                                 transition: `all ${durations.fast} ${easings.easeOut}`,
                                 whiteSpace: 'nowrap',
@@ -314,7 +438,7 @@ function ZoneFilterSection({
                                     borderRadius: '50%',
                                     bgcolor: accentColor,
                                     color: '#fff',
-                                    fontSize: '0.58rem',
+                                    fontSize: getResponsiveFontSize('xxs'),
                                     fontWeight: fontWeight.bold,
                                     display: 'flex',
                                     alignItems: 'center',
@@ -353,7 +477,7 @@ function ZoneFilterSection({
                                     transition: `background ${durations.fast} ${easings.easeOut}`,
                                 }}>
                                     <Typography sx={{
-                                        fontSize: '0.72rem',
+                                        fontSize: getResponsiveFontSize('xs'),
                                         fontWeight: hasAny ? fontWeight.bold : fontWeight.medium,
                                         color: hasAny ? accentColor : theme.palette.text.secondary,
                                         minWidth: 40,
@@ -381,7 +505,7 @@ function ZoneFilterSection({
                                                             : isDark ? alpha(chipColor, 0.1) : theme.palette.grey[100],
                                                         color: isSelected ? chipColor : alpha(chipColor, isDark ? 0.9 : 0.7),
                                                         cursor: 'pointer',
-                                                        fontSize: '0.68rem',
+                                                        fontSize: getResponsiveFontSize('xs'),
                                                         fontWeight: isSelected ? fontWeight.bold : fontWeight.medium,
                                                         textAlign: 'center',
                                                         transition: `all ${durations.fast} ${easings.easeOut}`,
@@ -485,7 +609,7 @@ function AccordionHeader({
                     borderRadius: `${borderRadius.pill}px`,
                     bgcolor: paletteColor,
                     color: '#fff',
-                    fontSize: '0.6rem',
+                    fontSize: getResponsiveFontSize('xxs'),
                     fontWeight: fontWeight.bold,
                     lineHeight: 1.6,
                     minWidth: 18,
@@ -522,11 +646,50 @@ function IndicatorSection({
     onClearAdvancedFilters: () => void;
 }) {
     const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
 
     const [newField, setNewField] = useState('');
     const [newCompare, setNewCompare] = useState<AdvancedCompare>('above');
     const [newLowerPct, setNewLowerPct] = useState('');
     const [newUpperPct, setNewUpperPct] = useState('');
+    const [indicatorOpen, setIndicatorOpen] = useState(false);
+    const [indicatorSearch, setIndicatorSearch] = useState('');
+    const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
+    const indicatorRef = useRef<HTMLDivElement>(null);
+    const triggerRef = useRef<HTMLButtonElement>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown on outside click; lock body scroll while open
+    useEffect(() => {
+        if (!indicatorOpen) return;
+        function handleClick(e: MouseEvent) {
+            if (
+                indicatorRef.current && !indicatorRef.current.contains(e.target as Node) &&
+                dropdownRef.current && !dropdownRef.current.contains(e.target as Node)
+            ) {
+                setIndicatorOpen(false);
+                setIndicatorSearch('');
+            }
+        }
+        document.addEventListener('mousedown', handleClick);
+        function preventScroll(e: WheelEvent | TouchEvent) {
+            if (dropdownRef.current && dropdownRef.current.contains(e.target as Node)) return;
+            e.preventDefault();
+        }
+        document.addEventListener('wheel', preventScroll, { passive: false });
+        document.addEventListener('touchmove', preventScroll, { passive: false });
+        return () => {
+            document.removeEventListener('mousedown', handleClick);
+            document.removeEventListener('wheel', preventScroll);
+            document.removeEventListener('touchmove', preventScroll);
+        };
+    }, [indicatorOpen]);
+
+    // Auto-focus search when dropdown opens
+    useEffect(() => {
+        if (indicatorOpen) searchInputRef.current?.focus();
+    }, [indicatorOpen]);
 
     const handleAdd = () => {
         if (!newField) return;
@@ -566,19 +729,19 @@ function IndicatorSection({
 
     const canAdd = !!newField && (newCompare !== 'range' || newLowerPct !== '' || newUpperPct !== '');
 
-    const selectSx = {
-        fontSize: getResponsiveFontSize('xs'),
-        borderRadius: `${borderRadius.sm}px`,
-        '& .MuiSelect-select': { py: 0.6 },
-    };
+    const filteredDefs = useMemo(() => {
+        if (!indicatorSearch) return ADVANCED_FILTER_DEFS;
+        const q = indicatorSearch.toLowerCase();
+        return ADVANCED_FILTER_DEFS.filter(d => d.label.toLowerCase().includes(q) || d.field.toLowerCase().includes(q));
+    }, [indicatorSearch]);
 
     const smallInputSx = {
         width: 62,
         '& .MuiOutlinedInput-root': {
             borderRadius: `${borderRadius.sm}px`,
-            fontSize: '0.7rem',
+            fontSize: getResponsiveFontSize('xs'),
         },
-        '& .MuiOutlinedInput-input': { py: 0.5, px: 0.75, textAlign: 'center' },
+        '& .MuiOutlinedInput-input': { py: 0.45, px: 0.75, fontSize: getResponsiveFontSize('xs'), textAlign: 'center' },
     };
 
     return (
@@ -592,7 +755,7 @@ function IndicatorSection({
                             size="small"
                             onDelete={() => onRemoveAdvancedFilter(af.field)}
                             sx={{
-                                fontSize: '0.68rem',
+                                fontSize: getResponsiveFontSize('xs'),
                                 fontWeight: fontWeight.semibold,
                                 height: 24,
                                 bgcolor: alpha(theme.palette.primary.main, 0.1),
@@ -612,7 +775,7 @@ function IndicatorSection({
                         variant="outlined"
                         onClick={onClearAdvancedFilters}
                         sx={{
-                            fontSize: '0.68rem',
+                            fontSize: getResponsiveFontSize('xs'),
                             height: 24,
                             color: theme.palette.error.main,
                             borderColor: alpha(theme.palette.error.main, 0.3),
@@ -641,7 +804,7 @@ function IndicatorSection({
                         bgcolor: alpha(theme.palette.text.primary, 0.06),
                         border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
                     }}>
-                        <Typography sx={{ fontSize: '0.65rem', fontWeight: fontWeight.bold, color: 'text.secondary', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                        <Typography sx={{ fontSize: getResponsiveFontSize('xxs'), fontWeight: fontWeight.bold, color: 'text.secondary', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
                             GIÁ
                         </Typography>
                     </Box>
@@ -664,7 +827,7 @@ function IndicatorSection({
                                     bgcolor: newCompare === opt.value ? alpha(theme.palette.primary.main, 0.15) : 'transparent',
                                     color: newCompare === opt.value ? theme.palette.primary.main : theme.palette.text.secondary,
                                     cursor: 'pointer',
-                                    fontSize: '0.68rem',
+                                    fontSize: getResponsiveFontSize('xs'),
                                     fontWeight: newCompare === opt.value ? fontWeight.bold : fontWeight.medium,
                                     transition: `all ${durations.fast} ${easings.easeOut}`,
                                     '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.08) },
@@ -680,34 +843,182 @@ function IndicatorSection({
 
                 {/* Row 2: Indicator + % input + Add */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-                    <FormControl size="small" sx={{ flex: '1 1 150px', maxWidth: 210 }}>
-                        <InputLabel sx={{ fontSize: '0.72rem' }}>Chỉ báo</InputLabel>
-                        <Select
-                            value={newField}
-                            onChange={(e) => setNewField(e.target.value)}
-                            label="Chỉ báo"
-                            sx={selectSx}
-                            MenuProps={{ PaperProps: { sx: { maxHeight: 350 } } }}
+                    <Box ref={indicatorRef} sx={{ position: 'relative', flex: '1 1 150px', maxWidth: 210 }}>
+                        {/* Trigger */}
+                        <Box
+                            component="button"
+                            ref={triggerRef}
+                            onClick={() => {
+                                if (triggerRef.current) {
+                                    const r = triggerRef.current.getBoundingClientRect();
+                                    setDropdownPos({ top: r.bottom + 6, left: r.left, width: Math.max(r.width, 220) });
+                                }
+                                setIndicatorOpen(v => !v);
+                                setIndicatorSearch('');
+                            }}
+                            sx={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 0.75,
+                                width: '100%',
+                                px: 1,
+                                py: 0.45,
+                                borderRadius: `${borderRadius.sm}px`,
+                                border: `1px solid ${newField
+                                    ? alpha(theme.palette.primary.main, 0.5)
+                                    : alpha(theme.palette.divider, 0.4)
+                                }`,
+                                bgcolor: newField
+                                    ? alpha(theme.palette.primary.main, 0.08)
+                                    : 'transparent',
+                                color: newField ? theme.palette.primary.main : theme.palette.text.secondary,
+                                cursor: 'pointer',
+                                transition: `all ${durations.fast} ${easings.easeOut}`,
+                                '&:hover': {
+                                    borderColor: alpha(theme.palette.primary.main, 0.35),
+                                    bgcolor: alpha(theme.palette.primary.main, 0.06),
+                                },
+                            }}
                         >
-                            {ADVANCED_FILTER_GROUPS.map(group => [
-                                <MenuItem key={`group-${group.key}`} disabled sx={{
-                                    fontSize: '0.65rem',
-                                    fontWeight: fontWeight.bold,
-                                    color: 'text.secondary',
-                                    textTransform: 'uppercase',
-                                    opacity: '1 !important',
-                                    letterSpacing: '0.5px',
-                                }}>
-                                    {group.label}
-                                </MenuItem>,
-                                ...ADVANCED_FILTER_DEFS.filter(d => d.group === group.key).map(d => (
-                                    <MenuItem key={d.field} value={d.field} sx={{ fontSize: getResponsiveFontSize('xs'), pl: 3 }}>
-                                        {d.label}
-                                    </MenuItem>
-                                )),
-                            ]).flat()}
-                        </Select>
-                    </FormControl>
+                            <Typography sx={{
+                                fontSize: getResponsiveFontSize('xs'),
+                                fontWeight: newField ? fontWeight.semibold : fontWeight.medium,
+                                color: newField ? theme.palette.primary.main : 'text.disabled',
+                                flex: 1,
+                                textAlign: 'left',
+                                whiteSpace: 'nowrap',
+                            }}>
+                                {newField ? (ADVANCED_FILTER_DEFS.find(d => d.field === newField)?.label ?? newField) : 'Chọn chỉ báo'}
+                            </Typography>
+                            <Icon
+                                icon="solar:alt-arrow-down-bold"
+                                width={12}
+                                style={{
+                                    transform: indicatorOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                                    transition: `transform ${durations.fast} ${easings.easeOut}`,
+                                }}
+                            />
+                        </Box>
+
+                        {/* Dropdown — rendered via portal to escape stacking contexts */}
+                        {indicatorOpen && dropdownPos && createPortal(
+                            <Box ref={dropdownRef} sx={{
+                                position: 'fixed',
+                                top: dropdownPos.top,
+                                left: dropdownPos.left,
+                                width: dropdownPos.width,
+                                zIndex: 9999,
+                                maxHeight: 350,
+                                overflowY: 'auto',
+                                borderRadius: `${borderRadius.lg}px`,
+                                ...getGlassCard(isDark),
+                                boxShadow: isDark
+                                    ? '0 8px 32px rgba(0,0,0,0.5)'
+                                    : '0 8px 24px rgba(0,0,0,0.12)',
+                                animation: `ddFadeIn2 ${durations.fast} ${easings.easeOut}`,
+                                '@keyframes ddFadeIn2': {
+                                    from: { opacity: 0, transform: 'translateY(-6px)' },
+                                    to: { opacity: 1, transform: 'translateY(0)' },
+                                },
+                                '&::-webkit-scrollbar': { width: 4 },
+                                '&::-webkit-scrollbar-track': { background: 'transparent' },
+                                '&::-webkit-scrollbar-thumb': { background: alpha(theme.palette.divider, 0.4), borderRadius: 2 },
+                            }}>
+                                {/* Search input */}
+                                <Box sx={{ p: 1.25, borderBottom: '1px solid', borderColor: 'divider' }}>
+                                    <Box
+                                        component="input"
+                                        ref={searchInputRef}
+                                        type="text"
+                                        placeholder="Tìm chỉ báo..."
+                                        value={indicatorSearch}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setIndicatorSearch(e.target.value)}
+                                        onKeyDown={(e: React.KeyboardEvent) => {
+                                            if (e.key === 'Enter' && filteredDefs.length > 0) {
+                                                setNewField(filteredDefs[0].field);
+                                                setIndicatorOpen(false);
+                                                setIndicatorSearch('');
+                                            }
+                                        }}
+                                        sx={{
+                                            width: '100%',
+                                            bgcolor: 'transparent',
+                                            border: 'none',
+                                            outline: 'none',
+                                            color: 'text.primary',
+                                            fontSize: getResponsiveFontSize('xs'),
+                                            fontFamily: 'inherit',
+                                            '&::placeholder': {
+                                                color: 'text.secondary',
+                                                opacity: 0.7,
+                                            },
+                                        }}
+                                    />
+                                </Box>
+
+                                {/* Grouped items */}
+                                {ADVANCED_FILTER_GROUPS.map(group => {
+                                    const groupDefs = filteredDefs.filter(d => d.group === group.key);
+                                    if (groupDefs.length === 0) return null;
+                                    return (
+                                        <Box key={group.key}>
+                                            <Typography sx={{
+                                                fontSize: getResponsiveFontSize('xxs'),
+                                                fontWeight: fontWeight.bold,
+                                                color: 'text.secondary',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.5px',
+                                                px: 1.5,
+                                                pt: 1,
+                                                pb: 0.25,
+                                            }}>
+                                                {group.label}
+                                            </Typography>
+                                            {groupDefs.map(d => {
+                                                const isActive = newField === d.field;
+                                                return (
+                                                    <Box
+                                                        key={d.field}
+                                                        component="button"
+                                                        onClick={() => {
+                                                            setNewField(d.field);
+                                                            setIndicatorOpen(false);
+                                                            setIndicatorSearch('');
+                                                        }}
+                                                        sx={{
+                                                            display: 'block',
+                                                            width: '100%',
+                                                            textAlign: 'left',
+                                                            background: isActive
+                                                                ? isDark ? alpha(theme.palette.primary.main, 0.15) : alpha(theme.palette.primary.main, 0.08)
+                                                                : 'transparent',
+                                                            border: 'none',
+                                                            cursor: 'pointer',
+                                                            px: 2,
+                                                            py: 0.75,
+                                                            transition: `background ${durations.fastest}`,
+                                                            '&:hover': {
+                                                                background: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.04),
+                                                            },
+                                                        }}
+                                                    >
+                                                        <Typography sx={{
+                                                            fontSize: getResponsiveFontSize('xs'),
+                                                            fontWeight: isActive ? fontWeight.semibold : fontWeight.medium,
+                                                            color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
+                                                            lineHeight: 1.4,
+                                                        }}>
+                                                            {d.label}
+                                                        </Typography>
+                                                    </Box>
+                                                );
+                                            })}
+                                        </Box>
+                                    );
+                                })}
+                            </Box>
+                        , document.body)}
+                    </Box>
 
                     {/* % offset inputs */}
                     <Box sx={{
@@ -717,7 +1028,7 @@ function IndicatorSection({
                         border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
                         bgcolor: alpha(theme.palette.background.paper, 0.5),
                     }}>
-                        <Typography sx={{ fontSize: '0.62rem', color: 'text.disabled', mr: 0.25 }}>±%</Typography>
+                        <Typography sx={{ fontSize: getResponsiveFontSize('xxs'), color: 'text.disabled', mr: 0.25 }}>±%</Typography>
                         <TextField
                             size="small"
                             placeholder={newCompare === 'range' ? '−%' : '%'}
@@ -729,7 +1040,7 @@ function IndicatorSection({
                         />
                         {newCompare === 'range' && (
                             <>
-                                <Typography sx={{ fontSize: '0.62rem', color: 'text.disabled' }}>→</Typography>
+                                <Typography sx={{ fontSize: getResponsiveFontSize('xxs'), color: 'text.disabled' }}>→</Typography>
                                 <TextField
                                     size="small"
                                     placeholder="+%"
@@ -757,7 +1068,7 @@ function IndicatorSection({
                                     bgcolor: canAdd ? theme.palette.primary.main : alpha(theme.palette.text.disabled, 0.1),
                                     color: canAdd ? '#fff' : theme.palette.text.disabled,
                                     cursor: canAdd ? 'pointer' : 'not-allowed',
-                                    fontSize: '0.72rem',
+                                    fontSize: getResponsiveFontSize('xs'),
                                     fontWeight: fontWeight.semibold,
                                     transition: `all ${durations.fast} ${easings.easeOut}`,
                                     '&:hover:not(:disabled)': { opacity: 0.88 },
@@ -860,12 +1171,12 @@ export default function AdvancedFilterPanel({
                                     ) : (
                                         <Box sx={{
                                             px: 1.5, pb: 1.25,
-                                            display: 'grid',
-                                            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-                                            gap: 0,
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: 0.25,
                                         }}>
                                             {(rangeGroups.get(group.key) ?? []).map(def => (
-                                                <CompactRangeInput
+                                                <SliderRangeRow
                                                     key={def.field}
                                                     def={def}
                                                     current={rangeFilters[def.field]}
@@ -888,7 +1199,7 @@ export default function AdvancedFilterPanel({
                 <Box sx={{
                     borderRadius: `${borderRadius.md}px`,
                     border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                    overflow: 'hidden',
+                    overflow: 'visible',
                 }}>
                     <IndicatorSection
                         advancedFilters={advancedFilters}

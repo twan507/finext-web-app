@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Box, Typography, useTheme, alpha } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { getResponsiveFontSize, fontWeight, borderRadius, getGlassCard, durations, easings } from 'theme/tokens';
@@ -40,16 +41,32 @@ function GlassDropdown({ label, options, selected, onChange, onClear }: GlassDro
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const [open, setOpen] = useState(false);
+    const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
     const ref = useRef<HTMLDivElement>(null);
+    const triggerRef = useRef<HTMLButtonElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
-    // Close on outside click
+    // Close on outside click; lock page scroll while open
     useEffect(() => {
         if (!open) return;
-        function handler(e: MouseEvent) {
-            if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+        function handleClick(e: MouseEvent) {
+            if (ref.current && !ref.current.contains(e.target as Node) &&
+                dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
         }
-        document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
+        function preventScroll(e: WheelEvent | TouchEvent) {
+            if (dropdownRef.current && dropdownRef.current.contains(e.target as Node)) return;
+            e.preventDefault();
+        }
+        document.addEventListener('mousedown', handleClick);
+        document.addEventListener('wheel', preventScroll, { passive: false });
+        document.addEventListener('touchmove', preventScroll, { passive: false });
+        return () => {
+            document.removeEventListener('mousedown', handleClick);
+            document.removeEventListener('wheel', preventScroll);
+            document.removeEventListener('touchmove', preventScroll);
+        };
     }, [open]);
 
     function toggleOption(opt: string) {
@@ -74,7 +91,14 @@ function GlassDropdown({ label, options, selected, onChange, onClear }: GlassDro
             {/* Trigger */}
             <Box
                 component="button"
-                onClick={() => setOpen(v => !v)}
+                ref={triggerRef}
+                onClick={() => {
+                    if (triggerRef.current) {
+                        const r = triggerRef.current.getBoundingClientRect();
+                        setDropdownPos({ top: r.bottom + 6, left: r.left, width: Math.max(r.width, 180) });
+                    }
+                    setOpen(v => !v);
+                }}
                 sx={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -135,15 +159,16 @@ function GlassDropdown({ label, options, selected, onChange, onClear }: GlassDro
                 </Box>
             </Box>
 
-            {/* Dropdown panel */}
-            {open && options.length > 0 && (
+            {/* Dropdown panel — portal to escape stacking contexts */}
+            {open && options.length > 0 && dropdownPos && createPortal(
                 <Box
+                    ref={dropdownRef}
                     sx={{
-                        position: 'absolute',
-                        top: 'calc(100% + 6px)',
-                        left: 0,
-                        zIndex: 1300,
-                        minWidth: 180,
+                        position: 'fixed',
+                        top: dropdownPos.top,
+                        left: dropdownPos.left,
+                        width: dropdownPos.width,
+                        zIndex: 9999,
                         maxHeight: 280,
                         overflowY: 'auto',
                         borderRadius: `${borderRadius.lg}px`,
@@ -156,7 +181,6 @@ function GlassDropdown({ label, options, selected, onChange, onClear }: GlassDro
                             from: { opacity: 0, transform: 'translateY(-6px)' },
                             to: { opacity: 1, transform: 'translateY(0)' },
                         },
-                        // Custom scrollbar
                         '&::-webkit-scrollbar': { width: 4 },
                         '&::-webkit-scrollbar-track': { background: 'transparent' },
                         '&::-webkit-scrollbar-thumb': { background: alpha(theme.palette.divider, 0.4), borderRadius: 2 },
@@ -202,7 +226,7 @@ function GlassDropdown({ label, options, selected, onChange, onClear }: GlassDro
                                     transition: `all ${durations.fast}`,
                                 }}>
                                     {isSelected && (
-                                        <Icon icon="solar:check-read-bold" width={10} color="#fff" />
+                                        <Icon icon="mingcute:check-fill" width={10} color="#fff" />
                                     )}
                                 </Box>
                                 <Typography sx={{
@@ -217,7 +241,7 @@ function GlassDropdown({ label, options, selected, onChange, onClear }: GlassDro
                         );
                     })}
                 </Box>
-            )}
+            , document.body)}
         </Box>
     );
 }
