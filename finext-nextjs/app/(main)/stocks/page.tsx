@@ -1,9 +1,6 @@
 import type { Metadata } from 'next';
 import PageContent from './PageContent';
 
-// Route Segment Config - Static page có thể cache
-export const revalidate = 3600;
-export const dynamic = 'force-static';
 
 export const metadata: Metadata = {
   title: 'Cổ phiếu - Bộ lọc thông minh',

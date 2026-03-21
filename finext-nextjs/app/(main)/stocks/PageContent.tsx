@@ -1,16 +1,473 @@
-// Server Component - static content, không cần 'use client'
-import { Box, Typography } from '@mui/material';
-import { fontWeight } from 'theme/tokens';
+'use client';
+
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { Box, Typography, useTheme, alpha, TextField, InputAdornment, Pagination, Select, MenuItem, FormControl } from '@mui/material';
+import { Icon } from '@iconify/react';
+import { useRouter } from 'next/navigation';
+import { getResponsiveFontSize, fontWeight, borderRadius, getGlassCard, durations, easings } from 'theme/tokens';
+import { useSseCache } from 'hooks/useSseCache';
+import useScreenerStore from 'hooks/useScreenerStore';
+import type { RangeFilter } from 'hooks/useScreenerStore';
+import FilterBar from './components/FilterBar';
+import AdvancedFilterPanel from './components/AdvancedFilterPanel';
+import TableViewSelector from './components/TableViewSelector';
+import ResultTable from './components/ResultTable';
+import ColumnCustomizer from './components/ColumnCustomizer';
+import { FILTER_PRESETS, COLUMN_MAP } from './screenerConfig';
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface ScreenerMeta {
+    exchange: string[];
+    industry_name: string[];
+    marketcap_name: string[];
+    category_name: string[];
+}
+
+// ─── Client-side filter engine ───────────────────────────────────────────────
+
+function applyFilters(
+    data: Record<string, any>[],
+    selectFilters: Record<string, string[]>,
+    rangeFilters: Record<string, RangeFilter>,
+    advancedFilters: { field: string; compare: 'above' | 'below' }[],
+    searchQuery: string,
+): Record<string, any>[] {
+    let result = data;
+
+    if (searchQuery.trim()) {
+        const q = searchQuery.trim().toLowerCase();
+        result = result.filter(row =>
+            (row.ticker && String(row.ticker).toLowerCase().includes(q)) ||
+            (row.ticker_name && String(row.ticker_name).toLowerCase().includes(q))
+        );
+    }
+
+    for (const [field, values] of Object.entries(selectFilters)) {
+        if (values.length === 0) continue;
+        result = result.filter(row => values.includes(String(row[field] ?? '')));
+    }
+
+    for (const [field, range] of Object.entries(rangeFilters)) {
+        if (range.min != null) {
+            result = result.filter(row => {
+                const v = row[field];
+                return typeof v === 'number' && v >= (range.min as number);
+            });
+        }
+        if (range.max != null) {
+            result = result.filter(row => {
+                const v = row[field];
+                return typeof v === 'number' && v <= (range.max as number);
+            });
+        }
+    }
+
+    for (const af of advancedFilters) {
+        result = result.filter(row => {
+            const price = row.close;
+            const indicatorVal = row[af.field];
+            if (typeof price !== 'number' || typeof indicatorVal !== 'number') return false;
+            return af.compare === 'above' ? price > indicatorVal : price < indicatorVal;
+        });
+    }
+
+    return result;
+}
+
+function applySorting(data: Record<string, any>[], sortField: string, sortOrder: 'asc' | 'desc'): Record<string, any>[] {
+    // Empty sortField = default: sort A→Z by ticker, no column highlighted
+    const field = sortField || 'ticker';
+    const order = sortField ? sortOrder : 'asc';
+
+    return [...data].sort((a, b) => {
+        const aVal = a[field];
+        const bVal = b[field];
+        if (aVal == null && bVal == null) return 0;
+        if (aVal == null) return 1;
+        if (bVal == null) return -1;
+        if (typeof aVal === 'string' && typeof bVal === 'string') {
+            return order === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        }
+        const diff = (aVal as number) - (bVal as number);
+        return order === 'asc' ? diff : -diff;
+    });
+}
+
+// ─── Preset Chip ─────────────────────────────────────────────────────────────
+
+interface PresetChipProps {
+    preset: typeof FILTER_PRESETS[0];
+    active: boolean;
+    onClick: () => void;
+    isDark: boolean;
+    theme: any;
+}
+
+function PresetChip({ preset, active, onClick, isDark, theme }: PresetChipProps) {
+    return (
+        <Box
+            component="button"
+            onClick={onClick}
+            title={preset.description}
+            sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.75,
+                px: 1.25,
+                py: 0.5,
+                borderRadius: `${borderRadius.pill}px`,
+                border: `1px solid ${active
+                    ? alpha(theme.palette.primary.main, 0.5)
+                    : alpha(theme.palette.divider, 0.4)
+                }`,
+                bgcolor: active
+                    ? alpha(theme.palette.primary.main, 0.12)
+                    : 'transparent',
+                color: active ? theme.palette.primary.main : theme.palette.text.secondary,
+                cursor: 'pointer',
+                background: 'none',
+                fontSize: getResponsiveFontSize('xs'),
+                fontWeight: active ? fontWeight.bold : fontWeight.medium,
+                transition: `all ${durations.fast} ${easings.easeOut}`,
+                '&:hover': {
+                    bgcolor: alpha(theme.palette.primary.main, 0.08),
+                    borderColor: alpha(theme.palette.primary.main, 0.3),
+                },
+            }}
+        >
+            <Icon icon={preset.iconifyIcon} width={14} />
+            {preset.label}
+        </Box>
+    );
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export default function StocksContent() {
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
+    const store = useScreenerStore();
+    const [showAdvanced, setShowAdvanced] = useState(false);
+    const [showColumnCustomizer, setShowColumnCustomizer] = useState(false);
+
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(20);
+
+    // SSE data
+    const { data: rawData, isLoading: dataLoading, error: dataError } = useSseCache<Record<string, any>[]>({
+        keyword: 'screener_stock_data',
+        onData: (d) => console.log('[Screener] data received:', Array.isArray(d) ? `${d.length} records` : typeof d),
+        onError: (e) => console.error('[Screener] error:', e),
+        onOpen: () => console.log('[Screener] SSE connected'),
+    });
+
+    const { data: meta } = useSseCache<ScreenerMeta>({
+        keyword: 'screener_stock_meta',
+    });
+
+    // Client-side filtering & sorting
+    const filteredData = useMemo(() => {
+        if (!rawData || !Array.isArray(rawData)) return [];
+        const filtered = applyFilters(
+            rawData,
+            store.state.selectFilters,
+            store.state.rangeFilters,
+            store.state.advancedFilters,
+            store.state.searchQuery,
+        );
+        return applySorting(filtered, store.state.sortField, store.state.sortOrder);
+    }, [rawData, store.state.selectFilters, store.state.rangeFilters, store.state.advancedFilters, store.state.searchQuery, store.state.sortField, store.state.sortOrder]);
+
+    // Reset to page 1 when filters/sort change
+    useEffect(() => { setCurrentPage(1); }, [
+        store.state.selectFilters,
+        store.state.rangeFilters,
+        store.state.advancedFilters,
+        store.state.searchQuery,
+        store.state.sortField,
+        store.state.sortOrder,
+    ]);
+
+    // Paginated slice
+    const pagedData = useMemo(() => {
+        if (pageSize === 0) return filteredData; // 0 = show all
+        const start = (currentPage - 1) * pageSize;
+        return filteredData.slice(start, start + pageSize);
+    }, [filteredData, currentPage, pageSize]);
+
+    const totalPages = pageSize === 0 ? 1 : Math.ceil(filteredData.length / pageSize);
+
+    const handleApplyPreset = useCallback((presetId: string) => {
+        if (store.state.activePresetId === presetId) {
+            store.clearAllFilters();
+        } else {
+            const preset = FILTER_PRESETS.find(p => p.id === presetId);
+            if (preset) store.applyPreset(presetId, preset.filters);
+        }
+    }, [store]);
+
+    const totalCount = rawData?.length ?? 0;
+    const statusText = dataError
+        ? `Lỗi kết nối: ${dataError.message}`
+        : dataLoading
+            ? 'Đang tải dữ liệu...'
+            : `${filteredData.length.toLocaleString()} / ${totalCount.toLocaleString()} cổ phiếu`;
+
     return (
-        <Box sx={{ py: 4 }}>
-            <Typography variant="h4" sx={{ mb: 2, fontWeight: fontWeight.bold }}>
-                Cổ phiếu
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-                Hệ thống sàng lọc đa chiều kết hợp phân tích kỹ thuật và cơ bản, hỗ trợ tìm kiếm cơ hội đầu tư và định giá doanh nghiệp.
-            </Typography>
+        <Box sx={{ py: 3 }}>
+            {/* ─── Header ─── */}
+            <Box sx={{ mb: 2.5, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5 }}>
+                <Box>
+                    <Typography variant="h4" sx={{ fontWeight: fontWeight.bold, lineHeight: 1.2 }}>
+                        Bộ lọc cổ phiếu
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.5 }}>
+                        {dataLoading && !dataError && (
+                            <Icon icon="svg-spinners:ring-resize" width={14} color={theme.palette.text.secondary} />
+                        )}
+                        {dataError && (
+                            <Icon icon="solar:danger-triangle-bold" width={14} color={theme.palette.error.main} />
+                        )}
+                        <Typography
+                            variant="body2"
+                            color={dataError ? 'error' : 'text.secondary'}
+                            sx={{ fontSize: getResponsiveFontSize('xs') }}
+                        >
+                            {statusText}
+                        </Typography>
+                    </Box>
+                </Box>
+
+                {/* Search */}
+                <TextField
+                    size="small"
+                    placeholder="Tìm mã CK hoặc tên..."
+                    value={store.state.searchQuery}
+                    onChange={(e) => store.setSearchQuery(e.target.value)}
+                    InputProps={{
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <Icon icon="solar:magnifer-linear" width={16} color={theme.palette.text.secondary} />
+                            </InputAdornment>
+                        ),
+                        endAdornment: store.state.searchQuery ? (
+                            <InputAdornment position="end">
+                                <Box
+                                    component="button"
+                                    onClick={() => store.setSearchQuery('')}
+                                    sx={{ background: 'none', border: 'none', cursor: 'pointer', p: 0.25, display: 'flex', color: 'text.disabled' }}
+                                >
+                                    <Icon icon="solar:close-circle-bold" width={16} />
+                                </Box>
+                            </InputAdornment>
+                        ) : undefined,
+                    }}
+                    sx={{
+                        width: { xs: '100%', sm: 260 },
+                        '& .MuiOutlinedInput-root': {
+                            borderRadius: `${borderRadius.md}px`,
+                            fontSize: getResponsiveFontSize('sm'),
+                        },
+                    }}
+                />
+            </Box>
+
+            {/* ─── Preset Filter Templates ─── */}
+            <Box sx={{ mb: 2, display: 'flex', gap: 0.75, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', fontWeight: fontWeight.medium }}>
+                    Mẫu lọc:
+                </Typography>
+                {FILTER_PRESETS.map(preset => (
+                    <PresetChip
+                        key={preset.id}
+                        preset={preset}
+                        active={store.state.activePresetId === preset.id}
+                        onClick={() => handleApplyPreset(preset.id)}
+                        isDark={isDark}
+                        theme={theme}
+                    />
+                ))}
+            </Box>
+
+            {/* ─── Filter Box ─── */}
+            <Box sx={{ ...getGlassCard(isDark), borderRadius: `${borderRadius.lg}px`, p: 2, mb: 2 }}>
+                <FilterBar
+                    meta={meta ?? { exchange: [], industry_name: [], marketcap_name: [], category_name: [] }}
+                    selectFilters={store.state.selectFilters}
+                    onSetSelectFilter={store.setSelectFilter}
+                    onClearSelectFilter={store.clearSelectFilter}
+                    filterCount={store.activeFilterCount}
+                    onClearAll={store.clearAllFilters}
+                />
+
+                {/* Advanced toggle */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5 }}>
+                    <Box
+                        component="button"
+                        onClick={() => setShowAdvanced(v => !v)}
+                        sx={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            px: 1.25,
+                            py: 0.5,
+                            borderRadius: `${borderRadius.pill}px`,
+                            border: `1px solid ${showAdvanced ? alpha(theme.palette.warning.main, 0.4) : alpha(theme.palette.divider, 0.4)}`,
+                            bgcolor: showAdvanced ? alpha(theme.palette.warning.main, 0.08) : 'transparent',
+                            color: showAdvanced ? theme.palette.warning.main : theme.palette.text.secondary,
+                            cursor: 'pointer',
+                            background: showAdvanced ? alpha(theme.palette.warning.main, 0.08) : 'transparent',
+                            fontSize: getResponsiveFontSize('xs'),
+                            fontWeight: fontWeight.medium,
+                            transition: `all ${durations.fast} ${easings.easeOut}`,
+                        }}
+                    >
+                        <Icon
+                            icon={showAdvanced ? 'solar:filter-bold' : 'solar:filter-linear'}
+                            width={14}
+                        />
+                        {showAdvanced ? 'Ẩn lọc nâng cao' : 'Lọc nâng cao'}
+                        {store.state.advancedFilters.length > 0 && (
+                            <Box sx={{
+                                ml: 0.25,
+                                px: 0.75,
+                                py: 0.1,
+                                borderRadius: `${borderRadius.pill}px`,
+                                bgcolor: theme.palette.warning.main,
+                                color: '#fff',
+                                fontSize: getResponsiveFontSize('xxs'),
+                                fontWeight: fontWeight.bold,
+                                lineHeight: 1.6,
+                            }}>
+                                {store.state.advancedFilters.length}
+                            </Box>
+                        )}
+                    </Box>
+                </Box>
+
+                {showAdvanced && (
+                    <Box sx={{ mt: 2 }}>
+                        <AdvancedFilterPanel
+                            rangeFilters={store.state.rangeFilters}
+                            advancedFilters={store.state.advancedFilters}
+                            onSetRangeFilter={store.setRangeFilter}
+                            onClearRangeFilter={store.clearRangeFilter}
+                            onAddAdvancedFilter={store.addAdvancedFilter}
+                            onRemoveAdvancedFilter={store.removeAdvancedFilter}
+                            onClearAdvancedFilters={store.clearAdvancedFilters}
+                        />
+                    </Box>
+                )}
+            </Box>
+
+            {/* ─── Table View Selector ─── */}
+            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+                <TableViewSelector
+                    activeView={store.state.tableView}
+                    onViewChange={store.setTableView}
+                    onOpenColumnCustomizer={() => setShowColumnCustomizer(true)}
+                />
+            </Box>
+
+            {/* ─── Results Table ─── */}
+            <Box sx={{ ...getGlassCard(isDark), borderRadius: `${borderRadius.lg}px`, overflow: 'hidden', px: 1, py: 0.5 }}>
+                <ResultTable
+                    data={pagedData}
+                    columns={store.activeColumns}
+                    sortField={store.state.sortField}
+                    sortOrder={store.state.sortOrder}
+                    onToggleSort={store.toggleSort}
+                    onReorderColumns={store.reorderColumns}
+                    isLoading={dataLoading}
+                />
+
+                {/* Pagination footer */}
+                {!dataLoading && filteredData.length > 0 && (
+                    <Box sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: 1,
+                        px: 1,
+                        py: 1,
+                        borderTop: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+                        mt: 0.5,
+                    }}>
+                        {/* Left: page info + per-page selector */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', whiteSpace: 'nowrap' }}>
+                                {pageSize === 0
+                                    ? `Tất cả ${filteredData.length.toLocaleString()} cổ phiếu`
+                                    : `${Math.min((currentPage - 1) * pageSize + 1, filteredData.length).toLocaleString()}–${Math.min(currentPage * pageSize, filteredData.length).toLocaleString()} / ${filteredData.length.toLocaleString()}`
+                                }
+                            </Typography>
+
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', whiteSpace: 'nowrap' }}>
+                                    Hiển thị:
+                                </Typography>
+                                <FormControl size="small" variant="outlined">
+                                    <Select
+                                        value={pageSize}
+                                        onChange={(e) => {
+                                            setPageSize(Number(e.target.value));
+                                            setCurrentPage(1);
+                                        }}
+                                        sx={{
+                                            fontSize: getResponsiveFontSize('xs').lg,
+                                            height: 26,
+                                            '.MuiSelect-select': { py: 0.2, pl: 1.5, pr: 0, fontSize: getResponsiveFontSize('xs').lg },
+                                            '.MuiOutlinedInput-notchedOutline': {
+                                                borderColor: alpha(theme.palette.divider, 0.4),
+                                            },
+                                            borderRadius: `${borderRadius.sm}px`,
+                                        }}
+                                        MenuProps={{ PaperProps: { sx: { fontSize: getResponsiveFontSize('xs').lg } } }}
+                                    >
+                                        {[20, 50, 100, 0].map(n => (
+                                            <MenuItem key={n} value={n} sx={{ fontSize: getResponsiveFontSize('xs').lg }}>
+                                                {n === 0 ? 'Tất cả' : `${n}`}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            </Box>
+                        </Box>
+
+                        {/* Right: page buttons */}
+                        {totalPages > 1 && (
+                            <Pagination
+                                count={totalPages}
+                                page={currentPage}
+                                onChange={(_, val) => setCurrentPage(val)}
+                                color="primary"
+                                size="small"
+                                showFirstButton
+                                showLastButton
+                                sx={{
+                                    '& .MuiPaginationItem-root': {
+                                        borderRadius: `${borderRadius.sm}px`,
+                                        fontSize: getResponsiveFontSize('xs'),
+                                    },
+                                }}
+                            />
+                        )}
+                    </Box>
+                )}
+            </Box>
+
+            {showColumnCustomizer && (
+                <ColumnCustomizer
+                    open={showColumnCustomizer}
+                    onClose={() => setShowColumnCustomizer(false)}
+                    selectedColumns={store.state.customColumns}
+                    onSetColumns={store.setCustomColumns}
+                    onToggleColumn={store.toggleCustomColumn}
+                />
+            )}
         </Box>
     );
 }

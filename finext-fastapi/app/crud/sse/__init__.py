@@ -35,6 +35,8 @@ from app.crud.sse.news_article import news_article
 from app.crud.sse.news_report import news_report
 from app.crud.sse.news_report_categories import news_report_categories
 from app.crud.sse.report_article import report_article
+from app.crud.sse.screener_stock_data import screener_stock_data
+from app.crud.sse.screener_stock_meta import screener_stock_meta
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +80,9 @@ SSE_QUERY_REGISTRY: Dict[str, Any] = {
     "finratios_stock": finratios_stock,
     "finratios_industry": finratios_industry,
     "finstats_map": finstats_map,
+    # Screener queries
+    "screener_stock_data": screener_stock_data,
+    "screener_stock_meta": screener_stock_meta,
 }
 
 

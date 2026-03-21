@@ -390,8 +390,8 @@ const fontSize = {
   lg: { mobile: '1rem', tablet: '1.125rem', desktop: '1.25rem' },    // ~16-20px (Old h6/lg)
   md: { mobile: '0.875rem', tablet: '1rem', desktop: '1rem' },       // ~14-16px (Old base/md) - STANDARD BODY
   sm: { mobile: '0.8125rem', tablet: '0.875rem', desktop: '0.875rem' }, // ~13-14px (Old sm)
-  xs: { mobile: '0.75rem', tablet: '0.8125rem', desktop: '0.8125rem' }, // ~12-13px (Old xs)
-  xxs: { mobile: '0.6875rem', tablet: '0.75rem', desktop: '0.75rem' },  // ~11-12px (Old xxs)
+  xs: { mobile: '0.75rem', tablet: '0.775rem', desktop: '0.8125rem' }, // ~12-13px (Old xs)
+  xxs: { mobile: '0.6875rem', tablet: '0.725rem', desktop: '0.75rem' },  // ~11-12px (Old xxs)
   badge: { mobile: '0.4rem', tablet: '0.45rem', desktop: '0.45rem' }, // Custom badge size
 } as const;
 
