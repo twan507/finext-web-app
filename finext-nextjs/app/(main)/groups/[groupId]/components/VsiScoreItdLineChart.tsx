@@ -195,7 +195,7 @@ export default function VsiITDStockLineChart({
                 seriesName: 'Chỉ số thanh khoản',
                 opposite: true,
                 min: 0,
-                max: (max) => Math.max(100, max),
+                max: undefined,
                 labels: {
                     style: {
                         colors: theme.palette.text.secondary,

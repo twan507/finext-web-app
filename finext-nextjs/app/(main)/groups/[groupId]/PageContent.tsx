@@ -23,6 +23,11 @@ import type { RawTrendData, TrendChartData, TrendTimeRange } from '../../markets
 import { transformTrendData } from '../../markets/components/TinHieuSecion/MarketTrendChart';
 
 // Lazy load heavy chart components
+const VsiITDIndexLineChart = dynamic(
+    () => import('./components/VsiScoreItdLineChart'),
+    { ssr: false, loading: () => <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 2 }} /> }
+);
+
 const MarketIndexChart = dynamic(
     () => import('../../components/marketSection/MarketIndexChart').then(mod => ({ default: mod.default })),
     {
@@ -56,6 +61,22 @@ const emptyChartData: ChartData = {
 
 // Sessions for line charts
 const LINE_SESSIONS = 20;
+
+// ── ITD timeline helper ────────────────────────────────────────────────────────
+function build1DTradingTimeline(referenceTimestamp?: number): number[] {
+    const ref = referenceTimestamp != null
+        ? new Date(referenceTimestamp)
+        : new Date(Date.now() + 7 * 60 * 60 * 1000);
+    const y = ref.getUTCFullYear(), m = ref.getUTCMonth(), d = ref.getUTCDate();
+    const timeline: number[] = [];
+    const pushRange = (sh: number, sm: number, eh: number, em: number) => {
+        for (let ts = Date.UTC(y, m, d, sh, sm, 0, 0); ts <= Date.UTC(y, m, d, eh, em, 0, 0); ts += 60_000)
+            timeline.push(ts);
+    };
+    pushRange(9, 0, 11, 30);
+    pushRange(13, 0, 15, 0);
+    return timeline;
+}
 
 // Danh sách index để chọn trong dropdown
 const INDEX_LIST: { ticker: string; name: string }[] = [
@@ -441,6 +462,49 @@ export default function GroupDetailContent() {
         };
     }, [histLineTicker, histLineVNINDEX, todayAllData, ticker]);
 
+    // ========== CHART ITD: VSI + t0_score intraday ==========
+    const { vsiSeriesData, t0ScoreSeriesData, vsiIndexToTimestamp, vsiXAxisMax } = useMemo(() => {
+        const rawData = (itdAllData[ticker] || []) as any[];
+        const sorted = [...rawData].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        if (sorted.length === 0) {
+            return {
+                vsiSeriesData: [] as { x: number; y: number }[],
+                t0ScoreSeriesData: [] as { x: number; y: number }[],
+                vsiIndexToTimestamp: new Map<number, number>(),
+                vsiXAxisMax: undefined as number | undefined,
+            };
+        }
+
+        const seen = new Set<number>();
+        const points = sorted
+            .map((r) => ({
+                ts: Math.floor((new Date(r.date).getTime() + 7 * 60 * 60 * 1000) / 60_000) * 60_000,
+                vsi: parseFloat(((r.vsi ?? 0) * 100).toFixed(2)),
+                t0: parseFloat((r.t0_score ?? 0).toFixed(2)),
+            }))
+            .filter((p) => { if (seen.has(p.ts)) return false; seen.add(p.ts); return true; });
+
+        const latestTs = points.length > 0 ? points[points.length - 1].ts : undefined;
+        const fixedTimeline = build1DTradingTimeline(latestTs);
+        const tsToIdx = new Map<number, number>();
+        const idxToTs = new Map<number, number>();
+        fixedTimeline.forEach((ts, idx) => { tsToIdx.set(ts, idx); idxToTs.set(idx, ts); });
+        const maxIdx = idxToTs.size > 0 ? Math.max(...Array.from(idxToTs.keys())) : undefined;
+
+        const toSeries = (field: 'vsi' | 't0') =>
+            points
+                .map((p) => { const idx = tsToIdx.get(p.ts); return idx !== undefined ? { x: idx, y: p[field] } : null; })
+                .filter((p): p is { x: number; y: number } => p !== null);
+
+        return {
+            vsiSeriesData: toSeries('vsi'),
+            t0ScoreSeriesData: toSeries('t0'),
+            vsiIndexToTimestamp: idxToTs,
+            vsiXAxisMax: maxIdx,
+        };
+    }, [itdAllData, ticker]);
+
     // ========== CHART 3: Cấu trúc sóng (Trend) ==========
     const [trendChartData, setTrendChartData] = useState<TrendChartData>({
         wTrend: [], mTrend: [], qTrend: [], yTrend: [],
@@ -662,6 +726,24 @@ export default function GroupDetailContent() {
                         indexName={indexName}
                         todayData={todayAllData[ticker] || []}
                     />
+                </Box>
+            </Box>
+
+            {/* ========== ITD SECTION: VSI intraday chart ========== */}
+            <Box sx={{ mt: 4 }}>
+                <SectionTitle>Diễn biến trong phiên</SectionTitle>
+                <Box sx={{ mt: 2 }}>
+                    {vsiSeriesData.length > 0 ? (
+                        <VsiITDIndexLineChart
+                            seriesData={vsiSeriesData}
+                            t0ScoreSeriesData={t0ScoreSeriesData}
+                            indexToTimestamp={vsiIndexToTimestamp}
+                            xAxisMax={vsiXAxisMax}
+                            chartHeight="280px"
+                        />
+                    ) : (
+                        <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 2 }} />
+                    )}
                 </Box>
             </Box>
 

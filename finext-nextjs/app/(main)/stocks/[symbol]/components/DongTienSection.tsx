@@ -6,7 +6,7 @@ import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import dynamic from 'next/dynamic';
 import { ISseRequest } from 'services/core/types';
 import { sseClient, getFromCache } from 'services/sseClient';
-import VsiITDStockLineChart from './VsiITDStockLineChart';
+import VsiITDStockLineChart from '../../../groups/[groupId]/components/VsiScoreItdLineChart';
 import RankingLineChart from './RankingLineChart';
 
 const SucManhDongTien = dynamic(

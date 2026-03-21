@@ -799,6 +799,7 @@ export default function SectorDetailContent() {
                         ticker={ticker}
                         indexName={indexName}
                         todayAllData={todayAllData}
+                        itdAllData={itdAllData}
                         histLineTicker={histLineTicker}
                         histLineVNINDEX={histLineVNINDEX}
                         historyTrendData={historyTrendData}

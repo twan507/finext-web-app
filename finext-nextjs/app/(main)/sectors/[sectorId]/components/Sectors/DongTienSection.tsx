@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Box, Typography, Skeleton, useTheme, useMediaQuery } from '@mui/material';
 import { RawMarketData } from 'app/(main)/components/marketSection/MarketIndexChart';
@@ -13,12 +13,31 @@ const SucManhDongTien = dynamic(
     { ssr: false }
 );
 
+const VsiITDIndexLineChart = dynamic(
+    () => import('app/(main)/groups/[groupId]/components/VsiScoreItdLineChart'),
+    { ssr: false, loading: () => <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 2 }} /> }
+);
 
+function build1DTradingTimeline(referenceTimestamp?: number): number[] {
+    const ref = referenceTimestamp != null
+        ? new Date(referenceTimestamp)
+        : new Date(Date.now() + 7 * 60 * 60 * 1000);
+    const y = ref.getUTCFullYear(), m = ref.getUTCMonth(), d = ref.getUTCDate();
+    const timeline: number[] = [];
+    const pushRange = (sh: number, sm: number, eh: number, em: number) => {
+        for (let ts = Date.UTC(y, m, d, sh, sm, 0, 0); ts <= Date.UTC(y, m, d, eh, em, 0, 0); ts += 60_000)
+            timeline.push(ts);
+    };
+    pushRange(9, 0, 11, 30);
+    pushRange(13, 0, 15, 0);
+    return timeline;
+}
 
 interface DongTienSectionProps {
     ticker: string;
     indexName: string;
     todayAllData: Record<string, RawMarketData[]>;
+    itdAllData: Record<string, RawMarketData[]>;
     histLineTicker: RawMarketData[];
     histLineVNINDEX: RawMarketData[];
     historyTrendData: RawTrendData[];
@@ -75,6 +94,7 @@ export default function DongTienSection({
     ticker,
     indexName,
     todayAllData,
+    itdAllData,
     histLineTicker,
     histLineVNINDEX,
     historyTrendData,
@@ -89,6 +109,49 @@ export default function DongTienSection({
     useEffect(() => {
         setTrendTimeRange(isMobile ? '1M' : '3M');
     }, [isMobile]);
+
+    // Chart ITD: VSI + t0_score intraday
+    const { vsiSeriesData, t0ScoreSeriesData, vsiIndexToTimestamp, vsiXAxisMax } = useMemo(() => {
+        const rawData = (itdAllData[ticker] || []) as any[];
+        const sorted = [...rawData].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        if (sorted.length === 0) {
+            return {
+                vsiSeriesData: [] as { x: number; y: number }[],
+                t0ScoreSeriesData: [] as { x: number; y: number }[],
+                vsiIndexToTimestamp: new Map<number, number>(),
+                vsiXAxisMax: undefined as number | undefined,
+            };
+        }
+
+        const seen = new Set<number>();
+        const points = sorted
+            .map((r) => ({
+                ts: Math.floor((new Date(r.date).getTime() + 7 * 60 * 60 * 1000) / 60_000) * 60_000,
+                vsi: parseFloat(((r.vsi ?? 0) * 100).toFixed(2)),
+                t0: parseFloat((r.t0_score ?? 0).toFixed(2)),
+            }))
+            .filter((p) => { if (seen.has(p.ts)) return false; seen.add(p.ts); return true; });
+
+        const latestTs = points.length > 0 ? points[points.length - 1].ts : undefined;
+        const fixedTimeline = build1DTradingTimeline(latestTs);
+        const tsToIdx = new Map<number, number>();
+        const idxToTs = new Map<number, number>();
+        fixedTimeline.forEach((ts, idx) => { tsToIdx.set(ts, idx); idxToTs.set(idx, ts); });
+        const maxIdx = idxToTs.size > 0 ? Math.max(...Array.from(idxToTs.keys())) : undefined;
+
+        const toSeries = (field: 'vsi' | 't0') =>
+            points
+                .map((p) => { const idx = tsToIdx.get(p.ts); return idx !== undefined ? { x: idx, y: p[field] } : null; })
+                .filter((p): p is { x: number; y: number } => p !== null);
+
+        return {
+            vsiSeriesData: toSeries('vsi'),
+            t0ScoreSeriesData: toSeries('t0'),
+            vsiIndexToTimestamp: idxToTs,
+            vsiXAxisMax: maxIdx,
+        };
+    }, [itdAllData, ticker]);
 
     // Chart 1: Sức mạnh dòng tiền
     const dongTienDates = (() => {
@@ -172,6 +235,21 @@ export default function DongTienSection({
 
     return (
         <Box>
+            <SectionTitle>Diễn biến trong phiên</SectionTitle>
+            <Box sx={{ mt: 2, mb: 3 }}>
+                {vsiSeriesData.length > 0 ? (
+                    <VsiITDIndexLineChart
+                        seriesData={vsiSeriesData}
+                        t0ScoreSeriesData={t0ScoreSeriesData}
+                        indexToTimestamp={vsiIndexToTimestamp}
+                        xAxisMax={vsiXAxisMax}
+                        chartHeight="280px"
+                    />
+                ) : (
+                    <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 2 }} />
+                )}
+            </Box>
+
             <SectionTitle>Diễn biến dòng tiền</SectionTitle>
             <Box sx={{
                 display: 'flex',

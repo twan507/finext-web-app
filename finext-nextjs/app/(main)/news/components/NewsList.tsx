@@ -203,7 +203,7 @@ export default function NewsList({
             params.set('page', value.toString());
         }
 
-        router.push(`${pathname}?${params.toString()}`, { scroll: true });
+        router.push(`${pathname}?${params.toString()}`, { scroll: false });
     };
 
     return (
