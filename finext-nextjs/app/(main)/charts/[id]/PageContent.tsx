@@ -410,6 +410,7 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
             onResetDefaultIndicators={resetToDefault}
             onCloseIndicatorsPanel={() => setShowIndicatorsPanel(false)}
             onCloseWatchlistPanel={() => setShowWatchlistPanel(false)}
+            onTickerChange={handleTickerChange}
             onLoadMore={loadMoreHistory}
             hasMoreData={hasMoreHistory}
         />;

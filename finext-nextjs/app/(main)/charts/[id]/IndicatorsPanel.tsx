@@ -131,16 +131,16 @@ export default function IndicatorsPanel({
             }}
         >
             {/* Header */}
-            <Box sx={{ px: 1.5, py: 1, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                {/* <Typography
+            <Box sx={{ px: 1.5, py: 1, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography
                     sx={{
                         fontSize: getResponsiveFontSize('sm'),
-                        fontWeight: fontWeight.semibold,
+                        fontWeight: fontWeight.bold,
                         color: 'text.primary',
                     }}
                 >
-                    Chỉ báo kỹ thuật
-                </Typography> */}
+                    Các chỉ báo
+                </Typography>
                 {hasActiveIndicators && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
                         {onResetDefault && (

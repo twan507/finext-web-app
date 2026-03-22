@@ -48,6 +48,7 @@ interface CandlestickChartProps {
     onResetDefaultIndicators?: () => void;
     onCloseIndicatorsPanel?: () => void;
     onCloseWatchlistPanel?: () => void;
+    onTickerChange?: (ticker: string) => void;
     onLoadMore?: () => void;
     hasMoreData?: boolean;
 }
@@ -131,7 +132,7 @@ const INDUSTRY_TICKERS = new Set([
     'YTE'
 ]);
 
-export default function CandlestickChart({ data, ticker, timeframe, chartType, showIndicators, showVolume, showLegend, priceTagMode, showIndicatorsPanel, showWatchlistPanel, enabledIndicators, onToggleIndicator, onClearAllIndicators, onResetDefaultIndicators, onCloseIndicatorsPanel, onCloseWatchlistPanel, onLoadMore, hasMoreData }: CandlestickChartProps) {
+export default function CandlestickChart({ data, ticker, timeframe, chartType, showIndicators, showVolume, showLegend, priceTagMode, showIndicatorsPanel, showWatchlistPanel, enabledIndicators, onToggleIndicator, onClearAllIndicators, onResetDefaultIndicators, onCloseIndicatorsPanel, onCloseWatchlistPanel, onTickerChange, onLoadMore, hasMoreData }: CandlestickChartProps) {
     const theme = useTheme();
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
@@ -1178,10 +1179,10 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
                             },
                         }}
                     >
-                        <WatchlistPanel />
+                        <WatchlistPanel onTickerChange={onTickerChange} />
                     </Drawer>
                 ) : (
-                    showWatchlistPanel && <WatchlistPanel />
+                    showWatchlistPanel && <WatchlistPanel onTickerChange={onTickerChange} />
                 )}
             </Box>
         </Box>

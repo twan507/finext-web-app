@@ -636,7 +636,7 @@ export default function ChartToolbar({
                     </Tooltip>
 
                     {/* Watchlist Panel */}
-                    <Tooltip title={showWatchlistPanel ? "Ẩn Watchlist" : "Hiện Watchlist"}>
+                    <Tooltip title={showWatchlistPanel ? "Ẩn danh sách theo dõi" : "Hiện danh sách theo dõi"}>
                         <Button
                             size="small"
                             onClick={onToggleWatchlistPanel}
@@ -661,7 +661,7 @@ export default function ChartToolbar({
                             }}
                         >
                             <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                                Watchlist
+                                Theo dõi
                             </Box>
                         </Button>
                     </Tooltip>
