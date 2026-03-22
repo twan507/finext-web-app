@@ -115,6 +115,39 @@ export default function WatchlistContent() {
     );
     const maxOccupied = occupiedLevels.length > 0 ? Math.max(...occupiedLevels) : 0;
 
+    // Build masonry visual columns: each column index stacks WLs from L1[i], L2[i], L3[i]...
+    type ColumnItem =
+        | { type: 'wl'; wl: Watchlist }
+        | { type: 'add'; level: number };
+
+    const visualColumns = useMemo(() => {
+        // Find the max number of WLs across all levels (determines column count)
+        const maxCount = occupiedLevels.reduce((mx, lv) => {
+            const count = (groupedByLevel.get(lv) || []).length;
+            return Math.max(mx, count);
+        }, 0);
+
+        // +1 column for the "add WL" button per level
+        const colCount = maxCount + 1;
+        const columns: ColumnItem[][] = Array.from({ length: colCount }, () => []);
+
+        for (const level of occupiedLevels) {
+            const wls = groupedByLevel.get(level) || [];
+            wls.forEach((wl, idx) => {
+                columns[idx].push({ type: 'wl', wl });
+            });
+            // "+" button goes at position = wls.length (end of this level's items)
+            columns[wls.length].push({ type: 'add', level });
+        }
+
+        // "Add new level" button at bottom of first column
+        if (maxOccupied < 3) {
+            columns[0].push({ type: 'add', level: maxOccupied + 1 });
+        }
+
+        return columns.filter(col => col.length > 0);
+    }, [groupedByLevel, occupiedLevels, maxOccupied]);
+
     // ── handlers ──
     const handleDeleteClick = (id: string) => {
         setDeleteTargetId(id);
@@ -214,92 +247,75 @@ export default function WatchlistContent() {
                 Danh sách theo dõi
             </Typography>
 
-            {/* Rows for occupied levels */}
-            {occupiedLevels.map(level => {
-                const wls = groupedByLevel.get(level) || [];
-                return (
-                    <Box key={level} sx={{ mb: 1.5 }}>
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                gap: 1.5,
-                                overflowX: 'auto',
-                                alignItems: 'flex-start',
-                                '&::-webkit-scrollbar': { height: 5 },
-                                '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
-                                '&::-webkit-scrollbar-thumb': {
-                                    bgcolor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
-                                    borderRadius: 3,
-                                },
-                            }}
-                        >
-                            {wls.map(wl => (
+            {/* Masonry columns layout */}
+            <Box
+                sx={{
+                    display: 'flex',
+                    gap: 1.5,
+                    alignItems: 'flex-start',
+                    overflowX: 'auto',
+                    '&::-webkit-scrollbar': { height: 5 },
+                    '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
+                    '&::-webkit-scrollbar-thumb': {
+                        bgcolor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
+                        borderRadius: 3,
+                    },
+                }}
+            >
+                {visualColumns.map((colItems, colIdx) => (
+                    <Box
+                        key={colIdx}
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 1.5,
+                            minWidth: 240,
+                            maxWidth: 300,
+                            flexShrink: 0,
+                        }}
+                    >
+                        {colItems.map((item, itemIdx) =>
+                            item.type === 'wl' ? (
                                 <WatchlistColumn
-                                    key={wl.id || wl._id}
-                                    watchlist={wl}
+                                    key={item.wl.id || item.wl._id}
+                                    watchlist={item.wl}
                                     stockDataMap={stockDataMap}
                                     allTickers={allTickers}
-                                    onDelete={() => handleDeleteClick(wl.id || wl._id!)}
-                                    onRename={() => openRename(wl)}
+                                    onDelete={() => handleDeleteClick(item.wl.id || item.wl._id!)}
+                                    onRename={() => openRename(item.wl)}
                                     onAddStock={(ticker) =>
-                                        handleUpdateStocks(wl, [...wl.stock_symbols, ticker])
+                                        handleUpdateStocks(item.wl, [...item.wl.stock_symbols, ticker])
                                     }
                                     onRemoveStock={(ticker) =>
-                                        handleUpdateStocks(wl, wl.stock_symbols.filter(s => s !== ticker))
+                                        handleUpdateStocks(item.wl, item.wl.stock_symbols.filter(s => s !== ticker))
                                     }
                                 />
-                            ))}
-
-                            {/* Add another WL to same row */}
-                            <Box
-                                onClick={() => openCreate(level)}
-                                sx={{
-                                    minWidth: 100,
-                                    minHeight: 80,
-                                    flexShrink: 0,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    borderRadius: `${borderRadius.md}px`,
-                                    border: `1px dashed ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                                    cursor: 'pointer',
-                                    transition: 'all 0.15s',
-                                    '&:hover': {
-                                        bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-                                        borderColor: theme.palette.primary.main,
-                                    },
-                                }}
-                            >
-                                <AddIcon sx={{ fontSize: 22, color: 'text.disabled' }} />
-                            </Box>
-                        </Box>
+                            ) : (
+                                <Box
+                                    key={`add-${item.level}-${itemIdx}`}
+                                    onClick={() => openCreate(item.level)}
+                                    sx={{
+                                        minHeight: 80,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        borderRadius: `${borderRadius.md}px`,
+                                        border: `1px dashed ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.15s',
+                                        '&:hover': {
+                                            bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                                            borderColor: theme.palette.primary.main,
+                                        },
+                                    }}
+                                >
+                                    <AddIcon sx={{ fontSize: 22, color: 'text.disabled' }} />
+                                </Box>
+                            ),
+                        )}
                     </Box>
-                );
-            })}
-
-            {/* Add new row — same square button style, aligned left */}
-            {maxOccupied < 3 && (
-                <Box
-                    onClick={() => openCreate(maxOccupied + 1)}
-                    sx={{
-                        width: 100,
-                        height: 80,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: `${borderRadius.md}px`,
-                        border: `1px dashed ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                        cursor: 'pointer',
-                        transition: 'all 0.15s',
-                        '&:hover': {
-                            bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-                            borderColor: theme.palette.primary.main,
-                        },
-                    }}
-                >
-                    <AddIcon sx={{ fontSize: 22, color: 'text.disabled' }} />
-                </Box>
-            )}
+                ))}
+            </Box>
 
             <AddWatchlistDialog
                 open={dialogOpen}
