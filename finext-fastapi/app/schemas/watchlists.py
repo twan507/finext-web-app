@@ -9,22 +9,22 @@ from app.utils.types import PyObjectId
 
 class WatchlistBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100, description="Tên của danh sách theo dõi.")
-    level: int = Field(..., ge=1, description="Cấp độ ưu tiên của danh sách theo dõi (1, 2, 3...).")
+    coordinate: List[int] = Field(..., min_length=2, max_length=2, description="Toạ độ [cột, hàng] của watchlist trên lưới, gốc [0,0].")
     stock_symbols: List[str] = Field(default_factory=list, description="Danh sách các mã cổ phiếu trong danh sách theo dõi.")
 
 
 class WatchlistCreate(WatchlistBase):
     # user_id will be taken from the current authenticated user
-    model_config = ConfigDict(json_schema_extra={"example": {"name": "Cổ phiếu Ngân Hàng", "level": 1, "stock_symbols": ["VCB", "TCB", "MBB"]}})
+    model_config = ConfigDict(json_schema_extra={"example": {"name": "Cổ phiếu Ngân Hàng", "coordinate": [0, 0], "stock_symbols": ["VCB", "TCB", "MBB"]}})
 
 
 class WatchlistUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
-    level: Optional[int] = Field(None, ge=1)
+    coordinate: Optional[List[int]] = Field(None, min_length=2, max_length=2)
     stock_symbols: Optional[List[str]] = None  # Allows replacing the entire list or adding/removing (handled in CRUD)
 
     model_config = ConfigDict(
-        json_schema_extra={"example": {"name": "Cổ phiếu Ngân Hàng Ưu Tiên", "level": 2, "stock_symbols": ["VCB", "TCB", "ACB", "BID"]}}
+        json_schema_extra={"example": {"name": "Cổ phiếu Ngân Hàng Ưu Tiên", "coordinate": [1, 0], "stock_symbols": ["VCB", "TCB", "ACB", "BID"]}}
     )
 
 
@@ -42,7 +42,7 @@ class WatchlistInDB(WatchlistBase):
                 "id": "60d5ec49f7b4e6a0e7d5c2f1",
                 "user_id": "60d5ec49f7b4e6a0e7d5c2a1",
                 "name": "Cổ phiếu Ngân Hàng",
-                "level": 1,
+                "coordinate": [0, 0],
                 "stock_symbols": ["VCB", "TCB", "MBB"],
                 "created_at": "2024-05-28T10:00:00Z",
                 "updated_at": "2024-05-28T10:00:00Z",

@@ -36,7 +36,7 @@ interface Watchlist {
     id: string;
     _id?: string;
     name: string;
-    level: number;
+    coordinate: [number, number];
     stock_symbols: string[];
 }
 
@@ -62,6 +62,7 @@ export default function WatchlistColumn({
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const [autocompleteKey, setAutocompleteKey] = useState(0);
+    const [collapsed, setCollapsed] = useState(false);
 
     // Aggregate pct_change
     const aggregateChange = useMemo(() => {
@@ -116,8 +117,7 @@ export default function WatchlistColumn({
     return (
         <Box
             sx={{
-                minWidth: 240,
-                maxWidth: 300,
+                width: 260,
                 flexShrink: 0,
                 borderRadius: `${borderRadius.md}px`,
                 border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
@@ -135,11 +135,14 @@ export default function WatchlistColumn({
                     justifyContent: 'space-between',
                     px: 1.5,
                     py: 0.75,
-                    borderBottom: `1px solid ${divider}`,
+                    borderBottom: collapsed ? 'none' : `1px solid ${divider}`,
                     bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
                 }}
             >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
+                <Box
+                    onClick={() => setCollapsed(c => !c)}
+                    sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1, cursor: 'pointer', userSelect: 'none' }}
+                >
                     <Typography
                         sx={{
                             fontSize: getResponsiveFontSize('sm'),
@@ -165,7 +168,7 @@ export default function WatchlistColumn({
                         </Typography>
                     )}
                 </Box>
-                <Box sx={{ display: 'flex', flexShrink: 0 }}>
+                <Box sx={{ display: 'flex', flexShrink: 0, ml: 1 }}>
                     <IconButton size="small" onClick={onRename} sx={{ color: 'text.secondary', p: 0.5 }}>
                         <EditIcon sx={{ fontSize: 15 }} />
                     </IconButton>
@@ -176,7 +179,7 @@ export default function WatchlistColumn({
             </Box>
 
             {/* ── Stock rows ── */}
-            <Box sx={{ flex: 1, overflowY: 'auto' }}>
+            <Box sx={{ flex: 1, overflowY: 'auto', display: collapsed ? 'none' : 'block' }}>
                 {watchlist.stock_symbols.map((ticker, idx) => {
                     const data = stockDataMap.get(ticker);
                     const isLast = idx === watchlist.stock_symbols.length - 1;
@@ -195,10 +198,16 @@ export default function WatchlistColumn({
                                 }}
                             >
                                 <Typography
+                                    component="a"
+                                    href={`/stocks/${ticker}`}
+                                        target="_blank"
                                     sx={{
                                         fontSize: getResponsiveFontSize('xs'),
                                         fontWeight: fontWeight.semibold,
                                         color: 'text.primary',
+                                        textDecoration: 'none',
+                                        cursor: 'pointer',
+                                        '&:hover': { textDecoration: 'underline' },
                                     }}
                                 >
                                     {ticker}
@@ -235,10 +244,16 @@ export default function WatchlistColumn({
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                     <Typography
+                                        component="a"
+                                        href={`/stocks/${ticker}`}
+                                        target="_blank"
                                         sx={{
                                             fontSize: getResponsiveFontSize('xs'),
                                             fontWeight: fontWeight.bold,
                                             color: changeColor,
+                                            textDecoration: 'none',
+                                            cursor: 'pointer',
+                                            '&:hover': { textDecoration: 'underline' },
                                         }}
                                     >
                                         {ticker}
@@ -344,7 +359,7 @@ export default function WatchlistColumn({
             </Box>
 
             {/* ── Add stock autocomplete ── */}
-            <Box sx={{ px: 1, py: 0.75, borderTop: `1px solid ${divider}` }}>
+            <Box sx={{ px: 1, py: 0.75, borderTop: `1px solid ${divider}`, display: collapsed ? 'none' : 'block' }}>
                 <Autocomplete
                     key={autocompleteKey}
                     options={tickerOptions}

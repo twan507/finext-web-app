@@ -28,7 +28,7 @@ async def create_watchlist(db: AsyncIOMotorDatabase, user_id: PyObjectId, watchl
     watchlist_doc_to_insert = {
         "user_id": ObjectId(user_id),
         "name": watchlist_data.name,
-        "level": watchlist_data.level,
+        "coordinate": watchlist_data.coordinate,
         "stock_symbols": list(set(watchlist_data.stock_symbols)),
         "created_at": now,
         "updated_at": now,

@@ -20,7 +20,7 @@ interface Watchlist {
     id: string;
     _id?: string;
     name: string;
-    level: number;
+    coordinate: [number, number];
     stock_symbols: string[];
 }
 
@@ -33,7 +33,7 @@ interface AddWatchlistDialogProps {
     open: boolean;
     onClose: () => void;
     onSaved: () => void;
-    defaultLevel: number;
+    defaultCoordinate: [number, number];
     editingWatchlist: Watchlist | null;
     industries: IndustryInfo[];
 }
@@ -42,7 +42,7 @@ export default function AddWatchlistDialog({
     open,
     onClose,
     onSaved,
-    defaultLevel,
+    defaultCoordinate,
     editingWatchlist,
     industries,
 }: AddWatchlistDialogProps) {
@@ -93,13 +93,14 @@ export default function AddWatchlistDialog({
                 await apiClient({
                     url: '/api/v1/watchlists',
                     method: 'POST',
-                    body: { name: trimmed, level: defaultLevel, stock_symbols: symbols },
+                    body: { name: trimmed, coordinate: defaultCoordinate, stock_symbols: symbols },
                     requireAuth: true,
                 });
             }
             onSaved();
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : 'Có lỗi xảy ra';
+            const apiErr = err as { message?: string };
+            const message = apiErr?.message || (err instanceof Error ? err.message : 'Có lỗi xảy ra');
             setError(message);
         } finally {
             setSaving(false);

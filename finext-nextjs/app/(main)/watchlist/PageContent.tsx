@@ -30,7 +30,7 @@ interface Watchlist {
     id: string;
     _id?: string;
     name: string;
-    level: number;
+    coordinate: [number, number]; // [col, row]
     stock_symbols: string[];
 }
 
@@ -41,7 +41,7 @@ export default function WatchlistContent() {
     const [watchlists, setWatchlists] = useState<Watchlist[]>([]);
     const [loading, setLoading] = useState(true);
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [dialogLevel, setDialogLevel] = useState(1);
+    const [dialogCoordinate, setDialogCoordinate] = useState<[number, number]>([0, 0]);
     const [editingWatchlist, setEditingWatchlist] = useState<Watchlist | null>(null);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -99,54 +99,42 @@ export default function WatchlistContent() {
 
     useEffect(() => { fetchWatchlists(); }, [fetchWatchlists]);
 
-    // Group by level
-    const groupedByLevel = useMemo(() => {
-        const groups = new Map<number, Watchlist[]>();
-        watchlists.forEach(wl => {
-            if (!groups.has(wl.level)) groups.set(wl.level, []);
-            groups.get(wl.level)!.push(wl);
-        });
-        return groups;
-    }, [watchlists]);
-
-    const occupiedLevels = useMemo(
-        () => Array.from(groupedByLevel.keys()).sort((a, b) => a - b),
-        [groupedByLevel],
-    );
-    const maxOccupied = occupiedLevels.length > 0 ? Math.max(...occupiedLevels) : 0;
-
-    // Build masonry visual columns: each column index stacks WLs from L1[i], L2[i], L3[i]...
+    // Build visual columns from coordinates
     type ColumnItem =
         | { type: 'wl'; wl: Watchlist }
-        | { type: 'add'; level: number };
+        | { type: 'add'; coordinate: [number, number] };
 
     const visualColumns = useMemo(() => {
-        // Find the max number of WLs across all levels (determines column count)
-        const maxCount = occupiedLevels.reduce((mx, lv) => {
-            const count = (groupedByLevel.get(lv) || []).length;
-            return Math.max(mx, count);
-        }, 0);
+        // Group WLs by col index, sorted by row within each col
+        const colMap = new Map<number, Watchlist[]>();
+        watchlists.forEach(wl => {
+            const [col] = wl.coordinate;
+            if (!colMap.has(col)) colMap.set(col, []);
+            colMap.get(col)!.push(wl);
+        });
+        // Sort each column's WLs by row
+        colMap.forEach(wls => wls.sort((a, b) => a.coordinate[1] - b.coordinate[1]));
 
-        // +1 column for the "add WL" button per level
-        const colCount = maxCount + 1;
+        const maxCol = colMap.size > 0 ? Math.max(...Array.from(colMap.keys())) : -1;
+        // Include one extra column for the "add new column" button
+        const colCount = maxCol + 2;
         const columns: ColumnItem[][] = Array.from({ length: colCount }, () => []);
 
-        for (const level of occupiedLevels) {
-            const wls = groupedByLevel.get(level) || [];
-            wls.forEach((wl, idx) => {
-                columns[idx].push({ type: 'wl', wl });
+        for (let col = 0; col <= maxCol; col++) {
+            const wls = colMap.get(col) || [];
+            wls.forEach(wl => {
+                columns[col].push({ type: 'wl', wl });
             });
-            // "+" button goes at position = wls.length (end of this level's items)
-            columns[wls.length].push({ type: 'add', level });
+            // "+" button at bottom of each existing column — next row index
+            const nextRow = wls.length > 0 ? Math.max(...wls.map(w => w.coordinate[1])) + 1 : 0;
+            columns[col].push({ type: 'add', coordinate: [col, nextRow] });
         }
 
-        // "Add new level" button at bottom of first column
-        if (maxOccupied < 3) {
-            columns[0].push({ type: 'add', level: maxOccupied + 1 });
-        }
+        // Last column is just an "add" button to start a new column
+        columns[maxCol + 1].push({ type: 'add', coordinate: [maxCol + 1, 0] });
 
         return columns.filter(col => col.length > 0);
-    }, [groupedByLevel, occupiedLevels, maxOccupied]);
+    }, [watchlists]);
 
     // ── handlers ──
     const handleDeleteClick = (id: string) => {
@@ -165,15 +153,15 @@ export default function WatchlistContent() {
         setDeleteTargetId(null);
     };
 
-    const openCreate = (level: number) => {
+    const openCreate = (coordinate: [number, number]) => {
         setEditingWatchlist(null);
-        setDialogLevel(level);
+        setDialogCoordinate(coordinate);
         setDialogOpen(true);
     };
 
     const openRename = (wl: Watchlist) => {
         setEditingWatchlist(wl);
-        setDialogLevel(wl.level);
+        setDialogCoordinate(wl.coordinate);
         setDialogOpen(true);
     };
 
@@ -218,14 +206,14 @@ export default function WatchlistContent() {
     if (watchlists.length === 0) {
         return (
             <Box sx={{ py: 2 }}>
-                <Typography variant="h5" sx={{ fontWeight: fontWeight.bold, mb: 4 }}>
+                <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1'), lineHeight: 1.2, fontWeight: fontWeight.bold, mb: 4 }}>
                     Danh sách theo dõi
                 </Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 8, gap: 2 }}>
                     <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('md') }}>
                         Bạn chưa có watchlist nào
                     </Typography>
-                    <Button variant="contained" startIcon={<AddIcon />} onClick={() => openCreate(1)} size="large">
+                    <Button variant="contained" startIcon={<AddIcon />} onClick={() => openCreate([0, 0])} size="large">
                         Thêm Watchlist
                     </Button>
                 </Box>
@@ -233,7 +221,7 @@ export default function WatchlistContent() {
                     open={dialogOpen}
                     onClose={() => { setDialogOpen(false); setEditingWatchlist(null); }}
                     onSaved={handleSaved}
-                    defaultLevel={dialogLevel}
+                    defaultCoordinate={dialogCoordinate}
                     editingWatchlist={editingWatchlist}
                     industries={industries}
                 />
@@ -243,7 +231,7 @@ export default function WatchlistContent() {
 
     return (
         <Box sx={{ py: 2 }}>
-            <Typography variant="h5" sx={{ fontWeight: fontWeight.bold, mb: 3 }}>
+            <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1'), lineHeight: 1.2, fontWeight: fontWeight.bold, mb: 3 }}>
                 Danh sách theo dõi
             </Typography>
 
@@ -269,8 +257,7 @@ export default function WatchlistContent() {
                             display: 'flex',
                             flexDirection: 'column',
                             gap: 1.5,
-                            minWidth: 240,
-                            maxWidth: 300,
+                            width: 260,
                             flexShrink: 0,
                         }}
                     >
@@ -292,8 +279,8 @@ export default function WatchlistContent() {
                                 />
                             ) : (
                                 <Box
-                                    key={`add-${item.level}-${itemIdx}`}
-                                    onClick={() => openCreate(item.level)}
+                                    key={`add-${item.coordinate[0]}-${item.coordinate[1]}`}
+                                    onClick={() => openCreate(item.coordinate)}
                                     sx={{
                                         minHeight: 80,
                                         display: 'flex',
@@ -321,7 +308,7 @@ export default function WatchlistContent() {
                 open={dialogOpen}
                 onClose={() => { setDialogOpen(false); setEditingWatchlist(null); }}
                 onSaved={handleSaved}
-                defaultLevel={dialogLevel}
+                defaultCoordinate={dialogCoordinate}
                 editingWatchlist={editingWatchlist}
                 industries={industries}
             />
