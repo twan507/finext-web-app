@@ -863,6 +863,7 @@ function IndicatorSection({
                                 zIndex: 9999,
                                 maxHeight: 350,
                                 overflowY: 'auto',
+                                overscrollBehavior: 'contain',
                                 borderRadius: `${borderRadius.lg}px`,
                                 ...getGlassCard(isDark),
                                 boxShadow: isDark

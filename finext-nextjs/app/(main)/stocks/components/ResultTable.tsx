@@ -1,7 +1,8 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { Box, Typography, useTheme, alpha, Skeleton } from '@mui/material';
+import { Box, Typography, useTheme, alpha, Skeleton, Tooltip } from '@mui/material';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { Icon } from '@iconify/react';
 import { useRouter } from 'next/navigation';
 import { getResponsiveFontSize, fontWeight, borderRadius, durations, easings } from 'theme/tokens';
@@ -212,9 +213,7 @@ export default function ResultTable({ data, columns, sortField, sortOrder, onTog
                         <Box
                             key={row.ticker ?? rowIdx}
                             component="tr"
-                            onClick={() => row.ticker && router.push(`/stocks/${row.ticker.toLowerCase()}`)}
                             sx={{
-                                cursor: 'pointer',
                                 transition: 'background 0.1s ease',
                                 '&:hover': {
                                     bgcolor: isDark
@@ -256,7 +255,69 @@ export default function ResultTable({ data, columns, sortField, sortOrder, onTog
                                             } : {}),
                                         }}
                                     >
-                                        {formatCellValue(val, col.format)}
+                                        {isTicker ? (
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                                {/* Ticker text — click opens detail page */}
+                                                <Box
+                                                    component="span"
+                                                    onClick={() => window.open(`/stocks/${String(val).toLowerCase()}`, '_blank')}
+                                                    sx={{
+                                                        cursor: 'pointer',
+                                                        '&:hover': { color: theme.palette.primary.main },
+                                                        transition: `color ${durations.fast}`,
+                                                    }}
+                                                >
+                                                    {formatCellValue(val, col.format)}
+                                                </Box>
+
+                                                {/* Chart icon button — opens chart page */}
+                                                <Tooltip
+                                                    title="Mở chart"
+                                                    placement="right"
+                                                    arrow={false}
+                                                    componentsProps={{
+                                                        tooltip: {
+                                                            sx: {
+                                                                bgcolor: isDark ? alpha('#1e1e1e', 0.92) : alpha('#fff', 0.92),
+                                                                color: theme.palette.text.primary,
+                                                                border: 'none',
+                                                                borderRadius: `${borderRadius.sm}px`,
+                                                                fontSize: getResponsiveFontSize('xs'),
+                                                                fontWeight: fontWeight.medium,
+                                                                backdropFilter: 'blur(8px)',
+                                                                boxShadow: isDark
+                                                                    ? '0 4px 16px rgba(0,0,0,0.5)'
+                                                                    : '0 4px 12px rgba(0,0,0,0.15)',
+                                                                px: 1,
+                                                                py: 0.5,
+                                                            },
+                                                        },
+                                                    }}
+                                                >
+                                                    <Box
+                                                        component="span"
+                                                        onClick={(e: React.MouseEvent) => {
+                                                            e.stopPropagation();
+                                                            window.open(`/charts/${String(val)}`, '_blank');
+                                                        }}
+                                                        sx={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            cursor: 'pointer',
+                                                            color: alpha(theme.palette.text.secondary, 0.4),
+                                                            flexShrink: 0,
+                                                            transition: `color ${durations.fast}`,
+                                                            '&:hover': {
+                                                                color: theme.palette.primary.main,
+                                                            },
+                                                        }}
+                                                    >
+                                                        <TrendingUpIcon sx={{ fontSize: 15 }} />
+                                                    </Box>
+                                                </Tooltip>
+                                            </Box>
+                                        ) : formatCellValue(val, col.format)}
                                     </Box>
                                 );
                             })}

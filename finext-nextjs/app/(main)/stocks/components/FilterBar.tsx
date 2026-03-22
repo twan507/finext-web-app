@@ -172,6 +172,7 @@ function GlassDropdown({ label, options, selected, onChange, onClear }: GlassDro
                         zIndex: 9999,
                         maxHeight: 280,
                         overflowY: 'auto',
+                        overscrollBehavior: 'contain',
                         borderRadius: `${borderRadius.lg}px`,
                         ...getGlassCard(isDark),
                         boxShadow: isDark

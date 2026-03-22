@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { Box, Typography, useTheme, alpha, TextField, InputAdornment, Pagination, Select, MenuItem, FormControl } from '@mui/material';
+import { createPortal } from 'react-dom';
+import { Box, Typography, useTheme, alpha, TextField, InputAdornment, Pagination } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { useRouter } from 'next/navigation';
 import { getResponsiveFontSize, fontWeight, borderRadius, getGlassCard, durations, easings } from 'theme/tokens';
@@ -151,6 +152,140 @@ function PresetChip({ preset, active, onClick, isDark, theme }: PresetChipProps)
         >
             <Icon icon={preset.iconifyIcon} width={14} />
             {preset.label}
+        </Box>
+    );
+}
+
+// ─── Page-size Glass Dropdown (no portal) ────────────────────────────────────
+
+const PAGE_SIZE_OPTIONS = [
+    { value: 20, label: '20 hàng' },
+    { value: 50, label: '50 hàng' },
+    { value: 100, label: '100 hàng' },
+    { value: 0, label: 'Tất cả' },
+];
+
+function PageSizeDropdown({ pageSize, onChangePageSize }: { pageSize: number; onChangePageSize: (n: number) => void }) {
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
+    const [open, setOpen] = useState(false);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!open) return;
+        function handleClick(e: MouseEvent) {
+            if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [open]);
+
+    const currentLabel = PAGE_SIZE_OPTIONS.find(o => o.value === pageSize)?.label ?? `${pageSize} hàng`;
+    const fontSize = getResponsiveFontSize('xs');
+
+    return (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography sx={{ fontSize, color: 'text.secondary', whiteSpace: 'nowrap' }}>
+                Hiển thị:
+            </Typography>
+            <Box ref={wrapperRef} sx={{ position: 'relative' }}>
+                <Box
+                    component="button"
+                    onClick={() => setOpen(v => !v)}
+                    sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 0.75,
+                        px: 1,
+                        height: 26,
+                        borderRadius: `${borderRadius.sm}px`,
+                        border: `1px solid ${alpha(theme.palette.divider, 0.4)}`,
+                        bgcolor: isDark ? alpha('#fff', 0.04) : alpha('#000', 0.03),
+                        color: theme.palette.text.secondary,
+                        cursor: 'pointer',
+                        transition: `all ${durations.fast} ${easings.easeOut}`,
+                        '&:hover': {
+                            borderColor: alpha(theme.palette.primary.main, 0.35),
+                            bgcolor: alpha(theme.palette.primary.main, 0.06),
+                        },
+                    }}
+                >
+                    <Typography sx={{ fontSize, fontWeight: fontWeight.medium, color: 'inherit', whiteSpace: 'nowrap', lineHeight: 1.4 }}>
+                        {currentLabel}
+                    </Typography>
+                    <Icon
+                        icon="solar:alt-arrow-down-bold"
+                        width={11}
+                        style={{
+                            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+                            transition: `transform ${durations.fast} ${easings.easeOut}`,
+                        }}
+                    />
+                </Box>
+
+                {open && (
+                    <Box sx={{
+                        position: 'absolute',
+                        bottom: '100%',
+                        left: 0,
+                        mb: 0.75,
+                        minWidth: '100%',
+                        zIndex: 9999,
+                        borderRadius: `${borderRadius.md}px`,
+                        ...getGlassCard(isDark),
+                        background: isDark ? 'rgba(30, 30, 30, 0.5)' : 'rgba(255, 255, 255, 0.5)',
+                        boxShadow: isDark
+                            ? '0 8px 32px rgba(0,0,0,0.5)'
+                            : '0 8px 24px rgba(0,0,0,0.12)',
+                        overflow: 'hidden',
+                        animation: `pageSizeFadeIn ${durations.fast} ${easings.easeOut}`,
+                        '@keyframes pageSizeFadeIn': {
+                            from: { opacity: 0, transform: 'translateY(4px)' },
+                            to: { opacity: 1, transform: 'translateY(0)' },
+                        },
+                    }}>
+                        {PAGE_SIZE_OPTIONS.map((opt, idx) => {
+                            const isActive = pageSize === opt.value;
+                            return (
+                                <Box
+                                    key={opt.value}
+                                    component="button"
+                                    onClick={() => { onChangePageSize(opt.value); setOpen(false); }}
+                                    sx={{
+                                        display: 'block',
+                                        width: '100%',
+                                        textAlign: 'left',
+                                        px: 1.5,
+                                        py: 0.7,
+                                        background: isActive
+                                            ? isDark ? alpha(theme.palette.primary.main, 0.15) : alpha(theme.palette.primary.main, 0.08)
+                                            : 'transparent',
+                                        border: 'none',
+                                        borderBottom: idx < PAGE_SIZE_OPTIONS.length - 1 ? `1px solid ${alpha(theme.palette.divider, 0.12)}` : 'none',
+                                        cursor: 'pointer',
+                                        transition: `background ${durations.fastest}`,
+                                        '&:hover': {
+                                            background: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.04),
+                                        },
+                                    }}
+                                >
+                                    <Typography sx={{
+                                        fontSize,
+                                        fontWeight: isActive ? fontWeight.semibold : fontWeight.medium,
+                                        color: isActive ? theme.palette.primary.main : theme.palette.text.primary,
+                                        lineHeight: 1.4,
+                                        whiteSpace: 'nowrap',
+                                    }}>
+                                        {opt.label}
+                                    </Typography>
+                                </Box>
+                            );
+                        })}
+                    </Box>
+                )}
+            </Box>
         </Box>
     );
 }
@@ -442,36 +577,10 @@ export default function StocksContent() {
                                 }
                             </Typography>
 
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', whiteSpace: 'nowrap' }}>
-                                    Hiển thị:
-                                </Typography>
-                                <FormControl size="small" variant="outlined">
-                                    <Select
-                                        value={pageSize}
-                                        onChange={(e) => {
-                                            setPageSize(Number(e.target.value));
-                                            setCurrentPage(1);
-                                        }}
-                                        sx={{
-                                            fontSize: getResponsiveFontSize('xs'),
-                                            height: 26,
-                                            '.MuiSelect-select': { py: 0.2, pl: 1.5, pr: 0, fontSize: getResponsiveFontSize('xs') },
-                                            '.MuiOutlinedInput-notchedOutline': {
-                                                borderColor: alpha(theme.palette.divider, 0.4),
-                                            },
-                                            borderRadius: `${borderRadius.sm}px`,
-                                        }}
-                                        MenuProps={{ PaperProps: { sx: { fontSize: getResponsiveFontSize('xs') } } }}
-                                    >
-                                        {[20, 50, 100, 0].map(n => (
-                                            <MenuItem key={n} value={n} sx={{ fontSize: getResponsiveFontSize('xs') }}>
-                                                {n === 0 ? 'Tất cả' : `${n} hàng`}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            </Box>
+                            <PageSizeDropdown
+                                pageSize={pageSize}
+                                onChangePageSize={(n) => { setPageSize(n); setCurrentPage(1); }}
+                            />
                         </Box>
 
                         {/* Right: page buttons */}
@@ -488,6 +597,10 @@ export default function StocksContent() {
                                     '& .MuiPaginationItem-root': {
                                         borderRadius: `${borderRadius.sm}px`,
                                         fontSize: getResponsiveFontSize('xs'),
+                                        color: theme.palette.text.secondary,
+                                    },
+                                    '& .MuiPaginationItem-root.Mui-selected': {
+                                        color: '#fff',
                                     },
                                 }}
                             />
