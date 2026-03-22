@@ -23,7 +23,7 @@ router = APIRouter()  # Prefix và tags sẽ được thêm ở main.py
 
 
 @router.post(
-    "/",
+    "",
     response_model=StandardApiResponse[WatchlistPublic],
     status_code=status.HTTP_201_CREATED,
     summary="[User] Tạo một danh sách theo dõi mới",

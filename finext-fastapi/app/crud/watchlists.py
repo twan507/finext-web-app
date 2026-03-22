@@ -28,6 +28,7 @@ async def create_watchlist(db: AsyncIOMotorDatabase, user_id: PyObjectId, watchl
     watchlist_doc_to_insert = {
         "user_id": ObjectId(user_id),
         "name": watchlist_data.name,
+        "level": watchlist_data.level,
         "stock_symbols": list(set(watchlist_data.stock_symbols)),
         "created_at": now,
         "updated_at": now,
@@ -62,7 +63,7 @@ async def get_watchlist_by_id(db: AsyncIOMotorDatabase, watchlist_id: PyObjectId
 async def get_watchlists_by_user_id(db: AsyncIOMotorDatabase, user_id: PyObjectId, skip: int = 0, limit: int = 100) -> List[WatchlistInDB]:
     if not ObjectId.is_valid(user_id):
         return []
-    watchlists_cursor = db[WATCHLIST_COLLECTION].find({"user_id": ObjectId(user_id)}).sort("created_at", -1).skip(skip).limit(limit)
+    watchlists_cursor = db[WATCHLIST_COLLECTION].find({"user_id": ObjectId(user_id)}).sort("created_at", 1).skip(skip).limit(limit)
     watchlists_docs = await watchlists_cursor.to_list(length=limit)
 
     results: List[WatchlistInDB] = []
