@@ -63,6 +63,42 @@ export const getVsiColor = (vsi: number, theme: Theme): string => {
 };
 
 /**
+ * Get color based on rank percentile (0–1), split into 5 equal bands of 20%
+ * 0–20%: floor | 20–40%: down | 40–60%: ref | 60–80%: up | 80–100%: ceil
+ */
+export const getRankColor = (value: number, theme: Theme): string => {
+    const pct = value * 100;
+    if (pct >= 80) return theme.palette.trend.ceil;
+    if (pct >= 60) return theme.palette.trend.up;
+    if (pct >= 40) return theme.palette.trend.ref;
+    if (pct >= 20) return theme.palette.trend.down;
+    return theme.palette.trend.floor;
+};
+
+/**
+ * Get color based on zone value (AAA/AA/A/B/C)
+ */
+const ZONE_COLORS_DARK: Record<string, string> = {
+    AAA: '#22c55e',
+    AA:  '#86efac',
+    A:   '#facc15',
+    B:   '#f97316',
+    C:   '#ef4444',
+};
+const ZONE_COLORS_LIGHT: Record<string, string> = {
+    AAA: '#16a34a',
+    AA:  '#0d9488',
+    A:   '#b45309',
+    B:   '#c2410c',
+    C:   '#b91c1c',
+};
+
+export const getZoneColor = (zone: string, isDark: boolean): string | undefined => {
+    const map = isDark ? ZONE_COLORS_DARK : ZONE_COLORS_LIGHT;
+    return map[zone] ?? undefined;
+};
+
+/**
  * Get simple trend color for a numeric value (up/down/ref)
  * Use for index pct_change, biến động %, or any value where
  * only positive/negative/neutral matters (no ceil/floor logic)

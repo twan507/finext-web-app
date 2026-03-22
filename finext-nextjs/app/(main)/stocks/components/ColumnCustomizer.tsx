@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Box, Typography, Checkbox, Dialog, DialogTitle, DialogContent, DialogActions, Button, useTheme, alpha, Divider } from '@mui/material';
 import { getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
 import { ALL_COLUMNS, COLUMN_GROUPS, TABLE_VIEWS } from '../screenerConfig';
@@ -14,18 +15,35 @@ interface ColumnCustomizerProps {
 
 export default function ColumnCustomizer({ open, onClose, selectedColumns, onSetColumns, onToggleColumn }: ColumnCustomizerProps) {
     const theme = useTheme();
+    const [localCols, setLocalCols] = useState<string[]>(selectedColumns);
+
+    // Sync local state when prop changes (e.g. external toggle)
+    useEffect(() => {
+        setLocalCols(selectedColumns);
+    }, [selectedColumns]);
+
+    const handleToggle = (field: string) => {
+        const next = localCols.includes(field)
+            ? localCols.filter(f => f !== field)
+            : [...localCols, field];
+        setLocalCols(next);
+        onToggleColumn(field);
+    };
 
     const handleSelectAll = (groupKey: string) => {
         const groupFields = ALL_COLUMNS.filter(c => c.group === groupKey).map(c => c.field);
-        const allSelected = groupFields.every(f => selectedColumns.includes(f));
-        if (allSelected) {
-            // Deselect all group fields (but keep ticker always)
-            onSetColumns(selectedColumns.filter(f => !groupFields.includes(f) || f === 'ticker'));
-        } else {
-            // Select all group fields
-            const newCols = new Set([...selectedColumns, ...groupFields]);
-            onSetColumns(Array.from(newCols));
-        }
+        const allSelected = groupFields.every(f => localCols.includes(f));
+        const next = allSelected
+            ? localCols.filter(f => !groupFields.includes(f) || f === 'ticker')
+            : Array.from(new Set([...localCols, ...groupFields]));
+        setLocalCols(next);
+        onSetColumns(next);
+    };
+
+    const handleReset = () => {
+        const defaults = [...TABLE_VIEWS['overview'].fields];
+        setLocalCols(defaults);
+        onSetColumns(defaults);
     };
 
     return (
@@ -34,16 +52,18 @@ export default function ColumnCustomizer({ open, onClose, selectedColumns, onSet
             onClose={onClose}
             maxWidth="sm"
             fullWidth
-            PaperProps={{
-                sx: {
-                    borderRadius: `${borderRadius.lg}px`,
-                    maxHeight: '80vh',
+            slotProps={{
+                paper: {
+                    sx: {
+                        borderRadius: `${borderRadius.lg}px`,
+                        maxHeight: '80vh',
+                    },
                 },
             }}
         >
-            <DialogTitle sx={{ fontWeight: fontWeight.bold, fontSize: getResponsiveFontSize('lg') }}>
+            <DialogTitle sx={{ fontWeight: fontWeight.bold, fontSize: getResponsiveFontSize('lg'), pb: 0.5 }}>
                 Tuỳ chỉnh cột hiển thị
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, fontSize: getResponsiveFontSize('xs') }}>
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: getResponsiveFontSize('xxs') }}>
                     Chọn các cột bạn muốn hiển thị trong bảng kết quả
                 </Typography>
             </DialogTitle>
@@ -53,13 +73,12 @@ export default function ColumnCustomizer({ open, onClose, selectedColumns, onSet
                     const groupCols = ALL_COLUMNS.filter(c => c.group === group.key);
                     if (groupCols.length === 0) return null;
 
-                    const allSelected = groupCols.every(c => selectedColumns.includes(c.field));
-                    const someSelected = groupCols.some(c => selectedColumns.includes(c.field));
+                    const allSelected = groupCols.every(c => localCols.includes(c.field));
+                    const someSelected = groupCols.some(c => localCols.includes(c.field));
 
                     return (
                         <Box key={group.key}>
                             {gi > 0 && <Divider />}
-                            {/* Group header */}
                             <Box
                                 sx={{
                                     display: 'flex',
@@ -91,15 +110,14 @@ export default function ColumnCustomizer({ open, onClose, selectedColumns, onSet
                                     color: 'text.disabled',
                                     ml: 1,
                                 }}>
-                                    ({groupCols.filter(c => selectedColumns.includes(c.field)).length}/{groupCols.length})
+                                    ({groupCols.filter(c => localCols.includes(c.field)).length}/{groupCols.length})
                                 </Typography>
                             </Box>
 
-                            {/* Columns */}
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', px: 2, py: 0.5 }}>
                                 {groupCols.map(col => {
-                                    const checked = selectedColumns.includes(col.field);
-                                    const isRequired = col.field === 'ticker'; // Always keep ticker
+                                    const checked = localCols.includes(col.field);
+                                    const isRequired = col.field === 'ticker';
 
                                     return (
                                         <Box
@@ -107,12 +125,12 @@ export default function ColumnCustomizer({ open, onClose, selectedColumns, onSet
                                             sx={{
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                width: { xs: '50%', sm: '33.33%' },
+                                                width: { xs: '50%', sm: '25%' },
                                                 py: 0.25,
                                                 cursor: isRequired ? 'not-allowed' : 'pointer',
                                                 opacity: isRequired ? 0.6 : 1,
                                             }}
-                                            onClick={() => !isRequired && onToggleColumn(col.field)}
+                                            onClick={() => !isRequired && handleToggle(col.field)}
                                         >
                                             <Checkbox
                                                 checked={checked}
@@ -138,10 +156,10 @@ export default function ColumnCustomizer({ open, onClose, selectedColumns, onSet
 
             <DialogActions sx={{ px: 2, py: 1.5 }}>
                 <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', flex: 1 }}>
-                    {selectedColumns.length} cột đã chọn
+                    {localCols.length} cột đã chọn
                 </Typography>
                 <Button
-                    onClick={() => onSetColumns([...TABLE_VIEWS['overview'].fields])}
+                    onClick={handleReset}
                     size="small"
                     sx={{ fontSize: getResponsiveFontSize('xs') }}
                 >

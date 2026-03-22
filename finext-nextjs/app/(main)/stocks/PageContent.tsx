@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Box, Typography, useTheme, alpha, TextField, InputAdornment, Pagination } from '@mui/material';
+import { Box, Typography, useTheme, alpha, TextField, InputAdornment, Pagination, Tooltip } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { useRouter } from 'next/navigation';
 import { getResponsiveFontSize, fontWeight, borderRadius, getGlassCard, durations, easings } from 'theme/tokens';
@@ -120,10 +120,32 @@ interface PresetChipProps {
 
 function PresetChip({ preset, active, onClick, isDark, theme }: PresetChipProps) {
     return (
+        <Tooltip
+            title={preset.description}
+            placement="bottom"
+            slotProps={{
+                tooltip: {
+                    sx: {
+                        bgcolor: isDark ? alpha('#1a1a2e', 0.95) : alpha('#fff', 0.97),
+                        color: isDark ? alpha('#fff', 0.85) : alpha('#000', 0.75),
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: getResponsiveFontSize('xs'),
+                        px: 1.25,
+                        py: 0.6,
+                        boxShadow: isDark
+                            ? '0 4px 16px rgba(0,0,0,0.5)'
+                            : '0 4px 16px rgba(0,0,0,0.12)',
+                        backdropFilter: 'blur(8px)',
+                    },
+                },
+                arrow: { sx: { color: isDark ? alpha('#1a1a2e', 0.95) : alpha('#fff', 0.97) } },
+            }}
+            arrow
+        >
         <Box
             component="button"
             onClick={onClick}
-            title={preset.description}
             sx={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -153,6 +175,7 @@ function PresetChip({ preset, active, onClick, isDark, theme }: PresetChipProps)
             <Icon icon={preset.iconifyIcon} width={14} />
             {preset.label}
         </Box>
+        </Tooltip>
     );
 }
 

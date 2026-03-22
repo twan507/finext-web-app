@@ -146,7 +146,11 @@ export default function useScreenerStore(): UseScreenerStoreReturn {
 
     // ── Custom columns ──
     const setCustomColumns = useCallback((columns: string[]) => {
-        setState(prev => ({ ...prev, customColumns: columns }));
+        setState(prev => ({
+            ...prev,
+            customColumns: columns,
+            columnOrder: { ...prev.columnOrder, custom: undefined as any },
+        }));
     }, []);
 
     const toggleCustomColumn = useCallback((field: string) => {

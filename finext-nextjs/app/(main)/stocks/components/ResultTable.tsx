@@ -7,6 +7,7 @@ import { Icon } from '@iconify/react';
 import { useRouter } from 'next/navigation';
 import { getResponsiveFontSize, fontWeight, borderRadius, durations, easings } from 'theme/tokens';
 import { COLUMN_MAP, formatCellValue, type ColumnDef } from '../screenerConfig';
+import { getVsiColor, getPriceColor, getZoneColor, getTrendColor, getRankColor } from 'theme/colorHelpers';
 
 interface ResultTableProps {
     data: Record<string, any>[];
@@ -18,13 +19,26 @@ interface ResultTableProps {
     isLoading: boolean;
 }
 
-function getCellColor(value: any, format: string | undefined, theme: any): string | undefined {
-    if (format === 'pct' || format === 'price') {
+function getCellColor(field: string, value: any, format: string | undefined, theme: any, row: Record<string, any>, isDark: boolean): string | undefined {
+    if (field.endsWith('_zone')) {
+        if (typeof value === 'string') return getZoneColor(value, isDark);
+    }
+    if (format === 'pct') {
         if (typeof value === 'number') {
-            if (value > 0) return theme.palette.trend?.up ?? theme.palette.success.main;
-            if (value < 0) return theme.palette.trend?.down ?? theme.palette.error.main;
-            return theme.palette.trend?.ref ?? theme.palette.text.secondary;
+            if (field === 'w_pct' || field === 'm_pct' || field === 'q_pct' || field === 'y_pct')
+                return getTrendColor(value, theme);
+            return getPriceColor(value, row['exchange'], theme);
         }
+    }
+    if (field === 'diff' || field === 'close') {
+        const pctChange = row['pct_change'];
+        if (typeof pctChange === 'number') return getPriceColor(pctChange, row['exchange'], theme);
+    }
+    if (format === 'vsi') {
+        if (typeof value === 'number') return getVsiColor(value, theme);
+    }
+    if (format === 'flow') {
+        if (typeof value === 'number') return getTrendColor(value, theme);
     }
     if (format === 'score') {
         if (typeof value === 'number') {
@@ -33,11 +47,7 @@ function getCellColor(value: any, format: string | undefined, theme: any): strin
         }
     }
     if (format === 'rank') {
-        if (typeof value === 'number') {
-            const pct = value * 100;
-            if (pct >= 70) return theme.palette.trend?.up ?? theme.palette.success.main;
-            if (pct <= 30) return theme.palette.trend?.down ?? theme.palette.error.main;
-        }
+        if (typeof value === 'number' && value !== 0) return getRankColor(value, theme);
     }
     return undefined;
 }
@@ -215,19 +225,19 @@ export default function ResultTable({ data, columns, sortField, sortOrder, onTog
                             component="tr"
                             sx={{
                                 transition: 'background 0.1s ease',
+                                '&:nth-of-type(even)': {
+                                    bgcolor: isDark ? alpha('#fff', 0.015) : alpha('#000', 0.015),
+                                },
                                 '&:hover': {
                                     bgcolor: isDark
                                         ? alpha(theme.palette.primary.main, 0.06)
                                         : alpha(theme.palette.primary.main, 0.04),
                                 },
-                                '&:nth-of-type(even)': {
-                                    bgcolor: isDark ? alpha('#fff', 0.015) : alpha('#000', 0.015),
-                                },
                             }}
                         >
                             {colDefs.map(col => {
                                 const val = row[col.field];
-                                const cellColor = getCellColor(val, col.format, theme);
+                                const cellColor = getCellColor(col.field, val, col.format, theme, row, isDark);
                                 const isTicker = col.field === 'ticker';
                                 const isName = col.field === 'ticker_name';
 

@@ -5,7 +5,7 @@
  */
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-export type TableViewKey = 'overview' | 'technical' | 'cashflow' | 'zones' | 'custom';
+export type TableViewKey = 'overview' | 'technical' | 'cashflow' | 'custom';
 
 export interface ColumnDef {
     field: string;
@@ -14,7 +14,7 @@ export interface ColumnDef {
     group: string;
     width?: number;
     align?: 'left' | 'right' | 'center';
-    format?: 'price' | 'pct' | 'volume' | 'value' | 'score' | 'text' | 'rank';
+    format?: 'price' | 'diff' | 'pct' | 'volume' | 'value' | 'tỷ' | 'tỷ0' | 'score' | 'flow' | 'text' | 'rank' | 'vsi';
     sortable?: boolean;
 }
 
@@ -30,57 +30,39 @@ export interface FilterPreset {
 
 export const ALL_COLUMNS: ColumnDef[] = [
     // Định danh
-    { field: 'ticker', label: 'Mã CK', group: 'info', width: 100, align: 'left', format: 'text', sortable: true },
+    { field: 'ticker', label: 'Mã CK', group: 'info', width: 80, align: 'left', format: 'text', sortable: true },
     { field: 'ticker_name', label: 'Tên công ty', group: 'info', width: 220, align: 'left', format: 'text', sortable: true },
-    { field: 'exchange', label: 'Sàn', group: 'info', width: 70, align: 'center', format: 'text', sortable: true },
-    { field: 'industry_name', label: 'Ngành', group: 'info', width: 130, align: 'left', format: 'text', sortable: true },
-    { field: 'marketcap_name', label: 'Vốn hóa', shortLabel: 'VH', group: 'info', width: 100, align: 'center', format: 'text', sortable: true },
-    { field: 'category_name', label: 'Nhóm', group: 'info', width: 100, align: 'center', format: 'text', sortable: true },
-    { field: 'top100', label: 'Top 100', group: 'info', width: 70, align: 'center', format: 'text', sortable: true },
+    { field: 'exchange', label: 'Sàn', group: 'info', width: 85, align: 'left', format: 'text', sortable: true },
+    { field: 'industry_name', label: 'Ngành Nghề', group: 'info', width: 130, align: 'left', format: 'text', sortable: true },
+    { field: 'marketcap_name', label: 'Nhóm Vốn hoá', group: 'info', width: 120, align: 'left', format: 'text', sortable: true },
+    { field: 'category_name', label: 'Nhóm Dòng tiền', group: 'info', width: 120, align: 'left', format: 'text', sortable: true },
 
     // Giá & OHLCV
     { field: 'open', label: 'Mở cửa', group: 'price', width: 85, align: 'right', format: 'price', sortable: true },
     { field: 'high', label: 'Cao nhất', group: 'price', width: 85, align: 'right', format: 'price', sortable: true },
     { field: 'low', label: 'Thấp nhất', group: 'price', width: 85, align: 'right', format: 'price', sortable: true },
     { field: 'close', label: 'Giá', group: 'price', width: 85, align: 'right', format: 'price', sortable: true },
-    { field: 'prev_close', label: 'Giá TC', group: 'price', width: 85, align: 'right', format: 'price', sortable: true },
-    { field: 'diff', label: '±', group: 'price', width: 70, align: 'right', format: 'price', sortable: true },
+    { field: 'diff', label: '±', group: 'price', width: 70, align: 'right', format: 'diff', sortable: true },
     { field: 'pct_change', label: '±%', group: 'price', width: 75, align: 'right', format: 'pct', sortable: true },
-    { field: 'volume', label: 'KL', group: 'price', width: 95, align: 'right', format: 'volume', sortable: true },
-    { field: 'trading_value', label: 'GTGD', group: 'price', width: 100, align: 'right', format: 'value', sortable: true },
-    { field: 'cap_value', label: 'Vốn hóa TT', shortLabel: 'VHTT', group: 'price', width: 110, align: 'right', format: 'value', sortable: true },
+    { field: 'volume', label: 'KLGD', group: 'price', width: 95, align: 'right', format: 'volume', sortable: true },
+    { field: 'trading_value', label: 'GTGD', group: 'price', width: 100, align: 'right', format: 'tỷ', sortable: true },
+    { field: 'cap_value', label: 'Vốn hóa TT', shortLabel: 'VHTT', group: 'info', width: 110, align: 'right', format: 'tỷ0', sortable: true },
 
     // % thay đổi theo khung
-    { field: 'w_pct', label: 'Tuần%', group: 'change', width: 80, align: 'right', format: 'pct', sortable: true },
-    { field: 'm_pct', label: 'Tháng%', group: 'change', width: 80, align: 'right', format: 'pct', sortable: true },
-    { field: 'q_pct', label: 'Quý%', group: 'change', width: 80, align: 'right', format: 'pct', sortable: true },
-    { field: 'y_pct', label: 'Năm%', group: 'change', width: 80, align: 'right', format: 'pct', sortable: true },
-
-    // Moving Averages
-    { field: 'ma5', label: 'MA5', group: 'ma', width: 85, align: 'right', format: 'price', sortable: true },
-    { field: 'ma20', label: 'MA20', group: 'ma', width: 85, align: 'right', format: 'price', sortable: true },
-    { field: 'ma60', label: 'MA60', group: 'ma', width: 85, align: 'right', format: 'price', sortable: true },
-    { field: 'ma120', label: 'MA120', group: 'ma', width: 85, align: 'right', format: 'price', sortable: true },
-    { field: 'ma240', label: 'MA240', group: 'ma', width: 85, align: 'right', format: 'price', sortable: true },
+    { field: 'w_pct', label: '% Tuần', group: 'change', width: 80, align: 'right', format: 'pct', sortable: true },
+    { field: 'm_pct', label: '% Tháng', group: 'change', width: 80, align: 'right', format: 'pct', sortable: true },
+    { field: 'q_pct', label: '% Quý', group: 'change', width: 80, align: 'right', format: 'pct', sortable: true },
+    { field: 'y_pct', label: '% Năm', group: 'change', width: 80, align: 'right', format: 'pct', sortable: true },
 
     // Volume indicators
-    { field: 'vema5', label: 'VEMA5', group: 'volume_ind', width: 90, align: 'right', format: 'volume', sortable: true },
-    { field: 'vsma5', label: 'VSMA5', group: 'volume_ind', width: 90, align: 'right', format: 'volume', sortable: true },
-    { field: 'vsma60', label: 'VSMA60', group: 'volume_ind', width: 90, align: 'right', format: 'volume', sortable: true },
-    { field: 'vsi', label: 'VSI', group: 'volume_ind', width: 70, align: 'right', format: 'score', sortable: true },
+    { field: 'vsi', label: 'VSI', group: 'price', width: 75, align: 'right', format: 'vsi', sortable: true },
 
     // Dòng tiền & Xếp hạng
-    { field: 't0_score', label: 'T0', group: 'cashflow', width: 65, align: 'right', format: 'score', sortable: true },
-    { field: 't5_score', label: 'T5', group: 'cashflow', width: 65, align: 'right', format: 'score', sortable: true },
-    { field: 'market_rank_pct', label: 'Rank TT', group: 'cashflow', width: 80, align: 'right', format: 'rank', sortable: true },
-    { field: 'industry_rank_pct', label: 'Rank Ngành', group: 'cashflow', width: 90, align: 'right', format: 'rank', sortable: true },
-    { field: 'market_count', label: 'Tổng TT', group: 'cashflow', width: 70, align: 'right', format: 'text', sortable: true },
-    { field: 'industry_count', label: 'Tổng Ngành', group: 'cashflow', width: 80, align: 'right', format: 'text', sortable: true },
+    { field: 't0_score', label: 'DT Phiên', group: 'cashflow', width: 75, align: 'right', format: 'flow', sortable: true },
+    { field: 't5_score', label: 'DT Tuần', group: 'cashflow', width: 75, align: 'right', format: 'flow', sortable: true },
+    { field: 'market_rank_pct', label: 'XHTT', group: 'cashflow', width: 70, align: 'right', format: 'rank', sortable: true },
+    { field: 'industry_rank_pct', label: 'XH Ngành', group: 'cashflow', width: 80, align: 'right', format: 'rank', sortable: true },
 
-    // Contribution Scores
-    { field: 'FNXINDEX_ctb', label: 'CTB FNX', group: 'contribution', width: 85, align: 'right', format: 'score', sortable: true },
-    { field: 'FNX100_ctb', label: 'CTB F100', group: 'contribution', width: 85, align: 'right', format: 'score', sortable: true },
-    { field: 'industry_ctb', label: 'CTB Ngành', group: 'contribution', width: 90, align: 'right', format: 'score', sortable: true },
 
     // Zone classifications
     { field: 'w_zone', label: 'Zone W', group: 'zones', width: 90, align: 'center', format: 'text', sortable: true },
@@ -111,41 +93,39 @@ export const TABLE_VIEWS: Record<TableViewKey, { label: string; iconifyIcon: str
         label: 'Tổng quan',
         iconifyIcon: 'solar:chart-square-bold-duotone',
         fields: [
-            'ticker', 'exchange', 'close', 'pct_change', 'volume', 'trading_value',
-            'w_pct', 'm_pct', 't0_score', 'market_rank_pct',
+            'ticker', 'exchange', 'industry_name', 'marketcap_name', 'category_name',
+            'close', 'diff', 'pct_change', 'volume', 'vsi', 'trading_value', 'cap_value',
         ],
     },
     technical: {
-        label: 'Kỹ thuật',
+        label: 'Vùng giá',
         iconifyIcon: 'solar:graph-up-bold-duotone',
         fields: [
-            'ticker', 'close', 'pct_change',
-            'ma5', 'ma20', 'ma60', 'ma120', 'ma240',
-            'vsi', 'vsma5',
+            'ticker',
+            'w_zone', 'm_zone', 'q_zone', 'y_zone',
+            'w_ma_zone', 'm_ma_zone', 'q_ma_zone', 'y_ma_zone',
+            'w_fibo_zone', 'm_fibo_zone', 'q_fibo_zone', 'y_fibo_zone',
+            'w_vp_zone', 'm_vp_zone', 'q_vp_zone', 'y_vp_zone',
         ],
     },
     cashflow: {
         label: 'Dòng tiền',
         iconifyIcon: 'solar:dollar-bold-duotone',
         fields: [
-            'ticker', 'close', 'pct_change',
-            't0_score', 't5_score', 'market_rank_pct', 'industry_rank_pct',
-            'vsi', 'volume', 'trading_value',
+            'ticker', 'diff', 'pct_change',
+            't0_score', 't5_score', 'volume', 'vsi',
+            'w_pct', 'm_pct', 'q_pct', 'y_pct',
+            'industry_rank_pct', 'market_rank_pct',
         ],
     },
-    zones: {
-        label: 'Vùng KT',
-        iconifyIcon: 'solar:target-bold-duotone',
-        fields: [
-            'ticker', 'close', 'pct_change',
-            'w_zone', 'm_zone', 'q_zone', 'y_zone',
-            'w_ma_zone', 'm_ma_zone',
-        ],
-    },
+
     custom: {
         label: 'Tuỳ chỉnh',
         iconifyIcon: 'solar:settings-bold-duotone',
-        fields: [],
+        fields: [
+            'ticker', 'exchange', 'industry_name', 'marketcap_name', 'category_name',
+            'close', 'diff', 'pct_change', 'volume', 'vsi', 'trading_value', 'cap_value',
+        ],
     },
 };
 
@@ -153,12 +133,9 @@ export const TABLE_VIEWS: Record<TableViewKey, { label: string; iconifyIcon: str
 
 export const COLUMN_GROUPS = [
     { key: 'info', label: 'Thông tin' },
-    { key: 'price', label: 'Giá & OHLCV' },
+    { key: 'price', label: 'Trong phiên' },
     { key: 'change', label: '% Thay đổi' },
-    { key: 'ma', label: 'Moving Average' },
-    { key: 'volume_ind', label: 'KL & VSI' },
     { key: 'cashflow', label: 'Dòng tiền' },
-    { key: 'contribution', label: 'Đóng góp' },
     { key: 'zones', label: 'Vùng kỹ thuật' },
 ];
 
@@ -178,40 +155,42 @@ export const FILTER_PRESETS: FilterPreset[] = [
         id: 'strong_cashflow',
         label: 'Dòng tiền tốt',
         iconifyIcon: 'solar:star-bold-duotone',
-        description: 'Điểm dòng tiền T0 > 70 & T5 > 60',
+        description: 'Có dòng tiền vào trong phiên và trong tuần',
         filters: {
             rangeFilters: {
-                t0_score: { min: 70, max: null },
-                t5_score: { min: 60, max: null },
+                t0_score: { min: 0, max: null },
+                t5_score: { min: 0, max: null },
             },
         },
     },
     {
         id: 'largecap_liquid',
-        label: 'Bluechip',
+        label: 'GTGD lớn',
         iconifyIcon: 'solar:buildings-3-bold-duotone',
-        description: 'Vốn hóa lớn, GTGD > 50 tỷ',
+        description: 'Giá trị giao dịch > 20 tỷ',
         filters: {
-            selectFilters: { marketcap_name: ['Vốn hóa lớn'] },
-            rangeFilters: { trading_value: { min: 50000000000, max: null } },
+            rangeFilters: { trading_value: { min: 20, max: null } },
         },
     },
     {
         id: 'accumulation_zone',
         label: 'Vùng tích lũy',
         iconifyIcon: 'solar:target-bold-duotone',
-        description: 'Cổ phiếu đang ở vùng tích lũy (Zone tổng hợp)',
+        description: 'Cổ phiếu đang ở vùng giá tích luỹ',
         filters: {
-            selectFilters: { m_zone: ['Tích lũy'] },
+            selectFilters: { w_zone: ['AAA'], m_zone: ['A'], q_zone: ['A'] },
         },
     },
     {
         id: 'top_ranked',
         label: 'Xếp hạng đầu',
         iconifyIcon: 'solar:cup-star-bold-duotone',
-        description: 'Top 20% xếp hạng thị trường',
+        description: 'Xếp hạng tốt trong ngành và thị trường',
         filters: {
-            rangeFilters: { market_rank_pct: { min: 80, max: null } },
+            rangeFilters: {
+                market_rank_pct: { min: 70, max: null },
+                industry_rank_pct: { min: 50, max: null },
+            },
         },
     },
 ];
@@ -282,9 +261,12 @@ export function formatCellValue(value: any, format?: string): string {
             return typeof value === 'number'
                 ? value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                 : String(value);
+        case 'diff':
+            if (typeof value !== 'number') return String(value);
+            return `${value > 0 ? '+' : ''}${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         case 'pct':
             if (typeof value !== 'number') return String(value);
-            return `${value >= 0 ? '+' : ''}${(value * 100).toFixed(2)}%`;
+            return `${value > 0 ? '+' : ''}${(value * 100).toFixed(2)}%`;
         case 'volume':
             if (typeof value !== 'number') return String(value);
             if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}B`;
@@ -297,10 +279,35 @@ export function formatCellValue(value: any, format?: string): string {
             if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}B`;
             if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
             return value.toLocaleString();
+        case 'tỷ0': {
+            if (typeof value !== 'number') return String(value);
+            const raw0 = value * 1_000_000_000;
+            const fmt0 = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+            if (raw0 >= 1_000_000_000) return `${fmt0(raw0 / 1_000_000_000)}B`;
+            if (raw0 >= 1_000_000) return `${fmt0(raw0 / 1_000_000)}M`;
+            if (raw0 >= 1_000) return `${fmt0(raw0 / 1_000)}K`;
+            return fmt0(raw0);
+        }
+        case 'tỷ': {
+            if (typeof value !== 'number') return String(value);
+            const raw = value * 1_000_000_000;
+            const fmt = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+            if (raw >= 1_000_000_000) return `${fmt(raw / 1_000_000_000)}B`;
+            if (raw >= 1_000_000) return `${fmt(raw / 1_000_000)}M`;
+            if (raw >= 1_000) return `${fmt(raw / 1_000)}K`;
+            return raw.toLocaleString('en-US', { maximumFractionDigits: 0 });
+        }
+        case 'vsi':
+            return typeof value === 'number' ? `${(value * 100).toFixed(1)}%` : String(value);
+        case 'flow':
+            if (typeof value !== 'number') return String(value);
+            return `${value > 0 ? '+' : ''}${value.toFixed(1)}`;
         case 'score':
             return typeof value === 'number' ? value.toFixed(1) : String(value);
         case 'rank':
-            return typeof value === 'number' ? `${(value * 100).toFixed(0)}%` : String(value);
+            if (typeof value !== 'number') return String(value);
+            if (value === 0) return '—';
+            return `${(value * 100).toFixed(0)}%`;
         default:
             return String(value);
     }

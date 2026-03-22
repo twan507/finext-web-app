@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, Typography, useTheme, alpha } from '@mui/material';
+import { Box, Typography, useTheme, alpha, Tooltip } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { getResponsiveFontSize, fontWeight, borderRadius, durations, easings } from 'theme/tokens';
 import { TABLE_VIEWS, type TableViewKey } from '../screenerConfig';
@@ -11,10 +11,11 @@ interface TableViewSelectorProps {
     onOpenColumnCustomizer: () => void;
 }
 
-const VIEW_KEYS: TableViewKey[] = ['overview', 'technical', 'cashflow', 'zones', 'custom'];
+const VIEW_KEYS: TableViewKey[] = ['overview', 'cashflow', 'technical', 'custom'];
 
 export default function TableViewSelector({ activeView, onViewChange, onOpenColumnCustomizer }: TableViewSelectorProps) {
     const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
 
     return (
         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
@@ -67,17 +68,37 @@ export default function TableViewSelector({ activeView, onViewChange, onOpenColu
 
             {/* Customize columns button — right side, icon only, only visible in custom view */}
             {activeView === 'custom' && (
+                <Tooltip
+                    title="Tuỳ chỉnh cột hiển thị"
+                    placement="left"
+                    arrow
+                    slotProps={{
+                        tooltip: {
+                            sx: {
+                                bgcolor: isDark ? alpha('#1a1a2e', 0.95) : alpha('#fff', 0.97),
+                                color: isDark ? alpha('#fff', 0.85) : alpha('#000', 0.75),
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: getResponsiveFontSize('xs'),
+                                px: 1.25,
+                                py: 0.6,
+                                boxShadow: isDark ? '0 4px 16px rgba(0,0,0,0.5)' : '0 4px 16px rgba(0,0,0,0.12)',
+                                backdropFilter: 'blur(8px)',
+                            },
+                        },
+                        arrow: { sx: { color: isDark ? alpha('#1a1a2e', 0.95) : alpha('#fff', 0.97) } },
+                    }}
+                >
                 <Box
                     component="button"
                     onClick={onOpenColumnCustomizer}
-                    title="Tuỳ chỉnh cột hiển thị"
                     sx={{
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        width: 30,
-                        height: 30,
-                        borderRadius: `${borderRadius.md}px`,
+                        width: 25,
+                        height: 25,
+                        borderRadius: `${borderRadius.sm}px`,
                         border: `1px solid ${alpha(theme.palette.divider, 0.4)}`,
                         bgcolor: 'transparent',
                         background: 'transparent',
@@ -92,8 +113,9 @@ export default function TableViewSelector({ activeView, onViewChange, onOpenColu
                         },
                     }}
                 >
-                    <Icon icon="solar:pen-bold" width={15} />
+                    <Icon icon="solar:pen-bold" width={12} />
                 </Box>
+                </Tooltip>
             )}
         </Box>
     );
