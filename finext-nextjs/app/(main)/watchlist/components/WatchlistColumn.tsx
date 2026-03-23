@@ -25,6 +25,7 @@ interface StockData {
     diff: number;
     pct_change: number;
     vsi: number;
+    trading_value?: number;
     exchange?: string;
 }
 
@@ -99,6 +100,15 @@ export default function WatchlistColumn({
         diff: (n: number) => `${n > 0 ? '+' : ''}${n.toFixed(2)}`,
         pct: (n: number) => `${(n * 100) > 0 ? '+' : ''}${(n * 100).toFixed(2)}%`,
         vsi: (n: number) => `${(n * 100).toFixed(0)}%`,
+        gtgd: (n: number) => {
+            // n is pre-divided by 10^9, restore then format
+            const v = n * 1_000_000_000;
+            if (v >= 1_000_000_000_000) return `${(v / 1_000_000_000_000).toFixed(1)}T`;
+            if (v >= 1_000_000_000) return `${(v / 1_000_000_000).toFixed(1)}B`;
+            if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+            if (v >= 1_000) return `${(v / 1_000).toFixed(1)}K`;
+            return `${v}`;
+        },
     };
 
     const divider = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
@@ -139,7 +149,7 @@ export default function WatchlistColumn({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    px: 1.5,
+                    px: 0.75,
                     py: 0.75,
                     borderBottom: collapsed ? 'none' : `1px solid ${divider}`,
                     bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
@@ -202,70 +212,88 @@ export default function WatchlistColumn({
             </Box>
 
             {/* ── Stock rows ── */}
-            <Box sx={{ flex: 1, overflowY: 'auto', display: collapsed ? 'none' : 'block' }}>
-                {watchlist.stock_symbols.map((ticker, idx) => {
+            <Box sx={{
+                flex: 1,
+                overflowY: 'auto',
+                display: collapsed ? 'none' : 'flex',
+                flexDirection: 'column',
+                gap: 0.5,
+                p: 0.75,
+            }}>
+                {watchlist.stock_symbols.map((ticker) => {
                     const data = stockDataMap.get(ticker);
-                    const isLast = idx === watchlist.stock_symbols.length - 1;
 
                     if (!data) {
                         return (
                             <Box
                                 key={ticker}
                                 sx={{
-                                    px: 1.5,
-                                    py: 0.6,
-                                    borderBottom: isLast ? 'none' : `1px solid ${divider}`,
+                                    px: 1,
+                                    py: 0.5,
+                                    borderRadius: `${borderRadius.sm}px`,
+                                    bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
                                     display: 'flex',
                                     justifyContent: 'space-between',
                                     alignItems: 'center',
+                                    '&:hover .remove-btn': { opacity: 1 },
                                 }}
                             >
                                 <Typography
                                     component="a"
                                     href={`/stocks/${ticker}`}
-                                        target="_blank"
+                                    target="_blank"
                                     sx={{
                                         fontSize: getResponsiveFontSize('xs'),
                                         fontWeight: fontWeight.semibold,
                                         color: 'text.primary',
                                         textDecoration: 'none',
-                                        cursor: 'pointer',
                                         '&:hover': { textDecoration: 'underline' },
                                     }}
                                 >
                                     {ticker}
                                 </Typography>
-                                <IconButton
-                                    size="small"
+                                <Box
+                                    component="span"
+                                    className="remove-btn"
                                     onClick={() => onRemoveStock(ticker)}
-                                    sx={{ color: 'text.disabled', p: 0.25, opacity: 0, '.MuiBox-root:hover > &': { opacity: 1 } }}
+                                    sx={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        cursor: 'pointer',
+                                        color: alpha(theme.palette.text.secondary, 0.35),
+                                        opacity: 0,
+                                        transition: `opacity ${durations.fast}, color ${durations.fast}`,
+                                        '&:hover': { color: theme.palette.error.main },
+                                    }}
                                 >
                                     <CloseIcon sx={{ fontSize: 13 }} />
-                                </IconButton>
+                                </Box>
                             </Box>
                         );
                     }
 
                     const changeColor = getPriceColor(data.pct_change, data.exchange, theme);
                     const vsiColor = getVsiColor(data.vsi ?? 0, theme);
+                    const cardBg = `linear-gradient(90deg, ${alpha(changeColor, 0.1)} 0%, ${alpha(changeColor, 0.05)} 50%, ${alpha(changeColor, 0.01)} 100%)`;
+                    const cardBgHover = `linear-gradient(90deg, ${alpha(changeColor, 0.2)} 0%, ${alpha(changeColor, 0.1)} 50%, ${alpha(changeColor, 0.02)} 100%)`;
 
                     return (
                         <Box
                             key={ticker}
                             sx={{
-                                px: 1.5,
-                                py: 0.6,
-                                borderBottom: isLast ? 'none' : `1px solid ${divider}`,
+                                px: 1,
+                                py: 0.5,
+                                borderRadius: `${borderRadius.sm}px`,
+                                background: cardBg,
                                 transition: `background ${durations.fast}`,
-                                '&:hover': {
-                                    bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-                                },
+                                '&:hover': { background: cardBgHover },
                                 '&:hover .remove-btn': { opacity: 1 },
                             }}
                         >
-                            {/* Line 1: Ticker + chart icon | TK: VSI */}
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            {/* Grid 3 cột: left | center tuyệt đối | right */}
+                            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', alignItems: 'center' }}>
+                                {/* [0,0] Ticker + icons */}
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
                                     <Typography
                                         component="a"
                                         href={`/stocks/${ticker}`}
@@ -275,13 +303,12 @@ export default function WatchlistColumn({
                                             fontWeight: fontWeight.bold,
                                             color: changeColor,
                                             textDecoration: 'none',
-                                            cursor: 'pointer',
                                             '&:hover': { textDecoration: 'underline' },
                                         }}
                                     >
                                         {ticker}
                                     </Typography>
-                                    <Tooltip title="Mở chart" placement="right" arrow={false} componentsProps={tooltipSlotProps}>
+                                    <Tooltip title="Mở chart" placement="right" arrow={false} slotProps={tooltipSlotProps}>
                                         <Box
                                             component="span"
                                             onClick={() => window.open(`/charts/${ticker}`, '_blank')}
@@ -298,7 +325,6 @@ export default function WatchlistColumn({
                                             <TrendingUpIcon sx={{ fontSize: 14 }} />
                                         </Box>
                                     </Tooltip>
-                                    {/* Remove button — visible on hover */}
                                     <Box
                                         component="span"
                                         className="remove-btn"
@@ -316,49 +342,68 @@ export default function WatchlistColumn({
                                         <CloseIcon sx={{ fontSize: 13 }} />
                                     </Box>
                                 </Box>
+                                {/* [0,1] +-% — căn giữa tuyệt đối */}
+                                <Typography
+                                    sx={{
+                                        fontSize: getResponsiveFontSize('xs'),
+                                        fontWeight: fontWeight.semibold,
+                                        color: changeColor,
+                                        fontVariantNumeric: 'tabular-nums',
+                                        textAlign: 'center',
+                                    }}
+                                >
+                                    {fmt.pct(data.pct_change)}
+                                </Typography>
+                                {/* [0,2] VSI — căn phải */}
                                 <Typography
                                     sx={{
                                         fontSize: getResponsiveFontSize('xs'),
                                         fontWeight: fontWeight.semibold,
                                         color: vsiColor,
                                         fontVariantNumeric: 'tabular-nums',
+                                        textAlign: 'right',
                                     }}
                                 >
                                     {fmt.vsi(data.vsi ?? 0)}
                                 </Typography>
-                            </Box>
 
-                            {/* Line 2: Price | Diff | Pct% */}
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.25 }}>
+                                {/* [1,0] Giá */}
                                 <Typography
                                     sx={{
                                         fontSize: getResponsiveFontSize('xs'),
                                         fontWeight: fontWeight.medium,
                                         color: 'text.primary',
                                         fontVariantNumeric: 'tabular-nums',
+                                        mt: 0.25,
                                     }}
                                 >
                                     {fmt.price(data.close)}
                                 </Typography>
+                                {/* [1,1] +- — căn giữa tuyệt đối */}
                                 <Typography
                                     sx={{
                                         fontSize: getResponsiveFontSize('xs'),
                                         fontWeight: fontWeight.medium,
                                         color: changeColor,
                                         fontVariantNumeric: 'tabular-nums',
+                                        textAlign: 'center',
+                                        mt: 0.25,
                                     }}
                                 >
                                     {fmt.diff(data.diff)}
                                 </Typography>
+                                {/* [1,2] GTGD — căn phải */}
                                 <Typography
                                     sx={{
                                         fontSize: getResponsiveFontSize('xs'),
-                                        fontWeight: fontWeight.semibold,
-                                        color: changeColor,
+                                        fontWeight: fontWeight.medium,
+                                        color: 'text.secondary',
                                         fontVariantNumeric: 'tabular-nums',
+                                        textAlign: 'right',
+                                        mt: 0.25,
                                     }}
                                 >
-                                    {fmt.pct(data.pct_change)}
+                                    {data.trading_value != null ? fmt.gtgd(data.trading_value) : '—'}
                                 </Typography>
                             </Box>
                         </Box>

@@ -144,7 +144,7 @@ export const trendColors = {
     dark: '#d45050',  // Rose-400
   },
   ref: {
-    light: '#eadb08', // Yellow-600
+    light: '#d4d100', // Yellow hue, desaturated — vàng xám đậm, không cam
     dark: '#c5c900',  // Yellow-400
   },
   ceil: {

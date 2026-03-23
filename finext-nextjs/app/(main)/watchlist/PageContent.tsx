@@ -33,6 +33,7 @@ interface StockData {
     diff: number;
     pct_change: number;
     vsi: number;
+    trading_value?: number;
     exchange?: string;
     industry_name?: string;
 }
