@@ -43,12 +43,16 @@ interface IndustryInfo {
     tickers: string[];
 }
 
+type WatchlistSort = 'pct_change_asc' | 'pct_change_desc' | 'vsi_asc' | 'vsi_desc' | 'trading_value_asc' | 'trading_value_desc' | 'manual';
+
 interface Watchlist {
     id: string;
     _id?: string;
     name: string;
     coordinate: [number, number]; // [col, row]
     stock_symbols: string[];
+    page: number;
+    sort: WatchlistSort;
 }
 
 function DroppableColumn({ colIdx, isDark, isActive, children }: {
@@ -90,6 +94,7 @@ export default function WatchlistContent() {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
     const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
+    const [currentPage, setCurrentPage] = useState(1);
 
     // ── DnD state ──
     const [activeId, setActiveId] = useState<string | null>(null);
@@ -307,10 +312,20 @@ export default function WatchlistContent() {
         | { type: 'wl'; wl: Watchlist }
         | { type: 'add'; coordinate: [number, number] };
 
+    // Derived pages list
+    const pages = useMemo(() => {
+        const pageNums = new Set(watchlists.map(w => w.page ?? 1));
+        pageNums.add(1);
+        pageNums.add(currentPage); // luôn hiện tab trang hiện tại kể cả khi chưa có WL
+        return Array.from(pageNums).sort((a, b) => a - b);
+    }, [watchlists, currentPage]);
+
     const visualColumns = useMemo(() => {
+        // Only show watchlists on currentPage
+        const pageWatchlists = watchlists.filter(wl => (wl.page ?? 1) === currentPage);
         // Group WLs by col index, sorted by row within each col
         const colMap = new Map<number, Watchlist[]>();
-        watchlists.forEach(wl => {
+        pageWatchlists.forEach(wl => {
             const [col] = wl.coordinate;
             if (!colMap.has(col)) colMap.set(col, []);
             colMap.get(col)!.push(wl);
@@ -337,7 +352,7 @@ export default function WatchlistContent() {
         columns[maxCol + 1].push({ type: 'add', coordinate: [maxCol + 1, 0] });
 
         return columns.filter(col => col.length > 0);
-    }, [watchlists]);
+    }, [watchlists, currentPage]);
 
     // Extract sortable IDs per column for SortableContext
     const columnSortableIds = useMemo(() => {
@@ -390,6 +405,16 @@ export default function WatchlistContent() {
             const apiErr = err as { message?: string };
             setSnackbar({ open: true, message: apiErr?.message || 'Đổi tên thất bại' });
             setWatchlists(prev => prev.map(w => (w.id || w._id) === wlId ? { ...w, name: wl.name } : w));
+        }
+    };
+
+    const handleSortChange = async (wl: Watchlist, sort: WatchlistSort) => {
+        const wlId = wl.id || wl._id!;
+        setWatchlists(prev => prev.map(w => (w.id || w._id) === wlId ? { ...w, sort } : w));
+        try {
+            await apiClient({ url: `/api/v1/watchlists/${wlId}`, method: 'PUT', body: { sort }, requireAuth: true });
+        } catch {
+            setWatchlists(prev => prev.map(w => (w.id || w._id) === wlId ? { ...w, sort: wl.sort } : w));
         }
     };
 
@@ -450,6 +475,7 @@ export default function WatchlistContent() {
                     onClose={() => { setDialogOpen(false); setEditingWatchlist(null); }}
                     onSaved={handleSaved}
                     defaultCoordinate={dialogCoordinate}
+                    defaultPage={currentPage}
                     editingWatchlist={editingWatchlist}
                     industries={industries}
                 />
@@ -459,9 +485,52 @@ export default function WatchlistContent() {
 
     return (
         <Box sx={{ py: 2 }}>
-            <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1'), lineHeight: 1.2, fontWeight: fontWeight.bold, mb: 3 }}>
+            <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1'), lineHeight: 1.2, fontWeight: fontWeight.bold, mb: 2 }}>
                 Danh sách theo dõi
             </Typography>
+
+            {/* Page selector */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 2.5, flexWrap: 'wrap' }}>
+                {pages.map(p => (
+                    <Box
+                        key={p}
+                        onClick={() => setCurrentPage(p)}
+                        sx={{
+                            px: 1.25, py: 0.35,
+                            borderRadius: `${borderRadius.sm}px`,
+                            cursor: 'pointer',
+                            fontSize: getResponsiveFontSize('xs'),
+                            fontWeight: currentPage === p ? fontWeight.semibold : fontWeight.medium,
+                            color: currentPage === p ? 'primary.main' : 'text.secondary',
+                            bgcolor: currentPage === p
+                                ? (isDark ? 'rgba(99,102,241,0.14)' : 'rgba(99,102,241,0.08)')
+                                : 'transparent',
+                            border: `1px solid ${currentPage === p ? 'rgba(99,102,241,0.4)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')}`,
+                            transition: 'all 0.15s',
+                            userSelect: 'none',
+                            '&:hover': { color: 'primary.main', borderColor: 'rgba(99,102,241,0.4)' },
+                        }}
+                    >
+                        Trang {p}
+                    </Box>
+                ))}
+                <Box
+                    onClick={() => { const next = Math.max(...pages) + 1; setCurrentPage(next); }}
+                    sx={{
+                        px: 1.25, py: 0.35,
+                        borderRadius: `${borderRadius.sm}px`,
+                        cursor: 'pointer',
+                        fontSize: getResponsiveFontSize('xs'),
+                        color: 'text.disabled',
+                        border: `1px dashed ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
+                        transition: 'all 0.15s',
+                        userSelect: 'none',
+                        '&:hover': { color: 'text.secondary', borderColor: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)' },
+                    }}
+                >
+                    + Trang mới
+                </Box>
+            </Box>
 
             <DndContext
                 sensors={sensors}
@@ -501,6 +570,7 @@ export default function WatchlistContent() {
                                                     allTickers={allTickers}
                                                     onDelete={() => handleDeleteClick(item.wl.id || item.wl._id!)}
                                                     onRenameSubmit={(newName) => handleRenameSubmit(item.wl, newName)}
+                                                    onSortChange={(sort) => handleSortChange(item.wl, sort)}
                                                     onAddStock={(ticker) =>
                                                         handleUpdateStocks(item.wl, [...item.wl.stock_symbols, ticker])
                                                     }
@@ -549,6 +619,7 @@ export default function WatchlistContent() {
                                     allTickers={allTickers}
                                     onDelete={() => {}}
                                     onRenameSubmit={() => {}}
+                                    onSortChange={() => {}}
                                     onAddStock={() => {}}
                                     onRemoveStock={() => {}}
                                     forceCollapsed
@@ -565,6 +636,7 @@ export default function WatchlistContent() {
                 onClose={() => { setDialogOpen(false); setEditingWatchlist(null); }}
                 onSaved={handleSaved}
                 defaultCoordinate={dialogCoordinate}
+                defaultPage={currentPage}
                 editingWatchlist={editingWatchlist}
                 industries={industries}
             />

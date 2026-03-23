@@ -1,16 +1,21 @@
 # app/schemas/watchlists.py
 from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import datetime, timezone
 from pydantic import EmailStr  # Thêm EmailStr
 
 from app.utils.types import PyObjectId
+
+VALID_SORT_VALUES = ('pct_change_asc', 'pct_change_desc', 'vsi_asc', 'vsi_desc', 'trading_value_asc', 'trading_value_desc', 'manual')
+WatchlistSort = Literal['pct_change_asc', 'pct_change_desc', 'vsi_asc', 'vsi_desc', 'trading_value_asc', 'trading_value_desc', 'manual']
 
 
 class WatchlistBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100, description="Tên của danh sách theo dõi.")
     coordinate: List[int] = Field(..., min_length=2, max_length=2, description="Toạ độ [cột, hàng] của watchlist trên lưới, gốc [0,0].")
     stock_symbols: List[str] = Field(default_factory=list, description="Danh sách các mã cổ phiếu trong danh sách theo dõi.")
+    page: int = Field(default=1, ge=1, description="Trang hiển thị watchlist (bắt đầu từ 1).")
+    sort: WatchlistSort = Field(default='manual', description="Kiểu sắp xếp cổ phiếu: pct_change_asc/desc, vsi_asc/desc, trading_value_asc/desc, manual.")
 
 
 class WatchlistCreate(WatchlistBase):
@@ -21,10 +26,12 @@ class WatchlistCreate(WatchlistBase):
 class WatchlistUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     coordinate: Optional[List[int]] = Field(None, min_length=2, max_length=2)
-    stock_symbols: Optional[List[str]] = None  # Allows replacing the entire list or adding/removing (handled in CRUD)
+    stock_symbols: Optional[List[str]] = None
+    page: Optional[int] = Field(None, ge=1)
+    sort: Optional[WatchlistSort] = None
 
     model_config = ConfigDict(
-        json_schema_extra={"example": {"name": "Cổ phiếu Ngân Hàng Ưu Tiên", "coordinate": [1, 0], "stock_symbols": ["VCB", "TCB", "ACB", "BID"]}}
+        json_schema_extra={"example": {"name": "Cổ phiếu Ngân Hàng Ưu Tiên", "coordinate": [1, 0], "stock_symbols": ["VCB", "TCB", "ACB", "BID"], "page": 1, "sort": "manual"}}
     )
 
 

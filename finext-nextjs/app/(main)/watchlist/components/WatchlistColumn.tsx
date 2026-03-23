@@ -37,12 +37,26 @@ interface TickerOption {
     name: string;
 }
 
+type WatchlistSort = 'pct_change_asc' | 'pct_change_desc' | 'vsi_asc' | 'vsi_desc' | 'trading_value_asc' | 'trading_value_desc' | 'manual';
+
+const SORT_OPTIONS: { key: WatchlistSort; label: string }[] = [
+    { key: 'manual',             label: 'Thủ công' },
+    { key: 'pct_change_desc',    label: '% Thay đổi ↓' },
+    { key: 'pct_change_asc',     label: '% Thay đổi ↑' },
+    { key: 'vsi_desc',           label: 'Thanh khoản ↓' },
+    { key: 'vsi_asc',            label: 'Thanh khoản ↑' },
+    { key: 'trading_value_desc', label: 'GTGD ↓' },
+    { key: 'trading_value_asc',  label: 'GTGD ↑' },
+];
+
 interface Watchlist {
     id: string;
     _id?: string;
     name: string;
     coordinate: [number, number];
     stock_symbols: string[];
+    page?: number;
+    sort?: WatchlistSort;
 }
 
 interface WatchlistColumnProps {
@@ -51,6 +65,7 @@ interface WatchlistColumnProps {
     allTickers: TickerOption[];
     onDelete: () => void;
     onRenameSubmit: (newName: string) => void;
+    onSortChange: (sort: WatchlistSort) => void;
     onAddStock: (ticker: string) => void;
     onRemoveStock: (ticker: string) => void;
     dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
@@ -63,6 +78,7 @@ export default function WatchlistColumn({
     allTickers,
     onDelete,
     onRenameSubmit,
+    onSortChange,
     onAddStock,
     onRemoveStock,
     dragHandleProps,
@@ -118,6 +134,22 @@ export default function WatchlistColumn({
     const headerColor = aggregateChange != null
         ? getTrendColor(aggregateChange * 100, theme)
         : theme.palette.text.secondary;
+
+    // Sorted tickers
+    const sortedTickers = useMemo(() => {
+        const tickers = watchlist.stock_symbols;
+        const sort = watchlist.sort ?? 'manual';
+        if (sort === 'manual') return tickers;
+        return [...tickers].sort((a, b) => {
+            const da = stockDataMap.get(a);
+            const db = stockDataMap.get(b);
+            let av = 0, bv = 0;
+            if (sort.startsWith('pct_change')) { av = da?.pct_change ?? 0; bv = db?.pct_change ?? 0; }
+            else if (sort.startsWith('vsi'))   { av = da?.vsi ?? 0;        bv = db?.vsi ?? 0; }
+            else                               { av = da?.trading_value ?? 0; bv = db?.trading_value ?? 0; }
+            return sort.endsWith('_asc') ? av - bv : bv - av;
+        });
+    }, [watchlist.stock_symbols, watchlist.sort, stockDataMap]);
 
     // Tickers available for autocomplete (exclude already added)
     const tickerOptions = useMemo(() => {
@@ -259,14 +291,16 @@ export default function WatchlistColumn({
                 </Box>
 
                 {/* ⋮ Menu button */}
-                <IconButton
-                    size="small"
-                    onClick={e => { e.stopPropagation(); setMenuAnchor(e.currentTarget); }}
-                    onPointerDown={e => e.stopPropagation()}
-                    sx={{ color: 'text.disabled', p: 0.25, flexShrink: 0, '&:hover': { color: 'text.secondary' } }}
-                >
-                    <MoreVertIcon sx={{ fontSize: 15 }} />
-                </IconButton>
+                <Tooltip title="Tùy chỉnh" placement="top" arrow={false} slotProps={tooltipSlotProps}>
+                    <IconButton
+                        size="small"
+                        onClick={e => { e.stopPropagation(); setMenuAnchor(e.currentTarget); }}
+                        onPointerDown={e => e.stopPropagation()}
+                        sx={{ color: 'text.disabled', p: 0.25, flexShrink: 0, '&:hover': { color: 'text.secondary' } }}
+                    >
+                        <MoreVertIcon sx={{ fontSize: 15 }} />
+                    </IconButton>
+                </Tooltip>
             </Box>
 
             {/* Popup menu */}
@@ -293,22 +327,51 @@ export default function WatchlistColumn({
                 transformOrigin={{ horizontal: 'left', vertical: 'top' }}
                 anchorOrigin={{ horizontal: 'right', vertical: 'top' }}
             >
+
+                {/* Sort options */}
+                {SORT_OPTIONS.map(opt => {
+                    const active = (watchlist.sort ?? 'manual') === opt.key;
+                    return (
+                        <MenuItem
+                            key={opt.key}
+                            onClick={() => { setMenuAnchor(null); onSortChange(opt.key); }}
+                            sx={{
+                                py: 0.4,
+                                px: 1,
+                                gap: 0.75,
+                                fontSize: getResponsiveFontSize('xs'),
+                                borderRadius: `${borderRadius.sm}px`,
+                                color: active ? 'primary.main' : 'text.secondary',
+                                fontWeight: active ? fontWeight.semibold : 400,
+                                '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' },
+                            }}
+                        >
+                            <Box component="span" sx={{ width: 10, fontSize: 9, flexShrink: 0, color: 'primary.main' }}>
+                                {active ? '●' : ''}
+                            </Box>
+                            <Box component="span" sx={{ fontSize: getResponsiveFontSize('xs') }}>{opt.label}</Box>
+                        </MenuItem>
+                    );
+                })}
+
+                {/* Divider */}
+                <Box sx={{ my: 0.5, mx: 1, height: '1px', bgcolor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)' }} />
+
+                {/* Delete */}
                 <MenuItem
                     onClick={() => { setMenuAnchor(null); onDelete(); }}
                     sx={{
-                        py: 0.5,
-                        px: 0.5,
+                        py: 0.4,
+                        px: 1,
                         gap: 0.75,
                         color: 'error.main',
                         fontSize: getResponsiveFontSize('xs'),
                         borderRadius: `${borderRadius.sm}px`,
-                        '&:hover': {
-                            bgcolor: isDark ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.08)',
-                        },
+                        '&:hover': { bgcolor: isDark ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.08)' },
                     }}
                 >
-                    <DeleteIcon sx={{ fontSize: 14, flexShrink: 0 }} />
-                    <Box component="span" sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium }}>Xóa danh sách</Box>
+                    <DeleteIcon sx={{ fontSize: 13, flexShrink: 0 }} />
+                    <Box component="span" sx={{ fontSize: getResponsiveFontSize('xs') }}>Xóa danh sách</Box>
                 </MenuItem>
             </Menu>
 
@@ -321,7 +384,7 @@ export default function WatchlistColumn({
                 gap: 0.5,
                 p: 0.75,
             }}>
-                {watchlist.stock_symbols.map((ticker) => {
+                {sortedTickers.map((ticker) => {
                     const data = stockDataMap.get(ticker);
 
                     if (!data) {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import {
     Box,
     Typography,
@@ -8,14 +8,21 @@ import {
     Autocomplete,
     TextField,
     Button,
+    Tooltip,
+    Menu,
+    MenuItem,
+    Snackbar,
+    Alert,
     useTheme,
     alpha,
-
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import RefreshIcon from '@mui/icons-material/Refresh';
 
 import { getResponsiveFontSize, fontWeight, borderRadius, durations } from 'theme/tokens';
 import { getPriceColor, getVsiColor, getTrendColor } from 'theme/colorHelpers';
@@ -41,12 +48,26 @@ interface IndustryInfo {
     tickers: string[];
 }
 
+type WatchlistSort = 'pct_change_asc' | 'pct_change_desc' | 'vsi_asc' | 'vsi_desc' | 'trading_value_asc' | 'trading_value_desc' | 'manual';
+
+const SORT_OPTIONS: { key: WatchlistSort; label: string }[] = [
+    { key: 'manual',             label: 'Thủ công' },
+    { key: 'pct_change_desc',    label: '% Thay đổi ↓' },
+    { key: 'pct_change_asc',     label: '% Thay đổi ↑' },
+    { key: 'vsi_desc',           label: 'Thanh khoản ↓' },
+    { key: 'vsi_asc',            label: 'Thanh khoản ↑' },
+    { key: 'trading_value_desc', label: 'GTGD ↓' },
+    { key: 'trading_value_asc',  label: 'GTGD ↑' },
+];
+
 interface Watchlist {
     id: string;
     _id?: string;
     name: string;
     coordinate: [number, number];
     stock_symbols: string[];
+    page: number;
+    sort: string;
 }
 
 interface TickerOption {
@@ -70,6 +91,18 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
     const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+
+    // Snackbar
+    const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'error' | 'success' }>({ open: false, message: '', severity: 'error' });
+
+    // Menu state — per watchlist card
+    const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
+    const [menuWlId, setMenuWlId] = useState<string | null>(null);
+
+    // Inline rename state
+    const [renamingId, setRenamingId] = useState<string | null>(null);
+    const [renameValue, setRenameValue] = useState('');
+    const renameInputRef = useRef<HTMLInputElement>(null);
 
     // SSE: all stock data
     const { data: stockDataRaw } = useSseCache<StockData[]>({ keyword: 'home_today_stock' });
@@ -151,12 +184,6 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
         setDialogOpen(true);
     };
 
-    const openRename = (wl: Watchlist) => {
-        setEditingWatchlist(wl);
-        setDialogCoordinate(wl.coordinate);
-        setDialogOpen(true);
-    };
-
     const handleSaved = () => {
         setDialogOpen(false);
         setEditingWatchlist(null);
@@ -192,6 +219,62 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
         });
     };
 
+    // Inline rename
+    const startRename = (wl: Watchlist) => {
+        const wlId = wl.id || wl._id!;
+        setRenamingId(wlId);
+        setRenameValue(wl.name);
+        setTimeout(() => renameInputRef.current?.select(), 0);
+    };
+
+    const commitRename = async (wl: Watchlist) => {
+        const trimmed = renameValue.trim();
+        const wlId = wl.id || wl._id!;
+        if (!trimmed || trimmed === wl.name) {
+            setRenamingId(null);
+            return;
+        }
+        // Optimistic update
+        setWatchlists(prev => prev.map(w => (w.id || w._id) === wlId ? { ...w, name: trimmed } : w));
+        setRenamingId(null);
+        try {
+            await apiClient({
+                url: `/api/v1/watchlists/${wlId}`,
+                method: 'PUT',
+                body: { name: trimmed },
+                requireAuth: true,
+            });
+        } catch (err: unknown) {
+            // Revert
+            setWatchlists(prev => prev.map(w => (w.id || w._id) === wlId ? { ...w, name: wl.name } : w));
+            const apiErr = err as { message?: string };
+            const message = apiErr?.message || (err instanceof Error ? err.message : 'Đổi tên thất bại');
+            setSnackbar({ open: true, message, severity: 'error' });
+        }
+    };
+
+    const cancelRename = () => {
+        setRenamingId(null);
+    };
+
+    // Sort change
+    const handleSortChange = async (wl: Watchlist, sort: WatchlistSort) => {
+        const wlId = wl.id || wl._id!;
+        const oldSort = wl.sort;
+        setWatchlists(prev => prev.map(w => (w.id || w._id) === wlId ? { ...w, sort } : w));
+        try {
+            await apiClient({
+                url: `/api/v1/watchlists/${wlId}`,
+                method: 'PUT',
+                body: { sort },
+                requireAuth: true,
+            });
+        } catch (err) {
+            console.error('Sort change failed:', err);
+            setWatchlists(prev => prev.map(w => (w.id || w._id) === wlId ? { ...w, sort: oldSort } : w));
+        }
+    };
+
     const fmt = {
         price: (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
         diff: (n: number) => `${n > 0 ? '+' : ''}${n.toFixed(2)}`,
@@ -209,6 +292,23 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
 
     const divider = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
 
+    const tooltipSlotProps = {
+        tooltip: {
+            sx: {
+                bgcolor: isDark ? alpha('#1e1e1e', 0.92) : alpha('#fff', 0.92),
+                color: 'text.primary',
+                border: 'none',
+                borderRadius: `${borderRadius.sm}px`,
+                fontSize: getResponsiveFontSize('xs'),
+                fontWeight: fontWeight.medium,
+                backdropFilter: 'blur(8px)',
+                boxShadow: isDark ? '0 4px 16px rgba(0,0,0,0.5)' : '0 4px 12px rgba(0,0,0,0.15)',
+                px: 1,
+                py: 0.5,
+            },
+        },
+    };
+
     // Next available coordinate for "add" button
     const nextCoordinate = useMemo<[number, number]>(() => {
         if (watchlists.length === 0) return [0, 0];
@@ -221,6 +321,7 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
     const renderWatchlistCard = (wl: Watchlist) => {
         const wlId = wl.id || wl._id!;
         const collapsed = collapsedIds.has(wlId);
+        const isRenaming = renamingId === wlId;
 
         // Aggregate pct_change
         let total = 0, count = 0;
@@ -232,6 +333,20 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
         const headerColor = aggregateChange != null
             ? getTrendColor(aggregateChange * 100, theme)
             : theme.palette.text.secondary;
+
+        // Sorted tickers (client-side sort)
+        const sort = (wl.sort ?? 'manual') as WatchlistSort;
+        const sortedTickers = sort === 'manual'
+            ? wl.stock_symbols
+            : [...wl.stock_symbols].sort((a, b) => {
+                const da = stockDataMap.get(a);
+                const db = stockDataMap.get(b);
+                let av = 0, bv = 0;
+                if (sort.startsWith('pct_change')) { av = da?.pct_change ?? 0; bv = db?.pct_change ?? 0; }
+                else if (sort.startsWith('vsi'))   { av = da?.vsi ?? 0;        bv = db?.vsi ?? 0; }
+                else                               { av = da?.trading_value ?? 0; bv = db?.trading_value ?? 0; }
+                return sort.endsWith('_asc') ? av - bv : bv - av;
+            });
 
         // Tickers available for autocomplete
         const existing = new Set(wl.stock_symbols);
@@ -253,30 +368,67 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                     sx={{
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'space-between',
-                        px: 1.5,
+                        px: 0.75,
                         py: 0.5,
                         borderBottom: collapsed ? 'none' : `1px solid ${divider}`,
                         bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                        userSelect: 'none',
                     }}
                 >
-                    <Box
+                    {/* Collapse button */}
+                    <IconButton
+                        size="small"
                         onClick={() => toggleCollapse(wlId)}
-                        sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0, flex: 1, cursor: 'pointer', userSelect: 'none' }}
+                        sx={{ color: 'text.disabled', p: 0.25, mr: 0.25, flexShrink: 0, '&:hover': { color: 'text.secondary' } }}
                     >
-                        <Typography
-                            sx={{
-                                fontSize: getResponsiveFontSize('xs'),
-                                fontWeight: fontWeight.bold,
-                                color: 'text.primary',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                            }}
-                        >
-                            {wl.name}
-                        </Typography>
-                        {aggregateChange != null && (
+                        {collapsed
+                            ? <ExpandMoreIcon sx={{ fontSize: 16 }} />
+                            : <ExpandLessIcon sx={{ fontSize: 16 }} />
+                        }
+                    </IconButton>
+
+                    {/* Name — double-click to rename inline */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0, flex: 1 }}>
+                        {isRenaming ? (
+                            <TextField
+                                inputRef={renameInputRef}
+                                value={renameValue}
+                                onChange={e => setRenameValue(e.target.value)}
+                                onBlur={() => commitRename(wl)}
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter') commitRename(wl);
+                                    if (e.key === 'Escape') cancelRename();
+                                }}
+                                variant="standard"
+                                size="small"
+                                autoFocus
+                                InputProps={{
+                                    disableUnderline: false,
+                                    sx: {
+                                        fontSize: getResponsiveFontSize('xs'),
+                                        fontWeight: fontWeight.bold,
+                                        px: 0,
+                                    },
+                                }}
+                                sx={{ flex: 1, minWidth: 0 }}
+                            />
+                        ) : (
+                            <Typography
+                                onDoubleClick={() => startRename(wl)}
+                                sx={{
+                                    fontSize: getResponsiveFontSize('xs'),
+                                    fontWeight: fontWeight.bold,
+                                    color: 'text.primary',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    cursor: 'text',
+                                }}
+                            >
+                                {wl.name}
+                            </Typography>
+                        )}
+                        {aggregateChange != null && !isRenaming && (
                             <Typography
                                 sx={{
                                     fontSize: getResponsiveFontSize('xs'),
@@ -289,21 +441,24 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                             </Typography>
                         )}
                     </Box>
-                    <Box sx={{ display: 'flex', flexShrink: 0, ml: 0.5 }}>
-                        <IconButton size="small" onClick={() => openRename(wl)} sx={{ color: 'text.secondary', p: 0.25 }}>
-                            <EditIcon sx={{ fontSize: 13 }} />
+
+                    {/* ⋮ Menu button */}
+                    <Tooltip title="Tùy chỉnh" placement="top" arrow={false} slotProps={tooltipSlotProps}>
+                        <IconButton
+                            size="small"
+                            onClick={e => { setMenuAnchor(e.currentTarget); setMenuWlId(wlId); }}
+                            sx={{ color: 'text.disabled', p: 0.25, flexShrink: 0, '&:hover': { color: 'text.secondary' } }}
+                        >
+                            <MoreVertIcon sx={{ fontSize: 15 }} />
                         </IconButton>
-                        <IconButton size="small" onClick={() => handleDeleteClick(wlId)} sx={{ color: 'text.secondary', p: 0.25 }}>
-                            <DeleteIcon sx={{ fontSize: 13 }} />
-                        </IconButton>
-                    </Box>
+                    </Tooltip>
                 </Box>
 
                 {/* Stock rows */}
                 {!collapsed && (
                     <>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 0.75 }}>
-                            {wl.stock_symbols.map((ticker) => {
+                            {sortedTickers.map((ticker) => {
                                 const data = stockDataMap.get(ticker);
 
                                 if (!data) {
@@ -424,6 +579,9 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
         );
     };
 
+    // Find the watchlist that the menu is open for
+    const menuWl = menuWlId ? watchlists.find(w => (w.id || w._id) === menuWlId) : null;
+
     return (
         <Box
             sx={{
@@ -443,9 +601,18 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                 <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.bold, color: 'text.primary' }}>
                     Danh sách theo dõi
                 </Typography>
-                <IconButton size="small" onClick={() => openCreate(nextCoordinate)} sx={{ color: 'text.secondary', p: 0.25 }}>
-                    <AddIcon sx={{ fontSize: 18 }} />
-                </IconButton>
+                <Box sx={{ display: 'flex', gap: 0.25 }}>
+                    <Tooltip title="Làm mới" placement="bottom" arrow={false} slotProps={tooltipSlotProps}>
+                        <IconButton size="small" onClick={() => { setLoading(true); fetchWatchlists(); }} sx={{ color: 'text.secondary', p: 0.25 }}>
+                            <RefreshIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Tạo mới" placement="bottom" arrow={false} slotProps={tooltipSlotProps}>
+                        <IconButton size="small" onClick={() => openCreate(nextCoordinate)} sx={{ color: 'text.secondary', p: 0.25 }}>
+                            <AddIcon sx={{ fontSize: 18 }} />
+                        </IconButton>
+                    </Tooltip>
+                </Box>
             </Box>
 
             {/* Content */}
@@ -474,11 +641,92 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                 )}
             </Box>
 
+            {/* Shared ⋮ popup menu — glassmorphism, opens LEFT since panel is on right edge */}
+            <Menu
+                anchorEl={menuAnchor}
+                open={Boolean(menuAnchor)}
+                onClose={() => { setMenuAnchor(null); setMenuWlId(null); }}
+                slotProps={{
+                    paper: {
+                        sx: {
+                            bgcolor: isDark ? 'rgba(22,22,26,0.72)' : 'rgba(255,255,255,0.72)',
+                            backdropFilter: 'blur(20px)',
+                            WebkitBackdropFilter: 'blur(20px)',
+                            border: `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.07)'}`,
+                            borderRadius: `${borderRadius.md}px`,
+                            boxShadow: isDark
+                                ? '0 8px 32px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)'
+                                : '0 8px 24px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.9)',
+                            overflow: 'hidden',
+                            px: 0.5,
+                        },
+                    },
+                }}
+                transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                anchorOrigin={{ horizontal: 'left', vertical: 'top' }}
+            >
+
+                {/* Sort options */}
+                {SORT_OPTIONS.map(opt => {
+                    const active = menuWl ? (menuWl.sort ?? 'manual') === opt.key : false;
+                    return (
+                        <MenuItem
+                            key={opt.key}
+                            onClick={() => {
+                                if (menuWl) handleSortChange(menuWl, opt.key);
+                                setMenuAnchor(null);
+                                setMenuWlId(null);
+                            }}
+                            sx={{
+                                py: 0.4,
+                                px: 1,
+                                gap: 0.75,
+                                fontSize: getResponsiveFontSize('xs'),
+                                borderRadius: `${borderRadius.sm}px`,
+                                color: active ? 'primary.main' : 'text.secondary',
+                                fontWeight: active ? fontWeight.semibold : 400,
+                                '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' },
+                            }}
+                        >
+                            <Box component="span" sx={{ width: 10, fontSize: 9, flexShrink: 0, color: 'primary.main' }}>
+                                {active ? '●' : ''}
+                            </Box>
+                            <Box component="span" sx={{ fontSize: getResponsiveFontSize('xs') }}>{opt.label}</Box>
+                        </MenuItem>
+                    );
+                })}
+
+                {/* Divider */}
+                <Box sx={{ my: 0.5, mx: 1, height: '1px', bgcolor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)' }} />
+
+                {/* Delete */}
+                <MenuItem
+                    onClick={() => {
+                        if (menuWlId) handleDeleteClick(menuWlId);
+                        setMenuAnchor(null);
+                        setMenuWlId(null);
+                    }}
+                    sx={{
+                        py: 0.4,
+                        px: 1,
+                        gap: 0.75,
+                        color: 'error.main',
+                        fontSize: getResponsiveFontSize('xs'),
+                        borderRadius: `${borderRadius.sm}px`,
+                        '&:hover': { bgcolor: isDark ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.08)' },
+                    }}
+                >
+                    <DeleteIcon sx={{ fontSize: 13, flexShrink: 0 }} />
+                    <Box component="span" sx={{ fontSize: getResponsiveFontSize('xs') }}>Xóa danh sách</Box>
+                </MenuItem>
+            </Menu>
+
             <AddWatchlistDialog
                 open={dialogOpen}
                 onClose={() => { setDialogOpen(false); setEditingWatchlist(null); }}
                 onSaved={handleSaved}
                 defaultCoordinate={dialogCoordinate}
+                defaultPage={1}
                 editingWatchlist={editingWatchlist}
                 industries={industries}
             />
@@ -490,6 +738,23 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                 title="Xóa Watchlist"
                 message="Bạn có chắc muốn xóa watchlist này? Hành động không thể hoàn tác."
             />
+
+            {/* Snackbar for errors */}
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={4000}
+                onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert
+                    onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+                    severity={snackbar.severity}
+                    variant="filled"
+                    sx={{ width: '100%' }}
+                >
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 }

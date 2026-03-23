@@ -14,6 +14,12 @@ logger = logging.getLogger(__name__)
 WATCHLIST_COLLECTION = "watchlists"
 
 
+def _dedup_preserve_order(symbols: list) -> list:
+    """Loại bỏ duplicate nhưng giữ nguyên thứ tự (quan trọng cho sort='manual')."""
+    seen: set = set()
+    return [x for x in symbols if not (x in seen or seen.add(x))]
+
+
 async def create_watchlist(db: AsyncIOMotorDatabase, user_id: PyObjectId, watchlist_data: WatchlistCreate) -> Optional[WatchlistInDB]:
     if not ObjectId.is_valid(user_id):
         logger.error(f"Invalid user_id format for creating watchlist: {user_id}")
@@ -25,12 +31,17 @@ async def create_watchlist(db: AsyncIOMotorDatabase, user_id: PyObjectId, watchl
         logger.warning(f"Watchlist with name '{watchlist_data.name}' already exists for user {user_id}.")
         raise ValueError(f"Bạn đã có một danh sách theo dõi với tên '{watchlist_data.name}'.")
 
+    # TODO: remove — debug log
+    logger.info(f"[DEBUG] create_watchlist received: page={watchlist_data.page}, sort={watchlist_data.sort}, name={watchlist_data.name}")
+
     now = datetime.now(timezone.utc)
     watchlist_doc_to_insert = {
         "user_id": ObjectId(user_id),
         "name": watchlist_data.name,
         "coordinate": watchlist_data.coordinate,
-        "stock_symbols": list(set(watchlist_data.stock_symbols)),
+        "page": watchlist_data.page,
+        "sort": watchlist_data.sort,
+        "stock_symbols": _dedup_preserve_order(list(watchlist_data.stock_symbols)),
         "created_at": now,
         "updated_at": now,
     }
@@ -98,7 +109,7 @@ async def update_watchlist(
             raise ValueError(f"Bạn đã có một danh sách theo dõi khác với tên '{update_data['name']}'.")
 
     if "stock_symbols" in update_data and update_data["stock_symbols"] is not None:
-        update_data["stock_symbols"] = list(set(update_data["stock_symbols"]))
+        update_data["stock_symbols"] = _dedup_preserve_order(update_data["stock_symbols"])
 
     update_data["updated_at"] = datetime.now(timezone.utc)
 

@@ -22,6 +22,8 @@ interface Watchlist {
     name: string;
     coordinate: [number, number];
     stock_symbols: string[];
+    page: number;
+    sort: string;
 }
 
 interface IndustryInfo {
@@ -34,6 +36,7 @@ interface AddWatchlistDialogProps {
     onClose: () => void;
     onSaved: () => void;
     defaultCoordinate: [number, number];
+    defaultPage: number;
     editingWatchlist: Watchlist | null;
     industries: IndustryInfo[];
 }
@@ -43,6 +46,7 @@ export default function AddWatchlistDialog({
     onClose,
     onSaved,
     defaultCoordinate,
+    defaultPage,
     editingWatchlist,
     industries,
 }: AddWatchlistDialogProps) {
@@ -93,7 +97,7 @@ export default function AddWatchlistDialog({
                 await apiClient({
                     url: '/api/v1/watchlists',
                     method: 'POST',
-                    body: { name: trimmed, coordinate: defaultCoordinate, stock_symbols: symbols },
+                    body: { name: trimmed, coordinate: defaultCoordinate, page: defaultPage, stock_symbols: symbols },
                     requireAuth: true,
                 });
             }
