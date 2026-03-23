@@ -103,21 +103,21 @@ export default function WatchlistContent() {
         useSensor(KeyboardSensor),
     );
 
-    // Helper: find column index for a sortable ID or a column droppable ID
+    // Helper: find column index — uses ref to avoid recreating on every state change
     const findColumnIndex = useCallback((id: string): number => {
         if (typeof id === 'string' && id.startsWith('column-')) {
             return parseInt(id.replace('column-', ''), 10);
         }
-        const wl = watchlists.find(w => (w.id || w._id) === id);
+        const wl = watchlistsRef.current.find(w => (w.id || w._id) === id);
         if (wl) return wl.coordinate[0];
         return -1;
-    }, [watchlists]);
+    }, []); // stable — reads from ref
 
-    // ── DnD handlers ──
+    // ── DnD handlers (all stable — no watchlists in deps) ──
     const handleDragStart = useCallback((event: DragStartEvent) => {
         setActiveId(event.active.id as string);
-        watchlistsBeforeDrag.current = [...watchlists];
-    }, [watchlists]);
+        watchlistsBeforeDrag.current = [...watchlistsRef.current];
+    }, []);
 
     const handleDragOver = useCallback((event: DragOverEvent) => {
         const { active, over } = event;
@@ -137,6 +137,10 @@ export default function WatchlistContent() {
         setWatchlists(prev => {
             const activeWl = prev.find(w => (w.id || w._id) === activeWlId);
             if (!activeWl) return prev;
+
+            // Double-check column from prev state to avoid stale ref reads
+            const prevActiveCol = activeWl.coordinate[0];
+            if (prevActiveCol === overCol) return prev; // already in target column
 
             // Get items in the target column sorted by row
             const overColItems = prev
@@ -158,22 +162,22 @@ export default function WatchlistContent() {
 
             // Recalculate coordinates for the source column (without the active item)
             const sourceColItems = prev
-                .filter(w => w.coordinate[0] === activeCol && (w.id || w._id) !== activeWlId)
+                .filter(w => w.coordinate[0] === prevActiveCol && (w.id || w._id) !== activeWlId)
                 .sort((a, b) => a.coordinate[1] - b.coordinate[1])
                 .map((w, idx) => ({
                     ...w,
-                    coordinate: [activeCol, idx] as [number, number],
+                    coordinate: [prevActiveCol, idx] as [number, number],
                 }));
 
             // Rebuild full list
             const otherItems = prev.filter(
-                w => w.coordinate[0] !== activeCol && w.coordinate[0] !== overCol
+                w => w.coordinate[0] !== prevActiveCol && w.coordinate[0] !== overCol
             );
             return [...otherItems, ...sourceColItems, ...updatedTargetItems];
         });
     }, [findColumnIndex]);
 
-    const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    const handleDragEnd = useCallback((event: DragEndEvent) => {
         const { active, over } = event;
         setActiveId(null);
 
@@ -181,38 +185,37 @@ export default function WatchlistContent() {
         const overWlId = over ? (over.id as string) : null;
 
         // Same-column reorder (cross-column was already handled in onDragOver)
-        if (overWlId && activeWlId !== overWlId) {
-            const activeCol = findColumnIndex(activeWlId);
-            const overCol = findColumnIndex(overWlId);
+        if (overWlId && activeWlId !== overWlId && !overWlId.startsWith('column-')) {
+            setWatchlists(prev => {
+                const activeWl = prev.find(w => (w.id || w._id) === activeWlId);
+                const overWl = prev.find(w => (w.id || w._id) === overWlId);
+                if (!activeWl || !overWl) return prev;
+                if (activeWl.coordinate[0] !== overWl.coordinate[0]) return prev; // different columns, already handled
 
-            if (activeCol === overCol && activeCol !== -1) {
-                setWatchlists(prev => {
-                    const colItems = prev
-                        .filter(w => w.coordinate[0] === activeCol)
-                        .sort((a, b) => a.coordinate[1] - b.coordinate[1]);
+                const col = activeWl.coordinate[0];
+                const colItems = prev
+                    .filter(w => w.coordinate[0] === col)
+                    .sort((a, b) => a.coordinate[1] - b.coordinate[1]);
 
-                    const activeIdx = colItems.findIndex(w => (w.id || w._id) === activeWlId);
-                    const overIdx = colItems.findIndex(w => (w.id || w._id) === overWlId);
+                const activeIdx = colItems.findIndex(w => (w.id || w._id) === activeWlId);
+                const overIdx = colItems.findIndex(w => (w.id || w._id) === overWlId);
+                if (activeIdx === -1 || overIdx === -1 || activeIdx === overIdx) return prev;
 
-                    if (activeIdx === -1 || overIdx === -1) return prev;
+                const reordered = [...colItems];
+                const [moved] = reordered.splice(activeIdx, 1);
+                reordered.splice(overIdx, 0, moved);
 
-                    const reordered = [...colItems];
-                    const [moved] = reordered.splice(activeIdx, 1);
-                    reordered.splice(overIdx, 0, moved);
+                const updatedColItems = reordered.map((w, idx) => ({
+                    ...w,
+                    coordinate: [col, idx] as [number, number],
+                }));
 
-                    const updatedColItems = reordered.map((w, idx) => ({
-                        ...w,
-                        coordinate: [activeCol, idx] as [number, number],
-                    }));
-
-                    const otherItems = prev.filter(w => w.coordinate[0] !== activeCol);
-                    return [...otherItems, ...updatedColItems];
-                });
-            }
+                const otherItems = prev.filter(w => w.coordinate[0] !== col);
+                return [...otherItems, ...updatedColItems];
+            });
         }
 
-        // Send reorder API — read latest state from ref (avoids stale closure)
-        // Use requestAnimationFrame to let React flush the state update above
+        // Send reorder API
         requestAnimationFrame(() => {
             const current = watchlistsRef.current;
             const before = watchlistsBeforeDrag.current;
@@ -237,7 +240,6 @@ export default function WatchlistContent() {
                 body: { items },
                 requireAuth: true,
             }).catch(() => {
-                // Rollback on failure
                 setWatchlists(watchlistsBeforeDrag.current);
             }).finally(() => {
                 setIsReordering(false);
@@ -525,9 +527,9 @@ export default function WatchlistContent() {
                 </Box>
 
                 {typeof document !== 'undefined' && createPortal(
-                    <DragOverlay>
+                    <DragOverlay dropAnimation={null}>
                         {activeWatchlist ? (
-                            <Box sx={{ opacity: 0.85, transform: 'scale(1.02)', boxShadow: 6 }}>
+                            <Box sx={{ boxShadow: 6, borderRadius: `${borderRadius.md}px`, overflow: 'hidden' }}>
                                 <WatchlistColumn
                                     watchlist={activeWatchlist}
                                     stockDataMap={stockDataMap}
@@ -536,6 +538,7 @@ export default function WatchlistContent() {
                                     onRename={() => {}}
                                     onAddStock={() => {}}
                                     onRemoveStock={() => {}}
+                                    forceCollapsed
                                 />
                             </Box>
                         ) : null}

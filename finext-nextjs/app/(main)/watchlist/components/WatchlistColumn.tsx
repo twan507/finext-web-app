@@ -50,6 +50,7 @@ interface WatchlistColumnProps {
     onAddStock: (ticker: string) => void;
     onRemoveStock: (ticker: string) => void;
     dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
+    forceCollapsed?: boolean;
 }
 
 export default function WatchlistColumn({
@@ -61,11 +62,13 @@ export default function WatchlistColumn({
     onAddStock,
     onRemoveStock,
     dragHandleProps,
+    forceCollapsed,
 }: WatchlistColumnProps) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const [autocompleteKey, setAutocompleteKey] = useState(0);
-    const [collapsed, setCollapsed] = useState(false);
+    const [collapsedState, setCollapsed] = useState(false);
+    const collapsed = forceCollapsed ?? collapsedState;
 
     // Aggregate pct_change
     const aggregateChange = useMemo(() => {
