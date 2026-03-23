@@ -41,6 +41,7 @@ async def create_watchlist(db: AsyncIOMotorDatabase, user_id: PyObjectId, watchl
         "coordinate": watchlist_data.coordinate,
         "page": watchlist_data.page,
         "sort": watchlist_data.sort,
+        "collapsed": watchlist_data.collapsed,
         "stock_symbols": _dedup_preserve_order(list(watchlist_data.stock_symbols)),
         "created_at": now,
         "updated_at": now,

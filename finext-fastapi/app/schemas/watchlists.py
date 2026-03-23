@@ -16,6 +16,7 @@ class WatchlistBase(BaseModel):
     stock_symbols: List[str] = Field(default_factory=list, description="Danh sách các mã cổ phiếu trong danh sách theo dõi.")
     page: int = Field(default=1, ge=1, description="Trang hiển thị watchlist (bắt đầu từ 1).")
     sort: WatchlistSort = Field(default='manual', description="Kiểu sắp xếp cổ phiếu: pct_change_asc/desc, vsi_asc/desc, trading_value_asc/desc, manual.")
+    collapsed: bool = Field(default=False, description="Trạng thái thu gọn của watchlist.")
 
 
 class WatchlistCreate(WatchlistBase):
@@ -29,6 +30,7 @@ class WatchlistUpdate(BaseModel):
     stock_symbols: Optional[List[str]] = None
     page: Optional[int] = Field(None, ge=1)
     sort: Optional[WatchlistSort] = None
+    collapsed: Optional[bool] = None
 
     model_config = ConfigDict(
         json_schema_extra={"example": {"name": "Cổ phiếu Ngân Hàng Ưu Tiên", "coordinate": [1, 0], "stock_symbols": ["VCB", "TCB", "ACB", "BID"], "page": 1, "sort": "manual"}}

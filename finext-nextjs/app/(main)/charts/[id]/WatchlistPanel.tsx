@@ -68,6 +68,7 @@ interface Watchlist {
     stock_symbols: string[];
     page: number;
     sort: string;
+    collapsed?: boolean;
 }
 
 interface TickerOption {
@@ -90,7 +91,6 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
     const [editingWatchlist, setEditingWatchlist] = useState<Watchlist | null>(null);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-    const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
 
     // Snackbar
     const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'error' | 'success' }>({ open: false, message: '', severity: 'error' });
@@ -210,13 +210,14 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
         }
     };
 
-    const toggleCollapse = (id: string) => {
-        setCollapsedIds(prev => {
-            const next = new Set(prev);
-            if (next.has(id)) next.delete(id);
-            else next.add(id);
-            return next;
-        });
+    const handleCollapseChange = async (wl: Watchlist, newCollapsed: boolean) => {
+        const wlId = wl.id || wl._id!;
+        setWatchlists(prev => prev.map(w => (w.id || w._id) === wlId ? { ...w, collapsed: newCollapsed } : w));
+        try {
+            await apiClient({ url: `/api/v1/watchlists/${wlId}`, method: 'PUT', body: { collapsed: newCollapsed }, requireAuth: true });
+        } catch {
+            setWatchlists(prev => prev.map(w => (w.id || w._id) === wlId ? { ...w, collapsed: wl.collapsed } : w));
+        }
     };
 
     // Inline rename
@@ -320,7 +321,7 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
 
     const renderWatchlistCard = (wl: Watchlist) => {
         const wlId = wl.id || wl._id!;
-        const collapsed = collapsedIds.has(wlId);
+        const collapsed = wl.collapsed ?? false;
         const isRenaming = renamingId === wlId;
 
         // Aggregate pct_change
@@ -378,7 +379,7 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                     {/* Collapse button */}
                     <IconButton
                         size="small"
-                        onClick={() => toggleCollapse(wlId)}
+                        onClick={() => handleCollapseChange(wl, !collapsed)}
                         sx={{ color: 'text.disabled', p: 0.25, mr: 0.25, flexShrink: 0, '&:hover': { color: 'text.secondary' } }}
                     >
                         {collapsed

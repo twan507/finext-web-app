@@ -57,6 +57,7 @@ interface Watchlist {
     stock_symbols: string[];
     page?: number;
     sort?: WatchlistSort;
+    collapsed?: boolean;
 }
 
 interface WatchlistColumnProps {
@@ -66,6 +67,7 @@ interface WatchlistColumnProps {
     onDelete: () => void;
     onRenameSubmit: (newName: string) => void;
     onSortChange: (sort: WatchlistSort) => void;
+    onCollapseChange: (collapsed: boolean) => void;
     onAddStock: (ticker: string) => void;
     onRemoveStock: (ticker: string) => void;
     dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
@@ -79,6 +81,7 @@ export default function WatchlistColumn({
     onDelete,
     onRenameSubmit,
     onSortChange,
+    onCollapseChange,
     onAddStock,
     onRemoveStock,
     dragHandleProps,
@@ -87,8 +90,7 @@ export default function WatchlistColumn({
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const [autocompleteKey, setAutocompleteKey] = useState(0);
-    const [collapsedState, setCollapsed] = useState(false);
-    const collapsed = forceCollapsed ?? collapsedState;
+    const collapsed = forceCollapsed ?? (watchlist.collapsed ?? false);
 
     // Menu state
     const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
@@ -223,7 +225,7 @@ export default function WatchlistColumn({
                 {/* Collapse button — stopPropagation để không trigger drag */}
                 <IconButton
                     size="small"
-                    onClick={() => setCollapsed(c => !c)}
+                    onClick={() => onCollapseChange(!collapsed)}
                     onPointerDown={e => e.stopPropagation()}
                     sx={{ color: 'text.disabled', p: 0.25, mr: 0.25, flexShrink: 0, '&:hover': { color: 'text.secondary' } }}
                 >

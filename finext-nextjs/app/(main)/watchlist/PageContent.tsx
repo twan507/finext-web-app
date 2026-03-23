@@ -53,6 +53,7 @@ interface Watchlist {
     stock_symbols: string[];
     page: number;
     sort: WatchlistSort;
+    collapsed?: boolean;
 }
 
 function DroppableColumn({ colIdx, isDark, isActive, children }: {
@@ -418,6 +419,16 @@ export default function WatchlistContent() {
         }
     };
 
+    const handleCollapseChange = async (wl: Watchlist, collapsed: boolean) => {
+        const wlId = wl.id || wl._id!;
+        setWatchlists(prev => prev.map(w => (w.id || w._id) === wlId ? { ...w, collapsed } : w));
+        try {
+            await apiClient({ url: `/api/v1/watchlists/${wlId}`, method: 'PUT', body: { collapsed }, requireAuth: true });
+        } catch {
+            setWatchlists(prev => prev.map(w => (w.id || w._id) === wlId ? { ...w, collapsed: wl.collapsed } : w));
+        }
+    };
+
     const handleSaved = () => {
         setDialogOpen(false);
         setEditingWatchlist(null);
@@ -571,6 +582,7 @@ export default function WatchlistContent() {
                                                     onDelete={() => handleDeleteClick(item.wl.id || item.wl._id!)}
                                                     onRenameSubmit={(newName) => handleRenameSubmit(item.wl, newName)}
                                                     onSortChange={(sort) => handleSortChange(item.wl, sort)}
+                                                    onCollapseChange={(c) => handleCollapseChange(item.wl, c)}
                                                     onAddStock={(ticker) =>
                                                         handleUpdateStocks(item.wl, [...item.wl.stock_symbols, ticker])
                                                     }
@@ -620,6 +632,7 @@ export default function WatchlistContent() {
                                     onDelete={() => {}}
                                     onRenameSubmit={() => {}}
                                     onSortChange={() => {}}
+                                    onCollapseChange={() => {}}
                                     onAddStock={() => {}}
                                     onRemoveStock={() => {}}
                                     forceCollapsed
