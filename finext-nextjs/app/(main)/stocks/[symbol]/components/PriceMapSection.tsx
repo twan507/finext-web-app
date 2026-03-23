@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Box, Typography, useTheme, alpha, Chip } from '@mui/material';
+import { Box, Typography, useTheme, alpha, Chip, Collapse } from '@mui/material';
 import { getResponsiveFontSize, fontWeight, borderRadius, getGlassCard } from 'theme/tokens';
 
 // ─── Types ───────────────────────────────────────────────────────────────────────
@@ -210,6 +210,10 @@ export default function PriceMapSection({ ticker, chartIndicatorData, currentPri
     const [enabledTimeframes, setEnabledTimeframes] = useState<Set<TimeframeKey>>(DEFAULT_TIMEFRAMES);
     const [enabledGroups, setEnabledGroups] = useState<Set<GroupKey>>(DEFAULT_GROUPS);
 
+    // Collapse states
+    const [resistanceCollapsed, setResistanceCollapsed] = useState(false);
+    const [supportCollapsed, setSupportCollapsed] = useState(false);
+
     const toggleTimeframe = (tf: TimeframeKey) => {
         setEnabledTimeframes(prev => {
             const next = new Set(prev);
@@ -263,7 +267,7 @@ export default function PriceMapSection({ ticker, chartIndicatorData, currentPri
 
     // Split into above & below current price
     const aboveClusters = clusters.filter(c => c.avgPctDiff > 0.01);
-    const belowClusters = clusters.filter(c => c.avgPctDiff <= 0.01).reverse(); // Low to high (ascending from bottom)
+    const belowClusters = clusters.filter(c => c.avgPctDiff <= 0.01); // Nearest to farthest (ascending)
 
     const getTimeframeColor = (tf: TimeframeKey | null, field?: string): string => {
         if (tf) return isDark ? TIMEFRAME_COLORS[tf].dark : TIMEFRAME_COLORS[tf].light;
@@ -408,43 +412,62 @@ export default function PriceMapSection({ ticker, chartIndicatorData, currentPri
 
                     {/* ═══ RESISTANCE ZONE ═══ */}
                     {aboveClusters.length > 0 && (
-                        <Box sx={{
-                            mb: 0.5,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1,
-                            px: 1,
-                            py: 0.5,
-                        }}>
-                            <Typography sx={{
-                                fontSize: getResponsiveFontSize('xs'),
-                                fontWeight: fontWeight.bold,
-                                color: isDark ? '#FF5252' : '#C62828',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.5px',
-                            }}>
-                                ▲ Kháng cự
-                            </Typography>
-                            <Box sx={{
-                                flex: 1,
-                                height: '1px',
-                                bgcolor: alpha(isDark ? '#FF5252' : '#C62828', 0.25),
-                            }} />
-                        </Box>
-                    )}
+                        <>
+                            <Collapse in={!resistanceCollapsed} timeout={200}>
+                                {aboveClusters.map((cluster, ci) => (
+                                    <ClusterRow
+                                        key={`r-${ci}`}
+                                        cluster={cluster}
+                                        isDark={isDark}
+                                        theme={theme}
+                                        isResistance={true}
+                                        getTimeframeColor={getTimeframeColor}
+                                        getTimeframeLabel={getTimeframeLabel}
+                                    />
+                                ))}
+                            </Collapse>
 
-                    {/* Resistance clusters (high to low) */}
-                    {aboveClusters.map((cluster, ci) => (
-                        <ClusterRow
-                            key={`r-${ci}`}
-                            cluster={cluster}
-                            isDark={isDark}
-                            theme={theme}
-                            isResistance={true}
-                            getTimeframeColor={getTimeframeColor}
-                            getTimeframeLabel={getTimeframeLabel}
-                        />
-                    ))}
+                            <Box
+                                sx={{
+                                    mt: 0,
+                                    mb: 0.5,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                    px: 1,
+                                    py: 0.5,
+                                    cursor: 'pointer',
+                                    userSelect: 'none',
+                                    borderRadius: `${borderRadius.sm}px`,
+                                    '&:hover': { bgcolor: alpha(isDark ? '#69F0AE' : '#2E7D32', 0.06) },
+                                    transition: 'background 0.15s',
+                                }}
+                                onClick={() => setResistanceCollapsed(v => !v)}
+                            >
+                                <Typography sx={{
+                                    fontSize: getResponsiveFontSize('xs'),
+                                    fontWeight: fontWeight.bold,
+                                    color: isDark ? '#69F0AE' : '#2E7D32',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px',
+                                }}>
+                                    {resistanceCollapsed ? '▶' : '▲'} Kháng cự
+                                </Typography>
+                                <Box sx={{
+                                    flex: 1,
+                                    height: '1px',
+                                    bgcolor: alpha(isDark ? '#69F0AE' : '#2E7D32', 0.25),
+                                }} />
+                                <Typography sx={{
+                                    fontSize: getResponsiveFontSize('xxs'),
+                                    color: theme.palette.text.disabled,
+                                    fontVariantNumeric: 'tabular-nums',
+                                }}>
+                                    {aboveClusters.length} mốc
+                                </Typography>
+                            </Box>
+                        </>
+                    )}
 
                     {/* ━━━ CURRENT PRICE ━━━ */}
                     <Box sx={{
@@ -523,43 +546,61 @@ export default function PriceMapSection({ ticker, chartIndicatorData, currentPri
 
                     {/* ═══ SUPPORT ZONE ═══ */}
                     {belowClusters.length > 0 && (
-                        <Box sx={{
-                            mt: 0.5,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1,
-                            px: 1,
-                            py: 0.5,
-                        }}>
-                            <Typography sx={{
-                                fontSize: getResponsiveFontSize('xs'),
-                                fontWeight: fontWeight.bold,
-                                color: isDark ? '#69F0AE' : '#2E7D32',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.5px',
-                            }}>
-                                ▼ Hỗ trợ
-                            </Typography>
-                            <Box sx={{
-                                flex: 1,
-                                height: '1px',
-                                bgcolor: alpha(isDark ? '#69F0AE' : '#2E7D32', 0.25),
-                            }} />
-                        </Box>
-                    )}
+                        <>
+                            <Box
+                                sx={{
+                                    mt: 0.5,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                    px: 1,
+                                    py: 0.5,
+                                    cursor: 'pointer',
+                                    userSelect: 'none',
+                                    borderRadius: `${borderRadius.sm}px`,
+                                    '&:hover': { bgcolor: alpha(isDark ? '#FF5252' : '#C62828', 0.06) },
+                                    transition: 'background 0.15s',
+                                }}
+                                onClick={() => setSupportCollapsed(v => !v)}
+                            >
+                                <Typography sx={{
+                                    fontSize: getResponsiveFontSize('xs'),
+                                    fontWeight: fontWeight.bold,
+                                    color: isDark ? '#FF5252' : '#C62828',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px',
+                                }}>
+                                    {supportCollapsed ? '▶' : '▼'} Hỗ trợ
+                                </Typography>
+                                <Box sx={{
+                                    flex: 1,
+                                    height: '1px',
+                                    bgcolor: alpha(isDark ? '#FF5252' : '#C62828', 0.25),
+                                }} />
+                                <Typography sx={{
+                                    fontSize: getResponsiveFontSize('xxs'),
+                                    color: theme.palette.text.disabled,
+                                    fontVariantNumeric: 'tabular-nums',
+                                }}>
+                                    {belowClusters.length} mốc
+                                </Typography>
+                            </Box>
 
-                    {/* Support clusters (high to low, reversed for display) */}
-                    {belowClusters.map((cluster, ci) => (
-                        <ClusterRow
-                            key={`s-${ci}`}
-                            cluster={cluster}
-                            isDark={isDark}
-                            theme={theme}
-                            isResistance={false}
-                            getTimeframeColor={getTimeframeColor}
-                            getTimeframeLabel={getTimeframeLabel}
-                        />
-                    ))}
+                            <Collapse in={!supportCollapsed} timeout={200}>
+                                {belowClusters.map((cluster, ci) => (
+                                    <ClusterRow
+                                        key={`s-${ci}`}
+                                        cluster={cluster}
+                                        isDark={isDark}
+                                        theme={theme}
+                                        isResistance={false}
+                                        getTimeframeColor={getTimeframeColor}
+                                        getTimeframeLabel={getTimeframeLabel}
+                                    />
+                                ))}
+                            </Collapse>
+                        </>
+                    )}
 
                     {priceLevels.length === 0 && (
                         <Typography color="text.secondary" sx={{
@@ -590,8 +631,8 @@ interface ClusterRowProps {
 function ClusterRow({ cluster, isDark, theme, isResistance, getTimeframeColor, getTimeframeLabel }: ClusterRowProps) {
     const isConfluence = cluster.levels.length > 1;
     const zoneColor = isResistance
-        ? (isDark ? '#FF5252' : '#C62828')
-        : (isDark ? '#69F0AE' : '#2E7D32');
+        ? (isDark ? '#69F0AE' : '#2E7D32')
+        : (isDark ? '#FF5252' : '#C62828');
 
     return (
         <Box sx={{
