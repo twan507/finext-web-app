@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import {
     Box,
     Typography,
@@ -10,12 +10,15 @@ import {
     TextField,
     useTheme,
     alpha,
+    Menu,
+    MenuItem,
 } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import CloseIcon from '@mui/icons-material/Close';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { fontWeight, getResponsiveFontSize, borderRadius, durations } from 'theme/tokens';
 import { getPriceColor, getVsiColor, getTrendColor } from 'theme/colorHelpers';
 
@@ -47,7 +50,7 @@ interface WatchlistColumnProps {
     stockDataMap: Map<string, StockData>;
     allTickers: TickerOption[];
     onDelete: () => void;
-    onRename: () => void;
+    onRenameSubmit: (newName: string) => void;
     onAddStock: (ticker: string) => void;
     onRemoveStock: (ticker: string) => void;
     dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
@@ -59,7 +62,7 @@ export default function WatchlistColumn({
     stockDataMap,
     allTickers,
     onDelete,
-    onRename,
+    onRenameSubmit,
     onAddStock,
     onRemoveStock,
     dragHandleProps,
@@ -70,6 +73,33 @@ export default function WatchlistColumn({
     const [autocompleteKey, setAutocompleteKey] = useState(0);
     const [collapsedState, setCollapsed] = useState(false);
     const collapsed = forceCollapsed ?? collapsedState;
+
+    // Menu state
+    const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
+
+    // Inline rename state
+    const [isRenaming, setIsRenaming] = useState(false);
+    const [renameValue, setRenameValue] = useState(watchlist.name);
+    const renameInputRef = useRef<HTMLInputElement>(null);
+
+    const startRename = () => {
+        setRenameValue(watchlist.name);
+        setIsRenaming(true);
+        setTimeout(() => renameInputRef.current?.select(), 0);
+    };
+
+    const commitRename = () => {
+        const trimmed = renameValue.trim();
+        if (trimmed && trimmed !== watchlist.name) {
+            onRenameSubmit(trimmed);
+        }
+        setIsRenaming(false);
+    };
+
+    const cancelRename = () => {
+        setRenameValue(watchlist.name);
+        setIsRenaming(false);
+    };
 
     // Aggregate pct_change
     const aggregateChange = useMemo(() => {
@@ -143,52 +173,78 @@ export default function WatchlistColumn({
                 flexDirection: 'column',
             }}
         >
-            {/* ── Header ── */}
+            {/* ── Header — toàn bộ là drag area ── */}
             <Box
+                {...(dragHandleProps ?? {})}
                 sx={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
                     px: 0.75,
-                    py: 0.75,
+                    py: 0.5,
                     borderBottom: collapsed ? 'none' : `1px solid ${divider}`,
                     bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                    cursor: dragHandleProps ? 'grab' : 'default',
+                    userSelect: 'none',
+                    '&:active': { cursor: dragHandleProps ? 'grabbing' : 'default' },
                 }}
             >
-                {/* Drag handle */}
-                {dragHandleProps && (
-                    <Box
-                        {...dragHandleProps}
-                        sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            cursor: 'grab',
-                            color: 'text.disabled',
-                            mr: 0.5,
-                            '&:hover': { color: 'text.secondary' },
-                            '&:active': { cursor: 'grabbing' },
-                        }}
-                    >
-                        <DragIndicatorIcon sx={{ fontSize: 16 }} />
-                    </Box>
-                )}
-                <Box
+                {/* Collapse button — stopPropagation để không trigger drag */}
+                <IconButton
+                    size="small"
                     onClick={() => setCollapsed(c => !c)}
-                    sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1, cursor: 'pointer', userSelect: 'none' }}
+                    onPointerDown={e => e.stopPropagation()}
+                    sx={{ color: 'text.disabled', p: 0.25, mr: 0.25, flexShrink: 0, '&:hover': { color: 'text.secondary' } }}
                 >
-                    <Typography
-                        sx={{
-                            fontSize: getResponsiveFontSize('sm'),
-                            fontWeight: fontWeight.bold,
-                            color: 'text.primary',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                        }}
-                    >
-                        {watchlist.name}
-                    </Typography>
-                    {aggregateChange != null && (
+                    {collapsed
+                        ? <ExpandMoreIcon sx={{ fontSize: 16 }} />
+                        : <ExpandLessIcon sx={{ fontSize: 16 }} />
+                    }
+                </IconButton>
+
+                {/* Name — double-click để đổi tên inline */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0, flex: 1 }}>
+                    {isRenaming ? (
+                        <TextField
+                            inputRef={renameInputRef}
+                            value={renameValue}
+                            onChange={e => setRenameValue(e.target.value)}
+                            onBlur={commitRename}
+                            onKeyDown={e => {
+                                e.stopPropagation(); // ngăn dnd-kit bắt Space/Enter
+                                if (e.key === 'Enter') commitRename();
+                                if (e.key === 'Escape') cancelRename();
+                            }}
+                            onPointerDown={e => e.stopPropagation()}
+                            variant="standard"
+                            size="small"
+                            autoFocus
+                            InputProps={{
+                                disableUnderline: false,
+                                sx: {
+                                    fontSize: getResponsiveFontSize('sm'),
+                                    fontWeight: fontWeight.bold,
+                                    px: 0,
+                                },
+                            }}
+                            sx={{ flex: 1, minWidth: 0 }}
+                        />
+                    ) : (
+                        <Typography
+                            onDoubleClick={e => { e.stopPropagation(); startRename(); }}
+                            sx={{
+                                fontSize: getResponsiveFontSize('sm'),
+                                fontWeight: fontWeight.bold,
+                                color: 'text.primary',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                cursor: 'text',
+                            }}
+                        >
+                            {watchlist.name}
+                        </Typography>
+                    )}
+                    {aggregateChange != null && !isRenaming && (
                         <Typography
                             sx={{
                                 fontSize: getResponsiveFontSize('xs'),
@@ -201,15 +257,60 @@ export default function WatchlistColumn({
                         </Typography>
                     )}
                 </Box>
-                <Box sx={{ display: 'flex', flexShrink: 0, ml: 1 }}>
-                    <IconButton size="small" onClick={onRename} sx={{ color: 'text.secondary', p: 0.5 }}>
-                        <EditIcon sx={{ fontSize: 15 }} />
-                    </IconButton>
-                    <IconButton size="small" onClick={onDelete} sx={{ color: 'text.secondary', p: 0.5 }}>
-                        <DeleteIcon sx={{ fontSize: 15 }} />
-                    </IconButton>
-                </Box>
+
+                {/* ⋮ Menu button */}
+                <IconButton
+                    size="small"
+                    onClick={e => { e.stopPropagation(); setMenuAnchor(e.currentTarget); }}
+                    onPointerDown={e => e.stopPropagation()}
+                    sx={{ color: 'text.disabled', p: 0.25, flexShrink: 0, '&:hover': { color: 'text.secondary' } }}
+                >
+                    <MoreVertIcon sx={{ fontSize: 15 }} />
+                </IconButton>
             </Box>
+
+            {/* Popup menu */}
+            <Menu
+                anchorEl={menuAnchor}
+                open={Boolean(menuAnchor)}
+                onClose={() => setMenuAnchor(null)}
+                slotProps={{
+                    paper: {
+                        sx: {
+                            bgcolor: isDark ? 'rgba(22,22,26,0.72)' : 'rgba(255,255,255,0.72)',
+                            backdropFilter: 'blur(20px)',
+                            WebkitBackdropFilter: 'blur(20px)',
+                            border: `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.07)'}`,
+                            borderRadius: `${borderRadius.md}px`,
+                            boxShadow: isDark
+                                ? '0 8px 32px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)'
+                                : '0 8px 24px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.9)',
+                            overflow: 'hidden',
+                            px: 0.5,
+                        },
+                    },
+                }}
+                transformOrigin={{ horizontal: 'left', vertical: 'top' }}
+                anchorOrigin={{ horizontal: 'right', vertical: 'top' }}
+            >
+                <MenuItem
+                    onClick={() => { setMenuAnchor(null); onDelete(); }}
+                    sx={{
+                        py: 0.5,
+                        px: 0.5,
+                        gap: 0.75,
+                        color: 'error.main',
+                        fontSize: getResponsiveFontSize('xs'),
+                        borderRadius: `${borderRadius.sm}px`,
+                        '&:hover': {
+                            bgcolor: isDark ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.08)',
+                        },
+                    }}
+                >
+                    <DeleteIcon sx={{ fontSize: 14, flexShrink: 0 }} />
+                    <Box component="span" sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium }}>Xóa danh sách</Box>
+                </MenuItem>
+            </Menu>
 
             {/* ── Stock rows ── */}
             <Box sx={{

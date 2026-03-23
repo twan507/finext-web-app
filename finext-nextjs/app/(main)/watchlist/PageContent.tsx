@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { Box, Typography, Button, CircularProgress, useTheme } from '@mui/material';
+import { Box, Typography, Button, CircularProgress, useTheme, Snackbar, Alert } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import {
     DndContext,
@@ -89,6 +89,7 @@ export default function WatchlistContent() {
     const [editingWatchlist, setEditingWatchlist] = useState<Watchlist | null>(null);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+    const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
     // ── DnD state ──
     const [activeId, setActiveId] = useState<string | null>(null);
@@ -375,10 +376,21 @@ export default function WatchlistContent() {
         setDialogOpen(true);
     };
 
-    const openRename = (wl: Watchlist) => {
-        setEditingWatchlist(wl);
-        setDialogCoordinate(wl.coordinate);
-        setDialogOpen(true);
+    const handleRenameSubmit = async (wl: Watchlist, newName: string) => {
+        const wlId = wl.id || wl._id!;
+        setWatchlists(prev => prev.map(w => (w.id || w._id) === wlId ? { ...w, name: newName } : w));
+        try {
+            await apiClient({
+                url: `/api/v1/watchlists/${wlId}`,
+                method: 'PUT',
+                body: { name: newName },
+                requireAuth: true,
+            });
+        } catch (err: unknown) {
+            const apiErr = err as { message?: string };
+            setSnackbar({ open: true, message: apiErr?.message || 'Đổi tên thất bại' });
+            setWatchlists(prev => prev.map(w => (w.id || w._id) === wlId ? { ...w, name: wl.name } : w));
+        }
     };
 
     const handleSaved = () => {
@@ -488,7 +500,7 @@ export default function WatchlistContent() {
                                                     stockDataMap={stockDataMap}
                                                     allTickers={allTickers}
                                                     onDelete={() => handleDeleteClick(item.wl.id || item.wl._id!)}
-                                                    onRename={() => openRename(item.wl)}
+                                                    onRenameSubmit={(newName) => handleRenameSubmit(item.wl, newName)}
                                                     onAddStock={(ticker) =>
                                                         handleUpdateStocks(item.wl, [...item.wl.stock_symbols, ticker])
                                                     }
@@ -536,7 +548,7 @@ export default function WatchlistContent() {
                                     stockDataMap={stockDataMap}
                                     allTickers={allTickers}
                                     onDelete={() => {}}
-                                    onRename={() => {}}
+                                    onRenameSubmit={() => {}}
                                     onAddStock={() => {}}
                                     onRemoveStock={() => {}}
                                     forceCollapsed
@@ -564,6 +576,17 @@ export default function WatchlistContent() {
                 title="Xóa Watchlist"
                 message="Bạn có chắc muốn xóa watchlist này? Hành động không thể hoàn tác."
             />
+
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={4000}
+                onClose={() => setSnackbar(s => ({ ...s, open: false }))}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert severity="error" onClose={() => setSnackbar(s => ({ ...s, open: false }))} sx={{ width: '100%' }}>
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 }
