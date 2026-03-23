@@ -32,6 +32,8 @@ export interface ToolbarPrefs {
     showLegend: boolean;
     priceTagMode: PriceTagMode;
     timeframe: string;
+    showIndicatorsPanel: boolean;
+    showWatchlistPanel: boolean;
 }
 
 const DEFAULT_TOOLBAR_PREFS: ToolbarPrefs = {
@@ -41,6 +43,8 @@ const DEFAULT_TOOLBAR_PREFS: ToolbarPrefs = {
     showLegend: true,
     priceTagMode: 'value',
     timeframe: '1D',
+    showIndicatorsPanel: true,
+    showWatchlistPanel: true,
 };
 
 function loadToolbarPrefs(): ToolbarPrefs {

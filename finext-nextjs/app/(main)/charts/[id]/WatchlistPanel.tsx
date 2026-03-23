@@ -31,6 +31,7 @@ interface StockData {
     diff: number;
     pct_change: number;
     vsi: number;
+    trading_value?: number;
     exchange?: string;
     industry_name?: string;
 }
@@ -196,6 +197,14 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
         diff: (n: number) => `${n > 0 ? '+' : ''}${n.toFixed(2)}`,
         pct: (n: number) => `${(n * 100) > 0 ? '+' : ''}${(n * 100).toFixed(2)}%`,
         vsi: (n: number) => `${(n * 100).toFixed(0)}%`,
+        gtgd: (n: number) => {
+            const v = n * 1_000_000_000;
+            if (v >= 1_000_000_000_000) return `${(v / 1_000_000_000_000).toFixed(1)}T`;
+            if (v >= 1_000_000_000) return `${(v / 1_000_000_000).toFixed(1)}B`;
+            if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+            if (v >= 1_000) return `${(v / 1_000).toFixed(1)}K`;
+            return `${v}`;
+        },
     };
 
     const divider = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
@@ -293,10 +302,9 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                 {/* Stock rows */}
                 {!collapsed && (
                     <>
-                        <Box>
-                            {wl.stock_symbols.map((ticker, idx) => {
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 0.75 }}>
+                            {wl.stock_symbols.map((ticker) => {
                                 const data = stockDataMap.get(ticker);
-                                const isLast = idx === wl.stock_symbols.length - 1;
 
                                 if (!data) {
                                     return (
@@ -304,22 +312,15 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                                             key={ticker}
                                             onClick={() => onTickerChange?.(ticker)}
                                             sx={{
-                                                px: 1.5, py: 0.4,
-                                                borderBottom: isLast ? 'none' : `1px solid ${divider}`,
+                                                px: 1, py: 0.5,
+                                                borderRadius: `${borderRadius.sm}px`,
+                                                bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
                                                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                                                 cursor: 'pointer',
-                                                transition: `background ${durations.fast}`,
-                                                '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' },
                                                 '&:hover .remove-btn': { opacity: 1 },
                                             }}
                                         >
-                                            <Typography
-                                                sx={{
-                                                    fontSize: getResponsiveFontSize('xs'),
-                                                    fontWeight: fontWeight.semibold,
-                                                    color: 'text.primary',
-                                                }}
-                                            >
+                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: 'text.primary' }}>
                                                 {ticker}
                                             </Typography>
                                             <Box
@@ -336,68 +337,58 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
 
                                 const changeColor = getPriceColor(data.pct_change, data.exchange, theme);
                                 const vsiColor = getVsiColor(data.vsi ?? 0, theme);
+                                const cardBg = `linear-gradient(90deg, ${alpha(changeColor, 0.1)} 0%, ${alpha(changeColor, 0.01)} 50%, ${alpha(changeColor, 0.001)} 100%)`;
+                                const cardBgHover = `linear-gradient(90deg, ${alpha(changeColor, 0.2)} 0%, ${alpha(changeColor, 0.02)} 50%, ${alpha(changeColor, 0.002)} 100%)`;
 
                                 return (
                                     <Box
                                         key={ticker}
                                         onClick={() => onTickerChange?.(ticker)}
                                         sx={{
-                                            px: 1.5, py: 0.4,
-                                            borderBottom: isLast ? 'none' : `1px solid ${divider}`,
+                                            px: 1, py: 0.5,
+                                            borderRadius: `${borderRadius.sm}px`,
+                                            background: cardBg,
                                             cursor: 'pointer',
                                             transition: `background ${durations.fast}`,
-                                            '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' },
+                                            '&:hover': { background: cardBgHover },
                                             '&:hover .remove-btn': { opacity: 1 },
                                         }}
                                     >
-                                        {/* Line 1 */}
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <Typography
-                                                    sx={{
-                                                        fontSize: getResponsiveFontSize('xs'),
-                                                        fontWeight: fontWeight.bold,
-                                                        color: changeColor,
-                                                    }}
-                                                >
+                                        {/* Grid 3 cột: left | center | right */}
+                                        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', alignItems: 'center' }}>
+                                            {/* [0,0] Ticker + remove */}
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.bold, color: changeColor }}>
                                                     {ticker}
                                                 </Typography>
                                                 <Box
                                                     component="span"
                                                     className="remove-btn"
                                                     onClick={(e) => { e.stopPropagation(); handleUpdateStocks(wl, wl.stock_symbols.filter(s => s !== ticker)); }}
-                                                    sx={{
-                                                        display: 'inline-flex', alignItems: 'center', cursor: 'pointer',
-                                                        color: alpha(theme.palette.text.secondary, 0.35),
-                                                        opacity: 0,
-                                                        transition: `opacity ${durations.fast}, color ${durations.fast}`,
-                                                        '&:hover': { color: theme.palette.error.main },
-                                                    }}
+                                                    sx={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', color: alpha(theme.palette.text.secondary, 0.35), opacity: 0, transition: `opacity ${durations.fast}, color ${durations.fast}`, '&:hover': { color: theme.palette.error.main } }}
                                                 >
                                                     <CloseIcon sx={{ fontSize: 12 }} />
                                                 </Box>
                                             </Box>
-                                            <Typography
-                                                sx={{
-                                                    fontSize: getResponsiveFontSize('xs'),
-                                                    fontWeight: fontWeight.semibold,
-                                                    color: vsiColor,
-                                                    fontVariantNumeric: 'tabular-nums',
-                                                }}
-                                            >
+                                            {/* [0,1] +-% */}
+                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: changeColor, fontVariantNumeric: 'tabular-nums', textAlign: 'center' }}>
+                                                {fmt.pct(data.pct_change)}
+                                            </Typography>
+                                            {/* [0,2] VSI */}
+                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: vsiColor, fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
                                                 {fmt.vsi(data.vsi ?? 0)}
                                             </Typography>
-                                        </Box>
-                                        {/* Line 2 */}
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.15 }}>
-                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: 'text.primary', fontVariantNumeric: 'tabular-nums' }}>
+                                            {/* [1,0] Giá */}
+                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: 'text.primary', fontVariantNumeric: 'tabular-nums', mt: 0.25 }}>
                                                 {fmt.price(data.close)}
                                             </Typography>
-                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: changeColor, fontVariantNumeric: 'tabular-nums' }}>
+                                            {/* [1,1] +- */}
+                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: changeColor, fontVariantNumeric: 'tabular-nums', textAlign: 'center', mt: 0.25 }}>
                                                 {fmt.diff(data.diff)}
                                             </Typography>
-                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: changeColor, fontVariantNumeric: 'tabular-nums' }}>
-                                                {fmt.pct(data.pct_change)}
+                                            {/* [1,2] GTGD */}
+                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: 'text.secondary', fontVariantNumeric: 'tabular-nums', textAlign: 'right', mt: 0.25 }}>
+                                                {data.trading_value != null ? fmt.gtgd(data.trading_value) : '—'}
                                             </Typography>
                                         </Box>
                                     </Box>

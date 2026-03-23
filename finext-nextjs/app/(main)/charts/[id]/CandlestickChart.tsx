@@ -1141,8 +1141,8 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
                     />
                 </Box>
 
-                {/* Indicators Panel - Drawer on mobile, inline on desktop */}
-                {isMobile ? (
+                {/* Indicators Panel - mobile Drawer only (desktop handled by PageContent) */}
+                {isMobile && (
                     <Drawer
                         anchor="right"
                         open={showIndicatorsPanel}
@@ -1150,21 +1150,14 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
                         variant="temporary"
                         elevation={0}
                         ModalProps={{ keepMounted: true }}
-                        sx={{
-                            '& .MuiDrawer-paper': {
-                                width: 280,
-                                backdropFilter: 'blur(12px)',
-                            },
-                        }}
+                        sx={{ '& .MuiDrawer-paper': { width: 280, backdropFilter: 'blur(12px)' } }}
                     >
                         <IndicatorsPanel enabledIndicators={enabledIndicators} onToggleIndicator={onToggleIndicator} onClearAll={onClearAllIndicators} onResetDefault={onResetDefaultIndicators} />
                     </Drawer>
-                ) : (
-                    showIndicatorsPanel && <IndicatorsPanel enabledIndicators={enabledIndicators} onToggleIndicator={onToggleIndicator} onClearAll={onClearAllIndicators} onResetDefault={onResetDefaultIndicators} />
                 )}
 
-                {/* Watchlist Panel - Drawer on mobile, inline on desktop */}
-                {isMobile ? (
+                {/* Watchlist Panel - mobile Drawer only (desktop handled by PageContent) */}
+                {isMobile && (
                     <Drawer
                         anchor="right"
                         open={showWatchlistPanel}
@@ -1172,17 +1165,10 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
                         variant="temporary"
                         elevation={0}
                         ModalProps={{ keepMounted: true }}
-                        sx={{
-                            '& .MuiDrawer-paper': {
-                                width: 300,
-                                backdropFilter: 'blur(12px)',
-                            },
-                        }}
+                        sx={{ '& .MuiDrawer-paper': { width: 300, backdropFilter: 'blur(12px)' } }}
                     >
                         <WatchlistPanel onTickerChange={onTickerChange} />
                     </Drawer>
-                ) : (
-                    showWatchlistPanel && <WatchlistPanel onTickerChange={onTickerChange} />
                 )}
             </Box>
         </Box>

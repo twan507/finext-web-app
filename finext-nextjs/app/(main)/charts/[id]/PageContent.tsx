@@ -2,13 +2,14 @@
 
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { Box, Typography, useTheme, useMediaQuery } from '@mui/material';
-import { useRouter } from 'next/navigation';
 import { apiClient } from 'services/apiClient';
 import useChartStore from 'hooks/useChartStore';
 import { zIndex } from 'theme/tokens';
 import CandlestickChart from './CandlestickChart';
 import ChartToolbar from './ChartToolbar';
 import ChartSkeleton from './ChartSkeleton';
+import IndicatorsPanel from './IndicatorsPanel';
+import WatchlistPanel from './WatchlistPanel';
 import type { TickerItem } from './ChartToolbar';
 import { aggregateByTimeframe, type Timeframe } from './aggregateTimeframe';
 
@@ -111,11 +112,18 @@ interface ChartPageContentProps {
     ticker: string;
 }
 
-export default function ChartPageContent({ ticker }: ChartPageContentProps) {
+export default function ChartPageContent({ ticker: initialTicker }: ChartPageContentProps) {
     const theme = useTheme();
-    const router = useRouter();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'));
+
+    // Internal ticker state — tránh router.push gây remount toàn bộ component tree
+    const [ticker, setTicker] = useState(initialTicker);
+
+    // Sync nếu prop thay đổi từ bên ngoài (e.g. direct URL navigation)
+    useEffect(() => {
+        setTicker(initialTicker);
+    }, [initialTicker]);
 
     // Persistent chart state (survives reload / tab switch)
     const { enabledIndicators, toggleIndicator, clearAll, resetToDefault, setLastTicker, toolbarPrefs, updateToolbarPrefs } = useChartStore();
@@ -132,9 +140,8 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
     const showLegend = toolbarPrefs.showLegend;
     const priceTagMode = toolbarPrefs.priceTagMode;
     const timeframe = toolbarPrefs.timeframe as Timeframe;
-    // Non-persisted UI state
-    const [showIndicatorsPanel, setShowIndicatorsPanel] = useState(!isMobile);
-    const [showWatchlistPanel, setShowWatchlistPanel] = useState(false);
+    const showIndicatorsPanel = isMobile ? false : toolbarPrefs.showIndicatorsPanel;
+    const showWatchlistPanel = isMobile ? false : toolbarPrefs.showWatchlistPanel;
     const [isFullscreen, setIsFullscreen] = useState(false);
 
     // Handle ESC key to exit fullscreen
@@ -167,12 +174,13 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
         return () => { cancelled = true; };
     }, []);
 
-    // Handler đổi ticker → navigate sang URL mới
+    // Handler đổi ticker — update state + URL mà không navigate (giữ component tree mounted)
     const handleTickerChange = useCallback(
         (newTicker: string) => {
-            router.push(`/charts/${newTicker}`);
+            setTicker(newTicker);
+            window.history.pushState(null, '', `/charts/${newTicker}`);
         },
-        [router],
+        [],
     );
 
     // ─── History: REST lazy-load (responsive chunks, newest first) ───
@@ -408,8 +416,8 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
             onToggleIndicator={toggleIndicator}
             onClearAllIndicators={clearAll}
             onResetDefaultIndicators={resetToDefault}
-            onCloseIndicatorsPanel={() => setShowIndicatorsPanel(false)}
-            onCloseWatchlistPanel={() => setShowWatchlistPanel(false)}
+            onCloseIndicatorsPanel={() => updateToolbarPrefs({ showIndicatorsPanel: false })}
+            onCloseWatchlistPanel={() => updateToolbarPrefs({ showWatchlistPanel: false })}
             onTickerChange={handleTickerChange}
             onLoadMore={loadMoreHistory}
             hasMoreData={hasMoreHistory}
@@ -455,14 +463,32 @@ export default function ChartPageContent({ ticker }: ChartPageContentProps) {
                 onToggleVolume={() => updateToolbarPrefs({ showVolume: !showVolume })}
                 onToggleLegend={() => updateToolbarPrefs({ showLegend: !showLegend })}
                 onCyclePriceTagMode={() => updateToolbarPrefs({ priceTagMode: priceTagMode === 'value' ? 'both' : priceTagMode === 'both' ? 'none' : 'value' })}
-                onToggleIndicatorsPanel={() => setShowIndicatorsPanel(!showIndicatorsPanel)}
-                onToggleWatchlistPanel={() => setShowWatchlistPanel(!showWatchlistPanel)}
+                onToggleIndicatorsPanel={() => updateToolbarPrefs({ showIndicatorsPanel: !toolbarPrefs.showIndicatorsPanel })}
+                onToggleWatchlistPanel={() => updateToolbarPrefs({ showWatchlistPanel: !toolbarPrefs.showWatchlistPanel })}
                 onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
             />
 
-            {/* Chart area - loading riêng biệt */}
-            <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
-                {renderChartArea()}
+            {/* Chart area + panels — panels luôn mounted, chỉ chart area mới loading */}
+            <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex' }}>
+                {/* Chart — loading chỉ ảnh hưởng vùng này */}
+                <Box sx={{ flex: 1, overflow: 'hidden' }}>
+                    {renderChartArea()}
+                </Box>
+
+                {/* Indicators panel — desktop only, mount 1 lần, bên phải */}
+                {!isMobile && showIndicatorsPanel && (
+                    <IndicatorsPanel
+                        enabledIndicators={enabledIndicators}
+                        onToggleIndicator={toggleIndicator}
+                        onClearAll={clearAll}
+                        onResetDefault={resetToDefault}
+                    />
+                )}
+
+                {/* Watchlist panel — desktop only, mount 1 lần, bên phải */}
+                {!isMobile && showWatchlistPanel && (
+                    <WatchlistPanel onTickerChange={handleTickerChange} />
+                )}
             </Box>
         </Box>
     );
