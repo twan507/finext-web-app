@@ -1,5 +1,5 @@
 # app/schemas/watchlists.py
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
 from typing import Optional, List
 from datetime import datetime, timezone
 from pydantic import EmailStr  # Thêm EmailStr
@@ -70,3 +70,29 @@ class WatchlistPublicAdmin(WatchlistBase):
     updated_at: datetime
 
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+
+class WatchlistReorderItem(BaseModel):
+    id: PyObjectId
+    coordinate: List[int] = Field(..., min_length=2, max_length=2, description="[col, row], values >= 0")
+
+    @field_validator("coordinate")
+    @classmethod
+    def validate_coordinate_values(cls, v: List[int]) -> List[int]:
+        if any(x < 0 for x in v):
+            raise ValueError("Coordinate values must be >= 0")
+        return v
+
+
+class WatchlistReorder(BaseModel):
+    items: List[WatchlistReorderItem] = Field(..., min_length=1)
+
+    @model_validator(mode='after')
+    def check_no_duplicates(self) -> 'WatchlistReorder':
+        ids = [item.id for item in self.items]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Duplicate watchlist IDs in reorder request")
+        coords = [tuple(item.coordinate) for item in self.items]
+        if len(coords) != len(set(coords)):
+            raise ValueError("Duplicate coordinates in reorder request")
+        return self

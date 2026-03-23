@@ -2,7 +2,14 @@
   "permissions": {
     "allow": [
       "Bash(npx tsc:*)",
-      "WebFetch(domain:minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com)"
+      "WebFetch(domain:minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com)",
+      "Bash(find /d/twan_projects/finext-web-app/backend -type f -name *watchlist*)",
+      "Bash(xargs grep:*)",
+      "Bash(ls -la \"./finext-nextjs/app/\\(main\\)/\")",
+      "Bash(ls -la \"./finext-nextjs/app/\\(main\\)/watchlist/\")",
+      "Bash(find \"./finext-nextjs/app/\\(main\\)/watchlist/\" -type f -name \"*.tsx\" -o -name \"*.ts\")",
+      "Bash(npm install:*)",
+      "Bash(python -c \"from app.schemas.watchlists import WatchlistReorder, WatchlistReorderItem; from app.crud.watchlists import reorder_watchlists; from app.routers.watchlists import router; print\\(''Backend OK''\\)\")"
     ],
     "additionalDirectories": [
       "D:\\twan_projects\\finext-web-app\\finext-nextjs\\app\\(main)\\sectors\\[sectorId]\\components"

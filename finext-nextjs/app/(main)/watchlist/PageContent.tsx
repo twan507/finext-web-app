@@ -1,12 +1,28 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { Box, Typography, Button, CircularProgress, useTheme } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import {
+    DndContext,
+    DragOverlay,
+    PointerSensor,
+    KeyboardSensor,
+    useSensor,
+    useSensors,
+    rectIntersection,
+    useDroppable,
+    type DragStartEvent,
+    type DragOverEvent,
+    type DragEndEvent,
+} from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { createPortal } from 'react-dom';
 import { fontWeight, getResponsiveFontSize, borderRadius } from 'theme/tokens';
 import { useSseCache } from 'hooks/useSseCache';
 import { apiClient } from 'services/apiClient';
 import WatchlistColumn from './components/WatchlistColumn';
+import SortableWatchlistCard from './components/SortableWatchlistCard';
 import AddWatchlistDialog from './components/AddWatchlistDialog';
 import ConfirmDialog from './components/ConfirmDialog';
 
@@ -34,6 +50,33 @@ interface Watchlist {
     stock_symbols: string[];
 }
 
+function DroppableColumn({ colIdx, isDark, isActive, children }: {
+    colIdx: number;
+    isDark: boolean;
+    isActive: boolean;
+    children: React.ReactNode;
+}) {
+    const { setNodeRef, isOver } = useDroppable({ id: `column-${colIdx}` });
+    return (
+        <Box
+            ref={setNodeRef}
+            sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 1.5,
+                width: 260,
+                flexShrink: 0,
+                minHeight: 80,
+                borderRadius: `${borderRadius.md}px`,
+                transition: 'background 0.15s',
+                bgcolor: isOver && isActive ? (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)') : 'transparent',
+            }}
+        >
+            {children}
+        </Box>
+    );
+}
+
 export default function WatchlistContent() {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
@@ -45,6 +88,162 @@ export default function WatchlistContent() {
     const [editingWatchlist, setEditingWatchlist] = useState<Watchlist | null>(null);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+
+    // ── DnD state ──
+    const [activeId, setActiveId] = useState<string | null>(null);
+    const [isReordering, setIsReordering] = useState(false);
+    const watchlistsBeforeDrag = useRef<Watchlist[]>([]);
+    const watchlistsRef = useRef<Watchlist[]>([]);
+
+    // Keep ref in sync with state so handlers can read latest without stale closures
+    useEffect(() => { watchlistsRef.current = watchlists; }, [watchlists]);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 3 } }),
+        useSensor(KeyboardSensor),
+    );
+
+    // Helper: find column index for a sortable ID or a column droppable ID
+    const findColumnIndex = useCallback((id: string): number => {
+        if (typeof id === 'string' && id.startsWith('column-')) {
+            return parseInt(id.replace('column-', ''), 10);
+        }
+        const wl = watchlists.find(w => (w.id || w._id) === id);
+        if (wl) return wl.coordinate[0];
+        return -1;
+    }, [watchlists]);
+
+    // ── DnD handlers ──
+    const handleDragStart = useCallback((event: DragStartEvent) => {
+        setActiveId(event.active.id as string);
+        watchlistsBeforeDrag.current = [...watchlists];
+    }, [watchlists]);
+
+    const handleDragOver = useCallback((event: DragOverEvent) => {
+        const { active, over } = event;
+        if (!over) return;
+
+        const activeWlId = active.id as string;
+        const overId = over.id as string;
+        if (activeWlId === overId) return;
+
+        const activeCol = findColumnIndex(activeWlId);
+        const overCol = findColumnIndex(overId);
+        if (activeCol === -1 || overCol === -1 || activeCol === overCol) return;
+
+        const isOverColumn = overId.startsWith('column-');
+
+        // Move item to the other column
+        setWatchlists(prev => {
+            const activeWl = prev.find(w => (w.id || w._id) === activeWlId);
+            if (!activeWl) return prev;
+
+            // Get items in the target column sorted by row
+            const overColItems = prev
+                .filter(w => w.coordinate[0] === overCol && (w.id || w._id) !== activeWlId)
+                .sort((a, b) => a.coordinate[1] - b.coordinate[1]);
+
+            // Find insertion index — append at end if dropping on column itself
+            const overIndex = isOverColumn ? -1 : overColItems.findIndex(w => (w.id || w._id) === overId);
+            const insertAt = overIndex === -1 ? overColItems.length : overIndex;
+
+            // Insert active item at the new position
+            overColItems.splice(insertAt, 0, activeWl);
+
+            // Recalculate coordinates for the target column
+            const updatedTargetItems = overColItems.map((w, idx) => ({
+                ...w,
+                coordinate: [overCol, idx] as [number, number],
+            }));
+
+            // Recalculate coordinates for the source column (without the active item)
+            const sourceColItems = prev
+                .filter(w => w.coordinate[0] === activeCol && (w.id || w._id) !== activeWlId)
+                .sort((a, b) => a.coordinate[1] - b.coordinate[1])
+                .map((w, idx) => ({
+                    ...w,
+                    coordinate: [activeCol, idx] as [number, number],
+                }));
+
+            // Rebuild full list
+            const otherItems = prev.filter(
+                w => w.coordinate[0] !== activeCol && w.coordinate[0] !== overCol
+            );
+            return [...otherItems, ...sourceColItems, ...updatedTargetItems];
+        });
+    }, [findColumnIndex]);
+
+    const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+        const { active, over } = event;
+        setActiveId(null);
+
+        const activeWlId = active.id as string;
+        const overWlId = over ? (over.id as string) : null;
+
+        // Same-column reorder (cross-column was already handled in onDragOver)
+        if (overWlId && activeWlId !== overWlId) {
+            const activeCol = findColumnIndex(activeWlId);
+            const overCol = findColumnIndex(overWlId);
+
+            if (activeCol === overCol && activeCol !== -1) {
+                setWatchlists(prev => {
+                    const colItems = prev
+                        .filter(w => w.coordinate[0] === activeCol)
+                        .sort((a, b) => a.coordinate[1] - b.coordinate[1]);
+
+                    const activeIdx = colItems.findIndex(w => (w.id || w._id) === activeWlId);
+                    const overIdx = colItems.findIndex(w => (w.id || w._id) === overWlId);
+
+                    if (activeIdx === -1 || overIdx === -1) return prev;
+
+                    const reordered = [...colItems];
+                    const [moved] = reordered.splice(activeIdx, 1);
+                    reordered.splice(overIdx, 0, moved);
+
+                    const updatedColItems = reordered.map((w, idx) => ({
+                        ...w,
+                        coordinate: [activeCol, idx] as [number, number],
+                    }));
+
+                    const otherItems = prev.filter(w => w.coordinate[0] !== activeCol);
+                    return [...otherItems, ...updatedColItems];
+                });
+            }
+        }
+
+        // Send reorder API — read latest state from ref (avoids stale closure)
+        // Use requestAnimationFrame to let React flush the state update above
+        requestAnimationFrame(() => {
+            const current = watchlistsRef.current;
+            const before = watchlistsBeforeDrag.current;
+
+            const changed = current.filter(w => {
+                const prev = before.find(b => (b.id || b._id) === (w.id || w._id));
+                if (!prev) return false;
+                return prev.coordinate[0] !== w.coordinate[0] || prev.coordinate[1] !== w.coordinate[1];
+            });
+
+            if (changed.length === 0) return;
+
+            setIsReordering(true);
+            const items = changed.map(w => ({
+                id: w.id || w._id!,
+                coordinate: w.coordinate,
+            }));
+
+            apiClient({
+                url: '/api/v1/watchlists/reorder',
+                method: 'POST',
+                body: { items },
+                requireAuth: true,
+            }).catch(() => {
+                // Rollback on failure
+                setWatchlists(watchlistsBeforeDrag.current);
+            }).finally(() => {
+                setIsReordering(false);
+            });
+        });
+    }, [findColumnIndex]);
 
     // SSE: all stock data
     const { data: stockDataRaw } = useSseCache<StockData[]>({
@@ -135,6 +334,20 @@ export default function WatchlistContent() {
 
         return columns.filter(col => col.length > 0);
     }, [watchlists]);
+
+    // Extract sortable IDs per column for SortableContext
+    const columnSortableIds = useMemo(() => {
+        return visualColumns.map(colItems =>
+            colItems
+                .filter((item): item is { type: 'wl'; wl: Watchlist } => item.type === 'wl')
+                .map(item => item.wl.id || item.wl._id!)
+        );
+    }, [visualColumns]);
+
+    const activeWatchlist = useMemo(
+        () => (activeId ? watchlists.find(w => (w.id || w._id) === activeId) ?? null : null),
+        [activeId, watchlists],
+    );
 
     // ── handlers ──
     const handleDeleteClick = (id: string) => {
@@ -235,74 +448,101 @@ export default function WatchlistContent() {
                 Danh sách theo dõi
             </Typography>
 
-            {/* Masonry columns layout */}
-            <Box
-                sx={{
-                    display: 'flex',
-                    gap: 1.5,
-                    alignItems: 'flex-start',
-                    overflowX: 'auto',
-                    '&::-webkit-scrollbar': { height: 5 },
-                    '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
-                    '&::-webkit-scrollbar-thumb': {
-                        bgcolor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
-                        borderRadius: 3,
-                    },
-                }}
+            <DndContext
+                sensors={sensors}
+                collisionDetection={rectIntersection}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDragEnd={handleDragEnd}
             >
-                {visualColumns.map((colItems, colIdx) => (
-                    <Box
-                        key={colIdx}
-                        sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 1.5,
-                            width: 260,
-                            flexShrink: 0,
-                        }}
-                    >
-                        {colItems.map((item, itemIdx) =>
-                            item.type === 'wl' ? (
+                <Box
+                    sx={{
+                        display: 'flex',
+                        gap: 1.5,
+                        alignItems: 'flex-start',
+                        overflowX: 'auto',
+                        '&::-webkit-scrollbar': { height: 5 },
+                        '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
+                        '&::-webkit-scrollbar-thumb': {
+                            bgcolor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
+                            borderRadius: 3,
+                        },
+                    }}
+                >
+                    {visualColumns.map((colItems, colIdx) => (
+                        <SortableContext
+                            key={colIdx}
+                            items={columnSortableIds[colIdx] || []}
+                            strategy={verticalListSortingStrategy}
+                        >
+                            <DroppableColumn colIdx={colIdx} isDark={isDark} isActive={!!activeId}>
+                                {colItems.map((item) =>
+                                    item.type === 'wl' ? (
+                                        <SortableWatchlistCard key={item.wl.id || item.wl._id} id={item.wl.id || item.wl._id!} disabled={isReordering}>
+                                            {(dragHandleProps) => (
+                                                <WatchlistColumn
+                                                    watchlist={item.wl}
+                                                    stockDataMap={stockDataMap}
+                                                    allTickers={allTickers}
+                                                    onDelete={() => handleDeleteClick(item.wl.id || item.wl._id!)}
+                                                    onRename={() => openRename(item.wl)}
+                                                    onAddStock={(ticker) =>
+                                                        handleUpdateStocks(item.wl, [...item.wl.stock_symbols, ticker])
+                                                    }
+                                                    onRemoveStock={(ticker) =>
+                                                        handleUpdateStocks(item.wl, item.wl.stock_symbols.filter(s => s !== ticker))
+                                                    }
+                                                    dragHandleProps={dragHandleProps}
+                                                />
+                                            )}
+                                        </SortableWatchlistCard>
+                                    ) : (
+                                        <Box
+                                            key={`add-${item.coordinate[0]}-${item.coordinate[1]}`}
+                                            onClick={() => openCreate(item.coordinate)}
+                                            sx={{
+                                                minHeight: 80,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                borderRadius: `${borderRadius.md}px`,
+                                                border: `1px dashed ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                                                cursor: 'pointer',
+                                                transition: 'all 0.15s',
+                                                '&:hover': {
+                                                    bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                                                    borderColor: theme.palette.primary.main,
+                                                },
+                                            }}
+                                        >
+                                            <AddIcon sx={{ fontSize: 22, color: 'text.disabled' }} />
+                                        </Box>
+                                    ),
+                                )}
+                            </DroppableColumn>
+                        </SortableContext>
+                    ))}
+                </Box>
+
+                {typeof document !== 'undefined' && createPortal(
+                    <DragOverlay>
+                        {activeWatchlist ? (
+                            <Box sx={{ opacity: 0.85, transform: 'scale(1.02)', boxShadow: 6 }}>
                                 <WatchlistColumn
-                                    key={item.wl.id || item.wl._id}
-                                    watchlist={item.wl}
+                                    watchlist={activeWatchlist}
                                     stockDataMap={stockDataMap}
                                     allTickers={allTickers}
-                                    onDelete={() => handleDeleteClick(item.wl.id || item.wl._id!)}
-                                    onRename={() => openRename(item.wl)}
-                                    onAddStock={(ticker) =>
-                                        handleUpdateStocks(item.wl, [...item.wl.stock_symbols, ticker])
-                                    }
-                                    onRemoveStock={(ticker) =>
-                                        handleUpdateStocks(item.wl, item.wl.stock_symbols.filter(s => s !== ticker))
-                                    }
+                                    onDelete={() => {}}
+                                    onRename={() => {}}
+                                    onAddStock={() => {}}
+                                    onRemoveStock={() => {}}
                                 />
-                            ) : (
-                                <Box
-                                    key={`add-${item.coordinate[0]}-${item.coordinate[1]}`}
-                                    onClick={() => openCreate(item.coordinate)}
-                                    sx={{
-                                        minHeight: 80,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        borderRadius: `${borderRadius.md}px`,
-                                        border: `1px dashed ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                                        cursor: 'pointer',
-                                        transition: 'all 0.15s',
-                                        '&:hover': {
-                                            bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-                                            borderColor: theme.palette.primary.main,
-                                        },
-                                    }}
-                                >
-                                    <AddIcon sx={{ fontSize: 22, color: 'text.disabled' }} />
-                                </Box>
-                            ),
-                        )}
-                    </Box>
-                ))}
-            </Box>
+                            </Box>
+                        ) : null}
+                    </DragOverlay>,
+                    document.body,
+                )}
+            </DndContext>
 
             <AddWatchlistDialog
                 open={dialogOpen}

@@ -5,8 +5,9 @@ from datetime import datetime, timezone
 
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from pymongo import UpdateOne
 
-from app.schemas.watchlists import WatchlistCreate, WatchlistUpdate, WatchlistInDB
+from app.schemas.watchlists import WatchlistCreate, WatchlistUpdate, WatchlistInDB, WatchlistReorder
 from app.utils.types import PyObjectId
 
 logger = logging.getLogger(__name__)
@@ -112,6 +113,35 @@ async def delete_watchlist(db: AsyncIOMotorDatabase, watchlist_id: PyObjectId, u
         return False
     delete_result = await db[WATCHLIST_COLLECTION].delete_one({"_id": ObjectId(watchlist_id), "user_id": ObjectId(user_id)})
     return delete_result.deleted_count > 0
+
+
+async def reorder_watchlists(db: AsyncIOMotorDatabase, user_id: PyObjectId, reorder_data: WatchlistReorder) -> int:
+    """Bulk-update coordinates for multiple watchlists owned by user_id. Returns modified count."""
+    if not ObjectId.is_valid(user_id):
+        raise ValueError(f"Định dạng User ID không hợp lệ: {user_id}")
+
+    item_ids = [ObjectId(item.id) for item in reorder_data.items]
+
+    # Validate all watchlist IDs belong to this user
+    count = await db[WATCHLIST_COLLECTION].count_documents({
+        "_id": {"$in": item_ids},
+        "user_id": ObjectId(user_id),
+    })
+    if count != len(item_ids):
+        raise ValueError("Một hoặc nhiều watchlist không tồn tại hoặc không thuộc về bạn.")
+
+    now = datetime.now(timezone.utc)
+    operations = [
+        UpdateOne(
+            {"_id": ObjectId(item.id), "user_id": ObjectId(user_id)},
+            {"$set": {"coordinate": item.coordinate, "updated_at": now}},
+        )
+        for item in reorder_data.items
+    ]
+
+    result = await db[WATCHLIST_COLLECTION].bulk_write(operations, ordered=False)
+    logger.info(f"Reorder watchlists for user {user_id}: modified {result.modified_count}/{len(operations)}")
+    return result.modified_count
 
 
 # <<<< PHẦN BỔ SUNG MỚI >>>>

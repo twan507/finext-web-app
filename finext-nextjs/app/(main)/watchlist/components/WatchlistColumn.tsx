@@ -15,6 +15,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import { fontWeight, getResponsiveFontSize, borderRadius, durations } from 'theme/tokens';
 import { getPriceColor, getVsiColor, getTrendColor } from 'theme/colorHelpers';
 
@@ -48,6 +49,7 @@ interface WatchlistColumnProps {
     onRename: () => void;
     onAddStock: (ticker: string) => void;
     onRemoveStock: (ticker: string) => void;
+    dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
 }
 
 export default function WatchlistColumn({
@@ -58,6 +60,7 @@ export default function WatchlistColumn({
     onRename,
     onAddStock,
     onRemoveStock,
+    dragHandleProps,
 }: WatchlistColumnProps) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
@@ -139,6 +142,23 @@ export default function WatchlistColumn({
                     bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
                 }}
             >
+                {/* Drag handle */}
+                {dragHandleProps && (
+                    <Box
+                        {...dragHandleProps}
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            cursor: 'grab',
+                            color: 'text.disabled',
+                            mr: 0.5,
+                            '&:hover': { color: 'text.secondary' },
+                            '&:active': { cursor: 'grabbing' },
+                        }}
+                    >
+                        <DragIndicatorIcon sx={{ fontSize: 16 }} />
+                    </Box>
+                )}
                 <Box
                     onClick={() => setCollapsed(c => !c)}
                     sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1, cursor: 'pointer', userSelect: 'none' }}
