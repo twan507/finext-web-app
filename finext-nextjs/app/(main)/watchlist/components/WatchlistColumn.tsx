@@ -19,6 +19,9 @@ import CloseIcon from '@mui/icons-material/Close';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { fontWeight, getResponsiveFontSize, borderRadius, durations } from 'theme/tokens';
 import { getPriceColor, getVsiColor, getTrendColor } from 'theme/colorHelpers';
 
@@ -68,6 +71,7 @@ interface WatchlistColumnProps {
     onRenameSubmit: (newName: string) => void;
     onSortChange: (sort: WatchlistSort) => void;
     onCollapseChange: (collapsed: boolean) => void;
+    onReorderStocks: (newSymbols: string[]) => void;
     onAddStock: (ticker: string) => void;
     onRemoveStock: (ticker: string) => void;
     dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
@@ -82,6 +86,7 @@ export default function WatchlistColumn({
     onRenameSubmit,
     onSortChange,
     onCollapseChange,
+    onReorderStocks,
     onAddStock,
     onRemoveStock,
     dragHandleProps,
@@ -138,10 +143,12 @@ export default function WatchlistColumn({
         : theme.palette.text.secondary;
 
     // Sorted tickers
+    const sort = (watchlist.sort ?? 'manual') as WatchlistSort;
+    const isManualSort = sort === 'manual';
+
     const sortedTickers = useMemo(() => {
         const tickers = watchlist.stock_symbols;
-        const sort = watchlist.sort ?? 'manual';
-        if (sort === 'manual') return tickers;
+        if (isManualSort) return tickers;
         return [...tickers].sort((a, b) => {
             const da = stockDataMap.get(a);
             const db = stockDataMap.get(b);
@@ -151,13 +158,27 @@ export default function WatchlistColumn({
             else                               { av = da?.trading_value ?? 0; bv = db?.trading_value ?? 0; }
             return sort.endsWith('_asc') ? av - bv : bv - av;
         });
-    }, [watchlist.stock_symbols, watchlist.sort, stockDataMap]);
+    }, [watchlist.stock_symbols, sort, isManualSort, stockDataMap]);
 
     // Tickers available for autocomplete (exclude already added)
     const tickerOptions = useMemo(() => {
         const existing = new Set(watchlist.stock_symbols);
         return allTickers.filter(t => !existing.has(t.ticker));
     }, [allTickers, watchlist.stock_symbols]);
+
+    // DnD sensors for stock reorder (only active when sort=manual)
+    const stockSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+    const handleStockDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+        const symbols = watchlist.stock_symbols;
+        const oldIndex = symbols.indexOf(active.id as string);
+        const newIndex = symbols.indexOf(over.id as string);
+        if (oldIndex !== -1 && newIndex !== -1) {
+            onReorderStocks(arrayMove(symbols, oldIndex, newIndex));
+        }
+    };
 
     const fmt = {
         price: (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
@@ -192,6 +213,161 @@ export default function WatchlistColumn({
                 py: 0.5,
             },
         },
+    };
+
+    const renderStockRow = (ticker: string, dragListeners?: Record<string, unknown>) => {
+        const data = stockDataMap.get(ticker);
+        const cardDragSx = isManualSort ? { cursor: 'grab', '&:active': { cursor: 'grabbing' } } : {};
+
+        if (!data) {
+            return (
+                <Box
+                    {...(dragListeners ?? {})}
+                    sx={{
+                        px: 1,
+                        py: 0.5,
+                        borderRadius: `${borderRadius.sm}px`,
+                        bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        '&:hover .remove-btn': { opacity: 1 },
+                        ...cardDragSx,
+                    }}
+                >
+                    <Typography
+                        component="a"
+                        href={`/stocks/${ticker}`}
+                        target="_blank"
+                        onPointerDown={e => e.stopPropagation()}
+                        sx={{
+                            fontSize: getResponsiveFontSize('xs'),
+                            fontWeight: fontWeight.semibold,
+                            color: 'text.primary',
+                            textDecoration: 'none',
+                            '&:hover': { textDecoration: 'underline' },
+                        }}
+                    >
+                        {ticker}
+                    </Typography>
+                    <Box
+                        component="span"
+                        className="remove-btn"
+                        onClick={() => onRemoveStock(ticker)}
+                        onPointerDown={e => e.stopPropagation()}
+                        sx={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            cursor: 'pointer',
+                            color: alpha(theme.palette.text.secondary, 0.35),
+                            opacity: 0,
+                            transition: `opacity ${durations.fast}, color ${durations.fast}`,
+                            '&:hover': { color: theme.palette.error.main },
+                        }}
+                    >
+                        <CloseIcon sx={{ fontSize: 13 }} />
+                    </Box>
+                </Box>
+            );
+        }
+
+        const changeColor = getPriceColor(data.pct_change, data.exchange, theme);
+        const vsiColor = getVsiColor(data.vsi ?? 0, theme);
+        const cardBg = `linear-gradient(90deg, ${alpha(changeColor, 0.1)} 0%, ${alpha(changeColor, 0.05)} 50%, ${alpha(changeColor, 0.01)} 100%)`;
+        const cardBgHover = `linear-gradient(90deg, ${alpha(changeColor, 0.2)} 0%, ${alpha(changeColor, 0.1)} 50%, ${alpha(changeColor, 0.02)} 100%)`;
+
+        return (
+            <Box
+                {...(dragListeners ?? {})}
+                sx={{
+                    px: 1,
+                    py: 0.5,
+                    borderRadius: `${borderRadius.sm}px`,
+                    background: cardBg,
+                    transition: `background ${durations.fast}`,
+                    '&:hover': { background: cardBgHover },
+                    '&:hover .remove-btn': { opacity: 1 },
+                    ...cardDragSx,
+                }}
+            >
+                {/* Grid 3 cột */}
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', alignItems: 'center' }}>
+                    {/* [0,0] Ticker + icons */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+                        <Typography
+                            component="a"
+                            href={`/stocks/${ticker}`}
+                            target="_blank"
+                            onPointerDown={e => e.stopPropagation()}
+                            sx={{
+                                fontSize: getResponsiveFontSize('xs'),
+                                fontWeight: fontWeight.bold,
+                                color: changeColor,
+                                textDecoration: 'none',
+                                '&:hover': { textDecoration: 'underline' },
+                            }}
+                        >
+                            {ticker}
+                        </Typography>
+                        <Tooltip title="Mở chart" placement="right" arrow={false} slotProps={tooltipSlotProps}>
+                            <Box
+                                component="span"
+                                onClick={() => window.open(`/charts/${ticker}`, '_blank')}
+                                onPointerDown={e => e.stopPropagation()}
+                                sx={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    cursor: 'pointer',
+                                    color: alpha(theme.palette.text.secondary, 0.4),
+                                    flexShrink: 0,
+                                    transition: `color ${durations.fast}`,
+                                    '&:hover': { color: theme.palette.primary.main },
+                                }}
+                            >
+                                <TrendingUpIcon sx={{ fontSize: 14 }} />
+                            </Box>
+                        </Tooltip>
+                        <Box
+                            component="span"
+                            className="remove-btn"
+                            onClick={() => onRemoveStock(ticker)}
+                            onPointerDown={e => e.stopPropagation()}
+                            sx={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                cursor: 'pointer',
+                                color: alpha(theme.palette.text.secondary, 0.35),
+                                opacity: 0,
+                                transition: `opacity ${durations.fast}, color ${durations.fast}`,
+                                '&:hover': { color: theme.palette.error.main },
+                            }}
+                        >
+                            <CloseIcon sx={{ fontSize: 13 }} />
+                        </Box>
+                    </Box>
+                    {/* [0,1] +-% */}
+                    <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: changeColor, fontVariantNumeric: 'tabular-nums', textAlign: 'center' }}>
+                        {fmt.pct(data.pct_change)}
+                    </Typography>
+                    {/* [0,2] VSI */}
+                    <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: vsiColor, fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
+                        {fmt.vsi(data.vsi ?? 0)}
+                    </Typography>
+                    {/* [1,0] Giá */}
+                    <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: 'text.primary', fontVariantNumeric: 'tabular-nums', mt: 0.25 }}>
+                        {fmt.price(data.close)}
+                    </Typography>
+                    {/* [1,1] +- */}
+                    <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: changeColor, fontVariantNumeric: 'tabular-nums', textAlign: 'center', mt: 0.25 }}>
+                        {fmt.diff(data.diff)}
+                    </Typography>
+                    {/* [1,2] GTGD */}
+                    <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: 'text.secondary', fontVariantNumeric: 'tabular-nums', textAlign: 'right', mt: 0.25 }}>
+                        {data.trading_value != null ? fmt.gtgd(data.trading_value) : '—'}
+                    </Typography>
+                </Box>
+            </Box>
+        );
     };
 
     return (
@@ -332,7 +508,7 @@ export default function WatchlistColumn({
 
                 {/* Sort options */}
                 {SORT_OPTIONS.map(opt => {
-                    const active = (watchlist.sort ?? 'manual') === opt.key;
+                    const active = sort === opt.key;
                     return (
                         <MenuItem
                             key={opt.key}
@@ -381,200 +557,21 @@ export default function WatchlistColumn({
             <Box sx={{
                 flex: 1,
                 overflowY: 'auto',
+                overflowX: 'hidden',
                 display: collapsed ? 'none' : 'flex',
                 flexDirection: 'column',
                 gap: 0.5,
                 p: 0.75,
             }}>
-                {sortedTickers.map((ticker) => {
-                    const data = stockDataMap.get(ticker);
-
-                    if (!data) {
-                        return (
-                            <Box
-                                key={ticker}
-                                sx={{
-                                    px: 1,
-                                    py: 0.5,
-                                    borderRadius: `${borderRadius.sm}px`,
-                                    bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    '&:hover .remove-btn': { opacity: 1 },
-                                }}
-                            >
-                                <Typography
-                                    component="a"
-                                    href={`/stocks/${ticker}`}
-                                    target="_blank"
-                                    sx={{
-                                        fontSize: getResponsiveFontSize('xs'),
-                                        fontWeight: fontWeight.semibold,
-                                        color: 'text.primary',
-                                        textDecoration: 'none',
-                                        '&:hover': { textDecoration: 'underline' },
-                                    }}
-                                >
-                                    {ticker}
-                                </Typography>
-                                <Box
-                                    component="span"
-                                    className="remove-btn"
-                                    onClick={() => onRemoveStock(ticker)}
-                                    sx={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        cursor: 'pointer',
-                                        color: alpha(theme.palette.text.secondary, 0.35),
-                                        opacity: 0,
-                                        transition: `opacity ${durations.fast}, color ${durations.fast}`,
-                                        '&:hover': { color: theme.palette.error.main },
-                                    }}
-                                >
-                                    <CloseIcon sx={{ fontSize: 13 }} />
-                                </Box>
-                            </Box>
-                        );
-                    }
-
-                    const changeColor = getPriceColor(data.pct_change, data.exchange, theme);
-                    const vsiColor = getVsiColor(data.vsi ?? 0, theme);
-                    const cardBg = `linear-gradient(90deg, ${alpha(changeColor, 0.1)} 0%, ${alpha(changeColor, 0.05)} 50%, ${alpha(changeColor, 0.01)} 100%)`;
-                    const cardBgHover = `linear-gradient(90deg, ${alpha(changeColor, 0.2)} 0%, ${alpha(changeColor, 0.1)} 50%, ${alpha(changeColor, 0.02)} 100%)`;
-
-                    return (
-                        <Box
-                            key={ticker}
-                            sx={{
-                                px: 1,
-                                py: 0.5,
-                                borderRadius: `${borderRadius.sm}px`,
-                                background: cardBg,
-                                transition: `background ${durations.fast}`,
-                                '&:hover': { background: cardBgHover },
-                                '&:hover .remove-btn': { opacity: 1 },
-                            }}
-                        >
-                            {/* Grid 3 cột: left | center tuyệt đối | right */}
-                            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', alignItems: 'center' }}>
-                                {/* [0,0] Ticker + icons */}
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
-                                    <Typography
-                                        component="a"
-                                        href={`/stocks/${ticker}`}
-                                        target="_blank"
-                                        sx={{
-                                            fontSize: getResponsiveFontSize('xs'),
-                                            fontWeight: fontWeight.bold,
-                                            color: changeColor,
-                                            textDecoration: 'none',
-                                            '&:hover': { textDecoration: 'underline' },
-                                        }}
-                                    >
-                                        {ticker}
-                                    </Typography>
-                                    <Tooltip title="Mở chart" placement="right" arrow={false} slotProps={tooltipSlotProps}>
-                                        <Box
-                                            component="span"
-                                            onClick={() => window.open(`/charts/${ticker}`, '_blank')}
-                                            sx={{
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                cursor: 'pointer',
-                                                color: alpha(theme.palette.text.secondary, 0.4),
-                                                flexShrink: 0,
-                                                transition: `color ${durations.fast}`,
-                                                '&:hover': { color: theme.palette.primary.main },
-                                            }}
-                                        >
-                                            <TrendingUpIcon sx={{ fontSize: 14 }} />
-                                        </Box>
-                                    </Tooltip>
-                                    <Box
-                                        component="span"
-                                        className="remove-btn"
-                                        onClick={() => onRemoveStock(ticker)}
-                                        sx={{
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            cursor: 'pointer',
-                                            color: alpha(theme.palette.text.secondary, 0.35),
-                                            opacity: 0,
-                                            transition: `opacity ${durations.fast}, color ${durations.fast}`,
-                                            '&:hover': { color: theme.palette.error.main },
-                                        }}
-                                    >
-                                        <CloseIcon sx={{ fontSize: 13 }} />
-                                    </Box>
-                                </Box>
-                                {/* [0,1] +-% — căn giữa tuyệt đối */}
-                                <Typography
-                                    sx={{
-                                        fontSize: getResponsiveFontSize('xs'),
-                                        fontWeight: fontWeight.semibold,
-                                        color: changeColor,
-                                        fontVariantNumeric: 'tabular-nums',
-                                        textAlign: 'center',
-                                    }}
-                                >
-                                    {fmt.pct(data.pct_change)}
-                                </Typography>
-                                {/* [0,2] VSI — căn phải */}
-                                <Typography
-                                    sx={{
-                                        fontSize: getResponsiveFontSize('xs'),
-                                        fontWeight: fontWeight.semibold,
-                                        color: vsiColor,
-                                        fontVariantNumeric: 'tabular-nums',
-                                        textAlign: 'right',
-                                    }}
-                                >
-                                    {fmt.vsi(data.vsi ?? 0)}
-                                </Typography>
-
-                                {/* [1,0] Giá */}
-                                <Typography
-                                    sx={{
-                                        fontSize: getResponsiveFontSize('xs'),
-                                        fontWeight: fontWeight.medium,
-                                        color: 'text.primary',
-                                        fontVariantNumeric: 'tabular-nums',
-                                        mt: 0.25,
-                                    }}
-                                >
-                                    {fmt.price(data.close)}
-                                </Typography>
-                                {/* [1,1] +- — căn giữa tuyệt đối */}
-                                <Typography
-                                    sx={{
-                                        fontSize: getResponsiveFontSize('xs'),
-                                        fontWeight: fontWeight.medium,
-                                        color: changeColor,
-                                        fontVariantNumeric: 'tabular-nums',
-                                        textAlign: 'center',
-                                        mt: 0.25,
-                                    }}
-                                >
-                                    {fmt.diff(data.diff)}
-                                </Typography>
-                                {/* [1,2] GTGD — căn phải */}
-                                <Typography
-                                    sx={{
-                                        fontSize: getResponsiveFontSize('xs'),
-                                        fontWeight: fontWeight.medium,
-                                        color: 'text.secondary',
-                                        fontVariantNumeric: 'tabular-nums',
-                                        textAlign: 'right',
-                                        mt: 0.25,
-                                    }}
-                                >
-                                    {data.trading_value != null ? fmt.gtgd(data.trading_value) : '—'}
-                                </Typography>
-                            </Box>
-                        </Box>
-                    );
-                })}
+                <DndContext sensors={stockSensors} collisionDetection={closestCenter} onDragEnd={handleStockDragEnd}>
+                    <SortableContext items={sortedTickers} strategy={verticalListSortingStrategy}>
+                        {sortedTickers.map((ticker) => (
+                            <SortableStockRow key={ticker} id={ticker} disabled={!isManualSort}>
+                                {(listeners) => renderStockRow(ticker, listeners)}
+                            </SortableStockRow>
+                        ))}
+                    </SortableContext>
+                </DndContext>
 
                 {watchlist.stock_symbols.length === 0 && (
                     <Typography
@@ -659,6 +656,31 @@ export default function WatchlistColumn({
                     }}
                 />
             </Box>
+        </Box>
+    );
+}
+
+// Sortable wrapper for stock rows
+function SortableStockRow({ id, disabled, children }: {
+    id: string;
+    disabled?: boolean;
+    children: (listeners: Record<string, unknown> | undefined) => React.ReactNode;
+}) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled });
+
+    return (
+        <Box
+            ref={setNodeRef}
+            style={{
+                transform: CSS.Translate.toString(transform),
+                transition: transition || undefined,
+                opacity: isDragging ? 0.4 : 1,
+                position: 'relative',
+                zIndex: isDragging ? 1 : 0,
+            }}
+            {...attributes}
+        >
+            {children(disabled ? undefined : listeners)}
         </Box>
     );
 }

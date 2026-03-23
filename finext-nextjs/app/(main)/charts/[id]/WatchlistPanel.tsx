@@ -24,6 +24,10 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import RefreshIcon from '@mui/icons-material/Refresh';
 
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
 import { getResponsiveFontSize, fontWeight, borderRadius, durations } from 'theme/tokens';
 import { getPriceColor, getVsiColor, getTrendColor } from 'theme/colorHelpers';
 import { useSseCache } from 'hooks/useSseCache';
@@ -103,6 +107,9 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
     const [renamingId, setRenamingId] = useState<string | null>(null);
     const [renameValue, setRenameValue] = useState('');
     const renameInputRef = useRef<HTMLInputElement>(null);
+
+    // DnD sensors for stock reorder
+    const stockSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
     // SSE: all stock data
     const { data: stockDataRaw } = useSseCache<StockData[]>({ keyword: 'home_today_stock' });
@@ -217,6 +224,18 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
             await apiClient({ url: `/api/v1/watchlists/${wlId}`, method: 'PUT', body: { collapsed: newCollapsed }, requireAuth: true });
         } catch {
             setWatchlists(prev => prev.map(w => (w.id || w._id) === wlId ? { ...w, collapsed: wl.collapsed } : w));
+        }
+    };
+
+    // Stock drag-drop reorder (only when sort=manual)
+    const handleStockDragEnd = (wl: Watchlist, event: DragEndEvent) => {
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+        const symbols = wl.stock_symbols;
+        const oldIndex = symbols.indexOf(active.id as string);
+        const newIndex = symbols.indexOf(over.id as string);
+        if (oldIndex !== -1 && newIndex !== -1) {
+            handleUpdateStocks(wl, arrayMove(symbols, oldIndex, newIndex));
         }
     };
 
@@ -337,7 +356,8 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
 
         // Sorted tickers (client-side sort)
         const sort = (wl.sort ?? 'manual') as WatchlistSort;
-        const sortedTickers = sort === 'manual'
+        const isManualSort = sort === 'manual';
+        const sortedTickers = isManualSort
             ? wl.stock_symbols
             : [...wl.stock_symbols].sort((a, b) => {
                 const da = stockDataMap.get(a);
@@ -458,98 +478,130 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                 {/* Stock rows */}
                 {!collapsed && (
                     <>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 0.75 }}>
-                            {sortedTickers.map((ticker) => {
-                                const data = stockDataMap.get(ticker);
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 0.75, overflowX: 'hidden' }}>
+                            <DndContext sensors={stockSensors} collisionDetection={closestCenter} onDragEnd={(e) => handleStockDragEnd(wl, e)}>
+                                <SortableContext items={sortedTickers} strategy={verticalListSortingStrategy}>
+                                    {sortedTickers.map((ticker) => {
+                                        const data = stockDataMap.get(ticker);
 
-                                if (!data) {
-                                    return (
-                                        <Box
-                                            key={ticker}
-                                            onClick={() => onTickerChange?.(ticker)}
-                                            sx={{
-                                                px: 1, py: 0.5,
-                                                borderRadius: `${borderRadius.sm}px`,
-                                                bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                cursor: 'pointer',
-                                                '&:hover .remove-btn': { opacity: 1 },
-                                            }}
-                                        >
-                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: 'text.primary' }}>
-                                                {ticker}
-                                            </Typography>
-                                            <Box
-                                                component="span"
-                                                className="remove-btn"
-                                                onClick={(e) => { e.stopPropagation(); handleUpdateStocks(wl, wl.stock_symbols.filter(s => s !== ticker)); }}
-                                                sx={{ display: 'inline-flex', cursor: 'pointer', opacity: 0, transition: `opacity ${durations.fast}, color ${durations.fast}`, color: alpha(theme.palette.text.secondary, 0.3), '&:hover': { color: theme.palette.error.main } }}
-                                            >
-                                                <CloseIcon sx={{ fontSize: 12 }} />
-                                            </Box>
-                                        </Box>
-                                    );
-                                }
+                                        if (!data) {
+                                            return (
+                                                <SortableStockRow key={ticker} id={ticker} disabled={!isManualSort}>
+                                                    {(dragListeners) => {
+                                                        const cardDragSx = isManualSort ? { cursor: 'grab', '&:active': { cursor: 'grabbing' } } : {};
+                                                        return (
+                                                        <Box
+                                                            {...(dragListeners ?? {})}
+                                                            onClick={() => onTickerChange?.(ticker)}
+                                                            sx={{
+                                                                ...cardDragSx,
+                                                                px: 1, py: 0.5,
+                                                                borderRadius: `${borderRadius.sm}px`,
+                                                                bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                                cursor: isManualSort ? 'grab' : 'pointer',
+                                                                '&:hover .remove-btn': { opacity: 1 },
+                                                            }}
+                                                        >
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+                                                                <Typography
+                                                                    onPointerDown={e => e.stopPropagation()}
+                                                                    onClick={() => onTickerChange?.(ticker)}
+                                                                    sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: 'text.primary', cursor: 'pointer' }}
+                                                                >
+                                                                    {ticker}
+                                                                </Typography>
+                                                            </Box>
+                                                            <Box
+                                                                component="span"
+                                                                className="remove-btn"
+                                                                onPointerDown={e => e.stopPropagation()}
+                                                                onClick={(e) => { e.stopPropagation(); handleUpdateStocks(wl, wl.stock_symbols.filter(s => s !== ticker)); }}
+                                                                sx={{ display: 'inline-flex', cursor: 'pointer', opacity: 0, transition: `opacity ${durations.fast}, color ${durations.fast}`, color: alpha(theme.palette.text.secondary, 0.3), '&:hover': { color: theme.palette.error.main } }}
+                                                            >
+                                                                <CloseIcon sx={{ fontSize: 12 }} />
+                                                            </Box>
+                                                        </Box>
+                                                        );
+                                                    }}
+                                                </SortableStockRow>
+                                            );
+                                        }
 
-                                const changeColor = getPriceColor(data.pct_change, data.exchange, theme);
-                                const vsiColor = getVsiColor(data.vsi ?? 0, theme);
-                                const cardBg = `linear-gradient(90deg, ${alpha(changeColor, 0.1)} 0%, ${alpha(changeColor, 0.01)} 50%, ${alpha(changeColor, 0.001)} 100%)`;
-                                const cardBgHover = `linear-gradient(90deg, ${alpha(changeColor, 0.2)} 0%, ${alpha(changeColor, 0.02)} 50%, ${alpha(changeColor, 0.002)} 100%)`;
+                                        const changeColor = getPriceColor(data.pct_change, data.exchange, theme);
+                                        const vsiColor = getVsiColor(data.vsi ?? 0, theme);
+                                        const cardBg = `linear-gradient(90deg, ${alpha(changeColor, 0.1)} 0%, ${alpha(changeColor, 0.01)} 50%, ${alpha(changeColor, 0.001)} 100%)`;
+                                        const cardBgHover = `linear-gradient(90deg, ${alpha(changeColor, 0.2)} 0%, ${alpha(changeColor, 0.02)} 50%, ${alpha(changeColor, 0.002)} 100%)`;
 
-                                return (
-                                    <Box
-                                        key={ticker}
-                                        onClick={() => onTickerChange?.(ticker)}
-                                        sx={{
-                                            px: 1, py: 0.5,
-                                            borderRadius: `${borderRadius.sm}px`,
-                                            background: cardBg,
-                                            cursor: 'pointer',
-                                            transition: `background ${durations.fast}`,
-                                            '&:hover': { background: cardBgHover },
-                                            '&:hover .remove-btn': { opacity: 1 },
-                                        }}
-                                    >
-                                        {/* Grid 3 cột: left | center | right */}
-                                        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', alignItems: 'center' }}>
-                                            {/* [0,0] Ticker + remove */}
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
-                                                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.bold, color: changeColor }}>
-                                                    {ticker}
-                                                </Typography>
-                                                <Box
-                                                    component="span"
-                                                    className="remove-btn"
-                                                    onClick={(e) => { e.stopPropagation(); handleUpdateStocks(wl, wl.stock_symbols.filter(s => s !== ticker)); }}
-                                                    sx={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', color: alpha(theme.palette.text.secondary, 0.35), opacity: 0, transition: `opacity ${durations.fast}, color ${durations.fast}`, '&:hover': { color: theme.palette.error.main } }}
-                                                >
-                                                    <CloseIcon sx={{ fontSize: 12 }} />
-                                                </Box>
-                                            </Box>
-                                            {/* [0,1] +-% */}
-                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: changeColor, fontVariantNumeric: 'tabular-nums', textAlign: 'center' }}>
-                                                {fmt.pct(data.pct_change)}
-                                            </Typography>
-                                            {/* [0,2] VSI */}
-                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: vsiColor, fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
-                                                {fmt.vsi(data.vsi ?? 0)}
-                                            </Typography>
-                                            {/* [1,0] Giá */}
-                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: 'text.primary', fontVariantNumeric: 'tabular-nums', mt: 0.25 }}>
-                                                {fmt.price(data.close)}
-                                            </Typography>
-                                            {/* [1,1] +- */}
-                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: changeColor, fontVariantNumeric: 'tabular-nums', textAlign: 'center', mt: 0.25 }}>
-                                                {fmt.diff(data.diff)}
-                                            </Typography>
-                                            {/* [1,2] GTGD */}
-                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: 'text.secondary', fontVariantNumeric: 'tabular-nums', textAlign: 'right', mt: 0.25 }}>
-                                                {data.trading_value != null ? fmt.gtgd(data.trading_value) : '—'}
-                                            </Typography>
-                                        </Box>
-                                    </Box>
-                                );
-                            })}
+                                        return (
+                                            <SortableStockRow key={ticker} id={ticker} disabled={!isManualSort}>
+                                                {(dragListeners) => {
+                                                    const cardDragSx = isManualSort ? { cursor: 'grab', '&:active': { cursor: 'grabbing' } } : {};
+                                                    return (
+                                                    <Box
+                                                        {...(dragListeners ?? {})}
+                                                        onClick={() => onTickerChange?.(ticker)}
+                                                        sx={{
+                                                            ...cardDragSx,
+                                                            px: 1, py: 0.5,
+                                                            borderRadius: `${borderRadius.sm}px`,
+                                                            background: cardBg,
+                                                            cursor: isManualSort ? 'grab' : 'pointer',
+                                                            transition: `background ${durations.fast}`,
+                                                            '&:hover': { background: cardBgHover },
+                                                            '&:hover .remove-btn': { opacity: 1 },
+                                                        }}
+                                                    >
+                                                        {/* Grid 3 cột: left | center | right */}
+                                                        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', alignItems: 'center' }}>
+                                                            {/* [0,0] Ticker + remove */}
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+                                                                <Typography
+                                                                    onPointerDown={e => e.stopPropagation()}
+                                                                    onClick={() => onTickerChange?.(ticker)}
+                                                                    sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.bold, color: changeColor, cursor: 'pointer' }}
+                                                                >
+                                                                    {ticker}
+                                                                </Typography>
+                                                                <Box
+                                                                    component="span"
+                                                                    className="remove-btn"
+                                                                    onPointerDown={e => e.stopPropagation()}
+                                                                    onClick={(e) => { e.stopPropagation(); handleUpdateStocks(wl, wl.stock_symbols.filter(s => s !== ticker)); }}
+                                                                    sx={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', color: alpha(theme.palette.text.secondary, 0.35), opacity: 0, transition: `opacity ${durations.fast}, color ${durations.fast}`, '&:hover': { color: theme.palette.error.main } }}
+                                                                >
+                                                                    <CloseIcon sx={{ fontSize: 12 }} />
+                                                                </Box>
+                                                            </Box>
+                                                            {/* [0,1] +-% */}
+                                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: changeColor, fontVariantNumeric: 'tabular-nums', textAlign: 'center' }}>
+                                                                {fmt.pct(data.pct_change)}
+                                                            </Typography>
+                                                            {/* [0,2] VSI */}
+                                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: vsiColor, fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
+                                                                {fmt.vsi(data.vsi ?? 0)}
+                                                            </Typography>
+                                                            {/* [1,0] Giá */}
+                                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: 'text.primary', fontVariantNumeric: 'tabular-nums', mt: 0.25 }}>
+                                                                {fmt.price(data.close)}
+                                                            </Typography>
+                                                            {/* [1,1] +- */}
+                                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: changeColor, fontVariantNumeric: 'tabular-nums', textAlign: 'center', mt: 0.25 }}>
+                                                                {fmt.diff(data.diff)}
+                                                            </Typography>
+                                                            {/* [1,2] GTGD */}
+                                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: 'text.secondary', fontVariantNumeric: 'tabular-nums', textAlign: 'right', mt: 0.25 }}>
+                                                                {data.trading_value != null ? fmt.gtgd(data.trading_value) : '—'}
+                                                            </Typography>
+                                                        </Box>
+                                                    </Box>
+                                                    );
+                                                }}
+                                            </SortableStockRow>
+                                        );
+                                    })}
+                                </SortableContext>
+                            </DndContext>
 
                             {wl.stock_symbols.length === 0 && (
                                 <Typography
@@ -761,6 +813,31 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
 }
 
 // Separate component to avoid key reset issues with autocomplete
+// Sortable wrapper for stock rows
+function SortableStockRow({ id, disabled, children }: {
+    id: string;
+    disabled?: boolean;
+    children: (listeners: Record<string, unknown> | undefined) => React.ReactNode;
+}) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled });
+
+    return (
+        <Box
+            ref={setNodeRef}
+            style={{
+                transform: CSS.Translate.toString(transform),
+                transition: transition || undefined,
+                opacity: isDragging ? 0.4 : 1,
+                position: 'relative',
+                zIndex: isDragging ? 1 : 0,
+            }}
+            {...attributes}
+        >
+            {children(disabled ? undefined : listeners)}
+        </Box>
+    );
+}
+
 function AutocompleteAdd({ tickerOptions, onAdd, isDark }: { tickerOptions: TickerOption[]; onAdd: (ticker: string) => void; isDark: boolean }) {
     const [key, setKey] = useState(0);
 

@@ -583,6 +583,7 @@ export default function WatchlistContent() {
                                                     onRenameSubmit={(newName) => handleRenameSubmit(item.wl, newName)}
                                                     onSortChange={(sort) => handleSortChange(item.wl, sort)}
                                                     onCollapseChange={(c) => handleCollapseChange(item.wl, c)}
+                                                    onReorderStocks={(newSymbols) => handleUpdateStocks(item.wl, newSymbols)}
                                                     onAddStock={(ticker) =>
                                                         handleUpdateStocks(item.wl, [...item.wl.stock_symbols, ticker])
                                                     }
@@ -633,6 +634,7 @@ export default function WatchlistContent() {
                                     onRenameSubmit={() => {}}
                                     onSortChange={() => {}}
                                     onCollapseChange={() => {}}
+                                    onReorderStocks={() => {}}
                                     onAddStock={() => {}}
                                     onRemoveStock={() => {}}
                                     forceCollapsed
