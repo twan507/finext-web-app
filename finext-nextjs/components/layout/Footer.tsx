@@ -13,23 +13,23 @@ const footerLinks = {
     links: [
       { label: 'Báo cáo tin tức thị trường', href: '#' },
       { label: 'Phân tích nhóm ngành', href: '#' },
-      { label: 'Bộ lọc cổ phiếu', href: '#' },
+      { label: 'Bộ lọc thông minh', href: '#' },
     ],
   },
   hoTro: {
     title: 'Finext Learning',
     links: [
-      { label: 'Khóa học phân tích kỹ thuật', href: '#' },
-      { label: 'Khóa học phân tích cơ bản', href: '#' },
-      { label: 'Chiến lược định vị dòng tiền', href: '#' },
+      { label: 'Phân tích kỹ thuật', href: '#' },
+      { label: 'Phân tích cơ bản', href: '#' },
+      { label: 'Phân tích dòng tiền', href: '#' },
     ],
   },
   huongDan: {
-    title: 'Hướng dẫn',
+    title: 'Chính sách',
     links: [
-      { label: 'Hướng dẫn sử dụng nền tảng', href: '#' },
-      { label: 'Kiến thức đầu tư chứng khoán', href: '#' },
-      { label: 'Video hướng dẫn chi tiết', href: '#' },
+      { label: 'Chính sách bảo mật', href: '#' },
+      { label: 'Chính sách nội dung', href: '#' },
+      { label: 'Tuyên bố trách nhiệm', href: '#' },
     ],
   },
   mangXaHoi: {

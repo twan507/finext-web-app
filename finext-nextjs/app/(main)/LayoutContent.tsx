@@ -21,7 +21,9 @@ import {
   CandlestickChartOutlined,
   StarBorderPurple500Outlined,
   ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon
+  ExpandLess as ExpandLessIcon,
+  ArrowBack as ArrowBackIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 
 import UserAvatar from '../../components/layout/UserAvatar';
@@ -1003,6 +1005,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               flexDirection: 'column',
               height: `calc(100dvh - ${layoutTokens.appBarHeight}px)`,
               overflow: 'hidden',
+              pb: { xs: '44px', md: 0 },
             }}
           >
             {children}
@@ -1032,13 +1035,77 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               </Box>
             </Box>
 
-
             {/* FOOTER */}
             {/* {currentPathname === '/' && <ConsultationSection />} */}
-            <ConsultationSection />
-            <Footer />
+            <Box sx={{ pb: { xs: `${layoutTokens.appBarHeight}px`, md: 0 } }}>
+              <ConsultationSection />
+              <Footer />
+            </Box>
           </>
         )}
+
+        {/* MOBILE BOTTOM BAR - chỉ hiện trên mobile (< md) */}
+        <Box
+          component="nav"
+          aria-label="Mobile navigation"
+          sx={{
+            display: { xs: 'flex', md: 'none' },
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 40,
+            zIndex: theme.zIndex.appBar,
+            alignItems: 'center',
+            justifyContent: 'space-around',
+            bgcolor: theme.palette.component.appBar.background,
+            borderTop: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+            boxShadow: shadows.appBar,
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          <MuiIconButton
+            onClick={() => router.back()}
+            aria-label="Quay lại"
+            sx={{
+              flex: 1,
+              height: '100%',
+              borderRadius: 0,
+              color: theme.palette.text.secondary,
+              '&:hover': { color: theme.palette.primary.main, bgcolor: 'transparent' },
+            }}
+          >
+            <ArrowBackIcon />
+          </MuiIconButton>
+
+          <MuiIconButton
+            onClick={handleDrawerToggle}
+            aria-label="Mở menu"
+            sx={{
+              flex: 1,
+              height: '100%',
+              borderRadius: 0,
+              color: theme.palette.text.secondary,
+              '&:hover': { color: theme.palette.primary.main, bgcolor: 'transparent' },
+            }}
+          >
+            <MenuIcon />
+          </MuiIconButton>
+
+          <MuiIconButton
+            onClick={() => window.location.reload()}
+            aria-label="Tải lại trang"
+            sx={{
+              flex: 1,
+              height: '100%',
+              borderRadius: 0,
+              color: theme.palette.text.secondary,
+              '&:hover': { color: theme.palette.primary.main, bgcolor: 'transparent' },
+            }}
+          >
+            <RefreshIcon />
+          </MuiIconButton>
+        </Box>
       </Box>
     </Box >
   );
