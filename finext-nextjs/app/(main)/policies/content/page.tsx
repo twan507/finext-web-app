@@ -3,7 +3,11 @@ import PageContent from './PageContent';
 
 export const metadata: Metadata = {
   title: 'Chính sách nội dung',
-  description: 'Quy định về nội dung được đăng tải và chia sẻ trên nền tảng.',
+  description: 'Quy định về nội dung được đăng tải và chia sẻ trên nền tảng Finext.',
+  openGraph: {
+    title: 'Chính sách nội dung | Finext',
+    description: 'Quy định về nội dung được đăng tải và chia sẻ trên nền tảng Finext.',
+  },
 };
 
 export default function ContentPolicyPage() {

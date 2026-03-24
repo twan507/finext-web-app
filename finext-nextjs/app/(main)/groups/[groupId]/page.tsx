@@ -5,7 +5,7 @@ export const metadata: Metadata = {
     title: 'Chi tiết nhóm cổ phiếu',
     description: 'Phân tích chi tiết biểu đồ chỉ số và dòng tiền nhóm cổ phiếu.',
     openGraph: {
-        title: 'Finext - Chi tiết nhóm cổ phiếu',
+        title: 'Chi tiết nhóm cổ phiếu | Finext',
         description: 'Phân tích chi tiết biểu đồ chỉ số và dòng tiền nhóm cổ phiếu.',
     },
 };

@@ -5,6 +5,10 @@ import ReportsContent from './PageContent';
 export const metadata: Metadata = {
     title: 'Báo cáo',
     description: 'Tổng hợp báo cáo phân tích, bản tin doanh nghiệp và thị trường hàng ngày.',
+    openGraph: {
+        title: 'Báo cáo | Finext',
+        description: 'Tổng hợp báo cáo phân tích, bản tin doanh nghiệp và thị trường hàng ngày.',
+    },
 };
 
 export default function ReportsPage() {

@@ -13,8 +13,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const typeName = typeInfo?.type_name || 'Báo cáo';
 
     return {
-        title: 'Báo cáo',
+        title: `Báo cáo ${typeName}`,
         description: `Tổng hợp ${typeName.toLowerCase()} từ Finext.`,
+        openGraph: {
+            title: `Báo cáo ${typeName} | Finext`,
+            description: `Tổng hợp ${typeName.toLowerCase()} từ Finext.`,
+        },
     };
 }
 

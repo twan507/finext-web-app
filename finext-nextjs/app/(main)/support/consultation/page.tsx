@@ -4,6 +4,10 @@ import PageContent from './PageContent';
 export const metadata: Metadata = {
   title: 'Đặt lịch tư vấn cá nhân',
   description: 'Đặt lịch hẹn tư vấn 1-1 với chuyên gia tài chính của Finext.',
+  openGraph: {
+    title: 'Đặt lịch tư vấn cá nhân | Finext',
+    description: 'Đặt lịch hẹn tư vấn 1-1 với chuyên gia tài chính của Finext.',
+  },
 };
 
 export default function ConsultationPage() {

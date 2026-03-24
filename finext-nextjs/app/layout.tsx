@@ -35,14 +35,37 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: 'Finext',
-    template: 'Finext - %s',
+    default: 'Finext - Phân Tích và Sàng Lọc Cổ Phiếu Thông Minh',
+    template: '%s | Finext',
   },
-  description: 'Finext - Your Next FInancial Step',
-  keywords: ['chứng khoán', 'phân tích', 'đầu tư', 'thị trường', 'cổ phiếu', 'Vietnam stock'],
+  description:
+    'Nền tảng phân tích chứng khoán thông minh cho nhà đầu tư Việt Nam. ' +
+    'Cung cấp dữ liệu thị trường, phân tích nhóm ngành, bộ lọc cổ phiếu, ' +
+    'báo cáo chuyên sâu và công cụ hỗ trợ ra quyết định đầu tư.',
+  keywords: [
+    'finext',
+    'chứng khoán',
+    'phân tích cổ phiếu',
+    'cổ phiếu Việt Nam',
+    'thị trường chứng khoán',
+    'VNINDEX',
+    'VN30',
+    'phân tích kỹ thuật',
+    'phân tích cơ bản',
+    'dòng tiền thị trường',
+    'nhóm ngành chứng khoán',
+    'bộ lọc cổ phiếu',
+    'báo cáo thị trường',
+    'đầu tư chứng khoán',
+    'stock screener Vietnam',
+  ],
   authors: [{ name: 'Finext Team' }],
   creator: 'Finext',
+  publisher: 'Finext',
   metadataBase: new URL('https://finext.vn'),
+  alternates: {
+    canonical: 'https://finext.vn',
+  },
   // Apple Touch Icon for iOS "Add to Home Screen"
   icons: {
     icon: '/icons/icon-192x192.png',
@@ -60,21 +83,25 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'vi_VN',
     siteName: 'Finext',
-    title: 'Finext - Your Next FInancial Step',
-    description: 'Công cụ phân tích chứng khoán chuyên sâu cho nhà đầu tư Việt Nam',
+    title: 'Finext - Phân Tích và Sàng Lọc Cổ Phiếu Thông Minh',
+    description:
+      'Nền tảng phân tích chứng khoán thông minh cho nhà đầu tư Việt Nam. ' +
+      'Dữ liệu thị trường, phân tích nhóm ngành, bộ lọc cổ phiếu và báo cáo chuyên sâu.',
+    url: 'https://finext.vn',
     images: [
       {
         url: '/finext-panel.png',
         width: 1200,
         height: 630,
-        alt: 'Finext - Your Next FInancial Step',
+        alt: 'Finext - Phân Tích và Sàng Lọc Cổ Phiếu Thông Minh',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Finext - Your Next FInancial Step',
-    description: 'Công cụ phân tích chứng khoán chuyên sâu cho nhà đầu tư Việt Nam',
+    title: 'Finext - Phân Tích và Sàng Lọc Cổ Phiếu Thông Minh',
+    description:
+      'Nền tảng phân tích chứng khoán thông minh cho nhà đầu tư Việt Nam.',
     images: ['/finext-panel.png'],
   },
   robots: {
@@ -190,6 +217,84 @@ export default function RootLayout({
     <html lang="vi" suppressHydrationWarning className={roboto.variable}>
       <head>
         <meta charSet="utf-8" />
+        {/* JSON-LD Structured Data — WebSite + SiteNavigationElement for Google Sitelinks */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@graph': [
+                {
+                  '@type': 'WebSite',
+                  '@id': 'https://finext.vn/#website',
+                  url: 'https://finext.vn',
+                  name: 'Finext',
+                  alternateName: 'Finext - Your Next Financial Step',
+                  description:
+                    'Nền tảng phân tích chứng khoán thông minh cho nhà đầu tư Việt Nam',
+                  inLanguage: 'vi',
+                  potentialAction: {
+                    '@type': 'SearchAction',
+                    target: {
+                      '@type': 'EntryPoint',
+                      urlTemplate: 'https://finext.vn/stocks?q={search_term_string}',
+                    },
+                    'query-input': 'required name=search_term_string',
+                  },
+                },
+                {
+                  '@type': 'Organization',
+                  '@id': 'https://finext.vn/#organization',
+                  name: 'Finext',
+                  url: 'https://finext.vn',
+                  logo: {
+                    '@type': 'ImageObject',
+                    url: 'https://finext.vn/icons/icon-512x512.png',
+                    width: 512,
+                    height: 512,
+                  },
+                  contactPoint: {
+                    '@type': 'ContactPoint',
+                    email: 'finext.vn@gmail.com',
+                    contactType: 'customer support',
+                    availableLanguage: 'Vietnamese',
+                  },
+                  sameAs: [],
+                },
+                {
+                  '@type': 'SiteNavigationElement',
+                  name: 'Tổng quan thị trường',
+                  url: 'https://finext.vn/markets',
+                },
+                {
+                  '@type': 'SiteNavigationElement',
+                  name: 'Cổ phiếu',
+                  url: 'https://finext.vn/stocks',
+                },
+                {
+                  '@type': 'SiteNavigationElement',
+                  name: 'Tin tức',
+                  url: 'https://finext.vn/news',
+                },
+                {
+                  '@type': 'SiteNavigationElement',
+                  name: 'Nhóm ngành',
+                  url: 'https://finext.vn/sectors',
+                },
+                {
+                  '@type': 'SiteNavigationElement',
+                  name: 'Báo cáo',
+                  url: 'https://finext.vn/reports',
+                },
+                {
+                  '@type': 'SiteNavigationElement',
+                  name: 'Chính sách bảo mật',
+                  url: 'https://finext.vn/policies/privacy',
+                },
+              ],
+            }),
+          }}
+        />
         {/* Register Service Worker for PWA installability */}
         <script
           dangerouslySetInnerHTML={{
@@ -202,8 +307,8 @@ export default function RootLayout({
               (function() {
                 var isPWA = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
                 if (!isPWA) return;
-                var p = 'Finext - ';
-                function strip() { if (document.title.indexOf(p) === 0) document.title = document.title.substring(p.length); }
+                var suffix = ' | Finext';
+                function strip() { if (document.title.endsWith(suffix)) document.title = document.title.slice(0, -suffix.length); }
                 strip();
                 new MutationObserver(strip).observe(document.querySelector('title') || document.head, { childList: true, subtree: true, characterData: true });
               })();

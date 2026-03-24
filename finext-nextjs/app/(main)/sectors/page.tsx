@@ -9,8 +9,8 @@ export const metadata: Metadata = {
   title: 'Tổng quan Nhóm & Ngành',
   description: 'Tổng quan sức mạnh và phân bổ dòng tiền nhóm ngành trên thị trường chứng khoán.',
   openGraph: {
-    title: 'Finext - Tổng quan Nhóm & Ngành',
-    description: 'Tổng quan sức mạnh và phân bổ dòng tiền nhóm ngành.',
+    title: 'Tổng quan Nhóm & Ngành | Finext',
+    description: 'Tổng quan sức mạnh và phân bổ dòng tiền nhóm ngành trên thị trường chứng khoán.',
   },
 };
 

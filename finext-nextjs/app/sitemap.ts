@@ -5,25 +5,39 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://finext.vn';
     const currentDate = new Date();
 
-    // Static pages - các trang public
+    // Static pages - các trang public chính
     const staticPages: MetadataRoute.Sitemap = [
+        // ── Trang chủ ──
         {
             url: baseUrl,
             lastModified: currentDate,
             changeFrequency: 'daily',
             priority: 1,
         },
-        {
-            url: `${baseUrl}/home`,
-            lastModified: currentDate,
-            changeFrequency: 'daily',
-            priority: 0.9,
-        },
+        // ── Sản phẩm chính (priority cao → Google ưu tiên sitelinks) ──
         {
             url: `${baseUrl}/markets`,
             lastModified: currentDate,
             changeFrequency: 'hourly',
             priority: 0.9,
+        },
+        {
+            url: `${baseUrl}/stocks`,
+            lastModified: currentDate,
+            changeFrequency: 'hourly',
+            priority: 0.9,
+        },
+        {
+            url: `${baseUrl}/news`,
+            lastModified: currentDate,
+            changeFrequency: 'hourly',
+            priority: 0.9,
+        },
+        {
+            url: `${baseUrl}/sectors`,
+            lastModified: currentDate,
+            changeFrequency: 'hourly',
+            priority: 0.8,
         },
         {
             url: `${baseUrl}/groups`,
@@ -32,21 +46,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             priority: 0.8,
         },
         {
-            url: `${baseUrl}/news`,
-            lastModified: currentDate,
-            changeFrequency: 'hourly',
-            priority: 0.8,
-        },
-        {
             url: `${baseUrl}/reports`,
             lastModified: currentDate,
             changeFrequency: 'daily',
-            priority: 0.7,
-        },
-        {
-            url: `${baseUrl}/stocks`,
-            lastModified: currentDate,
-            changeFrequency: 'hourly',
             priority: 0.8,
         },
         {
@@ -55,17 +57,75 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             changeFrequency: 'weekly',
             priority: 0.7,
         },
+        // ── Finext Learning ──
         {
-            url: `${baseUrl}/login`,
+            url: `${baseUrl}/learning/technical-analysis`,
+            lastModified: currentDate,
+            changeFrequency: 'weekly',
+            priority: 0.6,
+        },
+        {
+            url: `${baseUrl}/learning/fundamental-analysis`,
+            lastModified: currentDate,
+            changeFrequency: 'weekly',
+            priority: 0.6,
+        },
+        {
+            url: `${baseUrl}/learning/cash-flow-analysis`,
+            lastModified: currentDate,
+            changeFrequency: 'weekly',
+            priority: 0.6,
+        },
+        // ── Chính sách ──
+        {
+            url: `${baseUrl}/policies/privacy`,
+            lastModified: currentDate,
+            changeFrequency: 'monthly',
+            priority: 0.4,
+        },
+        {
+            url: `${baseUrl}/policies/content`,
+            lastModified: currentDate,
+            changeFrequency: 'monthly',
+            priority: 0.4,
+        },
+        {
+            url: `${baseUrl}/policies/disclaimer`,
+            lastModified: currentDate,
+            changeFrequency: 'monthly',
+            priority: 0.4,
+        },
+        // ── Hỗ trợ ──
+        {
+            url: `${baseUrl}/support/email`,
             lastModified: currentDate,
             changeFrequency: 'monthly',
             priority: 0.5,
         },
         {
-            url: `${baseUrl}/register`,
+            url: `${baseUrl}/support/live-chat`,
             lastModified: currentDate,
             changeFrequency: 'monthly',
             priority: 0.5,
+        },
+        {
+            url: `${baseUrl}/support/consultation`,
+            lastModified: currentDate,
+            changeFrequency: 'monthly',
+            priority: 0.5,
+        },
+        // ── Auth ──
+        {
+            url: `${baseUrl}/login`,
+            lastModified: currentDate,
+            changeFrequency: 'monthly',
+            priority: 0.3,
+        },
+        {
+            url: `${baseUrl}/register`,
+            lastModified: currentDate,
+            changeFrequency: 'monthly',
+            priority: 0.3,
         },
     ];
 

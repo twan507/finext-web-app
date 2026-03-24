@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         title: report.title,
         description,
         openGraph: {
-            title: report.title,
+            title: `${report.title} | Finext`,
             description,
             type: 'article',
             locale: 'vi_VN',
@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
                     url: 'https://finext.vn/finext-panel.png',
                     width: 1200,
                     height: 630,
-                    alt: 'Finext - Your Next FInancial Step',
+                    alt: 'Finext - Your Next Financial Step',
                 },
             ],
         },

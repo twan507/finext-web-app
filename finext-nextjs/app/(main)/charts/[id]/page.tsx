@@ -11,7 +11,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     return {
         title: `Biểu đồ ${ticker}`,
-        description: `Xem biểu đồ và phân tích kỹ thuật cho ${ticker}`,
+        description: `Xem biểu đồ và phân tích kỹ thuật cho ${ticker}.`,
+        openGraph: {
+            title: `Biểu đồ ${ticker} | Finext`,
+            description: `Xem biểu đồ và phân tích kỹ thuật cho ${ticker}.`,
+        },
     };
 }
 
