@@ -56,10 +56,13 @@ interface Watchlist {
     collapsed?: boolean;
 }
 
-function DroppableColumn({ colIdx, isDark, isActive, children }: {
+const COLUMN_WIDTH = 240;
+
+function DroppableColumn({ colIdx, isDark, isActive, isMobile, children }: {
     colIdx: number;
     isDark: boolean;
     isActive: boolean;
+    isMobile: boolean;
     children: React.ReactNode;
 }) {
     const { setNodeRef, isOver } = useDroppable({ id: `column-${colIdx}` });
@@ -70,7 +73,8 @@ function DroppableColumn({ colIdx, isDark, isActive, children }: {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 1.5,
-                width: '100%',
+                width: isMobile ? '100%' : COLUMN_WIDTH,
+                flexShrink: 0,
                 minHeight: 80,
                 borderRadius: `${borderRadius.md}px`,
                 transition: 'background 0.15s',
@@ -632,7 +636,7 @@ export default function WatchlistContent() {
                             items={columnSortableIds[colIdx] || []}
                             strategy={verticalListSortingStrategy}
                         >
-                            <DroppableColumn colIdx={colIdx} isDark={isDark} isActive={!!activeId}>
+                            <DroppableColumn colIdx={colIdx} isDark={isDark} isActive={!!activeId} isMobile={false}>
                                 {colItems.map((item) =>
                                     item.type === 'wl' ? (
                                         <SortableWatchlistCard key={item.wl.id || item.wl._id} id={item.wl.id || item.wl._id!} disabled={isReordering}>
