@@ -9,6 +9,7 @@ export default function manifest(): MetadataRoute.Manifest {
             'Nền tảng phân tích chứng khoán thông minh cho nhà đầu tư Việt Nam',
         start_url: '/',
         display: 'standalone',
+        display_override: ['window-controls-overlay', 'standalone'],
         background_color: '#fafbfc',
         theme_color: '#8b5cf6',
         orientation: 'any',

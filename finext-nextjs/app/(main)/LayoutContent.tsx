@@ -32,6 +32,7 @@ import Footer from '@/components/layout/Footer';
 import { layoutTokens, iconSize, borderRadius, shadows, transitions, spacing, getResponsiveFontSize, fontWeight } from '../../theme/tokens';
 import AuthButtons from '@/components/auth/AuthButtons';
 import ConsultationSection from './components/ConsultationSection';
+import PwaTitleBar from '@/components/layout/PwaTitleBar';
 
 interface NavItem {
   text: string;
@@ -648,6 +649,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   return (
     <Box sx={{ display: 'flex', minHeight: '100dvh', bgcolor: theme.palette.background.default }}>
       <CssBaseline />
+      <PwaTitleBar />
 
       {/* NAV DRAWERS */}
       <Box component="nav" sx={{ width: { lg: drawerWidth }, flexShrink: { lg: 0 } }} aria-label="sidebar">
@@ -729,7 +731,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           position="sticky"
           elevation={0}
           sx={{
-            top: 0,
+            top: 'env(titlebar-area-height, 0px)',
             zIndex: theme.zIndex.appBar,
             height: layoutTokens.appBarHeight,
             boxShadow: shadows.appBar,
