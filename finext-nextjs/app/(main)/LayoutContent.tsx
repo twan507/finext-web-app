@@ -710,6 +710,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               boxShadow: shadows.appBar,
               borderRight: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
               backdropFilter: 'blur(8px)',
+              paddingTop: 'env(titlebar-area-height, 0px)',
             }
           }}
           open
@@ -726,6 +727,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           display: 'flex',
           flexDirection: 'column',
           minWidth: 0, // Fix flex item not shrinking (chart resize issue)
+          paddingTop: 'env(titlebar-area-height, 0px)',
         }}
       >
         {/* APP BAR - sticky trong container */}

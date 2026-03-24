@@ -35,7 +35,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: 'Finext - Phân Tích và Sàng Lọc Cổ Phiếu Thông Minh',
+    default: 'Phân Tích và Sàng Lọc Cổ Phiếu Thông Minh | Finext',
     template: '%s | Finext',
   },
   description:

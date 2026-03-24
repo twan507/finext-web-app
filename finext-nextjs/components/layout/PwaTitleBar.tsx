@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Box, IconButton, Typography, useTheme } from '@mui/material';
 import { ArrowBack, Refresh } from '@mui/icons-material';
 
@@ -10,6 +11,7 @@ export default function PwaTitleBar() {
     const router = useRouter();
     const [isWCOVisible, setIsWCOVisible] = useState(false);
     const [canGoBack, setCanGoBack] = useState(false);
+    const [pageTitle, setPageTitle] = useState('');
 
     useEffect(() => {
         const wco = (navigator as Navigator & { windowControlsOverlay?: { visible: boolean; addEventListener: (event: string, cb: () => void) => void } }).windowControlsOverlay;
@@ -25,8 +27,23 @@ export default function PwaTitleBar() {
     }, []);
 
     useEffect(() => {
-        // history.length > 1 means there's something to go back to
         setCanGoBack(window.history.length > 1);
+    }, []);
+
+    useEffect(() => {
+        const readTitle = () => {
+            let title = document.title;
+            if (title.endsWith(' | Finext')) title = title.slice(0, -' | Finext'.length);
+            setPageTitle(title);
+        };
+
+        readTitle();
+
+        const titleEl = document.querySelector('title');
+        const observer = new MutationObserver(readTitle);
+        if (titleEl) observer.observe(titleEl, { childList: true, subtree: true, characterData: true });
+
+        return () => observer.disconnect();
     }, []);
 
     if (!isWCOVisible) return null;
@@ -42,21 +59,28 @@ export default function PwaTitleBar() {
                 display: 'flex',
                 alignItems: 'center',
                 zIndex: theme.zIndex.modal + 10,
-                bgcolor: theme.palette.background.paper,
+                backgroundColor: theme.palette.component.appBar.background,
                 WebkitAppRegion: 'drag',
                 userSelect: 'none',
             } as React.CSSProperties & { WebkitAppRegion: string }}
         >
-            {/* Left: navigation buttons - no-drag zone */}
+            {/* Left: logo + navigation buttons - no-drag zone */}
             <Box
                 sx={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: 0.25,
-                    px: 0.5,
+                    px: 0.75,
                     WebkitAppRegion: 'no-drag',
                 } as React.CSSProperties & { WebkitAppRegion: string }}
             >
+                <Image
+                    src="/finext-icon-color.png"
+                    alt="Finext"
+                    width={20}
+                    height={20}
+                    style={{ borderRadius: 4 }}
+                />
                 <IconButton
                     size="small"
                     onClick={() => router.back()}
@@ -84,23 +108,25 @@ export default function PwaTitleBar() {
                 </IconButton>
             </Box>
 
-            {/* Center: app title - drag region */}
+            {/* Center: page title - drag region */}
             <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <Typography
-                    variant="caption"
-                    sx={{
-                        fontWeight: 600,
-                        color: theme.palette.text.secondary,
-                        fontSize: '12px',
-                        letterSpacing: '0.02em',
-                    }}
-                >
-                    Finext
-                </Typography>
+                {pageTitle && (
+                    <Typography
+                        variant="caption"
+                        sx={{
+                            fontWeight: 600,
+                            color: theme.palette.text.secondary,
+                            fontSize: '12px',
+                            letterSpacing: '0.02em',
+                        }}
+                    >
+                        {pageTitle}
+                    </Typography>
+                )}
             </Box>
 
-            {/* Right: spacer to balance left buttons */}
-            <Box sx={{ width: 68 }} />
+            {/* Right: spacer to balance left side */}
+            <Box sx={{ width: 80 }} />
         </Box>
     );
 }

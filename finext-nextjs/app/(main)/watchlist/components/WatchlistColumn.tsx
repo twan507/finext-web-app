@@ -632,6 +632,7 @@ export default function WatchlistColumn({
                             setAutocompleteKey(k => k + 1);
                         }
                     }}
+                    autoHighlight
                     size="small"
                     noOptionsText="Không tìm thấy"
                     renderInput={(params) => (

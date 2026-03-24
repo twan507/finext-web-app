@@ -869,6 +869,7 @@ function AutocompleteAdd({ tickerOptions, onAdd, isDark }: { tickerOptions: Tick
                     setKey(k => k + 1);
                 }
             }}
+            autoHighlight
             size="small"
             noOptionsText="Không tìm thấy"
             renderInput={(params) => (
