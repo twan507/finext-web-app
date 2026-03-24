@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Box, Typography, Grid, useTheme, alpha } from '@mui/material';
 import BrandLogo from './BrandLogo';
 import { getResponsiveFontSize, spacing, borderRadius, transitions, fontWeight } from 'theme/tokens';
@@ -11,33 +11,33 @@ const footerLinks = {
   sanPham: {
     title: 'Sản phẩm',
     links: [
-      { label: 'Báo cáo tin tức thị trường', href: '#' },
-      { label: 'Phân tích nhóm ngành', href: '#' },
-      { label: 'Bộ lọc thông minh', href: '#' },
+      { label: 'Báo cáo tin tức thị trường', href: '/reports' },
+      { label: 'Phân tích nhóm ngành', href: '/sectors' },
+      { label: 'Bộ lọc thông minh', href: '/stocks' },
     ],
   },
   hoTro: {
     title: 'Finext Learning',
     links: [
-      { label: 'Phân tích kỹ thuật', href: '#' },
-      { label: 'Phân tích cơ bản', href: '#' },
-      { label: 'Phân tích dòng tiền', href: '#' },
+      { label: 'Phân tích kỹ thuật', href: '/learning/technical-analysis' },
+      { label: 'Phân tích cơ bản', href: '/learning/fundamental-analysis' },
+      { label: 'Phân tích dòng tiền', href: '/learning/cash-flow-analysis' },
     ],
   },
   huongDan: {
     title: 'Chính sách',
     links: [
-      { label: 'Chính sách bảo mật', href: '#' },
-      { label: 'Chính sách nội dung', href: '#' },
-      { label: 'Tuyên bố trách nhiệm', href: '#' },
+      { label: 'Chính sách bảo mật', href: '/policies/privacy' },
+      { label: 'Chính sách nội dung', href: '/policies/content' },
+      { label: 'Tuyên bố trách nhiệm', href: '/policies/disclaimer' },
     ],
   },
   mangXaHoi: {
     title: 'Liên hệ & Hỗ trợ',
     links: [
-      { label: 'Gửi yêu cầu qua Email', href: '#' },
-      { label: 'Trò chuyện trực tiếp', href: '#' },
-      { label: 'Đặt lịch tư vấn cá nhân', href: '#' },
+      { label: 'Gửi yêu cầu qua Email', href: '/support/email' },
+      { label: 'Trò chuyện trực tiếp', href: '/support/live-chat' },
+      { label: 'Đặt lịch tư vấn cá nhân', href: '/support/consultation' },
     ],
   },
 };
@@ -49,6 +49,7 @@ interface FooterLinkColumnProps {
 
 const FooterLinkColumn: React.FC<FooterLinkColumnProps> = ({ title, links }) => {
   const theme = useTheme();
+  const router = useRouter();
 
   return (
     <Box>
@@ -75,18 +76,36 @@ const FooterLinkColumn: React.FC<FooterLinkColumnProps> = ({ title, links }) => 
       >
         {links.map((link, index) => (
           <Box component="li" key={`${title}-${index}`}>
-            <Link
-              href={link.href}
-              target={link.external ? '_blank' : undefined}
-              rel={link.external ? 'noopener noreferrer' : undefined}
-              style={{ textDecoration: 'none' }}
-            >
+            {link.external ? (
+              <a
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ textDecoration: 'none' }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: getResponsiveFontSize('md'),
+                    color: theme.palette.text.secondary,
+                    transition: transitions.colors,
+                    py: 0.5,
+                    '&:hover': {
+                      color: theme.palette.primary.main,
+                    },
+                  }}
+                >
+                  {link.label}
+                </Typography>
+              </a>
+            ) : (
               <Typography
+                onClick={() => router.push(link.href)}
                 sx={{
                   fontSize: getResponsiveFontSize('md'),
                   color: theme.palette.text.secondary,
                   transition: transitions.colors,
                   py: 0.5,
+                  cursor: 'pointer',
                   '&:hover': {
                     color: theme.palette.primary.main,
                   },
@@ -94,7 +113,7 @@ const FooterLinkColumn: React.FC<FooterLinkColumnProps> = ({ title, links }) => 
               >
                 {link.label}
               </Typography>
-            </Link>
+            )}
           </Box>
         ))}
       </Box>

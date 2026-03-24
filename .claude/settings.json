@@ -9,7 +9,8 @@
       "Bash(ls -la \"./finext-nextjs/app/\\(main\\)/watchlist/\")",
       "Bash(find \"./finext-nextjs/app/\\(main\\)/watchlist/\" -type f -name \"*.tsx\" -o -name \"*.ts\")",
       "Bash(npm install:*)",
-      "Bash(python -c \"from app.schemas.watchlists import WatchlistReorder, WatchlistReorderItem; from app.crud.watchlists import reorder_watchlists; from app.routers.watchlists import router; print\\(''Backend OK''\\)\")"
+      "Bash(python -c \"from app.schemas.watchlists import WatchlistReorder, WatchlistReorderItem; from app.crud.watchlists import reorder_watchlists; from app.routers.watchlists import router; print\\(''Backend OK''\\)\")",
+      "Bash(find /d/twan_projects/finext-web-app -maxdepth 2 -name README* -o -name readme*)"
     ],
     "additionalDirectories": [
       "D:\\twan_projects\\finext-web-app\\finext-nextjs\\app\\(main)\\sectors\\[sectorId]\\components"

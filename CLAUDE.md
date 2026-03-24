@@ -93,6 +93,9 @@ Constraint: behavior must not change — no new logic, no new dependencies.
 
 # Code Constraints
 
+## Output Formatting
+- **Diff Blocks:** When modifying code, always present the detailed changes (removed and added lines) using a Markdown `diff` block directly in your response. Show the specific lines modified with `+` and `-` syntax. Do not just silently execute the edit or report "Modified X lines".
+
 ## Python
 - Type hints on all function signatures.
 - No bare `except:` — catch specific exceptions.

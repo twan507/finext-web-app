@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     const ogImage = article.image
         ? { url: article.image, alt: article.title }
-        : { url: 'https://finext.vn/finext-panel.png', width: 1200, height: 630, alt: 'Finext - Nền tảng phân tích chứng khoán thông minh' };
+        : { url: 'https://finext.vn/finext-panel.png', width: 1200, height: 630, alt: 'Finext - Your Next FInancial Step' };
 
     return {
         title: article.title,
