@@ -73,7 +73,8 @@ const topNavTabs: TopNavTab[] = [
       { label: 'Biến động', href: '/markets?tab=volatility', icon: 'fluent-color:poll-16' },
       { label: 'Dòng tiền', href: '/markets?tab=cashflow', icon: 'fluent-color:data-area-20' },
       { label: 'Định giá', href: '/markets?tab=valuation', icon: 'fluent-color:book-star-24' },
-      { label: 'Tín hiệu', href: '/markets?tab=signal', icon: 'fluent-color:gauge-32' },
+      // TODO: remove - { label: 'Tín hiệu', href: '/markets?tab=signal', icon: 'fluent-color:gauge-32' },
+      { label: 'Kỹ thuật', href: '/markets?tab=ptkt', icon: 'fluent-color:arrow-trending-lines-24' },
       { label: 'Nước ngoài', href: '/markets?tab=foreign', icon: 'fluent-color:globe-24' },
       { label: 'Tự doanh', href: '/markets?tab=proprietary', icon: 'fluent-color:building-people-24' },
     ]
