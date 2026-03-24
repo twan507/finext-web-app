@@ -140,8 +140,8 @@ export default function ChartPageContent({ ticker: initialTicker }: ChartPageCon
     const showLegend = toolbarPrefs.showLegend;
     const priceTagMode = toolbarPrefs.priceTagMode;
     const timeframe = toolbarPrefs.timeframe as Timeframe;
-    const showIndicatorsPanel = isMobile ? false : toolbarPrefs.showIndicatorsPanel;
-    const showWatchlistPanel = isMobile ? false : toolbarPrefs.showWatchlistPanel;
+    const showIndicatorsPanel = toolbarPrefs.showIndicatorsPanel;
+    const showWatchlistPanel = toolbarPrefs.showWatchlistPanel;
     const [isFullscreen, setIsFullscreen] = useState(false);
 
     // Handle ESC key to exit fullscreen
@@ -475,7 +475,7 @@ export default function ChartPageContent({ ticker: initialTicker }: ChartPageCon
                     {renderChartArea()}
                 </Box>
 
-                {/* Indicators panel — desktop only, mount 1 lần, bên phải */}
+                {/* Indicators panel — desktop inline (mobile drawer handled inside CandlestickChart) */}
                 {!isMobile && showIndicatorsPanel && (
                     <IndicatorsPanel
                         enabledIndicators={enabledIndicators}
@@ -485,7 +485,7 @@ export default function ChartPageContent({ ticker: initialTicker }: ChartPageCon
                     />
                 )}
 
-                {/* Watchlist panel — desktop only, mount 1 lần, bên phải */}
+                {/* Watchlist panel — desktop inline (mobile drawer handled inside CandlestickChart) */}
                 {!isMobile && showWatchlistPanel && (
                     <WatchlistPanel onTickerChange={handleTickerChange} />
                 )}

@@ -379,8 +379,7 @@ export default function WatchlistColumn({
     return (
         <Box
             sx={{
-                width: 260,
-                flexShrink: 0,
+                width: '100%',
                 borderRadius: `${borderRadius.md}px`,
                 border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
                 bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',

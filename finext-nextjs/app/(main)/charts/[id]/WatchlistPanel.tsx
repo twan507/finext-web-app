@@ -90,6 +90,7 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
 
     const [watchlists, setWatchlists] = useState<Watchlist[]>([]);
     const [loading, setLoading] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [dialogCoordinate, setDialogCoordinate] = useState<[number, number]>([0, 0]);
     const [editingWatchlist, setEditingWatchlist] = useState<Watchlist | null>(null);
@@ -160,13 +161,23 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
 
     useEffect(() => { fetchWatchlists(); }, [fetchWatchlists]);
 
-    // Sort watchlists by coordinate: x first, then y
+    // Derived pages list
+    const pages = useMemo(() => {
+        const pageNums = new Set(watchlists.map(w => w.page ?? 1));
+        pageNums.add(1);
+        pageNums.add(currentPage);
+        return Array.from(pageNums).sort((a, b) => a - b);
+    }, [watchlists, currentPage]);
+
+    // Sort watchlists by coordinate: x first, then y — filtered by currentPage
     const sortedWatchlists = useMemo(() => {
-        return [...watchlists].sort((a, b) => {
-            if (a.coordinate[0] !== b.coordinate[0]) return a.coordinate[0] - b.coordinate[0];
-            return a.coordinate[1] - b.coordinate[1];
-        });
-    }, [watchlists]);
+        return [...watchlists]
+            .filter(w => (w.page ?? 1) === currentPage)
+            .sort((a, b) => {
+                if (a.coordinate[0] !== b.coordinate[0]) return a.coordinate[0] - b.coordinate[0];
+                return a.coordinate[1] - b.coordinate[1];
+            });
+    }, [watchlists, currentPage]);
 
     // Handlers
     const handleDeleteClick = (id: string) => {
@@ -329,14 +340,18 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
         },
     };
 
-    // Next available coordinate for "add" button
+    // Next available coordinate for current page: always a new column
     const nextCoordinate = useMemo<[number, number]>(() => {
-        if (watchlists.length === 0) return [0, 0];
-        const maxCol = Math.max(...watchlists.map(w => w.coordinate[0]));
-        const inLastCol = watchlists.filter(w => w.coordinate[0] === maxCol);
-        const maxRow = Math.max(...inLastCol.map(w => w.coordinate[1]));
-        return [maxCol, maxRow + 1];
-    }, [watchlists]);
+        const pageWls = watchlists.filter(w => (w.page ?? 1) === currentPage);
+        if (pageWls.length === 0) return [0, 0];
+        const maxCol = Math.max(...pageWls.map(w => w.coordinate[0]));
+        return [maxCol + 1, 0];
+    }, [watchlists, currentPage]);
+
+    const currentPageHasWatchlists = useMemo(
+        () => watchlists.some(w => (w.page ?? 1) === currentPage),
+        [watchlists, currentPage],
+    );
 
     const renderWatchlistCard = (wl: Watchlist) => {
         const wlId = wl.id || wl._id!;
@@ -668,6 +683,48 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                 </Box>
             </Box>
 
+            {/* Page selector */}
+            <Box sx={{ px: 1, py: 0.75, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                {pages.map(p => (
+                    <Box
+                        key={p}
+                        onClick={() => setCurrentPage(p)}
+                        sx={{
+                            px: 1, py: 0.25,
+                            borderRadius: `${borderRadius.sm}px`,
+                            cursor: 'pointer',
+                            fontSize: getResponsiveFontSize('xs'),
+                            fontWeight: currentPage === p ? fontWeight.semibold : fontWeight.medium,
+                            color: currentPage === p ? 'primary.main' : 'text.secondary',
+                            bgcolor: currentPage === p ? (isDark ? 'rgba(99,102,241,0.14)' : 'rgba(99,102,241,0.08)') : 'transparent',
+                            border: `1px solid ${currentPage === p ? 'rgba(99,102,241,0.4)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')}`,
+                            transition: 'all 0.15s',
+                            userSelect: 'none',
+                            '&:hover': { color: 'primary.main', borderColor: 'rgba(99,102,241,0.4)' },
+                        }}
+                    >
+                        Trang {p}
+                    </Box>
+                ))}
+                <Box
+                    onClick={() => { if (!currentPageHasWatchlists) return; const next = Math.max(...pages) + 1; setCurrentPage(next); }}
+                    sx={{
+                        px: 1, py: 0.25,
+                        borderRadius: `${borderRadius.sm}px`,
+                        cursor: currentPageHasWatchlists ? 'pointer' : 'not-allowed',
+                        fontSize: getResponsiveFontSize('xs'),
+                        color: currentPageHasWatchlists ? 'text.disabled' : (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'),
+                        border: `1px dashed ${currentPageHasWatchlists ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)') : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)')}`,
+                        transition: 'all 0.15s',
+                        userSelect: 'none',
+                        opacity: currentPageHasWatchlists ? 1 : 0.6,
+                        ...(currentPageHasWatchlists && { '&:hover': { color: 'text.secondary', borderColor: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)' } }),
+                    }}
+                >
+                    + Trang mới
+                </Box>
+            </Box>
+
             {/* Content */}
             <Box sx={{ flex: 1, overflowY: 'auto', p: 1 }}>
                 {loading ? (
@@ -779,7 +836,7 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                 onClose={() => { setDialogOpen(false); setEditingWatchlist(null); }}
                 onSaved={handleSaved}
                 defaultCoordinate={dialogCoordinate}
-                defaultPage={1}
+                defaultPage={currentPage}
                 editingWatchlist={editingWatchlist}
                 industries={industries}
             />

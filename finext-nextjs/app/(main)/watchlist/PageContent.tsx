@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { Box, Typography, Button, CircularProgress, useTheme, Snackbar, Alert } from '@mui/material';
+import { Box, Typography, Button, CircularProgress, useTheme, useMediaQuery, Snackbar, Alert } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import {
     DndContext,
@@ -70,8 +70,7 @@ function DroppableColumn({ colIdx, isDark, isActive, children }: {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 1.5,
-                width: 260,
-                flexShrink: 0,
+                width: '100%',
                 minHeight: 80,
                 borderRadius: `${borderRadius.md}px`,
                 transition: 'background 0.15s',
@@ -86,6 +85,7 @@ function DroppableColumn({ colIdx, isDark, isActive, children }: {
 export default function WatchlistContent() {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
     const [watchlists, setWatchlists] = useState<Watchlist[]>([]);
     const [loading, setLoading] = useState(true);
@@ -321,6 +321,24 @@ export default function WatchlistContent() {
         return Array.from(pageNums).sort((a, b) => a - b);
     }, [watchlists, currentPage]);
 
+    // Next coordinate for current page (new column)
+    const nextCoordinate = useMemo<[number, number]>(() => {
+        const pageWls = watchlists.filter(w => (w.page ?? 1) === currentPage);
+        if (pageWls.length === 0) return [0, 0];
+        const maxCol = Math.max(...pageWls.map(w => w.coordinate[0]));
+        return [maxCol + 1, 0];
+    }, [watchlists, currentPage]);
+
+    // Mobile: flat sorted list of watchlists for current page
+    const mobileWatchlists = useMemo(() => {
+        return watchlists
+            .filter(wl => (wl.page ?? 1) === currentPage)
+            .sort((a, b) => {
+                if (a.coordinate[0] !== b.coordinate[0]) return a.coordinate[0] - b.coordinate[0];
+                return a.coordinate[1] - b.coordinate[1];
+            });
+    }, [watchlists, currentPage]);
+
     const visualColumns = useMemo(() => {
         // Only show watchlists on currentPage
         const pageWatchlists = watchlists.filter(wl => (wl.page ?? 1) === currentPage);
@@ -525,24 +543,68 @@ export default function WatchlistContent() {
                         Trang {p}
                     </Box>
                 ))}
-                <Box
-                    onClick={() => { const next = Math.max(...pages) + 1; setCurrentPage(next); }}
-                    sx={{
-                        px: 1.25, py: 0.35,
-                        borderRadius: `${borderRadius.sm}px`,
-                        cursor: 'pointer',
-                        fontSize: getResponsiveFontSize('xs'),
-                        color: 'text.disabled',
-                        border: `1px dashed ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
-                        transition: 'all 0.15s',
-                        userSelect: 'none',
-                        '&:hover': { color: 'text.secondary', borderColor: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)' },
-                    }}
-                >
-                    + Trang mới
-                </Box>
+                {(() => {
+                    const canAddPage = watchlists.some(w => (w.page ?? 1) === currentPage);
+                    return (
+                        <Box
+                            onClick={() => { if (!canAddPage) return; const next = Math.max(...pages) + 1; setCurrentPage(next); }}
+                            sx={{
+                                px: 1.25, py: 0.35,
+                                borderRadius: `${borderRadius.sm}px`,
+                                cursor: canAddPage ? 'pointer' : 'not-allowed',
+                                fontSize: getResponsiveFontSize('xs'),
+                                color: canAddPage ? 'text.disabled' : (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'),
+                                border: `1px dashed ${canAddPage ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)') : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)')}`,
+                                transition: 'all 0.15s',
+                                userSelect: 'none',
+                                opacity: canAddPage ? 1 : 0.6,
+                                ...(canAddPage && { '&:hover': { color: 'text.secondary', borderColor: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)' } }),
+                            }}
+                        >
+                            + Trang mới
+                        </Box>
+                    );
+                })()}
             </Box>
 
+            {isMobile ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    {mobileWatchlists.map(wl => (
+                        <WatchlistColumn
+                            key={wl.id || wl._id}
+                            watchlist={wl}
+                            stockDataMap={stockDataMap}
+                            allTickers={allTickers}
+                            onDelete={() => handleDeleteClick(wl.id || wl._id!)}
+                            onRenameSubmit={(newName) => handleRenameSubmit(wl, newName)}
+                            onSortChange={(sort) => handleSortChange(wl, sort)}
+                            onCollapseChange={(c) => handleCollapseChange(wl, c)}
+                            onReorderStocks={(newSymbols) => handleUpdateStocks(wl, newSymbols)}
+                            onAddStock={(ticker) => handleUpdateStocks(wl, [...wl.stock_symbols, ticker])}
+                            onRemoveStock={(ticker) => handleUpdateStocks(wl, wl.stock_symbols.filter(s => s !== ticker))}
+                        />
+                    ))}
+                    <Box
+                        onClick={() => openCreate(nextCoordinate)}
+                        sx={{
+                            minHeight: 64,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: `${borderRadius.md}px`,
+                            border: `1px dashed ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s',
+                            '&:hover': {
+                                bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                                borderColor: theme.palette.primary.main,
+                            },
+                        }}
+                    >
+                        <AddIcon sx={{ fontSize: 22, color: 'text.disabled' }} />
+                    </Box>
+                </Box>
+            ) : (
             <DndContext
                 sensors={sensors}
                 collisionDetection={rectIntersection}
@@ -645,6 +707,7 @@ export default function WatchlistContent() {
                     document.body,
                 )}
             </DndContext>
+            )}
 
             <AddWatchlistDialog
                 open={dialogOpen}

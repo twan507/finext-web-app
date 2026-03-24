@@ -1165,7 +1165,7 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
                         variant="temporary"
                         elevation={0}
                         ModalProps={{ keepMounted: true }}
-                        sx={{ '& .MuiDrawer-paper': { width: 300, backdropFilter: 'blur(12px)' } }}
+                        sx={{ '& .MuiDrawer-paper': { width: 280, backdropFilter: 'blur(12px)' } }}
                     >
                         <WatchlistPanel onTickerChange={onTickerChange} />
                     </Drawer>
