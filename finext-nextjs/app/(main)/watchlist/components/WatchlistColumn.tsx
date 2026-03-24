@@ -600,8 +600,10 @@ export default function WatchlistColumn({
                     key={autocompleteKey}
                     options={tickerOptions}
                     getOptionLabel={(opt) => opt.ticker}
-                    renderOption={(props, opt) => (
-                        <Box component="li" {...props} sx={{ display: 'flex', gap: 1, fontSize: getResponsiveFontSize('xs') }}>
+                    renderOption={(props, opt) => {
+                        const { key, ...restProps } = props as typeof props & { key?: React.Key };
+                        return (
+                        <Box key={key} component="li" {...restProps} sx={{ display: 'flex', gap: 1, fontSize: getResponsiveFontSize('xs') }}>
                             <Typography
                                 component="span"
                                 sx={{ fontWeight: fontWeight.bold, fontSize: 'inherit' }}
@@ -617,7 +619,8 @@ export default function WatchlistColumn({
                                 </Typography>
                             )}
                         </Box>
-                    )}
+                        );
+                    }}
                     filterOptions={(options, { inputValue }) => {
                         const q = inputValue.toUpperCase();
                         if (!q) return options.slice(0, 20);
