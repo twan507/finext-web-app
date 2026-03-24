@@ -23,6 +23,7 @@ export interface StockData {
     t0_score: number;
     t5_score?: number;
     vsma5: number;
+    top100?: number;
 }
 
 export interface NNStockData {

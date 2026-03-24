@@ -557,11 +557,26 @@ export default function GroupDetailContent() {
         };
     }, []);
 
-    // Top 10 stocks by trading_value
+    // Top 10 stocks by trading_value, filtered by current group
     const topStocks: GroupStockRowData[] = useMemo(() => {
         if (stockData.length === 0) return [];
 
-        return [...stockData]
+        const filterByGroup = (stocks: StockData[]): StockData[] => {
+            switch (ticker) {
+                case 'FNXINDEX': return stocks;
+                case 'FNX100': return stocks.filter(s => s.top100 === 1);
+                case 'VUOTTROI': return stocks.filter(s => s.category_name === 'Finext Vượt trội');
+                case 'ONDINH': return stocks.filter(s => s.category_name === 'Finext Ổn định');
+                case 'SUKIEN': return stocks.filter(s => s.category_name === 'Finext Sự kiện');
+                case 'LARGECAP': return stocks.filter(s => s.marketcap_name === 'Finext LargeCap');
+                case 'MIDCAP': return stocks.filter(s => s.marketcap_name === 'Finext MidCap');
+                case 'SMALLCAP': return stocks.filter(s => s.marketcap_name === 'Finext SmallCap');
+                default: return stocks;
+            }
+        };
+
+        const filtered = filterByGroup(stockData);
+        return [...filtered]
             .sort((a, b) => (b.trading_value || 0) - (a.trading_value || 0))
             .slice(0, 10)
             .map(s => ({
@@ -723,7 +738,7 @@ export default function GroupDetailContent() {
                     flexShrink: 0,
                 }}>
                     <IndexDetailPanel
-                        indexName={indexName}
+                        indexName=''
                         todayData={todayAllData[ticker] || []}
                     />
                 </Box>
@@ -731,7 +746,7 @@ export default function GroupDetailContent() {
 
             {/* ========== ITD SECTION: VSI intraday chart ========== */}
             <Box sx={{ mt: 4 }}>
-                <SectionTitle>Diễn biến trong phiên</SectionTitle>
+                <SectionTitle>Nhóm {indexName} trong phiên</SectionTitle>
                 <Box sx={{ mt: 2 }}>
                     {vsiSeriesData.length > 0 ? (
                         <VsiITDIndexLineChart
@@ -750,7 +765,7 @@ export default function GroupDetailContent() {
             {/* ========== BOTTOM SECTION: 3 Charts ========== */}
             <Box sx={{ mt: 4 }}>
                 {/* Top row: 2 charts side by side */}
-                <SectionTitle>Dòng tiền nhóm {indexName}</SectionTitle>
+                <SectionTitle>Nhóm {indexName} trong tháng</SectionTitle>
                 <Box sx={{
                     display: 'flex',
                     flexDirection: isMobile ? 'column' : 'row',
@@ -794,7 +809,7 @@ export default function GroupDetailContent() {
 
             {/* ========== STOCK TABLE: Top 10 cổ phiếu giao dịch cao nhất ========== */}
             <Box sx={{ mt: 4 }}>
-                <Box sx={{ mb: 2 }}><SectionTitle>Cổ phiếu nổi bật</SectionTitle></Box>
+                <Box sx={{ mb: 2 }}><SectionTitle>Cổ phiếu nổi bật nhóm {indexName}</SectionTitle></Box>
                 <GroupStockTable
                     data={topStocks}
                     isLoading={stockData.length === 0}

@@ -211,7 +211,7 @@ export default function DongTienSection({
                 textTransform: 'uppercase',
                 mb: 1,
             }}>
-                Diễn biến trong phiên
+                Dòng tiền Cổ phiếu {ticker} trong phiên
             </Typography>
 
             {/* Chỉ số thanh khoản ITD */}
@@ -235,7 +235,7 @@ export default function DongTienSection({
                 textTransform: 'uppercase',
                 mb: 2,
             }}>
-                Diễn biến trong tháng
+                Dòng tiền Cổ phiếu {ticker} trong tháng
             </Typography>
 
             {/* Sức mạnh dòng tiền + Tương quan */}
@@ -278,7 +278,7 @@ export default function DongTienSection({
                 textTransform: 'uppercase',
                 mb: 1,
             }}>
-                Diễn biến xếp hạng
+                Diễn biến xếp hạng cổ phiếu {ticker}
             </Typography>
             {rankingDates.length > 0 ? (
                 <RankingLineChart

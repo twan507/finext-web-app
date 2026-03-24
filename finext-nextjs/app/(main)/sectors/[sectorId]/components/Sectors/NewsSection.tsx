@@ -27,7 +27,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 export default function NewsSection({ ticker }: NewsSectionProps) {
     return (
         <Box>
-            <Box sx={{ mb: 2 }}><SectionTitle>TỔNG HỢP BẢN TIN</SectionTitle></Box>
+            <Box sx={{ mb: 2 }}><SectionTitle>TỔNG HỢP BẢN TIN LIÊN QUAN</SectionTitle></Box>
             <ReportList
                 ticker={ticker}
                 pageSize={5}

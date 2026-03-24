@@ -235,7 +235,7 @@ export default function DongTienSection({
 
     return (
         <Box>
-            <SectionTitle>Diễn biến trong phiên</SectionTitle>
+            <SectionTitle>nhóm {indexName} trong phiên</SectionTitle>
             <Box sx={{ mt: 2, mb: 3 }}>
                 {vsiSeriesData.length > 0 ? (
                     <VsiITDIndexLineChart
@@ -250,7 +250,7 @@ export default function DongTienSection({
                 )}
             </Box>
 
-            <SectionTitle>Diễn biến dòng tiền</SectionTitle>
+            <SectionTitle>nhóm {indexName} trong tháng</SectionTitle>
             <Box sx={{
                 display: 'flex',
                 flexDirection: isMobile ? 'column' : 'row',
@@ -281,7 +281,7 @@ export default function DongTienSection({
 
             {/* Bottom: Cấu trúc sóng */}
             <Box sx={{ mt: 3 }}>
-                <SectionTitle>Cấu trúc xu hướng</SectionTitle>
+                <SectionTitle>Xu hướng nhóm {indexName}</SectionTitle>
                 <MarketTrendChart
                     chartData={trendChartData}
                     isLoading={isTrendLoading}

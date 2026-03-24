@@ -40,6 +40,7 @@ async def home_today_stock(ticker: Optional[str] = None, **kwargs) -> Dict[str, 
         "vsma5": 1,
         "market_rank_pct": 1,
         "industry_rank_pct": 1,
+        "top100": 1,
     }
 
     find_query = {"ticker": ticker} if ticker else {}
