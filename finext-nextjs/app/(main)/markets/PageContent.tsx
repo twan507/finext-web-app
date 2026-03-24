@@ -17,7 +17,8 @@ import DongTienSection from './components/DongTienSection';
 import DinhGiaSection from './components/DinhGiaSection';
 import NuocNgoaiSection from './components/NuocNgoaiSection';
 import TuDoanhSection from './components/TuDoanhSection';
-import TinHieuSection from './components/TinHieuSection';
+// TODO: remove import TinHieuSection from './components/TinHieuSection';
+import PTKTSection from './components/PTKTSection';
 
 import { ISseRequest } from 'services/core/types';
 import { sseClient, getFromCache } from 'services/sseClient';
@@ -60,7 +61,7 @@ const MARKET_TABS = [
   { id: 'volatility', label: 'Biến động' },
   { id: 'cashflow', label: 'Dòng tiền' },
   { id: 'valuation', label: 'Định giá' },
-  { id: 'signal', label: 'Tín hiệu' },
+  { id: 'ptkt', label: 'PTKT' },
   { id: 'foreign', label: 'Nước ngoài' },
   { id: 'proprietary', label: 'Tự doanh' },
 ] as const;
@@ -137,8 +138,8 @@ export default function MarketsContent() {
 
   const [ticker, setTicker] = useState<string>('VNINDEX');
   const [activeTab, setActiveTab] = useState<MarketTabId>(() => {
-    const validTabs: MarketTabId[] = ['volatility', 'cashflow', 'valuation', 'signal', 'foreign', 'proprietary'];
-    if (tabParam && validTabs.includes(tabParam)) return tabParam;
+    const validTabs: MarketTabId[] = ['volatility', 'cashflow', 'valuation', 'ptkt', 'foreign', 'proprietary'];
+    if (tabParam && validTabs.includes(tabParam as MarketTabId)) return tabParam as MarketTabId;
     return 'volatility';
   });
 
@@ -147,9 +148,9 @@ export default function MarketsContent() {
 
   // Sync activeTab when URL search param changes (e.g. from nav dropdown)
   useEffect(() => {
-    const validTabs: MarketTabId[] = ['volatility', 'cashflow', 'valuation', 'signal', 'foreign', 'proprietary'];
-    if (tabParam && validTabs.includes(tabParam) && tabParam !== activeTab) {
-      setActiveTab(tabParam);
+    const validTabs: MarketTabId[] = ['volatility', 'cashflow', 'valuation', 'ptkt', 'foreign', 'proprietary'];
+    if (tabParam && validTabs.includes(tabParam as MarketTabId) && tabParam !== activeTab) {
+      setActiveTab(tabParam as MarketTabId);
     }
   }, [tabParam]);
 
@@ -358,8 +359,8 @@ export default function MarketsContent() {
         return <DongTienSection histIndexData={histIndexData} todayAllData={todayAllData} itdAllData={itdAllData} />;
       case 'valuation':
         return <DinhGiaSection />;
-      case 'signal':
-        return <TinHieuSection />;
+      case 'ptkt':
+        return <PTKTSection />;
       case 'foreign':
         return <NuocNgoaiSection />;
       case 'proprietary':

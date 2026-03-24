@@ -12,7 +12,8 @@
       "Bash(python -c \"from app.schemas.watchlists import WatchlistReorder, WatchlistReorderItem; from app.crud.watchlists import reorder_watchlists; from app.routers.watchlists import router; print\\(''Backend OK''\\)\")",
       "Bash(find /d/twan_projects/finext-web-app -maxdepth 2 -name README* -o -name readme*)",
       "Bash(grep -r \"category_name\\\\|marketcap_name\\\\|ticker\\\\|t0_score\\\\|vsi\" /d/twan_projects/finext-web-app/finext-fastapi/app/crud/sse/*.py)",
-      "Bash(grep -r \"today_stock\\\\|stock_db\" /d/twan_projects/finext-web-app/finext-fastapi/app/crud/sse/*.py)"
+      "Bash(grep -r \"today_stock\\\\|stock_db\" /d/twan_projects/finext-web-app/finext-fastapi/app/crud/sse/*.py)",
+      "Bash(ls -la \"/d/twan_projects/finext-web-app/finext-nextjs/app/\\(main\\)/stocks/[symbol]/components/\")"
     ],
     "additionalDirectories": [
       "D:\\twan_projects\\finext-web-app\\finext-nextjs\\app\\(main)\\sectors\\[sectorId]\\components"
