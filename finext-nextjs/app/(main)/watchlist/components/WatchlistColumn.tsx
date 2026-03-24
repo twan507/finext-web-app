@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import {
     Box,
     Typography,
@@ -9,6 +10,7 @@ import {
     Autocomplete,
     TextField,
     useTheme,
+    useMediaQuery,
     alpha,
     Menu,
     MenuItem,
@@ -94,6 +96,8 @@ export default function WatchlistColumn({
 }: WatchlistColumnProps) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const router = useRouter();
     const [autocompleteKey, setAutocompleteKey] = useState(0);
     const collapsed = forceCollapsed ?? (watchlist.collapsed ?? false);
 
@@ -238,7 +242,8 @@ export default function WatchlistColumn({
                     <Typography
                         component="a"
                         href={`/stocks/${ticker}`}
-                        target="_blank"
+                        target={isMobile ? '_self' : '_blank'}
+                        onClick={isMobile ? (e: React.MouseEvent) => { e.preventDefault(); router.push(`/stocks/${ticker}`); } : undefined}
                         onPointerDown={e => e.stopPropagation()}
                         sx={{
                             fontSize: getResponsiveFontSize('xs'),
@@ -297,7 +302,8 @@ export default function WatchlistColumn({
                         <Typography
                             component="a"
                             href={`/stocks/${ticker}`}
-                            target="_blank"
+                            target={isMobile ? '_self' : '_blank'}
+                            onClick={isMobile ? (e: React.MouseEvent) => { e.preventDefault(); router.push(`/stocks/${ticker}`); } : undefined}
                             onPointerDown={e => e.stopPropagation()}
                             sx={{
                                 fontSize: getResponsiveFontSize('xs'),
@@ -312,7 +318,7 @@ export default function WatchlistColumn({
                         <Tooltip title="Mở chart" placement="right" arrow={false} slotProps={tooltipSlotProps}>
                             <Box
                                 component="span"
-                                onClick={() => window.open(`/charts/${ticker}`, '_blank')}
+                                onClick={() => isMobile ? router.push(`/charts/${ticker}`) : window.open(`/charts/${ticker}`, '_blank')}
                                 onPointerDown={e => e.stopPropagation()}
                                 sx={{
                                     display: 'inline-flex',

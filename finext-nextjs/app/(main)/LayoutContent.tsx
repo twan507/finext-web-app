@@ -1054,7 +1054,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             bottom: 0,
             left: 0,
             right: 0,
-            height: 40,
+            height: 50,
             zIndex: theme.zIndex.appBar,
             alignItems: 'center',
             justifyContent: 'space-around',

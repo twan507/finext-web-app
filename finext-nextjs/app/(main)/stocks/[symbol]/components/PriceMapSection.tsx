@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Box, Typography, useTheme, alpha, Chip, Collapse } from '@mui/material';
+import { useRouter } from 'next/navigation';
+import { Box, Typography, useTheme, useMediaQuery, alpha, Chip, Collapse } from '@mui/material';
 import { getResponsiveFontSize, fontWeight, borderRadius, getGlassCard } from 'theme/tokens';
 
 // ─── Types ───────────────────────────────────────────────────────────────────────
@@ -205,6 +206,8 @@ function clusterLevels(levels: PriceLevel[]): ConfluenceCluster[] {
 export default function PriceMapSection({ ticker, chartIndicatorData, currentPrice, currentDiff, currentPctChange }: PriceMapSectionProps) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const router = useRouter();
 
     // Toggle states
     const [enabledTimeframes, setEnabledTimeframes] = useState<Set<TimeframeKey>>(DEFAULT_TIMEFRAMES);
@@ -314,7 +317,7 @@ export default function PriceMapSection({ ticker, chartIndicatorData, currentPri
                     }}>
                         MA TRẬN HỢP LƯU KỸ THUẬT
                     </Typography>
-                    <Box component="a" href={`/charts/${ticker.toLowerCase()}`} target="_blank" sx={{ textDecoration: 'none' }}>
+                    <Box component={isMobile ? 'span' : 'a'} href={isMobile ? undefined : `/charts/${ticker.toLowerCase()}`} target={isMobile ? undefined : '_blank'} onClick={isMobile ? () => router.push(`/charts/${ticker.toLowerCase()}`) : undefined} sx={{ textDecoration: 'none', cursor: 'pointer' }}>
                         <Typography sx={{
                             fontSize: getResponsiveFontSize('sm'),
                             fontWeight: fontWeight.bold,

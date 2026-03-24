@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { Box, Typography, useTheme, alpha, Skeleton, Tooltip } from '@mui/material';
+import { Box, Typography, useTheme, useMediaQuery, alpha, Skeleton, Tooltip } from '@mui/material';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { Icon } from '@iconify/react';
 import { useRouter } from 'next/navigation';
@@ -56,6 +56,7 @@ export default function ResultTable({ data, columns, sortField, sortOrder, onTog
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const router = useRouter();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
     // Drag state
     const dragIndexRef = useRef<number | null>(null);
@@ -270,7 +271,7 @@ export default function ResultTable({ data, columns, sortField, sortOrder, onTog
                                                 {/* Ticker text — click opens detail page */}
                                                 <Box
                                                     component="span"
-                                                    onClick={() => window.open(`/stocks/${String(val).toLowerCase()}`, '_blank')}
+                                                    onClick={() => isMobile ? router.push(`/stocks/${String(val).toLowerCase()}`) : window.open(`/stocks/${String(val).toLowerCase()}`, '_blank')}
                                                     sx={{
                                                         cursor: 'pointer',
                                                         '&:hover': { color: theme.palette.primary.main },
@@ -308,7 +309,7 @@ export default function ResultTable({ data, columns, sortField, sortOrder, onTog
                                                         component="span"
                                                         onClick={(e: React.MouseEvent) => {
                                                             e.stopPropagation();
-                                                            window.open(`/charts/${String(val)}`, '_blank');
+                                                            isMobile ? router.push(`/charts/${String(val)}`) : window.open(`/charts/${String(val)}`, '_blank');
                                                         }}
                                                         sx={{
                                                             display: 'inline-flex',
