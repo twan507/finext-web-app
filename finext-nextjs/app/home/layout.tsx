@@ -16,6 +16,10 @@
 
 
 
+export default function HomeLayout({ children }: { children: React.ReactNode }) {
+    return <>{children}</>;
+}
+
 // export default function DashboardLayout({ children }: { children: React.ReactNode }) {
 //     const { session, loading: authLoading } = useAuth();
 //     const router = useRouter();
