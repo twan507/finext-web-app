@@ -618,16 +618,23 @@ export default function WatchlistContent() {
             >
                 <Box
                     sx={{
-                        display: 'flex',
-                        gap: 1.5,
-                        alignItems: 'flex-start',
                         overflowX: 'auto',
+                        transform: 'rotateX(180deg)',
                         '&::-webkit-scrollbar': { height: 5 },
                         '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
                         '&::-webkit-scrollbar-thumb': {
                             bgcolor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
                             borderRadius: 3,
                         },
+                    }}
+                >
+                <Box
+                    sx={{
+                        display: 'flex',
+                        gap: 1.5,
+                        alignItems: 'flex-start',
+                        transform: 'rotateX(180deg)',
+                        mb: 2,
                     }}
                 >
                     {visualColumns.map((colItems, colIdx) => (
@@ -686,6 +693,7 @@ export default function WatchlistContent() {
                             </DroppableColumn>
                         </SortableContext>
                     ))}
+                </Box>
                 </Box>
 
                 {typeof document !== 'undefined' && createPortal(
