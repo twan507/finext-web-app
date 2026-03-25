@@ -57,6 +57,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             changeFrequency: 'weekly',
             priority: 0.7,
         },
+        // ── Mở tài khoản ──
+        {
+            url: `${baseUrl}/open-account`,
+            lastModified: currentDate,
+            changeFrequency: 'monthly',
+            priority: 0.8,
+        },
         // ── Finext Learning ──
         {
             url: `${baseUrl}/learning/technical-analysis`,
@@ -103,16 +110,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             priority: 0.5,
         },
         {
-            url: `${baseUrl}/support/live-chat`,
-            lastModified: currentDate,
-            changeFrequency: 'monthly',
-            priority: 0.5,
-        },
-        {
             url: `${baseUrl}/support/consultation`,
             lastModified: currentDate,
             changeFrequency: 'monthly',
-            priority: 0.5,
+            priority: 0.7,
         },
         // ── Auth ──
         {

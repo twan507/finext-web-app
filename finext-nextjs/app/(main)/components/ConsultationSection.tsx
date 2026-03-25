@@ -2,6 +2,7 @@
 
 import { Box, Typography, Button, Grid, useTheme } from '@mui/material';
 import Image from 'next/image';
+import Link from 'next/link';
 import { borderRadius, fontWeight, getResponsiveFontSize, getGlowButton } from 'theme/tokens';
 
 export default function ConsultationSection() {
@@ -79,6 +80,8 @@ export default function ConsultationSection() {
                         <Button
                             variant="contained"
                             size="large"
+                            component={Link}
+                            href="/open-account"
                             sx={{
                                 py: { xs: 1.25, md: 1.5 },
                                 px: { xs: 3, md: 4 },
@@ -88,7 +91,8 @@ export default function ConsultationSection() {
                                 textTransform: 'none',
                                 ...getGlowButton(isDark),
                                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                width: { xs: '100%', sm: 'auto' }
+                                width: { xs: '100%', sm: 'auto' },
+                                textDecoration: 'none'
                             }}
                         >
                             Mở tài khoản chứng khoán

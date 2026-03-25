@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Box, Typography, Button, CircularProgress, useTheme, useMediaQuery, Snackbar, Alert } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import {
@@ -21,6 +22,7 @@ import { createPortal } from 'react-dom';
 import { fontWeight, getResponsiveFontSize, borderRadius } from 'theme/tokens';
 import { useSseCache } from 'hooks/useSseCache';
 import { apiClient } from 'services/apiClient';
+import { useAuth } from '@/components/auth/AuthProvider';
 import WatchlistColumn from './components/WatchlistColumn';
 import SortableWatchlistCard from './components/SortableWatchlistCard';
 import AddWatchlistDialog from './components/AddWatchlistDialog';
@@ -90,6 +92,8 @@ export default function WatchlistContent() {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const router = useRouter();
+    const { session, loading: authLoading } = useAuth();
 
     const [watchlists, setWatchlists] = useState<Watchlist[]>([]);
     const [loading, setLoading] = useState(true);
@@ -301,6 +305,7 @@ export default function WatchlistContent() {
                 url: '/api/v1/watchlists/me',
                 method: 'GET',
                 requireAuth: true,
+                skipCache: true,
             });
             if (res.data) setWatchlists(res.data);
         } catch (err) {
@@ -310,7 +315,16 @@ export default function WatchlistContent() {
         }
     }, []);
 
-    useEffect(() => { fetchWatchlists(); }, [fetchWatchlists]);
+    // Redirect to login if not authenticated
+    useEffect(() => {
+        if (!authLoading && !session) {
+            router.push('/login?callbackUrl=/watchlist');
+        }
+    }, [authLoading, session, router]);
+
+    useEffect(() => {
+        if (session) fetchWatchlists();
+    }, [session, fetchWatchlists]);
 
     // Build visual columns from coordinates
     type ColumnItem =
@@ -480,7 +494,7 @@ export default function WatchlistContent() {
     };
 
     // ── render ──
-    if (loading) {
+    if (authLoading || !session || loading) {
         return (
             <Box sx={{ py: 6, display: 'flex', justifyContent: 'center' }}>
                 <CircularProgress size={32} />

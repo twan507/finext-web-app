@@ -117,6 +117,7 @@ export default function IndustryStocksSection({ stockData = [], isLoading = fals
             const filteredStocks = stocks
                 .filter(s => s.vsi < 5 && s.vsma5 > 100000) // Same filter as MarketTrendSection
                 .sort((a, b) => getScore(b) - getScore(a)) // Sort by score descending
+                .filter((s, i, arr) => arr.findIndex(x => x.ticker === s.ticker) === i) // Deduplicate by ticker
                 .slice(0, 5);
 
             if (filteredStocks.length > 0) {

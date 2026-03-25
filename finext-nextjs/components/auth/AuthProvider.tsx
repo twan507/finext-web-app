@@ -5,7 +5,7 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 import { useRouter } from 'next/navigation';
 // User type ở đây sẽ là User từ session.ts, đã được cập nhật
 import { getSession, clearSession, SessionData, saveSession as saveSessionToStorage, updateAccessToken, User, getAccessToken } from 'services/core/session';
-import { apiClient } from 'services/apiClient';
+import { apiClient, clearApiCache } from 'services/apiClient';
 import { logoutApi } from 'services/authService';
 // UserSchema cũng cần được import nếu bạn dùng nó trực tiếp ở đây
 import { LoginResponse, UserSchema } from 'services/core/types';
@@ -141,6 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     await logoutApi(); // Backend sẽ xóa HttpOnly cookie
     clearSession(); // Frontend xóa localStorage
+    clearApiCache(); // Xóa toàn bộ API cache trong memory
     setSession(null);
     setFeatures([]);
     setLoading(false);

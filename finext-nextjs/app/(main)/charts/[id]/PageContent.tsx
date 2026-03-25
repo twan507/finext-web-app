@@ -3,6 +3,8 @@
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { Box, Typography, useTheme, useMediaQuery } from '@mui/material';
 import { apiClient } from 'services/apiClient';
+import { ISseRequest } from 'services/core/types';
+import { sseClient, getFromCache } from 'services/sseClient';
 import useChartStore from 'hooks/useChartStore';
 import { zIndex } from 'theme/tokens';
 import CandlestickChart from './CandlestickChart';
@@ -262,50 +264,63 @@ export default function ChartPageContent({ ticker: initialTicker }: ChartPageCon
             });
     }, [ticker, hasMoreHistory, loadedBars]);
 
-    // ─── Today: REST polling mỗi 5s (thay vì SSE — nhanh hơn cho initial load) ───
+    // ─── Today: SSE stream (realtime updates qua EventSource) ───
     const [todayData, setTodayData] = useState<ChartRawData[] | null>(null);
     const [isTodayLoading, setIsTodayLoading] = useState(true);
     const [todayError, setTodayError] = useState<string | null>(null);
+    const todaySseRef = useRef<{ unsubscribe: () => void } | null>(null);
+    const isMountedRef = useRef(true);
 
     useEffect(() => {
         if (!ticker) return;
 
-        let cancelled = false;
+        isMountedRef.current = true;
 
-        const fetchToday = () => {
-            apiClient<ChartRawData[]>({
-                url: '/api/v1/sse/rest/chart_today_data',
-                method: 'GET',
-                queryParams: { ticker },
-                requireAuth: false,
-                useCache: false, // luôn fetch mới cho today data
-            })
-                .then((res) => {
-                    if (!cancelled) {
-                        const data = res.data ?? [];
-                        if (data.length > 0) {
-                            setTodayData(data);
+        // Unsubscribe from existing connection
+        if (todaySseRef.current) {
+            todaySseRef.current.unsubscribe();
+            todaySseRef.current = null;
+        }
+
+        const requestProps: ISseRequest = {
+            url: '/api/v1/sse/stream',
+            queryParams: { keyword: 'chart_today_data', ticker },
+        };
+
+        todaySseRef.current = sseClient<ChartRawData[]>(
+            requestProps,
+            {
+                onOpen: () => {
+                    // Connected
+                },
+                onData: (receivedData) => {
+                    if (isMountedRef.current && receivedData && Array.isArray(receivedData)) {
+                        if (receivedData.length > 0) {
+                            setTodayData(receivedData);
                         }
                         setIsTodayLoading(false);
                     }
-                })
-                .catch((err: any) => {
-                    if (!cancelled) {
-                        setTodayError(err.message || 'Lỗi tải dữ liệu hôm nay');
+                },
+                onError: (sseError) => {
+                    if (isMountedRef.current) {
+                        console.warn('[SSE Chart Today] Error:', sseError.message);
+                        setTodayError(sseError.message || 'Lỗi tải dữ liệu hôm nay');
                         setIsTodayLoading(false);
                     }
-                });
-        };
-
-        // Fetch ngay lần đầu
-        fetchToday();
-
-        // Polling mỗi 5 giây
-        const intervalId = setInterval(fetchToday, 5000);
+                },
+                onClose: () => {
+                    // Closed
+                },
+            },
+            { cacheTtl: 5 * 60 * 1000, useCache: true },
+        );
 
         return () => {
-            cancelled = true;
-            clearInterval(intervalId);
+            isMountedRef.current = false;
+            if (todaySseRef.current) {
+                todaySseRef.current.unsubscribe();
+                todaySseRef.current = null;
+            }
         };
     }, [ticker]);
 

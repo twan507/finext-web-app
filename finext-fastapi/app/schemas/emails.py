@@ -26,3 +26,18 @@ class MessageResponse(BaseModel):
 
 # Bạn có thể thêm các schema khác liên quan đến email ở đây trong tương lai.
 # Ví dụ: Schema cho email thông báo, email marketing, v.v.
+
+class ConsultationRequest(BaseModel):
+    """Schema cho yêu cầu đặt lịch tư vấn cá nhân."""
+    customer_name: str
+    phone_number: str
+    customer_email: Optional[str] = None
+    subject_topic: Optional[str] = "Tư vấn chung"
+    message: Optional[str] = "Khách hàng muốn được tư vấn."
+
+class OpenAccountRequest(BaseModel):
+    """Schema cho yêu cầu mở tài khoản chứng khoán."""
+    customer_name: str
+    phone_number: str
+    customer_email: Optional[str] = None
+    note: Optional[str] = None

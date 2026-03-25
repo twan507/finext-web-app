@@ -1,13 +1,15 @@
 'use client';
 
-import ComingSoonPlaceholder from 'components/common/ComingSoonPlaceholder';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function LiveChatContent() {
-  return (
-    <ComingSoonPlaceholder
-      title="Trò chuyện trực tiếp"
-      description="Chat trực tiếp với đội ngũ hỗ trợ của Finext."
-      icon="mdi:chat-outline"
-    />
-  );
+  const router = useRouter();
+
+  useEffect(() => {
+    window.open('https://zalo.me/0988888156', '_blank');
+    router.back();
+  }, [router]);
+
+  return null;
 }

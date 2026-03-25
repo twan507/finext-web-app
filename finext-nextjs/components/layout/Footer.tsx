@@ -36,7 +36,7 @@ const footerLinks = {
     title: 'Liên hệ & Hỗ trợ',
     links: [
       { label: 'Gửi yêu cầu qua Email', href: '/support/email' },
-      { label: 'Trò chuyện trực tiếp', href: '/support/live-chat' },
+      { label: 'Trò chuyện trực tiếp', href: 'https://zalo.me/0988888156', external: true },
       { label: 'Đặt lịch tư vấn cá nhân', href: '/support/consultation' },
     ],
   },

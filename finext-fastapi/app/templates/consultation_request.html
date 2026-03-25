@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yêu cầu tư vấn mới - Finext</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; color: #333; background-color: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; padding: 32px; border-radius: 12px; background-color: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .header { text-align: center; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 2px solid #7c3aed; }
+        .header h1 { color: #7c3aed; margin: 0; font-size: 22px; }
+        .header p { color: #666; margin: 8px 0 0; font-size: 14px; }
+        .info-table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+        .info-table tr { border-bottom: 1px solid #eee; }
+        .info-table td { padding: 12px 8px; vertical-align: top; }
+        .info-table .label { color: #666; font-size: 13px; font-weight: 600; width: 140px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .info-table .value { color: #222; font-size: 15px; }
+        .message-box { background-color: #f8f5ff; border-left: 4px solid #7c3aed; padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 20px 0; }
+        .message-box .label { color: #7c3aed; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+        .message-box .content { color: #333; font-size: 15px; line-height: 1.6; white-space: pre-wrap; }
+        .footer { text-align: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid #eee; }
+        .footer p { color: #999; font-size: 12px; margin: 4px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Yêu cầu tư vấn mới</h1>
+            <p>Nhận được lúc {{ submitted_at }}</p>
+        </div>
+
+        <table class="info-table">
+            <tr>
+                <td class="label">Họ và tên</td>
+                <td class="value">{{ customer_name }}</td>
+            </tr>
+            <tr>
+                <td class="label">Số điện thoại</td>
+                <td class="value">{{ phone_number }}</td>
+            </tr>
+            <tr>
+                <td class="label">Email</td>
+                <td class="value">{{ customer_email }}</td>
+            </tr>
+            <tr>
+                <td class="label">Chủ đề</td>
+                <td class="value">{{ subject_topic }}</td>
+            </tr>
+        </table>
+
+        <div class="message-box">
+            <div class="label">Nội dung yêu cầu</div>
+            <div class="content">{{ message_content }}</div>
+        </div>
+
+        <div class="footer">
+            <p>Đây là Email tự động từ hệ thống Finext©{{ current_year }}</p>
+            <p>Vui lòng phản hồi khách hàng trong thời gian sớm nhất.</p>
+        </div>
+    </div>
+</body>
+</html>
