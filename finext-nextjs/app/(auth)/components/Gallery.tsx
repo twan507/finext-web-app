@@ -12,13 +12,13 @@ export interface Slide {
 
 interface GalleryProps {
     slides: Slide[];
-    chartComponent?: React.ReactNode;
+    chartComponents?: React.ReactNode[];
     autoPlayInterval?: number;
 }
 
 export default function Gallery({
     slides,
-    chartComponent,
+    chartComponents,
     autoPlayInterval = 5000
 }: GalleryProps) {
     const [currentSlide, setCurrentSlide] = useState(0);
@@ -65,6 +65,7 @@ export default function Gallery({
     }, [currentSlide, triggerSlideChange, slides.length, autoPlayInterval]);
 
     const slide = slides[currentSlide];
+    const currentVisual = chartComponents?.[currentSlide];
 
     return (
         <Box sx={{ maxWidth: layoutTokens.authGalleryMaxWidth, position: 'relative' }}>
@@ -101,13 +102,13 @@ export default function Gallery({
                     >
                         {slide.headline}
                     </Typography>
-                    <Typography variant="body2" sx={{ minHeight: '3.75rem' }}>
+                    <Typography variant="body2" sx={{ minHeight: '3.75rem', mb: -1 }}>
                         {slide.description}
                     </Typography>
                 </Box>
 
-                {/* Chart/Visual Component */}
-                {chartComponent || (
+                {/* Slide Visual Component */}
+                {currentVisual || (
                     <Box
                         sx={{
                             position: 'relative',

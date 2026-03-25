@@ -1,11 +1,12 @@
 "use client";
 
 import React from "react";
-import { Box } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
+import { Icon } from '@iconify/react';
 import Gallery, { Slide } from "./components/Gallery";
 import ThemeToggleButton from "@/components/themeToggle/ThemeToggleButton";
-import { layoutTokens, shadows, zIndex } from "theme/tokens";
+import { layoutTokens, zIndex, borderRadius, fontWeight, getResponsiveFontSize } from "theme/tokens";
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -13,24 +14,227 @@ interface AuthLayoutProps {
 
 const gallerySlides: Slide[] = [
   {
-    overline: 'THẤU HIỂU DỮ LIỆU · CHINH PHỤC THỊ TRƯỜNG',
-    headline: 'Insight đầu tư theo ngành',
+    overline: 'DỮ LIỆU REALTIME · NẮM BẮT CƠ HỘI',
+    headline: 'Phân tích thị trường toàn diện',
     description:
-      'Thông qua hệ thống các chỉ báo chuyên sâu, Findicator mang đến góc nhìn của những chuyên gia đầu ngành, giúp nhà đầu tư có thể tìm kiếm các cơ hội và ý tưởng đầu tư chất lượng.',
+      'Theo dõi biến động chỉ số, dòng tiền, nước ngoài, tự doanh và phân tích kỹ thuật — tất cả trong một giao diện trực quan, cập nhật theo thời gian thực.',
   },
   {
-    overline: 'PHÂN TÍCH CHUYÊN SÂU · QUYẾT ĐỊNH ĐỘT PHÁ',
-    headline: 'Báo cáo thị trường độc quyền',
+    overline: 'BỘ LỌC MẠNH MẼ · ĐẦU TƯ HIỆU QUẢ',
+    headline: 'Sàng lọc cổ phiếu thông minh',
     description:
-      'Nhận các báo cáo phân tích chuyên sâu về từng ngành, xu hướng thị trường, và các yếu tố vĩ mô ảnh hưởng đến danh mục đầu tư của bạn. Luôn đi trước một bước với thông tin chi tiết.',
+      'Khám phá cơ hội đầu tư với bộ lọc đa tiêu chí — kết hợp phân tích kỹ thuật, cơ bản và dòng tiền trên hơn 1,600 mã cổ phiếu. Tìm ra những cơ hội tiềm năng nhất trước khi thị trường nhận ra.',
   },
   {
-    overline: 'CÔNG CỤ HỖ TRỢ · TỐI ƯU HÓA LỢI NHUẬN',
-    headline: 'Danh mục đầu tư thông minh',
+    overline: 'PHÂN TÍCH NGÀNH · ĐÓN ĐẦU DÒNG TIỀN',
+    headline: 'Nhóm ngành & xu hướng',
     description:
-      'Sử dụng các công cụ mạnh mẽ để xây dựng và quản lý danh mục đầu tư cá nhân hóa. Tối ưu hóa lợi nhuận và giảm thiểu rủi ro với các khuyến nghị được hỗ trợ bởi AI.',
+      'Đánh giá sức mạnh tương đối của từng nhóm ngành, phát hiện sự luân chuyển dòng tiền giữa các lĩnh vực và đón đầu xu hướng đầu tư trước thị trường — lợi thế quyết định của nhà đầu tư chuyên nghiệp.',
   },
 ];
+
+// ── Shared slide frame: fixed height, transparent bg, items rendered directly ──
+const SLIDE_HEIGHT = layoutTokens.authGalleryHeight; // 320px — same for all slides
+
+function SlideFrame({ children }: { children: React.ReactNode }) {
+  return (
+    <Box sx={{
+      height: SLIDE_HEIGHT,
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    }}>
+      {children}
+    </Box>
+  );
+}
+
+// ── Slide 1 Visual: Market Analysis Feature Cards ──
+const featureCards = [
+  { icon: 'fluent-color:poll-16', label: 'Biến động' },
+  { icon: 'fluent-color:data-area-20', label: 'Dòng tiền' },
+  { icon: 'fluent-color:book-star-24', label: 'Định giá' },
+  { icon: 'fluent-color:arrow-trending-lines-24', label: 'Phân tích KT' },
+];
+
+function MarketVisual() {
+  return (
+    <SlideFrame>
+      <Box sx={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(2, 1fr)',
+        gap: 1.5,
+      }}>
+        {featureCards.map((card) => (
+          <Box
+            key={card.label}
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 1,
+              py: 2.5,
+              px: 1.5,
+              height: '150px',
+              borderRadius: `${borderRadius.md}px`,
+              background: 'linear-gradient(135deg, rgba(139,92,246,0.25), rgba(59,130,246,0.2))',
+              border: '1px solid rgba(255,255,255,0.08)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+            }}
+          >
+            <Icon icon={card.icon} width={50} height={50} />
+            <Typography sx={(theme) => ({
+              fontSize: getResponsiveFontSize('sm'),
+              fontWeight: fontWeight.semibold,
+              color: theme.palette.text.primary,
+              textAlign: 'center',
+            })}>
+              {card.label}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+    </SlideFrame>
+  );
+}
+
+// ── Slide 2 Visual: Stock Screening Stats ──
+const statCards = [
+  { value: '1,600+', label: 'Mã cổ phiếu', icon: 'mdi:chart-box-outline' },
+  { value: '50+', label: 'Chỉ báo phân tích', icon: 'mdi:filter-variant' },
+  { value: 'Realtime', label: 'Cập nhật liên tục', icon: 'mdi:lightning-bolt-outline' },
+];
+
+function StockScreeningVisual() {
+  return (
+    <SlideFrame>
+
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {statCards.map((stat) => (
+          <Box
+            key={stat.label}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              py: 1.75,
+              px: 2,
+              height: '95px',
+              borderRadius: `${borderRadius.md}px`,
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+            }}
+          >
+            <Box sx={{
+              width: 40,
+              height: 40,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #7c3aed, #3b82f6)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <Icon icon={stat.icon} width={20} height={20} color="#fff" />
+            </Box>
+            <Box>
+              <Typography sx={(theme) => ({
+                fontSize: getResponsiveFontSize('lg'),
+                fontWeight: fontWeight.bold,
+                color: theme.palette.text.primary,
+                lineHeight: 1.2,
+              })}>
+                {stat.value}
+              </Typography>
+              <Typography sx={(theme) => ({
+                fontSize: getResponsiveFontSize('xs'),
+                color: theme.palette.text.secondary,
+              })}>
+                {stat.label}
+              </Typography>
+            </Box>
+          </Box>
+        ))}
+      </Box>
+    </SlideFrame>
+  );
+}
+
+// ── Slide 3 Visual: Industry Sectors ──
+const sectorItems = [
+  { name: 'Ngân hàng', ticker: 'NGANHANG', change: '+1.8%', up: true },
+  { name: 'Bất động sản', ticker: 'BDS', change: '-0.6%', up: false },
+  { name: 'Công nghệ', ticker: 'CONGNGHE', change: '+2.4%', up: true },
+  { name: 'Chứng khoán', ticker: 'CHUNGKHOAN', change: '+1.2%', up: true },
+];
+
+function SectorVisual() {
+  return (
+    <SlideFrame>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        {sectorItems.map((sector) => (
+          <Box
+            key={sector.ticker}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              py: 1.5,
+              px: 2,
+              height: '70px',
+              borderRadius: `${borderRadius.md}px`,
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box sx={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                flexShrink: 0,
+                background: sector.up ? '#25b770' : '#e14040',
+                boxShadow: sector.up
+                  ? '0 0 8px rgba(37,183,112,0.5)'
+                  : '0 0 8px rgba(225,64,64,0.5)',
+              }} />
+              <Box>
+                <Typography sx={(theme) => ({
+                  fontSize: getResponsiveFontSize('sm'),
+                  fontWeight: fontWeight.semibold,
+                  color: theme.palette.text.primary,
+                  lineHeight: 1.3,
+                })}>
+                  {sector.name}
+                </Typography>
+                <Typography sx={(theme) => ({
+                  fontSize: getResponsiveFontSize('xxs'),
+                  color: theme.palette.text.disabled,
+                })}>
+                  {sector.ticker}
+                </Typography>
+              </Box>
+            </Box>
+            <Typography sx={{
+              fontSize: getResponsiveFontSize('sm'),
+              fontWeight: fontWeight.bold,
+              color: sector.up ? '#25b770' : '#e14040',
+            }}>
+              {sector.change}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+    </SlideFrame>
+  );
+}
 
 export default function LayoutContent({ children }: AuthLayoutProps) {
   const theme = useTheme();
@@ -53,29 +257,11 @@ export default function LayoutContent({ children }: AuthLayoutProps) {
       blurPx: 28,
     };
 
-  const defaultChartComponent = (
-    <Box
-      sx={{
-        position: 'relative',
-        width: { md: '100%' },
-        height: { md: layoutTokens.authGalleryHeight },
-        borderRadius: 2,
-        background: 'linear-gradient(180deg, rgba(10,8,20,0.86) 0%, rgba(12,10,28,0.92) 100%)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        boxShadow: shadows.xxl,
-        overflow: 'hidden',
-      }}
-    >
-      <Box
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          background:
-            'radial-gradient(circle at 20% 60%, rgba(140,90,255,0.18), transparent 40%), radial-gradient(circle at 70% 30%, rgba(80,140,255,0.16), transparent 45%)',
-        }}
-      />
-    </Box>
-  );
+  const galleryVisuals = [
+    <MarketVisual key="market" />,
+    <StockScreeningVisual key="stock" />,
+    <SectorVisual key="sector" />,
+  ];
 
   return (
     <Box
@@ -126,7 +312,7 @@ export default function LayoutContent({ children }: AuthLayoutProps) {
         <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
           <Gallery
             slides={gallerySlides}
-            chartComponent={defaultChartComponent}
+            chartComponents={galleryVisuals}
           />
         </Box>
         <Box

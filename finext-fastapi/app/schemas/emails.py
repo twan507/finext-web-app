@@ -40,4 +40,12 @@ class OpenAccountRequest(BaseModel):
     customer_name: str
     phone_number: str
     customer_email: Optional[str] = None
+    note: Optional[str] = None
+
+class PlanInquiryRequest(BaseModel):
+    """Schema cho yêu cầu tư vấn gói thành viên."""
+    customer_name: str
+    phone_number: str
+    customer_email: Optional[str] = None
+    plan_interest: Optional[str] = None   # Gói quan tâm (Basic / Advanced / ...)
     note: Optional[str] = None

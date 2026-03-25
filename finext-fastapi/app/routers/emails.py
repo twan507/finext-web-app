@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException
 from app.utils.email_utils import send_email_async
 from app.utils.response_wrapper import StandardApiResponse, api_response_wrapper
 # THAY ĐỔI: Import schema từ file mới
-from app.schemas.emails import TestEmailRequest, MessageResponse, ConsultationRequest, OpenAccountRequest
+from app.schemas.emails import TestEmailRequest, MessageResponse, ConsultationRequest, OpenAccountRequest, PlanInquiryRequest
 from app.core.config import MAIL_FROM
 
 logger = logging.getLogger(__name__)
@@ -160,6 +160,58 @@ async def send_open_account_request(
         raise
     except Exception as e:
         logger.error(f"Lỗi khi xử lý yêu cầu mở tài khoản: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Đã xảy ra lỗi: {str(e)}"
+        )
+
+
+@router.post(
+    "/plan-inquiry",
+    response_model=StandardApiResponse[MessageResponse],
+    summary="Gửi yêu cầu tư vấn gói thành viên",
+    tags=["emails"]
+)
+@api_response_wrapper(default_success_message="Yêu cầu tư vấn gói thành viên đã được gửi thành công.")
+async def send_plan_inquiry_request(
+    request_data: PlanInquiryRequest,
+):
+    try:
+        subject = f"[Finext] Tư vấn gói thành viên — {request_data.customer_name}"
+        submitted_at = datetime.now().strftime("%H:%M %d/%m/%Y")
+
+        template_body = {
+            "customer_name": request_data.customer_name,
+            "phone_number": request_data.phone_number,
+            "customer_email": request_data.customer_email or "Không cung cấp",
+            "plan_interest": request_data.plan_interest or "Chưa xác định",
+            "note_content": request_data.note or "",
+            "submitted_at": submitted_at,
+            "current_year": datetime.now().year,
+        }
+
+        recipient = MAIL_FROM if MAIL_FROM else "finext.vn@gmail.com"
+        success = await send_email_async(
+            subject=subject,
+            recipients=[recipient],
+            template_name="plan_inquiry_request.html",
+            template_body=template_body
+        )
+
+        if not success:
+            logger.error(f"Gửi email tư vấn gói từ {request_data.customer_name} thất bại.")
+            raise HTTPException(
+                status_code=500,
+                detail="Gửi yêu cầu thất bại. Vui lòng thử lại sau."
+            )
+
+        logger.info(f"Yêu cầu tư vấn gói từ {request_data.customer_name} ({request_data.phone_number}) đã được gửi.")
+        return MessageResponse(message="Đăng ký thành công! Finext sẽ liên hệ tư vấn gói thành viên phù hợp nhất cho bạn sớm nhất.")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Lỗi khi xử lý yêu cầu tư vấn gói: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Đã xảy ra lỗi: {str(e)}"
