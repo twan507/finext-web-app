@@ -1,5 +1,6 @@
 # finext-fastapi/app/routers/subscriptions.py
 import logging
+from datetime import datetime, timezone
 from typing import List, Optional, Union
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query  # Thêm Query
@@ -73,6 +74,32 @@ async def activate_subscription_endpoint(
     sub_to_activate = await crud_subscriptions.get_subscription_by_id_db(db, subscription_id)
     if not sub_to_activate:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Subscription với ID {subscription_id} không tìm thấy.")
+
+    # Điều kiện 1: Không kích hoạt nếu số ngày còn lại = 0 (đã hết hạn)
+    dt_now = datetime.now(timezone.utc)
+    expiry = sub_to_activate.expiry_date
+    if expiry.tzinfo is None:
+        expiry = expiry.replace(tzinfo=timezone.utc)
+    remaining_days = (expiry - dt_now).days
+    if remaining_days <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Không thể kích hoạt subscription đã hết hạn (số ngày còn lại = 0).",
+        )
+
+    # Điều kiện 2: Không kích hoạt nếu user đang có subscription khác đang hoạt động
+    other_active_sub = await db.subscriptions.find_one(
+        {
+            "user_id": ObjectId(str(sub_to_activate.user_id)),
+            "is_active": True,
+            "_id": {"$ne": ObjectId(subscription_id)},
+        }
+    )
+    if other_active_sub:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Không thể kích hoạt subscription vì user đang có một subscription khác đang hoạt động. Hãy hủy kích hoạt subscription hiện tại trước.",
+        )
 
     user_id_of_sub = str(sub_to_activate.user_id)
 

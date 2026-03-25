@@ -165,7 +165,7 @@ export default function FeaturesPage() {
             }
 
             const response = await apiClient<PaginatedFeaturesResponse | FeaturePublic[]>({
-                url: `/api/v1/features?skip=${page * rowsPerPage}&limit=${rowsPerPage}`,
+                url: `/api/v1/features/?skip=${page * rowsPerPage}&limit=${rowsPerPage}`,
                 method: 'GET',
             });
 
