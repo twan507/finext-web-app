@@ -21,6 +21,8 @@ import NewsSection from './components/NewsSection';
 import StockFinRatiosSection from './components/StockFinRatiosSection';
 
 import type { StockData } from '../../components/marketSection/MarketVolatility';
+import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
+import { ADVANCED_AND_ABOVE, BASIC_AND_ABOVE } from '@/components/auth/features';
 
 const MarketIndexChart = dynamic(
     () => import('../../components/marketSection/MarketIndexChart').then(mod => ({ default: mod.default })),
@@ -641,39 +643,49 @@ export default function StockDetailContent() {
                 <SubNavbar activeTab={activeTab} onTabChange={handleTabChange} />
             </Box>
 
-            {/* ========== TAB CONTENT ========== */}
+            {/* ========== TAB CONTENT: each gated individually ========== */}
+
+            {/* Dòng tiền → ADVANCED */}
             {activeTab === 'cashflow' && (
-                <Box sx={{ mt: 4 }}>
-                    <DongTienSection
-                        ticker={ticker}
-                        dongTienDates={dongTienDates}
-                        t5ScoreData={t5ScoreData}
-                        t0ScoreData={t0ScoreData}
-                        tuongQuanDates={tuongQuanDates}
-                        tuongQuanSeries={tuongQuanSeries}
-                        rankingDates={rankingDates}
-                        marketRankData={marketRankData}
-                        industryRankData={industryRankData}
-                    />
-                </Box>
+                <OptionalAuthWrapper requireAuth={true} requiredFeatures={ADVANCED_AND_ABOVE}>
+                    <Box sx={{ mt: 4 }}>
+                        <DongTienSection
+                            ticker={ticker}
+                            dongTienDates={dongTienDates}
+                            t5ScoreData={t5ScoreData}
+                            t0ScoreData={t0ScoreData}
+                            tuongQuanDates={tuongQuanDates}
+                            tuongQuanSeries={tuongQuanSeries}
+                            rankingDates={rankingDates}
+                            marketRankData={marketRankData}
+                            industryRankData={industryRankData}
+                        />
+                    </Box>
+                </OptionalAuthWrapper>
             )}
 
+            {/* PTKT → ADVANCED */}
             {activeTab === 'pricemap' && (
-                <Box sx={{ mt: 4 }}>
-                    <PriceMapSection
-                        ticker={ticker}
-                        chartIndicatorData={chartIndicatorData}
-                        currentPrice={todayAllData[ticker]?.[todayAllData[ticker].length - 1]?.close ?? 0}
-                        currentDiff={todayAllData[ticker]?.[todayAllData[ticker].length - 1]?.diff}
-                        currentPctChange={todayAllData[ticker]?.[todayAllData[ticker].length - 1]?.pct_change}
-                    />
-                </Box>
+                <OptionalAuthWrapper requireAuth={true} requiredFeatures={ADVANCED_AND_ABOVE}>
+                    <Box sx={{ mt: 4 }}>
+                        <PriceMapSection
+                            ticker={ticker}
+                            chartIndicatorData={chartIndicatorData}
+                            currentPrice={todayAllData[ticker]?.[todayAllData[ticker].length - 1]?.close ?? 0}
+                            currentDiff={todayAllData[ticker]?.[todayAllData[ticker].length - 1]?.diff}
+                            currentPctChange={todayAllData[ticker]?.[todayAllData[ticker].length - 1]?.pct_change}
+                        />
+                    </Box>
+                </OptionalAuthWrapper>
             )}
 
+            {/* Tin tức → BASIC */}
             {activeTab === 'news' && (
-                <Box sx={{ mt: 4 }}>
-                    <NewsSection ticker={ticker} />
-                </Box>
+                <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
+                    <Box sx={{ mt: 4 }}>
+                        <NewsSection ticker={ticker} />
+                    </Box>
+                </OptionalAuthWrapper>
             )}
         </Box>
     );

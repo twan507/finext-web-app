@@ -15,6 +15,8 @@ import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import { INDICATOR_GROUPS, LINE_STYLE, getIndicatorColor, type IndicatorDef, type LineIndicator, type VolumeLineIndicator } from './indicatorConfig';
+import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
+import { ADVANCED_AND_ABOVE } from '@/components/auth/features';
 
 /** Map lwOptions.lineStyle → CSS border-style */
 const getCssLineStyle = (lineStyle?: number): string => {
@@ -130,6 +132,7 @@ export default function IndicatorsPanel({
                 scrollbarWidth: 'thin',
             }}
         >
+            <OptionalAuthWrapper requireAuth={true} requiredFeatures={ADVANCED_AND_ABOVE} compact>
             {/* Header */}
             <Box sx={{ px: 1.5, py: 1, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Typography
@@ -351,6 +354,7 @@ export default function IndicatorsPanel({
                     </Box>
                 );
             })}
+            </OptionalAuthWrapper>
         </Box>
     );
 }

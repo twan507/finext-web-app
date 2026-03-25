@@ -22,6 +22,8 @@ import FinRatiosSection from './components/Sectors/FinRatiosSection';
 
 import type { StockData } from '../../components/marketSection/MarketVolatility';
 import { transformTrendData, type RawTrendData, type TrendChartData } from '../../markets/components/TinHieuSecion/MarketTrendChart';
+import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
+import { ADVANCED_AND_ABOVE, BASIC_AND_ABOVE } from '@/components/auth/features';
 
 const MarketIndexChart = dynamic(
     () => import('../../components/marketSection/MarketIndexChart').then(mod => ({ default: mod.default })),
@@ -787,42 +789,52 @@ export default function SectorDetailContent() {
                 </Box>
             </Box>
 
-            {/* ========== SUB-NAVBAR (full-width bleed) ========== */}
+            {/* ========== SUB-NAVBAR: public — users can see all 3 tabs ========== */}
             <Box sx={{ mt: 4 }}>
                 <SubNavbar activeTab={activeTab} onTabChange={handleTabChange} />
             </Box>
 
-            {/* ========== TAB CONTENT ========== */}
+            {/* ========== TAB CONTENT: each gated individually ========== */}
+
+            {/* Dòng tiền → ADVANCED */}
             {activeTab === 'cashflow' && (
-                <Box sx={{ mt: 4 }}>
-                    <DongTienSection
-                        ticker={ticker}
-                        indexName={indexName}
-                        todayAllData={todayAllData}
-                        itdAllData={itdAllData}
-                        histLineTicker={histLineTicker}
-                        histLineVNINDEX={histLineVNINDEX}
-                        historyTrendData={historyTrendData}
-                        trendTodayData={trendTodayData}
-                        historyTrendLoading={historyTrendLoading}
-                    />
-                </Box>
+                <OptionalAuthWrapper requireAuth={true} requiredFeatures={ADVANCED_AND_ABOVE}>
+                    <Box sx={{ mt: 4 }}>
+                        <DongTienSection
+                            ticker={ticker}
+                            indexName={indexName}
+                            todayAllData={todayAllData}
+                            itdAllData={itdAllData}
+                            histLineTicker={histLineTicker}
+                            histLineVNINDEX={histLineVNINDEX}
+                            historyTrendData={historyTrendData}
+                            trendTodayData={trendTodayData}
+                            historyTrendLoading={historyTrendLoading}
+                        />
+                    </Box>
+                </OptionalAuthWrapper>
             )}
 
+            {/* Cổ phiếu → ADVANCED */}
             {activeTab === 'stocks' && (
-                <Box sx={{ mt: 4 }}>
-                    <StocksSection
-                        ticker={ticker}
-                        indexName={indexName}
-                        stockData={stockData}
-                    />
-                </Box>
+                <OptionalAuthWrapper requireAuth={true} requiredFeatures={ADVANCED_AND_ABOVE}>
+                    <Box sx={{ mt: 4 }}>
+                        <StocksSection
+                            ticker={ticker}
+                            indexName={indexName}
+                            stockData={stockData}
+                        />
+                    </Box>
+                </OptionalAuthWrapper>
             )}
 
+            {/* Tin tức → BASIC */}
             {activeTab === 'news' && (
-                <Box sx={{ mt: 4 }}>
-                    <NewsSection ticker={ticker} />
-                </Box>
+                <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
+                    <Box sx={{ mt: 4 }}>
+                        <NewsSection ticker={ticker} />
+                    </Box>
+                </OptionalAuthWrapper>
             )}
         </Box>
     );

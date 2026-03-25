@@ -10,6 +10,8 @@ import { ReportList } from './components';
 import NewsBreadcrumb from '../news/components/NewsBreadcrumb';
 import { spacing, fontWeight, borderRadius } from 'theme/tokens';
 import { REPORT_TYPES_INFO, ReportType } from './types';
+import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
+import { BASIC_AND_ABOVE } from '@/components/auth/features';
 
 export default function ReportsContent() {
     const router = useRouter();
@@ -102,44 +104,47 @@ export default function ReportsContent() {
                 />
             </Box>
 
-            {/* Type Tabs - Level 1 */}
-            <Box
-                sx={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: 1,
-                    mb: spacing.xs,
-                }}
-            >
-                <Chip
-                    label="Tất cả"
-                    onClick={() => router.push('/reports')}
-                    color="default"
-                    variant="filled"
+            {/* BASIC GATE: Type Tabs + Report List */}
+            <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
+                {/* Type Tabs - Level 1 */}
+                <Box
                     sx={{
-                        fontWeight: fontWeight.semibold,
-                        border: 'none',
-                        backgroundColor: 'primary.main',
-                        color: '#ffffff',
-                        '&:hover': {
-                            backgroundColor: 'primary.dark',
-                        },
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 1,
+                        mb: spacing.xs,
                     }}
-                />
-                {REPORT_TYPES_INFO.map((typeInfo) => (
+                >
                     <Chip
-                        key={typeInfo.type}
-                        label={typeInfo.type_name}
-                        onClick={() => handleTypeClick(typeInfo.type)}
+                        label="Tất cả"
+                        onClick={() => router.push('/reports')}
                         color="default"
                         variant="filled"
-                        sx={{ fontWeight: fontWeight.medium, border: 'none' }}
+                        sx={{
+                            fontWeight: fontWeight.semibold,
+                            border: 'none',
+                            backgroundColor: 'primary.main',
+                            color: '#ffffff',
+                            '&:hover': {
+                                backgroundColor: 'primary.dark',
+                            },
+                        }}
                     />
-                ))}
-            </Box>
+                    {REPORT_TYPES_INFO.map((typeInfo) => (
+                        <Chip
+                            key={typeInfo.type}
+                            label={typeInfo.type_name}
+                            onClick={() => handleTypeClick(typeInfo.type)}
+                            color="default"
+                            variant="filled"
+                            sx={{ fontWeight: fontWeight.medium, border: 'none' }}
+                        />
+                    ))}
+                </Box>
 
-            {/* Report List - Show all */}
-            <ReportList ticker={tickerSearch || undefined} />
+                {/* Report List - Show all */}
+                <ReportList ticker={tickerSearch || undefined} />
+            </OptionalAuthWrapper>
         </Box>
     );
 }

@@ -21,6 +21,8 @@ import GroupStockTable, { GroupStockRowData } from './components/GroupStockTable
 import type { StockData } from '../../components/marketSection/MarketVolatility';
 import type { RawTrendData, TrendChartData, TrendTimeRange } from '../../markets/components/TinHieuSecion/MarketTrendChart';
 import { transformTrendData } from '../../markets/components/TinHieuSecion/MarketTrendChart';
+import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
+import { ADVANCED_AND_ABOVE } from '@/components/auth/features';
 
 // Lazy load heavy chart components
 const VsiITDIndexLineChart = dynamic(
@@ -744,78 +746,81 @@ export default function GroupDetailContent() {
                 </Box>
             </Box>
 
-            {/* ========== ITD SECTION: VSI intraday chart ========== */}
-            <Box sx={{ mt: 4 }}>
-                <SectionTitle>Nhóm {indexName} trong phiên</SectionTitle>
-                <Box sx={{ mt: 2 }}>
-                    {vsiSeriesData.length > 0 ? (
-                        <VsiITDIndexLineChart
-                            seriesData={vsiSeriesData}
-                            t0ScoreSeriesData={t0ScoreSeriesData}
-                            indexToTimestamp={vsiIndexToTimestamp}
-                            xAxisMax={vsiXAxisMax}
-                            chartHeight="280px"
-                        />
-                    ) : (
-                        <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 2 }} />
-                    )}
-                </Box>
-            </Box>
-
-            {/* ========== BOTTOM SECTION: 3 Charts ========== */}
-            <Box sx={{ mt: 4 }}>
-                {/* Top row: 2 charts side by side */}
-                <SectionTitle>Nhóm {indexName} trong tháng</SectionTitle>
-                <Box sx={{
-                    display: 'flex',
-                    flexDirection: isMobile ? 'column' : 'row',
-                    gap: isMobile ? 2 : 5,
-                    mt: 2
-                }}>
-                    {/* Left: Sức mạnh dòng tiền */}
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <SucManhDongTien
-                            title=""
-                            chartHeight="300px"
-                            dates={dongTienDates}
-                            t5ScoreData={t5ScoreData}
-                            t0ScoreData={t0ScoreData}
-                        />
-                    </Box>
-
-                    {/* Right: Tương quan biến động giá và dòng tiền */}
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <TuongQuanDongTien
-                            chartHeight="300px"
-                            dates={tuongQuanDates}
-                            series={tuongQuanSeries}
-                            unit="percent"
-                        />
+            {/* ========== ADVANCED GATE: ITD + Bottom charts + Stock table ========== */}
+            <OptionalAuthWrapper requireAuth={true} requiredFeatures={ADVANCED_AND_ABOVE}>
+                {/* ========== ITD SECTION: VSI intraday chart ========== */}
+                <Box sx={{ mt: 4 }}>
+                    <SectionTitle>Nhóm {indexName} trong phiên</SectionTitle>
+                    <Box sx={{ mt: 2 }}>
+                        {vsiSeriesData.length > 0 ? (
+                            <VsiITDIndexLineChart
+                                seriesData={vsiSeriesData}
+                                t0ScoreSeriesData={t0ScoreSeriesData}
+                                indexToTimestamp={vsiIndexToTimestamp}
+                                xAxisMax={vsiXAxisMax}
+                                chartHeight="280px"
+                            />
+                        ) : (
+                            <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 2 }} />
+                        )}
                     </Box>
                 </Box>
 
-                {/* Bottom: Cấu trúc sóng */}
-                <Box sx={{ mt: 3 }}>
-                    <SectionTitle>Xu hướng nhóm {indexName}</SectionTitle>
-                    <MarketTrendChart
-                        chartData={trendChartData}
-                        isLoading={isTrendLoading}
-                        timeRange={trendTimeRange}
-                        onTimeRangeChange={setTrendTimeRange}
-                        height={345}
+                {/* ========== BOTTOM SECTION: 3 Charts ========== */}
+                <Box sx={{ mt: 4 }}>
+                    {/* Top row: 2 charts side by side */}
+                    <SectionTitle>Nhóm {indexName} trong tháng</SectionTitle>
+                    <Box sx={{
+                        display: 'flex',
+                        flexDirection: isMobile ? 'column' : 'row',
+                        gap: isMobile ? 2 : 5,
+                        mt: 2
+                    }}>
+                        {/* Left: Sức mạnh dòng tiền */}
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <SucManhDongTien
+                                title=""
+                                chartHeight="300px"
+                                dates={dongTienDates}
+                                t5ScoreData={t5ScoreData}
+                                t0ScoreData={t0ScoreData}
+                            />
+                        </Box>
+
+                        {/* Right: Tương quan biến động giá và dòng tiền */}
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <TuongQuanDongTien
+                                chartHeight="300px"
+                                dates={tuongQuanDates}
+                                series={tuongQuanSeries}
+                                unit="percent"
+                            />
+                        </Box>
+                    </Box>
+
+                    {/* Bottom: Cấu trúc sóng */}
+                    <Box sx={{ mt: 3 }}>
+                        <SectionTitle>Xu hướng nhóm {indexName}</SectionTitle>
+                        <MarketTrendChart
+                            chartData={trendChartData}
+                            isLoading={isTrendLoading}
+                            timeRange={trendTimeRange}
+                            onTimeRangeChange={setTrendTimeRange}
+                            height={345}
+                        />
+                    </Box>
+                </Box>
+
+                {/* ========== STOCK TABLE: Top 10 cổ phiếu giao dịch cao nhất ========== */}
+                <Box sx={{ mt: 4 }}>
+                    <Box sx={{ mb: 2 }}><SectionTitle>Cổ phiếu nổi bật nhóm {indexName}</SectionTitle></Box>
+                    <GroupStockTable
+                        data={topStocks}
+                        isLoading={stockData.length === 0}
+                        skeletonRows={10}
                     />
                 </Box>
-            </Box>
-
-            {/* ========== STOCK TABLE: Top 10 cổ phiếu giao dịch cao nhất ========== */}
-            <Box sx={{ mt: 4 }}>
-                <Box sx={{ mb: 2 }}><SectionTitle>Cổ phiếu nổi bật nhóm {indexName}</SectionTitle></Box>
-                <GroupStockTable
-                    data={topStocks}
-                    isLoading={stockData.length === 0}
-                    skeletonRows={10}
-                />
-            </Box>
+            </OptionalAuthWrapper>
         </Box>
     );
 }

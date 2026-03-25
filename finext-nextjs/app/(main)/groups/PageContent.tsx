@@ -9,6 +9,8 @@ import { sseClient, getFromCache } from 'services/sseClient';
 import { apiClient } from 'services/apiClient';
 import type { RawMarketData } from '../components/marketSection/MarketIndexChart';
 import StockTable, { IndexRowData } from './components/StockTable';
+import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
+import { ADVANCED_AND_ABOVE } from '@/components/auth/features';
 
 // Reuse chart components from markets page
 import DongTienTrongPhien from '../markets/components/DongTienSection/DongTienTrongPhien';
@@ -447,36 +449,38 @@ export default function GroupsContent() {
             />
 
             {/* ========== 3 NHÓM BIỂU ĐỒ ========== */}
-            {!isLoading && (
-                <>
-                    {/* Nhóm Thị trường: FNXINDEX, FNX100 */}
-                    <GroupChartRow
-                        title="Nhóm thị trường"
-                        tickers={GROUP_MARKET}
-                        rawDataMap={rawDataMap}
-                        histQueries5={marketHist5}
-                        histQueriesLine={marketHistLine}
-                    />
+            <OptionalAuthWrapper requireAuth={true} requiredFeatures={ADVANCED_AND_ABOVE}>
+                {!isLoading && (
+                    <>
+                        {/* Nhóm Thị trường: FNXINDEX, FNX100 */}
+                        <GroupChartRow
+                            title="Nhóm thị trường"
+                            tickers={GROUP_MARKET}
+                            rawDataMap={rawDataMap}
+                            histQueries5={marketHist5}
+                            histQueriesLine={marketHistLine}
+                        />
 
-                    {/* Nhóm Dòng tiền: VUOTTROI, ONDINH, SUKIEN */}
-                    <GroupChartRow
-                        title="Nhóm dòng tiền"
-                        tickers={GROUP_FLOW}
-                        rawDataMap={rawDataMap}
-                        histQueries5={flowHist5}
-                        histQueriesLine={flowHistLine}
-                    />
+                        {/* Nhóm Dòng tiền: VUOTTROI, ONDINH, SUKIEN */}
+                        <GroupChartRow
+                            title="Nhóm dòng tiền"
+                            tickers={GROUP_FLOW}
+                            rawDataMap={rawDataMap}
+                            histQueries5={flowHist5}
+                            histQueriesLine={flowHistLine}
+                        />
 
-                    {/* Nhóm Vốn hóa: LARGECAP, MIDCAP, SMALLCAP */}
-                    <GroupChartRow
-                        title="Nhóm vốn hoá"
-                        tickers={GROUP_CAP}
-                        rawDataMap={rawDataMap}
-                        histQueries5={capHist5}
-                        histQueriesLine={capHistLine}
-                    />
-                </>
-            )}
+                        {/* Nhóm Vốn hóa: LARGECAP, MIDCAP, SMALLCAP */}
+                        <GroupChartRow
+                            title="Nhóm vốn hoá"
+                            tickers={GROUP_CAP}
+                            rawDataMap={rawDataMap}
+                            histQueries5={capHist5}
+                            histQueriesLine={capHistLine}
+                        />
+                    </>
+                )}
+            </OptionalAuthWrapper>
         </Box>
     );
 }

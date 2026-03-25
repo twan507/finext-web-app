@@ -34,6 +34,8 @@ import { useSseCache } from 'hooks/useSseCache';
 import { apiClient } from 'services/apiClient';
 import AddWatchlistDialog from '../../watchlist/components/AddWatchlistDialog';
 import ConfirmDialog from '../../watchlist/components/ConfirmDialog';
+import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
+import { BASIC_AND_ABOVE } from '@/components/auth/features';
 
 interface StockData {
     ticker: string;
@@ -664,6 +666,7 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                 overflow: 'hidden',
             }}
         >
+            <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE} compact>
             {/* Header */}
             <Box sx={{ px: 1.5, py: 1, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.bold, color: 'text.primary' }}>
@@ -865,6 +868,7 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                     {snackbar.message}
                 </Alert>
             </Snackbar>
+            </OptionalAuthWrapper>
         </Box>
     );
 }

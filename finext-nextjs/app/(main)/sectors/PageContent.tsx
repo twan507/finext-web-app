@@ -10,6 +10,8 @@ import { apiClient } from 'services/apiClient';
 import type { RawMarketData } from '../components/marketSection/MarketIndexChart';
 import StockTable, { IndexRowData } from '../groups/components/StockTable';
 import FinRatiosTable from './components/FinRatiosTable';
+import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
+import { ADVANCED_AND_ABOVE } from '@/components/auth/features';
 
 // Reuse chart components from markets page
 import DongTienTrongPhien from '../markets/components/DongTienSection/DongTienTrongPhien';
@@ -266,81 +268,84 @@ export default function SectorsContent() {
                 isLoading={isLoading}
             />
 
-            {/* ========== BIỂU ĐỒ NGÀNH ========== */}
-            {!isLoading && industryTickers.length > 0 && (
-                <Box sx={{ mt: 4, ...getGlassCard(isDark), borderRadius: `${borderRadius.lg}px`, p: 2, position: 'relative', '&::before': getGlassHighlight(isDark), '&::after': getGlassEdgeLight(isDark) }}>
-                    <Typography
-                        color="text.secondary"
-                        sx={{
-                            fontSize: getResponsiveFontSize('lg'),
-                            fontWeight: fontWeight.semibold,
-                            mb: 3,
-                            textTransform: 'uppercase',
-                        }}
-                    >
-                        DÒNG TIỀN NGÀNH NGHỀ
-                    </Typography>
+            {/* ========== ADVANCED GATE: Biểu đồ + Bảng định giá ========== */}
+            <OptionalAuthWrapper requireAuth={true} requiredFeatures={ADVANCED_AND_ABOVE}>
+                {/* ========== BIỂU ĐỒ NGÀNH ========== */}
+                {!isLoading && industryTickers.length > 0 && (
+                    <Box sx={{ mt: 4, ...getGlassCard(isDark), borderRadius: `${borderRadius.lg}px`, p: 2, position: 'relative', '&::before': getGlassHighlight(isDark), '&::after': getGlassEdgeLight(isDark) }}>
+                        <Typography
+                            color="text.secondary"
+                            sx={{
+                                fontSize: getResponsiveFontSize('lg'),
+                                fontWeight: fontWeight.semibold,
+                                mb: 3,
+                                textTransform: 'uppercase',
+                            }}
+                        >
+                            DÒNG TIỀN NGÀNH NGHỀ
+                        </Typography>
 
-                    {/* 4 bar charts */}
-                    <Box
-                        sx={{
-                            display: 'grid',
-                            gridTemplateColumns: {
-                                xs: '1fr',
-                                md: '1fr 1fr',
-                                lg: '4fr 2fr 2fr 3fr',
-                            },
-                            gap: 2,
-                        }}
-                    >
-                        <Box sx={{ minWidth: 0 }}>
-                            <DongTienTrongPhien
-                                title="Dòng tiền trong phiên"
-                                categories={categories}
-                                series={bar1Series}
-                                unit="number"
-                                chartHeight="800px"
-                            />
-                        </Box>
-                        <Box sx={{ minWidth: 0 }}>
-                            <ChiSoThanhKhoan
-                                title="Chỉ số thanh khoản"
-                                categories={categories}
-                                series={bar2Series}
-                                unit="percent"
-                                chartHeight="800px"
-                            />
-                        </Box>
-                        <Box sx={{ minWidth: 0, ...(!isTablet && { ml: -2 }) }}>
-                            <PhanBoDongTien
-                                title="Phân bổ dòng tiền"
-                                categories={categories}
-                                flowData={flowData}
-                                chartHeight="800px"
-                            />
-                        </Box>
-                        <Box sx={{ minWidth: 0 }}>
-                            <DongTienTrongTuan
-                                title="Dòng tiền trong tuần"
-                                categories={categories}
-                                daySeriesData={stackedData}
-                                unit="number"
-                                chartHeight="800px"
-                            />
+                        {/* 4 bar charts */}
+                        <Box
+                            sx={{
+                                display: 'grid',
+                                gridTemplateColumns: {
+                                    xs: '1fr',
+                                    md: '1fr 1fr',
+                                    lg: '4fr 2fr 2fr 3fr',
+                                },
+                                gap: 2,
+                            }}
+                        >
+                            <Box sx={{ minWidth: 0 }}>
+                                <DongTienTrongPhien
+                                    title="Dòng tiền trong phiên"
+                                    categories={categories}
+                                    series={bar1Series}
+                                    unit="number"
+                                    chartHeight="800px"
+                                />
+                            </Box>
+                            <Box sx={{ minWidth: 0 }}>
+                                <ChiSoThanhKhoan
+                                    title="Chỉ số thanh khoản"
+                                    categories={categories}
+                                    series={bar2Series}
+                                    unit="percent"
+                                    chartHeight="800px"
+                                />
+                            </Box>
+                            <Box sx={{ minWidth: 0, ...(!isTablet && { ml: -2 }) }}>
+                                <PhanBoDongTien
+                                    title="Phân bổ dòng tiền"
+                                    categories={categories}
+                                    flowData={flowData}
+                                    chartHeight="800px"
+                                />
+                            </Box>
+                            <Box sx={{ minWidth: 0 }}>
+                                <DongTienTrongTuan
+                                    title="Dòng tiền trong tuần"
+                                    categories={categories}
+                                    daySeriesData={stackedData}
+                                    unit="number"
+                                    chartHeight="800px"
+                                />
+                            </Box>
                         </Box>
                     </Box>
-                </Box>
-            )}
+                )}
 
-            {/* ========== CHỈ SỐ ĐỊNH GIÁ NGÀNH ========== */}
-            {!finratiosLoading && finratiosData.length > 0 && (
-                <Box sx={{ mt: 6, ...getGlassCard(isDark), borderRadius: `${borderRadius.lg}px`, p: 2, position: 'relative', overflow: 'hidden', '&::before': getGlassHighlight(isDark), '&::after': getGlassEdgeLight(isDark) }}>
-                    <FinRatiosTable
-                        data={finratiosData}
-                        isLoading={finratiosLoading}
-                    />
-                </Box>
-            )}
+                {/* ========== CHỆ SỐ ĐỊNH GIÁ NGÀNH ========== */}
+                {!finratiosLoading && finratiosData.length > 0 && (
+                    <Box sx={{ mt: 6, ...getGlassCard(isDark), borderRadius: `${borderRadius.lg}px`, p: 2, position: 'relative', overflow: 'hidden', '&::before': getGlassHighlight(isDark), '&::after': getGlassEdgeLight(isDark) }}>
+                        <FinRatiosTable
+                            data={finratiosData}
+                            isLoading={finratiosLoading}
+                        />
+                    </Box>
+                )}
+            </OptionalAuthWrapper>
         </Box>
     );
 }

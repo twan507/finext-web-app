@@ -9,6 +9,8 @@ import { useRouter } from 'next/navigation';
 import { NewsBreadcrumb, NewsList } from './components';
 import { spacing, fontWeight, borderRadius } from 'theme/tokens';
 import { NEWS_TYPES_INFO, NewsType } from './types';
+import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
+import { BASIC_AND_ABOVE } from '@/components/auth/features';
 
 export default function NewsContent() {
     const router = useRouter();
@@ -101,45 +103,47 @@ export default function NewsContent() {
                 />
             </Box>
 
-            {/* Type Tabs */}
-            <Box
-                sx={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: 1,
-                    mb: spacing.xs,
-                }}
-            >
-                <Chip
-                    label="Tất cả"
-                    onClick={() => router.push('/news')}
-                    color="default"
-                    variant="filled"
+            {/* BASIC GATE: Type Tabs + News List */}
+            <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
+                {/* Type Tabs */}
+                <Box
                     sx={{
-                        fontWeight: fontWeight.semibold,
-                        border: 'none',
-                        backgroundColor: 'primary.main',
-                        color: '#ffffff',
-                        '&:hover': {
-                            backgroundColor: 'primary.dark',
-                        },
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 1,
+                        mb: spacing.xs,
                     }}
-                />
-                {NEWS_TYPES_INFO.map((typeInfo) => (
+                >
                     <Chip
-                        key={typeInfo.type}
-                        label={typeInfo.type_name}
-                        onClick={() => handleTypeClick(typeInfo.type)}
+                        label="Tất cả"
+                        onClick={() => router.push('/news')}
                         color="default"
                         variant="filled"
-                        sx={{ fontWeight: fontWeight.medium, border: 'none' }}
+                        sx={{
+                            fontWeight: fontWeight.semibold,
+                            border: 'none',
+                            backgroundColor: 'primary.main',
+                            color: '#ffffff',
+                            '&:hover': {
+                                backgroundColor: 'primary.dark',
+                            },
+                        }}
                     />
-                ))}
-            </Box>
+                    {NEWS_TYPES_INFO.map((typeInfo) => (
+                        <Chip
+                            key={typeInfo.type}
+                            label={typeInfo.type_name}
+                            onClick={() => handleTypeClick(typeInfo.type)}
+                            color="default"
+                            variant="filled"
+                            sx={{ fontWeight: fontWeight.medium, border: 'none' }}
+                        />
+                    ))}
+                </Box>
 
-            {/* News List */}
-            <NewsList ticker={tickerSearch || undefined} />
+                {/* News List */}
+                <NewsList ticker={tickerSearch || undefined} />
+            </OptionalAuthWrapper>
         </Box>
     );
 }
-

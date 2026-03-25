@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
+import { BASIC_AND_ABOVE } from '@/components/auth/features';
 import { Box, Typography, Button, CircularProgress, useTheme, useMediaQuery, Snackbar, Alert } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import {
@@ -92,7 +93,6 @@ export default function WatchlistContent() {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-    const router = useRouter();
     const { session, loading: authLoading } = useAuth();
 
     const [watchlists, setWatchlists] = useState<Watchlist[]>([]);
@@ -315,12 +315,6 @@ export default function WatchlistContent() {
         }
     }, []);
 
-    // Redirect to login if not authenticated
-    useEffect(() => {
-        if (!authLoading && !session) {
-            router.push('/login?callbackUrl=/watchlist');
-        }
-    }, [authLoading, session, router]);
 
     useEffect(() => {
         if (session) fetchWatchlists();
@@ -493,8 +487,7 @@ export default function WatchlistContent() {
         }
     };
 
-    // ── render ──
-    if (authLoading || !session || loading) {
+    if (authLoading) {
         return (
             <Box sx={{ py: 6, display: 'flex', justifyContent: 'center' }}>
                 <CircularProgress size={32} />
@@ -505,32 +498,35 @@ export default function WatchlistContent() {
     // Empty state — just one button
     if (watchlists.length === 0) {
         return (
-            <Box sx={{ py: 2 }}>
-                <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1'), lineHeight: 1.2, fontWeight: fontWeight.bold, mb: 4 }}>
-                    Danh sách theo dõi
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 8, gap: 2 }}>
-                    <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('md') }}>
-                        Bạn chưa có watchlist nào
+            <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
+                <Box sx={{ py: 2 }}>
+                    <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1'), lineHeight: 1.2, fontWeight: fontWeight.bold, mb: 4 }}>
+                        Danh sách theo dõi
                     </Typography>
-                    <Button variant="contained" startIcon={<AddIcon />} onClick={() => openCreate([0, 0])} size="large">
-                        Thêm Watchlist
-                    </Button>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 8, gap: 2 }}>
+                        <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('md') }}>
+                            Bạn chưa có watchlist nào
+                        </Typography>
+                        <Button variant="contained" startIcon={<AddIcon />} onClick={() => openCreate([0, 0])} size="large">
+                            Thêm Watchlist
+                        </Button>
+                    </Box>
+                    <AddWatchlistDialog
+                        open={dialogOpen}
+                        onClose={() => { setDialogOpen(false); setEditingWatchlist(null); }}
+                        onSaved={handleSaved}
+                        defaultCoordinate={dialogCoordinate}
+                        defaultPage={currentPage}
+                        editingWatchlist={editingWatchlist}
+                        industries={industries}
+                    />
                 </Box>
-                <AddWatchlistDialog
-                    open={dialogOpen}
-                    onClose={() => { setDialogOpen(false); setEditingWatchlist(null); }}
-                    onSaved={handleSaved}
-                    defaultCoordinate={dialogCoordinate}
-                    defaultPage={currentPage}
-                    editingWatchlist={editingWatchlist}
-                    industries={industries}
-                />
-            </Box>
+            </OptionalAuthWrapper>
         );
     }
 
     return (
+        <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
         <Box sx={{ py: 2 }}>
             <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1'), lineHeight: 1.2, fontWeight: fontWeight.bold, mb: 2 }}>
                 Danh sách theo dõi
@@ -764,5 +760,6 @@ export default function WatchlistContent() {
                 </Alert>
             </Snackbar>
         </Box>
+        </OptionalAuthWrapper>
     );
 }

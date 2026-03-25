@@ -19,6 +19,8 @@ import NuocNgoaiSection from './components/NuocNgoaiSection';
 import TuDoanhSection from './components/TuDoanhSection';
 // TODO: remove import TinHieuSection from './components/TinHieuSection';
 import PTKTSection from './components/PTKTSection';
+import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
+import { BASIC_AND_ABOVE, ADVANCED_AND_ABOVE } from '@/components/auth/features';
 
 import { ISseRequest } from 'services/core/types';
 import { sseClient, getFromCache } from 'services/sseClient';
@@ -358,9 +360,17 @@ export default function MarketsContent() {
       case 'cashflow':
         return <DongTienSection histIndexData={histIndexData} todayAllData={todayAllData} itdAllData={itdAllData} />;
       case 'valuation':
-        return <DinhGiaSection />;
+        return (
+          <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
+            <DinhGiaSection />
+          </OptionalAuthWrapper>
+        );
       case 'ptkt':
-        return <PTKTSection />;
+        return (
+          <OptionalAuthWrapper requireAuth={true} requiredFeatures={ADVANCED_AND_ABOVE}>
+            <PTKTSection />
+          </OptionalAuthWrapper>
+        );
       case 'foreign':
         return <NuocNgoaiSection />;
       case 'proprietary':

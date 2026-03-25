@@ -177,7 +177,7 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
     const primaryColor = theme.palette.primary.main;
     const upColor = chartColors?.upColor || (isDark ? '#26a69a' : '#089981');
     const downColor = chartColors?.downColor || (isDark ? '#ef5350' : '#f23645');
-    const gridColor = chartColors?.gridLine || (isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.15)');
+    const gridColor = isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)';
     const crosshairColor = chartColors?.crosshair || (isDark ? '#555' : 'rgba(0,0,0,0.3)');
     const textColor = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)';
     const bgColor = theme.palette.background.default;

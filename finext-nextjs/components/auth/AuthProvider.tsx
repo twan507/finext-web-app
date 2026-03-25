@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 // User type ở đây sẽ là User từ session.ts, đã được cập nhật
 import { getSession, clearSession, SessionData, saveSession as saveSessionToStorage, updateAccessToken, User, getAccessToken } from 'services/core/session';
 import { apiClient, clearApiCache } from 'services/apiClient';
+import { clearCache as clearSseCache } from 'services/sseClient';
 import { logoutApi } from 'services/authService';
 // UserSchema cũng cần được import nếu bạn dùng nó trực tiếp ở đây
 import { LoginResponse, UserSchema } from 'services/core/types';
@@ -142,6 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await logoutApi(); // Backend sẽ xóa HttpOnly cookie
     clearSession(); // Frontend xóa localStorage
     clearApiCache(); // Xóa toàn bộ API cache trong memory
+    clearSseCache(); // Xóa toàn bộ SSE cache trong memory
     setSession(null);
     setFeatures([]);
     setLoading(false);
@@ -149,6 +151,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   const login = useCallback((sessionData: SessionData) => {
+    clearApiCache(); // Xóa cache API cũ khi đăng nhập tài khoản mới
+    clearSseCache(); // Xóa cache SSE cũ khi đăng nhập tài khoản mới
     saveSessionToStorage(sessionData); // Lưu user (có subscription_id), accessToken, features
     setSession(sessionData);
     setFeatures(sessionData.features || []);

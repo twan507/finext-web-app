@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
+import { BASIC_AND_ABOVE } from '@/components/auth/features';
 import { useQueries } from '@tanstack/react-query';
 import { Box, Typography, useTheme, useMediaQuery } from '@mui/material';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
@@ -440,6 +442,7 @@ export default function DongTienSection({ histIndexData, todayAllData, itdAllDat
     );
 
     return (
+        <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
         <Box sx={{ py: 3 }}>
             <Typography
                 color="text.secondary"
@@ -610,5 +613,6 @@ export default function DongTienSection({ histIndexData, todayAllData, itdAllDat
                 </Box>
             </Box>
         </Box>
+        </OptionalAuthWrapper>
     );
 }

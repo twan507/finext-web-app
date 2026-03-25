@@ -359,8 +359,7 @@ const DEFAULT_ENABLED_KEYS: ReadonlySet<string> = new Set([
     'ma60',
     'm_fibo',
     'q_fibo',
-    'm_poc',
-    'q_poc',
+    'y_fibo',
     'vsma5',
     'vsma60',
 ]);

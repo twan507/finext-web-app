@@ -68,7 +68,9 @@ export default function IndexDetailPanel({ indexName, todayData }: IndexDetailPa
 
     const formatPct = (v: number | undefined | null) => {
         if (v == null) return '—';
-        return `${v > 0 ? '+' : ''}${v.toFixed(2)}%`;
+        const fixed = v.toFixed(2);
+        if (fixed === '0.00' || fixed === '-0.00') return '0.00%';
+        return `${v > 0 ? '+' : ''}${fixed}%`;
     };
     const formatPrice = (v: number | undefined | null) => {
         if (v == null) return '—';

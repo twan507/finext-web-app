@@ -15,6 +15,8 @@ import TableViewSelector from './components/TableViewSelector';
 import ResultTable from './components/ResultTable';
 import ColumnCustomizer from './components/ColumnCustomizer';
 import { FILTER_PRESETS, COLUMN_MAP } from './screenerConfig';
+import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
+import { ADVANCED_AND_ABOVE } from '@/components/auth/features';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -446,201 +448,204 @@ export default function StocksContent() {
                 />
             </Box>
 
-            {/* ─── Preset Filter Templates ─── */}
-            <Box sx={{ mb: 2, display: 'flex', gap: 0.75, flexWrap: 'wrap', alignItems: 'center' }}>
-                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', fontWeight: fontWeight.medium }}>
-                    Mẫu lọc:
-                </Typography>
-                {FILTER_PRESETS.map(preset => (
-                    <PresetChip
-                        key={preset.id}
-                        preset={preset}
-                        active={store.state.activePresetId === preset.id}
-                        onClick={() => handleApplyPreset(preset.id)}
-                        isDark={isDark}
-                        theme={theme}
-                    />
-                ))}
-            </Box>
-
-            {/* ─── Filter Box ─── */}
-            <Box sx={{ ...getGlassCard(isDark), borderRadius: `${borderRadius.lg}px`, p: 2, mb: 2 }}>
-                <FilterBar
-                    meta={meta ?? { exchange: [], industry_name: [], marketcap_name: [], category_name: [] }}
-                    selectFilters={store.state.selectFilters}
-                    onSetSelectFilter={store.setSelectFilter}
-                    onClearSelectFilter={store.clearSelectFilter}
-                    filterCount={store.activeFilterCount}
-                    onClearAll={store.clearAllFilters}
-                />
-
-                {/* Filter toggle buttons */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 1.5 }}>
-                    {[
-                        {
-                            active: showDetail,
-                            onToggle: () => setShowDetail((v: boolean) => !v),
-                            label: 'Lọc nâng cao',
-                            color: theme.palette.warning.main,
-                            badge: Object.keys(store.state.rangeFilters).length + Object.values(store.state.selectFilters).filter(v => v.length > 0).length,
-                        },
-                        {
-                            active: showIndicator,
-                            onToggle: () => setShowIndicator((v: boolean) => !v),
-                            label: 'Lọc kỹ thuật',
-                            color: theme.palette.primary.main,
-                            badge: store.state.advancedFilters.length,
-                        },
-                    ].map(({ active, onToggle, label, color, badge }) => (
-                        <Box
-                            key={label}
-                            component="button"
-                            onClick={onToggle}
-                            sx={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 0.5,
-                                px: 1.25,
-                                height: 28,
-                                borderRadius: `${borderRadius.pill}px`,
-                                border: `1px solid ${active ? alpha(color, 0.4) : alpha(theme.palette.divider, 0.4)}`,
-                                bgcolor: active ? alpha(color, 0.08) : 'transparent',
-                                color: active ? color : theme.palette.text.secondary,
-                                cursor: 'pointer',
-                                fontSize: getResponsiveFontSize('xs'),
-                                fontWeight: active ? fontWeight.semibold : fontWeight.medium,
-                                transition: `all ${durations.fast} ${easings.easeOut}`,
-                                '&:hover': {
-                                    bgcolor: alpha(color, 0.06),
-                                    borderColor: alpha(color, 0.3),
-                                },
-                            }}
-                        >
-                            <Icon icon={active ? 'solar:filter-bold' : 'solar:filter-linear'} width={13} />
-                            {label}
-                            {badge > 0 && (
-                                <Box sx={{
-                                    ml: 0.25, px: 0.625, py: 0.1,
-                                    borderRadius: `${borderRadius.pill}px`,
-                                    bgcolor: color,
-                                    color: '#fff',
-                                    fontSize: '0.6rem',
-                                    fontWeight: fontWeight.bold,
-                                    lineHeight: 1.6,
-                                    minWidth: 16,
-                                    textAlign: 'center',
-                                }}>
-                                    {badge}
-                                </Box>
-                            )}
-                        </Box>
+            {/* ─── ADVANCED GATE: Preset chips + Filters + Table ─── */}
+            <OptionalAuthWrapper requireAuth={true} requiredFeatures={ADVANCED_AND_ABOVE}>
+                {/* ─── Preset Filter Templates ─── */}
+                <Box sx={{ mb: 2, display: 'flex', gap: 0.75, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', fontWeight: fontWeight.medium }}>
+                        Mẫu lọc:
+                    </Typography>
+                    {FILTER_PRESETS.map(preset => (
+                        <PresetChip
+                            key={preset.id}
+                            preset={preset}
+                            active={store.state.activePresetId === preset.id}
+                            onClick={() => handleApplyPreset(preset.id)}
+                            isDark={isDark}
+                            theme={theme}
+                        />
                     ))}
                 </Box>
 
-                {(showDetail || showIndicator) && (
-                    <Box sx={{ mt: 1.5 }}>
-                        <AdvancedFilterPanel
-                            rangeFilters={store.state.rangeFilters}
-                            advancedFilters={store.state.advancedFilters}
-                            selectFilters={store.state.selectFilters}
-                            showDetail={showDetail}
-                            showIndicator={showIndicator}
-                            onSetRangeFilter={store.setRangeFilter}
-                            onClearRangeFilter={store.clearRangeFilter}
-                            onAddAdvancedFilter={store.addAdvancedFilter}
-                            onRemoveAdvancedFilter={store.removeAdvancedFilter}
-                            onClearAdvancedFilters={store.clearAdvancedFilters}
-                            onSetSelectFilter={store.setSelectFilter}
-                            onClearSelectFilter={store.clearSelectFilter}
-                        />
-                    </Box>
-                )}
-            </Box>
+                {/* ─── Filter Box ─── */}
+                <Box sx={{ ...getGlassCard(isDark), borderRadius: `${borderRadius.lg}px`, p: 2, mb: 2 }}>
+                    <FilterBar
+                        meta={meta ?? { exchange: [], industry_name: [], marketcap_name: [], category_name: [] }}
+                        selectFilters={store.state.selectFilters}
+                        onSetSelectFilter={store.setSelectFilter}
+                        onClearSelectFilter={store.clearSelectFilter}
+                        filterCount={store.activeFilterCount}
+                        onClearAll={store.clearAllFilters}
+                    />
 
-            {/* ─── Table View Selector ─── */}
-            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-                <TableViewSelector
-                    activeView={store.state.tableView}
-                    onViewChange={store.setTableView}
-                    onOpenColumnCustomizer={() => setShowColumnCustomizer(true)}
-                />
-            </Box>
-
-            {/* ─── Results Table ─── */}
-            <Box sx={{ ...getGlassCard(isDark), borderRadius: `${borderRadius.lg}px`, overflow: 'hidden', px: 1, py: 0.5 }}>
-                <ResultTable
-                    data={pagedData}
-                    columns={store.activeColumns}
-                    sortField={store.state.sortField}
-                    sortOrder={store.state.sortOrder}
-                    onToggleSort={store.toggleSort}
-                    onReorderColumns={store.reorderColumns}
-                    isLoading={dataLoading}
-                />
-
-                {/* Pagination footer */}
-                {!dataLoading && filteredData.length > 0 && (
-                    <Box sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        flexWrap: 'wrap',
-                        gap: 1,
-                        px: 1,
-                        py: 1,
-                        borderTop: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
-                        mt: 0.5,
-                    }}>
-                        {/* Left: page info + per-page selector */}
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', whiteSpace: 'nowrap' }}>
-                                {pageSize === 0
-                                    ? `Tất cả ${filteredData.length.toLocaleString()} cổ phiếu`
-                                    : `${Math.min((currentPage - 1) * pageSize + 1, filteredData.length).toLocaleString()}–${Math.min(currentPage * pageSize, filteredData.length).toLocaleString()} / ${filteredData.length.toLocaleString()}`
-                                }
-                            </Typography>
-
-                            <PageSizeDropdown
-                                pageSize={pageSize}
-                                onChangePageSize={(n) => { setPageSize(n); setCurrentPage(1); }}
-                            />
-                        </Box>
-
-                        {/* Right: page buttons */}
-                        {totalPages > 1 && (
-                            <Pagination
-                                count={totalPages}
-                                page={currentPage}
-                                onChange={(_, val) => setCurrentPage(val)}
-                                color="primary"
-                                size="small"
-                                showFirstButton
-                                showLastButton
+                    {/* Filter toggle buttons */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 1.5 }}>
+                        {[
+                            {
+                                active: showDetail,
+                                onToggle: () => setShowDetail((v: boolean) => !v),
+                                label: 'Lọc nâng cao',
+                                color: theme.palette.warning.main,
+                                badge: Object.keys(store.state.rangeFilters).length + Object.values(store.state.selectFilters).filter(v => v.length > 0).length,
+                            },
+                            {
+                                active: showIndicator,
+                                onToggle: () => setShowIndicator((v: boolean) => !v),
+                                label: 'Lọc kỹ thuật',
+                                color: theme.palette.primary.main,
+                                badge: store.state.advancedFilters.length,
+                            },
+                        ].map(({ active, onToggle, label, color, badge }) => (
+                            <Box
+                                key={label}
+                                component="button"
+                                onClick={onToggle}
                                 sx={{
-                                    '& .MuiPaginationItem-root': {
-                                        borderRadius: `${borderRadius.sm}px`,
-                                        fontSize: getResponsiveFontSize('xs'),
-                                        color: theme.palette.text.secondary,
-                                    },
-                                    '& .MuiPaginationItem-root.Mui-selected': {
-                                        color: '#fff',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                    px: 1.25,
+                                    height: 28,
+                                    borderRadius: `${borderRadius.pill}px`,
+                                    border: `1px solid ${active ? alpha(color, 0.4) : alpha(theme.palette.divider, 0.4)}`,
+                                    bgcolor: active ? alpha(color, 0.08) : 'transparent',
+                                    color: active ? color : theme.palette.text.secondary,
+                                    cursor: 'pointer',
+                                    fontSize: getResponsiveFontSize('xs'),
+                                    fontWeight: active ? fontWeight.semibold : fontWeight.medium,
+                                    transition: `all ${durations.fast} ${easings.easeOut}`,
+                                    '&:hover': {
+                                        bgcolor: alpha(color, 0.06),
+                                        borderColor: alpha(color, 0.3),
                                     },
                                 }}
-                            />
-                        )}
+                            >
+                                <Icon icon={active ? 'solar:filter-bold' : 'solar:filter-linear'} width={13} />
+                                {label}
+                                {badge > 0 && (
+                                    <Box sx={{
+                                        ml: 0.25, px: 0.625, py: 0.1,
+                                        borderRadius: `${borderRadius.pill}px`,
+                                        bgcolor: color,
+                                        color: '#fff',
+                                        fontSize: '0.6rem',
+                                        fontWeight: fontWeight.bold,
+                                        lineHeight: 1.6,
+                                        minWidth: 16,
+                                        textAlign: 'center',
+                                    }}>
+                                        {badge}
+                                    </Box>
+                                )}
+                            </Box>
+                        ))}
                     </Box>
-                )}
-            </Box>
 
-            {showColumnCustomizer && (
-                <ColumnCustomizer
-                    open={showColumnCustomizer}
-                    onClose={() => setShowColumnCustomizer(false)}
-                    selectedColumns={store.state.customColumns}
-                    onSetColumns={store.setCustomColumns}
-                    onToggleColumn={store.toggleCustomColumn}
-                />
-            )}
+                    {(showDetail || showIndicator) && (
+                        <Box sx={{ mt: 1.5 }}>
+                            <AdvancedFilterPanel
+                                rangeFilters={store.state.rangeFilters}
+                                advancedFilters={store.state.advancedFilters}
+                                selectFilters={store.state.selectFilters}
+                                showDetail={showDetail}
+                                showIndicator={showIndicator}
+                                onSetRangeFilter={store.setRangeFilter}
+                                onClearRangeFilter={store.clearRangeFilter}
+                                onAddAdvancedFilter={store.addAdvancedFilter}
+                                onRemoveAdvancedFilter={store.removeAdvancedFilter}
+                                onClearAdvancedFilters={store.clearAdvancedFilters}
+                                onSetSelectFilter={store.setSelectFilter}
+                                onClearSelectFilter={store.clearSelectFilter}
+                            />
+                        </Box>
+                    )}
+                </Box>
+
+                {/* ─── Table View Selector ─── */}
+                <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+                    <TableViewSelector
+                        activeView={store.state.tableView}
+                        onViewChange={store.setTableView}
+                        onOpenColumnCustomizer={() => setShowColumnCustomizer(true)}
+                    />
+                </Box>
+
+                {/* ─── Results Table ─── */}
+                <Box sx={{ ...getGlassCard(isDark), borderRadius: `${borderRadius.lg}px`, overflow: 'hidden', px: 1, py: 0.5 }}>
+                    <ResultTable
+                        data={pagedData}
+                        columns={store.activeColumns}
+                        sortField={store.state.sortField}
+                        sortOrder={store.state.sortOrder}
+                        onToggleSort={store.toggleSort}
+                        onReorderColumns={store.reorderColumns}
+                        isLoading={dataLoading}
+                    />
+
+                    {/* Pagination footer */}
+                    {!dataLoading && filteredData.length > 0 && (
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            flexWrap: 'wrap',
+                            gap: 1,
+                            px: 1,
+                            py: 1,
+                            borderTop: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+                            mt: 0.5,
+                        }}>
+                            {/* Left: page info + per-page selector */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', whiteSpace: 'nowrap' }}>
+                                    {pageSize === 0
+                                        ? `Tất cả ${filteredData.length.toLocaleString()} cổ phiếu`
+                                        : `${Math.min((currentPage - 1) * pageSize + 1, filteredData.length).toLocaleString()}–${Math.min(currentPage * pageSize, filteredData.length).toLocaleString()} / ${filteredData.length.toLocaleString()}`
+                                    }
+                                </Typography>
+
+                                <PageSizeDropdown
+                                    pageSize={pageSize}
+                                    onChangePageSize={(n) => { setPageSize(n); setCurrentPage(1); }}
+                                />
+                            </Box>
+
+                            {/* Right: page buttons */}
+                            {totalPages > 1 && (
+                                <Pagination
+                                    count={totalPages}
+                                    page={currentPage}
+                                    onChange={(_, val) => setCurrentPage(val)}
+                                    color="primary"
+                                    size="small"
+                                    showFirstButton
+                                    showLastButton
+                                    sx={{
+                                        '& .MuiPaginationItem-root': {
+                                            borderRadius: `${borderRadius.sm}px`,
+                                            fontSize: getResponsiveFontSize('xs'),
+                                            color: theme.palette.text.secondary,
+                                        },
+                                        '& .MuiPaginationItem-root.Mui-selected': {
+                                            color: '#fff',
+                                        },
+                                    }}
+                                />
+                            )}
+                        </Box>
+                    )}
+                </Box>
+
+                {showColumnCustomizer && (
+                    <ColumnCustomizer
+                        open={showColumnCustomizer}
+                        onClose={() => setShowColumnCustomizer(false)}
+                        selectedColumns={store.state.customColumns}
+                        onSetColumns={store.setCustomColumns}
+                        onToggleColumn={store.toggleCustomColumn}
+                    />
+                )}
+            </OptionalAuthWrapper>
         </Box>
     );
 }
