@@ -92,7 +92,7 @@ const DEFAULT_VISIBLE_BARS_DESKTOP = 180;
 const DEFAULT_VISIBLE_BARS_TABLET = 120;
 const DEFAULT_VISIBLE_BARS_MOBILE = 60;
 const INITIAL_RIGHT_MARGIN_DESKTOP = 10; // Khoảng trống bên phải nến cuối khi render lần đầu
-const INITIAL_RIGHT_MARGIN_MOBILE = 2;
+const INITIAL_RIGHT_MARGIN_MOBILE = 10;
 // Lazy load: trigger loadMore khi scroll gần cạnh trái (logical index < threshold)
 const LOAD_MORE_THRESHOLD = 50;
 
@@ -177,7 +177,7 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
     const primaryColor = theme.palette.primary.main;
     const upColor = chartColors?.upColor || (isDark ? '#26a69a' : '#089981');
     const downColor = chartColors?.downColor || (isDark ? '#ef5350' : '#f23645');
-    const gridColor = chartColors?.gridLine || (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)');
+    const gridColor = chartColors?.gridLine || (isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.15)');
     const crosshairColor = chartColors?.crosshair || (isDark ? '#555' : 'rgba(0,0,0,0.3)');
     const textColor = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)';
     const bgColor = theme.palette.background.default;
@@ -266,10 +266,13 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
         }
     }, [data, ticker]);
 
-    // Create chart - only once per theme change
+    const hasData = data.length > 0;
+
+    // Create chart - only once when data first becomes available
     useEffect(() => {
         if (!chartContainerRef.current) return;
-        if (data.length === 0) return;
+        if (!hasData) return;
+        if (chartRef.current) return; // already created, theme changes handled separately
 
         const containerEl = chartContainerRef.current;
 
@@ -565,7 +568,50 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
             prevDataLengthRef.current = 0;
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [bgColor, textColor, gridColor, crosshairColor, upColor, downColor, isDark, primaryColor, lineColor]);
+    }, [hasData]);
+
+    // Update chart colors when theme changes - no chart recreation needed
+    useEffect(() => {
+        if (!chartRef.current) return;
+
+        chartRef.current.applyOptions({
+            layout: {
+                background: { type: ColorType.Solid, color: bgColor },
+                textColor,
+            },
+            grid: {
+                vertLines: { color: gridColor },
+                horzLines: { color: gridColor },
+            },
+            crosshair: {
+                vertLine: {
+                    color: crosshairColor,
+                    labelBackgroundColor: isDark ? '#333' : '#f0f0f0',
+                },
+                horzLine: {
+                    color: crosshairColor,
+                    labelBackgroundColor: isDark ? '#333' : '#f0f0f0',
+                },
+            },
+            rightPriceScale: { borderColor: gridColor },
+            timeScale: { borderColor: gridColor },
+        });
+
+        candleSeriesRef.current?.applyOptions({
+            upColor,
+            downColor,
+            borderDownColor: downColor,
+            borderUpColor: upColor,
+            wickDownColor: downColor,
+            wickUpColor: upColor,
+        });
+
+        lineSeriesRef.current?.applyOptions({
+            color: lineColor,
+            crosshairMarkerBorderColor: lineColor,
+            crosshairMarkerBackgroundColor: bgColor,
+        });
+    }, [bgColor, textColor, gridColor, crosshairColor, upColor, downColor, isDark, lineColor]);
 
     // Reset chart range when timeframe changes (bar count changes significantly)
     // IMPORTANT: Must be declared BEFORE data update effect so React runs it first

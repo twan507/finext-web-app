@@ -1006,7 +1006,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               bgcolor: theme.palette.background.default,
               display: 'flex',
               flexDirection: 'column',
-              height: `calc(100dvh - ${layoutTokens.appBarHeight}px)`,
+              height: `calc(100dvh - ${layoutTokens.appBarHeight}px - env(titlebar-area-height, 0px))`,
               overflow: 'hidden',
               pb: { xs: '44px', md: 0 },
             }}

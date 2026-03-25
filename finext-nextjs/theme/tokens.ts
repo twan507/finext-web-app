@@ -132,24 +132,30 @@ declare module '@mui/material/styles' {
 }
 
 // --------------------
+// THEME PRIMARY COLORS (single source of truth)
+// --------------------
+const LIGHT_PRIMARY_MAIN = '#8b5cf6'; // Violet-500
+const DARK_PRIMARY_MAIN  = '#b47eff'; // Violet-400 (lighter for dark bg)
+
+// --------------------
 // TREND COLOR TOKENS
 // --------------------
 export const trendColors = {
   up: {
-    light: '#20b927', // Green-600
-    dark: '#22c55e',  // Green-500
+    light: '#25b770', // Green-600
+    dark: '#25b770',  // Green-500
   },
   down: {
-    light: '#e11d1d', // Rose-600
-    dark: '#d45050',  // Rose-400
+    light: '#e14040', // Rose-600
+    dark: '#e14040',  // Rose-400
   },
   ref: {
-    light: '#d4d100', // Yellow hue, desaturated — vàng xám đậm, không cam
-    dark: '#c5c900',  // Yellow-400
+    light: '#ffc752', // Yellow hue, desaturated — vàng xám đậm, không cam
+    dark: '#ffc752',  // Yellow-400
   },
   ceil: {
-    light: '#7e22ce', // Purple-700
-    dark: '#a855f7',  // Purple-500
+    light: LIGHT_PRIMARY_MAIN, // đồng bộ với primary.main light
+    dark:  DARK_PRIMARY_MAIN,  // đồng bộ với primary.main dark
   },
   floor: {
     light: '#0593bb', // Cyan-700
@@ -165,7 +171,7 @@ export const trendColors = {
 export const lightThemePalette: PaletteOptions = {
   mode: 'light',
   primary: {
-    main: '#8b5cf6',
+    main: LIGHT_PRIMARY_MAIN,
     light: '#a855f7',
     dark: '#7c3aed',
     contrastText: '#fafbfc',
@@ -245,7 +251,7 @@ export const lightThemePalette: PaletteOptions = {
       areaBottom: 'rgba(139, 92, 246, 0.05)',
       upColor: trendColors.up.light,
       downColor: trendColors.down.light,
-      gridLine: 'rgba(0, 0, 0, 0.06)',
+      gridLine: 'rgba(0, 0, 0, 0.15)',
       crosshair: 'rgba(0, 0, 0, 0.3)',
       buttonBackground: '#f0f0f0',
       buttonBackgroundHover: '#e5e5e5',
@@ -347,7 +353,7 @@ export const darkThemePalette: PaletteOptions = {
       areaBottom: 'rgba(180, 126, 255, 0.05)',
       upColor: trendColors.up.dark,
       downColor: trendColors.down.dark,
-      gridLine: 'rgba(255, 255, 255, 0.08)',
+      gridLine: 'rgba(255, 255, 255, 0.18)',
       crosshair: '#444444',
       buttonBackground: '#1e1e1e',
       buttonBackgroundHover: '#2a2a2a',
