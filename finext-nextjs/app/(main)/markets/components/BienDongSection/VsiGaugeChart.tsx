@@ -48,8 +48,8 @@ export default function VsiGaugeChart({ value, chartHeight = '250px' }: VsiGauge
             toolbar: { show: false },
             fontFamily: 'inherit',
             animations: { enabled: true, speed: 500 },
-            // Push arc upward so the ±110° arc ends don't get clipped at bottom
-            offsetY: 15,
+            // Sparkline removes all internal padding — arc fills full SVG area
+            sparkline: { enabled: true },
         },
         plotOptions: {
             radialBar: {
@@ -64,7 +64,6 @@ export default function VsiGaugeChart({ value, chartHeight = '250px' }: VsiGauge
                     strokeWidth: '100%',
                     margin: 0,
                 },
-                // Text rendered as overlay JSX for precise positioning
                 dataLabels: {
                     name: { show: false },
                     value: { show: false },
@@ -84,22 +83,33 @@ export default function VsiGaugeChart({ value, chartHeight = '250px' }: VsiGauge
     const series = useMemo(() => [parseFloat(displayValue.toFixed(2))], [displayValue]);
 
     return (
-        <Box sx={{ width: '100%', height: chartHeight, position: 'relative' }}>
-            {/* Arc chart fills the full container */}
-            <Chart
-                options={chartOptions}
-                series={series}
-                type="radialBar"
-                height={chartHeight}
-                width="100%"
-            />
-
-            {/* Percentage — overlaid in hollow center.
-                bottom % compensates for chart.offsetY: -28 shifting arc upward. */}
+        <Box sx={{ width: '100%', height: chartHeight, position: 'relative', overflow: 'hidden' }}>
+            {/* Render chart larger than container — overflow: hidden crops the empty bottom.
+                The arc (200° semicircle) only uses the top ~60% of the SVG square,
+                so rendering at 150% height makes the arc fill the visible area. */}
             <Box
                 sx={{
                     position: 'absolute',
-                    bottom: '34%',
+                    top: -20,
+                    left: '-5%',
+                    width: '109%',
+                    height: '140%',
+                }}
+            >
+                <Chart
+                    options={chartOptions}
+                    series={series}
+                    type="radialBar"
+                    height="100%"
+                    width="100%"
+                />
+            </Box>
+
+            {/* Percentage — overlaid in hollow center */}
+            <Box
+                sx={{
+                    position: 'absolute',
+                    top: '52%',
                     left: 0,
                     right: 0,
                     display: 'flex',
@@ -109,7 +119,7 @@ export default function VsiGaugeChart({ value, chartHeight = '250px' }: VsiGauge
             >
                 <Typography
                     sx={{
-                        fontSize: getResponsiveFontSize('xxl'),
+                        fontSize: getResponsiveFontSize('h4'),
                         fontWeight: fontWeight.bold,
                         color: arcColor,
                         lineHeight: 1,
@@ -119,32 +129,32 @@ export default function VsiGaugeChart({ value, chartHeight = '250px' }: VsiGauge
                 </Typography>
             </Box>
 
-            {/* Level badge — sits just below the arc end points */}
+            {/* Level badge */}
             <Box
                 sx={{
-                    position: 'absolute',
-                    bottom: '6%',
+                    bottom: '4%',
                     left: 0,
                     right: 0,
                     display: 'flex',
                     justifyContent: 'center',
                     pointerEvents: 'none',
+                    position: 'absolute',
                 }}
             >
                 <Box
                     sx={{
-                        py: 0.75,
+                        py: 1,
                         borderRadius: 1.5,
                         backgroundColor: arcColor,
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        minWidth: 150,
+                        minWidth: 180,
                     }}
                 >
                     <Typography
                         sx={{
-                            fontSize: getResponsiveFontSize('md'),
+                            fontSize: getResponsiveFontSize('lg').md,
                             fontWeight: fontWeight.semibold,
                             color: '#fff',
                             letterSpacing: '0.04em',
