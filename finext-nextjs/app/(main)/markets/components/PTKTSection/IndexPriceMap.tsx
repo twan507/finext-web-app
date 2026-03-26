@@ -213,9 +213,11 @@ export default function VNINDEXPriceMap({ chartIndicatorData, currentPrice, curr
         return levels;
     }, [chartIndicatorData, currentPrice, enabledTimeframes, enabledGroups]);
 
-    const clusters = useMemo(() => clusterLevels(priceLevels), [priceLevels]);
-    const aboveClusters = clusters.filter(c => c.avgPctDiff > 0.01);
-    const belowClusters = clusters.filter(c => c.avgPctDiff <= 0.01);
+    const { aboveClusters, belowClusters } = useMemo(() => {
+        const above = priceLevels.filter(l => l.pctDiff > 0.01);
+        const below = priceLevels.filter(l => l.pctDiff <= 0.01);
+        return { aboveClusters: clusterLevels(above), belowClusters: clusterLevels(below) };
+    }, [priceLevels]);
 
     const getTimeframeColor = (tf: TimeframeKey | null, field?: string): string => {
         if (tf) return isDark ? TIMEFRAME_COLORS[tf].dark : TIMEFRAME_COLORS[tf].light;
