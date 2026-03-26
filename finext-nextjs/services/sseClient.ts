@@ -39,6 +39,8 @@ interface ConnectionEntry<T = any> {
   lastError: SseError | null;
   reconnectAttempts: number;
   reconnectTimeout: NodeJS.Timeout | null;
+  /** Factory function để tái tạo connection khi tab visible lại */
+  reconnector: (() => void) | null;
 }
 
 // ========== Constants ==========
@@ -77,6 +79,46 @@ function stopCacheCleanup(): void {
 // Bắt đầu cleanup khi module được load (client-side only)
 if (typeof window !== 'undefined') {
   startCacheCleanup();
+}
+
+// ========== Visibility Management ==========
+// Ngắt tất cả SSE khi tab ẩn, kết nối lại khi tab hiện.
+// Tránh vượt giới hạn 6 connections/domain của browser khi mở nhiều tab.
+function pauseAllConnections(): void {
+  connections.forEach((entry) => {
+    // Clear pending reconnect
+    if (entry.reconnectTimeout) {
+      clearTimeout(entry.reconnectTimeout);
+      entry.reconnectTimeout = null;
+    }
+    // Close EventSource nhưng GIỮ NGUYÊN subscribers + reconnector
+    if (entry.connection) {
+      const es = entry.connection.getEventSource();
+      if (es) es.close();
+      entry.connection = null;
+    }
+    entry.isConnecting = false;
+    entry.reconnectAttempts = 0;
+  });
+}
+
+function resumeAllConnections(): void {
+  connections.forEach((entry) => {
+    // Chỉ reconnect nếu còn subscribers và chưa có connection
+    if (entry.subscribers.size > 0 && !entry.connection && !entry.isConnecting && entry.reconnector) {
+      entry.reconnector();
+    }
+  });
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      pauseAllConnections();
+    } else {
+      resumeAllConnections();
+    }
+  });
 }
 
 // ========== Helper Functions ==========
@@ -226,7 +268,8 @@ export function sseClient<DataType = any>(
       isConnecting: false,
       lastError: null,
       reconnectAttempts: 0,
-      reconnectTimeout: null
+      reconnectTimeout: null,
+      reconnector: null
     };
     connections.set(connectionKey, connectionEntry);
   }
@@ -409,7 +452,13 @@ export function sseClient<DataType = any>(
     }
   }
 
-  createConnection();
+  // Lưu reconnector để visibility handler có thể tái tạo connection
+  connectionEntry.reconnector = createConnection;
+
+  // Chỉ tạo connection nếu tab đang visible (hoặc không phải browser)
+  if (typeof document === 'undefined' || document.visibilityState !== 'hidden') {
+    createConnection();
+  }
 
   return {
     subscriberId,
