@@ -21,7 +21,7 @@
       "Bash(grep -r \"revalidate\\\\|ISR\\\\|stale-while\\\\|cache.*control\" /d/twan_projects/finext-web-app/finext-nextjs/app --include=*.ts --include=*.tsx)",
       "Bash(grep -r \"useQuery\\\\|QueryClient\\\\|QueryKey\\\\|@tanstack\" /d/twan_projects/finext-web-app/finext-nextjs/app --include=*.ts --include=*.tsx)",
       "Bash(grep -r \"login\\\\|logout\\\\|oauth\\\\|google\" /d/twan_projects/finext-web-app/finext-nextjs/app --include=*[Ll]ogin* --include=*[Aa]uth*)",
-      "Bash(find d:/twan_projects/finext-web-app/finext-fastapi/app/templates -type f -name *.html)",
+      "Bash(find d:/twan_projects/finext-web-app/finext-fastapi/app/templates -type f -name *.html)"
     ],
     "additionalDirectories": [
       "D:\\twan_projects\\finext-web-app\\finext-nextjs\\app\\(main)\\sectors\\[sectorId]\\components"
