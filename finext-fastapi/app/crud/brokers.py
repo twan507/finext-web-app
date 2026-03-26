@@ -243,6 +243,62 @@ async def update_broker_status(db: AsyncIOMotorDatabase, broker_id_or_code: str,
     return None
 
 
+async def update_broker_code(db: AsyncIOMotorDatabase, broker_id: str, new_code: str) -> Optional[BrokerInDB]:
+    brokers_collection = db.get_collection(BROKERS_COLLECTION)
+    users_collection = db.get_collection(USERS_COLLECTION)
+
+    new_code = new_code.strip().upper()
+
+    if not ObjectId.is_valid(broker_id):
+        raise ValueError(f"Broker ID không hợp lệ: {broker_id}")
+
+    broker_doc = await brokers_collection.find_one({"_id": ObjectId(broker_id)})
+    if not broker_doc:
+        return None
+
+    # Kiểm tra trùng mã (loại trừ chính broker này)
+    duplicate = await brokers_collection.find_one({"broker_code": new_code, "_id": {"$ne": ObjectId(broker_id)}})
+    if duplicate:
+        raise ValueError(f"Mã broker '{new_code}' đã được sử dụng bởi đối tác khác.")
+
+    old_code = broker_doc.get("broker_code")
+    user_obj_id = broker_doc.get("user_id")
+    now = datetime.now(timezone.utc)
+
+    await brokers_collection.update_one(
+        {"_id": ObjectId(broker_id)},
+        {"$set": {"broker_code": new_code, "updated_at": now}},
+    )
+
+    # 1. Sync referral_code trên user sở hữu broker này
+    if user_obj_id:
+        await users_collection.update_one(
+            {"_id": user_obj_id},
+            {"$set": {"referral_code": new_code, "updated_at": now}},
+        )
+        logger.info(f"Đã cập nhật referral_code của user broker {user_obj_id} từ '{old_code}' → '{new_code}'.")
+
+    # 2. Cascade: cập nhật referral_code của tất cả user đã dùng mã cũ khi đăng ký
+    users_result = await users_collection.update_many(
+        {"referral_code": old_code, "_id": {"$ne": user_obj_id}},
+        {"$set": {"referral_code": new_code, "updated_at": now}},
+    )
+    if users_result.modified_count:
+        logger.info(f"Cascade: cập nhật referral_code cho {users_result.modified_count} user(s) từ '{old_code}' → '{new_code}'.")
+
+    # 3. Cascade: cập nhật broker_code_applied trên tất cả transaction liên quan
+    transactions_collection = db.get_collection("transactions")
+    txn_result = await transactions_collection.update_many(
+        {"broker_code_applied": old_code},
+        {"$set": {"broker_code_applied": new_code, "updated_at": now}},
+    )
+    if txn_result.modified_count:
+        logger.info(f"Cascade: cập nhật broker_code_applied cho {txn_result.modified_count} transaction(s) từ '{old_code}' → '{new_code}'.")
+
+    updated_doc = await brokers_collection.find_one({"_id": ObjectId(broker_id)})
+    return BrokerInDB(**updated_doc) if updated_doc else None
+
+
 async def is_broker_code_valid_and_active(db: AsyncIOMotorDatabase, broker_code: str) -> bool:
     if not broker_code or len(broker_code) != 4:
         return False

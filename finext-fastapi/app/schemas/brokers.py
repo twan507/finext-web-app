@@ -1,5 +1,6 @@
 # finext-fastapi/app/schemas/brokers.py
-from pydantic import BaseModel, Field, ConfigDict
+import re
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import Optional
 from datetime import datetime
 from app.utils.types import PyObjectId
@@ -27,6 +28,27 @@ class BrokerUpdate(BaseModel):
         json_schema_extra={
             "example": {
                 "is_active": False
+            }
+        }
+    )
+
+BROKER_CODE_REGEX = re.compile(r"^[A-Z0-9]{4}$")
+
+class BrokerCodeUpdate(BaseModel):
+    broker_code: str = Field(..., min_length=4, max_length=4, description="Mã broker mới (chữ HOA và số, đúng 4 ký tự).")
+
+    @field_validator("broker_code")
+    @classmethod
+    def validate_broker_code(cls, v: str) -> str:
+        normalized = v.strip().upper()
+        if not BROKER_CODE_REGEX.match(normalized):
+            raise ValueError("Mã broker chỉ được chứa chữ cái (A-Z) và số (0-9), đúng 4 ký tự.")
+        return normalized
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "broker_code": "NEWCODE"
             }
         }
     )

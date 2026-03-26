@@ -18,6 +18,7 @@ from app.schemas.brokers import (
     BrokerInDB,
     BrokerPublic,
     BrokerUpdate,
+    BrokerCodeUpdate,
     BrokerValidationResponse,
 )
 
@@ -267,6 +268,29 @@ async def update_broker_active_status(
         return BrokerPublic.model_validate(updated_broker)
     except ValueError as ve:  # Bắt lỗi từ CRUD (ví dụ: không cho deactive broker được bảo vệ)
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(ve))
+
+
+@router.patch(
+    "/{broker_id}/code",
+    response_model=StandardApiResponse[BrokerPublic],
+    summary="[Admin] Đổi mã broker (broker_code) theo ý muốn",
+    dependencies=[Depends(require_permission("broker", "update_any"))],
+)
+@api_response_wrapper(default_success_message="Cập nhật mã broker thành công.")
+async def update_broker_code_endpoint(
+    broker_id: str,
+    code_update: BrokerCodeUpdate,
+    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
+    current_admin: UserInDB = Depends(get_current_active_user),
+):
+    logger.info(f"Admin {current_admin.email} yêu cầu đổi mã broker ID '{broker_id}' thành '{code_update.broker_code}'")
+    try:
+        updated = await crud_brokers.update_broker_code(db, broker_id, code_update.broker_code)
+        if not updated:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Không tìm thấy broker với ID '{broker_id}'.")
+        return BrokerPublic.model_validate(updated)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
 # Endpoint DELETE này có thể được coi là "Hủy tư cách đối tác" thay vì xóa hẳn record

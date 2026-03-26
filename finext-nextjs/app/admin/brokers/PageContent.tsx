@@ -8,7 +8,7 @@ import {
     Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
     TableHead, TableRow, Button, Chip, IconButton, Alert, CircularProgress,
     TablePagination, Tooltip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
-    TextField, useTheme
+    TextField, useTheme, InputAdornment
 } from '@mui/material';
 import {
     BusinessCenter as BrokerIcon,
@@ -16,7 +16,9 @@ import {
     BusinessCenter as GrantIcon,
     DoDisturbOn as RevokeIcon,
     UnfoldMore as ExpandIcon,
-    UnfoldLess as CollapseIcon
+    UnfoldLess as CollapseIcon,
+    EditSquare as EditIcon,
+    Close as CloseIcon,
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 import { getResponsiveFontSize, borderRadiusTop } from 'theme/tokens';
@@ -76,7 +78,14 @@ export default function BrokersPage() {
 
     // Add Broker Modal
     const [openAddBrokerModal, setOpenAddBrokerModal] = useState(false);
-    const [allUsers, setAllUsers] = useState<UserPublic[]>([]);// View and sorting state
+    const [allUsers, setAllUsers] = useState<UserPublic[]>([]);
+
+    // Edit Broker Code
+    const [openEditCodeDialog, setOpenEditCodeDialog] = useState(false);
+    const [brokerToEditCode, setBrokerToEditCode] = useState<BrokerPublic | null>(null);
+    const [newBrokerCode, setNewBrokerCode] = useState('');
+    const [editCodeLoading, setEditCodeLoading] = useState(false);
+    const [editCodeError, setEditCodeError] = useState<string | null>(null);// View and sorting state
     const [expandedView, setExpandedView] = useState(false);
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
     const [userEmails, setUserEmails] = useState<Map<string, string>>(new Map());
@@ -388,6 +397,45 @@ export default function BrokersPage() {
         fetchBrokers(); // Refresh the brokers list
     };
 
+    const handleOpenEditCodeDialog = (broker: BrokerPublic) => {
+        setBrokerToEditCode(broker);
+        setNewBrokerCode(broker.broker_code);
+        setEditCodeError(null);
+        setOpenEditCodeDialog(true);
+    };
+
+    const handleCloseEditCodeDialog = () => {
+        if (!editCodeLoading) {
+            setOpenEditCodeDialog(false);
+            setBrokerToEditCode(null);
+            setNewBrokerCode('');
+            setEditCodeError(null);
+        }
+    };
+
+    const handleConfirmEditCode = async () => {
+        if (!brokerToEditCode || !newBrokerCode.trim()) return;
+        setEditCodeLoading(true);
+        setEditCodeError(null);
+        try {
+            const response = await apiClient<BrokerPublic>({
+                url: `/api/v1/brokers/${brokerToEditCode.id}/code`,
+                method: 'PATCH',
+                body: { broker_code: newBrokerCode.trim().toUpperCase() },
+            });
+            if (response.status === 200) {
+                fetchBrokers();
+                handleCloseEditCodeDialog();
+            } else {
+                setEditCodeError(response.message || 'Cập nhật mã thất bại.');
+            }
+        } catch (err: any) {
+            setEditCodeError(err.message || 'Đã xảy ra lỗi.');
+        } finally {
+            setEditCodeLoading(false);
+        }
+    };
+
     // Fetch all users for add broker modal
     useEffect(() => {
         fetchAllUsers();
@@ -554,20 +602,15 @@ export default function BrokersPage() {
                                                 minWidth: columnConfigs[1].minWidth,
                                                 width: expandedView ? 'auto' : columnConfigs[1].minWidth
                                             }}>
-                                                <Tooltip title={userEmails.get(broker.user_id) || broker.user_email || broker.user_id}>
-                                                    <Typography
-                                                        variant="body2"
-                                                        sx={{
-                                                            maxWidth: expandedView ? 'none' : 120,
-                                                            overflow: 'hidden',
-                                                            textOverflow: 'ellipsis',
-                                                            fontSize: getResponsiveFontSize('sm'),
-                                                            opacity: emailsLoading ? 0.7 : 1
-                                                        }}
-                                                    >
-                                                        {userEmails.get(broker.user_id) || broker.user_email || broker.user_id}
-                                                    </Typography>
-                                                </Tooltip>
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        fontSize: getResponsiveFontSize('sm'),
+                                                        opacity: emailsLoading ? 0.7 : 1
+                                                    }}
+                                                >
+                                                    {userEmails.get(broker.user_id) || broker.user_email || broker.user_id}
+                                                </Typography>
                                             </TableCell>
                                             <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[2], expandedView),
@@ -644,6 +687,20 @@ export default function BrokersPage() {
                                                     }
                                                 }}
                                             >                                                <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                                                    <Tooltip title="Đổi mã broker">
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => handleOpenEditCodeDialog(broker)}
+                                                            color="primary"
+                                                            sx={{
+                                                                minWidth: { xs: 32, sm: 'auto' },
+                                                                width: { xs: 32, sm: 'auto' },
+                                                                height: { xs: 32, sm: 'auto' },
+                                                            }}
+                                                        >
+                                                            <EditIcon fontSize="small" />
+                                                        </IconButton>
+                                                    </Tooltip>
                                                     {(() => {
                                                         const brokerEmail = userEmails.get(broker.user_id) || broker.user_email || '';
                                                         const isSystemBroker = isSystemUser(brokerEmail);
@@ -884,6 +941,109 @@ export default function BrokersPage() {
                             ? (actionType === 'revoke' ? 'Đang thu hồi...' : 'Đang khôi phục...')
                             : (actionType === 'revoke' ? 'Xác nhận thu hồi quyền' : 'Xác nhận khôi phục quyền')
                         }
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Edit Broker Code Dialog */}
+            <Dialog
+                open={openEditCodeDialog}
+                onClose={editCodeLoading ? undefined : handleCloseEditCodeDialog}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 2 } }}
+            >
+                <DialogTitle>
+                    <Typography variant="h5" component="div" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <EditIcon color="primary" />
+                        Đổi mã broker
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                        {userEmails.get(brokerToEditCode?.user_id || '') || brokerToEditCode?.user_id}
+                    </Typography>
+                </DialogTitle>
+                <DialogContent>
+                    {editCodeError && (
+                        <Alert severity="error" onClose={() => setEditCodeError(null)} sx={{ mb: 3 }}>
+                            {editCodeError}
+                        </Alert>
+                    )}
+                    <Box sx={{ mt: 1 }}>
+                        <TextField
+                            autoFocus
+                            fullWidth
+                            label="Mã broker mới *"
+                            placeholder="VD: PARTNER01"
+                            value={newBrokerCode}
+                            onChange={(e) => setNewBrokerCode(e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 4))}
+                            onKeyUp={(e) => { if (e.key === 'Enter') handleConfirmEditCode(); }}
+                            inputProps={{ maxLength: 4 }}
+                            helperText={`Chữ cái và số, đúng 4 ký tự · Hiện tại: ${brokerToEditCode?.broker_code} · ${newBrokerCode.length}/4`}
+                            error={newBrokerCode.length > 0 && newBrokerCode.length < 4}
+                            disabled={editCodeLoading}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <BrokerIcon fontSize="small" />
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
+                    </Box>
+                    <Box sx={{
+                        mt: 3, p: 2,
+                        bgcolor: theme.palette.component.modal.noteBackground,
+                        borderRadius: 1,
+                        border: `1px solid ${theme.palette.component.modal.noteBorder}`,
+                        position: 'relative',
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0, left: 0, right: 0,
+                            height: '3px',
+                            bgcolor: 'warning.main',
+                            borderRadius: borderRadiusTop('sm'),
+                        },
+                    }}>
+                        <Typography variant="body2" fontWeight="bold" sx={{ color: 'warning.main', mb: 1 }}>
+                            ⚠️ Lưu ý:
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText, mb: 0.5 }}>
+                            • Mã broker mới sẽ được đồng bộ với mã giới thiệu của tài khoản
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
+                            • Mã cũ sẽ không còn hoạt động sau khi thay đổi
+                        </Typography>
+                    </Box>
+                </DialogContent>
+                <DialogActions sx={{ p: 3, pt: 1 }}>
+                    <Button
+                        onClick={handleCloseEditCodeDialog}
+                        disabled={editCodeLoading}
+                        variant="outlined"
+                        startIcon={<CloseIcon />}
+                        sx={{
+                            minWidth: { xs: 'auto', sm: 100 },
+                            '& .MuiButton-startIcon': { margin: { xs: 0, sm: '0 8px 0 -4px' } },
+                            px: { xs: 1, sm: 2 },
+                        }}
+                    >
+                        <Box sx={{ display: { xs: 'none', sm: 'block' } }}>Hủy</Box>
+                    </Button>
+                    <Button
+                        onClick={handleConfirmEditCode}
+                        variant="contained"
+                        disabled={editCodeLoading || newBrokerCode.length !== 4 || newBrokerCode === brokerToEditCode?.broker_code}
+                        startIcon={editCodeLoading ? <CircularProgress size={20} /> : <EditIcon />}
+                        sx={{
+                            minWidth: { xs: 'auto', sm: 140 },
+                            '& .MuiButton-startIcon': { margin: { xs: 0, sm: '0 8px 0 -4px' } },
+                            px: { xs: 1, sm: 2 },
+                        }}
+                    >
+                        <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+                            {editCodeLoading ? 'Đang cập nhật...' : 'Cập nhật'}
+                        </Box>
                     </Button>
                 </DialogActions>
             </Dialog>
