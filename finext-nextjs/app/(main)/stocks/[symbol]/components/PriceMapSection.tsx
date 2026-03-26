@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Typography, useTheme, useMediaQuery, alpha, Chip, Collapse } from '@mui/material';
 import { getResponsiveFontSize, fontWeight, borderRadius, getGlassCard } from 'theme/tokens';
+import usePriceMapStore, { type TimeframeKey, type GroupKey } from 'hooks/usePriceMapStore';
 
 // ─── Types ───────────────────────────────────────────────────────────────────────
 
@@ -14,9 +15,6 @@ interface PriceMapSectionProps {
     currentDiff?: number;
     currentPctChange?: number;
 }
-
-type TimeframeKey = 'w' | 'm' | 'q' | 'y';
-type GroupKey = 'ma' | 'open_high_low' | 'pivot' | 'fibonacci' | 'volume_profile';
 
 interface PriceLevel {
     price: number;
@@ -122,11 +120,6 @@ function buildFieldDefs(): FieldDef[] {
 
 const ALL_FIELD_DEFS = buildFieldDefs();
 
-// ─── Default enabled preset ──────────────────────────────────────────────────────
-
-const DEFAULT_TIMEFRAMES = new Set<TimeframeKey>(['m', 'q']);
-const DEFAULT_GROUPS = new Set<GroupKey>(['ma', 'open_high_low', 'pivot', 'fibonacci']);
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────────
 
 function formatPrice(price: number): string {
@@ -209,31 +202,11 @@ export default function PriceMapSection({ ticker, chartIndicatorData, currentPri
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const router = useRouter();
 
-    // Toggle states
-    const [enabledTimeframes, setEnabledTimeframes] = useState<Set<TimeframeKey>>(DEFAULT_TIMEFRAMES);
-    const [enabledGroups, setEnabledGroups] = useState<Set<GroupKey>>(DEFAULT_GROUPS);
+    const { enabledTimeframes, enabledGroups, toggleTimeframe, toggleGroup } = usePriceMapStore();
 
     // Collapse states
     const [resistanceCollapsed, setResistanceCollapsed] = useState(false);
     const [supportCollapsed, setSupportCollapsed] = useState(false);
-
-    const toggleTimeframe = (tf: TimeframeKey) => {
-        setEnabledTimeframes(prev => {
-            const next = new Set(prev);
-            if (next.has(tf)) next.delete(tf);
-            else next.add(tf);
-            return next;
-        });
-    };
-
-    const toggleGroup = (g: GroupKey) => {
-        setEnabledGroups(prev => {
-            const next = new Set(prev);
-            if (next.has(g)) next.delete(g);
-            else next.add(g);
-            return next;
-        });
-    };
 
     // Build price levels
     const priceLevels = useMemo<PriceLevel[]>(() => {

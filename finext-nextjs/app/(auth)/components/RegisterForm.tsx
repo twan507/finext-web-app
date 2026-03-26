@@ -614,7 +614,7 @@ export default function RegisterForm() {
                     }
                     label={
                         <Typography variant="body2" sx={{ mt: 0.5 }}>
-                            Tôi đã đọc và đồng ý với <Link href="/terms" underline="hover" tabIndex={-1}>Điều khoản sử dụng</Link> <br></br> và <Link href="/privacy" underline="hover" tabIndex={-1}>Chính sách bảo mật</Link>
+                            Tôi đã đọc và đồng ý với <Link href="/policies/content" underline="hover" tabIndex={-1}>Chính sách nội dung</Link> <br></br> và <Link href="policies/privacy" underline="hover" tabIndex={-1}>Chính sách bảo mật</Link>
                         </Typography>
                     }
                     sx={{ mt: 2, mb: 2, alignItems: 'flex-start' }}
