@@ -1,65 +1,44 @@
 # finext-fastapi/app/routers/emails.py
 import logging
+import time
 from datetime import datetime
+from typing import Dict
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
-# Import các thành phần cần thiết
 from app.utils.email_utils import send_email_async
 from app.utils.response_wrapper import StandardApiResponse, api_response_wrapper
-# THAY ĐỔI: Import schema từ file mới
-from app.schemas.emails import TestEmailRequest, MessageResponse, ConsultationRequest, OpenAccountRequest, PlanInquiryRequest
+from app.schemas.emails import MessageResponse, ConsultationRequest, OpenAccountRequest, PlanInquiryRequest
 from app.core.config import MAIL_FROM
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-@router.post(
-    "/send-test-email",
-    response_model=StandardApiResponse[MessageResponse],
-    summary="Gửi email kiểm tra",
-    tags=["emails"]
-)
-@api_response_wrapper(default_success_message="Yêu cầu gửi email kiểm tra đã được xử lý.")
-async def send_test_email_endpoint(
-    request_data: TestEmailRequest,
-):
-    try:
-        subject = "Email kiểm tra từ Finext FastAPI"
-        template_body = {
-            "title": f"Email kiểm tra cho {request_data.name}",
-            "name": request_data.name,
-            "message": request_data.custom_message,
-            "current_year": datetime.now().year
-        }
+# ========== Rate Limiter (in-memory, per IP) ==========
+# Max 1 request per 60 seconds per IP for email endpoints
+RATE_LIMIT_SECONDS = 60
+_rate_limit_store: Dict[str, float] = {}
 
-        # Gọi trực tiếp thay vì qua background_tasks
-        success = await send_email_async(
-            subject=subject,
-            recipients=[request_data.recipient_email],
-            template_name="test_email_template.html",
-            template_body=template_body
-        )
 
-        if not success:
-            logger.error(f"Gửi email kiểm tra đến {request_data.recipient_email} thất bại.")
-            raise HTTPException(
-                status_code=500, 
-                detail=f"Gửi email kiểm tra đến {request_data.recipient_email} thất bại. Vui lòng kiểm tra cấu hình email server."
-            )
+def _check_rate_limit(request: Request) -> None:
+    """Kiểm tra rate limit theo IP. Raise HTTPException 429 nếu quá giới hạn."""
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
 
-        logger.info(f"Đã gửi email kiểm tra thành công đến {request_data.recipient_email}")
-        return MessageResponse(message=f"Email kiểm tra đã được gửi thành công đến {request_data.recipient_email}.")
-        
-    except HTTPException:
-        # Re-raise HTTPException để giữ nguyên status code và detail
-        raise
-    except Exception as e:
-        logger.error(f"Lỗi không xác định khi gửi email đến {request_data.recipient_email}: {str(e)}")
+    # Dọn entries cũ hơn 5 phút để tránh memory leak
+    expired_keys = [k for k, v in _rate_limit_store.items() if now - v > 300]
+    for k in expired_keys:
+        del _rate_limit_store[k]
+
+    last_request_time = _rate_limit_store.get(client_ip)
+    if last_request_time and (now - last_request_time) < RATE_LIMIT_SECONDS:
+        remaining = int(RATE_LIMIT_SECONDS - (now - last_request_time))
         raise HTTPException(
-            status_code=500,
-            detail=f"Đã xảy ra lỗi không xác định khi gửi email: {str(e)}"
+            status_code=429,
+            detail=f"Bạn đã gửi yêu cầu quá nhanh. Vui lòng thử lại sau {remaining} giây."
         )
+
+    _rate_limit_store[client_ip] = now
 
 
 @router.post(
@@ -70,8 +49,11 @@ async def send_test_email_endpoint(
 )
 @api_response_wrapper(default_success_message="Yêu cầu tư vấn đã được gửi thành công.")
 async def send_consultation_request(
+    request: Request,
     request_data: ConsultationRequest,
 ):
+    _check_rate_limit(request)
+
     try:
         subject = f"[Finext] Yêu cầu tư vấn từ {request_data.customer_name}"
         submitted_at = datetime.now().strftime("%H:%M %d/%m/%Y")
@@ -86,7 +68,6 @@ async def send_consultation_request(
             "current_year": datetime.now().year,
         }
 
-        # Gửi email đến chính Finext (MAIL_FROM)
         recipient = MAIL_FROM if MAIL_FROM else "finext.vn@gmail.com"
         success = await send_email_async(
             subject=subject,
@@ -123,8 +104,11 @@ async def send_consultation_request(
 )
 @api_response_wrapper(default_success_message="Yêu cầu mở tài khoản đã được gửi thành công.")
 async def send_open_account_request(
+    request: Request,
     request_data: OpenAccountRequest,
 ):
+    _check_rate_limit(request)
+
     try:
         subject = f"[Finext] Mở tài khoản chứng khoán — {request_data.customer_name}"
         submitted_at = datetime.now().strftime("%H:%M %d/%m/%Y")
@@ -174,8 +158,11 @@ async def send_open_account_request(
 )
 @api_response_wrapper(default_success_message="Yêu cầu tư vấn gói thành viên đã được gửi thành công.")
 async def send_plan_inquiry_request(
+    request: Request,
     request_data: PlanInquiryRequest,
 ):
+    _check_rate_limit(request)
+
     try:
         subject = f"[Finext] Tư vấn gói thành viên — {request_data.customer_name}"
         submitted_at = datetime.now().strftime("%H:%M %d/%m/%Y")
@@ -215,4 +202,4 @@ async def send_plan_inquiry_request(
         raise HTTPException(
             status_code=500,
             detail=f"Đã xảy ra lỗi: {str(e)}"
-        )
+        )

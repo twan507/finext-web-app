@@ -573,6 +573,12 @@ async def deactivate_subscription_db(
 
 
 async def send_expiry_reminders_task(db: AsyncIOMotorDatabase, days_before_expiry: int = 7) -> int:
+    """
+    Gửi email nhắc hết hạn subscription chỉ vào các mốc: 7 ngày, 3 ngày, 1 ngày trước hết hạn.
+    Chạy mỗi đêm lúc 00:00, chỉ gửi cho subscriptions rơi đúng vào mốc trong ngày đó.
+    """
+    REMINDER_DAYS = [7, 3, 1]  # Chỉ gửi vào các mốc này
+
     now = datetime.now(timezone.utc)
     reminder_threshold_date = now + timedelta(days=days_before_expiry)
 
@@ -613,9 +619,10 @@ async def send_expiry_reminders_task(db: AsyncIOMotorDatabase, days_before_expir
                 days_left_exact = 0
 
             if days_left_exact <= 0:
-                logger.info(
-                    f"Subscription {sub_doc['_id']} for user {user_email} seems already expired or expiring today. Days left: {days_left_exact}. Skipping reminder."
-                )
+                continue
+
+            # Chỉ gửi email khi rơi đúng vào mốc 7, 3, hoặc 1 ngày
+            if days_left_exact not in REMINDER_DAYS:
                 continue
 
             email_successful = await send_subscription_expiry_reminder_email(
@@ -628,6 +635,7 @@ async def send_expiry_reminders_task(db: AsyncIOMotorDatabase, days_before_expir
             )
             if email_successful:
                 email_sent_count += 1
+                logger.info(f"Sent {days_left_exact}-day expiry reminder to {user_email} for sub {sub_doc['_id']}")
         except Exception as e:
             logger.error(f"Error processing reminder for subscription {sub_doc.get('_id')}: {e}", exc_info=True)
 

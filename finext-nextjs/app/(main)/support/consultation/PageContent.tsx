@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
     Box,
     Typography,
@@ -40,11 +40,21 @@ export default function ConsultationContent() {
         message: '',
         severity: 'success',
     });
+    const lastSubmitRef = useRef<number>(0);
+    const COOLDOWN_MS = 60_000; // 1 phút cooldown giữa các lần gửi
 
     const isFormValid = name.trim() && phone.trim() && subject;
 
     const handleSubmit = async () => {
         if (!isFormValid || submitting) return;
+
+        // Rate limit: 1 lần/phút
+        const now = Date.now();
+        if (now - lastSubmitRef.current < COOLDOWN_MS) {
+            const remaining = Math.ceil((COOLDOWN_MS - (now - lastSubmitRef.current)) / 1000);
+            setSnack({ open: true, message: `Vui lòng đợi ${remaining} giây trước khi gửi lại.`, severity: 'error' });
+            return;
+        }
 
         setSubmitting(true);
         try {
@@ -61,6 +71,7 @@ export default function ConsultationContent() {
                 },
             });
 
+            lastSubmitRef.current = Date.now(); // Ghi nhận thời điểm gửi thành công
             setSnack({
                 open: true,
                 message: res.data?.message || 'Yêu cầu tư vấn đã được gửi thành công!',

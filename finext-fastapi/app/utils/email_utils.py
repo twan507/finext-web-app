@@ -123,7 +123,7 @@ async def send_otp_email(
         action_description = "xác thực địa chỉ email của bạn"
     elif otp_type == OtpTypeEnum.RESET_PASSWORD:
         subject = "Mã OTP Đặt Lại Mật Khẩu Finext"
-        template_name = "reset_pasword.html"
+        template_name = "reset_password.html"
         action_description = "đặt lại mật khẩu của bạn"
     elif otp_type == OtpTypeEnum.PWDLESS_LOGIN:
         subject = "Mã OTP Đăng Nhập Finext"
@@ -165,35 +165,6 @@ async def send_otp_email(
     return email_sent
 
 
-async def send_verification_email(email_to: EmailStr, full_name: str, verification_token: str, token_expiry_hours: int = 24):
-    # ... (giữ nguyên)
-    subject = "Xác thực địa chỉ Email của bạn tại Finext"
-    verification_link = f"{FRONTEND_URL}/auth/verify-email?token={verification_token}"
-    current_year = datetime.now().year
-
-    template_body = {
-        "full_name": full_name,
-        "verification_link": verification_link,
-        "token_expiry_hours": token_expiry_hours,
-        "current_year": current_year,
-    }
-    return await send_email_async(subject=subject, recipients=[email_to], template_name="verify_email.html", template_body=template_body)
-
-
-async def send_reset_password_email(email_to: EmailStr, full_name: str, reset_token: str, token_expiry_minutes: int = 30):
-    # ... (giữ nguyên)
-    subject = "Yêu cầu đặt lại mật khẩu tài khoản Finext"
-    reset_link = f"{FRONTEND_URL}/auth/reset-password?token={reset_token}"
-    current_year = datetime.now().year
-
-    template_body = {
-        "full_name": full_name,
-        "reset_link": reset_link,
-        "token_expiry_minutes": token_expiry_minutes,
-        "current_year": current_year,
-    }
-    return await send_email_async(subject=subject, recipients=[email_to], template_name="reset_password.html", template_body=template_body)
-
 async def send_subscription_expiry_reminder_email(
     email_to: EmailStr,
     full_name: str,
@@ -224,7 +195,7 @@ async def send_subscription_expiry_reminder_email(
     email_sent = await send_email_async(
         subject=subject,
         recipients=[email_to],
-        template_name="subscription_expiry_reminder.html", # Tên template mới
+        template_name="subscription_reminder.html",
         template_body=template_body
     )
 

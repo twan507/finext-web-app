@@ -94,6 +94,8 @@ export default function OpenAccountContent() {
         message: '',
         severity: 'success',
     });
+    const lastSubmitRef = useRef<number>(0);
+    const COOLDOWN_MS = 60_000; // 1 phút cooldown giữa các lần gửi
 
     const isFormValid = name.trim() && phone.trim();
 
@@ -103,6 +105,14 @@ export default function OpenAccountContent() {
 
     const handleSubmit = async () => {
         if (!isFormValid || submitting) return;
+
+        const now = Date.now();
+        if (now - lastSubmitRef.current < COOLDOWN_MS) {
+            const remaining = Math.ceil((COOLDOWN_MS - (now - lastSubmitRef.current)) / 1000);
+            setSnack({ open: true, message: `Vui lòng đợi ${remaining} giây trước khi gửi lại.`, severity: 'error' });
+            return;
+        }
+
         setSubmitting(true);
         try {
             const res = await apiClient({
@@ -116,6 +126,7 @@ export default function OpenAccountContent() {
                     note: note.trim() || null,
                 },
             });
+            lastSubmitRef.current = Date.now();
             setSnack({
                 open: true,
                 message: res.data?.message || 'Đăng ký thành công! Finext sẽ liên hệ với bạn sớm nhất.',
