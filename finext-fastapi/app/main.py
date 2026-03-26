@@ -33,6 +33,7 @@ from .routers import (
     watchlists,
     uploads,
     features,
+    dashboard,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -145,6 +146,7 @@ app.include_router(otps.router, prefix="/api/v1/otps", tags=["otps"])
 app.include_router(watchlists.router, prefix="/api/v1/watchlists", tags=["watchlists"])
 app.include_router(uploads.router, prefix="/api/v1/uploads", tags=["uploads"])
 app.include_router(features.router, prefix="/api/v1/features", tags=["features"])
+app.include_router(dashboard.router, prefix="/api/v1/admin/dashboard", tags=["dashboard"])
 
 
 @app.get("/api/v1")
