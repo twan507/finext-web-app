@@ -20,6 +20,7 @@ import { borderRadius, getGlassCard, getGlassHighlight } from 'theme/tokens';
 interface KpiCardsProps {
     kpis: KpiStats;
     totalUsers?: number;
+    isBroker?: boolean;
 }
 
 interface KpiCardConfig {
@@ -44,9 +45,13 @@ const KPI_CONFIG: KpiCardConfig[] = [
     { key: 'conversion_rate',      label: 'Conversion',      icon: <ConversionIcon />, isCurrency: false, isPercent: true,  accentHue: '#06b6d4' }, // cyan
 ];
 
-const KpiCards: React.FC<KpiCardsProps> = ({ kpis, totalUsers }) => {
+const BROKER_KPI_KEYS = new Set(['total_revenue', 'successful_orders', 'pending_orders']);
+
+const KpiCards: React.FC<KpiCardsProps> = ({ kpis, totalUsers, isBroker }) => {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
+
+    const visibleConfig = isBroker ? KPI_CONFIG.filter(c => BROKER_KPI_KEYS.has(c.key)) : KPI_CONFIG;
 
     // Compute derived metrics
     const activeSubs = kpis.active_subscriptions.current;
@@ -63,7 +68,7 @@ const KpiCards: React.FC<KpiCardsProps> = ({ kpis, totalUsers }) => {
 
     return (
         <Grid container spacing={2}>
-            {KPI_CONFIG.map((cfg) => {
+            {visibleConfig.map((cfg) => {
                 // Resolve current & previous values
                 let current: number;
                 let previous: number;

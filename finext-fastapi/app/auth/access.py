@@ -16,7 +16,7 @@ import app.crud.watchlists as crud_watchlists
 logger = logging.getLogger(__name__)
 
 
-async def _get_user_permissions(db: AsyncIOMotorDatabase, user_id_str: str) -> Set[str]:
+async def get_user_permissions(db: AsyncIOMotorDatabase, user_id_str: str) -> Set[str]:
     """Lấy tất cả các tên permission mà user sở hữu thông qua các vai trò."""
     if not ObjectId.is_valid(user_id_str):
         logger.error(f"Định dạng user_id không hợp lệ khi lấy permissions: {user_id_str}")
@@ -60,7 +60,7 @@ def require_permission(resource: str, action: str):
         current_user: UserInDB = Depends(get_current_active_user),
         db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
     ) -> UserInDB:
-        user_permissions = await _get_user_permissions(db, str(current_user.id))
+        user_permissions = await get_user_permissions(db, str(current_user.id))
 
         allowed = False
         required_permission_context = f"{resource}:{action}"

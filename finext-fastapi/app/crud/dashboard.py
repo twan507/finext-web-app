@@ -354,6 +354,131 @@ async def _get_recent_transactions(
     return items
 
 
+async def _get_broker_revenue_kpi(
+    db: AsyncIOMotorDatabase, start: datetime, end: datetime, broker_code: str
+) -> float:
+    pipeline = [
+        {"$match": {
+            "payment_status": "succeeded",
+            "created_at": {"$gte": start, "$lt": end},
+            "broker_code_applied": broker_code,
+        }},
+        {"$group": {"_id": None, "total": {"$sum": "$transaction_amount"}}},
+    ]
+    result = await db.transactions.aggregate(pipeline).to_list(1)
+    return result[0]["total"] if result else 0
+
+
+async def _get_broker_order_count(
+    db: AsyncIOMotorDatabase, start: datetime, end: datetime, broker_code: str, status: str
+) -> int:
+    return await db.transactions.count_documents({
+        "payment_status": status,
+        "created_at": {"$gte": start, "$lt": end},
+        "broker_code_applied": broker_code,
+    })
+
+
+async def _get_broker_revenue_trend(
+    db: AsyncIOMotorDatabase, start: datetime, end: datetime, granularity: str, broker_code: str
+) -> List[RevenueTrendItem]:
+    pipeline = [
+        {"$match": {
+            "payment_status": "succeeded",
+            "created_at": {"$gte": start, "$lt": end},
+            "broker_code_applied": broker_code,
+        }},
+        {"$group": {
+            "_id": _get_date_group_expr(granularity),
+            "revenue": {"$sum": "$transaction_amount"},
+        }},
+        {"$sort": {"_id": 1}},
+    ]
+    results = await db.transactions.aggregate(pipeline).to_list(366)
+    return [
+        RevenueTrendItem(
+            date=_format_date_key(r["_id"], granularity),
+            revenue=round(r["revenue"], 0),
+        )
+        for r in results
+    ]
+
+
+async def _get_broker_recent_transactions(
+    db: AsyncIOMotorDatabase, broker_code: str, limit: int = 10
+) -> List[RecentTransactionItem]:
+    cursor = db.transactions.find(
+        {"broker_code_applied": broker_code}
+    ).sort("created_at", -1).limit(limit)
+    docs = await cursor.to_list(limit)
+
+    buyer_ids = list({doc["buyer_user_id"] for doc in docs if doc.get("buyer_user_id")})
+    user_docs = await db.users.find({"_id": {"$in": buyer_ids}}).to_list(limit)
+    email_map = {doc["_id"]: doc.get("email", "") for doc in user_docs}
+
+    items = []
+    for doc in docs:
+        buyer_email = email_map.get(doc.get("buyer_user_id"), "")
+        items.append(RecentTransactionItem(
+            id=str(doc["_id"]),
+            buyer_email=buyer_email,
+            license_key=doc.get("license_key", ""),
+            transaction_amount=doc.get("transaction_amount", 0),
+            payment_status=doc.get("payment_status", ""),
+            transaction_type=doc.get("transaction_type", ""),
+            created_at=doc.get("created_at", datetime.now(timezone.utc)),
+        ))
+    return items
+
+
+async def get_broker_dashboard_stats(
+    db: AsyncIOMotorDatabase,
+    start_date: datetime,
+    end_date: datetime,
+    broker_code: str,
+) -> DashboardStatsResponse:
+    """Dashboard stats filtered to a specific broker's referrals only."""
+    period_delta = end_date - start_date
+    prev_start = start_date - period_delta
+    prev_end = start_date
+    granularity = _get_granularity(start_date, end_date)
+
+    (
+        current_revenue,
+        current_orders,
+        current_pending,
+        prev_revenue,
+        prev_orders,
+        prev_pending,
+    ) = await asyncio.gather(
+        _get_broker_revenue_kpi(db, start_date, end_date, broker_code),
+        _get_broker_order_count(db, start_date, end_date, broker_code, "succeeded"),
+        _get_broker_order_count(db, start_date, end_date, broker_code, "pending"),
+        _get_broker_revenue_kpi(db, prev_start, prev_end, broker_code),
+        _get_broker_order_count(db, prev_start, prev_end, broker_code, "succeeded"),
+        _get_broker_order_count(db, prev_start, prev_end, broker_code, "pending"),
+    )
+
+    (revenue_trend, recent_transactions) = await asyncio.gather(
+        _get_broker_revenue_trend(db, start_date, end_date, granularity, broker_code),
+        _get_broker_recent_transactions(db, broker_code),
+    )
+
+    return DashboardStatsResponse(
+        period=PeriodRange(start_date=start_date, end_date=end_date),
+        previous_period=PeriodRange(start_date=prev_start, end_date=prev_end),
+        granularity=granularity,
+        total_users=0,
+        kpis=KpiStats(
+            total_revenue=KpiMetric(current=current_revenue, previous=prev_revenue),
+            successful_orders=KpiMetric(current=current_orders, previous=prev_orders),
+            pending_orders=KpiMetric(current=current_pending, previous=prev_pending),
+        ),
+        revenue_trend=revenue_trend,
+        recent_transactions=recent_transactions,
+    )
+
+
 async def get_dashboard_stats(
     db: AsyncIOMotorDatabase,
     start_date: datetime,

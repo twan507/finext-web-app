@@ -110,7 +110,7 @@ function UserAvatarWithSubscription({
                         transform: 'translateX(-50%)',
                         backgroundColor: badgeColor,
                         color: 'white',
-                        px: 0.45, // Giảm từ 0.6 xuống 0.4
+                        px: 0.55, // Giảm từ 0.6 xuống 0.4
                         py: 0.15,
                         fontSize: getResponsiveFontSize('badge'),
                         fontWeight: 'bold',

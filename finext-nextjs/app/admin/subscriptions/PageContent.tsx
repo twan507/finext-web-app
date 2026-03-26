@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { apiClient } from 'services/apiClient';
+import { useAuth } from '@/components/auth/AuthProvider';
 import AdminBreadcrumb from '../components/AdminBreadcrumb';
 import {
 	Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
@@ -52,6 +53,8 @@ interface PaginatedSubscriptionsResponse {
 
 export default function SubscriptionsPage() {
 	const theme = useTheme();
+	const { hasPermission } = useAuth();
+	const canDeleteSubscription = hasPermission('subscription:delete_any');
 
 
 	const [subscriptions, setSubscriptions] = useState<SubscriptionPublic[]>([]);
@@ -700,18 +703,18 @@ export default function SubscriptionsPage() {
 																<ActivateIcon fontSize="small" />
 															</IconButton>
 														</Tooltip>
-													)}                                                    <Tooltip title={sub.is_active ? "Cannot delete active subscription. Deactivate first." : "Delete Subscription"}>
+													)}                                                    <Tooltip title={!canDeleteSubscription ? "Bạn không có quyền thực hiện thao tác này" : sub.is_active ? "Cannot delete active subscription. Deactivate first." : "Xóa subscription"}>
 														<span>
 															<IconButton
 																size="small"
 																onClick={() => handleOpenDeleteDialog(sub)}
 																color="error"
-																disabled={sub.is_active}
+																disabled={!canDeleteSubscription || sub.is_active}
 																sx={{
 																	minWidth: { xs: 32, sm: 'auto' },
 																	width: { xs: 32, sm: 'auto' },
 																	height: { xs: 32, sm: 'auto' },
-																	opacity: sub.is_active ? 0.5 : 1
+																	opacity: !canDeleteSubscription || sub.is_active ? 0.4 : 1
 																}}
 															>
 																<DeleteIcon fontSize="small" />

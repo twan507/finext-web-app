@@ -14,6 +14,7 @@ import AdminBreadcrumb from '../components/AdminBreadcrumb';
 import { apiClient } from 'services/apiClient';
 import { DashboardStatsResponse } from './types';
 import { borderRadius, getGlassCard, getGlassHighlight, getResponsiveFontSize, fontWeight } from 'theme/tokens';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 import TimeFilterBar from './components/TimeFilterBar';
 import KpiCards from './components/KpiCards';
@@ -72,6 +73,56 @@ const SectionHeader: React.FC<{
     );
 };
 
+/* ─── Broker Info Header ──────────────────────────────────────────── */
+const BrokerInfoHeader: React.FC<{ name: string; referralCode: string; avatarUrl?: string | null }> = ({ name, referralCode, avatarUrl }) => {
+    const theme = useTheme();
+    return (
+        <Box
+            sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2,
+                p: 2.5,
+                mb: 3,
+                borderRadius: `${borderRadius.lg}px`,
+                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.12)}, ${alpha(theme.palette.primary.main, 0.04)})`,
+                border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+            }}
+        >
+            <Box
+                sx={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: '50%',
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontWeight: fontWeight.bold,
+                    fontSize: '1.25rem',
+                }}
+            >
+                {avatarUrl ? (
+                    <img src={avatarUrl} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                    name.charAt(0).toUpperCase()
+                )}
+            </Box>
+            <Box>
+                <Typography variant="h6" fontWeight={fontWeight.bold} color="text.primary">
+                    {name}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                    Mã broker: <strong style={{ color: theme.palette.primary.main }}>{referralCode}</strong>
+                </Typography>
+            </Box>
+        </Box>
+    );
+};
+
 /* ─── Chart Slot (lightweight inner label, no card border) ────────── */
 const ChartSlot: React.FC<{
     title: string;
@@ -94,6 +145,8 @@ const ChartSlot: React.FC<{
 const DashboardHomePage: React.FC = () => {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
+    const { session, hasPermission } = useAuth();
+    const isBroker = !hasPermission('transaction:read_any') && hasPermission('transaction:read_referred');
     const [data, setData] = useState<DashboardStatsResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -189,6 +242,15 @@ const DashboardHomePage: React.FC = () => {
                 </Alert>
             )}
 
+            {/* ── Broker Info Header ────────────────────────────── */}
+            {isBroker && session?.user?.referral_code && (
+                <BrokerInfoHeader
+                    name={session.user.full_name}
+                    referralCode={session.user.referral_code}
+                    avatarUrl={session.user.avatar_url}
+                />
+            )}
+
             {/* ── KPI Strip ─────────────────────────────────────── */}
             <Box sx={{ mb: 3 }}>
                 {loading || !data ? (
@@ -200,89 +262,106 @@ const DashboardHomePage: React.FC = () => {
                         ))}
                     </Grid>
                 ) : (
-                    <KpiCards kpis={data.kpis} totalUsers={data.total_users} />
+                    <KpiCards kpis={data.kpis} totalUsers={data.total_users} isBroker={isBroker} />
                 )}
             </Box>
 
-            {/* ── Section 1 — Trend Analytics ────────────────────── */}
-            <Box sx={{ mb: 3 }}>
-                <Box sx={glassSx}>
-                    <SectionHeader
-                        icon={<TrendingUpIcon />}
-                        title="Phân tích xu hướng"
-                        subtitle="Doanh thu & tăng trưởng người dùng theo thời gian"
-                    />
-                    <Grid container spacing={3}>
-                        <Grid size={{ xs: 12, lg: 6 }}>
-                            <ChartSlot title="Xu hướng doanh thu">
-                                {loading || !data ? sk(350) : <RevenueTrendChart data={data.revenue_trend} />}
-                            </ChartSlot>
-                        </Grid>
-                        <Grid size={{ xs: 12, lg: 6 }}>
-                            <ChartSlot title="Tăng trưởng người dùng">
-                                {loading || !data ? sk(350) : <UserGrowthChart data={data.user_growth} />}
-                            </ChartSlot>
-                        </Grid>
-                    </Grid>
-                </Box>
-            </Box>
+            {/* ── Section 1–3 — Admin/Manager only ──────────────── */}
+            {!isBroker && (
+                <>
+                    {/* ── Section 1 — Trend Analytics ────────────────────── */}
+                    <Box sx={{ mb: 3 }}>
+                        <Box sx={glassSx}>
+                            <SectionHeader
+                                icon={<TrendingUpIcon />}
+                                title="Phân tích xu hướng"
+                                subtitle="Doanh thu & tăng trưởng người dùng theo thời gian"
+                            />
+                            <Grid container spacing={3}>
+                                <Grid size={{ xs: 12, lg: 6 }}>
+                                    <ChartSlot title="Xu hướng doanh thu">
+                                        {loading || !data ? sk(350) : <RevenueTrendChart data={data.revenue_trend} />}
+                                    </ChartSlot>
+                                </Grid>
+                                <Grid size={{ xs: 12, lg: 6 }}>
+                                    <ChartSlot title="Tăng trưởng người dùng">
+                                        {loading || !data ? sk(350) : <UserGrowthChart data={data.user_growth} />}
+                                    </ChartSlot>
+                                </Grid>
+                            </Grid>
+                        </Box>
+                    </Box>
 
-            {/* ── Section 2 — Distribution Breakdown ─────────────── */}
-            <Box sx={{ mb: 3 }}>
-                <Box sx={glassSx}>
-                    <SectionHeader
-                        icon={<PieChartIcon />}
-                        title="Phân bổ & cơ cấu"
-                        subtitle="Cơ cấu doanh thu, subscription và trạng thái giao dịch"
-                    />
-                    <Grid container spacing={3}>
-                        <Grid size={{ xs: 12, md: 4 }}>
-                            <ChartSlot title="Doanh thu theo gói">
-                                {loading || !data ? sk(300) : <RevenueByLicenseChart data={data.revenue_by_license} />}
-                            </ChartSlot>
-                        </Grid>
-                        <Grid size={{ xs: 12, md: 4 }}>
-                            <ChartSlot title="Phân bổ Subscription">
-                                {loading || !data ? sk(300) : <SubscriptionDonut data={data.subscription_distribution} />}
-                            </ChartSlot>
-                        </Grid>
-                        <Grid size={{ xs: 12, md: 4 }}>
-                            <ChartSlot title="Trạng thái giao dịch">
-                                {loading || !data ? sk(300) : <TransactionDonut data={data.transaction_status} />}
-                            </ChartSlot>
-                        </Grid>
-                    </Grid>
-                </Box>
-            </Box>
+                    {/* ── Section 2 — Distribution Breakdown ─────────────── */}
+                    <Box sx={{ mb: 3 }}>
+                        <Box sx={glassSx}>
+                            <SectionHeader
+                                icon={<PieChartIcon />}
+                                title="Phân bổ & cơ cấu"
+                                subtitle="Cơ cấu doanh thu, subscription và trạng thái giao dịch"
+                            />
+                            <Grid container spacing={3}>
+                                <Grid size={{ xs: 12, md: 4 }}>
+                                    <ChartSlot title="Doanh thu theo gói">
+                                        {loading || !data ? sk(300) : <RevenueByLicenseChart data={data.revenue_by_license} />}
+                                    </ChartSlot>
+                                </Grid>
+                                <Grid size={{ xs: 12, md: 4 }}>
+                                    <ChartSlot title="Phân bổ Subscription">
+                                        {loading || !data ? sk(300) : <SubscriptionDonut data={data.subscription_distribution} />}
+                                    </ChartSlot>
+                                </Grid>
+                                <Grid size={{ xs: 12, md: 4 }}>
+                                    <ChartSlot title="Trạng thái giao dịch">
+                                        {loading || !data ? sk(300) : <TransactionDonut data={data.transaction_status} />}
+                                    </ChartSlot>
+                                </Grid>
+                            </Grid>
+                        </Box>
+                    </Box>
 
-            {/* ── Section 3 — Top Rankings ───────────────────────── */}
-            <Box sx={{ mb: 3 }}>
-                <Box sx={glassSx}>
-                    <SectionHeader
-                        icon={<EmojiEventsIcon />}
-                        title="Bảng xếp hạng"
-                        subtitle="Top khuyến mãi & đối tác môi giới"
-                    />
-                    <Grid container spacing={3}>
-                        <Grid size={{ xs: 12, lg: 6 }}>
-                            <ChartSlot title="Top khuyến mãi">
-                                {loading || !data ? sk(300) : <TopPromotionsChart data={data.top_promotions} />}
-                            </ChartSlot>
-                        </Grid>
-                        <Grid size={{ xs: 12, lg: 6 }}>
-                            <ChartSlot title="Top Brokers">
-                                {loading || !data ? sk(300) : <TopBrokersChart data={data.top_brokers} />}
-                            </ChartSlot>
+                    {/* ── Section 3 — Top Rankings ───────────────────────── */}
+                    <Box sx={{ mb: 3 }}>
+                        <Box sx={glassSx}>
+                            <SectionHeader
+                                icon={<EmojiEventsIcon />}
+                                title="Bảng xếp hạng"
+                                subtitle="Top khuyến mãi & đối tác môi giới"
+                            />
+                            <Grid container spacing={3}>
+                                <Grid size={{ xs: 12, lg: 6 }}>
+                                    <ChartSlot title="Top khuyến mãi">
+                                        {loading || !data ? sk(300) : <TopPromotionsChart data={data.top_promotions} />}
+                                    </ChartSlot>
+                                </Grid>
+                                <Grid size={{ xs: 12, lg: 6 }}>
+                                    <ChartSlot title="Top Brokers">
+                                        {loading || !data ? sk(300) : <TopBrokersChart data={data.top_brokers} />}
+                                    </ChartSlot>
+                                </Grid>
+                            </Grid>
+                        </Box>
+                    </Box>
+                </>
+            )}
+
+            {/* ── Broker Revenue Trend ───────────────────────────── */}
+            {isBroker && data && data.revenue_trend.length > 0 && (
+                <>
+                    <SectionHeader icon={<TrendingUpIcon />} title="Xu hướng doanh thu của bạn" />
+                    <Grid container spacing={3} sx={{ mb: 4 }}>
+                        <Grid size={{ xs: 12 }}>
+                            <RevenueTrendChart data={data.revenue_trend} />
                         </Grid>
                     </Grid>
-                </Box>
-            </Box>
+                </>
+            )}
 
             {/* ── Section 4 — Recent Activity ────────────────────── */}
             <Box sx={glassSx}>
                 <SectionHeader
                     icon={<ReceiptLongIcon />}
-                    title="Hoạt động gần đây"
+                    title={isBroker ? "Giao dịch qua mã của bạn" : "Giao dịch gần đây"}
                     subtitle="Giao dịch mới nhất trong hệ thống"
                 />
                 {loading || !data ? sk(200) : <RecentTransactions transactions={data.recent_transactions} />}

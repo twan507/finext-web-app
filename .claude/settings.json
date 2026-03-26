@@ -21,7 +21,12 @@
       "Bash(grep -r \"revalidate\\\\|ISR\\\\|stale-while\\\\|cache.*control\" /d/twan_projects/finext-web-app/finext-nextjs/app --include=*.ts --include=*.tsx)",
       "Bash(grep -r \"useQuery\\\\|QueryClient\\\\|QueryKey\\\\|@tanstack\" /d/twan_projects/finext-web-app/finext-nextjs/app --include=*.ts --include=*.tsx)",
       "Bash(grep -r \"login\\\\|logout\\\\|oauth\\\\|google\" /d/twan_projects/finext-web-app/finext-nextjs/app --include=*[Ll]ogin* --include=*[Aa]uth*)",
-      "Bash(find d:/twan_projects/finext-web-app/finext-fastapi/app/templates -type f -name *.html)"
+      "Bash(find d:/twan_projects/finext-web-app/finext-fastapi/app/templates -type f -name *.html)",
+      "Bash(find /d/twan_projects/finext-web-app/finext-nextjs/app/admin -type f -name *.tsx -o -type f -name *.ts -o -type f -name *.json)",
+      "Bash(find /d/twan_projects/finext-web-app/finext-nextjs -path */src/api/* -o -path */app/api/*)",
+      "Bash(find /d/twan_projects/finext-web-app/finext-nextjs/services -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))",
+      "Bash(ls -la /d/twan_projects/finext-web-app/finext-nextjs/app/admin/*/)",
+      "Bash(xargs -I {} find {} -type f -name \"*.tsx\")"
     ],
     "additionalDirectories": [
       "D:\\twan_projects\\finext-web-app\\finext-nextjs\\app\\(main)\\sectors\\[sectorId]\\components"

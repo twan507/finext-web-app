@@ -141,9 +141,9 @@ async def read_subscription_by_id(  # Đổi tên hàm nếu bị trùng
         )
 
     # Kiểm tra permissions - lấy permissions của user hiện tại
-    from app.auth.access import _get_user_permissions
+    from app.auth.access import get_user_permissions
 
-    user_permissions = await _get_user_permissions(db, str(current_user.id))
+    user_permissions = await get_user_permissions(db, str(current_user.id))
 
     # Kiểm tra quyền truy cập
     has_read_any = "subscription:read_any" in user_permissions

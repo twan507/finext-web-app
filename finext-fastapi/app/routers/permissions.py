@@ -10,7 +10,7 @@ from app.schemas.users import UserInDB
 from app.schemas.common import PaginatedResponse
 from app.utils.response_wrapper import StandardApiResponse, api_response_wrapper
 from app.auth.dependencies import get_current_active_user
-from app.auth.access import _get_user_permissions, require_permission
+from app.auth.access import get_user_permissions, require_permission
 import app.crud.permissions as crud_permissions
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ async def read_my_permissions(
     current_user: UserInDB = Depends(get_current_active_user),
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
-    current_user_permission_names: Set[str] = await _get_user_permissions(db, str(current_user.id))
+    current_user_permission_names: Set[str] = await get_user_permissions(db, str(current_user.id))
     permissions_to_return: List[PermissionPublic] = []
 
     if not current_user_permission_names:

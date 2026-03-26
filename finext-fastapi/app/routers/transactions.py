@@ -242,13 +242,26 @@ async def read_my_referred_transactions(
 
     transactions_docs, total_count = await crud_transactions.get_all_transactions(
         db=db,
-        broker_code_applied_filter=broker_info.broker_code,  # Lọc theo broker_code của user hiện tại
+        broker_code_applied_filter=broker_info.broker_code,
         payment_status=payment_status,
         skip=skip,
         limit=limit,
-        # Các filter khác có thể thêm vào đây nếu cần (transaction_type, buyer_user_id)
     )
-    items = [TransactionPublic.model_validate(t) for t in transactions_docs]
+
+    # Batch-lookup buyer emails
+    from bson import ObjectId as BsonObjectId
+    buyer_ids = [BsonObjectId(str(doc.buyer_user_id)) for doc in transactions_docs if doc.buyer_user_id]
+    email_map: dict = {}
+    if buyer_ids:
+        user_docs = await db.users.find({"_id": {"$in": buyer_ids}}, {"_id": 1, "email": 1}).to_list(None)
+        email_map = {str(u["_id"]): u["email"] for u in user_docs}
+
+    items = []
+    for doc in transactions_docs:
+        pub = TransactionPublic.model_validate(doc)
+        pub.buyer_email = email_map.get(str(doc.buyer_user_id)) if doc.buyer_user_id else None
+        items.append(pub)
+
     return PaginatedResponse[TransactionPublic](items=items, total=total_count)
 
 

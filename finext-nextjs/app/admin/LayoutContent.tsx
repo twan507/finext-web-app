@@ -49,6 +49,7 @@ interface NavItem {
   text: string;
   href: string;
   icon: React.ReactElement<SvgIconProps>;
+  requiredPermission?: string | string[];
 }
 
 interface NavGroup {
@@ -63,48 +64,48 @@ const navigationStructure: (NavItem | NavGroup)[] = [
     groupText: 'Account Management',
     groupIcon: <ManageAccounts />,
     subItems: [
-      { text: 'Users', href: '/admin/users', icon: <PeopleIcon /> },
-      { text: 'Brokers', href: '/admin/brokers', icon: <BusinessCenter /> },
+      { text: 'Users', href: '/admin/users', icon: <PeopleIcon />, requiredPermission: 'user:list' },
+      { text: 'Brokers', href: '/admin/brokers', icon: <BusinessCenter />, requiredPermission: 'broker:list' },
     ],
   },
   {
     groupText: 'Payment Management',
     groupIcon: <ShoppingCart />,
     subItems: [
-      { text: 'Transactions', href: '/admin/transactions', icon: <ReceiptLong /> },
-      { text: 'Subscriptions', href: '/admin/subscriptions', icon: <Receipt /> },
-      { text: 'Promotions', href: '/admin/promotions', icon: <Campaign /> },
+      { text: 'Transactions', href: '/admin/transactions', icon: <ReceiptLong />, requiredPermission: ['transaction:read_any', 'transaction:read_referred'] },
+      { text: 'Subscriptions', href: '/admin/subscriptions', icon: <Receipt />, requiredPermission: 'subscription:read_any' },
+      { text: 'Promotions', href: '/admin/promotions', icon: <Campaign />, requiredPermission: 'promotion:manage' },
     ],
   },
   {
     groupText: 'Licenses & Features',
     groupIcon: <Policy />,
     subItems: [
-      { text: 'Licenses', href: '/admin/licenses', icon: <VerifiedUser /> },
-      { text: 'Features', href: '/admin/features', icon: <Category /> },
+      { text: 'Licenses', href: '/admin/licenses', icon: <VerifiedUser />, requiredPermission: 'license:manage' },
+      { text: 'Features', href: '/admin/features', icon: <Category />, requiredPermission: 'feature:manage' },
     ],
   },
   {
     groupText: 'Roles & Permissions',
     groupIcon: <AdminPanelSettings />,
     subItems: [
-      { text: 'Roles', href: '/admin/roles', icon: <Security /> },
-      { text: 'Permissions', href: '/admin/permissions', icon: <Gavel /> },
+      { text: 'Roles', href: '/admin/roles', icon: <Security />, requiredPermission: 'role:manage' },
+      { text: 'Permissions', href: '/admin/permissions', icon: <Gavel />, requiredPermission: 'permission:manage' },
     ],
   },
   {
     groupText: 'User Data',
     groupIcon: <ContactPage />,
     subItems: [
-      { text: 'Watchlists', href: '/admin/watchlists', icon: <ListAlt /> },
-      { text: 'Sessions', href: '/admin/sessions', icon: <Devices /> },
-      { text: 'Otps', href: '/admin/otps', icon: <VpnKey /> },
+      { text: 'Watchlists', href: '/admin/watchlists', icon: <ListAlt />, requiredPermission: 'watchlist:manage_any' },
+      { text: 'Sessions', href: '/admin/sessions', icon: <Devices />, requiredPermission: 'session:manage_any' },
+      { text: 'Otps', href: '/admin/otps', icon: <VpnKey />, requiredPermission: 'otp:manage' },
     ],
   },
 ];
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
-  const { session, loading: authLoading, logout } = useAuth();
+  const { session, loading: authLoading, logout, hasPermission } = useAuth();
   const router = useRouter();
   const currentPathname = usePathname();
   const theme = useTheme();
@@ -124,6 +125,48 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const drawerWidth = EXPANDED_WIDTH;
   // Show hamburger menu for both Tablet and Mobile
   const showHamburgerMenu = !isDesktop;
+
+  const canViewItem = (item: NavItem): boolean => {
+    if (!item.requiredPermission) return true;
+    if (Array.isArray(item.requiredPermission)) {
+      return item.requiredPermission.some(p => hasPermission(p));
+    }
+    return hasPermission(item.requiredPermission);
+  };
+
+  useEffect(() => {
+    if (authLoading || !session) return;
+
+    const routePermissions: Record<string, string | string[]> = {
+      '/admin/users': 'user:list',
+      '/admin/brokers': 'broker:list',
+      '/admin/transactions': ['transaction:read_any', 'transaction:read_referred'],
+      '/admin/subscriptions': 'subscription:read_any',
+      '/admin/promotions': 'promotion:manage',
+      '/admin/licenses': 'license:manage',
+      '/admin/features': 'feature:manage',
+      '/admin/roles': 'role:manage',
+      '/admin/permissions': 'permission:manage',
+      '/admin/watchlists': 'watchlist:manage_any',
+      '/admin/sessions': 'session:manage_any',
+      '/admin/otps': 'otp:manage',
+    };
+
+    const matchedRoute = Object.keys(routePermissions).find(route =>
+      currentPathname.startsWith(route)
+    );
+
+    if (!matchedRoute) return;
+
+    const required = routePermissions[matchedRoute];
+    const allowed = Array.isArray(required)
+      ? required.some(p => hasPermission(p))
+      : hasPermission(required);
+
+    if (!allowed) {
+      router.replace('/admin/dashboard');
+    }
+  }, [currentPathname, authLoading, session, hasPermission, router]);
 
   useEffect(() => {
     if (!authLoading && !session) {
@@ -190,7 +233,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   };
 
   const renderExpandedGroup = (group: NavGroup) => {
-    const isGroupActive = group.subItems.some(sub => currentPathname.startsWith(sub.href));
+    const visibleSubItems = group.subItems.filter(canViewItem);
+    if (visibleSubItems.length === 0) return null;
+    const isGroupActive = visibleSubItems.some(sub => currentPathname.startsWith(sub.href));
     const isOpen = openGroups[group.groupText] ?? isGroupActive; // auto-open active group
 
     return (
@@ -216,7 +261,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         </ListItemButton>
         <Collapse in={isOpen} unmountOnExit>
           <List disablePadding>
-            {group.subItems.map(subItem => {
+            {visibleSubItems.map(subItem => {
               const isSubActive = currentPathname.startsWith(subItem.href);
               return (
                 <ListItem key={subItem.text} disablePadding>
@@ -331,6 +376,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               </ListItem>
             );
           } else {
+            const visibleSubItems = itemOrGroup.subItems.filter(canViewItem);
+            if (visibleSubItems.length === 0) return null;
             return (
               <React.Fragment key={itemOrGroup.groupText}>
                 <ListItem sx={{ pt: 1 }}>
@@ -338,7 +385,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     {itemOrGroup.groupText}
                   </Typography>
                 </ListItem>
-                {itemOrGroup.subItems.map(subItem => {
+                {visibleSubItems.map(subItem => {
                   const isActive = currentPathname.startsWith(subItem.href);
                   return (
                     <ListItem key={subItem.text} disablePadding sx={{ pl: 2 }}>
@@ -426,6 +473,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               </ListItem>
             );
           } else {
+            const visibleSubItems = itemOrGroup.subItems.filter(canViewItem);
+            if (visibleSubItems.length === 0) return null;
             return (
               <React.Fragment key={itemOrGroup.groupText}>
                 <ListItem sx={{ px: 1 }}>
@@ -433,7 +482,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     {itemOrGroup.groupText}
                   </Typography>
                 </ListItem>
-                {itemOrGroup.subItems.map(subItem => {
+                {visibleSubItems.map(subItem => {
                   const isActive = currentPathname.startsWith(subItem.href);
                   return (
                     <ListItem key={subItem.text} disablePadding sx={{ pl: 0.5 }}>

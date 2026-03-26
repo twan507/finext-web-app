@@ -30,6 +30,7 @@ import {
   getResponsiveDisplayStyle
 } from '../components/TableSortUtils';
 import { isSystemUser } from 'utils/systemProtection';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 // Interface for User data (matching UserPublic from backend)
 interface UserPublic {
@@ -79,6 +80,10 @@ interface PaginatedUsersResponse {
 
 const UsersPage: React.FC = () => {
   const theme = useTheme();
+  const { hasPermission } = useAuth();
+  const canDeleteUser = hasPermission('user:delete_any');
+  const canManageRoles = hasPermission('user:manage_roles');
+  const canViewRoles = hasPermission('role:manage');
 
 
   const [users, setUsers] = useState<UserPublic[]>([]);
@@ -241,6 +246,7 @@ const UsersPage: React.FC = () => {
   }, [page, rowsPerPage]);
 
   const fetchRoles = useCallback(async () => {
+    if (!hasPermission('role:manage')) return;
     try {
       const response = await apiClient<{ items: RolePublic[]; total: number }>({
         url: `/api/v1/roles/?skip=0&limit=200`,
@@ -253,7 +259,7 @@ const UsersPage: React.FC = () => {
     } catch (err: any) {
       console.error('Failed to load roles:', err.message);
     }
-  }, []);
+  }, [hasPermission]);
 
   const fetchProtectedEmails = useCallback(async () => {
     try {
@@ -660,7 +666,7 @@ const UsersPage: React.FC = () => {
                 width: '100%'
               }}>
                 <SortableTableHead
-                  columns={columnConfigs}
+                  columns={canViewRoles ? columnConfigs : columnConfigs.filter(c => c.id !== 'roles')}
                   sortConfig={sortConfig}
                   onSort={handleSort}
                   expandedView={expandedView}
@@ -783,6 +789,7 @@ const UsersPage: React.FC = () => {
                           size="small"
                         />
                       </TableCell>
+                      {canViewRoles && (
                       <TableCell sx={{
                         ...getResponsiveDisplayStyle(columnConfigs[4], expandedView),
                         whiteSpace: expandedView ? 'nowrap' : 'normal',
@@ -798,6 +805,7 @@ const UsersPage: React.FC = () => {
                             <Typography variant="body2" color="text.secondary" sx={{ fontSize: getResponsiveFontSize('sm') }}>N/A</Typography>)}
                         </Box>
                       </TableCell>
+                      )}
                       <TableCell sx={{
                         ...getResponsiveDisplayStyle(columnConfigs[5], expandedView),
                         whiteSpace: expandedView ? 'nowrap' : 'normal',
@@ -906,18 +914,18 @@ const UsersPage: React.FC = () => {
                               <EditIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title={isSystemUser(user.email) ? "Không thể xóa người dùng hệ thống" : "Xóa người dùng"}>
+                          <Tooltip title={!canDeleteUser ? "Bạn không có quyền thực hiện thao tác này" : isSystemUser(user.email) ? "Không thể xóa người dùng hệ thống" : "Xóa người dùng"}>
                             <span>
                               <IconButton
                                 size="small"
                                 onClick={() => handleOpenDeleteDialog(user)}
                                 color="error"
-                                disabled={isSystemUser(user.email)}
+                                disabled={!canDeleteUser || isSystemUser(user.email)}
                                 sx={{
                                   minWidth: { xs: 32, sm: 'auto' },
                                   width: { xs: 32, sm: 'auto' },
                                   height: { xs: 32, sm: 'auto' },
-                                  opacity: isSystemUser(user.email) ? 0.5 : 1
+                                  opacity: !canDeleteUser || isSystemUser(user.email) ? 0.4 : 1
                                 }}
                               >
                                 <DeleteIcon fontSize="small" />

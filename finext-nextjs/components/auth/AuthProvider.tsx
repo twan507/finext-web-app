@@ -17,10 +17,12 @@ import { useNotification } from '../provider/NotificationProvider';
 interface AuthContextType {
   session: SessionData | null;
   features: string[];
+  permissions: string[];
   login: (sessionData: SessionData) => void;
   logout: () => void;
   loading: boolean;
   hasFeature: (featureKey: string) => boolean;
+  hasPermission: (permKey: string) => boolean;
   // THÊM: Hàm để cập nhật session từ bên ngoài (ví dụ khi subscription thay đổi)
   refreshSessionData: () => Promise<void>;
 }
@@ -30,6 +32,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<SessionData | null>(null);
   const [features, setFeatures] = useState<string[]>([]);
+  const [permissions, setPermissions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const { showNotification } = useNotification();
@@ -44,18 +47,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // API Client đã tự động thêm token vào header nếu có
-      const userResponse = await apiClient<UserSchema>({ url: '/api/v1/auth/me', method: 'GET' });
-      const featuresResponse = await apiClient<string[]>({ url: '/api/v1/auth/me/features', method: 'GET' });
+      const [userResponse, featuresResponse, permissionsResponse] = await Promise.all([
+        apiClient<UserSchema>({ url: '/api/v1/auth/me', method: 'GET' }),
+        apiClient<string[]>({ url: '/api/v1/auth/me/features', method: 'GET' }),
+        apiClient<string[]>({ url: '/api/v1/auth/me/permissions', method: 'GET' }),
+      ]);
 
-      if (userResponse.status === 200 && userResponse.data && featuresResponse.status === 200) {
+      if (userResponse.status === 200 && userResponse.data && featuresResponse.status === 200 && permissionsResponse.status === 200) {
         const newSessionData: SessionData = {
           user: userResponse.data, // userResponse.data giờ sẽ có subscription_id
           accessToken: tokenToUse, // Sử dụng token đang dùng để fetch
           features: featuresResponse.data || [],
+          permissions: permissionsResponse.data || [],
         };
         saveSessionToStorage(newSessionData);
         setSession(newSessionData);
         setFeatures(newSessionData.features);
+        setPermissions(newSessionData.permissions);
       } else {
         // Xử lý lỗi cụ thể hơn nếu cần
         throw new Error(userResponse.message || featuresResponse.message || "Failed to fetch user/features data.");
@@ -87,6 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             clearSession();
             setSession(null);
             setFeatures([]);
+            setPermissions([]);
             // Hiển thị thông báo session hết hạn
             showNotification(errorInfo.userMessage, errorInfo.severity);
           }
@@ -102,6 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           clearSession();
           setSession(null);
           setFeatures([]);
+          setPermissions([]);
           // Hiển thị thông báo lỗi refresh token
           showNotification(refreshErrorInfo.userMessage, refreshErrorInfo.severity);
         }
@@ -132,6 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setSession(null);
         setFeatures([]);
+        setPermissions([]);
         setLoading(false); // Quan trọng: set loading false nếu không có session
       }
     };
@@ -147,6 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearSseCache(); // Xóa toàn bộ SSE cache trong memory
     setSession(null);
     setFeatures([]);
+    setPermissions([]);
     setLoading(false);
     router.push('/'); // Chuyển về trang chủ mượt mà với Next.js router
   }, [router]);
@@ -158,6 +170,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     saveSessionToStorage(sessionData); // Lưu user (có subscription_id), accessToken, features
     setSession(sessionData);
     setFeatures(sessionData.features || []);
+    setPermissions(sessionData.permissions || []);
     setLoading(false); // Sau khi login thành công, không còn loading
     // Không redirect ở đây - để caller (LoginForm, Google callback, etc.) tự xử lý redirect
     // Điều này cho phép các caller sử dụng callbackUrl hoặc window.location.href nếu cần
@@ -167,8 +180,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return features.includes(featureKey);
   }, [features]);
 
+  const hasPermission = useCallback((permKey: string): boolean => {
+    return permissions.includes(permKey);
+  }, [permissions]);
+
   return (
-    <AuthContext.Provider value={{ session, features, login, logout, loading, hasFeature, refreshSessionData }}>
+    <AuthContext.Provider value={{ session, features, permissions, login, logout, loading, hasFeature, hasPermission, refreshSessionData }}>
       {children}
     </AuthContext.Provider>
   );

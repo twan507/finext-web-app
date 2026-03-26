@@ -189,6 +189,8 @@ class TransactionPublic(BaseModel):
     """Schema for returning transaction data to regular users (minimal info)."""
 
     id: PyObjectId = Field(alias="_id")  # Thêm id để frontend có thể dùng làm key
+    buyer_user_id: Optional[PyObjectId] = None
+    buyer_email: Optional[str] = None
     license_key: str
     original_license_price: float
     purchased_duration_days: int
@@ -202,7 +204,7 @@ class TransactionPublic(BaseModel):
     transaction_type: TransactionTypeEnum
     notes: Optional[str] = None
     created_at: datetime
-    # KHÔNG bao gồm: buyer_user_id, license_id, target_subscription_id, updated_at
+    # KHÔNG bao gồm: license_id, target_subscription_id, updated_at
 
     model_config = ConfigDict(populate_by_name=True, from_attributes=True, use_enum_values=True)
 

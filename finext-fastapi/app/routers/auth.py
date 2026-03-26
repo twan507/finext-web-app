@@ -11,6 +11,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from jose import jwt, JWTError
 
 from app.auth.dependencies import get_current_active_user, verify_active_session
+from app.auth.access import get_user_permissions
 from app.auth.jwt_handler import (
     create_access_token,
     create_refresh_token,
@@ -209,6 +210,21 @@ async def read_my_features(
     feature_keys = license_data.feature_keys
     logger.info(f"User {current_user.email} has access to features: {feature_keys} via sub {sub_id_str}")
     return feature_keys
+
+
+@router.get(
+    "/me/permissions",
+    response_model=StandardApiResponse[List[str]],
+    summary="Lấy danh sách permission names của người dùng hiện tại",
+    description="Trả về danh sách các permission name dựa trên roles của user.",
+)
+@api_response_wrapper(default_success_message="Lấy danh sách permissions thành công.")
+async def read_my_permissions(
+    current_user: UserInDB = Depends(get_current_active_user),
+    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
+):
+    permissions = await get_user_permissions(db, str(current_user.id))
+    return sorted(list(permissions))
 
 
 @router.post("/logout", response_model=StandardApiResponse[None])

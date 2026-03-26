@@ -11,6 +11,7 @@ export interface SessionData {
   accessToken: string;
   user: User; // User ở đây sẽ có subscription_id
   features: string[];
+  permissions: string[];
 }
 
 const SESSION_KEY = 'finext-session';
@@ -32,6 +33,7 @@ export function getSession(): SessionData | null {
             parsed.user = {} as User; // Khởi tạo rỗng nếu thiếu
         }
         parsed.features = Array.isArray(parsed.features) ? parsed.features : [];
+        parsed.permissions = Array.isArray(parsed.permissions) ? parsed.permissions : [];
         return parsed;
       } catch {
         clearSession();
@@ -58,6 +60,11 @@ export function getFeatures(): string[] {
   return session?.features || [];
 }
 
+export function getPermissions(): string[] {
+  const session = getSession();
+  return session?.permissions || [];
+}
+
 export function updateAccessToken(accessToken: string): void {
     const session = getSession();
     if (session && typeof window !== 'undefined') {
@@ -70,6 +77,14 @@ export function updateFeatures(features: string[]): void {
     const session = getSession();
     if (session && typeof window !== 'undefined') {
         const newSession = { ...session, features };
+        localStorage.setItem(SESSION_KEY, JSON.stringify(newSession));
+    }
+}
+
+export function updatePermissions(permissions: string[]): void {
+    const session = getSession();
+    if (session && typeof window !== 'undefined') {
+        const newSession = { ...session, permissions };
         localStorage.setItem(SESSION_KEY, JSON.stringify(newSession));
     }
 }

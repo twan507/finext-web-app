@@ -74,9 +74,9 @@ async def read_all_licenses(
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
     # Kiểm tra quyền admin để quyết định trả về full hay minimal
-    from app.auth.access import _get_user_permissions
+    from app.auth.access import get_user_permissions
 
-    user_permissions = await _get_user_permissions(db, str(current_user.id))
+    user_permissions = await get_user_permissions(db, str(current_user.id))
     is_admin_or_manager = "license:manage" in user_permissions
 
     licenses_docs, total_count = await crud_licenses.get_licenses(
@@ -112,9 +112,9 @@ async def read_license_by_id_endpoint(
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
     # Kiểm tra permissions - cần có license:read hoặc license:manage
-    from app.auth.access import _get_user_permissions
+    from app.auth.access import get_user_permissions
 
-    user_permissions = await _get_user_permissions(db, str(current_user.id))
+    user_permissions = await get_user_permissions(db, str(current_user.id))
 
     if not ("license:read" in user_permissions or "license:manage" in user_permissions):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Bạn không có quyền truy cập thông tin license này.")

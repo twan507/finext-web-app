@@ -32,6 +32,7 @@ import {
 import CreateTransactionModal from './components/CreateTransactionModal';
 import ConfirmTransactionModal from './components/ConfirmTransactionModal';
 import TransactionSearch from './components/TransactionSearch';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 enum PaymentStatusEnumFE {
   PENDING = "pending",
@@ -46,6 +47,7 @@ enum TransactionTypeEnumFE {
 interface TransactionPublic {
   id: string;
   buyer_user_id: string;
+  buyer_email?: string | null;
   license_id: string;
   license_key: string;
   original_license_price: number;
@@ -71,6 +73,11 @@ interface PaginatedTransactionsResponse {
 
 export default function TransactionsPage() {
   const theme = useTheme();
+  const { hasPermission } = useAuth();
+  const isBroker = !hasPermission('transaction:read_any') && hasPermission('transaction:read_referred');
+  const canCreateTransaction = hasPermission('transaction:create_any');
+  const canConfirmTransaction = hasPermission('transaction:confirm_payment_any');
+  const canDeleteTransaction = hasPermission('transaction:delete_any');
   const [transactions, setTransactions] = useState<TransactionPublic[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<TransactionPublic[]>([]);
   const [isFiltering, setIsFiltering] = useState(false);
@@ -271,8 +278,9 @@ export default function TransactionsPage() {
         queryParams.sort_order = sortConfig.direction;
       }
 
+      const url = isBroker ? `/api/v1/transactions/me/referred` : `/api/v1/transactions/admin/all`;
       const response = await apiClient<PaginatedTransactionsResponse | TransactionPublic[]>({
-        url: `/api/v1/transactions/admin/all`,
+        url,
         method: 'GET',
         queryParams,
       });
@@ -309,7 +317,7 @@ export default function TransactionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, sortConfig]);
+  }, [page, rowsPerPage, sortConfig, isBroker]);
 
   const fetchUserEmails = useCallback(async (userIds: string[]) => {
     if (userIds.length === 0) return;
@@ -544,29 +552,36 @@ export default function TransactionsPage() {
               {expandedView ? 'Chế độ thu gọn' : 'Chế độ chi tiết'}
             </Box>
           </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleAddTransaction}
-            sx={{
-              minWidth: { xs: 'auto', sm: 'auto', md: 'auto' },
-              '& .MuiButton-startIcon': {
-                margin: { xs: 0, sm: 0, md: '0 8px 0 -4px' }
-              },
-              px: { xs: 1, sm: 2 },
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}
-          >
-            <Box
-              component="span"
-              sx={{
-                display: { xs: 'none', sm: 'none', md: 'inline' }
-              }}
-            >
-              Tạo Transaction
-            </Box>          </Button>
+          <Tooltip title={!canCreateTransaction ? "Bạn không có quyền thực hiện thao tác này" : ""}>
+            <span>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={handleAddTransaction}
+                disabled={!canCreateTransaction}
+                sx={{
+                  minWidth: { xs: 'auto', sm: 'auto', md: 'auto' },
+                  '& .MuiButton-startIcon': {
+                    margin: { xs: 0, sm: 0, md: '0 8px 0 -4px' }
+                  },
+                  px: { xs: 1, sm: 2 },
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  opacity: !canCreateTransaction ? 0.5 : 1,
+                }}
+              >
+                <Box
+                  component="span"
+                  sx={{
+                    display: { xs: 'none', sm: 'none', md: 'inline' }
+                  }}
+                >
+                  Tạo Transaction
+                </Box>
+              </Button>
+            </span>
+          </Tooltip>
         </Box>
       </Box>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -620,7 +635,7 @@ export default function TransactionsPage() {
                           {emailsLoading ? (
                             <CircularProgress size={16} />
                           ) : (
-                            userEmails.get(transaction.buyer_user_id) || transaction.buyer_user_id
+                            transaction.buyer_email || userEmails.get(transaction.buyer_user_id) || transaction.buyer_user_id
                           )}
                         </Typography>
                       </TableCell>
@@ -812,14 +827,18 @@ export default function TransactionsPage() {
                         whiteSpace: expandedView ? 'nowrap' : 'normal',
                         minWidth: columnConfigs[14].minWidth
                       }} align="center">
-                        <Tooltip title="Delete Transaction">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleOpenDeleteDialog(transaction)}
-                            color="error"
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
+                        <Tooltip title={canDeleteTransaction ? "Delete Transaction" : "Bạn không có quyền thực hiện thao tác này"}>
+                          <span>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenDeleteDialog(transaction)}
+                              color="error"
+                              disabled={!canDeleteTransaction}
+                              sx={{ opacity: !canDeleteTransaction ? 0.4 : 1 }}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </span>
                         </Tooltip>
                       </TableCell>
 
@@ -851,14 +870,18 @@ export default function TransactionsPage() {
                         align="center"
                       >
                         {transaction.payment_status === PaymentStatusEnumFE.PENDING && (
-                          <Tooltip title="Confirm Payment Status">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleConfirmPayment(transaction.id)}
-                              color="success"
-                            >
-                              <ConfirmIcon fontSize="small" />
-                            </IconButton>
+                          <Tooltip title={canConfirmTransaction ? "Confirm Payment Status" : "Bạn không có quyền thực hiện thao tác này"}>
+                            <span>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleConfirmPayment(transaction.id)}
+                                color="success"
+                                disabled={!canConfirmTransaction}
+                                sx={{ opacity: !canConfirmTransaction ? 0.4 : 1 }}
+                              >
+                                <ConfirmIcon fontSize="small" />
+                              </IconButton>
+                            </span>
                           </Tooltip>
                         )}
                       </TableCell>

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Button, TextField, Skeleton, useTheme, Alert, InputAdornment } from '@mui/material';
-import { Person, Email, Phone, AdminPanelSettings } from '@mui/icons-material';
+import { Person, Email, Phone, AdminPanelSettings, Settings, BusinessCenter } from '@mui/icons-material';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { apiClient } from 'services/apiClient';
 import { borderRadius, getResponsiveFontSize } from 'theme/tokens';
@@ -38,7 +38,7 @@ interface ILicense {
 }
 
 export default function PageContent() {
-    const { session } = useAuth();
+    const { session, hasPermission } = useAuth();
     const theme = useTheme();
     const [displayName, setDisplayName] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
@@ -273,7 +273,7 @@ export default function PageContent() {
                             sx={{
                                 backgroundColor: licenseColor,
                                 color: 'white',
-                                px: 0.8,
+                                px: 1.5,
                                 py: 0.2,
                                 fontWeight: 'bold',
                                 textTransform: 'uppercase',
@@ -454,7 +454,7 @@ export default function PageContent() {
                         {isUpdating ? 'Đang cập nhật...' : 'Cập nhật thông tin'}
                     </Button>
 
-                    {finalIsAdmin && (
+                    {hasPermission('role:manage') && (
                         <Button
                             component={Link}
                             href="/admin"
@@ -462,27 +462,65 @@ export default function PageContent() {
                             size="medium"
                             startIcon={<AdminPanelSettings />}
                             sx={{
-                                px: 3,
-                                py: 1,
-                                minHeight: 40,
-                                minWidth: 120,
-                                borderRadius: 2,
-                                fontWeight: 'bold',
-                                textTransform: 'none',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
+                                px: 3, py: 1, minHeight: 40, minWidth: 120, borderRadius: 2,
+                                fontWeight: 'bold', textTransform: 'none',
                                 flex: { xs: '1 1 auto', sm: '0 0 auto' },
                                 borderColor: theme.palette.mode === 'light' ? '#d32f2f' : '#f44336',
                                 color: theme.palette.mode === 'light' ? '#d32f2f' : '#f44336',
                                 '&:hover': {
                                     borderColor: theme.palette.mode === 'light' ? '#b71c1c' : '#d32f2f',
-                                    backgroundColor: theme.palette.mode === 'light' ? '#ffebee' : 'rgba(244, 67, 54, 0.04)',
+                                    backgroundColor: theme.palette.mode === 'light' ? '#ffebee' : 'rgba(244,67,54,0.04)',
                                     color: theme.palette.mode === 'light' ? '#b71c1c' : '#f44336',
-                                }
+                                },
                             }}
                         >
-                            Truy cập Admin
+                            Admin Panel
+                        </Button>
+                    )}
+                    {hasPermission('transaction:read_any') && !hasPermission('role:manage') && (
+                        <Button
+                            component={Link}
+                            href="/admin"
+                            variant="outlined"
+                            size="medium"
+                            startIcon={<Settings />}
+                            sx={{
+                                px: 3, py: 1, minHeight: 40, minWidth: 120, borderRadius: 2,
+                                fontWeight: 'bold', textTransform: 'none',
+                                flex: { xs: '1 1 auto', sm: '0 0 auto' },
+                                borderColor: theme.palette.warning.main,
+                                color: theme.palette.warning.main,
+                                '&:hover': {
+                                    borderColor: theme.palette.warning.dark,
+                                    backgroundColor: `rgba(237,108,2,0.04)`,
+                                    color: theme.palette.warning.dark,
+                                },
+                            }}
+                        >
+                            Manager Panel
+                        </Button>
+                    )}
+                    {hasPermission('transaction:read_referred') && !hasPermission('transaction:read_any') && (
+                        <Button
+                            component={Link}
+                            href="/admin"
+                            variant="outlined"
+                            size="medium"
+                            startIcon={<BusinessCenter />}
+                            sx={{
+                                px: 3, py: 1, minHeight: 40, minWidth: 120, borderRadius: 2,
+                                fontWeight: 'bold', textTransform: 'none',
+                                flex: { xs: '1 1 auto', sm: '0 0 auto' },
+                                borderColor: theme.palette.primary.main,
+                                color: theme.palette.primary.main,
+                                '&:hover': {
+                                    borderColor: theme.palette.primary.dark,
+                                    backgroundColor: `rgba(2,136,209,0.04)`,
+                                    color: theme.palette.primary.dark,
+                                },
+                            }}
+                        >
+                            Partner Panel
                         </Button>
                     )}
                 </Box>
