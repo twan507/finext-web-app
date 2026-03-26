@@ -1,283 +1,228 @@
-// finext-nextjs/app/(dashboard)/page.tsx
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Box, Typography, Paper, Grid, Link as MuiLink, Avatar, List, ListItem, ListItemAvatar, ListItemText,
-  ToggleButton, ToggleButtonGroup, useTheme
+    Box, Typography, Paper, Grid, Alert, Button, Skeleton, useTheme,
 } from '@mui/material';
 import AdminBreadcrumb from '../components/AdminBreadcrumb';
-import {
-  LocalAtm as RevenueIcon,
-  PeopleOutline as AccountsIcon,
-  ShoppingCartOutlined as OrdersIcon,
-  TrendingUp as ConversionIcon,
-  AddShoppingCart as NewOrderIcon,
-  PersonAddAlt1Outlined as NewUserIcon,
-  MailOutline as SupportTicketIcon,
-  ReceiptLongOutlined as InvoicePaidIcon,
-  AttachMoney as ProfitIcon,
-  Inventory as ProductsIcon,
-  Support as SupportIcon,
-  Assessment as ReportsIcon,
-} from '@mui/icons-material';
-import { borderRadius } from 'theme/tokens';
+import { apiClient } from 'services/apiClient';
+import { DashboardStatsResponse } from './types';
 
-// Dummy Data (Giữ nguyên)
-const kpiData = [
-  { title: "Total Revenue", value: "$24,780", change: "+12.5%", changeColorKey: "success.main", icon: <RevenueIcon /> },
-  { title: "Total Accounts", value: "1,842", change: "+8.2%", changeColorKey: "success.main", icon: <AccountsIcon /> },
-  { title: "New Orders", value: "327", change: "+3.1%", changeColorKey: "success.main", icon: <OrdersIcon /> },
-  { title: "Conversion Rate", value: "3.6%", change: "-0.8%", changeColorKey: "error.main", icon: <ConversionIcon /> },
-];
-
-// Thêm 4 thẻ số nữa cho hàng thứ 2
-const kpiDataSecond = [
-  { title: "Net Profit", value: "$8,420", change: "+15.3%", changeColorKey: "success.main", icon: <ProfitIcon /> },
-  { title: "Active Products", value: "156", change: "+5.7%", changeColorKey: "success.main", icon: <ProductsIcon /> },
-  { title: "Support Tickets", value: "23", change: "-2.1%", changeColorKey: "success.main", icon: <SupportIcon /> },
-  { title: "Monthly Reports", value: "42", change: "+18.9%", changeColorKey: "success.main", icon: <ReportsIcon /> },
-];
-
-const recentActivityData = [
-  { icon: <NewUserIcon />, text: "<strong>John Smith</strong> created a new account", time: "2 hours ago" },
-  { icon: <NewOrderIcon />, text: "New order <strong>#ORD-4829</strong> was placed", time: "4 hours ago" },
-  { icon: <SupportTicketIcon />, text: "<strong>Sarah Johnson</strong> sent a support ticket", time: "1 day ago" },
-  { icon: <InvoicePaidIcon />, text: "Invoice <strong>#INV-2948</strong> was paid", time: "2 days ago" },
-];
+import TimeFilterBar from './components/TimeFilterBar';
+import KpiCards from './components/KpiCards';
+import RevenueTrendChart from './components/RevenueTrendChart';
+import UserGrowthChart from './components/UserGrowthChart';
+import RevenueByLicenseChart from './components/RevenueByLicenseChart';
+import SubscriptionDonut from './components/SubscriptionDonut';
+import TransactionDonut from './components/TransactionDonut';
+import TopPromotionsChart from './components/TopPromotionsChart';
+import TopBrokersChart from './components/TopBrokersChart';
+import RecentTransactions from './components/RecentTransactions';
 
 const DashboardHomePage: React.FC = () => {
-  const theme = useTheme();
-  const [revenueChartPeriod, setRevenueChartPeriod] = React.useState('Monthly');
-  const [userGrowthChartPeriod, setUserGrowthChartPeriod] = React.useState('Monthly');
+    const theme = useTheme();
+    const [data, setData] = useState<DashboardStatsResponse | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [startDate, setStartDate] = useState<string>(() => {
+        const d = new Date();
+        d.setDate(d.getDate() - 30);
+        return d.toISOString().slice(0, 10);
+    });
+    const [endDate, setEndDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
 
-  const handleChartPeriodChange = (
-    event: React.MouseEvent<HTMLElement>,
-    newPeriod: string | null,
-    setter: React.Dispatch<React.SetStateAction<string>>
-  ) => {
-    if (newPeriod !== null) {
-      setter(newPeriod);
-    }
-  };
+    const fetchData = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await apiClient({
+                url: '/api/v1/admin/dashboard/stats',
+                method: 'GET',
+                queryParams: { start_date: startDate, end_date: endDate },
+            });
+            setData(response.data as DashboardStatsResponse);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'Không thể tải dữ liệu dashboard';
+            setError(message);
+        } finally {
+            setLoading(false);
+        }
+    }, [startDate, endDate]);
 
-  // Style chung cho các card
-  const cardHoverStyles = {
-    transition: theme.transitions.create(['transform', 'box-shadow'], {
-      duration: theme.transitions.duration.short, // 'all 0.2s ease'
-    }),
-    '&:hover': {
-      transform: 'translateY(-2px)',
-      boxShadow: theme.shadows[3], // Tăng nhẹ shadow khi hover
-    },
-  };
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
-  return (
-    <Box>
-      {/* Breadcrumb */}
-      <AdminBreadcrumb />
+    const handleRangeChange = useCallback((start: string, end: string) => {
+        setStartDate(start);
+        setEndDate(end);
+    }, []);
 
-      {/* Page Header */}
-      <Box sx={{ mb: theme.spacing(3) }}>
-        <Typography variant="h4" component="h1" sx={{ mb: 0.5, color: 'text.primary' }}>
-          Dashboard Overview
-        </Typography>
-      </Box>
+    const cardHoverStyles = {
+        transition: theme.transitions.create(['transform', 'box-shadow'], {
+            duration: theme.transitions.duration.short,
+        }),
+        '&:hover': {
+            transform: 'translateY(-2px)',
+            boxShadow: theme.shadows[3],
+        },
+    };
 
-      {/* KPI Cards - Hàng 1 */}
-      <Grid container spacing={2.5} sx={{ mb: 3 }}> {/* Tăng spacing một chút giữa các thẻ */}
-        {kpiData.map((kpi, index) => (
-          <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
-            <Paper
-              variant="outlined"
-              sx={{
-                p: 2.5,
-                borderRadius: theme.shape.borderRadius, // Sử dụng theme.shape.borderRadius
-                borderColor: theme.palette.divider,
-                height: '100%', // Đảm bảo các card có chiều cao bằng nhau nếu cần
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                ...cardHoverStyles, // Áp dụng hiệu ứng hover
-              }}
-            >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                <Box>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    {kpi.title}
-                  </Typography>
-                  <Typography variant="h5" component="h3" sx={{ mt: 0.5, color: 'text.primary' }}>
-                    {kpi.value}
-                  </Typography>
-                </Box>
-                <Avatar sx={{ bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[100] : theme.palette.grey[800], color: 'text.secondary' }}>
-                  {kpi.icon}
-                </Avatar>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Typography variant="body2" sx={{ color: kpi.changeColorKey }}>
-                  {kpi.change}
+    const sectionPaperSx = {
+        p: 2.5,
+        borderRadius: theme.shape.borderRadius,
+        borderColor: theme.palette.divider,
+        ...cardHoverStyles,
+    };
+
+    return (
+        <Box>
+            <AdminBreadcrumb />
+
+            <Box sx={{ mb: 3 }}>
+                <Typography variant="h4" component="h1" sx={{ mb: 0.5, color: 'text.primary' }}>
+                    Dashboard Overview
                 </Typography>
-                <Typography variant="caption" sx={{ color: 'text.disabled', ml: 1 }}>
-                  vs last month
+            </Box>
+
+            {/* Time Filter */}
+            <Box sx={{ mb: 3 }}>
+                <TimeFilterBar onRangeChange={handleRangeChange} onRefresh={fetchData} loading={loading} />
+            </Box>
+
+            {/* Error */}
+            {error && (
+                <Alert severity="error" sx={{ mb: 3 }} action={
+                    <Button color="inherit" size="small" onClick={fetchData}>Thử lại</Button>
+                }>
+                    {error}
+                </Alert>
+            )}
+
+            {/* KPI Cards */}
+            <Box sx={{ mb: 3 }}>
+                {loading || !data ? (
+                    <Grid container spacing={2.5}>
+                        {Array.from({ length: 6 }).map((_, i) => (
+                            <Grid size={{ xs: 12, sm: 6, md: 4, lg: 2 }} key={i}>
+                                <Skeleton variant="rounded" height={130} />
+                            </Grid>
+                        ))}
+                    </Grid>
+                ) : (
+                    <KpiCards kpis={data.kpis} />
+                )}
+            </Box>
+
+            {/* Row 1: Revenue Trend + User Growth */}
+            <Grid container spacing={2.5} sx={{ mb: 3 }}>
+                <Grid size={{ xs: 12, lg: 6 }}>
+                    <Paper variant="outlined" sx={sectionPaperSx}>
+                        <Typography variant="h6" sx={{ mb: 2, color: 'text.primary' }}>
+                            Xu hướng doanh thu
+                        </Typography>
+                        {loading || !data ? (
+                            <Skeleton variant="rounded" height={350} />
+                        ) : (
+                            <RevenueTrendChart data={data.revenue_trend} />
+                        )}
+                    </Paper>
+                </Grid>
+                <Grid size={{ xs: 12, lg: 6 }}>
+                    <Paper variant="outlined" sx={sectionPaperSx}>
+                        <Typography variant="h6" sx={{ mb: 2, color: 'text.primary' }}>
+                            Tăng trưởng người dùng
+                        </Typography>
+                        {loading || !data ? (
+                            <Skeleton variant="rounded" height={350} />
+                        ) : (
+                            <UserGrowthChart data={data.user_growth} />
+                        )}
+                    </Paper>
+                </Grid>
+            </Grid>
+
+            {/* Row 2: Revenue by License + Subscription Donut + Transaction Donut */}
+            <Grid container spacing={2.5} sx={{ mb: 3 }}>
+                <Grid size={{ xs: 12, md: 4 }}>
+                    <Paper variant="outlined" sx={sectionPaperSx}>
+                        <Typography variant="h6" sx={{ mb: 2, color: 'text.primary' }}>
+                            Doanh thu theo gói
+                        </Typography>
+                        {loading || !data ? (
+                            <Skeleton variant="rounded" height={300} />
+                        ) : (
+                            <RevenueByLicenseChart data={data.revenue_by_license} />
+                        )}
+                    </Paper>
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                    <Paper variant="outlined" sx={sectionPaperSx}>
+                        <Typography variant="h6" sx={{ mb: 2, color: 'text.primary' }}>
+                            Phân bổ Subscription
+                        </Typography>
+                        {loading || !data ? (
+                            <Skeleton variant="rounded" height={300} />
+                        ) : (
+                            <SubscriptionDonut data={data.subscription_distribution} />
+                        )}
+                    </Paper>
+                </Grid>
+                <Grid size={{ xs: 12, md: 4 }}>
+                    <Paper variant="outlined" sx={sectionPaperSx}>
+                        <Typography variant="h6" sx={{ mb: 2, color: 'text.primary' }}>
+                            Trạng thái giao dịch
+                        </Typography>
+                        {loading || !data ? (
+                            <Skeleton variant="rounded" height={300} />
+                        ) : (
+                            <TransactionDonut data={data.transaction_status} />
+                        )}
+                    </Paper>
+                </Grid>
+            </Grid>
+
+            {/* Row 3: Top Promotions + Top Brokers */}
+            <Grid container spacing={2.5} sx={{ mb: 3 }}>
+                <Grid size={{ xs: 12, lg: 6 }}>
+                    <Paper variant="outlined" sx={sectionPaperSx}>
+                        <Typography variant="h6" sx={{ mb: 2, color: 'text.primary' }}>
+                            Top Khuyến mãi
+                        </Typography>
+                        {loading || !data ? (
+                            <Skeleton variant="rounded" height={300} />
+                        ) : (
+                            <TopPromotionsChart data={data.top_promotions} />
+                        )}
+                    </Paper>
+                </Grid>
+                <Grid size={{ xs: 12, lg: 6 }}>
+                    <Paper variant="outlined" sx={sectionPaperSx}>
+                        <Typography variant="h6" sx={{ mb: 2, color: 'text.primary' }}>
+                            Top Brokers
+                        </Typography>
+                        {loading || !data ? (
+                            <Skeleton variant="rounded" height={300} />
+                        ) : (
+                            <TopBrokersChart data={data.top_brokers} />
+                        )}
+                    </Paper>
+                </Grid>
+            </Grid>
+
+            {/* Recent Transactions */}
+            <Paper variant="outlined" sx={sectionPaperSx}>
+                <Typography variant="h6" sx={{ mb: 2, color: 'text.primary' }}>
+                    Giao dịch gần đây
                 </Typography>
-              </Box>
+                {loading || !data ? (
+                    <Skeleton variant="rounded" height={200} />
+                ) : (
+                    <RecentTransactions transactions={data.recent_transactions} />
+                )}
             </Paper>
-          </Grid>
-        ))}
-      </Grid>
-
-      {/* KPI Cards - Hàng 2 */}
-      <Grid container spacing={2.5} sx={{ mb: 3 }}>
-        {kpiDataSecond.map((kpi, index) => (
-          <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
-            <Paper
-              variant="outlined"
-              sx={{
-                p: 2.5,
-                borderRadius: theme.shape.borderRadius,
-                borderColor: theme.palette.divider,
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                ...cardHoverStyles,
-              }}
-            >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                <Box>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    {kpi.title}
-                  </Typography>
-                  <Typography variant="h5" component="h3" sx={{ mt: 0.5, color: 'text.primary' }}>
-                    {kpi.value}
-                  </Typography>
-                </Box>
-                <Avatar sx={{ bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[100] : theme.palette.grey[800], color: 'text.secondary' }}>
-                  {kpi.icon}
-                </Avatar>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Typography variant="body2" sx={{ color: kpi.changeColorKey }}>
-                  {kpi.change}
-                </Typography>
-                <Typography variant="caption" sx={{ color: 'text.disabled', ml: 1 }}>
-                  vs last month
-                </Typography>
-              </Box>
-            </Paper>
-          </Grid>
-        ))}
-      </Grid>
-
-      {/* Charts Section - Sửa layout thành 2 cột */}
-      <Grid container spacing={2.5} sx={{ mb: 3 }}>
-        {/* Revenue Chart Card */}
-        <Grid size={{ xs: 12, lg: 6 }}> {/* lg={6} để chiếm 50% trên màn hình lớn */}
-          <Paper variant="outlined" sx={{ p: 2.5, borderRadius: theme.shape.borderRadius, borderColor: theme.palette.divider, ...cardHoverStyles }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6" component="h3" sx={{ color: 'text.primary' }}>
-                Revenue Overview
-              </Typography>
-              <ToggleButtonGroup
-                value={revenueChartPeriod}
-                exclusive
-                onChange={(event, newPeriod) => handleChartPeriodChange(event, newPeriod, setRevenueChartPeriod)}
-                aria-label="Revenue chart period"
-                size="small"
-              >
-                {['Monthly', 'Quarterly', 'Yearly'].map((period) => (
-                  <ToggleButton
-                    key={period}
-                    value={period}
-                    aria-label={period}
-                    sx={{
-                      borderRadius: `${borderRadius.xxl}px !important`, // Ghi đè border-radius của ToggleButton
-                      px: 1.5, py: 0.5,
-                      border: 'none',
-                      textTransform: 'none',
-                      color: 'text.secondary',
-                      '&.Mui-selected': {
-                        bgcolor: theme.palette.action.selected, // Sử dụng màu action.selected của theme
-                        color: 'text.primary',
-                        '&:hover': {
-                          bgcolor: theme.palette.action.hover, //
-                        }
-                      },
-                      '&:hover': {
-                        bgcolor: theme.palette.action.hover,
-                      }
-                    }}
-                  >
-                    {period}
-                  </ToggleButton>
-                ))}
-              </ToggleButtonGroup>
-            </Box>
-            <Box sx={{
-              height: 380, width: '100%',
-              bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[50] : theme.palette.grey[800], // Phù hợp với theme
-              borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled'
-            }}>
-              Revenue chart would appear here
-            </Box>
-          </Paper>
-        </Grid>
-
-        {/* User Growth Chart Card */}
-        <Grid size={{ xs: 12, lg: 6 }}> {/* lg={6} để chiếm 50% trên màn hình lớn */}
-          <Paper variant="outlined" sx={{ p: 2.5, borderRadius: theme.shape.borderRadius, borderColor: theme.palette.divider, ...cardHoverStyles }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6" component="h3" sx={{ color: 'text.primary' }}>
-                User Growth
-              </Typography>
-              <ToggleButtonGroup
-                value={userGrowthChartPeriod}
-                exclusive
-                onChange={(event, newPeriod) => handleChartPeriodChange(event, newPeriod, setUserGrowthChartPeriod)}
-                aria-label="User growth chart period"
-                size="small"
-              >
-                {['Monthly', 'Quarterly', 'Yearly'].map((period) => (
-                  <ToggleButton
-                    key={period}
-                    value={period}
-                    aria-label={period}
-                    sx={{
-                      borderRadius: `${borderRadius.xxl}px !important`,
-                      px: 1.5, py: 0.5,
-                      border: 'none',
-                      textTransform: 'none',
-                      color: 'text.secondary',
-                      '&.Mui-selected': {
-                        bgcolor: theme.palette.action.selected,
-                        color: 'text.primary',
-                        '&:hover': {
-                          bgcolor: theme.palette.action.hover,
-                        }
-                      },
-                      '&:hover': {
-                        bgcolor: theme.palette.action.hover,
-                      }
-                    }}
-                  >
-                    {period}
-                  </ToggleButton>
-                ))}
-              </ToggleButtonGroup>
-            </Box>
-            <Box sx={{
-              height: 380, width: '100%',
-              bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[50] : theme.palette.grey[800],
-              borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled'
-            }}>
-              User growth chart would appear here
-            </Box>
-          </Paper>
-        </Grid>
-      </Grid>
-    </Box>
-  );
+        </Box>
+    );
 };
 
 export default DashboardHomePage;
