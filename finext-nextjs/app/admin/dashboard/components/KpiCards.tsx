@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Box, Grid, Paper, Typography, Avatar, useTheme } from '@mui/material';
+import { Box, Grid, Typography, useTheme, alpha } from '@mui/material';
 import {
     LocalAtm as RevenueIcon,
     ShoppingCartOutlined as OrdersIcon,
@@ -13,6 +13,7 @@ import {
     ArrowDownward as ArrowDownIcon,
 } from '@mui/icons-material';
 import { KpiStats, formatCurrency, calcChange } from '../types';
+import { borderRadius, getGlassCard, getGlassHighlight } from 'theme/tokens';
 
 interface KpiCardsProps {
     kpis: KpiStats;
@@ -24,33 +25,25 @@ interface KpiCardConfig {
     icon: React.ReactNode;
     isCurrency: boolean;
     isPercent: boolean;
-    invertChange?: boolean; // true for metrics where lower is better (churn, pending)
+    invertChange?: boolean;
+    accent: string; // hsl hue for subtle accent
 }
 
 const KPI_CONFIG: KpiCardConfig[] = [
-    { key: 'total_revenue', label: 'Tổng doanh thu', icon: <RevenueIcon />, isCurrency: true, isPercent: false },
-    { key: 'successful_orders', label: 'Đơn thành công', icon: <OrdersIcon />, isCurrency: false, isPercent: false },
-    { key: 'new_users', label: 'User mới', icon: <NewUserIcon />, isCurrency: false, isPercent: false },
-    { key: 'active_subscriptions', label: 'Subscriptions active', icon: <SubsIcon />, isCurrency: false, isPercent: false },
-    { key: 'churn_rate', label: 'Tỷ lệ churn', icon: <ChurnIcon />, isCurrency: false, isPercent: true, invertChange: true },
-    { key: 'pending_orders', label: 'Đơn chờ xử lý', icon: <PendingIcon />, isCurrency: false, isPercent: false, invertChange: true },
+    { key: 'total_revenue', label: 'Tổng doanh thu', icon: <RevenueIcon />, isCurrency: true, isPercent: false, accent: '270' },
+    { key: 'successful_orders', label: 'Đơn thành công', icon: <OrdersIcon />, isCurrency: false, isPercent: false, accent: '150' },
+    { key: 'new_users', label: 'User mới', icon: <NewUserIcon />, isCurrency: false, isPercent: false, accent: '210' },
+    { key: 'active_subscriptions', label: 'Subscriptions', icon: <SubsIcon />, isCurrency: false, isPercent: false, accent: '30' },
+    { key: 'churn_rate', label: 'Tỷ lệ churn', icon: <ChurnIcon />, isCurrency: false, isPercent: true, invertChange: true, accent: '0' },
+    { key: 'pending_orders', label: 'Đơn chờ xử lý', icon: <PendingIcon />, isCurrency: false, isPercent: false, invertChange: true, accent: '45' },
 ];
 
 const KpiCards: React.FC<KpiCardsProps> = ({ kpis }) => {
     const theme = useTheme();
-
-    const cardHoverStyles = {
-        transition: theme.transitions.create(['transform', 'box-shadow'], {
-            duration: theme.transitions.duration.short,
-        }),
-        '&:hover': {
-            transform: 'translateY(-2px)',
-            boxShadow: theme.shadows[3],
-        },
-    };
+    const isDark = theme.palette.mode === 'dark';
 
     return (
-        <Grid container spacing={2.5}>
+        <Grid container spacing={2}>
             {KPI_CONFIG.map((cfg) => {
                 const metric = kpis[cfg.key];
                 const change = calcChange(metric.current, metric.previous);
@@ -61,56 +54,126 @@ const KpiCards: React.FC<KpiCardsProps> = ({ kpis }) => {
                         ? `${metric.current}%`
                         : metric.current.toLocaleString('vi-VN');
 
+                const accentColor = isDark
+                    ? `hsl(${cfg.accent}, 65%, 65%)`
+                    : `hsl(${cfg.accent}, 55%, 50%)`;
+
                 return (
-                    <Grid size={{ xs: 12, sm: 6, md: 4, lg: 2 }} key={cfg.key}>
-                        <Paper
-                            variant="outlined"
+                    <Grid size={{ xs: 6, sm: 4, lg: 2 }} key={cfg.key}>
+                        <Box
                             sx={{
-                                p: 2.5,
-                                borderRadius: theme.shape.borderRadius,
-                                borderColor: theme.palette.divider,
+                                ...getGlassCard(isDark),
+                                borderRadius: `${borderRadius.lg}px`,
+                                position: 'relative',
+                                overflow: 'hidden',
+                                p: 2,
                                 height: '100%',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 justifyContent: 'space-between',
-                                ...cardHoverStyles,
+                                '&::before': getGlassHighlight(isDark),
                             }}
                         >
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                                <Box>
-                                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                        {cfg.label}
-                                    </Typography>
-                                    <Typography variant="h5" component="h3" sx={{ mt: 0.5, color: 'text.primary' }}>
-                                        {displayValue}
-                                    </Typography>
-                                </Box>
-                                <Avatar
+                            {/* Top accent bar */}
+                            <Box
+                                sx={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: '3px',
+                                    background: `linear-gradient(90deg, ${accentColor}, ${alpha(accentColor, 0.3)})`,
+                                    zIndex: 1,
+                                }}
+                            />
+
+                            {/* Icon + Label */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                                <Box
                                     sx={{
-                                        bgcolor: theme.palette.mode === 'light' ? theme.palette.grey[100] : theme.palette.grey[800],
-                                        color: 'text.secondary',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        width: 28,
+                                        height: 28,
+                                        borderRadius: `${borderRadius.sm}px`,
+                                        bgcolor: alpha(accentColor, isDark ? 0.15 : 0.1),
+                                        color: accentColor,
+                                        '& svg': { fontSize: 16 },
                                     }}
                                 >
                                     {cfg.icon}
-                                </Avatar>
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                {isPositiveChange ? (
-                                    <ArrowUpIcon sx={{ fontSize: 16, color: 'success.main' }} />
-                                ) : (
-                                    <ArrowDownIcon sx={{ fontSize: 16, color: 'error.main' }} />
-                                )}
+                                </Box>
                                 <Typography
-                                    variant="body2"
-                                    sx={{ color: isPositiveChange ? 'success.main' : 'error.main', ml: 0.25 }}
+                                    variant="caption"
+                                    sx={{
+                                        color: 'text.secondary',
+                                        fontWeight: 500,
+                                        lineHeight: 1.2,
+                                        fontSize: '0.7rem',
+                                    }}
                                 >
-                                    {Math.abs(change)}%
-                                </Typography>
-                                <Typography variant="caption" sx={{ color: 'text.disabled', ml: 1 }}>
-                                    vs kỳ trước
+                                    {cfg.label}
                                 </Typography>
                             </Box>
-                        </Paper>
+
+                            {/* Value */}
+                            <Typography
+                                variant="h5"
+                                component="p"
+                                sx={{
+                                    fontWeight: 700,
+                                    color: 'text.primary',
+                                    lineHeight: 1.2,
+                                    mb: 1,
+                                    fontSize: { xs: '1.1rem', sm: '1.25rem' },
+                                }}
+                            >
+                                {displayValue}
+                            </Typography>
+
+                            {/* Change indicator */}
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <Box
+                                    sx={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 0.25,
+                                        px: 0.75,
+                                        py: 0.25,
+                                        borderRadius: `${borderRadius.sm}px`,
+                                        bgcolor: alpha(
+                                            isPositiveChange
+                                                ? theme.palette.success.main
+                                                : theme.palette.error.main,
+                                            isDark ? 0.15 : 0.08,
+                                        ),
+                                    }}
+                                >
+                                    {isPositiveChange ? (
+                                        <ArrowUpIcon sx={{ fontSize: 14, color: 'success.main' }} />
+                                    ) : (
+                                        <ArrowDownIcon sx={{ fontSize: 14, color: 'error.main' }} />
+                                    )}
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
+                                            fontSize: '0.68rem',
+                                            fontWeight: 600,
+                                            color: isPositiveChange ? 'success.main' : 'error.main',
+                                        }}
+                                    >
+                                        {Math.abs(change)}%
+                                    </Typography>
+                                </Box>
+                                <Typography
+                                    variant="caption"
+                                    sx={{ color: 'text.disabled', ml: 0.75, fontSize: '0.65rem' }}
+                                >
+                                    vs trước
+                                </Typography>
+                            </Box>
+                        </Box>
                     </Grid>
                 );
             })}

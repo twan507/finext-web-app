@@ -272,10 +272,19 @@ export const apiClient = async <TResponseData = any>(
             setToCache(url, response, queryParams);
         }
 
-        // ===== 4. Invalidate cache khi có mutation (POST, PUT, DELETE, PATCH) =====
+    // ===== 4. Invalidate cache when mutation (POST, PUT, DELETE, PATCH) =====
         if (method !== 'GET') {
-            // Xóa cache liên quan đến URL này
+            // Clear cache for the exact URL
             clearApiCache(url);
+
+            // Also clear the parent resource list cache.
+            // e.g. mutating /api/v1/users/123 should bust /api/v1/users/ list cache.
+            // We take everything up to and including the 5th path segment: /api/v1/{resource}/
+            const parts = url.split('/').filter(Boolean); // ['api', 'v1', 'users', '123']
+            if (parts.length >= 3) {
+                const resourceBase = '/' + parts.slice(0, 3).join('/') + '/'; // '/api/v1/users/'
+                clearApiCache(resourceBase);
+            }
         }
 
         return response;

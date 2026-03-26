@@ -58,6 +58,7 @@ interface NavGroup {
 }
 
 const navigationStructure: (NavItem | NavGroup)[] = [
+  { text: 'Dashboard', href: '/admin/dashboard', icon: <DashboardIcon /> },
   {
     groupText: 'Account Management',
     groupIcon: <ManageAccounts />,
@@ -119,7 +120,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   // Drawer widths
-  const EXPANDED_WIDTH = 256;
+  const EXPANDED_WIDTH = 280;
   const drawerWidth = EXPANDED_WIDTH;
   // Show hamburger menu for both Tablet and Mobile
   const showHamburgerMenu = !isDesktop;
