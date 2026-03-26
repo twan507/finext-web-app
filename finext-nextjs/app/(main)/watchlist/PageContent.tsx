@@ -504,8 +504,57 @@ export default function WatchlistContent() {
         );
     }
 
-    // Empty state — just one button
-    if (loading) return null;
+    // Loading state — dots animation matching global app loading
+    if (loading) {
+        return (
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    height: '60vh',
+                    width: '100%',
+                }}
+            >
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 2,
+                    }}
+                >
+                    <Box
+                        className="root-loading-dots"
+                        sx={{
+                            display: 'flex',
+                            gap: '6px',
+                            '& > span': {
+                                width: '7px',
+                                height: '7px',
+                                borderRadius: '50%',
+                                bgcolor: 'primary.main',
+                                animation: 'dotBounce 1.4s ease-in-out infinite both',
+                            },
+                            '& > span:nth-child(1)': { animationDelay: '-0.32s' },
+                            '& > span:nth-child(2)': { animationDelay: '-0.16s' },
+                            '& > span:nth-child(3)': { animationDelay: '0s' },
+                            '& > span:nth-child(4)': { animationDelay: '0.16s' },
+                            '@keyframes dotBounce': {
+                                '0%, 80%, 100%': { transform: 'scale(0.4)', opacity: 0.4 },
+                                '40%': { transform: 'scale(1)', opacity: 1 },
+                            },
+                        }}
+                    >
+                        <span />
+                        <span />
+                        <span />
+                        <span />
+                    </Box>
+                </Box>
+            </Box>
+        );
+    }
 
     if (watchlists.length === 0) {
         return (
