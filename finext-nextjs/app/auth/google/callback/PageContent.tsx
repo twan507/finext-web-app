@@ -89,15 +89,20 @@ function GoogleCallbackContent() {
             const userResponse = await apiClient<UserInfoFromGoogleCallback>({ url: '/api/v1/auth/me', method: 'GET', headers: tempHeaders }); //
             console.log('GoogleCallbackPage: /me response:', userResponse);
 
-            console.log('GoogleCallbackPage: Fetching /me/features from backend...');
-            const featuresResponse = await apiClient<string[]>({ url: '/api/v1/auth/me/features', method: 'GET', headers: tempHeaders }); //
+            console.log('GoogleCallbackPage: Fetching /me/features and /me/permissions from backend...');
+            const [featuresResponse, permissionsResponse] = await Promise.all([
+              apiClient<string[]>({ url: '/api/v1/auth/me/features', method: 'GET', headers: tempHeaders }),
+              apiClient<string[]>({ url: '/api/v1/auth/me/permissions', method: 'GET', headers: tempHeaders }),
+            ]); //
             console.log('GoogleCallbackPage: /me/features response:', featuresResponse);
+            console.log('GoogleCallbackPage: /me/permissions response:', permissionsResponse);
 
-            if (userResponse.status === 200 && userResponse.data && featuresResponse.status === 200) {
+            if (userResponse.status === 200 && userResponse.data && featuresResponse.status === 200 && permissionsResponse.status === 200) {
               const sessionData = {
                 user: userResponse.data, // UserInfoFromGoogleCallback (UserSchema)
                 accessToken: access_token,
-                features: featuresResponse.data || []
+                features: featuresResponse.data || [],
+                permissions: permissionsResponse.data || [],
               };
               console.log('GoogleCallbackPage: Preparing to call login() with sessionData:', sessionData);
               login(sessionData);
@@ -109,8 +114,8 @@ function GoogleCallbackContent() {
                 window.location.href = '/';
               }, 100);
             } else {
-              const errMsg = (userResponse.message || featuresResponse.message || 'Không thể lấy thông tin người dùng hoặc features sau khi đăng nhập Google.');
-              console.error('GoogleCallbackPage: Error fetching user/features:', errMsg);
+              const errMsg = (userResponse.message || featuresResponse.message || permissionsResponse.message || 'Không thể lấy thông tin người dùng, features hoặc permissions sau khi đăng nhập Google.');
+              console.error('GoogleCallbackPage: Error fetching user/features/permissions:', errMsg);
               throw new Error(errMsg); // Ném lỗi để catch bên dưới xử lý
             }
           } else {
