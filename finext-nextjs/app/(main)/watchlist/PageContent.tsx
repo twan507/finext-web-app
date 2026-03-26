@@ -317,8 +317,7 @@ export default function WatchlistContent() {
         | { type: 'wl'; wl: Watchlist }
         | { type: 'add'; coordinate: [number, number] };
 
-    const MAX_COLS = 5;  // max WL per row
-    const MAX_ROWS = 3;  // max rows per page → 15 WL total
+    const MAX_COLS = 5;  // max 5 columns
 
     // Derive pages list from all watchlists
     const pages = useMemo(() => {
@@ -327,18 +326,20 @@ export default function WatchlistContent() {
         return Array.from(pageNums).sort((a, b) => a - b);
     }, [watchlists, currentPage]);
 
-    // Next coordinate for current page — max 5 cols per row, max 3 rows
+    // Next coordinate for current page — append to last column, or start new column if < MAX_COLS
     const nextCoordinate = useMemo<[number, number]>(() => {
         const pageWls = watchlists.filter(w => (w.page ?? 1) === currentPage);
         if (pageWls.length === 0) return [0, 0];
-        const maxRow = Math.max(...pageWls.map(w => w.coordinate[1]));
-        for (let row = 0; row < MAX_ROWS; row++) {
-            const rowWls = pageWls.filter(w => w.coordinate[1] === row);
-            if (rowWls.length === 0) return [0, row];
-            const maxCol = Math.max(...rowWls.map(w => w.coordinate[0]));
-            if (maxCol < MAX_COLS - 1) return [maxCol + 1, row];
-        }
-        return [0, maxRow]; // page đã full, fallback an toàn
+        const colMap = new Map<number, number>();
+        pageWls.forEach(w => {
+            const col = w.coordinate[0];
+            const row = w.coordinate[1];
+            colMap.set(col, Math.max(colMap.get(col) ?? -1, row));
+        });
+        const maxCol = Math.max(...Array.from(colMap.keys()));
+        if (colMap.size < MAX_COLS) return [maxCol + 1, 0];
+        // All 5 cols used — append to last column
+        return [maxCol, (colMap.get(maxCol) ?? -1) + 1];
     }, [watchlists, currentPage]);
 
     // Mobile: flat sorted list of watchlists for current page
@@ -365,30 +366,24 @@ export default function WatchlistContent() {
         colMap.forEach(wls => wls.sort((a, b) => a.coordinate[1] - b.coordinate[1]));
 
         const maxCol = colMap.size > 0 ? Math.max(...Array.from(colMap.keys())) : -1;
-        // Include one extra column for the "add new column" button
-        const colCount = maxCol + 2;
-        const columns: ColumnItem[][] = Array.from({ length: colCount }, () => []);
+        const columns: ColumnItem[][] = [];
 
-        const totalWls = pageWatchlists.length;
-        const pageFull = totalWls >= MAX_COLS * MAX_ROWS;
-
+        // Build existing columns — each always gets a "+" button at the bottom
         for (let col = 0; col <= maxCol; col++) {
+            const colItems: ColumnItem[] = [];
             const wls = colMap.get(col) || [];
             wls.forEach(wl => {
-                columns[col].push({ type: 'wl', wl });
+                colItems.push({ type: 'wl', wl });
             });
-                // "+" button — ẩn nếu col này đã đủ MAX_ROWS WL hoặc page đã full
+            // Always add "+" button at the bottom of each existing column
             const nextRow = wls.length > 0 ? Math.max(...wls.map(w => w.coordinate[1])) + 1 : 0;
-            const nextRowWlCount = pageWatchlists.filter(w => w.coordinate[1] === nextRow).length;
-            if (!pageFull && nextRow < MAX_ROWS && nextRowWlCount < MAX_COLS) {
-                columns[col].push({ type: 'add', coordinate: [col, nextRow] });
-            }
+            colItems.push({ type: 'add', coordinate: [col, nextRow] });
+            columns.push(colItems);
         }
 
-        // Nút thêm cột mới — thêm vào [maxCol+1, 0], ẩn nếu row 0 đã đủ MAX_COLS WL hoặc page đã full
-        const row0Count = pageWatchlists.filter(w => w.coordinate[1] === 0).length;
-        if (!pageFull && row0Count < MAX_COLS) {
-            columns[maxCol + 1].push({ type: 'add', coordinate: [maxCol + 1, 0] });
+        // New column "+" button — only show if fewer than MAX_COLS columns are used
+        if (colMap.size < MAX_COLS) {
+            columns.push([{ type: 'add', coordinate: [maxCol + 1, 0] }]);
         }
 
         return columns.filter(col => col.length > 0);
