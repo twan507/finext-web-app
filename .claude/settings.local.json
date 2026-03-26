@@ -7,7 +7,8 @@
       "Bash(ls \"d:/twan-projects/finext-web-app/finext-nextjs/app/\\(main\\)/stocks/\")",
       "Bash(grep -r \"projection\\\\|\"\".*\"\": 1\" /d/twan-projects/finext-web-app/finext-fastapi/app/crud/sse/*.py)",
       "Bash(find /d/twan-projects/finext-web-app/finext-nextjs -type f -name *watchlist* -o -name *sse* -o -name *stream*)",
-      "Bash(ls \"d:/twan-projects/finext-web-app/finext-nextjs/app/\\(main\\)/watchlist/\")"
+      "Bash(ls \"d:/twan-projects/finext-web-app/finext-nextjs/app/\\(main\\)/watchlist/\")",
+      "Bash(grep -r import.*useSseCache d:twan-projectsfinext-web-appfinext-nextjs --include=*.ts --include=*.tsx)"
     ]
   }
 }

@@ -30,7 +30,7 @@ import { CSS } from '@dnd-kit/utilities';
 
 import { getResponsiveFontSize, fontWeight, borderRadius, durations } from 'theme/tokens';
 import { getPriceColor, getVsiColor, getTrendColor } from 'theme/colorHelpers';
-import { useSseCache } from 'hooks/useSseCache';
+import { useSseCache } from 'services/sseClient';
 import { apiClient } from 'services/apiClient';
 import AddWatchlistDialog from '../../watchlist/components/AddWatchlistDialog';
 import ConfirmDialog from '../../watchlist/components/ConfirmDialog';

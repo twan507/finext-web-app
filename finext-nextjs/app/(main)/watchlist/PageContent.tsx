@@ -21,7 +21,7 @@ import {
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { createPortal } from 'react-dom';
 import { fontWeight, getResponsiveFontSize, borderRadius } from 'theme/tokens';
-import { useSseCache } from 'hooks/useSseCache';
+import { useSseCache } from 'services/sseClient';
 import { apiClient } from 'services/apiClient';
 import { useAuth } from '@/components/auth/AuthProvider';
 import WatchlistColumn from './components/WatchlistColumn';
