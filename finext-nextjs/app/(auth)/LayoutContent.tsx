@@ -6,6 +6,7 @@ import { useTheme } from "@mui/material/styles";
 import { Icon } from '@iconify/react';
 import Gallery, { Slide } from "./components/Gallery";
 import ThemeToggleButton from "@/components/themeToggle/ThemeToggleButton";
+import PwaTitleBar from "@/components/layout/PwaTitleBar";
 import { layoutTokens, zIndex, borderRadius, fontWeight, getResponsiveFontSize } from "theme/tokens";
 
 interface AuthLayoutProps {
@@ -264,6 +265,8 @@ export default function LayoutContent({ children }: AuthLayoutProps) {
   ];
 
   return (
+    <>
+    <PwaTitleBar />
     <Box
       sx={{
         minHeight: "100vh",
@@ -271,6 +274,7 @@ export default function LayoutContent({ children }: AuthLayoutProps) {
         position: "relative",
         overflow: "hidden",
         background: layers.base,
+        paddingTop: 'env(titlebar-area-height, 0px)',
         "&::before": {
           content: '""',
           position: "absolute",
@@ -327,5 +331,6 @@ export default function LayoutContent({ children }: AuthLayoutProps) {
         </Box>
       </Box>
     </Box>
+    </>
   );
 }

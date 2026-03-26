@@ -43,6 +43,7 @@ import ThemeToggleButton from '@/components/themeToggle/ThemeToggleButton';
 import BrandLogo from '@/components/layout/BrandLogo';
 import { layoutTokens, iconSize, borderRadius, shadows, getResponsiveFontSize, fontWeight } from '../../theme/tokens';
 import UserAvatar from '@/components/layout/UserAvatar';
+import PwaTitleBar from '@/components/layout/PwaTitleBar';
 
 interface NavItem {
   text: string;
@@ -522,6 +523,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: theme.palette.background.default }}>
       <CssBaseline />
+      <PwaTitleBar />
 
       {/* NAV DRAWERS */}
       <Box component="nav" sx={{ width: { lg: drawerWidth }, flexShrink: { lg: 0 } }} aria-label="sidebar">
@@ -578,6 +580,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               boxShadow: shadows.card,
               borderRight: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
               backdropFilter: 'blur(8px)',
+              paddingTop: 'env(titlebar-area-height, 0px)',
             }
           }}
           open
@@ -595,6 +598,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           display: 'flex',
           flexDirection: 'column',
           minWidth: 0,
+          paddingTop: 'env(titlebar-area-height, 0px)',
         }}
       >
         {/* APP BAR - sticky trong container */}
@@ -602,7 +606,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           position="sticky"
           elevation={0}
           sx={{
-            top: 0,
+            top: 'env(titlebar-area-height, 0px)',
             zIndex: theme.zIndex.appBar,
             height: layoutTokens.appBarHeight,
             boxShadow: shadows.appBar,
