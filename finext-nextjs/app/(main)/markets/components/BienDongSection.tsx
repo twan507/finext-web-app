@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { Box, Typography, useTheme, Divider, useMediaQuery } from '@mui/material';
+import { useEffect, useRef, useState, useMemo } from 'react';
+import { Box, Typography, useTheme, useMediaQuery } from '@mui/material';
 import BreadthPolarChart from './BienDongSection/BreadthPolarChart';
 import FlowBarChart from './BienDongSection/FlowBarChart';
-import VsiITDLineChart from './BienDongSection/VsiITDLineChart';
+import VsiGaugeChart from './BienDongSection/VsiGaugeChart';
 import StockTreemap from './BienDongSection/StockTreemap';
 import type { StockData } from '../../components/marketSection/MarketVolatility';
 import { ISseRequest } from 'services/core/types';
@@ -24,38 +24,6 @@ interface ItdRecord {
     vsi?: number;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-/**
- * Build a fixed 1D trading timeline: 09:00–11:30 + 13:00–15:00 (skip lunch break).
- * Returns array of UTC timestamps at minute resolution.
- */
-function build1DTradingTimeline(referenceTimestamp?: number): number[] {
-    const ref = referenceTimestamp != null
-        ? new Date(referenceTimestamp)
-        : new Date(Date.now() + 7 * 60 * 60 * 1000);
-
-    const y = ref.getUTCFullYear();
-    const m = ref.getUTCMonth();
-    const d = ref.getUTCDate();
-
-    const timeline: number[] = [];
-
-    const pushMinuteRange = (startHour: number, startMinute: number, endHour: number, endMinute: number) => {
-        const start = Date.UTC(y, m, d, startHour, startMinute, 0, 0);
-        const end = Date.UTC(y, m, d, endHour, endMinute, 0, 0);
-        for (let ts = start; ts <= end; ts += 60 * 1000) {
-            timeline.push(ts);
-        }
-    };
-
-    // Hours 9-15 because data timestamps are already shifted +7h
-    // so getUTCHours() returns VN local time directly
-    pushMinuteRange(9, 0, 11, 30);
-    pushMinuteRange(13, 0, 15, 0);
-
-    return timeline;
-}
 
 export default function BienDongSection() {
     const theme = useTheme();
@@ -169,63 +137,13 @@ export default function BienDongSection() {
     const flowOut = stockData.filter((s) => s.t0_score < 0).reduce((sum, s) => sum + (s.trading_value || 0), 0);
     const flowNeutral = stockData.filter((s) => s.t0_score === 0).reduce((sum, s) => sum + (s.trading_value || 0), 0);
 
-    // ========== VSI CHART DATA PROCESSING ==========
-    const { vsiSeriesData, vsiIndexToTimestamp, vsiXAxisMax } = useMemo(() => {
-        // Sort by date, filter records that have a valid vsi value
-        const sortedData = [...itdData]
-            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-            .filter((r) => typeof r.vsi === 'number' && !isNaN(r.vsi));
-
-        if (sortedData.length === 0) {
-            return {
-                vsiSeriesData: [] as { x: number; y: number }[],
-                vsiIndexToTimestamp: new Map<number, number>(),
-                vsiXAxisMax: undefined as number | undefined,
-            };
-        }
-
-        // Convert dates to UTC timestamps, shift to VN time, normalize to minute
-        const seenTimestamps = new Set<number>();
-        const dataPoints = sortedData
-            .map((r) => ({
-                ts: Math.floor((new Date(r.date).getTime() + 7 * 60 * 60 * 1000) / (60 * 1000)) * (60 * 1000),
-                y: parseFloat(((r.vsi ?? 0) * 100).toFixed(2)),
-            }))
-            .filter((p) => {
-                if (seenTimestamps.has(p.ts)) return false;
-                seenTimestamps.add(p.ts);
-                return true;
-            });
-
-        // Build fixed 1D timeline to skip lunch break
-        const latestDataTs = dataPoints.length > 0 ? dataPoints[dataPoints.length - 1].ts : undefined;
-        const fixedTimeline = build1DTradingTimeline(latestDataTs);
-
-        // Map timestamp → sequential index
-        const timestampToIndex = new Map<number, number>();
-        const idxToTs = new Map<number, number>();
-        fixedTimeline.forEach((ts, index) => {
-            timestampToIndex.set(ts, index);
-            idxToTs.set(index, ts);
-        });
-
-        // Max index for fixed x-axis width (data draws up to where it exists)
-        const maxIndex = idxToTs.size > 0 ? Math.max(...Array.from(idxToTs.keys())) : undefined;
-
-        // Transform data points to use sequential index as X
-        const seriesData = dataPoints
-            .map((p) => {
-                const index = timestampToIndex.get(p.ts);
-                if (index === undefined) return null;
-                return { x: index, y: p.y };
-            })
-            .filter((p): p is { x: number; y: number } => p !== null);
-
-        return {
-            vsiSeriesData: seriesData,
-            vsiIndexToTimestamp: idxToTs,
-            vsiXAxisMax: maxIndex,
-        };
+    // ========== VSI GAUGE DATA ==========
+    const vsiLastValue = useMemo(() => {
+        const sorted = [...itdData]
+            .filter((r) => typeof r.vsi === 'number' && !isNaN(r.vsi))
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        if (sorted.length === 0) return null;
+        return parseFloat(((sorted[sorted.length - 1].vsi ?? 0) * 100).toFixed(2));
     }, [itdData]);
 
     // ========== Chart title component ==========
@@ -253,10 +171,10 @@ export default function BienDongSection() {
                     gap: isMobile ? 2 : 3,
                 }}
             >
-                {/* Độ rộng thị trường — Desktop: 25%, Tablet: 50%, Mobile: 100% */}
+                {/* Độ rộng thị trường — Desktop: 33%, Tablet: 50%, Mobile: 100% */}
                 <Box
                     sx={{
-                        flex: isMobile ? '1 1 100%' : isTablet ? '1 1 calc(50% - 12px)' : '0 0 25%',
+                        flex: isMobile ? '1 1 100%' : isTablet ? '1 1 calc(50% - 12px)' : '1 1 0',
                         minWidth: 0,
                     }}
                 >
@@ -269,13 +187,11 @@ export default function BienDongSection() {
                     />
                 </Box>
 
-                {/* Phân bổ dòng tiền — Desktop: 30%, Tablet: 50%, Mobile: 100% */}
+                {/* Phân bổ dòng tiền — Desktop: 33%, Tablet: 50%, Mobile: 100% */}
                 <Box
                     sx={{
-                        flex: isMobile ? '1 1 100%' : isTablet ? '1 1 calc(50% - 12px)' : '0 0 30%',
+                        flex: isMobile ? '1 1 100%' : isTablet ? '1 1 calc(50% - 12px)' : '1 1 0',
                         minWidth: 0,
-                        ml: (isMobile || isTablet) ? 0 : -2,
-                        mr: (isMobile || isTablet) ? 0 : 2,
                     }}
                 >
                     {chartTitle('Phân bổ dòng tiền')}
@@ -288,20 +204,15 @@ export default function BienDongSection() {
                     />
                 </Box>
 
-                {/* Chỉ số thanh khoản — Desktop: 45%, Tablet: 100%, Mobile: 100% */}
+                {/* Chỉ số thanh khoản — Desktop: 33%, Tablet: 50%, Mobile: 100% */}
                 <Box
                     sx={{
-                        flex: isMobile ? '1 1 100%' : isTablet ? '1 1 100%' : '0 0 45%',
+                        flex: isMobile ? '1 1 100%' : isTablet ? '1 1 calc(50% - 12px)' : '1 1 0',
                         minWidth: 0,
-                        mt: isTablet ? 1 : 0,
                     }}
                 >
                     {chartTitle('Chỉ số thanh khoản')}
-                    <VsiITDLineChart
-                        seriesData={vsiSeriesData}
-                        indexToTimestamp={vsiIndexToTimestamp}
-                        xAxisMax={vsiXAxisMax}
-                    />
+                    <VsiGaugeChart value={vsiLastValue} />
                 </Box>
             </Box>
 
