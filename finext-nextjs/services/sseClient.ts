@@ -51,6 +51,34 @@ const MAX_RECONNECT_DELAY = 30000; // 30 seconds
 const cache = new Map<string, CacheEntry>();
 const connections = new Map<string, ConnectionEntry>();
 
+// ========== Cache Eviction ==========
+// Tự động dọn cache entries hết TTL mỗi 5 phút, tránh memory leak khi để trang mở lâu
+let cacheCleanupTimer: ReturnType<typeof setInterval> | null = null;
+
+function startCacheCleanup(): void {
+  if (cacheCleanupTimer) return; // Đã chạy rồi
+  cacheCleanupTimer = setInterval(() => {
+    const now = Date.now();
+    cache.forEach((entry, key) => {
+      if (now - entry.timestamp > DEFAULT_CACHE_TTL) {
+        cache.delete(key);
+      }
+    });
+  }, DEFAULT_CACHE_TTL); // Chạy mỗi 5 phút
+}
+
+function stopCacheCleanup(): void {
+  if (cacheCleanupTimer) {
+    clearInterval(cacheCleanupTimer);
+    cacheCleanupTimer = null;
+  }
+}
+
+// Bắt đầu cleanup khi module được load (client-side only)
+if (typeof window !== 'undefined') {
+  startCacheCleanup();
+}
+
 // ========== Helper Functions ==========
 function generateSubscriberId(): string {
   return `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -323,14 +351,41 @@ export function sseClient<DataType = any>(
                 createConnection();
               }
             }, delay);
+          } else if (entry.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+            // Hết retry — notify subscribers và cleanup zombie entry
+            console.warn(`[SSE Client] Max reconnect attempts reached for ${connectionKey}. Giving up.`);
+            const maxRetryError: SseError = {
+              type: 'EventSourceError',
+              message: `SSE connection failed after ${MAX_RECONNECT_ATTEMPTS} reconnect attempts`,
+            };
+            entry.subscribers.forEach(sub => sub.onError?.(maxRetryError));
+            // Xóa connection entry khỏi Map để tránh zombie
+            connections.delete(connectionKey);
           }
         } else {
-          // EventSource sẽ tự động thử kết nối lại
+          // EventSource readyState chưa CLOSED — browser đang tự auto-reconnect.
+          // Đóng EventSource cũ để tránh conflict với custom reconnect logic,
+          // rồi để custom reconnect xử lý.
+          eventSource.close();
+          entry.isConnecting = false;
+          entry.connection = null;
+
           entry.subscribers.forEach(sub => sub.onError?.({
             type: 'EventSourceError',
-            message: 'SSE connection error (may retry)',
+            message: 'SSE connection error (will retry)',
             originalEvent: errorEvent
           }));
+
+          // Custom reconnect thay vì để browser auto-reconnect
+          if (autoReconnect && entry.subscribers.size > 0 && entry.reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            const delay = getReconnectDelay(entry.reconnectAttempts);
+            entry.reconnectAttempts++;
+            entry.reconnectTimeout = setTimeout(() => {
+              if (entry.subscribers.size > 0) {
+                createConnection();
+              }
+            }, delay);
+          }
         }
       };
 
@@ -404,6 +459,9 @@ export function closeAllConnections(): void {
     }
   });
   connections.clear();
+  // Restart cache cleanup timer (reset cycle)
+  stopCacheCleanup();
+  startCacheCleanup();
 }
 
 /**

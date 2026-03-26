@@ -48,7 +48,7 @@ export const handleRefreshToken = async (): Promise<string | null> => {
         isRefreshing = true;
         refreshPromise = refreshTokenApi().finally(() => {
             isRefreshing = false;
-            // Không reset refreshPromise ở đây
+            refreshPromise = null; // Reset để tránh stale reference
         });
     }
     return refreshPromise;

@@ -99,6 +99,19 @@ export function getApiCacheDebugInfo(): {
     };
 }
 
+// ========== Cache Eviction ==========
+// Tự động dọn cache entries hết TTL mỗi 5 phút, tránh memory leak khi để trang mở lâu
+if (typeof window !== 'undefined') {
+    setInterval(() => {
+        const now = Date.now();
+        apiCache.forEach((entry, key) => {
+            if (now - entry.timestamp > DEFAULT_CACHE_TTL) {
+                apiCache.delete(key);
+            }
+        });
+    }, DEFAULT_CACHE_TTL);
+}
+
 // ========== Token Refresh Logic ==========
 let isRefreshing = false;
 let refreshPromise: Promise<string | null> | null = null;
@@ -311,6 +324,7 @@ const _sendRequestWithRefresh = async <TResponseData = any>(
                         throw e instanceof Error ? e : new Error(e.message || 'Refresh token failed');
                     } finally {
                         isRefreshing = false;
+                        refreshPromise = null;
                     }
                 })();
             }

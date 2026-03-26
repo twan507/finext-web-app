@@ -10,8 +10,6 @@ const nextConfig = {
 
   // Configure DevTools position
   devIndicators: {
-    appIsrStatus: false,
-    buildActivity: true,
     position: 'bottom-right',
   },
 

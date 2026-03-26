@@ -15,7 +15,12 @@
       "Bash(grep -r \"today_stock\\\\|stock_db\" /d/twan_projects/finext-web-app/finext-fastapi/app/crud/sse/*.py)",
       "Bash(ls -la \"/d/twan_projects/finext-web-app/finext-nextjs/app/\\(main\\)/stocks/[symbol]/components/\")",
       "WebSearch",
-      "WebFetch(domain:www.codegenes.net)"
+      "WebFetch(domain:www.codegenes.net)",
+      "Bash(grep -r \"fetch\\\\|request\\\\|retry\\\\|queue\\\\|dedup\" /d/twan_projects/finext-web-app/finext-nextjs/app --include=*.ts --include=*.tsx)",
+      "Bash(grep -r \"AbortController\\\\|AbortSignal\\\\|connection.*pool\\\\|request.*queue\\\\|pending.*request\" /d/twan_projects/finext-web-app/finext-nextjs --include=*.ts --include=*.tsx)",
+      "Bash(grep -r \"revalidate\\\\|ISR\\\\|stale-while\\\\|cache.*control\" /d/twan_projects/finext-web-app/finext-nextjs/app --include=*.ts --include=*.tsx)",
+      "Bash(grep -r \"useQuery\\\\|QueryClient\\\\|QueryKey\\\\|@tanstack\" /d/twan_projects/finext-web-app/finext-nextjs/app --include=*.ts --include=*.tsx)",
+      "Bash(grep -r \"login\\\\|logout\\\\|oauth\\\\|google\" /d/twan_projects/finext-web-app/finext-nextjs/app --include=*[Ll]ogin* --include=*[Aa]uth*)"
     ],
     "additionalDirectories": [
       "D:\\twan_projects\\finext-web-app\\finext-nextjs\\app\\(main)\\sectors\\[sectorId]\\components"
