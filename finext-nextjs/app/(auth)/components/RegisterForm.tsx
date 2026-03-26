@@ -169,8 +169,25 @@ export default function RegisterForm() {
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [agreeTerms, setAgreeTerms] = useState(false);
+    const [showOtpStep, setShowOtpStep] = useState(false);
+    const [otpCode, setOtpCode] = useState('');
+    const [registeredEmail, setRegisteredEmail] = useState('');
+    const [otpLoading, setOtpLoading] = useState(false);
+    const [resendCooldown, setResendCooldown] = useState(0);
 
     const router = useRouter();
+
+    useEffect(() => {
+        if (resendCooldown <= 0) return;
+        const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+        return () => clearTimeout(timer);
+    }, [resendCooldown]);
+
+    useEffect(() => {
+        if (!error) return;
+        const timer = setTimeout(() => setError(null), 4000);
+        return () => clearTimeout(timer);
+    }, [error]);
 
     // Lấy Client ID từ environment variables
     const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
@@ -187,20 +204,32 @@ export default function RegisterForm() {
             setError('Vui lòng nhập họ và tên.');
             return false;
         }
-        if (!email.trim()) {
-            setError('Vui lòng nhập địa chỉ email.');
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email.trim() || !emailRegex.test(email.trim())) {
+            setError('Địa chỉ email không hợp lệ.');
             return false;
         }
-        if (!password.trim()) {
-            setError('Vui lòng nhập mật khẩu.');
-            return false;
+        if (phoneNumber.trim()) {
+            const phoneRegex = /^(0|\+84)[3-9]\d{8}$/;
+            if (!phoneRegex.test(phoneNumber.trim())) {
+                setError('Số điện thoại không hợp lệ (VD: 0912345678 hoặc +84912345678).');
+                return false;
+            }
         }
-        if (password.length < 8) {
+        if (!password || password.length < 8) {
             setError('Mật khẩu phải có ít nhất 8 ký tự.');
+            return false;
+        }
+        if (!/[a-zA-Z]/.test(password) || !/\d/.test(password)) {
+            setError('Mật khẩu phải chứa ít nhất 1 chữ cái và 1 chữ số.');
             return false;
         }
         if (password !== confirmPassword) {
             setError('Mật khẩu xác nhận không khớp.');
+            return false;
+        }
+        if (referralCode.trim() && !/^[A-Za-z0-9]{4}$/.test(referralCode.trim())) {
+            setError('Mã giới thiệu phải gồm đúng 4 ký tự chữ hoặc số.');
             return false;
         }
         if (!agreeTerms) {
@@ -230,29 +259,55 @@ export default function RegisterForm() {
                 referral_code: referralCode.trim() || undefined,
             };
 
-            const response = await apiClient<MessageResponse>({
+            await apiClient<MessageResponse>({
                 url: '/api/v1/auth/register',
                 method: 'POST',
                 body: registerData,
                 requireAuth: false,
             });
 
-            if (response.status === 201) {
-                setSuccessMessage(
-                    response.data?.message ||
-                    'Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.'
-                );
-                // Có thể redirect sau vài giây
-                setTimeout(() => {
-                    router.push('/login');
-                }, 3000);
-            } else {
-                setError(response.message || 'Đăng ký thất bại. Vui lòng thử lại.');
-            }
+            setRegisteredEmail(email.trim());
+            setShowOtpStep(true);
         } catch (err: any) {
             setError(err.message || 'Lỗi kết nối hoặc có lỗi xảy ra trong quá trình đăng ký.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleVerifyOtp = async () => {
+        setOtpLoading(true);
+        setError(null);
+        setSuccessMessage(null);
+        try {
+            await apiClient<{ message?: string }>({
+                url: '/api/v1/otps/verify',
+                method: 'POST',
+                body: { email: registeredEmail, otp_type: 'email_verification', otp_code: otpCode },
+                requireAuth: false,
+            });
+            setSuccessMessage('Xác thực email thành công! Đang chuyển đến đăng nhập...');
+            setTimeout(() => router.push('/login'), 2000);
+        } catch (err: any) {
+            setError(err.message || 'Lỗi xác thực OTP. Vui lòng thử lại.');
+        } finally {
+            setOtpLoading(false);
+        }
+    };
+
+    const handleResendOtp = async () => {
+        setError(null);
+        setSuccessMessage(null);
+        try {
+            await apiClient({
+                url: '/api/v1/otps/request',
+                method: 'POST',
+                body: { email: registeredEmail, otp_type: 'email_verification' },
+                requireAuth: false,
+            });
+            setResendCooldown(60);
+        } catch (err: any) {
+            setError(err.message || 'Không thể gửi lại mã OTP. Vui lòng thử lại.');
         }
     };
 
@@ -328,6 +383,58 @@ export default function RegisterForm() {
                 Tạo tài khoản mới!
             </Typography>
 
+            {showOtpStep ? (
+                <Box sx={{ width: '100%' }}>
+                    {!successMessage && (
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                            Mã xác thực đã gửi đến <strong>{registeredEmail}</strong>. Vui lòng kiểm tra hộp thư (kể cả mục Spam).
+                        </Alert>
+                    )}
+                    {error && (
+                        <Alert severity="error" sx={{ mb: 1.5 }}>
+                            {error}
+                        </Alert>
+                    )}
+                    {successMessage && (
+                        <Alert severity="success" sx={{ mb: 1.5 }}>
+                            {successMessage}
+                        </Alert>
+                    )}
+                    <TextField
+                        fullWidth
+                        label="Mã xác thực (6 chữ số)"
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleVerifyOtp(); } }}
+                        disabled={otpLoading || !!successMessage}
+                        inputProps={{ maxLength: 6, inputMode: 'numeric' }}
+                        size="small"
+                        sx={{ mb: 2 }}
+                    />
+                    <Button
+                        fullWidth
+                        variant="contained"
+                        onClick={handleVerifyOtp}
+                        disabled={otpCode.length < 6 || otpLoading || !!successMessage}
+                        sx={(t) => ({
+                            py: 1, borderRadius: 2,
+                            ...getGlowButton(t.palette.mode === 'dark'),
+                        })}
+                    >
+                        {otpLoading ? <CircularProgress size={iconSize.progressMedium} color="inherit" /> : 'Xác thực tài khoản'}
+                    </Button>
+                    <Box sx={{ textAlign: 'center', mt: 1.5 }}>
+                        <Button
+                            variant="text"
+                            size="small"
+                            onClick={handleResendOtp}
+                            disabled={resendCooldown > 0 || otpLoading || !!successMessage}
+                        >
+                            {resendCooldown > 0 ? `Gửi lại sau ${resendCooldown}s` : 'Gửi lại mã'}
+                        </Button>
+                    </Box>
+                </Box>
+            ) : (
             <Box component="form" onSubmit={handleSubmit} noValidate sx={{ width: '100%' }}>
                 {error && (
                     <Alert severity="error" sx={{ width: '100%', mb: 1.5 }}>
@@ -550,6 +657,7 @@ export default function RegisterForm() {
                     Đã có tài khoản? <Link href="/login" tabIndex={-1}>Đăng nhập</Link>
                 </Typography>
             </Box>
+            )}
         </Box>
     );
 }

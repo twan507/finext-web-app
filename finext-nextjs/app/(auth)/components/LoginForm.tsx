@@ -167,6 +167,13 @@ function SignInFormContent() {
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [isRedirecting, setIsRedirecting] = useState(false);
+    const [showVerifyPanel, setShowVerifyPanel] = useState(false);
+    const [verifyEmail, setVerifyEmail] = useState('');
+    const [verifyOtpCode, setVerifyOtpCode] = useState('');
+    const [verifyLoading, setVerifyLoading] = useState(false);
+    const [verifyError, setVerifyError] = useState<string | null>(null);
+    const [showVerifyWarning, setShowVerifyWarning] = useState(false);
+    const [resendCooldown, setResendCooldown] = useState(0);
 
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -175,6 +182,36 @@ function SignInFormContent() {
 
     // Lấy callback URL từ query params (nếu có) hoặc mặc định về trang chủ
     const callbackUrl = searchParams.get('callbackUrl') || '/';
+
+    useEffect(() => {
+        if (resendCooldown <= 0) return;
+        const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+        return () => clearTimeout(timer);
+    }, [resendCooldown]);
+
+    useEffect(() => {
+        if (!error) return;
+        const timer = setTimeout(() => setError(null), 4000);
+        return () => clearTimeout(timer);
+    }, [error]);
+
+    useEffect(() => {
+        if (!verifyError) return;
+        const timer = setTimeout(() => setVerifyError(null), 4000);
+        return () => clearTimeout(timer);
+    }, [verifyError]);
+
+    useEffect(() => {
+        if (!successMessage) return;
+        const timer = setTimeout(() => setSuccessMessage(null), 4000);
+        return () => clearTimeout(timer);
+    }, [successMessage]);
+
+    useEffect(() => {
+        if (!showVerifyWarning) return;
+        const timer = setTimeout(() => setShowVerifyWarning(false), 4000);
+        return () => clearTimeout(timer);
+    }, [showVerifyWarning]);
 
     // Lấy Client ID từ environment variables
     const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
@@ -203,15 +240,15 @@ function SignInFormContent() {
         }
     }, [session, authLoading, redirectAfterLogin, isRedirecting]);
 
-    const handleTraditionalSubmit = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
+    const doLoginWithCredentials = async (loginEmail: string, loginPassword: string) => {
         setLoading(true);
         setError(null);
         setSuccessMessage(null);
+        setVerifyError(null);
         try {
             const loginParams = new URLSearchParams();
-            loginParams.append('username', email);
-            loginParams.append('password', password);
+            loginParams.append('username', loginEmail);
+            loginParams.append('password', loginPassword);
             const loginStandardResponse = await apiClient<LoginResponse>({
                 url: '/api/v1/auth/login',
                 method: 'POST',
@@ -231,30 +268,33 @@ function SignInFormContent() {
                     url: '/api/v1/auth/me',
                     method: 'GET',
                     headers: tempHeaders,
-                    requireAuth: false, // Bypass auto-refresh during login flow
+                    requireAuth: false,
                 });
                 const featuresResponse = await apiClient<string[]>({
                     url: '/api/v1/auth/me/features',
                     method: 'GET',
                     headers: tempHeaders,
-                    requireAuth: false, // Bypass auto-refresh during login flow
+                    requireAuth: false,
+                });
+                const permissionsResponse = await apiClient<string[]>({
+                    url: '/api/v1/auth/me/permissions',
+                    method: 'GET',
+                    headers: tempHeaders,
+                    requireAuth: false,
                 });
 
                 if (
-                    userResponse.status === 200 &&
                     userResponse.data &&
-                    featuresResponse.status === 200
+                    featuresResponse.data
                 ) {
                     const sessionData = {
                         user: userResponse.data,
                         accessToken: access_token,
                         features: featuresResponse.data || [],
+                        permissions: permissionsResponse.data || [],
                     };
                     login(sessionData);
                     setSuccessMessage(`Đăng nhập thành công! Đang chuyển hướng...`);
-
-                    // Sử dụng window.location.href để full page reload
-                    // Đảm bảo middleware nhận được cookie mới nhất từ backend
                     setTimeout(() => {
                         window.location.href = callbackUrl;
                     }, 100);
@@ -271,11 +311,66 @@ function SignInFormContent() {
                 );
             }
         } catch (err: any) {
-            setError(
-                err.message || 'Lỗi kết nối hoặc có lỗi xảy ra trong quá trình đăng nhập.',
-            );
+            const errMsg = err.message || '';
+            if (errMsg === 'User is inactive' || errMsg.toLowerCase().includes('inactive')) {
+                setVerifyEmail(loginEmail);
+                setShowVerifyPanel(true);
+                setShowVerifyWarning(true);
+                setResendCooldown(60);
+                apiClient({
+                    url: '/api/v1/otps/request',
+                    method: 'POST',
+                    body: { email: loginEmail, otp_type: 'email_verification' },
+                    requireAuth: false,
+                }).catch(() => {});
+            } else {
+                setError(errMsg || 'Lỗi kết nối hoặc có lỗi xảy ra trong quá trình đăng nhập.');
+            }
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleTraditionalSubmit = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        await doLoginWithCredentials(email, password);
+    };
+
+    const handleVerifyEmail = async () => {
+        setVerifyLoading(true);
+        setVerifyError(null);
+        setError(null);
+        setSuccessMessage(null);
+        try {
+            await apiClient({
+                url: '/api/v1/otps/verify',
+                method: 'POST',
+                body: { email: verifyEmail, otp_type: 'email_verification', otp_code: verifyOtpCode },
+                requireAuth: false,
+            });
+            setShowVerifyPanel(false);
+            setVerifyOtpCode('');
+            setVerifyLoading(false);
+            await doLoginWithCredentials(verifyEmail, password);
+        } catch (err: any) {
+            setVerifyError(err.message || 'Lỗi xác thực OTP. Vui lòng thử lại.');
+        } finally {
+            setVerifyLoading(false);
+        }
+    };
+
+    const handleResendVerificationOtp = async () => {
+        setVerifyError(null);
+        setResendCooldown(60);
+        try {
+            await apiClient({
+                url: '/api/v1/otps/request',
+                method: 'POST',
+                body: { email: verifyEmail, otp_type: 'email_verification' },
+                requireAuth: false,
+            });
+        } catch (err: any) {
+            setVerifyError(err.message || 'Không thể gửi lại mã OTP. Vui lòng thử lại.');
         }
     };
 
@@ -364,16 +459,64 @@ function SignInFormContent() {
                 Đăng nhập ngay!
             </Typography>
 
-            <Box component="form" onSubmit={handleTraditionalSubmit} noValidate sx={{ width: '100%' }}>
-                {error && (
-                    <Alert severity="error" sx={{ width: '100%', mb: 1.5 }}>
-                        {error}
-                    </Alert>
-                )}
+            <Box component="form" onSubmit={showVerifyPanel ? handleVerifyEmail : handleTraditionalSubmit} noValidate sx={{ width: '100%' }}>
                 {successMessage && (
                     <Alert severity="success" sx={{ width: '100%', mb: 1.5 }}>
                         {successMessage}
                     </Alert>
+                )}
+                {showVerifyWarning && (
+                    <Alert severity="warning" sx={{ mb: 1.5 }}>
+                        <strong>{verifyEmail}</strong> chưa được xác thực. Nhập mã xác thực bên dưới.
+                    </Alert>
+                )}
+                {verifyError && (
+                    <Alert severity="error" sx={{ mb: 1.5 }}>
+                        {verifyError}
+                    </Alert>
+                )}
+                {showVerifyPanel ? (
+                    <Box sx={{ mb: 1.5 }}>
+                        <TextField
+                            label="Mã xác thực (6 chữ số)"
+                            fullWidth
+                            value={verifyOtpCode}
+                            onChange={(e) => setVerifyOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleVerifyEmail(); } }}
+                            disabled={verifyLoading}
+                            inputProps={{ maxLength: 6, inputMode: 'numeric' }}
+                            size="small"
+                            sx={{ mb: 1.5 }}
+                        />
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button
+                                fullWidth
+                                variant="contained"
+                                onClick={handleVerifyEmail}
+                                disabled={verifyOtpCode.length < 6 || verifyLoading}
+                                size="small"
+                                sx={(t) => ({ borderRadius: 2, ...getGlowButton(t.palette.mode === 'dark') })}
+                            >
+                                {verifyLoading ? <CircularProgress size={16} color="inherit" /> : 'Xác thực'}
+                            </Button>
+                            <Button
+                                fullWidth
+                                variant="outlined"
+                                onClick={handleResendVerificationOtp}
+                                disabled={resendCooldown > 0 || verifyLoading}
+                                size="small"
+                                sx={{ borderRadius: 2 }}
+                            >
+                                {resendCooldown > 0 ? `Gửi lại (${resendCooldown}s)` : 'Gửi lại mã'}
+                            </Button>
+                        </Box>
+                    </Box>
+                ) : (
+                    error && (
+                        <Alert severity="error" sx={{ width: '100%', mb: 1.5 }}>
+                            {error}
+                        </Alert>
+                    )
                 )}
 
                 <TextField
@@ -387,7 +530,7 @@ function SignInFormContent() {
                     autoFocus
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    disabled={loading || googleLoading || !!successMessage}
+                    disabled={loading || googleLoading || !!successMessage || showVerifyPanel}
                     size="small"
                 />
                 <Box sx={{ position: 'relative' }}>
@@ -402,14 +545,14 @@ function SignInFormContent() {
                         autoComplete="current-password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        disabled={loading || googleLoading || !!successMessage}
+                        disabled={loading || googleLoading || !!successMessage || showVerifyPanel}
                         size="small"
                     />
                     <IconButton
                         aria-label="toggle password visibility"
                         onClick={handleClickShowPassword}
                         onMouseDown={handleMouseDownPassword}
-                        disabled={loading || googleLoading || !!successMessage}
+                        disabled={loading || googleLoading || !!successMessage || showVerifyPanel}
                         tabIndex={-1}
                         sx={{
                             position: 'absolute',
@@ -432,8 +575,8 @@ function SignInFormContent() {
                 <Box
                     sx={{ mt: 0.5, mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                 >
-                    <FormControlLabel control={<Checkbox size="small" tabIndex={-1} />} label="Duy trì đăng nhập" />
-                    <Link href="/forgot-password" underline="hover" tabIndex={-1} sx={{ fontSize: getResponsiveFontSize('sm'), mt: 0.6 }}>
+                    <FormControlLabel control={<Checkbox size="small" tabIndex={-1} disabled={showVerifyPanel} />} label="Duy trì đăng nhập" />
+                    <Link href="/forgot-password" underline="hover" tabIndex={-1} sx={{ fontSize: getResponsiveFontSize('sm'), mt: 0.6, pointerEvents: showVerifyPanel ? 'none' : 'auto', opacity: showVerifyPanel ? 0.5 : 1 }}>
                         Quên mật khẩu?
                     </Link>
                 </Box>
@@ -447,7 +590,7 @@ function SignInFormContent() {
                         ...getGlowButton(t.palette.mode === 'dark'),
                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     })}
-                    disabled={loading || googleLoading || !!successMessage}
+                    disabled={loading || googleLoading || !!successMessage || showVerifyPanel}
                 >
                     {loading ? <CircularProgress size={iconSize.progressMedium} color="inherit" /> : 'Đăng nhập'}
                 </Button>
@@ -460,12 +603,11 @@ function SignInFormContent() {
                         <GoogleLoginComponent
                             setGoogleLoading={setGoogleLoading}
                             setError={setError}
-                            disabled={loading || googleLoading || !!successMessage}
+                            disabled={loading || googleLoading || !!successMessage || showVerifyPanel}
                             loading={googleLoading}
                         />
                     </GoogleOAuthProvider>
                 ) : (
-                    // Optional: Hiển thị một nút bị vô hiệu hóa hoặc thông báo nếu không có Client ID
                     <GoogleButton
                         onClick={() => { }}
                         disabled={true}
