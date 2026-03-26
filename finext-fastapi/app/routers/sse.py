@@ -183,6 +183,7 @@ async def rest_query_endpoint(
     sort_by: Optional[str] = Query(None, description="Tên field để sắp xếp"),
     sort_order: Optional[str] = Query(None, regex="^(asc|desc)$", description="Thứ tự sắp xếp: asc hoặc desc"),
     projection: Optional[str] = Query(None, description='MongoDB projection dạng JSON (VD: {"title":1,"sapo":1})'),
+    search: Optional[str] = Query(None, description="Từ khóa tìm kiếm text (dùng cho search_news, search_reports)"),
 ):
     """
     REST endpoint để query dữ liệu một lần.
@@ -229,6 +230,7 @@ async def rest_query_endpoint(
             "sort_by": sort_by,
             "sort_order": sort_order,
             "projection": parsed_projection,
+            "search": search,
         }
 
         result = await execute_sse_query(keyword, **query_params)

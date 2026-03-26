@@ -37,6 +37,11 @@ from app.crud.sse.news_report_categories import news_report_categories
 from app.crud.sse.report_article import report_article
 from app.crud.sse.screener_stock_data import screener_stock_data
 from app.crud.sse.screener_stock_meta import screener_stock_meta
+# Search keywords
+from app.crud.sse.search_stocks import search_stocks
+from app.crud.sse.search_index import search_index
+from app.crud.sse.search_news import search_news
+from app.crud.sse.search_reports import search_reports
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +88,11 @@ SSE_QUERY_REGISTRY: Dict[str, Any] = {
     # Screener queries
     "screener_stock_data": screener_stock_data,
     "screener_stock_meta": screener_stock_meta,
+    # Search queries
+    "search_stocks": search_stocks,
+    "search_index": search_index,
+    "search_news": search_news,
+    "search_reports": search_reports,
 }
 
 
@@ -106,6 +116,7 @@ async def execute_sse_query(
     sort_by: Optional[str] = None,
     sort_order: Optional[str] = None,
     projection: Optional[Dict[str, Any]] = None,
+    search: Optional[str] = None,
     **kwargs,
 ) -> Dict[str, Any]:
     """
@@ -155,6 +166,7 @@ async def execute_sse_query(
         "sort_by": sort_by,
         "sort_order": sort_order,
         "projection": projection,
+        "search": search,
     }
 
     # Gọi hàm query với các params

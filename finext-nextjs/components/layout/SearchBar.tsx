@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     TextField,
     InputAdornment,
@@ -12,243 +12,749 @@ import {
     Drawer,
     useMediaQuery,
     Tooltip,
+    Paper,
+    Typography,
+    Divider,
+    CircularProgress,
+    Chip,
 } from '@mui/material';
 import {
     Search as SearchIcon,
     Clear as ClearIcon,
     Close as CloseIcon,
 } from '@mui/icons-material';
-import { getResponsiveFontSize, borderRadius, transitions, fontWeight, iconSize, shadows } from 'theme/tokens';
+import { Icon } from '@iconify/react';
+import { useRouter } from 'next/navigation';
+import { getResponsiveFontSize, borderRadius, fontWeight, iconSize, shadows } from 'theme/tokens';
+import { apiClient } from 'services/apiClient';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+interface SearchStock {
+    ticker: string;
+    ticker_name?: string;
+    exchange?: string;
+    industry_name?: string;
+    close?: number;
+    pct_change?: number;
+}
+
+interface SearchIndexItem {
+    ticker: string;
+    ticker_name?: string;
+    type?: string; // 'industry' → /sectors, others → /groups
+    close?: number;
+    pct_change?: number;
+}
+
+interface SearchNewsItem {
+    article_slug: string;
+    title: string;
+    news_type?: string;
+    created_at?: string;
+    tickers?: string[];
+}
+
+interface SearchReportItem {
+    report_slug: string;
+    title: string;
+    report_type?: string;
+    created_at?: string;
+    tickers?: string[];
+}
+
+interface SearchResults {
+    stocks: SearchStock[];
+    indexes: SearchIndexItem[];
+    news: SearchNewsItem[];
+    reports: SearchReportItem[];
+}
 
 interface SearchBarProps {
     placeholder?: string;
     variant?: 'compact' | 'full' | 'icon';
 }
 
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+function formatPct(pct?: number): string {
+    if (pct == null) return '';
+    if (pct === 0) return '0.00%';
+    const sign = pct > 0 ? '+' : '';
+    return `${sign}${pct.toFixed(2)}%`;
+}
+
+function getPctColor(pct: number | undefined, theme: any): string {
+    if (pct == null) return theme.palette.text.secondary;
+    if (pct > 0) return theme.palette.trend?.up ?? theme.palette.success.main;
+    if (pct < 0) return theme.palette.trend?.down ?? theme.palette.error.main;
+    return theme.palette.trend?.ref ?? theme.palette.text.secondary;
+}
+
+const MAX_STOCKS = 8;
+const DEBOUNCE_MS = 300;
+const MIN_CHARS = 2;
+
+// ============================================================================
+// SEARCH LOGIC HOOK
+// ============================================================================
+
+function useSearchLogic() {
+    const [allStocks, setAllStocks] = useState<SearchStock[]>([]);
+    const [allIndexes, setAllIndexes] = useState<SearchIndexItem[]>([]);
+    const [isPreloaded, setIsPreloaded] = useState(false);
+
+    // Preload stocks and indexes on first use
+    useEffect(() => {
+        let cancelled = false;
+
+        async function preload() {
+            try {
+                const [stocksRes, indexesRes] = await Promise.all([
+                    apiClient<SearchStock[]>({
+                        url: '/api/v1/sse/rest/search_stocks',
+                        method: 'GET',
+                        requireAuth: false,
+                        useCache: true,
+                        cacheTtl: 10 * 60 * 1000, // 10 min
+                    }),
+                    apiClient<SearchIndexItem[]>({
+                        url: '/api/v1/sse/rest/search_index',
+                        method: 'GET',
+                        requireAuth: false,
+                        useCache: true,
+                        cacheTtl: 10 * 60 * 1000,
+                    }),
+                ]);
+                if (!cancelled) {
+                    if (stocksRes.data && Array.isArray(stocksRes.data)) setAllStocks(stocksRes.data);
+                    if (indexesRes.data && Array.isArray(indexesRes.data)) setAllIndexes(indexesRes.data);
+                    setIsPreloaded(true);
+                }
+            } catch (err) {
+                console.warn('[SearchBar] Preload failed:', err);
+            }
+        }
+
+        preload();
+        return () => { cancelled = true; };
+    }, []);
+
+    const search = useCallback(async (query: string): Promise<SearchResults> => {
+        if (query.length < MIN_CHARS) {
+            return { stocks: [], indexes: [], news: [], reports: [] };
+        }
+
+        const q = query.trim().toUpperCase();
+        const qLower = query.trim().toLowerCase();
+
+        // Client-side filter for stocks
+        const filteredStocks = allStocks
+            .filter(s =>
+                s.ticker?.toUpperCase().includes(q) ||
+                s.ticker_name?.toLowerCase().includes(qLower) ||
+                s.industry_name?.toLowerCase().includes(qLower)
+            )
+            .slice(0, MAX_STOCKS);
+
+        // Client-side filter for indexes (groups + sectors)
+        const filteredIndexes = allIndexes.filter(s =>
+            s.ticker?.toUpperCase().includes(q) ||
+            s.ticker_name?.toLowerCase().includes(qLower)
+        );
+
+        // Remote search for news + reports
+        try {
+            const [newsRes, reportsRes] = await Promise.all([
+                apiClient<SearchNewsItem[]>({
+                    url: '/api/v1/sse/rest/search_news',
+                    method: 'GET',
+                    queryParams: { search: query.trim(), limit: 5 },
+                    requireAuth: false,
+                    useCache: false,
+                }),
+                apiClient<SearchReportItem[]>({
+                    url: '/api/v1/sse/rest/search_reports',
+                    method: 'GET',
+                    queryParams: { search: query.trim(), limit: 5 },
+                    requireAuth: false,
+                    useCache: false,
+                }),
+            ]);
+
+            return {
+                stocks: filteredStocks,
+                indexes: filteredIndexes,
+                news: newsRes.data && Array.isArray(newsRes.data) ? newsRes.data : [],
+                reports: reportsRes.data && Array.isArray(reportsRes.data) ? reportsRes.data : [],
+            };
+        } catch {
+            return { stocks: filteredStocks, indexes: filteredIndexes, news: [], reports: [] };
+        }
+    }, [allStocks, allIndexes]);
+
+    return { search, isPreloaded };
+}
+
+// ============================================================================
+// RESULT SECTION
+// ============================================================================
+
+interface SectionHeaderProps {
+    icon: string;
+    label: string;
+}
+
+function SectionHeader({ icon, label }: SectionHeaderProps) {
+    const theme = useTheme();
+    return (
+        <Box
+            sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                px: 1.5,
+                py: 0.75,
+                backgroundColor: theme.palette.background.default,
+            }}
+        >
+            <Icon icon={icon} width={15} height={15} style={{ color: theme.palette.primary.main, flexShrink: 0 }} />
+            <Typography
+                sx={{
+                    color: theme.palette.text.secondary,
+                    fontWeight: fontWeight.semibold,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    fontSize: getResponsiveFontSize('xs'),
+                }}
+            >
+                {label}
+            </Typography>
+        </Box>
+    );
+}
+
+interface StockResultItemProps {
+    item: SearchStock;
+    onClick: () => void;
+}
+
+function StockResultItem({ item, onClick }: StockResultItemProps) {
+    const theme = useTheme();
+    const pctColor = getPctColor(item.pct_change, theme);
+
+    return (
+        <Box
+            onClick={onClick}
+            sx={{
+                px: 1.5,
+                py: 0.75,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 1,
+                borderRadius: `${borderRadius.sm}px`,
+                mx: 0.5,
+                transition: 'background-color 0.15s',
+                '&:hover': {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                },
+            }}
+        >
+            <Box sx={{ minWidth: 0 }}>
+                <Typography sx={{ fontSize: getResponsiveFontSize('md'), fontWeight: fontWeight.semibold, lineHeight: 1.3 }}>
+                    {item.ticker}
+                </Typography>
+                <Typography noWrap sx={{ fontSize: getResponsiveFontSize('sm'), color: theme.palette.text.secondary, lineHeight: 1.2, maxWidth: 260 }}>
+                    {item.ticker_name}
+                </Typography>
+            </Box>
+
+            <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
+                {item.close != null && (
+                    <Typography sx={{ fontSize: getResponsiveFontSize('md'), fontWeight: fontWeight.medium }}>
+                        {item.close.toLocaleString('vi-VN')}
+                    </Typography>
+                )}
+                {item.pct_change != null && (
+                    <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: pctColor, fontWeight: fontWeight.medium }}>
+                        {formatPct(item.pct_change)}
+                    </Typography>
+                )}
+            </Box>
+        </Box>
+    );
+}
+
+interface IndexResultItemProps {
+    item: SearchIndexItem;
+    onClick: () => void;
+}
+
+function IndexResultItem({ item, onClick }: IndexResultItemProps) {
+    const theme = useTheme();
+    const pctColor = getPctColor(item.pct_change, theme);
+    const isIndustry = item.type === 'industry';
+
+    return (
+        <Box
+            onClick={onClick}
+            sx={{
+                px: 1.5,
+                py: 0.75,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 1,
+                borderRadius: `${borderRadius.sm}px`,
+                mx: 0.5,
+                transition: 'background-color 0.15s',
+                '&:hover': {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                },
+            }}
+        >
+            <Box sx={{ minWidth: 0 }}>
+                <Typography sx={{ fontSize: getResponsiveFontSize('md'), fontWeight: fontWeight.semibold, lineHeight: 1.3 }}>
+                    {item.ticker_name || item.ticker}
+                </Typography>
+                <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: theme.palette.text.secondary, lineHeight: 1.2 }}>
+                    {item.ticker} · {isIndustry ? 'Ngành' : 'Nhóm'}
+                </Typography>
+            </Box>
+            {item.pct_change != null && (
+                <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: pctColor, fontWeight: fontWeight.medium, flexShrink: 0 }}>
+                    {formatPct(item.pct_change)}
+                </Typography>
+            )}
+        </Box>
+    );
+}
+
+interface NewsResultItemProps {
+    item: SearchNewsItem;
+    onClick: () => void;
+}
+
+function NewsResultItem({ item, onClick }: NewsResultItemProps) {
+    const theme = useTheme();
+    const date = item.created_at ? new Date(item.created_at).toLocaleDateString('vi-VN') : '';
+
+    return (
+        <Box
+            onClick={onClick}
+            sx={{
+                px: 1.5,
+                py: 0.75,
+                cursor: 'pointer',
+                borderRadius: `${borderRadius.sm}px`,
+                mx: 0.5,
+                transition: 'background-color 0.15s',
+                '&:hover': {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                },
+            }}
+        >
+            <Typography sx={{ fontSize: getResponsiveFontSize('md'), lineHeight: 1.4, fontWeight: fontWeight.medium }}>
+                {item.title}
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.25 }}>
+                {item.tickers && item.tickers.length > 0 && (
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        {item.tickers.slice(0, 3).map(t => (
+                            <Chip key={t} label={t} size="small" sx={{ height: 18, fontSize: '0.7rem', '& .MuiChip-label': { px: 0.75 } }} />
+                        ))}
+                    </Box>
+                )}
+                {date && (
+                    <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: theme.palette.text.secondary }}>
+                        {date}
+                    </Typography>
+                )}
+            </Box>
+        </Box>
+    );
+}
+
+interface ReportResultItemProps {
+    item: SearchReportItem;
+    onClick: () => void;
+}
+
+function ReportResultItem({ item, onClick }: ReportResultItemProps) {
+    const theme = useTheme();
+    const date = item.created_at ? new Date(item.created_at).toLocaleDateString('vi-VN') : '';
+
+    return (
+        <Box
+            onClick={onClick}
+            sx={{
+                px: 1.5,
+                py: 0.75,
+                cursor: 'pointer',
+                borderRadius: `${borderRadius.sm}px`,
+                mx: 0.5,
+                transition: 'background-color 0.15s',
+                '&:hover': {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                },
+            }}
+        >
+            <Typography sx={{ fontSize: getResponsiveFontSize('md'), lineHeight: 1.4, fontWeight: fontWeight.medium }}>
+                {item.title}
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.25 }}>
+                {item.tickers && item.tickers.length > 0 && (
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        {item.tickers.slice(0, 3).map(t => (
+                            <Chip key={t} label={t} size="small" sx={{ height: 18, fontSize: '0.7rem', '& .MuiChip-label': { px: 0.75 } }} />
+                        ))}
+                    </Box>
+                )}
+                {date && (
+                    <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: theme.palette.text.secondary }}>
+                        {date}
+                    </Typography>
+                )}
+            </Box>
+        </Box>
+    );
+}
+
+// ============================================================================
+// DROPDOWN RESULTS PANEL
+// ============================================================================
+
+interface ResultsPanelProps {
+    results: SearchResults;
+    isLoading: boolean;
+    query: string;
+    onNavigate: (path: string) => void;
+}
+
+function ResultsPanel({ results, isLoading, query, onNavigate }: ResultsPanelProps) {
+    const theme = useTheme();
+    const hasStocks = results.stocks.length > 0;
+    const hasIndexes = results.indexes.length > 0;
+    const hasNews = results.news.length > 0;
+    const hasReports = results.reports.length > 0;
+    const hasAny = hasStocks || hasIndexes || hasNews || hasReports;
+
+    return (
+        <Box sx={{ maxHeight: '70vh', overflowY: 'auto', py: 0.5 }}>
+            {isLoading && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+                    <CircularProgress size={20} />
+                </Box>
+            )}
+
+            {!isLoading && !hasAny && query.length >= MIN_CHARS && (
+                <Box sx={{ py: 3, textAlign: 'center', color: theme.palette.text.secondary }}>
+                    <Icon icon="fluent:search-off-24-regular" width={32} height={32} style={{ opacity: 0.5 }} />
+                    <Typography sx={{ mt: 1, fontSize: getResponsiveFontSize('sm') }}>
+                        Không tìm thấy kết quả cho &quot;{query}&quot;
+                    </Typography>
+                </Box>
+            )}
+
+            {/* Section 1: Cổ phiếu */}
+            {hasStocks && (
+                <>
+                    <SectionHeader icon="fluent-color:data-trending-16" label="Cổ phiếu" />
+                    {results.stocks.map(item => (
+                        <StockResultItem
+                            key={item.ticker}
+                            item={item}
+                            onClick={() => onNavigate(`/stocks/${item.ticker}`)}
+                        />
+                    ))}
+                </>
+            )}
+
+            {/* Divider between sections */}
+            {hasStocks && hasIndexes && <Divider sx={{ my: 0.5, mx: 1.5 }} />}
+
+            {/* Section 2: Nhóm & Ngành */}
+            {hasIndexes && (
+                <>
+                    <SectionHeader icon="fluent-color:diversity-16" label="Nhóm & Ngành" />
+                    {results.indexes.map(item => (
+                        <IndexResultItem
+                            key={item.ticker}
+                            item={item}
+                            onClick={() => onNavigate(item.type === 'industry' ? `/sectors/${item.ticker}` : `/groups/${item.ticker}`)}
+                        />
+                    ))}
+                </>
+            )}
+
+            {/* Divider */}
+            {(hasStocks || hasIndexes) && hasNews && <Divider sx={{ my: 0.5, mx: 1.5 }} />}
+
+            {/* Section 3: Tin tức */}
+            {hasNews && (
+                <>
+                    <SectionHeader icon="fluent-color:news-28" label="Tin tức" />
+                    {results.news.map(item => (
+                        <NewsResultItem
+                            key={item.article_slug}
+                            item={item}
+                            onClick={() => onNavigate(`/news/${item.article_slug}`)}
+                        />
+                    ))}
+                </>
+            )}
+
+            {/* Divider */}
+            {(hasStocks || hasIndexes || hasNews) && hasReports && <Divider sx={{ my: 0.5, mx: 1.5 }} />}
+
+            {/* Section 4: Báo cáo */}
+            {hasReports && (
+                <>
+                    <SectionHeader icon="fluent-color:document-edit-24" label="Báo cáo" />
+                    {results.reports.map(item => (
+                        <ReportResultItem
+                            key={item.report_slug}
+                            item={item}
+                            onClick={() => onNavigate(`/reports/${item.report_slug}`)}
+                        />
+                    ))}
+                </>
+            )}
+        </Box>
+    );
+}
+
+// ============================================================================
+// MAIN SEARCH BAR COMPONENT
+// ============================================================================
+
 export default function SearchBar({
-    placeholder = "Tìm kiếm cổ phiếu, tin tức...",
-    variant = 'full'
+    placeholder = 'Tìm cổ phiếu, nhóm ngành, tin tức...',
 }: SearchBarProps) {
     const [searchValue, setSearchValue] = useState('');
     const [isFocused, setIsFocused] = useState(false);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [results, setResults] = useState<SearchResults>({ stocks: [], indexes: [], news: [], reports: [] });
+    const [isSearching, setIsSearching] = useState(false);
+    const [showDropdown, setShowDropdown] = useState(false);
     const [currentPlaceholder, setCurrentPlaceholder] = useState('');
-    const [isTyping, setIsTyping] = useState(true);
-    const theme = useTheme();
-
-    // Danh sách các placeholder để hiển thị
-    const placeholderTexts = [
-        "Tìm kiếm cổ phiếu, tin tức...",
-        "Nhập mã cổ phiếu...",
-        "Tìm kiếm công ty...",
-        "Khám phá thị trường..."
-    ];
+    const [isTypingAnim, setIsTypingAnim] = useState(true);
     const [currentTextIndex, setCurrentTextIndex] = useState(0);
 
-    // Sử dụng cùng breakpoint với sidebar (lg)
+    const theme = useTheme();
+    const router = useRouter();
     const lgDown = useMediaQuery(theme.breakpoints.down('lg'));
+    const anchorRef = useRef<HTMLDivElement>(null);
+    const debounceRef = useRef<NodeJS.Timeout | null>(null);
+    const { search, isPreloaded } = useSearchLogic();
 
-    // Typing animation effect
+    // Placeholder typing animation
+    const placeholderTexts = [
+        'Tìm cổ phiếu, nhóm ngành...',
+        'Nhập mã cổ phiếu VD: VNM...',
+        'Tìm theo tên công ty...',
+        'Tìm tin tức, báo cáo...',
+    ];
+
     useEffect(() => {
-        if (searchValue || isFocused) return; // Không chạy animation khi đang có text hoặc đang focus
-
+        if (searchValue || isFocused) return;
         const currentText = placeholderTexts[currentTextIndex];
         let timeoutId: NodeJS.Timeout;
-
-        if (isTyping) {
-            // Typing animation - gõ từng ký tự
-            const nextLength = currentPlaceholder.length + 1;
-            if (nextLength <= currentText.length) {
-                timeoutId = setTimeout(() => {
-                    setCurrentPlaceholder(currentText.slice(0, nextLength));
-                }, 100); // Tốc độ gõ
+        if (isTypingAnim) {
+            const next = currentPlaceholder.length + 1;
+            if (next <= currentText.length) {
+                timeoutId = setTimeout(() => setCurrentPlaceholder(currentText.slice(0, next)), 90);
             } else {
-                // Đã gõ xong, chờ một chút rồi bắt đầu xóa
-                timeoutId = setTimeout(() => {
-                    setIsTyping(false);
-                }, 2000); // Dừng 2 giây
+                timeoutId = setTimeout(() => setIsTypingAnim(false), 2000);
             }
         } else {
-            // Erasing animation - xóa từng ký tự
             if (currentPlaceholder.length > 0) {
-                timeoutId = setTimeout(() => {
-                    setCurrentPlaceholder(currentPlaceholder.slice(0, -1));
-                }, 50); // Tốc độ xóa nhanh hơn
+                timeoutId = setTimeout(() => setCurrentPlaceholder(p => p.slice(0, -1)), 45);
             } else {
-                // Đã xóa xong, chuyển sang text tiếp theo
-                setCurrentTextIndex((prev) => (prev + 1) % placeholderTexts.length);
-                setIsTyping(true);
+                setCurrentTextIndex(i => (i + 1) % placeholderTexts.length);
+                setIsTypingAnim(true);
             }
         }
-
         return () => clearTimeout(timeoutId);
-    }, [currentPlaceholder, isTyping, currentTextIndex, searchValue, isFocused, placeholderTexts]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentPlaceholder, isTypingAnim, currentTextIndex, searchValue, isFocused]);
 
-    const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchValue(event.target.value);
-        // TODO: Implement actual search functionality
+    // Debounced search
+    const triggerSearch = useCallback((query: string) => {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+
+        if (query.length < MIN_CHARS) {
+            setResults({ stocks: [], indexes: [], news: [], reports: [] });
+            setShowDropdown(false);
+            setIsSearching(false);
+            return;
+        }
+
+        setIsSearching(true);
+        setShowDropdown(true);
+
+        debounceRef.current = setTimeout(async () => {
+            const res = await search(query);
+            setResults(res);
+            setIsSearching(false);
+        }, DEBOUNCE_MS);
+    }, [search]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setSearchValue(val);
+        triggerSearch(val);
     };
 
-    const handleClearSearch = () => {
+    const handleClear = () => {
         setSearchValue('');
-        // TODO: Clear search results
+        setResults({ stocks: [], indexes: [], news: [], reports: [] });
+        setShowDropdown(false);
     };
 
-    const handleSubmit = (event: React.FormEvent) => {
-        event.preventDefault();
-        if (searchValue.trim()) {
-            // TODO: Implement search submission
-            console.log('Searching for:', searchValue);
+    const handleNavigate = (path: string) => {
+        router.push(path);
+        handleClear();
+        setIsFocused(false);
+        setShowDropdown(false);
+        setIsDrawerOpen(false);
+    };
+
+    const handleClickAway = () => {
+        setShowDropdown(false);
+        setIsFocused(false);
+    };
+
+    const handleFocus = () => {
+        setIsFocused(true);
+        if (searchValue.length >= MIN_CHARS) {
+            setShowDropdown(true);
         }
     };
 
-    const handleOpenDrawer = () => {
-        setIsDrawerOpen(true);
+    const handleBlur = () => {
+        // Delay so that clicks on result items register first
+        setTimeout(() => {
+            setShowDropdown(false);
+            setIsFocused(false);
+        }, 180);
     };
 
-    const handleCloseDrawer = () => {
-        setIsDrawerOpen(false);
-        setSearchValue('');
+    const inputSx = {
+        borderRadius: borderRadius.pill,
+        backgroundColor: theme.palette.background.paper,
+        backdropFilter: 'blur(8px)',
+        transition: theme.transitions.create(['box-shadow', 'background-color']),
+        '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+        '&:hover': { backgroundColor: theme.palette.background.paper },
+        '&.Mui-focused': {
+            backgroundColor: theme.palette.background.paper,
+            boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.25)}`,
+        },
     };
 
-    // Hiển thị icon search khi là mobile/tablet (lg breakpoint)
+    // ─── Mobile / Tablet: icon → drawer ───
     if (lgDown) {
         return (
             <>
                 <Tooltip title="Tìm kiếm" placement="bottom">
                     <IconButton
-                        onClick={handleOpenDrawer}
+                        onClick={() => setIsDrawerOpen(true)}
                         aria-label="Mở tìm kiếm"
                         sx={{
-                            p: 0, // Không padding để nút sát cạnh phải
+                            p: 0,
                             color: theme.palette.text.secondary,
-                            '&:hover': {
-                                color: theme.palette.primary.main,
-                                backgroundColor: 'transparent',
-                            },
+                            '&:hover': { color: theme.palette.primary.main, backgroundColor: 'transparent' },
                         }}
                     >
-                        <SearchIcon aria-hidden="true" />
+                        <SearchIcon />
                     </IconButton>
                 </Tooltip>
 
-                {/* Search Drawer - sử dụng MUI Drawer giống layout để không gây xê dịch giao diện */}
                 <Drawer
                     anchor="right"
                     open={isDrawerOpen}
-                    onClose={handleCloseDrawer}
+                    onClose={() => { setIsDrawerOpen(false); handleClear(); }}
                     ModalProps={{ keepMounted: true }}
                     elevation={0}
                     aria-label="Tìm kiếm"
                     sx={{
                         '& .MuiDrawer-paper': {
-                            width: { xs: 300, sm: 320 },
+                            width: { xs: 320, sm: 380 },
                             boxShadow: shadows.drawerLeft,
                             backdropFilter: 'blur(12px)',
-                            backgroundColor: theme.palette.background.paper,
+                            backgroundColor: theme.palette.background.default,
                         },
                     }}
                 >
-                    <Box sx={{ p: 3 }}>
-                        {/* Header với nút đóng */}
+                    <Box sx={{ p: 2, pt: 2.5 }}>
+                        {/* Drawer Header */}
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                            <Box
-                                component="h2"
-                                id="search-drawer-title"
-                                sx={{
-                                    color: theme.palette.text.primary,
-                                    fontWeight: fontWeight.semibold,
-                                    fontSize: getResponsiveFontSize('lg'),
-                                    m: 0,
-                                }}
-                            >
+                            <Typography variant="h6" sx={{ fontWeight: fontWeight.semibold, fontSize: getResponsiveFontSize('lg') }}>
                                 Tìm kiếm
-                            </Box>
-                            <IconButton
-                                onClick={handleCloseDrawer}
-                                size="small"
-                                aria-label="Đóng tìm kiếm"
-                                sx={{
-                                    color: theme.palette.text.secondary,
-                                    '&:hover': {
-                                        color: theme.palette.text.primary,
-                                        backgroundColor: alpha(theme.palette.text.primary, 0.08),
-                                    },
-                                }}
-                            >
-                                <CloseIcon fontSize="small" aria-hidden="true" />
+                            </Typography>
+                            <IconButton size="small" onClick={() => { setIsDrawerOpen(false); handleClear(); }}>
+                                <CloseIcon fontSize="small" />
                             </IconButton>
                         </Box>
 
-                        {/* Search input */}
-                        <Box component="form" onSubmit={handleSubmit}>
-                            <TextField
-                                fullWidth
-                                autoFocus
-                                size="small"
-                                value={searchValue}
-                                onChange={handleSearchChange}
-                                onFocus={() => setIsFocused(true)}
-                                onBlur={() => setIsFocused(false)}
-                                placeholder={isFocused ? '' : currentPlaceholder}
-                                variant="outlined"
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <SearchIcon
-                                                sx={{
-                                                    color: theme.palette.primary.main,
-                                                    fontSize: iconSize.lg,
-                                                }}
-                                            />
-                                        </InputAdornment>
-                                    ),
-                                    endAdornment: searchValue && (
-                                        <InputAdornment position="end">
-                                            <Fade in={!!searchValue}>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={handleClearSearch}
-                                                    sx={{
-                                                        color: theme.palette.text.secondary,
-                                                        '&:hover': {
-                                                            color: theme.palette.text.primary,
-                                                            backgroundColor: alpha(theme.palette.text.primary, 0.08),
-                                                        },
-                                                    }}
-                                                >
-                                                    <ClearIcon fontSize="small" />
-                                                </IconButton>
-                                            </Fade>
-                                        </InputAdornment>
-                                    ),
-                                    sx: {
-                                        borderRadius: borderRadius.pill,
-                                        fontSize: getResponsiveFontSize('lg'),
-                                        '& .MuiOutlinedInput-notchedOutline': {
-                                            border: 'none',
-                                        },
-                                        backgroundColor: alpha(theme.palette.text.primary, 0.04),
-                                        '&:hover': {
-                                            backgroundColor: alpha(theme.palette.text.primary, 0.06),
-                                        },
-                                        '&.Mui-focused': {
-                                            backgroundColor: alpha(theme.palette.text.primary, 0.04),
-                                            boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`,
-                                        },
+                        {/* Search Input */}
+                        <TextField
+                            fullWidth
+                            autoFocus
+                            size="small"
+                            value={searchValue}
+                            onChange={handleChange}
+                            onFocus={() => setIsFocused(true)}
+                            onBlur={() => setIsFocused(false)}
+                            placeholder="Tìm cổ phiếu, nhóm ngành, tin tức..."
+                            variant="outlined"
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <SearchIcon sx={{ color: theme.palette.primary.main, fontSize: iconSize.lg }} />
+                                    </InputAdornment>
+                                ),
+                                endAdornment: searchValue && (
+                                    <InputAdornment position="end">
+                                        <IconButton size="small" onClick={handleClear}>
+                                            <ClearIcon fontSize="small" />
+                                        </IconButton>
+                                    </InputAdornment>
+                                ),
+                                sx: {
+                                    ...inputSx,
+                                    backgroundColor: alpha(theme.palette.text.primary, 0.05),
+                                    '&.Mui-focused': {
+                                        backgroundColor: alpha(theme.palette.text.primary, 0.05),
+                                        boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.25)}`,
                                     },
-                                }}
-                            />
-                        </Box>
+                                },
+                            }}
+                        />
 
-                        {/* TODO: Add search results here */}
-                        <Box sx={{
-                            color: theme.palette.text.secondary,
-                            textAlign: 'center',
-                            mt: 4,
-                            fontSize: getResponsiveFontSize('md')
-                        }}>
-                            Nhập từ khóa để tìm kiếm...
+                        {/* Results */}
+                        <Box sx={{ mt: 1.5 }}>
+                            {searchValue.length < MIN_CHARS && !isSearching && (
+                                <Box sx={{ py: 4, textAlign: 'center', color: theme.palette.text.secondary }}>
+                                    <Icon icon="fluent:search-24-regular" width={36} height={36} style={{ opacity: 0.35 }} />
+                                </Box>
+                            )}
+                            {searchValue.length >= MIN_CHARS && (
+                                <ResultsPanel
+                                    results={results}
+                                    isLoading={isSearching}
+                                    query={searchValue}
+                                    onNavigate={handleNavigate}
+                                />
+                            )}
                         </Box>
                     </Box>
                 </Drawer>
@@ -256,92 +762,95 @@ export default function SearchBar({
         );
     }
 
-    // Desktop version - thanh tìm kiếm đầy đủ và dài hơn
+    // ─── Desktop: inline search bar + absolute dropdown ───
     return (
         <Box
-            component="form"
-            onSubmit={handleSubmit}
+            ref={anchorRef}
             sx={{
-                maxWidth: variant === 'compact' ? 400 : 500,
-                minWidth: variant === 'compact' ? 300 : 400,
+                maxWidth: 500,
+                minWidth: 380,
                 width: '100%',
+                position: 'relative',
             }}
         >
             <TextField
                 fullWidth
                 size="small"
                 value={searchValue}
-                onChange={handleSearchChange}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                placeholder={isFocused ? '' : currentPlaceholder}
+                onChange={handleChange}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                placeholder={isFocused ? '' : currentPlaceholder || placeholder}
                 variant="outlined"
                 InputProps={{
                     startAdornment: (
                         <InputAdornment position="start">
                             <SearchIcon
                                 sx={{
-                                    color: isFocused
-                                        ? theme.palette.primary.main
-                                        : theme.palette.text.secondary,
+                                    color: isFocused ? theme.palette.primary.main : theme.palette.text.secondary,
                                     fontSize: iconSize.md,
                                     transition: theme.transitions.create('color'),
                                 }}
                             />
                         </InputAdornment>
                     ),
-                    endAdornment: searchValue && (
+                    endAdornment: searchValue ? (
                         <InputAdornment position="end">
                             <Fade in={!!searchValue}>
-                                <IconButton
-                                    size="small"
-                                    onClick={handleClearSearch}
-                                    sx={{
-                                        padding: 0.5,
-                                        color: theme.palette.text.secondary,
-                                        '&:hover': {
-                                            color: theme.palette.text.primary,
-                                            backgroundColor: alpha(theme.palette.text.primary, 0.08),
-                                        },
-                                    }}
-                                >
+                                <IconButton size="small" onClick={handleClear} sx={{ padding: 0.5 }}>
                                     <ClearIcon fontSize="small" />
                                 </IconButton>
                             </Fade>
                         </InputAdornment>
-                    ),
+                    ) : isSearching ? (
+                        <InputAdornment position="end">
+                            <CircularProgress size={16} />
+                        </InputAdornment>
+                    ) : null,
                     sx: {
-                        borderRadius: borderRadius.pill,
-                        backgroundColor: theme.palette.background.paper,
-                        backdropFilter: 'blur(8px)',
-                        transition: theme.transitions.create([
-                            'background-color',
-                            'box-shadow'
-                        ]),
-                        '& .MuiOutlinedInput-notchedOutline': {
-                            border: 'none', // Bỏ border
-                        },
-                        '&:hover': {
-                            backgroundColor: theme.palette.background.paper,
-                        },
-                        '&.Mui-focused': {
-                            backgroundColor: theme.palette.background.paper,
-                            boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`,
+                        ...inputSx,
+                        '& .MuiInputBase-input': {
+                            fontSize: getResponsiveFontSize('sm'),
+                            padding: '6px 0',
                         },
                     },
                 }}
                 sx={{
-                    '& .MuiInputBase-input': {
-                        fontSize: getResponsiveFontSize('sm'),
-                        fontWeight: 'normal',
-                        padding: '6px 0',
-                        '&::placeholder': {
-                            color: theme.palette.text.secondary,
-                            opacity: 0.7,
-                        },
+                    '& .MuiInputBase-input::placeholder': {
+                        color: theme.palette.text.secondary,
+                        opacity: 0.7,
                     },
                 }}
             />
+
+            {/* Dropdown results - absolute position, always rendered in same stacking context */}
+            <Fade in={showDropdown}>
+                <Paper
+                    elevation={0}
+                    sx={{
+                        display: showDropdown ? 'block' : 'none',
+                        position: 'absolute',
+                        top: 'calc(100% + 6px)',
+                        left: 0,
+                        right: 0,
+                        zIndex: 1400,
+                        borderRadius: `${borderRadius.lg}px`,
+                        border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+                        boxShadow: shadows.xl,
+                        backdropFilter: 'blur(16px)',
+                        WebkitBackdropFilter: 'blur(16px)',
+                        backgroundColor: theme.palette.background.default,
+                        overflow: 'hidden',
+                    }}
+                >
+                    <ResultsPanel
+                        results={results}
+                        isLoading={isSearching}
+                        query={searchValue}
+                        onNavigate={handleNavigate}
+                    />
+                </Paper>
+            </Fade>
         </Box>
     );
 }
