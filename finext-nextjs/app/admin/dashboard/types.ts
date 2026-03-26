@@ -76,6 +76,7 @@ export interface DashboardStatsResponse {
     period: PeriodRange;
     previous_period: PeriodRange;
     granularity: string;
+    total_users: number;
     kpis: KpiStats;
     revenue_trend: RevenueTrendItem[];
     user_growth: UserGrowthItem[];
@@ -90,12 +91,17 @@ export interface DashboardStatsResponse {
 // Time filter presets
 export type TimePreset = '7d' | '30d' | '3m' | '6m' | '1y' | 'custom';
 
-// Currency formatter: auto VND/triệu/tỷ
+// Currency formatter: auto K/M/B + đ
+// B/M → 2 decimal places (e.g. 9.00Mđ, 1.23Bđ)
+// K and below → integer only (e.g. 500Kđ, 800đ)
 export function formatCurrency(value: number): string {
-    if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)} tỷ`;
-    if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)} triệu`;
-    if (value >= 1_000) return `${Math.round(value / 1_000)}K₫`;
-    return `${Math.round(value)}₫`;
+    if (!isFinite(value) || isNaN(value)) return '0đ';
+    const abs = Math.abs(value);
+    const sign = value < 0 ? '-' : '';
+    if (abs >= 1_000_000_000) return `${sign}${(abs / 1_000_000_000).toFixed(2)}Bđ`;
+    if (abs >= 1_000_000)     return `${sign}${(abs / 1_000_000).toFixed(2)}Mđ`;
+    if (abs >= 1_000)         return `${sign}${Math.round(abs / 1_000)}Kđ`;
+    return `${sign}${Math.round(abs)}đ`;
 }
 
 // Percentage change calculator

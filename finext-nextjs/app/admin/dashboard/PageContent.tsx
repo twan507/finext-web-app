@@ -80,7 +80,7 @@ const ChartSlot: React.FC<{
     <Box>
         <Typography
             variant="body2"
-            sx={{ fontWeight: 600, color: 'text.secondary', mb: 1.5, textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: '0.7rem' }}
+            sx={{ fontWeight: 600, color: 'text.secondary', mb: 1.5, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: getResponsiveFontSize('sm') }}
         >
             {title}
         </Typography>
@@ -112,6 +112,7 @@ const DashboardHomePage: React.FC = () => {
                 url: '/api/v1/admin/dashboard/stats',
                 method: 'GET',
                 queryParams: { start_date: startDate, end_date: endDate },
+                useCache: false,   // Dashboard must always show real-time data
             });
             setData(response.data as DashboardStatsResponse);
         } catch (err: unknown) {
@@ -192,14 +193,14 @@ const DashboardHomePage: React.FC = () => {
             <Box sx={{ mb: 3 }}>
                 {loading || !data ? (
                     <Grid container spacing={2}>
-                        {Array.from({ length: 6 }).map((_, i) => (
-                            <Grid size={{ xs: 6, sm: 4, lg: 2 }} key={i}>
+                        {Array.from({ length: 8 }).map((_, i) => (
+                            <Grid size={{ xs: 6, sm: 4, md: 3, lg: 'auto' }} key={i} sx={{ flex: { lg: 1 } }}>
                                 {sk(110)}
                             </Grid>
                         ))}
                     </Grid>
                 ) : (
-                    <KpiCards kpis={data.kpis} />
+                    <KpiCards kpis={data.kpis} totalUsers={data.total_users} />
                 )}
             </Box>
 

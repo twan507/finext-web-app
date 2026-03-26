@@ -1,6 +1,6 @@
 # finext-fastapi/app/schemas/dashboard.py
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List
 from datetime import datetime
 
 
@@ -80,6 +80,7 @@ class DashboardStatsResponse(BaseModel):
     period: PeriodRange
     previous_period: PeriodRange
     granularity: str  # "day", "week", "month"
+    total_users: int = 0  # Total registered users (for conversion rate)
     kpis: KpiStats = Field(default_factory=KpiStats)
     revenue_trend: List[RevenueTrendItem] = []
     user_growth: List[UserGrowthItem] = []

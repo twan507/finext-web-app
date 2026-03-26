@@ -46,6 +46,17 @@ async def get_dashboard_stats(
     if end_date.tzinfo is None:
         end_date = end_date.replace(tzinfo=timezone.utc)
 
+    # When end_date is sent as a date-only string (e.g. "2026-03-26"),
+    # FastAPI parses it as midnight 00:00:00 UTC — this would exclude ALL
+    # transactions created during that day.  Push it to end-of-day so the
+    # full selected date is included in the range.
+    if end_date.hour == 0 and end_date.minute == 0 and end_date.second == 0 and end_date.microsecond == 0:
+        end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    # Clamp end_date to now so future dates are not accepted
+    if end_date > now:
+        end_date = now
+
     if start_date >= end_date:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -53,3 +64,4 @@ async def get_dashboard_stats(
         )
 
     return await crud_dashboard.get_dashboard_stats(db, start_date, end_date)
+

@@ -9,6 +9,8 @@ import {
     CardMembership as SubsIcon,
     TrendingDown as ChurnIcon,
     HourglassEmpty as PendingIcon,
+    BarChart as ArpuIcon,
+    CompareArrows as ConversionIcon,
     ArrowUpward as ArrowUpIcon,
     ArrowDownward as ArrowDownIcon,
 } from '@mui/icons-material';
@@ -17,49 +19,80 @@ import { borderRadius, getGlassCard, getGlassHighlight } from 'theme/tokens';
 
 interface KpiCardsProps {
     kpis: KpiStats;
+    totalUsers?: number;
 }
 
 interface KpiCardConfig {
-    key: keyof KpiStats;
+    key: keyof KpiStats | 'arpu' | 'conversion_rate';
     label: string;
     icon: React.ReactNode;
     isCurrency: boolean;
     isPercent: boolean;
     invertChange?: boolean;
-    accent: string; // hsl hue for subtle accent
+    accentHue: string; // css color string
 }
 
+// Project-aligned accent hues (matching tokens.ts primary violet + semantic palette)
 const KPI_CONFIG: KpiCardConfig[] = [
-    { key: 'total_revenue', label: 'Tổng doanh thu', icon: <RevenueIcon />, isCurrency: true, isPercent: false, accent: '270' },
-    { key: 'successful_orders', label: 'Đơn thành công', icon: <OrdersIcon />, isCurrency: false, isPercent: false, accent: '150' },
-    { key: 'new_users', label: 'User mới', icon: <NewUserIcon />, isCurrency: false, isPercent: false, accent: '210' },
-    { key: 'active_subscriptions', label: 'Subscriptions', icon: <SubsIcon />, isCurrency: false, isPercent: false, accent: '30' },
-    { key: 'churn_rate', label: 'Tỷ lệ churn', icon: <ChurnIcon />, isCurrency: false, isPercent: true, invertChange: true, accent: '0' },
-    { key: 'pending_orders', label: 'Đơn chờ xử lý', icon: <PendingIcon />, isCurrency: false, isPercent: false, invertChange: true, accent: '45' },
+    { key: 'total_revenue',        label: 'Tổng doanh thu',  icon: <RevenueIcon />,    isCurrency: true,  isPercent: false, accentHue: '#8b5cf6' }, // primary violet
+    { key: 'successful_orders',    label: 'Đơn thành công',  icon: <OrdersIcon />,     isCurrency: false, isPercent: false, accentHue: '#10b981' }, // emerald
+    { key: 'new_users',            label: 'User mới',        icon: <NewUserIcon />,    isCurrency: false, isPercent: false, accentHue: '#3b82f6' }, // blue
+    { key: 'active_subscriptions', label: 'Subscriptions',   icon: <SubsIcon />,       isCurrency: false, isPercent: false, accentHue: '#f59e0b' }, // amber
+    { key: 'arpu',                 label: 'ARPU',             icon: <ArpuIcon />,       isCurrency: true,  isPercent: false, accentHue: '#a855f7' }, // purple
+    { key: 'churn_rate',           label: 'Tỷ lệ churn',     icon: <ChurnIcon />,      isCurrency: false, isPercent: true,  invertChange: true, accentHue: '#e14040' }, // rose (down trend)
+    { key: 'pending_orders',       label: 'Đơn chờ xử lý',  icon: <PendingIcon />,    isCurrency: false, isPercent: false, invertChange: true, accentHue: '#ed6c02' }, // orange
+    { key: 'conversion_rate',      label: 'Conversion',      icon: <ConversionIcon />, isCurrency: false, isPercent: true,  accentHue: '#06b6d4' }, // cyan
 ];
 
-const KpiCards: React.FC<KpiCardsProps> = ({ kpis }) => {
+const KpiCards: React.FC<KpiCardsProps> = ({ kpis, totalUsers }) => {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
+
+    // Compute derived metrics
+    const activeSubs = kpis.active_subscriptions.current;
+    const prevActiveSubs = kpis.active_subscriptions.previous;
+    const totalRevenue = kpis.total_revenue.current;
+    const prevRevenue = kpis.total_revenue.previous;
+
+    const arpu = activeSubs > 0 ? totalRevenue / activeSubs : 0;
+    const prevArpu = prevActiveSubs > 0 ? prevRevenue / prevActiveSubs : 0;
+
+    // Conversion = active paid subs / total users × 100%
+    const conversionRate = totalUsers && totalUsers > 0 ? parseFloat(((activeSubs / totalUsers) * 100).toFixed(1)) : 0;
+    const prevConversionRate = 0; // placeholder — no totalUsers for prev period currently
 
     return (
         <Grid container spacing={2}>
             {KPI_CONFIG.map((cfg) => {
-                const metric = kpis[cfg.key];
-                const change = calcChange(metric.current, metric.previous);
-                const isPositiveChange = cfg.invertChange ? change <= 0 : change >= 0;
-                const displayValue = cfg.isCurrency
-                    ? formatCurrency(metric.current)
-                    : cfg.isPercent
-                        ? `${metric.current}%`
-                        : metric.current.toLocaleString('vi-VN');
+                // Resolve current & previous values
+                let current: number;
+                let previous: number;
 
-                const accentColor = isDark
-                    ? `hsl(${cfg.accent}, 65%, 65%)`
-                    : `hsl(${cfg.accent}, 55%, 50%)`;
+                if (cfg.key === 'arpu') {
+                    current = arpu;
+                    previous = prevArpu;
+                } else if (cfg.key === 'conversion_rate') {
+                    current = conversionRate;
+                    previous = prevConversionRate;
+                } else {
+                    const metric = kpis[cfg.key as keyof KpiStats];
+                    current = metric.current;
+                    previous = metric.previous;
+                }
+
+                const change = calcChange(current, previous);
+                const isPositiveChange = cfg.invertChange ? change <= 0 : change >= 0;
+
+                const displayValue = cfg.isCurrency
+                    ? formatCurrency(current)
+                    : cfg.isPercent
+                        ? `${current}%`
+                        : current.toLocaleString('vi-VN');
+
+                const accentColor = cfg.accentHue;
 
                 return (
-                    <Grid size={{ xs: 6, sm: 4, lg: 2 }} key={cfg.key}>
+                    <Grid size={{ xs: 6, sm: 4, md: 3, lg: 'auto' }} key={cfg.key} sx={{ flex: { lg: 1 } }}>
                         <Box
                             sx={{
                                 ...getGlassCard(isDark),
@@ -126,7 +159,7 @@ const KpiCards: React.FC<KpiCardsProps> = ({ kpis }) => {
                                     color: 'text.primary',
                                     lineHeight: 1.2,
                                     mb: 1,
-                                    fontSize: { xs: '1.1rem', sm: '1.25rem' },
+                                    fontSize: { xs: '1.05rem', sm: '1.2rem' },
                                 }}
                             >
                                 {displayValue}

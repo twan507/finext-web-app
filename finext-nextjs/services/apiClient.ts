@@ -279,11 +279,21 @@ export const apiClient = async <TResponseData = any>(
 
             // Also clear the parent resource list cache.
             // e.g. mutating /api/v1/users/123 should bust /api/v1/users/ list cache.
-            // We take everything up to and including the 5th path segment: /api/v1/{resource}/
             const parts = url.split('/').filter(Boolean); // ['api', 'v1', 'users', '123']
             if (parts.length >= 3) {
                 const resourceBase = '/' + parts.slice(0, 3).join('/') + '/'; // '/api/v1/users/'
                 clearApiCache(resourceBase);
+            }
+
+            // When any admin resource is mutated, clear ALL admin-related caches
+            // (dashboard stats, transactions list, subscriptions, etc.)
+            if (url.includes('/admin/')) {
+                const entries = Array.from(apiCache.keys());
+                entries.forEach((key) => {
+                    if (key.includes('/admin/')) {
+                        apiCache.delete(key);
+                    }
+                });
             }
         }
 

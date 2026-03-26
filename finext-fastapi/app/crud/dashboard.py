@@ -1,7 +1,8 @@
 # finext-fastapi/app/crud/dashboard.py
+import asyncio
 import logging
-from datetime import datetime, timezone, timedelta
-from typing import List, Dict, Any, Tuple
+from datetime import datetime, timezone
+from typing import List, Dict, Any
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
@@ -83,6 +84,24 @@ async def _get_new_users_count(
 
 async def _get_active_subscriptions_count(db: AsyncIOMotorDatabase) -> int:
     return await db.subscriptions.count_documents({"is_active": True})
+
+
+async def _get_active_subscriptions_at(
+    db: AsyncIOMotorDatabase, snapshot_date: datetime
+) -> int:
+    """
+    Count subscriptions that were active AT a given snapshot date.
+    A subscription is considered active at `snapshot_date` if:
+      - start_date < snapshot_date
+      - expiry_date >= snapshot_date  OR  is_active is True and expiry_date is null
+    """
+    return await db.subscriptions.count_documents({
+        "start_date": {"$lt": snapshot_date},
+        "$or": [
+            {"expiry_date": {"$gte": snapshot_date}},
+            {"expiry_date": None, "is_active": True},
+        ],
+    })
 
 
 async def _get_churn_rate(
@@ -169,19 +188,24 @@ async def _get_revenue_by_license(
             "count": {"$sum": 1},
         }},
         {"$sort": {"revenue": -1}},
+        {"$limit": 20},
     ]
     results = await db.transactions.aggregate(pipeline).to_list(20)
 
-    items = []
-    for r in results:
-        license_doc = await db.licenses.find_one({"key": r["_id"]})
-        items.append(RevenueByLicenseItem(
+    # Batch fetch license names to avoid N+1
+    license_keys = [r["_id"] for r in results if r["_id"]]
+    license_docs = await db.licenses.find({"key": {"$in": license_keys}}).to_list(50)
+    license_map = {doc["key"]: doc.get("name", "") for doc in license_docs}
+
+    return [
+        RevenueByLicenseItem(
             license_key=r["_id"] or "Unknown",
-            license_name=license_doc["name"] if license_doc else r["_id"] or "Unknown",
+            license_name=license_map.get(r["_id"], r["_id"] or "Unknown"),
             revenue=round(r["revenue"], 0),
             count=r["count"],
-        ))
-    return items
+        )
+        for r in results
+    ]
 
 
 async def _get_subscription_distribution(
@@ -191,18 +215,23 @@ async def _get_subscription_distribution(
         {"$match": {"is_active": True}},
         {"$group": {"_id": "$license_key", "count": {"$sum": 1}}},
         {"$sort": {"count": -1}},
+        {"$limit": 20},
     ]
     results = await db.subscriptions.aggregate(pipeline).to_list(20)
 
-    items = []
-    for r in results:
-        license_doc = await db.licenses.find_one({"key": r["_id"]})
-        items.append(SubscriptionDistributionItem(
+    # Batch fetch license names
+    license_keys = [r["_id"] for r in results if r["_id"]]
+    license_docs = await db.licenses.find({"key": {"$in": license_keys}}).to_list(50)
+    license_map = {doc["key"]: doc.get("name", "") for doc in license_docs}
+
+    return [
+        SubscriptionDistributionItem(
             license_key=r["_id"] or "Unknown",
-            license_name=license_doc["name"] if license_doc else r["_id"] or "Unknown",
+            license_name=license_map.get(r["_id"], r["_id"] or "Unknown"),
             count=r["count"],
-        ))
-    return items
+        )
+        for r in results
+    ]
 
 
 async def _get_transaction_status(
@@ -272,16 +301,26 @@ async def _get_top_brokers(
     ]
     results = await db.transactions.aggregate(pipeline).to_list(limit)
 
+    # Batch fetch broker + user info to avoid N+1
+    broker_codes = [r["_id"] for r in results if r["_id"]]
+    broker_docs = await db.brokers.find({"broker_code": {"$in": broker_codes}}).to_list(20)
+    broker_map = {doc["broker_code"]: doc for doc in broker_docs}
+
+    # Collect user_ids to batch fetch
+    user_ids = [broker_map[code]["user_id"] for code in broker_codes if code in broker_map and broker_map[code].get("user_id")]
+    user_docs = await db.users.find({"_id": {"$in": user_ids}}).to_list(20)
+    user_map = {doc["_id"]: doc.get("full_name", "") for doc in user_docs}
+
     items = []
     for r in results:
-        broker_doc = await db.brokers.find_one({"broker_code": r["_id"]})
-        broker_name = r["_id"]
-        if broker_doc:
-            user_doc = await db.users.find_one({"_id": broker_doc.get("user_id")})
-            if user_doc:
-                broker_name = user_doc.get("full_name", r["_id"])
+        code = r["_id"]
+        broker_name = code
+        if code in broker_map:
+            uid = broker_map[code].get("user_id")
+            if uid and uid in user_map:
+                broker_name = user_map[uid] or code
         items.append(TopBrokerItem(
-            broker_code=r["_id"],
+            broker_code=code,
             broker_name=broker_name,
             total_revenue=round(r["total_revenue"], 0),
             order_count=r["order_count"],
@@ -293,13 +332,16 @@ async def _get_recent_transactions(
     db: AsyncIOMotorDatabase, limit: int = 10
 ) -> List[RecentTransactionItem]:
     cursor = db.transactions.find().sort("created_at", -1).limit(limit)
+    docs = await cursor.to_list(limit)
+
+    # Batch fetch buyer emails to avoid N+1
+    buyer_ids = list({doc["buyer_user_id"] for doc in docs if doc.get("buyer_user_id")})
+    user_docs = await db.users.find({"_id": {"$in": buyer_ids}}).to_list(limit)
+    email_map = {doc["_id"]: doc.get("email", "") for doc in user_docs}
+
     items = []
-    async for doc in cursor:
-        buyer_email = ""
-        if doc.get("buyer_user_id"):
-            user_doc = await db.users.find_one({"_id": doc["buyer_user_id"]})
-            if user_doc:
-                buyer_email = user_doc.get("email", "")
+    for doc in docs:
+        buyer_email = email_map.get(doc.get("buyer_user_id"), "")
         items.append(RecentTransactionItem(
             id=str(doc["_id"]),
             buyer_email=buyer_email,
@@ -323,40 +365,68 @@ async def get_dashboard_stats(
 
     granularity = _get_granularity(start_date, end_date)
 
-    # KPIs — current period
-    current_revenue = await _get_revenue_kpi(db, start_date, end_date)
-    current_orders = await _get_order_count(db, start_date, end_date, "succeeded")
-    current_new_users = await _get_new_users_count(db, start_date, end_date)
-    current_active_subs = await _get_active_subscriptions_count(db)
-    current_churn = await _get_churn_rate(db, start_date, end_date)
-    current_pending = await _get_order_count(db, start_date, end_date, "pending")
+    # Run all KPI queries in parallel using asyncio.gather
+    (
+        current_revenue,
+        current_orders,
+        current_new_users,
+        current_active_subs,
+        current_churn,
+        current_pending,
+        prev_revenue,
+        prev_orders,
+        prev_new_users,
+        prev_active_subs,
+        prev_churn,
+        prev_pending,
+        total_users,
+    ) = await asyncio.gather(
+        _get_revenue_kpi(db, start_date, end_date),
+        _get_order_count(db, start_date, end_date, "succeeded"),
+        _get_new_users_count(db, start_date, end_date),
+        _get_active_subscriptions_count(db),
+        _get_churn_rate(db, start_date, end_date),
+        _get_order_count(db, start_date, end_date, "pending"),
+        _get_revenue_kpi(db, prev_start, prev_end),
+        _get_order_count(db, prev_start, prev_end, "succeeded"),
+        _get_new_users_count(db, prev_start, prev_end),
+        _get_active_subscriptions_at(db, prev_end),   # ← Fix: snapshot at prev period end
+        _get_churn_rate(db, prev_start, prev_end),
+        _get_order_count(db, prev_start, prev_end, "pending"),
+        db.users.count_documents({}),   # total registered users
+    )
 
-    # KPIs — previous period
-    prev_revenue = await _get_revenue_kpi(db, prev_start, prev_end)
-    prev_orders = await _get_order_count(db, prev_start, prev_end, "succeeded")
-    prev_new_users = await _get_new_users_count(db, prev_start, prev_end)
-    prev_churn = await _get_churn_rate(db, prev_start, prev_end)
-    prev_pending = await _get_order_count(db, prev_start, prev_end, "pending")
-
-    # Charts & tables
-    revenue_trend = await _get_revenue_trend(db, start_date, end_date, granularity)
-    user_growth = await _get_user_growth(db, start_date, end_date, granularity)
-    revenue_by_license = await _get_revenue_by_license(db, start_date, end_date)
-    subscription_distribution = await _get_subscription_distribution(db)
-    transaction_status = await _get_transaction_status(db, start_date, end_date)
-    top_promotions = await _get_top_promotions(db, start_date, end_date)
-    top_brokers = await _get_top_brokers(db, start_date, end_date)
-    recent_transactions = await _get_recent_transactions(db)
+    # Charts & tables — also parallelized
+    (
+        revenue_trend,
+        user_growth,
+        revenue_by_license,
+        subscription_distribution,
+        transaction_status,
+        top_promotions,
+        top_brokers,
+        recent_transactions,
+    ) = await asyncio.gather(
+        _get_revenue_trend(db, start_date, end_date, granularity),
+        _get_user_growth(db, start_date, end_date, granularity),
+        _get_revenue_by_license(db, start_date, end_date),
+        _get_subscription_distribution(db),
+        _get_transaction_status(db, start_date, end_date),
+        _get_top_promotions(db, start_date, end_date),
+        _get_top_brokers(db, start_date, end_date),
+        _get_recent_transactions(db),
+    )
 
     return DashboardStatsResponse(
         period=PeriodRange(start_date=start_date, end_date=end_date),
         previous_period=PeriodRange(start_date=prev_start, end_date=prev_end),
         granularity=granularity,
+        total_users=total_users,
         kpis=KpiStats(
             total_revenue=KpiMetric(current=current_revenue, previous=prev_revenue),
             successful_orders=KpiMetric(current=current_orders, previous=prev_orders),
             new_users=KpiMetric(current=current_new_users, previous=prev_new_users),
-            active_subscriptions=KpiMetric(current=current_active_subs, previous=current_active_subs),
+            active_subscriptions=KpiMetric(current=current_active_subs, previous=prev_active_subs),
             churn_rate=KpiMetric(current=current_churn, previous=prev_churn),
             pending_orders=KpiMetric(current=current_pending, previous=prev_pending),
         ),
