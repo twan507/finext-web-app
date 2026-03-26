@@ -56,7 +56,7 @@ export default function VsiGaugeChart({ value, chartHeight = '250px' }: VsiGauge
                 startAngle: -100,
                 endAngle: 100,
                 hollow: {
-                    size: '60%',
+                    size: '68%',
                     background: 'transparent',
                 },
                 track: {
@@ -90,10 +90,10 @@ export default function VsiGaugeChart({ value, chartHeight = '250px' }: VsiGauge
             <Box
                 sx={{
                     position: 'absolute',
-                    top: -20,
-                    left: '-5%',
-                    width: '109%',
-                    height: '140%',
+                    top: '0%',
+                    left: '0%',
+                    width: '100%',
+                    height: '120%',
                 }}
             >
                 <Chart
@@ -109,7 +109,7 @@ export default function VsiGaugeChart({ value, chartHeight = '250px' }: VsiGauge
             <Box
                 sx={{
                     position: 'absolute',
-                    top: '52%',
+                    top: '50%',
                     left: 0,
                     right: 0,
                     display: 'flex',
@@ -132,7 +132,7 @@ export default function VsiGaugeChart({ value, chartHeight = '250px' }: VsiGauge
             {/* Level badge */}
             <Box
                 sx={{
-                    bottom: '4%',
+                    bottom: '0%',
                     left: 0,
                     right: 0,
                     display: 'flex',
