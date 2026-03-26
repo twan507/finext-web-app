@@ -504,55 +504,67 @@ export default function WatchlistContent() {
         );
     }
 
+    // Title always rendered — loading only covers content below
+    const renderTitle = () => (
+        <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1'), lineHeight: 1.2, fontWeight: fontWeight.bold, mb: 2 }}>
+            Danh sách theo dõi
+        </Typography>
+    );
+
     // Loading state — dots animation matching global app loading
     if (loading) {
         return (
-            <Box
-                sx={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    height: '60vh',
-                    width: '100%',
-                }}
-            >
-                <Box
-                    sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 2,
-                    }}
-                >
+            <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
+                <Box sx={{ py: 2 }}>
+                    {renderTitle()}
                     <Box
-                        className="root-loading-dots"
                         sx={{
                             display: 'flex',
-                            gap: '6px',
-                            '& > span': {
-                                width: '7px',
-                                height: '7px',
-                                borderRadius: '50%',
-                                bgcolor: 'primary.main',
-                                animation: 'dotBounce 1.4s ease-in-out infinite both',
-                            },
-                            '& > span:nth-child(1)': { animationDelay: '-0.32s' },
-                            '& > span:nth-child(2)': { animationDelay: '-0.16s' },
-                            '& > span:nth-child(3)': { animationDelay: '0s' },
-                            '& > span:nth-child(4)': { animationDelay: '0.16s' },
-                            '@keyframes dotBounce': {
-                                '0%, 80%, 100%': { transform: 'scale(0.4)', opacity: 0.4 },
-                                '40%': { transform: 'scale(1)', opacity: 1 },
-                            },
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            minHeight: '40vh',
+                            width: '100%',
                         }}
                     >
-                        <span />
-                        <span />
-                        <span />
-                        <span />
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: 2,
+                            }}
+                        >
+                            <Box
+                                className="root-loading-dots"
+                                sx={{
+                                    display: 'flex',
+                                    gap: '6px',
+                                    '& > span': {
+                                        width: '7px',
+                                        height: '7px',
+                                        borderRadius: '50%',
+                                        bgcolor: 'primary.main',
+                                        animation: 'dotBounce 1.4s ease-in-out infinite both',
+                                    },
+                                    '& > span:nth-child(1)': { animationDelay: '-0.32s' },
+                                    '& > span:nth-child(2)': { animationDelay: '-0.16s' },
+                                    '& > span:nth-child(3)': { animationDelay: '0s' },
+                                    '& > span:nth-child(4)': { animationDelay: '0.16s' },
+                                    '@keyframes dotBounce': {
+                                        '0%, 80%, 100%': { transform: 'scale(0.4)', opacity: 0.4 },
+                                        '40%': { transform: 'scale(1)', opacity: 1 },
+                                    },
+                                }}
+                            >
+                                <span />
+                                <span />
+                                <span />
+                                <span />
+                            </Box>
+                        </Box>
                     </Box>
                 </Box>
-            </Box>
+            </OptionalAuthWrapper>
         );
     }
 
@@ -560,9 +572,7 @@ export default function WatchlistContent() {
         return (
             <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
                 <Box sx={{ py: 2 }}>
-                    <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1'), lineHeight: 1.2, fontWeight: fontWeight.bold, mb: 4 }}>
-                        Danh sách theo dõi
-                    </Typography>
+                    {renderTitle()}
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 8, gap: 2 }}>
                         <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('md'), fontWeight: fontWeight.medium }}>
                             Bạn chưa có Watchlist
@@ -612,9 +622,7 @@ export default function WatchlistContent() {
     return (
         <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
             <Box sx={{ py: 2 }}>
-                <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1'), lineHeight: 1.2, fontWeight: fontWeight.bold, mb: 2 }}>
-                    Danh sách theo dõi
-                </Typography>
+                {renderTitle()}
 
                 {/* Page selector */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5, flexWrap: 'wrap' }}>
