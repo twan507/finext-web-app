@@ -96,6 +96,7 @@ export default function WatchlistContent() {
     const { session, loading: authLoading } = useAuth();
 
     const [watchlists, setWatchlists] = useState<Watchlist[]>([]);
+    const [watchlistPages, setWatchlistPages] = useState<number[]>([1]);
     const [loading, setLoading] = useState(true);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [dialogCoordinate, setDialogCoordinate] = useState<[number, number]>([0, 0]);
@@ -299,10 +300,24 @@ export default function WatchlistContent() {
             .sort((a, b) => a.name.localeCompare(b.name));
     }, [stockDataRaw]);
 
-    const fetchWatchlists = useCallback(async () => {
+    const fetchPages = useCallback(async () => {
+        try {
+            const res = await apiClient<number[]>({
+                url: '/api/v1/watchlists/me/pages',
+                method: 'GET',
+                requireAuth: true,
+                skipCache: true,
+            });
+            if (res.data) setWatchlistPages(res.data);
+        } catch (err) {
+            console.error('Failed to fetch watchlist pages:', err);
+        }
+    }, []);
+
+    const fetchWatchlists = useCallback(async (page: number) => {
         try {
             const res = await apiClient<Watchlist[]>({
-                url: '/api/v1/watchlists/me',
+                url: `/api/v1/watchlists/me?page=${page}`,
                 method: 'GET',
                 requireAuth: true,
                 skipCache: true,
@@ -315,30 +330,34 @@ export default function WatchlistContent() {
         }
     }, []);
 
+    useEffect(() => {
+        if (session) {
+            fetchPages();
+            fetchWatchlists(currentPage);
+        }
+    }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
-        if (session) fetchWatchlists();
-    }, [session, fetchWatchlists]);
+        if (session) fetchWatchlists(currentPage);
+    }, [currentPage]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Build visual columns from coordinates
     type ColumnItem =
         | { type: 'wl'; wl: Watchlist }
         | { type: 'add'; coordinate: [number, number] };
 
-    // Derived pages list
-    const pages = useMemo(() => {
-        const pageNums = new Set(watchlists.map(w => w.page ?? 1));
-        pageNums.add(1);
-        pageNums.add(currentPage); // luôn hiện tab trang hiện tại kể cả khi chưa có WL
-        return Array.from(pageNums).sort((a, b) => a - b);
-    }, [watchlists, currentPage]);
-
-    // Next coordinate for current page (new column)
+    // Next coordinate for current page — max 10 cols (index 0–9) per row
     const nextCoordinate = useMemo<[number, number]>(() => {
         const pageWls = watchlists.filter(w => (w.page ?? 1) === currentPage);
         if (pageWls.length === 0) return [0, 0];
-        const maxCol = Math.max(...pageWls.map(w => w.coordinate[0]));
-        return [maxCol + 1, 0];
+        const maxRow = Math.max(...pageWls.map(w => w.coordinate[1]));
+        for (let row = 0; row <= maxRow + 1; row++) {
+            const rowWls = pageWls.filter(w => w.coordinate[1] === row);
+            if (rowWls.length === 0) return [0, row];
+            const maxCol = Math.max(...rowWls.map(w => w.coordinate[0]));
+            if (maxCol < 9) return [maxCol + 1, row];
+        }
+        return [0, maxRow + 1]; // fallback (không nên xảy ra)
     }, [watchlists, currentPage]);
 
     // Mobile: flat sorted list of watchlists for current page
@@ -346,8 +365,8 @@ export default function WatchlistContent() {
         return watchlists
             .filter(wl => (wl.page ?? 1) === currentPage)
             .sort((a, b) => {
-                if (a.coordinate[0] !== b.coordinate[0]) return a.coordinate[0] - b.coordinate[0];
-                return a.coordinate[1] - b.coordinate[1];
+                if (a.coordinate[1] !== b.coordinate[1]) return a.coordinate[1] - b.coordinate[1];
+                return a.coordinate[0] - b.coordinate[0];
             });
     }, [watchlists, currentPage]);
 
@@ -462,7 +481,8 @@ export default function WatchlistContent() {
     const handleSaved = () => {
         setDialogOpen(false);
         setEditingWatchlist(null);
-        fetchWatchlists();
+        fetchPages();
+        fetchWatchlists(currentPage);
     };
 
     const handleUpdateStocks = async (wl: Watchlist, newSymbols: string[]) => {
@@ -534,7 +554,7 @@ export default function WatchlistContent() {
 
             {/* Page selector */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 2.5, flexWrap: 'wrap' }}>
-                {pages.map(p => (
+                {watchlistPages.map((p: number) => (
                     <Box
                         key={p}
                         onClick={() => setCurrentPage(p)}
@@ -561,7 +581,7 @@ export default function WatchlistContent() {
                     const canAddPage = watchlists.some(w => (w.page ?? 1) === currentPage);
                     return (
                         <Box
-                            onClick={() => { if (!canAddPage) return; const next = Math.max(...pages) + 1; setCurrentPage(next); }}
+                            onClick={() => { if (!canAddPage) return; const next = Math.max(...watchlistPages) + 1; setCurrentPage(next); }}
                             sx={{
                                 px: 1.25, py: 0.35,
                                 borderRadius: `${borderRadius.sm}px`,
