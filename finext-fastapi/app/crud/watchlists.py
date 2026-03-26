@@ -73,13 +73,10 @@ async def get_watchlist_by_id(db: AsyncIOMotorDatabase, watchlist_id: PyObjectId
     return None
 
 
-async def get_watchlists_by_user_id(db: AsyncIOMotorDatabase, user_id: PyObjectId, page: Optional[int] = None) -> List[WatchlistInDB]:
+async def get_watchlists_by_user_id(db: AsyncIOMotorDatabase, user_id: PyObjectId) -> List[WatchlistInDB]:
     if not ObjectId.is_valid(user_id):
         return []
-    query: dict = {"user_id": ObjectId(user_id)}
-    if page is not None:
-        query["page"] = page
-    watchlists_cursor = db[WATCHLIST_COLLECTION].find(query).sort("created_at", 1)
+    watchlists_cursor = db[WATCHLIST_COLLECTION].find({"user_id": ObjectId(user_id)}).sort("created_at", 1)
     watchlists_docs = await watchlists_cursor.to_list(length=None)
 
     results: List[WatchlistInDB] = []

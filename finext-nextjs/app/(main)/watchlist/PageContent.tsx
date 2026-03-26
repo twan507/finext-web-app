@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
 import { BASIC_AND_ABOVE } from '@/components/auth/features';
-import { Box, Typography, Button, CircularProgress, useTheme, useMediaQuery, Snackbar, Alert } from '@mui/material';
+import { Box, Typography, CircularProgress, useTheme, useMediaQuery, Snackbar, Alert } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import {
     DndContext,
@@ -59,7 +59,7 @@ interface Watchlist {
     collapsed?: boolean;
 }
 
-const COLUMN_WIDTH = 240;
+const COLUMN_WIDTH = 270;
 
 function DroppableColumn({ colIdx, isDark, isActive, isMobile, children }: {
     colIdx: number;
@@ -96,7 +96,6 @@ export default function WatchlistContent() {
     const { session, loading: authLoading } = useAuth();
 
     const [watchlists, setWatchlists] = useState<Watchlist[]>([]);
-    const [watchlistPages, setWatchlistPages] = useState<number[]>([1]);
     const [loading, setLoading] = useState(true);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [dialogCoordinate, setDialogCoordinate] = useState<[number, number]>([0, 0]);
@@ -200,67 +199,60 @@ export default function WatchlistContent() {
 
         const activeWlId = active.id as string;
         const overWlId = over ? (over.id as string) : null;
+        const before = watchlistsBeforeDrag.current;
 
-        // Same-column reorder (cross-column was already handled in onDragOver)
+        // Start from latest known state (cross-column already applied via handleDragOver)
+        let nextWatchlists = watchlistsRef.current;
+
+        // Same-column reorder (cross-column was already handled in handleDragOver)
         if (overWlId && activeWlId !== overWlId && !overWlId.startsWith('column-')) {
-            setWatchlists(prev => {
-                const activeWl = prev.find(w => (w.id || w._id) === activeWlId);
-                const overWl = prev.find(w => (w.id || w._id) === overWlId);
-                if (!activeWl || !overWl) return prev;
-                if (activeWl.coordinate[0] !== overWl.coordinate[0]) return prev; // different columns, already handled
-
+            const activeWl = nextWatchlists.find(w => (w.id || w._id) === activeWlId);
+            const overWl = nextWatchlists.find(w => (w.id || w._id) === overWlId);
+            if (activeWl && overWl && activeWl.coordinate[0] === overWl.coordinate[0]) {
                 const col = activeWl.coordinate[0];
-                const colItems = prev
+                const colItems = nextWatchlists
                     .filter(w => w.coordinate[0] === col)
                     .sort((a, b) => a.coordinate[1] - b.coordinate[1]);
 
                 const activeIdx = colItems.findIndex(w => (w.id || w._id) === activeWlId);
                 const overIdx = colItems.findIndex(w => (w.id || w._id) === overWlId);
-                if (activeIdx === -1 || overIdx === -1 || activeIdx === overIdx) return prev;
 
-                const reordered = [...colItems];
-                const [moved] = reordered.splice(activeIdx, 1);
-                reordered.splice(overIdx, 0, moved);
-
-                const updatedColItems = reordered.map((w, idx) => ({
-                    ...w,
-                    coordinate: [col, idx] as [number, number],
-                }));
-
-                const otherItems = prev.filter(w => w.coordinate[0] !== col);
-                return [...otherItems, ...updatedColItems];
-            });
+                if (activeIdx !== -1 && overIdx !== -1 && activeIdx !== overIdx) {
+                    const reordered = [...colItems];
+                    const [moved] = reordered.splice(activeIdx, 1);
+                    reordered.splice(overIdx, 0, moved);
+                    const updatedColItems = reordered.map((w, idx) => ({
+                        ...w,
+                        coordinate: [col, idx] as [number, number],
+                    }));
+                    const otherItems = nextWatchlists.filter(w => w.coordinate[0] !== col);
+                    nextWatchlists = [...otherItems, ...updatedColItems];
+                }
+            }
         }
 
-        // Send reorder API
-        requestAnimationFrame(() => {
-            const current = watchlistsRef.current;
-            const before = watchlistsBeforeDrag.current;
+        // Apply final UI state first
+        setWatchlists(nextWatchlists);
 
-            const changed = current.filter(w => {
-                const prev = before.find(b => (b.id || b._id) === (w.id || w._id));
-                if (!prev) return false;
-                return prev.coordinate[0] !== w.coordinate[0] || prev.coordinate[1] !== w.coordinate[1];
-            });
+        // Then send API with the same computed data — no rAF, no stale ref
+        const changed = nextWatchlists.filter(w => {
+            const prev = before.find(b => (b.id || b._id) === (w.id || w._id));
+            if (!prev) return false;
+            return prev.coordinate[0] !== w.coordinate[0] || prev.coordinate[1] !== w.coordinate[1];
+        });
 
-            if (changed.length === 0) return;
+        if (changed.length === 0) return;
 
-            setIsReordering(true);
-            const items = changed.map(w => ({
-                id: w.id || w._id!,
-                coordinate: w.coordinate,
-            }));
-
-            apiClient({
-                url: '/api/v1/watchlists/reorder',
-                method: 'POST',
-                body: { items },
-                requireAuth: true,
-            }).catch(() => {
-                setWatchlists(watchlistsBeforeDrag.current);
-            }).finally(() => {
-                setIsReordering(false);
-            });
+        setIsReordering(true);
+        apiClient({
+            url: '/api/v1/watchlists/reorder',
+            method: 'POST',
+            body: { items: changed.map(w => ({ id: w.id || w._id!, coordinate: w.coordinate })) },
+            requireAuth: true,
+        }).catch(() => {
+            setWatchlists(before);
+        }).finally(() => {
+            setIsReordering(false);
         });
     }, [findColumnIndex]);
 
@@ -300,24 +292,10 @@ export default function WatchlistContent() {
             .sort((a, b) => a.name.localeCompare(b.name));
     }, [stockDataRaw]);
 
-    const fetchPages = useCallback(async () => {
-        try {
-            const res = await apiClient<number[]>({
-                url: '/api/v1/watchlists/me/pages',
-                method: 'GET',
-                requireAuth: true,
-                skipCache: true,
-            });
-            if (res.data) setWatchlistPages(res.data);
-        } catch (err) {
-            console.error('Failed to fetch watchlist pages:', err);
-        }
-    }, []);
-
-    const fetchWatchlists = useCallback(async (page: number) => {
+    const fetchWatchlists = useCallback(async () => {
         try {
             const res = await apiClient<Watchlist[]>({
-                url: `/api/v1/watchlists/me?page=${page}`,
+                url: '/api/v1/watchlists/me',
                 method: 'GET',
                 requireAuth: true,
                 skipCache: true,
@@ -331,33 +309,36 @@ export default function WatchlistContent() {
     }, []);
 
     useEffect(() => {
-        if (session) {
-            fetchPages();
-            fetchWatchlists(currentPage);
-        }
-    }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    useEffect(() => {
-        if (session) fetchWatchlists(currentPage);
-    }, [currentPage]); // eslint-disable-line react-hooks/exhaustive-deps
+        if (session) fetchWatchlists();
+    }, [session, fetchWatchlists]);
 
     // Build visual columns from coordinates
     type ColumnItem =
         | { type: 'wl'; wl: Watchlist }
         | { type: 'add'; coordinate: [number, number] };
 
-    // Next coordinate for current page — max 10 cols (index 0–9) per row
+    const MAX_COLS = 5;  // max WL per row
+    const MAX_ROWS = 3;  // max rows per page → 15 WL total
+
+    // Derive pages list from all watchlists
+    const pages = useMemo(() => {
+        const pageNums = new Set(watchlists.map(w => w.page ?? 1));
+        pageNums.add(currentPage);
+        return Array.from(pageNums).sort((a, b) => a - b);
+    }, [watchlists, currentPage]);
+
+    // Next coordinate for current page — max 5 cols per row, max 3 rows
     const nextCoordinate = useMemo<[number, number]>(() => {
         const pageWls = watchlists.filter(w => (w.page ?? 1) === currentPage);
         if (pageWls.length === 0) return [0, 0];
         const maxRow = Math.max(...pageWls.map(w => w.coordinate[1]));
-        for (let row = 0; row <= maxRow + 1; row++) {
+        for (let row = 0; row < MAX_ROWS; row++) {
             const rowWls = pageWls.filter(w => w.coordinate[1] === row);
             if (rowWls.length === 0) return [0, row];
             const maxCol = Math.max(...rowWls.map(w => w.coordinate[0]));
-            if (maxCol < 9) return [maxCol + 1, row];
+            if (maxCol < MAX_COLS - 1) return [maxCol + 1, row];
         }
-        return [0, maxRow + 1]; // fallback (không nên xảy ra)
+        return [0, maxRow]; // page đã full, fallback an toàn
     }, [watchlists, currentPage]);
 
     // Mobile: flat sorted list of watchlists for current page
@@ -388,18 +369,27 @@ export default function WatchlistContent() {
         const colCount = maxCol + 2;
         const columns: ColumnItem[][] = Array.from({ length: colCount }, () => []);
 
+        const totalWls = pageWatchlists.length;
+        const pageFull = totalWls >= MAX_COLS * MAX_ROWS;
+
         for (let col = 0; col <= maxCol; col++) {
             const wls = colMap.get(col) || [];
             wls.forEach(wl => {
                 columns[col].push({ type: 'wl', wl });
             });
-            // "+" button at bottom of each existing column — next row index
+                // "+" button — ẩn nếu col này đã đủ MAX_ROWS WL hoặc page đã full
             const nextRow = wls.length > 0 ? Math.max(...wls.map(w => w.coordinate[1])) + 1 : 0;
-            columns[col].push({ type: 'add', coordinate: [col, nextRow] });
+            const nextRowWlCount = pageWatchlists.filter(w => w.coordinate[1] === nextRow).length;
+            if (!pageFull && nextRow < MAX_ROWS && nextRowWlCount < MAX_COLS) {
+                columns[col].push({ type: 'add', coordinate: [col, nextRow] });
+            }
         }
 
-        // Last column is just an "add" button to start a new column
-        columns[maxCol + 1].push({ type: 'add', coordinate: [maxCol + 1, 0] });
+        // Nút thêm cột mới — thêm vào [maxCol+1, 0], ẩn nếu row 0 đã đủ MAX_COLS WL hoặc page đã full
+        const row0Count = pageWatchlists.filter(w => w.coordinate[1] === 0).length;
+        if (!pageFull && row0Count < MAX_COLS) {
+            columns[maxCol + 1].push({ type: 'add', coordinate: [maxCol + 1, 0] });
+        }
 
         return columns.filter(col => col.length > 0);
     }, [watchlists, currentPage]);
@@ -481,8 +471,7 @@ export default function WatchlistContent() {
     const handleSaved = () => {
         setDialogOpen(false);
         setEditingWatchlist(null);
-        fetchPages();
-        fetchWatchlists(currentPage);
+        fetchWatchlists();
     };
 
     const handleUpdateStocks = async (wl: Watchlist, newSymbols: string[]) => {
@@ -516,6 +505,8 @@ export default function WatchlistContent() {
     }
 
     // Empty state — just one button
+    if (loading) return null;
+
     if (watchlists.length === 0) {
         return (
             <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
@@ -524,12 +515,36 @@ export default function WatchlistContent() {
                         Danh sách theo dõi
                     </Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 8, gap: 2 }}>
-                        <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('md') }}>
-                            Bạn chưa có watchlist nào
+                        <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('md'), fontWeight: fontWeight.medium }}>
+                            Bạn chưa có Watchlist
                         </Typography>
-                        <Button variant="contained" startIcon={<AddIcon />} onClick={() => openCreate([0, 0])} size="large">
-                            Thêm Watchlist
-                        </Button>
+                        <Box
+                            onClick={() => openCreate([0, 0])}
+                            sx={{
+                                width: 80,
+                                height: 80,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: `${borderRadius.md}px`,
+                                border: `2px dashed`,
+                                borderColor: 'primary.main',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                boxShadow: isDark
+                                    ? '0 0 14px 3px rgba(99,102,241,0.3), inset 0 0 14px 3px rgba(99,102,241,0.12)'
+                                    : '0 0 14px 3px rgba(99,102,241,0.18), inset 0 0 14px 3px rgba(99,102,241,0.07)',
+                                '&:hover': {
+                                    boxShadow: isDark
+                                        ? '0 0 26px 7px rgba(99,102,241,0.5), inset 0 0 26px 7px rgba(99,102,241,0.2)'
+                                        : '0 0 26px 7px rgba(99,102,241,0.32), inset 0 0 26px 7px rgba(99,102,241,0.12)',
+                                    borderColor: 'primary.light',
+                                    '& .add-icon': { color: 'primary.light' },
+                                },
+                            }}
+                        >
+                            <AddIcon className="add-icon" sx={{ fontSize: 36, color: 'primary.main', transition: 'color 0.2s' }} />
+                        </Box>
                     </Box>
                     <AddWatchlistDialog
                         open={dialogOpen}
@@ -547,239 +562,239 @@ export default function WatchlistContent() {
 
     return (
         <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
-        <Box sx={{ py: 2 }}>
-            <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1'), lineHeight: 1.2, fontWeight: fontWeight.bold, mb: 2 }}>
-                Danh sách theo dõi
-            </Typography>
+            <Box sx={{ py: 2 }}>
+                <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1'), lineHeight: 1.2, fontWeight: fontWeight.bold, mb: 2 }}>
+                    Danh sách theo dõi
+                </Typography>
 
-            {/* Page selector */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 2.5, flexWrap: 'wrap' }}>
-                {watchlistPages.map((p: number) => (
-                    <Box
-                        key={p}
-                        onClick={() => setCurrentPage(p)}
-                        sx={{
-                            px: 1.25, py: 0.35,
-                            borderRadius: `${borderRadius.sm}px`,
-                            cursor: 'pointer',
-                            fontSize: getResponsiveFontSize('xs'),
-                            fontWeight: currentPage === p ? fontWeight.semibold : fontWeight.medium,
-                            color: currentPage === p ? 'primary.main' : 'text.secondary',
-                            bgcolor: currentPage === p
-                                ? (isDark ? 'rgba(99,102,241,0.14)' : 'rgba(99,102,241,0.08)')
-                                : 'transparent',
-                            border: `1px solid ${currentPage === p ? 'rgba(99,102,241,0.4)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')}`,
-                            transition: 'all 0.15s',
-                            userSelect: 'none',
-                            '&:hover': { color: 'primary.main', borderColor: 'rgba(99,102,241,0.4)' },
-                        }}
-                    >
-                        Trang {p}
-                    </Box>
-                ))}
-                {(() => {
-                    const canAddPage = watchlists.some(w => (w.page ?? 1) === currentPage);
-                    return (
+                {/* Page selector */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5, flexWrap: 'wrap' }}>
+                    {pages.map((p: number) => (
                         <Box
-                            onClick={() => { if (!canAddPage) return; const next = Math.max(...watchlistPages) + 1; setCurrentPage(next); }}
+                            key={p}
+                            onClick={() => setCurrentPage(p)}
                             sx={{
                                 px: 1.25, py: 0.35,
                                 borderRadius: `${borderRadius.sm}px`,
-                                cursor: canAddPage ? 'pointer' : 'not-allowed',
+                                cursor: 'pointer',
                                 fontSize: getResponsiveFontSize('xs'),
-                                color: canAddPage ? 'text.disabled' : (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'),
-                                border: `1px dashed ${canAddPage ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)') : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)')}`,
+                                fontWeight: currentPage === p ? fontWeight.semibold : fontWeight.medium,
+                                color: currentPage === p ? 'primary.main' : 'text.secondary',
+                                bgcolor: currentPage === p
+                                    ? (isDark ? 'rgba(99,102,241,0.14)' : 'rgba(99,102,241,0.08)')
+                                    : 'transparent',
+                                border: `1px solid ${currentPage === p ? 'rgba(99,102,241,0.4)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')}`,
                                 transition: 'all 0.15s',
                                 userSelect: 'none',
-                                opacity: canAddPage ? 1 : 0.6,
-                                ...(canAddPage && { '&:hover': { color: 'text.secondary', borderColor: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)' } }),
+                                '&:hover': { color: 'primary.main', borderColor: 'rgba(99,102,241,0.4)' },
                             }}
                         >
-                            + Trang mới
+                            Trang {p}
                         </Box>
-                    );
-                })()}
-            </Box>
-
-            {isMobile ? (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                    {mobileWatchlists.map(wl => (
-                        <WatchlistColumn
-                            key={wl.id || wl._id}
-                            watchlist={wl}
-                            stockDataMap={stockDataMap}
-                            allTickers={allTickers}
-                            onDelete={() => handleDeleteClick(wl.id || wl._id!)}
-                            onRenameSubmit={(newName) => handleRenameSubmit(wl, newName)}
-                            onSortChange={(sort) => handleSortChange(wl, sort)}
-                            onCollapseChange={(c) => handleCollapseChange(wl, c)}
-                            onReorderStocks={(newSymbols) => handleUpdateStocks(wl, newSymbols)}
-                            onAddStock={(ticker) => handleUpdateStocks(wl, [...wl.stock_symbols, ticker])}
-                            onRemoveStock={(ticker) => handleUpdateStocks(wl, wl.stock_symbols.filter(s => s !== ticker))}
-                        />
                     ))}
-                    <Box
-                        onClick={() => openCreate(nextCoordinate)}
-                        sx={{
-                            minHeight: 64,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            borderRadius: `${borderRadius.md}px`,
-                            border: `1px dashed ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                            cursor: 'pointer',
-                            transition: 'all 0.15s',
-                            '&:hover': {
-                                bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-                                borderColor: theme.palette.primary.main,
-                            },
-                        }}
-                    >
-                        <AddIcon sx={{ fontSize: 22, color: 'text.disabled' }} />
-                    </Box>
-                </Box>
-            ) : (
-            <DndContext
-                sensors={sensors}
-                collisionDetection={rectIntersection}
-                onDragStart={handleDragStart}
-                onDragOver={handleDragOver}
-                onDragEnd={handleDragEnd}
-            >
-                <Box
-                    sx={{
-                        overflowX: 'auto',
-                        transform: 'rotateX(180deg)',
-                        '&::-webkit-scrollbar': { height: 5 },
-                        '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
-                        '&::-webkit-scrollbar-thumb': {
-                            bgcolor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
-                            borderRadius: 3,
-                        },
-                    }}
-                >
-                <Box
-                    sx={{
-                        display: 'flex',
-                        gap: 1.5,
-                        alignItems: 'flex-start',
-                        transform: 'rotateX(180deg)',
-                        mb: 2,
-                    }}
-                >
-                    {visualColumns.map((colItems, colIdx) => (
-                        <SortableContext
-                            key={colIdx}
-                            items={columnSortableIds[colIdx] || []}
-                            strategy={verticalListSortingStrategy}
-                        >
-                            <DroppableColumn colIdx={colIdx} isDark={isDark} isActive={!!activeId} isMobile={false}>
-                                {colItems.map((item) =>
-                                    item.type === 'wl' ? (
-                                        <SortableWatchlistCard key={item.wl.id || item.wl._id} id={item.wl.id || item.wl._id!} disabled={isReordering}>
-                                            {(dragHandleProps) => (
-                                                <WatchlistColumn
-                                                    watchlist={item.wl}
-                                                    stockDataMap={stockDataMap}
-                                                    allTickers={allTickers}
-                                                    onDelete={() => handleDeleteClick(item.wl.id || item.wl._id!)}
-                                                    onRenameSubmit={(newName) => handleRenameSubmit(item.wl, newName)}
-                                                    onSortChange={(sort) => handleSortChange(item.wl, sort)}
-                                                    onCollapseChange={(c) => handleCollapseChange(item.wl, c)}
-                                                    onReorderStocks={(newSymbols) => handleUpdateStocks(item.wl, newSymbols)}
-                                                    onAddStock={(ticker) =>
-                                                        handleUpdateStocks(item.wl, [...item.wl.stock_symbols, ticker])
-                                                    }
-                                                    onRemoveStock={(ticker) =>
-                                                        handleUpdateStocks(item.wl, item.wl.stock_symbols.filter(s => s !== ticker))
-                                                    }
-                                                    dragHandleProps={dragHandleProps}
-                                                />
-                                            )}
-                                        </SortableWatchlistCard>
-                                    ) : (
-                                        <Box
-                                            key={`add-${item.coordinate[0]}-${item.coordinate[1]}`}
-                                            onClick={() => openCreate(item.coordinate)}
-                                            sx={{
-                                                minHeight: 80,
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                borderRadius: `${borderRadius.md}px`,
-                                                border: `1px dashed ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                                                cursor: 'pointer',
-                                                transition: 'all 0.15s',
-                                                '&:hover': {
-                                                    bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-                                                    borderColor: theme.palette.primary.main,
-                                                },
-                                            }}
-                                        >
-                                            <AddIcon sx={{ fontSize: 22, color: 'text.disabled' }} />
-                                        </Box>
-                                    ),
-                                )}
-                            </DroppableColumn>
-                        </SortableContext>
-                    ))}
-                </Box>
-                </Box>
-
-                {typeof document !== 'undefined' && createPortal(
-                    <DragOverlay dropAnimation={null}>
-                        {activeWatchlist ? (
-                            <Box sx={{ boxShadow: 6, borderRadius: `${borderRadius.md}px`, overflow: 'hidden' }}>
-                                <WatchlistColumn
-                                    watchlist={activeWatchlist}
-                                    stockDataMap={stockDataMap}
-                                    allTickers={allTickers}
-                                    onDelete={() => {}}
-                                    onRenameSubmit={() => {}}
-                                    onSortChange={() => {}}
-                                    onCollapseChange={() => {}}
-                                    onReorderStocks={() => {}}
-                                    onAddStock={() => {}}
-                                    onRemoveStock={() => {}}
-                                    forceCollapsed
-                                />
+                    {(() => {
+                        const canAddPage = watchlists.some(w => (w.page ?? 1) === currentPage);
+                        return (
+                            <Box
+                                onClick={() => { if (!canAddPage) return; const next = Math.max(...pages) + 1; setCurrentPage(next); }}
+                                sx={{
+                                    px: 1.25, py: 0.35,
+                                    borderRadius: `${borderRadius.sm}px`,
+                                    cursor: canAddPage ? 'pointer' : 'not-allowed',
+                                    fontSize: getResponsiveFontSize('xs'),
+                                    color: canAddPage ? 'text.disabled' : (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'),
+                                    border: `1px dashed ${canAddPage ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)') : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)')}`,
+                                    transition: 'all 0.15s',
+                                    userSelect: 'none',
+                                    opacity: canAddPage ? 1 : 0.6,
+                                    ...(canAddPage && { '&:hover': { color: 'text.secondary', borderColor: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)' } }),
+                                }}
+                            >
+                                + Trang mới
                             </Box>
-                        ) : null}
-                    </DragOverlay>,
-                    document.body,
+                        );
+                    })()}
+                </Box>
+
+                {isMobile ? (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                        {mobileWatchlists.map(wl => (
+                            <WatchlistColumn
+                                key={wl.id || wl._id}
+                                watchlist={wl}
+                                stockDataMap={stockDataMap}
+                                allTickers={allTickers}
+                                onDelete={() => handleDeleteClick(wl.id || wl._id!)}
+                                onRenameSubmit={(newName) => handleRenameSubmit(wl, newName)}
+                                onSortChange={(sort) => handleSortChange(wl, sort)}
+                                onCollapseChange={(c) => handleCollapseChange(wl, c)}
+                                onReorderStocks={(newSymbols) => handleUpdateStocks(wl, newSymbols)}
+                                onAddStock={(ticker) => handleUpdateStocks(wl, [...wl.stock_symbols, ticker])}
+                                onRemoveStock={(ticker) => handleUpdateStocks(wl, wl.stock_symbols.filter(s => s !== ticker))}
+                            />
+                        ))}
+                        <Box
+                            onClick={() => openCreate(nextCoordinate)}
+                            sx={{
+                                minHeight: 64,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: `${borderRadius.md}px`,
+                                border: `1px dashed ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                                cursor: 'pointer',
+                                transition: 'all 0.15s',
+                                '&:hover': {
+                                    bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                                    borderColor: theme.palette.primary.main,
+                                },
+                            }}
+                        >
+                            <AddIcon sx={{ fontSize: 22, color: 'text.disabled' }} />
+                        </Box>
+                    </Box>
+                ) : (
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={rectIntersection}
+                        onDragStart={handleDragStart}
+                        onDragOver={handleDragOver}
+                        onDragEnd={handleDragEnd}
+                    >
+                        <Box
+                            sx={{
+                                overflowX: 'auto',
+                                transform: 'rotateX(180deg)',
+                                '&::-webkit-scrollbar': { height: 5 },
+                                '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
+                                '&::-webkit-scrollbar-thumb': {
+                                    bgcolor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
+                                    borderRadius: 3,
+                                },
+                            }}
+                        >
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    gap: 1.5,
+                                    alignItems: 'flex-start',
+                                    transform: 'rotateX(180deg)',
+                                    mb: 2,
+                                }}
+                            >
+                                {visualColumns.map((colItems, colIdx) => (
+                                    <SortableContext
+                                        key={colIdx}
+                                        items={columnSortableIds[colIdx] || []}
+                                        strategy={verticalListSortingStrategy}
+                                    >
+                                        <DroppableColumn colIdx={colIdx} isDark={isDark} isActive={!!activeId} isMobile={false}>
+                                            {colItems.map((item) =>
+                                                item.type === 'wl' ? (
+                                                    <SortableWatchlistCard key={item.wl.id || item.wl._id} id={item.wl.id || item.wl._id!} disabled={isReordering}>
+                                                        {(dragHandleProps) => (
+                                                            <WatchlistColumn
+                                                                watchlist={item.wl}
+                                                                stockDataMap={stockDataMap}
+                                                                allTickers={allTickers}
+                                                                onDelete={() => handleDeleteClick(item.wl.id || item.wl._id!)}
+                                                                onRenameSubmit={(newName) => handleRenameSubmit(item.wl, newName)}
+                                                                onSortChange={(sort) => handleSortChange(item.wl, sort)}
+                                                                onCollapseChange={(c) => handleCollapseChange(item.wl, c)}
+                                                                onReorderStocks={(newSymbols) => handleUpdateStocks(item.wl, newSymbols)}
+                                                                onAddStock={(ticker) =>
+                                                                    handleUpdateStocks(item.wl, [...item.wl.stock_symbols, ticker])
+                                                                }
+                                                                onRemoveStock={(ticker) =>
+                                                                    handleUpdateStocks(item.wl, item.wl.stock_symbols.filter(s => s !== ticker))
+                                                                }
+                                                                dragHandleProps={dragHandleProps}
+                                                            />
+                                                        )}
+                                                    </SortableWatchlistCard>
+                                                ) : (
+                                                    <Box
+                                                        key={`add-${item.coordinate[0]}-${item.coordinate[1]}`}
+                                                        onClick={() => openCreate(item.coordinate)}
+                                                        sx={{
+                                                            minHeight: 80,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            borderRadius: `${borderRadius.md}px`,
+                                                            border: `1px dashed ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.15s',
+                                                            '&:hover': {
+                                                                bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                                                                borderColor: theme.palette.primary.main,
+                                                            },
+                                                        }}
+                                                    >
+                                                        <AddIcon sx={{ fontSize: 22, color: 'text.disabled' }} />
+                                                    </Box>
+                                                ),
+                                            )}
+                                        </DroppableColumn>
+                                    </SortableContext>
+                                ))}
+                            </Box>
+                        </Box>
+
+                        {typeof document !== 'undefined' && createPortal(
+                            <DragOverlay dropAnimation={null}>
+                                {activeWatchlist ? (
+                                    <Box sx={{ boxShadow: 6, borderRadius: `${borderRadius.md}px`, overflow: 'hidden' }}>
+                                        <WatchlistColumn
+                                            watchlist={activeWatchlist}
+                                            stockDataMap={stockDataMap}
+                                            allTickers={allTickers}
+                                            onDelete={() => { }}
+                                            onRenameSubmit={() => { }}
+                                            onSortChange={() => { }}
+                                            onCollapseChange={() => { }}
+                                            onReorderStocks={() => { }}
+                                            onAddStock={() => { }}
+                                            onRemoveStock={() => { }}
+                                            forceCollapsed
+                                        />
+                                    </Box>
+                                ) : null}
+                            </DragOverlay>,
+                            document.body,
+                        )}
+                    </DndContext>
                 )}
-            </DndContext>
-            )}
 
-            <AddWatchlistDialog
-                open={dialogOpen}
-                onClose={() => { setDialogOpen(false); setEditingWatchlist(null); }}
-                onSaved={handleSaved}
-                defaultCoordinate={dialogCoordinate}
-                defaultPage={currentPage}
-                editingWatchlist={editingWatchlist}
-                industries={industries}
-            />
+                <AddWatchlistDialog
+                    open={dialogOpen}
+                    onClose={() => { setDialogOpen(false); setEditingWatchlist(null); }}
+                    onSaved={handleSaved}
+                    defaultCoordinate={dialogCoordinate}
+                    defaultPage={currentPage}
+                    editingWatchlist={editingWatchlist}
+                    industries={industries}
+                />
 
-            <ConfirmDialog
-                open={confirmOpen}
-                onClose={() => { setConfirmOpen(false); setDeleteTargetId(null); }}
-                onConfirm={handleDeleteConfirm}
-                title="Xóa Watchlist"
-                message="Bạn có chắc muốn xóa watchlist này? Hành động không thể hoàn tác."
-            />
+                <ConfirmDialog
+                    open={confirmOpen}
+                    onClose={() => { setConfirmOpen(false); setDeleteTargetId(null); }}
+                    onConfirm={handleDeleteConfirm}
+                    title="Xóa Watchlist"
+                    message="Bạn có chắc muốn xóa watchlist này? Hành động không thể hoàn tác."
+                />
 
-            <Snackbar
-                open={snackbar.open}
-                autoHideDuration={4000}
-                onClose={() => setSnackbar(s => ({ ...s, open: false }))}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-            >
-                <Alert severity="error" onClose={() => setSnackbar(s => ({ ...s, open: false }))} sx={{ width: '100%' }}>
-                    {snackbar.message}
-                </Alert>
-            </Snackbar>
-        </Box>
+                <Snackbar
+                    open={snackbar.open}
+                    autoHideDuration={4000}
+                    onClose={() => setSnackbar(s => ({ ...s, open: false }))}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                >
+                    <Alert severity="error" onClose={() => setSnackbar(s => ({ ...s, open: false }))} sx={{ width: '100%' }}>
+                        {snackbar.message}
+                    </Alert>
+                </Snackbar>
+            </Box>
         </OptionalAuthWrapper>
     );
 }

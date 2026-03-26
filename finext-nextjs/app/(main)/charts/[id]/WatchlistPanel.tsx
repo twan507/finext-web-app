@@ -736,8 +736,8 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                     </Typography>
                 ) : watchlists.length === 0 ? (
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 3, gap: 1 }}>
-                        <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary' }}>
-                            Chưa có watchlist
+                        <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', fontWeight: fontWeight.medium }}>
+                            Bạn chưa có Watchlist
                         </Typography>
                         <Button
                             size="small"

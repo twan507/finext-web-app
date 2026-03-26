@@ -62,26 +62,10 @@ async def create_new_watchlist(  # Đổi tên hàm cho rõ ràng
 @api_response_wrapper(default_success_message="Lấy danh sách theo dõi thành công.")
 async def read_my_watchlists(
     current_user: UserInDB = Depends(get_current_active_user),
-    page: int = Query(1, ge=1, description="Trang watchlist cần lấy"),
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
-    watchlists_in_db = await crud_watchlists.get_watchlists_by_user_id(db, user_id=current_user.id, page=page)  # type: ignore
+    watchlists_in_db = await crud_watchlists.get_watchlists_by_user_id(db, user_id=current_user.id)  # type: ignore
     return [WatchlistPublic.model_validate(wl) for wl in watchlists_in_db]
-
-
-@router.get(
-    "/me/pages",
-    response_model=StandardApiResponse[List[int]],
-    summary="[User] Lấy danh sách các page có watchlist",
-    dependencies=[Depends(require_permission("watchlist", "manage_own"))],
-    tags=["watchlists"],
-)
-@api_response_wrapper(default_success_message="Lấy danh sách trang thành công.")
-async def read_my_watchlist_pages(
-    current_user: UserInDB = Depends(get_current_active_user),
-    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
-):
-    return await crud_watchlists.get_watchlist_pages_by_user_id(db, user_id=current_user.id)  # type: ignore
 
 
 @router.get(
