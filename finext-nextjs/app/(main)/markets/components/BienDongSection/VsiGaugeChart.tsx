@@ -110,7 +110,7 @@ export default function VsiGaugeChart({ value, chartHeight = '250px' }: VsiGauge
                 sx={{
                     position: 'absolute',
                     top: '50%',
-                    left: 0,
+                    left: '1%',
                     right: 0,
                     display: 'flex',
                     justifyContent: 'center',
