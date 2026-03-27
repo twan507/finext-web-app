@@ -980,16 +980,16 @@ export default function SubscriptionsPage() {
 								<Typography variant="body2" color="text.secondary" fontWeight="bold">
 									Người dùng: {subscriptionToDelete.user_email}
 								</Typography>
-							</Box>                            <Box>
+							</Box>                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
 								<Typography variant="body2" color="text.secondary">
-									License: {' '}
-									<Chip
-										label={subscriptionToDelete.license_key}
-										size="small"
-										variant="outlined"
-										sx={{ fontFamily: 'monospace' }}
-									/>
+									License:
 								</Typography>
+								<Chip
+									label={subscriptionToDelete.license_key}
+									size="small"
+									variant="outlined"
+									sx={{ fontFamily: 'monospace' }}
+								/>
 							</Box>
 							<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
 								<Typography variant="body2" color="text.secondary">

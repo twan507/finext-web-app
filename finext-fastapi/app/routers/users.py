@@ -22,7 +22,6 @@ from app.crud.users import (
 
 # <<<< KẾT THÚC PHẦN CẬP NHẬT IMPORT >>>>
 import app.crud.brokers as crud_brokers
-import app.crud.subscriptions as crud_subscriptions
 
 from app.schemas.users import UserCreate, UserAdminResponse, UserRoleModificationRequest, UserUpdate, UserInDB
 from app.schemas.auth import AdminChangePasswordRequest  # Thêm import schema mới
@@ -226,10 +225,8 @@ async def delete_user_by_id_endpoint(
             detail=f"Không thể xóa người dùng '{user_to_delete.email}'. Người dùng đã từng là Đối tác trong hệ thống và không thể xóa.",
         )
 
-    await crud_subscriptions.deactivate_all_active_subscriptions_for_user(db, ObjectId(user_to_delete.id))
-    # Cân nhắc xóa hẳn các subscription record thay vì chỉ deactivate, tùy theo yêu cầu nghiệp vụ
-    # await db.subscriptions.delete_many({"user_id": ObjectId(user_to_delete.id)})
-    logger.info(f"Đã hủy kích hoạt tất cả subscriptions của user {user_to_delete.email} (ID: {user_id}).")
+    await db.subscriptions.delete_many({"user_id": ObjectId(user_to_delete.id)})
+    logger.info(f"Đã xóa tất cả subscriptions của user {user_to_delete.email} (ID: {user_id}).")
 
     await db.sessions.delete_many({"user_id": ObjectId(user_to_delete.id)})
     logger.info(f"Đã xóa tất cả sessions của user {user_to_delete.email} (ID: {user_id}).")
