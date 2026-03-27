@@ -754,7 +754,7 @@ async def delete_subscription_db(
         if user_id_of_sub_obj and isinstance(user_id_of_sub_obj, ObjectId):
             user = await db.users.find_one({"_id": user_id_of_sub_obj})
 
-            # Clear user.subscription_id if this subscription was the primary one
+            # Clear user.subscription_id and re-assign BASIC only if this was the primary subscription
             if user and user.get("subscription_id") == sub_obj_id:
                 await db.users.update_one(
                     {"_id": user_id_of_sub_obj},
@@ -768,12 +768,7 @@ async def delete_subscription_db(
                 logger.info(
                     f"Cleared subscription_id from user {str(user_id_of_sub_obj)} after deleting primary subscription {subscription_id_str}."
                 )
-
-            # Assign BASIC subscription if needed
-            logger.debug(
-                f"Calling assign_free_subscription_if_needed for user {user_id_of_sub_obj} after deleting subscription {subscription_id_str}."
-            )
-            await assign_free_subscription_if_needed(db, user_id_of_sub_obj)
+                await assign_free_subscription_if_needed(db, user_id_of_sub_obj)
 
         return subscription_to_return
     else:
