@@ -333,7 +333,7 @@ function SignInFormContent() {
 
     const handleTraditionalSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        await doLoginWithCredentials(email, password);
+        await doLoginWithCredentials(email.trim().toLowerCase(), password);
     };
 
     const handleVerifyEmail = async () => {

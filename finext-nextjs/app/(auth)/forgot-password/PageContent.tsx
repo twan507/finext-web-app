@@ -114,7 +114,7 @@ export default function PageContent() {
                 url: '/api/v1/otps/request',
                 method: 'POST',
                 body: {
-                    email: email,
+                    email: email.trim().toLowerCase(),
                     otp_type: 'reset_password',
                 },
                 requireAuth: false,
@@ -163,7 +163,7 @@ export default function PageContent() {
                 url: '/api/v1/auth/reset-password-otp',
                 method: 'POST',
                 body: {
-                    email: email,
+                    email: email.trim().toLowerCase(),
                     otp_code: otpCode,
                     new_password: newPassword,
                 },
@@ -209,7 +209,7 @@ export default function PageContent() {
                 url: '/api/v1/otps/request',
                 method: 'POST',
                 body: {
-                    email: email,
+                    email: email.trim().toLowerCase(),
                     otp_type: 'reset_password',
                 },
                 requireAuth: false,

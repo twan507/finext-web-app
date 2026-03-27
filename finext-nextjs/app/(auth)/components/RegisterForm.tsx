@@ -253,7 +253,7 @@ export default function RegisterForm() {
         try {
             const registerData = {
                 full_name: fullName.trim(),
-                email: email.trim(),
+                email: email.trim().toLowerCase(),
                 phone_number: phoneNumber.trim() || undefined,
                 password: password,
                 referral_code: referralCode.trim() || undefined,
@@ -266,7 +266,7 @@ export default function RegisterForm() {
                 requireAuth: false,
             });
 
-            setRegisteredEmail(email.trim());
+            setRegisteredEmail(email.trim().toLowerCase());
             setShowOtpStep(true);
         } catch (err: any) {
             setError(err.message || 'Lỗi kết nối hoặc có lỗi xảy ra trong quá trình đăng ký.');

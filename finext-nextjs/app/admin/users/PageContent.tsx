@@ -402,7 +402,7 @@ const UsersPage: React.FC = () => {
       const nonUserRoles = userRoleNames.filter(roleName =>
         roleName.toLowerCase() !== 'user'
       );
-      setError(`Không thể xóa người dùng '${user.email}' vì họ có thêm các vai trò: ${nonUserRoles.join(', ')}. Vui lòng thu hồi các vai trò này trước khi xóa người dùng.`);
+      setError(`Không thể xóa người dùng '${user.email}'. Người dùng đã được cấp quyền (${nonUserRoles.join(', ')}) và không thể xóa khỏi hệ thống.`);
       return;
     }
 
@@ -446,21 +446,8 @@ const UsersPage: React.FC = () => {
         setError(response.message || 'Không thể xóa người dùng.');
       }
     } catch (delError: any) {
-      console.error('Delete user error:', delError);      // Handle specific role-based validation errors with more user-friendly messages
-      let errorMessage = delError.message || 'Đã xảy ra lỗi khi xóa người dùng.';
-
-      // Check if it's a role-based validation error (HTTP 400)
-      if (delError.status === 400 && delError.message) {
-        if (delError.message.includes('vai trò') || delError.message.includes('roles')) {
-          // This is likely our role-based validation error - display it as-is since it's already user-friendly
-          errorMessage = delError.message;
-        } else if (delError.message.includes('Đối tác') || delError.message.includes('broker')) {
-          // This is likely a broker-related validation error
-          errorMessage = delError.message;
-        }
-      }
-
-      setError(errorMessage);
+      console.error('Delete user error:', delError);
+      setError(delError.message || 'Đã xảy ra lỗi khi xóa người dùng.');
     } finally {
       setDeleteLoading(false);
     }
@@ -536,6 +523,14 @@ const UsersPage: React.FC = () => {
   // Helper function to check if a user is protected
   const isUserProtected = (userEmail: string): boolean => {
     return protectedEmails.includes(userEmail) || isSystemUser(userEmail);
+  };
+
+  const getDeleteDisabledReason = (user: UserPublic): string | null => {
+    if (!canDeleteUser) return "Bạn không có quyền thực hiện thao tác này";
+    if (isSystemUser(user.email)) return "Không thể xóa người dùng hệ thống";
+    const nonUserRoles = getRoleNames(user.role_ids || []).filter(r => r.toLowerCase() !== 'user');
+    if (nonUserRoles.length > 0) return `Không thể xóa người dùng đã được cấp quyền ${nonUserRoles.join(', ')}`;
+    return null;
   };
   // Calculate paginated users - use server pagination when not filtering/sorting, client pagination when filtering/sorting
   const paginatedUsers = React.useMemo(() => {
@@ -914,24 +909,29 @@ const UsersPage: React.FC = () => {
                               <EditIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title={!canDeleteUser ? "Bạn không có quyền thực hiện thao tác này" : isSystemUser(user.email) ? "Không thể xóa người dùng hệ thống" : "Xóa người dùng"}>
-                            <span>
-                              <IconButton
-                                size="small"
-                                onClick={() => handleOpenDeleteDialog(user)}
-                                color="error"
-                                disabled={!canDeleteUser || isSystemUser(user.email)}
-                                sx={{
-                                  minWidth: { xs: 32, sm: 'auto' },
-                                  width: { xs: 32, sm: 'auto' },
-                                  height: { xs: 32, sm: 'auto' },
-                                  opacity: !canDeleteUser || isSystemUser(user.email) ? 0.4 : 1
-                                }}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </span>
-                          </Tooltip>
+                          {(() => {
+                            const deleteReason = getDeleteDisabledReason(user);
+                            return (
+                              <Tooltip title={deleteReason ?? "Xóa người dùng"}>
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleOpenDeleteDialog(user)}
+                                    color="error"
+                                    disabled={!!deleteReason}
+                                    sx={{
+                                      minWidth: { xs: 32, sm: 'auto' },
+                                      width: { xs: 32, sm: 'auto' },
+                                      height: { xs: 32, sm: 'auto' },
+                                      opacity: deleteReason ? 0.4 : 1
+                                    }}
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                            );
+                          })()}
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -1050,10 +1050,10 @@ const UsersPage: React.FC = () => {
               • Subscription của người dùng sẽ bị chấm dứt ngay lập tức
             </Typography>
             <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
-              • Chỉ người dùng với vai trò "user" (hoặc không có vai trò) mới có thể xóa
+              • Chỉ người dùng chưa từng được cấp quyền hệ thống mới có thể xóa
             </Typography>
             <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText }}>
-              • Người dùng có vai trò admin, broker hoặc vai trò khác phải được thu hồi vai trò trước khi xóa
+              • Người dùng đã từng có vai trò broker không thể xóa
             </Typography>
           </Box>
           <TextField

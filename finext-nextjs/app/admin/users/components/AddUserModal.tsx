@@ -112,7 +112,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
             // Chuẩn bị data để gửi - loại bỏ các field trống
             const submitData: any = {
                 full_name: formData.full_name.trim(),
-                email: formData.email.trim(),
+                email: formData.email.trim().toLowerCase(),
                 password: formData.password
             };
 

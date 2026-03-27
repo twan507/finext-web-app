@@ -216,14 +216,14 @@ async def delete_user_by_id_endpoint(
             role_list = ", ".join(sorted(additional_roles))
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Không thể xóa người dùng '{user_to_delete.email}' vì còn có các vai trò: {role_list}. Vui lòng thu hồi các vai trò này trước khi xóa người dùng.",
+                detail=f"Không thể xóa người dùng '{user_to_delete.email}'. Người dùng đã được cấp quyền ({role_list}) và không thể xóa khỏi hệ thống.",
             )
 
     broker_info = await crud_brokers.get_broker_by_user_id(db, user_to_delete.id)  # type: ignore
     if broker_info:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Người dùng '{user_to_delete.email}' hiện là một Đối tác. Vui lòng hủy tư cách Đối tác trước khi xóa người dùng.",
+            detail=f"Không thể xóa người dùng '{user_to_delete.email}'. Người dùng đã từng là Đối tác trong hệ thống và không thể xóa.",
         )
 
     await crud_subscriptions.deactivate_all_active_subscriptions_for_user(db, ObjectId(user_to_delete.id))
