@@ -840,7 +840,7 @@ export default function MarketIndexChart({
     };
 
     const handleOpenChart = () => {
-        router.push(`/charts/${symbol}`);
+        router.push(`/charts/${symbol.toUpperCase()}`);
     };
 
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Box, Typography, useTheme, useMediaQuery, alpha, Chip, Collapse } from '@mui/material';
 import { getResponsiveFontSize, fontWeight, borderRadius, getGlassCard } from 'theme/tokens';
 import usePriceMapStore from 'hooks/usePriceMapStore';
@@ -168,6 +169,7 @@ function clusterLevels(levels: PriceLevel[]): ConfluenceCluster[] {
 // ─── Component ───────────────────────────────────────────────────────────────────
 
 export default function VNINDEXPriceMap({ chartIndicatorData, currentPrice, currentDiff, currentPctChange }: VNINDEXPriceMapProps) {
+    const router = useRouter();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -235,10 +237,8 @@ export default function VNINDEXPriceMap({ chartIndicatorData, currentPrice, curr
                         MA TRẬN HỢP LƯU KỸ THUẬT CHỈ SỐ VNINDEX
                     </Typography>
                     <Box
-                        component={isMobile ? 'span' : 'a'}
-                        href={isMobile ? undefined : '/charts/vnindex'}
-                        target={isMobile ? undefined : '_blank'}
-                        onClick={isMobile ? () => window.open('/charts/vnindex', '_blank') : undefined}
+                        component="span"
+                        onClick={() => router.push('/charts/VNINDEX')}
                         sx={{ textDecoration: 'none', cursor: 'pointer' }}
                     >
                         <Typography sx={{

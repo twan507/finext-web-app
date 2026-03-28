@@ -290,7 +290,7 @@ export default function PriceMapSection({ ticker, chartIndicatorData, currentPri
                     }}>
                         MA TRẬN HỢP LƯU KỸ THUẬT CỔ PHIẾU {ticker}
                     </Typography>
-                    <Box component={isMobile ? 'span' : 'a'} href={isMobile ? undefined : `/charts/${ticker.toLowerCase()}`} target={isMobile ? undefined : '_blank'} onClick={isMobile ? () => router.push(`/charts/${ticker.toLowerCase()}`) : undefined} sx={{ textDecoration: 'none', cursor: 'pointer' }}>
+                    <Box component="span" onClick={() => router.push(`/charts/${ticker.toUpperCase()}`)} sx={{ textDecoration: 'none', cursor: 'pointer' }}>
                         <Typography sx={{
                             fontSize: getResponsiveFontSize('sm'),
                             fontWeight: fontWeight.bold,

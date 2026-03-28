@@ -242,8 +242,7 @@ export default function WatchlistColumn({
                     <Typography
                         component="a"
                         href={`/stocks/${ticker}`}
-                        target={isMobile ? '_self' : '_blank'}
-                        onClick={isMobile ? (e: React.MouseEvent) => { e.preventDefault(); router.push(`/stocks/${ticker}`); } : undefined}
+                        onClick={(e: React.MouseEvent) => { e.preventDefault(); router.push(`/stocks/${ticker.toUpperCase()}`); }}
                         onPointerDown={e => e.stopPropagation()}
                         sx={{
                             fontSize: getResponsiveFontSize('xs'),
@@ -302,8 +301,7 @@ export default function WatchlistColumn({
                         <Typography
                             component="a"
                             href={`/stocks/${ticker}`}
-                            target={isMobile ? '_self' : '_blank'}
-                            onClick={isMobile ? (e: React.MouseEvent) => { e.preventDefault(); router.push(`/stocks/${ticker}`); } : undefined}
+                            onClick={(e: React.MouseEvent) => { e.preventDefault(); router.push(`/stocks/${ticker.toUpperCase()}`); }}
                             onPointerDown={e => e.stopPropagation()}
                             sx={{
                                 fontSize: getResponsiveFontSize('xs'),
@@ -318,7 +316,7 @@ export default function WatchlistColumn({
                         <Tooltip title="Mở chart" placement="right" arrow={false} slotProps={tooltipSlotProps}>
                             <Box
                                 component="span"
-                                onClick={() => isMobile ? router.push(`/charts/${ticker}`) : window.open(`/charts/${ticker}`, '_blank')}
+                                onClick={() => router.push(`/charts/${ticker.toUpperCase()}`)}
                                 onPointerDown={e => e.stopPropagation()}
                                 sx={{
                                     display: 'inline-flex',
