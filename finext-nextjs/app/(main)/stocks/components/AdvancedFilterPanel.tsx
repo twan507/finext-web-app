@@ -879,7 +879,7 @@ function IndicatorSection({
                                 '&::-webkit-scrollbar-thumb': { background: alpha(theme.palette.divider, 0.4), borderRadius: 2 },
                             }}>
                                 {/* Search input */}
-                                <Box sx={{ p: 1.25, borderBottom: '1px solid', borderColor: 'divider' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, p: 1.25, borderBottom: '1px solid', borderColor: 'divider' }}>
                                     <Box
                                         component="input"
                                         ref={searchInputRef}
@@ -895,7 +895,8 @@ function IndicatorSection({
                                             }
                                         }}
                                         sx={{
-                                            width: '100%',
+                                            flex: 1,
+                                            minWidth: 0,
                                             bgcolor: 'transparent',
                                             border: 'none',
                                             outline: 'none',
@@ -908,6 +909,22 @@ function IndicatorSection({
                                             },
                                         }}
                                     />
+                                    {indicatorSearch && (
+                                        <Box
+                                            component="span"
+                                            onClick={() => { setIndicatorSearch(''); searchInputRef.current?.focus(); }}
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                color: 'text.disabled',
+                                                cursor: 'pointer',
+                                                flexShrink: 0,
+                                                '&:hover': { color: 'text.secondary' },
+                                            }}
+                                        >
+                                            <Icon icon="solar:close-circle-bold" width={14} />
+                                        </Box>
+                                    )}
                                 </Box>
 
                                 {/* Grouped items */}

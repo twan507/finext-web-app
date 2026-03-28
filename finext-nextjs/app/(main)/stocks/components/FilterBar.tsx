@@ -36,16 +36,27 @@ interface GlassDropdownProps {
     selected: string[];
     onChange: (selected: string[]) => void;
     onClear: () => void;
+    searchable?: boolean;
 }
 
-function GlassDropdown({ label, options, selected, onChange, onClear }: GlassDropdownProps) {
+function GlassDropdown({ label, options, selected, onChange, onClear, searchable }: GlassDropdownProps) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const [open, setOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
     const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
     const ref = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<HTMLButtonElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
+
+    // Reset search when closed; auto-focus search input when opened
+    useEffect(() => {
+        if (!open) { setSearchQuery(''); return; }
+        if (searchable) {
+            requestAnimationFrame(() => searchInputRef.current?.focus());
+        }
+    }, [open, searchable]);
 
     // Close on outside click; lock page scroll while open
     useEffect(() => {
@@ -80,6 +91,10 @@ function GlassDropdown({ label, options, selected, onChange, onClear }: GlassDro
         }
     }
 
+    const filteredOptions = searchable && searchQuery
+        ? options.filter(opt => opt.toLowerCase().includes(searchQuery.toLowerCase()))
+        : options;
+
     const hasSelected = selected.length > 0;
     const displayLabel = hasSelected
         ? selected.length === 1
@@ -96,7 +111,7 @@ function GlassDropdown({ label, options, selected, onChange, onClear }: GlassDro
                 onClick={() => {
                     if (triggerRef.current) {
                         const r = triggerRef.current.getBoundingClientRect();
-                        setDropdownPos({ top: r.bottom + 6, left: r.left, width: Math.max(r.width, 180) });
+                        setDropdownPos({ top: r.bottom + 6, left: r.left, width: r.width });
                     }
                     setOpen(v => !v);
                 }}
@@ -168,11 +183,12 @@ function GlassDropdown({ label, options, selected, onChange, onClear }: GlassDro
                         position: 'fixed',
                         top: dropdownPos.top,
                         left: dropdownPos.left,
-                        width: dropdownPos.width,
+                        width: 'max-content',
+                        minWidth: dropdownPos.width,
                         zIndex: 9999,
-                        maxHeight: 280,
-                        overflowY: 'auto',
-                        overscrollBehavior: 'contain',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        maxHeight: 320,
                         borderRadius: `${borderRadius.lg}px`,
                         ...getGlassCard(isDark),
                         boxShadow: isDark
@@ -183,12 +199,63 @@ function GlassDropdown({ label, options, selected, onChange, onClear }: GlassDro
                             from: { opacity: 0, transform: 'translateY(-6px)' },
                             to: { opacity: 1, transform: 'translateY(0)' },
                         },
+                    }}
+                >
+                    {/* Search input */}
+                    {searchable && (
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            px: 1.5,
+                            py: 1,
+                            borderBottom: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
+                            flexShrink: 0,
+                            gap: 0.5,
+                        }}>
+                            <Box
+                                component="input"
+                                ref={searchInputRef}
+                                value={searchQuery}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+                                placeholder={`Tìm ${label.toLowerCase()}...`}
+                                sx={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    border: 'none',
+                                    outline: 'none',
+                                    background: 'transparent',
+                                    fontSize: getResponsiveFontSize('xs'),
+                                    color: theme.palette.text.primary,
+                                    '&::placeholder': { color: theme.palette.text.disabled },
+                                }}
+                            />
+                            {searchQuery && (
+                                <Box
+                                    component="span"
+                                    onClick={() => { setSearchQuery(''); searchInputRef.current?.focus(); }}
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        color: theme.palette.text.disabled,
+                                        cursor: 'pointer',
+                                        flexShrink: 0,
+                                        '&:hover': { color: theme.palette.text.secondary },
+                                    }}
+                                >
+                                    <Icon icon="solar:close-circle-bold" width={14} />
+                                </Box>
+                            )}
+                        </Box>
+                    )}
+                    {/* Options list */}
+                    <Box sx={{
+                        overflowY: 'auto',
+                        overscrollBehavior: 'contain',
                         '&::-webkit-scrollbar': { width: 4 },
                         '&::-webkit-scrollbar-track': { background: 'transparent' },
                         '&::-webkit-scrollbar-thumb': { background: alpha(theme.palette.divider, 0.4), borderRadius: 2 },
-                    }}
-                >
-                    {options.map((opt, idx) => {
+                    }}>
+                    {filteredOptions.map((opt, idx) => {
                         const isSelected = selected.includes(opt);
                         return (
                             <Box
@@ -207,7 +274,7 @@ function GlassDropdown({ label, options, selected, onChange, onClear }: GlassDro
                                         ? isDark ? alpha(theme.palette.primary.main, 0.15) : alpha(theme.palette.primary.main, 0.08)
                                         : 'transparent',
                                     border: 'none',
-                                    borderBottom: idx < options.length - 1 ? `1px solid ${alpha(theme.palette.divider, 0.12)}` : 'none',
+                                    borderBottom: idx < filteredOptions.length - 1 ? `1px solid ${alpha(theme.palette.divider, 0.12)}` : 'none',
                                     cursor: 'pointer',
                                     transition: `background ${durations.fastest}`,
                                     '&:hover': {
@@ -236,12 +303,14 @@ function GlassDropdown({ label, options, selected, onChange, onClear }: GlassDro
                                     fontWeight: isSelected ? fontWeight.semibold : fontWeight.medium,
                                     color: isSelected ? theme.palette.primary.main : theme.palette.text.primary,
                                     lineHeight: 1.4,
+                                    whiteSpace: 'nowrap',
                                 }}>
                                     {opt}
                                 </Typography>
                             </Box>
                         );
                     })}
+                    </Box>
                 </Box>
             , document.body)}
         </Box>
@@ -263,6 +332,7 @@ export default function FilterBar({ meta, selectFilters, onSetSelectFilter, onCl
                     selected={selectFilters[field] ?? []}
                     onChange={(vals) => onSetSelectFilter(field, vals)}
                     onClear={() => onClearSelectFilter(field)}
+                    searchable={field === 'industry_name'}
                 />
             ))}
 
