@@ -158,9 +158,11 @@ export default function WatchlistContent() {
             const prevActiveCol = activeWl.coordinate[0];
             if (prevActiveCol === overCol) return prev; // already in target column
 
-            // Get items in the target column sorted by row
+            const activePage = activeWl.page ?? 1;
+
+            // Get items in the target column sorted by row (same page only)
             const overColItems = prev
-                .filter(w => w.coordinate[0] === overCol && (w.id || w._id) !== activeWlId)
+                .filter(w => w.coordinate[0] === overCol && (w.id || w._id) !== activeWlId && (w.page ?? 1) === activePage)
                 .sort((a, b) => a.coordinate[1] - b.coordinate[1]);
 
             // Find insertion index — append at end if dropping on column itself
@@ -176,18 +178,21 @@ export default function WatchlistContent() {
                 coordinate: [overCol, idx] as [number, number],
             }));
 
-            // Recalculate coordinates for the source column (without the active item)
+            // Recalculate coordinates for the source column (without the active item, same page only)
             const sourceColItems = prev
-                .filter(w => w.coordinate[0] === prevActiveCol && (w.id || w._id) !== activeWlId)
+                .filter(w => w.coordinate[0] === prevActiveCol && (w.id || w._id) !== activeWlId && (w.page ?? 1) === activePage)
                 .sort((a, b) => a.coordinate[1] - b.coordinate[1])
                 .map((w, idx) => ({
                     ...w,
                     coordinate: [prevActiveCol, idx] as [number, number],
                 }));
 
-            // Rebuild full list
+            // Rebuild full list — exclude only the affected col+page combinations
             const otherItems = prev.filter(
-                w => w.coordinate[0] !== prevActiveCol && w.coordinate[0] !== overCol
+                w => !(
+                    (w.coordinate[0] === prevActiveCol && (w.page ?? 1) === activePage) ||
+                    (w.coordinate[0] === overCol && (w.page ?? 1) === activePage)
+                )
             );
             return [...otherItems, ...sourceColItems, ...updatedTargetItems];
         });
@@ -208,10 +213,11 @@ export default function WatchlistContent() {
         if (overWlId && activeWlId !== overWlId && !overWlId.startsWith('column-')) {
             const activeWl = nextWatchlists.find(w => (w.id || w._id) === activeWlId);
             const overWl = nextWatchlists.find(w => (w.id || w._id) === overWlId);
-            if (activeWl && overWl && activeWl.coordinate[0] === overWl.coordinate[0]) {
+            if (activeWl && overWl && activeWl.coordinate[0] === overWl.coordinate[0] && (activeWl.page ?? 1) === (overWl.page ?? 1)) {
                 const col = activeWl.coordinate[0];
+                const activePage = activeWl.page ?? 1;
                 const colItems = nextWatchlists
-                    .filter(w => w.coordinate[0] === col)
+                    .filter(w => w.coordinate[0] === col && (w.page ?? 1) === activePage)
                     .sort((a, b) => a.coordinate[1] - b.coordinate[1]);
 
                 const activeIdx = colItems.findIndex(w => (w.id || w._id) === activeWlId);
@@ -225,7 +231,7 @@ export default function WatchlistContent() {
                         ...w,
                         coordinate: [col, idx] as [number, number],
                     }));
-                    const otherItems = nextWatchlists.filter(w => w.coordinate[0] !== col);
+                    const otherItems = nextWatchlists.filter(w => w.coordinate[0] !== col || (w.page ?? 1) !== activePage);
                     nextWatchlists = [...otherItems, ...updatedColItems];
                 }
             }
@@ -412,8 +418,36 @@ export default function WatchlistContent() {
     const handleDeleteConfirm = async () => {
         if (!deleteTargetId) return;
         try {
+            const deleted = watchlistsRef.current.find(w => (w.id || w._id) === deleteTargetId);
             await apiClient({ url: `/api/v1/watchlists/${deleteTargetId}`, method: 'DELETE', requireAuth: true });
-            setWatchlists(prev => prev.filter(w => (w.id || w._id) !== deleteTargetId));
+
+            if (deleted) {
+                const col = deleted.coordinate[0];
+                const page = deleted.page ?? 1;
+                const remaining = watchlistsRef.current.filter(w => (w.id || w._id) !== deleteTargetId);
+                const colItems = remaining
+                    .filter(w => w.coordinate[0] === col && (w.page ?? 1) === page)
+                    .sort((a, b) => a.coordinate[1] - b.coordinate[1])
+                    .map((w, idx) => ({ ...w, coordinate: [col, idx] as [number, number] }));
+                const others = remaining.filter(w => w.coordinate[0] !== col || (w.page ?? 1) !== page);
+                setWatchlists([...others, ...colItems]);
+
+                // Gửi coordinate mới lên BE cho các item bị renormalize
+                const changed = colItems.filter(w => {
+                    const prev = watchlistsRef.current.find(b => (b.id || b._id) === (w.id || w._id));
+                    return prev && prev.coordinate[1] !== w.coordinate[1];
+                });
+                if (changed.length > 0) {
+                    apiClient({
+                        url: '/api/v1/watchlists/reorder',
+                        method: 'POST',
+                        body: { items: changed.map(w => ({ id: w.id || w._id!, coordinate: w.coordinate })) },
+                        requireAuth: true,
+                    }).catch(err => console.error('Reorder after delete failed:', err));
+                }
+            } else {
+                setWatchlists(prev => prev.filter(w => (w.id || w._id) !== deleteTargetId));
+            }
         } catch (err) {
             console.error('Delete failed:', err);
         }
