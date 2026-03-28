@@ -108,11 +108,12 @@ function useSearchLogic() {
     const [allIndexes, setAllIndexes] = useState<SearchIndexItem[]>([]);
     const [isPreloaded, setIsPreloaded] = useState(false);
 
-    // Preload stocks and indexes on first use
+    // Preload stocks and indexes on first use — delay để không tranh connection với API của page
     useEffect(() => {
         let cancelled = false;
 
         async function preload() {
+            if (cancelled) return;
             try {
                 const [stocksRes, indexesRes] = await Promise.all([
                     apiClient<SearchStock[]>({
@@ -140,8 +141,11 @@ function useSearchLogic() {
             }
         }
 
-        preload();
-        return () => { cancelled = true; };
+        const timeoutId = setTimeout(preload, 1500);
+        return () => {
+            cancelled = true;
+            clearTimeout(timeoutId);
+        };
     }, []);
 
     const search = useCallback(async (query: string): Promise<SearchResults> => {

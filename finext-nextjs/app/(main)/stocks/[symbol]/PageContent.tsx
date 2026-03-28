@@ -324,21 +324,8 @@ export default function StockDetailContent() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [timeRange, ticker]);
 
-    // ========== REST - History Data for line charts ==========
-    const { data: histLineTicker = [] } = useQuery({
-        queryKey: ['stocks', 'hist_index_line', ticker, LINE_SESSIONS],
-        queryFn: async () => {
-            const response = await apiClient<RawMarketData[]>({
-                url: '/api/v1/sse/rest/home_hist_stock',
-                method: 'GET',
-                queryParams: { ticker, limit: LINE_SESSIONS },
-                requireAuth: false,
-            });
-            return response.data || [];
-        },
-        staleTime: 5 * 60 * 1000,
-        refetchOnWindowFocus: false,
-    });
+    // Derive last LINE_SESSIONS bars from already-loaded history (tránh call trùng endpoint)
+    const histLineTicker = useMemo(() => historyData.slice(-LINE_SESSIONS), [historyData]);
 
     // ========== SSE - Today All Stocks ==========
     useEffect(() => {
@@ -365,12 +352,17 @@ export default function StockDetailContent() {
         return () => { isMountedRef.current = false; if (todaySseRef.current) todaySseRef.current.unsubscribe(); };
     }, []);
 
-    // ========== SSE - ITD Stock Data (cho 1D chart) ==========
+    // ========== SSE - ITD Stock Data (chỉ mở khi 1D) ==========
     useEffect(() => {
-        isMountedRef.current = true;
+        if (timeRange !== '1D') {
+            // Đóng SSE nếu đang mở và không ở khung 1D
+            if (itdSseRef.current) { itdSseRef.current.unsubscribe(); itdSseRef.current = null; }
+            setIntradayData(emptyChartData);
+            return;
+        }
 
+        isMountedRef.current = true;
         if (itdSseRef.current) { itdSseRef.current.unsubscribe(); itdSseRef.current = null; }
-        setIntradayData(emptyChartData);
 
         const requestProps: ISseRequest = {
             url: '/api/v1/sse/stream',
@@ -391,9 +383,9 @@ export default function StockDetailContent() {
             isMountedRef.current = false;
             if (itdSseRef.current) { itdSseRef.current.unsubscribe(); itdSseRef.current = null; }
         };
-    }, [ticker]);
+    }, [ticker, timeRange]);
 
-    // ========== REST - Finratios Stock Data ==========
+    // ========== REST - Finratios Stock Data (defer until chart ready) ==========
     const { data: finratiosData = [] } = useQuery({
         queryKey: ['stock', 'finratios_stock', ticker],
         queryFn: async () => {
@@ -405,11 +397,12 @@ export default function StockDetailContent() {
             });
             return response.data || [];
         },
+        enabled: !historyLoading,
         staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
     });
 
-    // ========== REST - Chart Indicator Data (for PriceMap) ==========
+    // ========== REST - Chart Indicator Data (for PriceMap, defer until chart ready) ==========
     const { data: chartIndicatorData = null } = useQuery({
         queryKey: ['stock', 'chart_history_data', ticker],
         queryFn: async () => {
@@ -423,6 +416,7 @@ export default function StockDetailContent() {
             if (data && Array.isArray(data) && data.length > 0) return data[data.length - 1];
             return null;
         },
+        enabled: !historyLoading,
         staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
     });
