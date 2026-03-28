@@ -8,7 +8,20 @@
       "Bash(grep -r \"projection\\\\|\"\".*\"\": 1\" /d/twan-projects/finext-web-app/finext-fastapi/app/crud/sse/*.py)",
       "Bash(find /d/twan-projects/finext-web-app/finext-nextjs -type f -name *watchlist* -o -name *sse* -o -name *stream*)",
       "Bash(ls \"d:/twan-projects/finext-web-app/finext-nextjs/app/\\(main\\)/watchlist/\")",
-      "Bash(grep -r import.*useSseCache d:twan-projectsfinext-web-appfinext-nextjs --include=*.ts --include=*.tsx)"
+      "Bash(grep -r import.*useSseCache d:twan-projectsfinext-web-appfinext-nextjs --include=*.ts --include=*.tsx)",
+      "Bash(find d:twan-projectsfinext-web-appfinext-nextjs -type d -name *chart*)",
+      "Bash(ls -la \"d:\\\\twan-projects\\\\finext-web-app\\\\finext-nextjs\\\\app\\\\\\(main\\\\\\)\\\\charts\")",
+      "Bash(find . -path \"./app/\\(main\\)/charts\" -prune -o -path \"./app/\\(main\\)/charts/*\" -type f -print)",
+      "Bash(ls -la \"app/\\(main\\)/charts/[id]\")",
+      "Bash(cat \"app/\\(main\\)/charts/page.tsx\")",
+      "Bash(cat \"app/\\(main\\)/charts/layout.tsx\")",
+      "Bash(cat \"app/\\(main\\)/charts/\\\\[id\\\\]/page.tsx\")",
+      "Bash(cat \"app/\\(main\\)/charts/[id]/page.tsx\")",
+      "Bash(ls -la \"app/\\(main\\)/charts/[id]/\")",
+      "Bash(cat \"app/\\(main\\)/charts/[id]/PageContent.tsx\")",
+      "Bash(cat \"app/\\(main\\)/charts/[id]/CandlestickChart.tsx\")",
+      "Bash(head -100 \"app/\\(main\\)/charts/[id]/ChartToolbar.tsx\")"
+    
     ]
   }
 }
