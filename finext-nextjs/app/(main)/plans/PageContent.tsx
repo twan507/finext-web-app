@@ -40,7 +40,7 @@ const plans = [
         label: 'Hội viên Patron',
         icon: 'mdi:handshake',
         color: '#ed6c02',
-        description: 'Ủng hộ dự án Finext để duy trì & phát triển nền tảng — nhận quyền truy cập vĩnh viễn toàn bộ tính năng nâng cao.',
+        description: 'Ủng hộ dự án Finext để duy trì & phát triển nền tảng — nhận quyền truy cập toàn bộ tính năng nâng cao trong suốt thời gian đăng ký.',
         features: ['Tất cả tính năng Cộng đồng', 'Bộ lọc cổ phiếu đa tiêu chí (50+ chỉ báo)', 'Phân tích kỹ thuật & dòng tiền nâng cao', 'Báo cáo định kỳ & bản tin thị trường', 'Nhóm Zalo VIP & trao đổi 1:1 với đội ngũ Finext', 'Hỗ trợ ưu tiên'],
     },
 ];
@@ -89,12 +89,12 @@ const steps = [
     {
         number: '02',
         title: 'Nhận hướng dẫn từ Finext',
-        description: 'Đội ngũ Finext sẽ liên hệ trong vòng 24h để hướng dẫn chi tiết và kích hoạt quyền truy cập.',
+        description: 'Finext sẽ liên hệ trong vòng 24h để hướng dẫn chi tiết và kích hoạt quyền truy cập.',
     },
     {
         number: '03',
-        title: 'Truy cập vĩnh viễn',
-        description: 'Mở khóa toàn bộ tính năng nâng cao — vĩnh viễn, không giới hạn thời gian.',
+        title: 'Truy cập đầy đủ',
+        description: 'Mở khóa toàn bộ và truy cập không giới hạn các tính năng nâng cao.',
     },
 ];
 
@@ -262,7 +262,7 @@ export default function PlansPageContent() {
                 >
                     Finext là nền tảng dữ liệu chứng khoán độc lập, được duy trì và phát triển bởi cộng đồng.
                     Sự đồng hành của bạn giúp nền tảng tiếp tục phát triển — đổi lại, bạn nhận quyền truy cập{' '}
-                    <strong style={{ color: theme.palette.primary.main }}>vĩnh viễn</strong> toàn bộ công cụ phân tích nâng cao.
+                    <strong style={{ color: theme.palette.primary.main }}>toàn bộ</strong> công cụ phân tích nâng cao trong suốt thời gian đăng ký.
                 </Typography>
 
                 <Button
@@ -407,7 +407,7 @@ export default function PlansPageContent() {
                     textAlign: 'center',
                     mb: 4,
                 }}>
-                    Toàn bộ tính năng nâng cao được mở khóa vĩnh viễn — cảm ơn bạn đã đồng hành cùng Finext.
+                    Toàn bộ tính năng nâng cao được mở khóa trong suốt thời gian đăng ký — cảm ơn bạn đã đồng hành cùng Finext.
                 </Typography>
 
                 <Box
