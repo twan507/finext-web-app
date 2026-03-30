@@ -83,9 +83,10 @@ interface SearchBarProps {
 
 function formatPct(pct?: number): string {
     if (pct == null) return '';
-    if (pct === 0) return '0.00%';
-    const sign = pct > 0 ? '+' : '';
-    return `${sign}${pct.toFixed(2)}%`;
+    const val = pct * 100;
+    if (val === 0) return '0.00%';
+    const sign = val > 0 ? '+' : '';
+    return `${sign}${val.toFixed(2)}%`;
 }
 
 function getPctColor(pct: number | undefined, theme: any): string {
@@ -95,9 +96,8 @@ function getPctColor(pct: number | undefined, theme: any): string {
     return theme.palette.trend?.ref ?? theme.palette.text.secondary;
 }
 
-const MAX_STOCKS = 8;
+const MAX_PER_SECTION = 5;
 const DEBOUNCE_MS = 300;
-const MIN_CHARS = 2;
 
 // ============================================================================
 // SEARCH LOGIC HOOK
@@ -108,11 +108,12 @@ function useSearchLogic() {
     const [allIndexes, setAllIndexes] = useState<SearchIndexItem[]>([]);
     const [isPreloaded, setIsPreloaded] = useState(false);
 
-    // Preload stocks and indexes on first use
+    // Preload stocks and indexes on first use — delay để không tranh connection với API của page
     useEffect(() => {
         let cancelled = false;
 
         async function preload() {
+            if (cancelled) return;
             try {
                 const [stocksRes, indexesRes] = await Promise.all([
                     apiClient<SearchStock[]>({
@@ -140,58 +141,62 @@ function useSearchLogic() {
             }
         }
 
-        preload();
-        return () => { cancelled = true; };
+        const timeoutId = setTimeout(preload, 1500);
+        return () => {
+            cancelled = true;
+            clearTimeout(timeoutId);
+        };
     }, []);
 
     const search = useCallback(async (query: string): Promise<SearchResults> => {
-        if (query.length < MIN_CHARS) {
-            return { stocks: [], indexes: [], news: [], reports: [] };
-        }
+        const trimmed = query.trim();
+        const q = trimmed.toUpperCase();
 
-        const q = query.trim().toUpperCase();
-        const qLower = query.trim().toLowerCase();
+        const sortByTicker = <T extends { ticker?: string }>(arr: T[]) =>
+            [...arr].sort((a, b) => (a.ticker ?? '').localeCompare(b.ticker ?? ''));
 
-        // Client-side filter for stocks
-        const filteredStocks = allStocks
-            .filter(s =>
-                s.ticker?.toUpperCase().includes(q) ||
-                s.ticker_name?.toLowerCase().includes(qLower) ||
-                s.industry_name?.toLowerCase().includes(qLower)
-            )
-            .slice(0, MAX_STOCKS);
+        const sortByDate = <T extends { created_at?: string }>(arr: T[]) =>
+            [...arr].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''));
 
-        // Client-side filter for indexes (groups + sectors)
-        const filteredIndexes = allIndexes.filter(s =>
-            s.ticker?.toUpperCase().includes(q) ||
-            s.ticker_name?.toLowerCase().includes(qLower)
-        );
+        // Client-side filter stocks by ticker only, sorted A→Z
+        const filteredStocks = trimmed
+            ? sortByTicker(allStocks.filter(s => s.ticker?.toUpperCase().includes(q))).slice(0, MAX_PER_SECTION)
+            : sortByTicker(allStocks).slice(0, MAX_PER_SECTION);
 
-        // Remote search for news + reports
+        // Client-side filter indexes by ticker only, sorted A→Z
+        const filteredIndexes = trimmed
+            ? sortByTicker(allIndexes.filter(s => s.ticker?.toUpperCase().includes(q))).slice(0, MAX_PER_SECTION)
+            : sortByTicker(allIndexes).slice(0, MAX_PER_SECTION);
+
+        // Remote search for news + reports (always called, empty query returns latest)
         try {
+            const params = trimmed
+                ? { search: trimmed, limit: MAX_PER_SECTION }
+                : { limit: MAX_PER_SECTION };
+
             const [newsRes, reportsRes] = await Promise.all([
                 apiClient<SearchNewsItem[]>({
                     url: '/api/v1/sse/rest/search_news',
                     method: 'GET',
-                    queryParams: { search: query.trim(), limit: 5 },
+                    queryParams: params,
                     requireAuth: false,
-                    useCache: false,
+                    useCache: !trimmed,
+                    cacheTtl: 5 * 60 * 1000,
                 }),
                 apiClient<SearchReportItem[]>({
                     url: '/api/v1/sse/rest/search_reports',
                     method: 'GET',
-                    queryParams: { search: query.trim(), limit: 5 },
+                    queryParams: params,
                     requireAuth: false,
-                    useCache: false,
+                    useCache: !trimmed,
+                    cacheTtl: 5 * 60 * 1000,
                 }),
             ]);
 
-            return {
-                stocks: filteredStocks,
-                indexes: filteredIndexes,
-                news: newsRes.data && Array.isArray(newsRes.data) ? newsRes.data : [],
-                reports: reportsRes.data && Array.isArray(reportsRes.data) ? reportsRes.data : [],
-            };
+            const news = sortByDate(newsRes.data && Array.isArray(newsRes.data) ? newsRes.data : []);
+            const reports = sortByDate(reportsRes.data && Array.isArray(reportsRes.data) ? reportsRes.data : []);
+
+            return { stocks: filteredStocks, indexes: filteredIndexes, news, reports };
         } catch {
             return { stocks: filteredStocks, indexes: filteredIndexes, news: [], reports: [] };
         }
@@ -278,7 +283,7 @@ function StockResultItem({ item, onClick }: StockResultItemProps) {
             <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
                 {item.close != null && (
                     <Typography sx={{ fontSize: getResponsiveFontSize('md'), fontWeight: fontWeight.medium }}>
-                        {item.close.toLocaleString('vi-VN')}
+                        {item.close.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </Typography>
                 )}
                 {item.pct_change != null && (
@@ -454,7 +459,7 @@ function ResultsPanel({ results, isLoading, query, onNavigate }: ResultsPanelPro
                 </Box>
             )}
 
-            {!isLoading && !hasAny && query.length >= MIN_CHARS && (
+            {!isLoading && !hasAny && query.length > 0 && (
                 <Box sx={{ py: 3, textAlign: 'center', color: theme.palette.text.secondary }}>
                     <Icon icon="fluent:search-off-24-regular" width={32} height={32} style={{ opacity: 0.5 }} />
                     <Typography sx={{ mt: 1, fontSize: getResponsiveFontSize('sm') }}>
@@ -590,13 +595,6 @@ export default function SearchBar({
     const triggerSearch = useCallback((query: string) => {
         if (debounceRef.current) clearTimeout(debounceRef.current);
 
-        if (query.length < MIN_CHARS) {
-            setResults({ stocks: [], indexes: [], news: [], reports: [] });
-            setShowDropdown(false);
-            setIsSearching(false);
-            return;
-        }
-
         setIsSearching(true);
         setShowDropdown(true);
 
@@ -634,9 +632,7 @@ export default function SearchBar({
 
     const handleFocus = () => {
         setIsFocused(true);
-        if (searchValue.length >= MIN_CHARS) {
-            setShowDropdown(true);
-        }
+        triggerSearch(searchValue);
     };
 
     const handleBlur = () => {
@@ -742,19 +738,12 @@ export default function SearchBar({
 
                         {/* Results */}
                         <Box sx={{ mt: 1.5 }}>
-                            {searchValue.length < MIN_CHARS && !isSearching && (
-                                <Box sx={{ py: 4, textAlign: 'center', color: theme.palette.text.secondary }}>
-                                    <Icon icon="fluent:search-24-regular" width={36} height={36} style={{ opacity: 0.35 }} />
-                                </Box>
-                            )}
-                            {searchValue.length >= MIN_CHARS && (
-                                <ResultsPanel
-                                    results={results}
-                                    isLoading={isSearching}
-                                    query={searchValue}
-                                    onNavigate={handleNavigate}
-                                />
-                            )}
+                            <ResultsPanel
+                                results={results}
+                                isLoading={isSearching}
+                                query={searchValue}
+                                onNavigate={handleNavigate}
+                            />
                         </Box>
                     </Box>
                 </Drawer>

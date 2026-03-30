@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
@@ -302,21 +302,91 @@ export default function SectorDetailContent() {
         );
     }, [industryList, searchQuery]);
 
-    // ========== REST - History Data ==========
-    const { data: historyData = [], isLoading: historyLoading } = useQuery({
-        queryKey: ['sector', 'history', ticker],
-        queryFn: async () => {
-            const response = await apiClient<RawMarketData[]>({
-                url: '/api/v1/sse/rest/home_hist_index',
-                method: 'GET',
-                queryParams: { ticker },
-                requireAuth: false
+    // ========== REST - History Data (lazy load) ==========
+    const baseChunk = 90;
+    const baseChunkRef = useRef(baseChunk);
+
+    const [historyData, setHistoryData] = useState<RawMarketData[]>([]);
+    const [historyLoading, setHistoryLoading] = useState(true);
+    const [loadedBars, setLoadedBars] = useState(0);
+    const [hasMoreHistory, setHasMoreHistory] = useState(true);
+    const isLoadingMoreRef = useRef(false);
+
+    useEffect(() => {
+        let cancelled = false;
+        setHistoryLoading(true);
+        setHistoryData([]);
+        setLoadedBars(0);
+        setHasMoreHistory(true);
+
+        apiClient<RawMarketData[]>({
+            url: '/api/v1/sse/rest/home_hist_index',
+            method: 'GET',
+            queryParams: { ticker, limit: baseChunkRef.current },
+            requireAuth: false,
+        })
+            .then((res) => {
+                if (cancelled) return;
+                const data = res.data ?? [];
+                setHistoryData(data);
+                setLoadedBars(data.length);
+                setHasMoreHistory(data.length > 0);
+                setHistoryLoading(false);
+            })
+            .catch(() => {
+                if (cancelled) return;
+                setHistoryLoading(false);
             });
-            return response.data || [];
-        },
-        staleTime: 5 * 60 * 1000,
-        refetchOnWindowFocus: false,
-    });
+
+        return () => { cancelled = true; };
+    }, [ticker]);
+
+    const loadMoreHistory = useCallback(() => {
+        if (isLoadingMoreRef.current || !hasMoreHistory) return;
+        isLoadingMoreRef.current = true;
+
+        apiClient<RawMarketData[]>({
+            url: '/api/v1/sse/rest/home_hist_index',
+            method: 'GET',
+            queryParams: { ticker, limit: baseChunkRef.current, skip: loadedBars },
+            requireAuth: false,
+        })
+            .then((res) => {
+                const olderData = res.data ?? [];
+                if (olderData.length > 0) {
+                    setHistoryData((prev) => [...olderData, ...prev]);
+                    setLoadedBars((prev) => prev + olderData.length);
+                }
+                if (olderData.length === 0) setHasMoreHistory(false);
+                isLoadingMoreRef.current = false;
+            })
+            .catch(() => { isLoadingMoreRef.current = false; });
+    }, [ticker, hasMoreHistory, loadedBars]);
+
+    // Khi switch sang 1Y: tự động fetch thêm để đủ 260 bars
+    useEffect(() => {
+        if (timeRange !== '1Y') return;
+        if (loadedBars >= 260 || !hasMoreHistory || isLoadingMoreRef.current) return;
+        isLoadingMoreRef.current = true;
+        const needed = 260 - loadedBars;
+        apiClient<RawMarketData[]>({
+            url: '/api/v1/sse/rest/home_hist_index',
+            method: 'GET',
+            queryParams: { ticker, limit: needed, skip: loadedBars },
+            requireAuth: false,
+        })
+            .then((res) => {
+                const olderData = res.data ?? [];
+                if (olderData.length > 0) {
+                    setHistoryData((prev) => [...olderData, ...prev]);
+                    setLoadedBars((prev) => prev + olderData.length);
+                }
+                if (olderData.length === 0) setHasMoreHistory(false);
+                isLoadingMoreRef.current = false;
+            })
+            .catch(() => { isLoadingMoreRef.current = false; });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [timeRange, ticker]);
 
     // ========== REST - History Data for line charts ==========
     const { data: histLineTicker = [] } = useQuery({
@@ -767,6 +837,7 @@ export default function SectorDetailContent() {
                         error={error}
                         timeRange={timeRange}
                         onTimeRangeChange={setTimeRange}
+                        onLoadMore={loadMoreHistory}
                     />
 
                     {/* FinRatios Section - same width as chart */}

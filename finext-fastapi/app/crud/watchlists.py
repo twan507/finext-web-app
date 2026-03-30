@@ -73,11 +73,11 @@ async def get_watchlist_by_id(db: AsyncIOMotorDatabase, watchlist_id: PyObjectId
     return None
 
 
-async def get_watchlists_by_user_id(db: AsyncIOMotorDatabase, user_id: PyObjectId, skip: int = 0, limit: int = 100) -> List[WatchlistInDB]:
+async def get_watchlists_by_user_id(db: AsyncIOMotorDatabase, user_id: PyObjectId) -> List[WatchlistInDB]:
     if not ObjectId.is_valid(user_id):
         return []
-    watchlists_cursor = db[WATCHLIST_COLLECTION].find({"user_id": ObjectId(user_id)}).sort("created_at", 1).skip(skip).limit(limit)
-    watchlists_docs = await watchlists_cursor.to_list(length=limit)
+    watchlists_cursor = db[WATCHLIST_COLLECTION].find({"user_id": ObjectId(user_id)}).sort("created_at", 1)
+    watchlists_docs = await watchlists_cursor.to_list(length=None)
 
     results: List[WatchlistInDB] = []
     for wl_doc in watchlists_docs:
@@ -85,6 +85,22 @@ async def get_watchlists_by_user_id(db: AsyncIOMotorDatabase, user_id: PyObjectI
             wl_doc["user_id"] = str(wl_doc["user_id"])
         results.append(WatchlistInDB(**wl_doc))
     return results
+
+
+async def get_watchlist_pages_by_user_id(db: AsyncIOMotorDatabase, user_id: PyObjectId) -> List[int]:
+    """Trả về danh sách các page number mà user có watchlist."""
+    if not ObjectId.is_valid(user_id):
+        return []
+    pipeline = [
+        {"$match": {"user_id": ObjectId(user_id)}},
+        {"$group": {"_id": "$page"}},
+        {"$sort": {"_id": 1}},
+    ]
+    result = await db[WATCHLIST_COLLECTION].aggregate(pipeline).to_list(length=None)
+    pages = [doc["_id"] for doc in result if doc["_id"] is not None]
+    if not pages:
+        return [1]
+    return pages
 
 
 async def update_watchlist(

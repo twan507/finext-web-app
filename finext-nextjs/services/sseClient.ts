@@ -1,5 +1,6 @@
 // finext-nextjs/services/sseClient.ts
 import queryString from 'query-string';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { API_BASE_URL } from './core/config';
 import {
   ISseRequest,
@@ -39,6 +40,8 @@ interface ConnectionEntry<T = any> {
   lastError: SseError | null;
   reconnectAttempts: number;
   reconnectTimeout: NodeJS.Timeout | null;
+  /** Factory function để tái tạo connection khi tab visible lại */
+  reconnector: (() => void) | null;
 }
 
 // ========== Constants ==========
@@ -77,6 +80,46 @@ function stopCacheCleanup(): void {
 // Bắt đầu cleanup khi module được load (client-side only)
 if (typeof window !== 'undefined') {
   startCacheCleanup();
+}
+
+// ========== Visibility Management ==========
+// Ngắt tất cả SSE khi tab ẩn, kết nối lại khi tab hiện.
+// Tránh vượt giới hạn 6 connections/domain của browser khi mở nhiều tab.
+function pauseAllConnections(): void {
+  connections.forEach((entry) => {
+    // Clear pending reconnect
+    if (entry.reconnectTimeout) {
+      clearTimeout(entry.reconnectTimeout);
+      entry.reconnectTimeout = null;
+    }
+    // Close EventSource nhưng GIỮ NGUYÊN subscribers + reconnector
+    if (entry.connection) {
+      const es = entry.connection.getEventSource();
+      if (es) es.close();
+      entry.connection = null;
+    }
+    entry.isConnecting = false;
+    entry.reconnectAttempts = 0;
+  });
+}
+
+function resumeAllConnections(): void {
+  connections.forEach((entry) => {
+    // Chỉ reconnect nếu còn subscribers và chưa có connection
+    if (entry.subscribers.size > 0 && !entry.connection && !entry.isConnecting && entry.reconnector) {
+      entry.reconnector();
+    }
+  });
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      pauseAllConnections();
+    } else {
+      resumeAllConnections();
+    }
+  });
 }
 
 // ========== Helper Functions ==========
@@ -226,7 +269,8 @@ export function sseClient<DataType = any>(
       isConnecting: false,
       lastError: null,
       reconnectAttempts: 0,
-      reconnectTimeout: null
+      reconnectTimeout: null,
+      reconnector: null
     };
     connections.set(connectionKey, connectionEntry);
   }
@@ -409,7 +453,13 @@ export function sseClient<DataType = any>(
     }
   }
 
-  createConnection();
+  // Lưu reconnector để visibility handler có thể tái tạo connection
+  connectionEntry.reconnector = createConnection;
+
+  // Chỉ tạo connection nếu tab đang visible (hoặc không phải browser)
+  if (typeof document === 'undefined' || document.visibilityState !== 'hidden') {
+    createConnection();
+  }
 
   return {
     subscriberId,
@@ -530,4 +580,197 @@ export function createSseSubscription<T>(
     },
     { cacheTtl, useCache }
   );
+}
+
+// ========== React Hooks ==========
+
+/**
+ * Options cho useSseCache hook
+ */
+export interface UseSseCacheOptions<T> {
+  keyword: string;
+  url?: string;
+  queryParams?: Record<string, any>;
+  enabled?: boolean;
+  cacheTtl?: number;
+  useCache?: boolean;
+  transform?: (data: T) => T;
+  onData?: (data: T) => void;
+  onError?: (error: SseError) => void;
+  onOpen?: () => void;
+  onClose?: () => void;
+}
+
+export interface UseSseCacheResult<T> {
+  data: T | null;
+  isLoading: boolean;
+  error: SseError | null;
+  isConnected: boolean;
+  clearCache: () => void;
+  debugInfo: ReturnType<typeof getDebugInfo>;
+}
+
+/**
+ * Hook để sử dụng SSE với cache trong React components.
+ * Tương tự usePollingClient nhưng dùng SSE thay vì REST polling.
+ */
+export function useSseCache<T = any>(
+  options: UseSseCacheOptions<T>
+): UseSseCacheResult<T> {
+  const {
+    keyword,
+    url = '/api/v1/sse/stream',
+    queryParams = {},
+    enabled = true,
+    cacheTtl = DEFAULT_CACHE_TTL,
+    useCache: useCacheOption = true,
+    transform,
+    onData,
+    onError,
+    onOpen,
+    onClose
+  } = options;
+
+  const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
+  const isMountedRef = useRef(true);
+
+  const [data, setData] = useState<T | null>(() => {
+    if (!useCacheOption) return null;
+    const cached = getFromCache<T>(keyword, queryParams, cacheTtl);
+    return cached ? (transform ? transform(cached) : cached) : null;
+  });
+
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    if (!useCacheOption) return true;
+    return getFromCache<T>(keyword, queryParams, cacheTtl) === null;
+  });
+
+  const [error, setError] = useState<SseError | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    if (!enabled) {
+      return;
+    }
+
+    if (subscriptionRef.current) {
+      subscriptionRef.current.unsubscribe();
+      subscriptionRef.current = null;
+    }
+
+    subscriptionRef.current = sseClient<T>(
+      {
+        url,
+        queryParams: { ...queryParams, keyword }
+      },
+      {
+        onOpen: () => {
+          if (isMountedRef.current) {
+            setIsConnected(true);
+            setError(null);
+            onOpen?.();
+          }
+        },
+        onData: (receivedData) => {
+          if (isMountedRef.current) {
+            if (
+              receivedData === null || receivedData === undefined ||
+              (Array.isArray(receivedData) && receivedData.length === 0) ||
+              (typeof receivedData === 'object' && !Array.isArray(receivedData) && Object.keys(receivedData).length === 0)
+            ) {
+              return;
+            }
+            const processedData = transform ? transform(receivedData) : receivedData;
+            setData(processedData);
+            setIsLoading(false);
+            setError(null);
+            onData?.(processedData);
+          }
+        },
+        onError: (sseError) => {
+          if (isMountedRef.current) {
+            setError(sseError);
+            onError?.(sseError);
+          }
+        },
+        onClose: () => {
+          if (isMountedRef.current) {
+            setIsConnected(false);
+            onClose?.();
+          }
+        }
+      },
+      { cacheTtl, useCache: useCacheOption }
+    );
+
+    return () => {
+      isMountedRef.current = false;
+      if (subscriptionRef.current) {
+        subscriptionRef.current.unsubscribe();
+        subscriptionRef.current = null;
+      }
+    };
+  }, [keyword, enabled]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const clearKeywordCache = useCallback(() => {
+    clearCache(keyword);
+    setData(null);
+    setIsLoading(true);
+  }, [keyword]);
+
+  return {
+    data,
+    isLoading,
+    error,
+    isConnected,
+    clearCache: clearKeywordCache,
+    debugInfo: getDebugInfo()
+  };
+}
+
+/**
+ * Hook SSE với grouping theo key.
+ * Tương tự useSseCache nhưng tự động group data theo một field.
+ */
+export interface UseSseCacheGroupedOptions<T> extends Omit<UseSseCacheOptions<T[]>, 'transform'> {
+  groupByKey: keyof T;
+}
+
+export interface UseSseCacheGroupedResult<T> extends Omit<UseSseCacheResult<T[]>, 'data'> {
+  groupedData: Record<string, T[]>;
+  rawData: T[] | null;
+}
+
+export function useSseCacheGrouped<T extends Record<string, any>>(
+  options: UseSseCacheGroupedOptions<T>
+): UseSseCacheGroupedResult<T> {
+  const { groupByKey, ...restOptions } = options;
+
+  const [groupedData, setGroupedData] = useState<Record<string, T[]>>({});
+
+  const result = useSseCache<T[]>({
+    ...restOptions,
+    onData: (data) => {
+      if (data && Array.isArray(data)) {
+        const grouped: Record<string, T[]> = {};
+        data.forEach((item) => {
+          const key = String(item[groupByKey]);
+          if (key) {
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push(item);
+          }
+        });
+        setGroupedData(grouped);
+      }
+      restOptions.onData?.(data);
+    }
+  });
+
+  return {
+    ...result,
+    groupedData,
+    rawData: result.data
+  };
 }

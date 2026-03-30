@@ -38,7 +38,7 @@ import PanZoomToggle from 'components/common/PanZoomToggle';
 import { getResponsiveFontSize, fontWeight, getGlassCard } from 'theme/tokens';
 
 // Types - export để page có thể sử dụng
-export type TimeRange = '1D' | '1M' | '3M' | '1Y' | 'ALL';
+export type TimeRange = '1D' | '1M' | '3M' | '1Y';
 type ChartType = 'area' | 'candlestick';
 
 interface PriceData {
@@ -95,6 +95,7 @@ interface StockChartProps {
     // Lifted state từ page
     timeRange: TimeRange;
     onTimeRangeChange: (newTimeRange: TimeRange) => void;
+    onLoadMore?: () => void;
 }
 
 // Transform raw API data to chart format - export để page có thể sử dụng
@@ -226,7 +227,6 @@ const getVisibleRange = (
         case '1Y':
             daysToShow = 252; // ~1 year of trading days
             break;
-        case 'ALL':
         default:
             daysToShow = dataLength;
             break;
@@ -257,7 +257,8 @@ export default function MarketIndexChart({
     isLoading = false,
     error = null,
     timeRange,
-    onTimeRangeChange
+    onTimeRangeChange,
+    onLoadMore
 }: StockChartProps) {
     const router = useRouter();
     const theme = useTheme();
@@ -722,6 +723,31 @@ export default function MarketIndexChart({
         };
     }, [colors, panZoomEnabled]);
 
+    // Ref để tránh stale closure trong event handler
+    const onLoadMoreRef = useRef(onLoadMore);
+    onLoadMoreRef.current = onLoadMore;
+
+    // Trigger onLoadMore khi user scroll sang cạnh trái trong pan/zoom mode
+    useEffect(() => {
+        if (!panZoomEnabled || !chartRef.current) return;
+        const chart = chartRef.current;
+
+        const handler = () => {
+            if (!onLoadMoreRef.current) return;
+            try {
+                const range = chart.timeScale().getVisibleLogicalRange();
+                if (range && range.from < 10) {
+                    onLoadMoreRef.current();
+                }
+            } catch { /* ignore */ }
+        };
+
+        chart.timeScale().subscribeVisibleLogicalRangeChange(handler);
+        return () => {
+            chart.timeScale().unsubscribeVisibleLogicalRangeChange(handler);
+        };
+    }, [panZoomEnabled]);
+
 
 
     // Update chart colors when theme changes (without recreating chart)
@@ -840,7 +866,7 @@ export default function MarketIndexChart({
     };
 
     const handleOpenChart = () => {
-        router.push(`/charts/${symbol}`);
+        router.push(`/charts/${symbol.toUpperCase()}`);
     };
 
 
@@ -1011,7 +1037,7 @@ export default function MarketIndexChart({
                 <TimeframeSelector
                     value={timeRange}
                     onChange={handleTimeRangeChange}
-                    options={['1D', '1M', '3M', '1Y', 'ALL']}
+                    options={['1D', '1M', '3M', '1Y']}
                 />
 
                 {/* Chart type and fullscreen buttons */}

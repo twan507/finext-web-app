@@ -30,7 +30,7 @@ import { CSS } from '@dnd-kit/utilities';
 
 import { getResponsiveFontSize, fontWeight, borderRadius, durations } from 'theme/tokens';
 import { getPriceColor, getVsiColor, getTrendColor } from 'theme/colorHelpers';
-import { useSseCache } from 'hooks/useSseCache';
+import { useSseCache } from 'services/sseClient';
 import { apiClient } from 'services/apiClient';
 import AddWatchlistDialog from '../../watchlist/components/AddWatchlistDialog';
 import ConfirmDialog from '../../watchlist/components/ConfirmDialog';
@@ -736,8 +736,8 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                     </Typography>
                 ) : watchlists.length === 0 ? (
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 3, gap: 1 }}>
-                        <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary' }}>
-                            Chưa có watchlist
+                        <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', fontWeight: fontWeight.medium }}>
+                            Bạn chưa có Watchlist
                         </Typography>
                         <Button
                             size="small"

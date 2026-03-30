@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Box, Skeleton, useTheme, keyframes, CircularProgress } from '@mui/material';
+import { Box, Skeleton, useTheme, keyframes } from '@mui/material';
 
 // Shimmer animation
 const shimmer = keyframes`
@@ -34,7 +34,7 @@ export default function ChartSkeleton() {
         overflow: 'hidden',
       }}
     >
-      {/* Centered loading spinner */}
+      {/* Centered loading dots */}
       <Box
         sx={{
           position: 'absolute',
@@ -47,15 +47,32 @@ export default function ChartSkeleton() {
           justifyContent: 'center',
         }}
       >
-        <CircularProgress
-          variant="determinate"
-          value={100}
+        <Box
           sx={{
-            position: 'absolute',
-            color: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+            display: 'flex',
+            gap: '6px',
+            '& > span': {
+              width: '7px',
+              height: '7px',
+              borderRadius: '50%',
+              bgcolor: 'primary.main',
+              animation: 'dotBounce 1.4s ease-in-out infinite both',
+            },
+            '& > span:nth-child(1)': { animationDelay: '-0.32s' },
+            '& > span:nth-child(2)': { animationDelay: '-0.16s' },
+            '& > span:nth-child(3)': { animationDelay: '0s' },
+            '& > span:nth-child(4)': { animationDelay: '0.16s' },
+            '@keyframes dotBounce': {
+              '0%, 80%, 100%': { transform: 'scale(0.4)', opacity: 0.4 },
+              '40%': { transform: 'scale(1)', opacity: 1 },
+            },
           }}
-        />
-        <CircularProgress />
+        >
+          <span />
+          <span />
+          <span />
+          <span />
+        </Box>
       </Box>
 
       {/* Legend skeleton */}

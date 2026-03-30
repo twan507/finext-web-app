@@ -271,7 +271,7 @@ export default function ResultTable({ data, columns, sortField, sortOrder, onTog
                                                 {/* Ticker text — click opens detail page */}
                                                 <Box
                                                     component="span"
-                                                    onClick={() => isMobile ? router.push(`/stocks/${String(val).toLowerCase()}`) : window.open(`/stocks/${String(val).toLowerCase()}`, '_blank')}
+                                                    onClick={() => router.push(`/stocks/${String(val).toUpperCase()}`)}
                                                     sx={{
                                                         cursor: 'pointer',
                                                         '&:hover': { color: theme.palette.primary.main },
@@ -309,7 +309,7 @@ export default function ResultTable({ data, columns, sortField, sortOrder, onTog
                                                         component="span"
                                                         onClick={(e: React.MouseEvent) => {
                                                             e.stopPropagation();
-                                                            isMobile ? router.push(`/charts/${String(val)}`) : window.open(`/charts/${String(val)}`, '_blank');
+                                                            router.push(`/charts/${String(val).toUpperCase()}`);
                                                         }}
                                                         sx={{
                                                             display: 'inline-flex',

@@ -6,7 +6,7 @@ import { Box, Typography, useTheme, alpha, TextField, InputAdornment, Pagination
 import { Icon } from '@iconify/react';
 import { useRouter } from 'next/navigation';
 import { getResponsiveFontSize, fontWeight, borderRadius, getGlassCard, durations, easings } from 'theme/tokens';
-import { useSseCache } from 'hooks/useSseCache';
+import { useSseCache } from 'services/sseClient';
 import useScreenerStore from 'hooks/useScreenerStore';
 import type { RangeFilter, AdvancedFilter } from 'hooks/useScreenerStore';
 import FilterBar from './components/FilterBar';

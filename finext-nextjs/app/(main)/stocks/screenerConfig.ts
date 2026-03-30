@@ -55,7 +55,7 @@ export const ALL_COLUMNS: ColumnDef[] = [
     { field: 'y_pct', label: '% Năm', group: 'change', width: 80, align: 'right', format: 'pct', sortable: true },
 
     // Volume indicators
-    { field: 'vsi', label: 'VSI', group: 'price', width: 75, align: 'right', format: 'vsi', sortable: true },
+    { field: 'vsi', label: 'CSTK', group: 'price', width: 75, align: 'right', format: 'vsi', sortable: true },
 
     // Dòng tiền & Xếp hạng
     { field: 't0_score', label: 'DT Phiên', group: 'cashflow', width: 75, align: 'right', format: 'flow', sortable: true },

@@ -1,10 +1,14 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Box, Typography, useTheme, useMediaQuery, alpha, Chip, Collapse } from '@mui/material';
 import { getResponsiveFontSize, fontWeight, borderRadius, getGlassCard } from 'theme/tokens';
+import usePriceMapStore from 'hooks/usePriceMapStore';
 
 // ─── Types ───────────────────────────────────────────────────────────────────────
+
+import type { TimeframeKey, GroupKey } from 'hooks/usePriceMapStore';
 
 interface VNINDEXPriceMapProps {
     chartIndicatorData: Record<string, any> | null;
@@ -12,9 +16,6 @@ interface VNINDEXPriceMapProps {
     currentDiff?: number;
     currentPctChange?: number;
 }
-
-type TimeframeKey = 'w' | 'm' | 'q' | 'y';
-type GroupKey = 'ma' | 'open_high_low' | 'pivot' | 'fibonacci' | 'volume_profile';
 
 interface PriceLevel {
     price: number;
@@ -114,9 +115,6 @@ function buildFieldDefs(): FieldDef[] {
 
 const ALL_FIELD_DEFS = buildFieldDefs();
 
-const DEFAULT_TIMEFRAMES = new Set<TimeframeKey>(['m', 'q']);
-const DEFAULT_GROUPS = new Set<GroupKey>(['ma', 'open_high_low', 'pivot', 'fibonacci']);
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────────
 
 function formatPrice(price: number): string {
@@ -171,30 +169,14 @@ function clusterLevels(levels: PriceLevel[]): ConfluenceCluster[] {
 // ─── Component ───────────────────────────────────────────────────────────────────
 
 export default function VNINDEXPriceMap({ chartIndicatorData, currentPrice, currentDiff, currentPctChange }: VNINDEXPriceMapProps) {
+    const router = useRouter();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-    const [enabledTimeframes, setEnabledTimeframes] = useState<Set<TimeframeKey>>(DEFAULT_TIMEFRAMES);
-    const [enabledGroups, setEnabledGroups] = useState<Set<GroupKey>>(DEFAULT_GROUPS);
+    const { enabledTimeframes, enabledGroups, toggleTimeframe, toggleGroup } = usePriceMapStore();
     const [resistanceCollapsed, setResistanceCollapsed] = useState(false);
     const [supportCollapsed, setSupportCollapsed] = useState(false);
-
-    const toggleTimeframe = (tf: TimeframeKey) => {
-        setEnabledTimeframes(prev => {
-            const next = new Set(prev);
-            if (next.has(tf)) next.delete(tf); else next.add(tf);
-            return next;
-        });
-    };
-
-    const toggleGroup = (g: GroupKey) => {
-        setEnabledGroups(prev => {
-            const next = new Set(prev);
-            if (next.has(g)) next.delete(g); else next.add(g);
-            return next;
-        });
-    };
 
     const priceLevels = useMemo<PriceLevel[]>(() => {
         if (!chartIndicatorData || currentPrice <= 0) return [];
@@ -213,9 +195,11 @@ export default function VNINDEXPriceMap({ chartIndicatorData, currentPrice, curr
         return levels;
     }, [chartIndicatorData, currentPrice, enabledTimeframes, enabledGroups]);
 
-    const clusters = useMemo(() => clusterLevels(priceLevels), [priceLevels]);
-    const aboveClusters = clusters.filter(c => c.avgPctDiff > 0.01);
-    const belowClusters = clusters.filter(c => c.avgPctDiff <= 0.01);
+    const { aboveClusters, belowClusters } = useMemo(() => {
+        const above = priceLevels.filter(l => l.pctDiff > 0.01);
+        const below = priceLevels.filter(l => l.pctDiff <= 0.01);
+        return { aboveClusters: clusterLevels(above), belowClusters: clusterLevels(below) };
+    }, [priceLevels]);
 
     const getTimeframeColor = (tf: TimeframeKey | null, field?: string): string => {
         if (tf) return isDark ? TIMEFRAME_COLORS[tf].dark : TIMEFRAME_COLORS[tf].light;
@@ -253,10 +237,8 @@ export default function VNINDEXPriceMap({ chartIndicatorData, currentPrice, curr
                         MA TRẬN HỢP LƯU KỸ THUẬT CHỈ SỐ VNINDEX
                     </Typography>
                     <Box
-                        component={isMobile ? 'span' : 'a'}
-                        href={isMobile ? undefined : '/charts/vnindex'}
-                        target={isMobile ? undefined : '_blank'}
-                        onClick={isMobile ? () => window.open('/charts/vnindex', '_blank') : undefined}
+                        component="span"
+                        onClick={() => router.push('/charts/VNINDEX')}
                         sx={{ textDecoration: 'none', cursor: 'pointer' }}
                     >
                         <Typography sx={{

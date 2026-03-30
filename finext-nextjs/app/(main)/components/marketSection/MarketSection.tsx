@@ -55,6 +55,7 @@ interface MarketSectionProps {
     onIndexTabChange: Dispatch<SetStateAction<IndexTabType>>;
     onTickerChange: (newTicker: string) => void;
     todayAllData: IndexDataByTicker;
+    onLoadMore?: () => void;
 }
 
 // ========== INDEX TABLES SECTION (Single merged table on mobile, Row on desktop) ==========
@@ -139,6 +140,7 @@ export default function MarketSection({
     onIndexTabChange,
     onTickerChange,
     todayAllData,
+    onLoadMore,
 }: MarketSectionProps) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
@@ -198,6 +200,7 @@ export default function MarketSection({
                         error={error}
                         timeRange={timeRange}
                         onTimeRangeChange={onTimeRangeChange}
+                        onLoadMore={onLoadMore}
                     />
                 </Box>
 

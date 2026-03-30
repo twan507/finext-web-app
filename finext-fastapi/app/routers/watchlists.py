@@ -62,11 +62,9 @@ async def create_new_watchlist(  # Đổi tên hàm cho rõ ràng
 @api_response_wrapper(default_success_message="Lấy danh sách theo dõi thành công.")
 async def read_my_watchlists(
     current_user: UserInDB = Depends(get_current_active_user),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
-    watchlists_in_db = await crud_watchlists.get_watchlists_by_user_id(db, user_id=current_user.id, skip=skip, limit=limit)  # type: ignore
+    watchlists_in_db = await crud_watchlists.get_watchlists_by_user_id(db, user_id=current_user.id)  # type: ignore
     return [WatchlistPublic.model_validate(wl) for wl in watchlists_in_db]
 
 
