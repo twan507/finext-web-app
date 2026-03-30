@@ -19,9 +19,9 @@ import { getResponsiveFontSize, fontWeight, borderRadius, getGlassCard, getGlass
 
 const subjectOptions = [
     'Hướng dẫn sử dụng sản phẩm Finext',
-    'Tư vấn danh mục đầu tư',
-    'Tư vấn phân tích kỹ thuật',
-    'Tư vấn quản lý rủi ro',
+    'Trao đổi về danh mục đầu tư',
+    'Trao đổi về phân tích kỹ thuật',
+    'Trao đổi về quản lý rủi ro',
     'Khác',
 ];
 
@@ -74,7 +74,7 @@ export default function ConsultationContent() {
             lastSubmitRef.current = Date.now(); // Ghi nhận thời điểm gửi thành công
             setSnack({
                 open: true,
-                message: res.data?.message || 'Yêu cầu tư vấn đã được gửi thành công!',
+                message: res.data?.message || 'Yêu cầu trao đổi đã được gửi thành công!',
                 severity: 'success',
             });
 
@@ -173,7 +173,7 @@ export default function ConsultationContent() {
                         mb: 1,
                     }}
                 >
-                    Đặt lịch tư vấn cá nhân
+                    Đặt lịch trao đổi
                 </Typography>
                 <Typography
                     sx={{
@@ -224,7 +224,7 @@ export default function ConsultationContent() {
                     {/* Subject */}
                     <TextField
                         select
-                        label="Chủ đề tư vấn"
+                        label="Chủ đề trao đổi"
                         value={subject}
                         onChange={(e) => setSubject(e.target.value)}
                         fullWidth
@@ -269,7 +269,7 @@ export default function ConsultationContent() {
                             },
                         }}
                     >
-                        {submitting ? 'Đang gửi...' : 'Đặt lịch tư vấn'}
+                        {submitting ? 'Đang gửi...' : 'Đặt lịch trao đổi'}
                     </Button>
                 </Box>
             </Card>

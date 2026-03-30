@@ -93,8 +93,8 @@ class LicenseInDB(LicenseBase):  # Kế thừa is_active
         json_schema_extra={
             "example": {
                 "id": "60d5ec49f7b4e6a0e7d5c2b2",
-                "key": "PRO",
-                "name": "Gói Chuyên Nghiệp",
+                "key": "PATRON",
+                "name": "Gói Patron",
                 "price": 99.99,
                 "duration_days": 365,
                 "feature_keys": [
@@ -102,7 +102,7 @@ class LicenseInDB(LicenseBase):  # Kế thừa is_active
                     "export_data",
                     "enable_pro_indicator",
                 ],
-                "color": "#1976D2",
+                "color": "#ed6c02",
                 "is_active": True,  # MỚI
                 "created_at": "2023-10-27T10:00:00Z",
                 "updated_at": "2023-10-27T10:00:00Z",

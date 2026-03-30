@@ -82,11 +82,11 @@ export default function AuthGateOverlay({ compact = false }: AuthGateOverlayProp
                     />
 
                     <Typography sx={{ fontSize: compact ? '1rem' : { xs: '1.2rem', sm: '1.4rem' }, fontWeight: 800, color: 'text.primary', mb: 1 }}>
-                        Tính năng dành riêng cho hội viên Professional
+                        Tính năng dành riêng cho hội viên Patron
                     </Typography>
 
                     <Typography sx={{ fontSize: compact ? '0.75rem' : '0.85rem', color: 'text.secondary', mb: 1.5 }}>
-                        Finext cung cấp cho hội viên chuyên nghiệp bộ công cụ phân tích cao cấp, giúp bạn đưa ra quyết định đầu tư chính xác và hiệu quả hơn.
+                        Ủng hộ Finext để mở khóa bộ công cụ phân tích nâng cao — dữ liệu chuyên sâu, bộ lọc thông minh và nhiều tính năng khác.
                     </Typography>
 
                     <Button
@@ -112,13 +112,13 @@ export default function AuthGateOverlay({ compact = false }: AuthGateOverlayProp
                             '&:active': { transform: 'translateY(0)' },
                         }}
                     >
-                        {'Trải nghiệm ngay'}
+                        {'Trở thành Patron'}
                     </Button>
 
                     {!compact && (
                         <Typography sx={{ fontSize: '0.72rem', color: 'text.disabled', mt: 2, maxWidth: 340, mx: 'auto', lineHeight: 1.6 }}>
-                            Hơn 10.000+ nhà đầu tư đang sử dụng các công cụ này.{'\n'}
-                            Cam kết dữ liệu chính xác và hiệu quả đầu tư vượt trội.
+                            Hơn 10.000+ người dùng đang sử dụng Finext.{' '}
+                            Dữ liệu mang tính chất tham khảo, không phải khuyến nghị đầu tư.
                         </Typography>
                     )}
                 </>

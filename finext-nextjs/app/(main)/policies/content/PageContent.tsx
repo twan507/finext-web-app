@@ -81,7 +81,7 @@ export default function ContentPolicyContent() {
         <ul>
           <li>Dữ liệu giá cổ phiếu, chỉ số (VNINDEX, VN30, HNX, UPCOM...) được tổng hợp từ các
             nguồn công khai và đối tác cung cấp dữ liệu tài chính</li>
-          <li>Dữ liệu có thể có độ trễ nhất định so với thời gian thực tùy thuộc vào gói dịch vụ</li>
+          <li>Dữ liệu có thể có độ trễ nhất định so với thời gian thực tùy thuộc vào gói đăng ký</li>
           <li>Finext nỗ lực đảm bảo tính chính xác nhưng không chịu trách nhiệm cho sai sót từ
             nguồn cung cấp bên thứ ba</li>
         </ul>

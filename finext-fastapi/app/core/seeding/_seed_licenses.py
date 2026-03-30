@@ -30,7 +30,7 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
             "price": 0,
             "duration_days": 99999,
             "feature_keys": [fkey for fkey in ALL_DEFAULT_FEATURE_KEYS if fkey != "admin_feature"],
-            "color": "#DA7901",
+            "color": "#C21884",
         },
         {
             "key": "PARTNER",
@@ -45,15 +45,15 @@ async def seed_licenses(db: AsyncIOMotorDatabase) -> Dict[str, PyObjectId]:
             "color": "#8E1FCE",
         },
         {
-            "key": "PRO",
-            "name": "License Chuyên Nghiệp",
+            "key": "PATRON",
+            "name": "License Người ủng hộ",
             "price": 10000000,
             "duration_days": 365,
             "feature_keys": [
                 "basic_feature",
                 "advanced_feature",
             ],
-            "color": "#C21884",
+            "color": "#ed6c02",
         },
         {
             "key": "BASIC",

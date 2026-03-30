@@ -25,23 +25,23 @@ import {
     getGlowButton,
 } from 'theme/tokens';
 
-// ── Plan tiers ──
+// ── Support tiers ──
 const plans = [
     {
         id: 'BASIC',
-        label: 'Basic',
+        label: 'Cộng đồng',
         icon: 'mdi:sprout',
         color: '#25b770',
-        description: 'Công cụ phân tích thị trường cốt lõi — lý tưởng cho nhà đầu tư mới bắt đầu hành trình.',
+        description: 'Truy cập miễn phí các công cụ phân tích cốt lõi — dành cho mọi người dùng Finext.',
         features: ['Dữ liệu thị trường realtime', 'Bảng giá & chỉ số tổng quan', 'Phân tích ngành & nhóm ngành', 'Cộng đồng nhà đầu tư Finext'],
     },
     {
-        id: 'PROFESSIONAL',
-        label: 'Professional',
-        icon: 'mdi:crown',
-        color: '#8b5cf6',
-        description: 'Bộ công cụ phân tích chuyên sâu đầy đủ nhất — dành cho nhà đầu tư nghiêm túc và chuyên nghiệp.',
-        features: ['Tất cả tính năng Basic', 'Bộ lọc cổ phiếu đa tiêu chí (50+ chỉ báo)', 'Phân tích kỹ thuật & dòng tiền nâng cao', 'Báo cáo định kỳ & bản tin thị trường', 'Nhóm Zalo VIP & tư vấn chuyên gia 1:1', 'Hỗ trợ ưu tiên'],
+        id: 'PATRON',
+        label: 'Hội viên Patron',
+        icon: 'mdi:handshake',
+        color: '#ed6c02',
+        description: 'Ủng hộ dự án Finext để duy trì & phát triển nền tảng — nhận quyền truy cập vĩnh viễn toàn bộ tính năng nâng cao.',
+        features: ['Tất cả tính năng Cộng đồng', 'Bộ lọc cổ phiếu đa tiêu chí (50+ chỉ báo)', 'Phân tích kỹ thuật & dòng tiền nâng cao', 'Báo cáo định kỳ & bản tin thị trường', 'Nhóm Zalo VIP & trao đổi 1:1 với đội ngũ Finext', 'Hỗ trợ ưu tiên'],
     },
 ];
 
@@ -55,7 +55,7 @@ const benefits = [
     {
         icon: 'fluent-color:arrow-trending-lines-24',
         title: 'Phân tích kỹ thuật chuyên sâu',
-        description: 'Hơn 50 chỉ báo kỹ thuật, bộ lọc đa tiêu chí và tín hiệu giao dịch được xây dựng bởi đội ngũ chuyên gia.',
+        description: 'Hơn 50 chỉ báo kỹ thuật, bộ lọc đa tiêu chí và tín hiệu giao dịch được xây dựng bởi đội ngũ Finext.',
     },
     {
         icon: 'fluent-color:poll-16',
@@ -69,8 +69,8 @@ const benefits = [
     },
     {
         icon: 'mdi:account-tie',
-        title: 'Tư vấn từ chuyên gia',
-        description: 'Hỗ trợ 1:1 từ đội ngũ chuyên gia giàu kinh nghiệm giúp xây dựng chiến lược đầu tư phù hợp với mục tiêu.',
+        title: 'Hỗ trợ từ đội ngũ Finext',
+        description: 'Hỗ trợ 1:1 từ đội ngũ Finext — chia sẻ góc nhìn và hỗ trợ bạn tìm hiểu phương pháp đầu tư phù hợp với mục tiêu.',
     },
     {
         icon: 'mdi:account-group',
@@ -83,18 +83,18 @@ const benefits = [
 const steps = [
     {
         number: '01',
-        title: 'Chọn gói & đăng ký',
-        description: 'Chọn gói quan tâm và điền thông tin liên hệ vào form bên dưới.',
+        title: 'Đăng ký ủng hộ',
+        description: 'Điền thông tin liên hệ vào form bên dưới để đăng ký đồng hành cùng Finext.',
     },
     {
         number: '02',
-        title: 'Nhận tư vấn từ Finext',
-        description: 'Đội ngũ Finext sẽ liên hệ trong vòng 24h để tư vấn chi tiết và hướng dẫn kích hoạt.',
+        title: 'Nhận hướng dẫn từ Finext',
+        description: 'Đội ngũ Finext sẽ liên hệ trong vòng 24h để hướng dẫn chi tiết và kích hoạt quyền truy cập.',
     },
     {
         number: '03',
-        title: 'Trải nghiệm đầy đủ',
-        description: 'Tận hưởng toàn bộ tính năng của gói bạn chọn — ngay lập tức sau khi kích hoạt.',
+        title: 'Truy cập vĩnh viễn',
+        description: 'Mở khóa toàn bộ tính năng nâng cao — vĩnh viễn, không giới hạn thời gian.',
     },
 ];
 
@@ -143,14 +143,14 @@ export default function PlansPageContent() {
                     customer_name: name.trim(),
                     phone_number: phone.trim(),
                     customer_email: email.trim() || null,
-                    plan_interest: 'PROFESSIONAL',
+                    plan_interest: 'PATRON',
                     note: note.trim() || null,
                 },
             });
             lastSubmitRef.current = Date.now();
             setSnack({
                 open: true,
-                message: res.data?.message || 'Đăng ký thành công! Finext sẽ liên hệ tư vấn cho bạn sớm nhất.',
+                message: res.data?.message || 'Đăng ký thành công! Đội ngũ Finext sẽ liên hệ bạn sớm nhất.',
                 severity: 'success',
             });
             setName('');
@@ -221,7 +221,7 @@ export default function PlansPageContent() {
                         mb: 2.5,
                     }}
                 >
-                    <Icon icon="mdi:crown-outline" width={36} height={36} color={theme.palette.primary.main} />
+                    <Icon icon="mdi:heart-outline" width={36} height={36} color={theme.palette.primary.main} />
                 </Box>
 
                 <Typography
@@ -233,7 +233,7 @@ export default function PlansPageContent() {
                         lineHeight: 1.25,
                     }}
                 >
-                    Nâng cấp trải nghiệm với{' '}
+                    Đồng hành cùng{' '}
                     <Box
                         component="span"
                         sx={{
@@ -246,7 +246,7 @@ export default function PlansPageContent() {
                             WebkitTextFillColor: 'transparent',
                         }}
                     >
-                        Finext Professional
+                        Finext
                     </Box>
                 </Typography>
 
@@ -254,14 +254,15 @@ export default function PlansPageContent() {
                     sx={{
                         fontSize: getResponsiveFontSize('lg'),
                         color: theme.palette.text.secondary,
-                        maxWidth: 600,
+                        maxWidth: 750,
                         mx: 'auto',
                         mb: 3.5,
                         lineHeight: 1.7,
                     }}
                 >
-                    Bạn đang dùng gói Basic miễn phí — hãy nâng cấp lên <strong>Professional</strong> để mở khóa toàn bộ
-                    công cụ phân tích chuyên sâu, bộ lọc cổ phiếu thông minh và quyền lợi tư vấn 1:1 từ chuyên gia.
+                    Finext là nền tảng dữ liệu chứng khoán độc lập, được duy trì và phát triển bởi cộng đồng.
+                    Sự đồng hành của bạn giúp nền tảng tiếp tục phát triển — đổi lại, bạn nhận quyền truy cập{' '}
+                    <strong style={{ color: theme.palette.primary.main }}>vĩnh viễn</strong> toàn bộ công cụ phân tích nâng cao.
                 </Typography>
 
                 <Button
@@ -283,7 +284,7 @@ export default function PlansPageContent() {
                         },
                     }}
                 >
-                    Đăng ký tư vấn miễn phí
+                    Ủng hộ ngay
                 </Button>
             </Box>
 
@@ -300,7 +301,7 @@ export default function PlansPageContent() {
                         mb: 4,
                     }}
                 >
-                    Các gói thành viên
+                    Hình thức đồng hành
                 </Typography>
 
                 <Box
@@ -308,12 +309,12 @@ export default function PlansPageContent() {
                         display: 'grid',
                         gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
                         gap: 2.5,
-                        maxWidth: 720,
+                        maxWidth: 780,
                         mx: 'auto',
                     }}
                 >
                     {plans.map((plan) => {
-                        const isSelected = plan.id === 'PROFESSIONAL';
+                        const isSelected = plan.id === 'PATRON';
                         return (
                             <Card
                                 key={plan.id}
@@ -398,7 +399,7 @@ export default function PlansPageContent() {
                         mb: 1.5,
                     }}
                 >
-                    Tại sao chọn Finext?
+                    Bạn nhận được gì khi ủng hộ?
                 </Typography>
                 <Typography sx={{
                     fontSize: getResponsiveFontSize('md'),
@@ -406,7 +407,7 @@ export default function PlansPageContent() {
                     textAlign: 'center',
                     mb: 4,
                 }}>
-                    Nền tảng phân tích đầu tư chứng khoán toàn diện — được xây dựng bởi chuyên gia.
+                    Toàn bộ tính năng nâng cao được mở khóa vĩnh viễn — cảm ơn bạn đã đồng hành cùng Finext.
                 </Typography>
 
                 <Box
@@ -455,7 +456,7 @@ export default function PlansPageContent() {
             </Box>
 
             {/* ══════════════════════════════════
-                 HOW IT WORKS
+                 HOW IT WORKS (3 Steps)
             ══════════════════════════════════ */}
             <Box sx={{ mb: { xs: 5, md: 7 } }}>
                 <Typography
@@ -464,7 +465,7 @@ export default function PlansPageContent() {
                         fontWeight: fontWeight.bold,
                         color: theme.palette.text.primary,
                         textAlign: 'center',
-                        mb: 4,
+                        mb: { xs: 3, md: 4 },
                     }}
                 >
                     Chỉ 3 bước để bắt đầu
@@ -472,46 +473,86 @@ export default function PlansPageContent() {
 
                 <Box
                     sx={{
-                        display: 'grid',
-                        gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
-                        gap: 2.5,
+                        display: 'flex',
+                        flexDirection: { xs: 'column', md: 'row' },
+                        gap: { xs: 2, md: 3 },
+                        justifyContent: 'center',
                     }}
                 >
-                    {steps.map((step, i) => (
-                        <Card key={step.number} sx={{ ...cardStyle, p: 3, textAlign: 'center' }}>
-                            <Typography
+                    {steps.map((step, idx) => (
+                        <Box
+                            key={step.number}
+                            sx={{
+                                flex: 1,
+                                position: 'relative',
+                                textAlign: 'center',
+                                px: 2,
+                            }}
+                        >
+                            {/* Connector line for desktop */}
+                            {!isMobile && idx < steps.length - 1 && (
+                                <Box
+                                    sx={{
+                                        position: 'absolute',
+                                        top: 28,
+                                        right: -20,
+                                        width: 40,
+                                        height: 2,
+                                        background: isDark
+                                            ? 'linear-gradient(90deg, rgba(139,92,246,0.4), rgba(59,130,246,0.4))'
+                                            : 'linear-gradient(90deg, rgba(139,92,246,0.25), rgba(59,130,246,0.25))',
+                                        zIndex: 0,
+                                    }}
+                                />
+                            )}
+
+                            <Box
                                 sx={{
-                                    fontSize: '2.5rem',
-                                    fontWeight: fontWeight.extrabold,
-                                    lineHeight: 1,
-                                    mb: 1.5,
+                                    width: 56,
+                                    height: 56,
+                                    borderRadius: '50%',
                                     background: isDark
-                                        ? 'linear-gradient(135deg, #c4b5fd 0%, #93c5fd 100%)'
-                                        : 'linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%)',
-                                    backgroundClip: 'text',
-                                    WebkitBackgroundClip: 'text',
-                                    color: 'transparent',
-                                    WebkitTextFillColor: 'transparent',
+                                        ? 'linear-gradient(135deg, #7c3aed, #3b82f6)'
+                                        : 'linear-gradient(135deg, #8b5cf6, #60a5fa)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    mx: 'auto',
+                                    mb: 1.5,
+                                    position: 'relative',
+                                    zIndex: 1,
                                 }}
                             >
-                                {step.number}
-                            </Typography>
-                            <Typography sx={{
-                                fontSize: getResponsiveFontSize('md'),
-                                fontWeight: fontWeight.semibold,
-                                color: theme.palette.text.primary,
-                                mb: 1,
-                            }}>
+                                <Typography
+                                    sx={{
+                                        fontSize: getResponsiveFontSize('lg'),
+                                        fontWeight: fontWeight.bold,
+                                        color: '#fff',
+                                    }}
+                                >
+                                    {step.number}
+                                </Typography>
+                            </Box>
+                            <Typography
+                                sx={{
+                                    fontSize: getResponsiveFontSize('md'),
+                                    fontWeight: fontWeight.semibold,
+                                    color: theme.palette.text.primary,
+                                    mb: 0.5,
+                                }}
+                            >
                                 {step.title}
                             </Typography>
-                            <Typography sx={{
-                                fontSize: getResponsiveFontSize('sm'),
-                                color: theme.palette.text.secondary,
-                                lineHeight: 1.65,
-                            }}>
+                            <Typography
+                                sx={{
+                                    fontSize: getResponsiveFontSize('sm'),
+                                    color: theme.palette.text.secondary,
+                                    lineHeight: 1.5,
+                                }}
+                            >
                                 {step.description}
                             </Typography>
-                        </Card>
+                        </Box>
                     ))}
                 </Box>
             </Box>
@@ -531,17 +572,17 @@ export default function PlansPageContent() {
                                 mb: 1,
                             }}
                         >
-                            Đăng ký tư vấn miễn phí
+                            Đăng ký ủng hộ dự án
                         </Typography>
                         <Typography sx={{
                             fontSize: getResponsiveFontSize('md'),
                             color: theme.palette.text.secondary,
                         }}>
-                            Điền thông tin bên dưới — đội ngũ Finext sẽ liên hệ trong vòng 24 giờ.
+                            Để lại thông tin — đội ngũ Finext sẽ liên hệ hướng dẫn trong vòng 24 giờ.
                         </Typography>
                     </Box>
 
-{/* Fields */}
+                    {/* Fields */}
                     <Box
                         sx={{
                             display: 'grid',
@@ -617,7 +658,7 @@ export default function PlansPageContent() {
                         ) : (
                             <>
                                 <Icon icon="mdi:send" width={18} height={18} style={{ marginRight: 8 }} />
-                                Gửi yêu cầu tư vấn
+                                Gửi yêu cầu
                             </>
                         )}
                     </Button>
@@ -630,7 +671,7 @@ export default function PlansPageContent() {
                             mt: 2,
                         }}
                     >
-                        Thông tin của bạn được bảo mật tuyệt đối và chỉ dùng để liên hệ tư vấn.
+                        Thông tin của bạn được bảo mật tuyệt đối và chỉ dùng để liên hệ hỗ trợ.
                     </Typography>
                 </Card>
             </Box>

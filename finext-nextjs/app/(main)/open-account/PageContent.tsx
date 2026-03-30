@@ -34,8 +34,8 @@ const benefits = [
     },
     {
         icon: 'mdi:account-tie',
-        title: 'Tư vấn từ chuyên gia',
-        description: 'Nhận hỗ trợ 1:1 từ đội ngũ chuyên gia giàu kinh nghiệm — giúp bạn xây dựng chiến lược đầu tư phù hợp với mục tiêu tài chính.',
+        title: 'Hỗ trợ từ đội ngũ Finext',
+        description: 'Nhận hỗ trợ 1:1 từ đội ngũ Finext — chia sẻ góc nhìn và hỗ trợ bạn tìm hiểu phương pháp đầu tư phù hợp với mục tiêu tài chính.',
     },
     {
         icon: 'mdi:account-group',
@@ -68,7 +68,7 @@ const steps = [
     },
     {
         number: '02',
-        title: 'Nhận tư vấn từ Finext',
+        title: 'Nhận hỗ trợ từ Finext',
         description: 'Đội ngũ Finext sẽ liên hệ hướng dẫn bạn mở tài khoản chứng khoán.',
     },
     {
@@ -237,8 +237,8 @@ export default function OpenAccountContent() {
                         mb: 3,
                     }}
                 >
-                    Mở tài khoản chứng khoán theo hướng dẫn của Finext để được kích hoạt toàn bộ tính năng nâng cao, 
-                    nhận tư vấn từ chuyên gia và nhiều đặc quyền khác —{' '}
+                    Mở tài khoản chứng khoán theo hướng dẫn của Finext để được kích hoạt toàn bộ tính năng nâng cao,
+                    nhận hỗ trợ từ đội ngũ Finext và nhiều đặc quyền khác —{' '}
                     <strong>hoàn toàn miễn phí, không giới hạn thời gian.</strong>
                 </Typography>
 
@@ -554,7 +554,7 @@ export default function OpenAccountContent() {
                                     color: theme.palette.text.disabled,
                                 }}
                             >
-                                Thông tin của bạn được bảo mật và chỉ dùng để liên hệ tư vấn.
+                                Thông tin của bạn được bảo mật và chỉ dùng để liên hệ hỗ trợ.
                             </Typography>
                         </Box>
                     </Box>

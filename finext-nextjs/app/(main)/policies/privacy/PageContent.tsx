@@ -66,12 +66,12 @@ export default function PrivacyPolicyContent() {
       <Divider sx={{ mb: 4 }} />
 
       <Section title="1. Giới thiệu">
-        Finext (&quot;chúng tôi&quot;, &quot;nền tảng&quot;) cam kết bảo vệ quyền riêng tư và
+        Finext (&quot;chúng tôi&quot;, &quot;nền tảng&quot;) coi trọng và bảo vệ quyền riêng tư và
         thông tin cá nhân của người dùng. Chính sách bảo mật này giải thích cách chúng tôi thu
         thập, sử dụng, lưu trữ và bảo vệ dữ liệu của bạn khi sử dụng nền tảng phân tích chứng
         khoán Finext.
         <br /><br />
-        Bằng việc sử dụng dịch vụ của Finext, bạn đồng ý với các điều khoản được mô tả trong
+        Bằng việc sử dụng nền tảng Finext, bạn đồng ý với các điều khoản được mô tả trong
         chính sách này.
       </Section>
 
@@ -95,11 +95,11 @@ export default function PrivacyPolicyContent() {
       <Section title="3. Mục đích sử dụng thông tin">
         Chúng tôi sử dụng thông tin thu thập được cho các mục đích sau:
         <ul>
-          <li>Cung cấp và duy trì dịch vụ phân tích chứng khoán</li>
+          <li>Cung cấp và duy trì nền tảng phân tích chứng khoán</li>
           <li>Xác thực danh tính và quản lý phiên đăng nhập</li>
           <li>Cá nhân hóa trải nghiệm: hiển thị dữ liệu thị trường, biểu đồ và báo cáo phù hợp</li>
           <li>Quản lý gói đăng ký và quyền truy cập tính năng</li>
-          <li>Gửi thông báo quan trọng về tài khoản hoặc thay đổi dịch vụ</li>
+          <li>Gửi thông báo quan trọng về tài khoản hoặc thay đổi nền tảng</li>
           <li>Cải thiện chất lượng sản phẩm và trải nghiệm người dùng</li>
           <li>Phát hiện và ngăn chặn các hành vi gian lận, truy cập trái phép</li>
         </ul>
@@ -140,7 +140,7 @@ export default function PrivacyPolicyContent() {
 
       <Section title="6. Lưu trữ và thời hạn giữ dữ liệu">
         <ul>
-          <li>Dữ liệu tài khoản được lưu trữ trong suốt thời gian bạn sử dụng dịch vụ</li>
+          <li>Dữ liệu tài khoản được lưu trữ trong suốt thời gian bạn sử dụng nền tảng</li>
           <li>Khi bạn yêu cầu xóa tài khoản, chúng tôi sẽ xóa hoặc ẩn danh hóa dữ liệu cá nhân
             trong vòng 30 ngày làm việc</li>
           <li>Một số dữ liệu có thể được giữ lại để tuân thủ nghĩa vụ pháp lý hoặc giải quyết
@@ -153,7 +153,7 @@ export default function PrivacyPolicyContent() {
         <ul>
           <li>Duy trì phiên đăng nhập và trạng thái xác thực</li>
           <li>Lưu tùy chọn giao diện (chế độ sáng/tối, ngôn ngữ)</li>
-          <li>Phân tích hành vi sử dụng nhằm cải thiện dịch vụ</li>
+          <li>Phân tích hành vi sử dụng nhằm cải thiện nền tảng</li>
         </ul>
         Bạn có thể quản lý cookie thông qua cài đặt trình duyệt. Tuy nhiên, việc tắt cookie có
         thể ảnh hưởng đến trải nghiệm sử dụng.
@@ -173,7 +173,7 @@ export default function PrivacyPolicyContent() {
 
       <Section title="9. Thay đổi chính sách">
         Chúng tôi có thể cập nhật chính sách bảo mật này theo thời gian. Mọi thay đổi quan trọng
-        sẽ được thông báo qua email hoặc thông báo trên nền tảng. Việc tiếp tục sử dụng dịch vụ
+        sẽ được thông báo qua email hoặc thông báo trên nền tảng. Việc tiếp tục sử dụng nền tảng
         sau khi chính sách được cập nhật đồng nghĩa với việc bạn chấp nhận các thay đổi đó.
       </Section>
 

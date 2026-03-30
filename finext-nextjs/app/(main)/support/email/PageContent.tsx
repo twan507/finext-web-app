@@ -22,7 +22,7 @@ const FINEXT_EMAIL = 'finext.vn@gmail.com';
 
 const subjectOptions = [
     'Hỗ trợ kỹ thuật',
-    'Tư vấn dịch vụ',
+    'Hỗ trợ sản phẩm',
     'Góp ý & Phản hồi',
     'Hợp tác kinh doanh',
     'Khác',

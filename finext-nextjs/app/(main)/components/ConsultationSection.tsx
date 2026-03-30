@@ -62,7 +62,7 @@ export default function ConsultationSection() {
                                 maxWidth: '600px'
                             }}
                         >
-                            Mở tài khoản chứng khoán và nhận tư vấn 1:1 từ chuyên gia
+                            Mở tài khoản chứng khoán và nhận hỗ trợ 1:1 từ đội ngũ Finext
                         </Typography>
                         <Typography
                             variant="body1"
@@ -75,7 +75,7 @@ export default function ConsultationSection() {
                                 mx: { xs: 'auto', md: 0 }
                             }}
                         >
-                            Đừng bỏ lỡ cơ hội gia tăng tài sản nhờ những quyết định đầu tư kịp thời và phương pháp quản lý danh mục bài bản, hiệu quả.
+                            Đừng bỏ lỡ cơ hội gia tăng tài sản nhờ những quyết định đầu tư kịp thời và phương pháp phân bổ vốn bài bản, hiệu quả.
                         </Typography>
                         <Button
                             variant="contained"

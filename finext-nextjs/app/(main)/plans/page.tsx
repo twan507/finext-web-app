@@ -2,11 +2,11 @@ import { Metadata } from 'next';
 import PageContent from './PageContent';
 
 export const metadata: Metadata = {
-  title: 'Các gói thành viên',
-  description: 'Khám phá các gói thành viên Finext — mở khóa toàn bộ dữ liệu phân tích chuyên sâu, tín hiệu giao dịch và tính năng nâng cao.',
+  title: 'Ủng hộ Finext',
+  description: 'Ủng hộ dự án Finext — đồng hành cùng đội ngũ phát triển và nhận quyền truy cập vĩnh viễn toàn bộ tính năng nâng cao.',
   openGraph: {
-    title: 'Các gói thành viên | Finext',
-    description: 'Khám phá các gói thành viên Finext — mở khóa toàn bộ dữ liệu phân tích và tính năng nâng cao.',
+    title: 'Ủng hộ Finext | Support Us',
+    description: 'Ủng hộ dự án Finext — đồng hành cùng đội ngũ phát triển và nhận quyền truy cập vĩnh viễn tính năng nâng cao.',
   },
 };
 

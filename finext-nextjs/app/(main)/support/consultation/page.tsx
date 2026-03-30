@@ -2,11 +2,11 @@ import { Metadata } from 'next';
 import PageContent from './PageContent';
 
 export const metadata: Metadata = {
-  title: 'Đặt lịch tư vấn cá nhân',
-  description: 'Đặt lịch hẹn tư vấn 1-1 với chuyên gia tài chính của Finext.',
+  title: 'Đặt lịch trao đổi',
+  description: 'Đặt lịch trao đổi 1-1 với đội ngũ Finext về phân tích và dữ liệu chứng khoán.',
   openGraph: {
-    title: 'Đặt lịch tư vấn cá nhân | Finext',
-    description: 'Đặt lịch hẹn tư vấn 1-1 với chuyên gia tài chính của Finext.',
+    title: 'Đặt lịch trao đổi | Finext',
+    description: 'Đặt lịch trao đổi 1-1 với đội ngũ Finext về phân tích và dữ liệu chứng khoán.',
   },
 };
 
