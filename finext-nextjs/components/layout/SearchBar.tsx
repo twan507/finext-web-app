@@ -121,14 +121,14 @@ function useSearchLogic() {
                         method: 'GET',
                         requireAuth: false,
                         useCache: true,
-                        cacheTtl: 10 * 60 * 1000, // 10 min
+                        cacheTtl: 60 * 1000, // 1 min — giá thay đổi liên tục
                     }),
                     apiClient<SearchIndexItem[]>({
                         url: '/api/v1/sse/rest/search_index',
                         method: 'GET',
                         requireAuth: false,
                         useCache: true,
-                        cacheTtl: 10 * 60 * 1000,
+                        cacheTtl: 60 * 1000, // 1 min
                     }),
                 ]);
                 if (!cancelled) {
@@ -283,7 +283,7 @@ function StockResultItem({ item, onClick }: StockResultItemProps) {
             <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
                 {item.close != null && (
                     <Typography sx={{ fontSize: getResponsiveFontSize('md'), fontWeight: fontWeight.medium }}>
-                        {item.close.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {item.close.toFixed(2)}
                     </Typography>
                 )}
                 {item.pct_change != null && (
