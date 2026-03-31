@@ -107,7 +107,7 @@ export default function NhomCPLineChart({
                 left: 0,
                 blur: 5,
                 opacity: 0.8,
-                color: colors as unknown as string,
+                color: [theme.palette.text.secondary, ...colors] as unknown as string,
             },
         },
         annotations: {
@@ -217,7 +217,7 @@ export default function NhomCPLineChart({
         markers: {
             size: 0,
             colors: [theme.palette.mode === 'dark' ? '#000000' : '#ffffff'],
-            strokeColors: colors,
+            strokeColors: [theme.palette.text.secondary, ...colors],
             strokeWidth: 2,
             hover: { size: 6 },
         },

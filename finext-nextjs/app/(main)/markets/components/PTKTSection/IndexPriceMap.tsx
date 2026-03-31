@@ -381,13 +381,15 @@ export default function VNINDEXPriceMap({ chartIndicatorData, currentPrice, curr
                         <Box sx={{ flex: 1 }} />
                         {currentDiff != null && currentPctChange != null && (
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.semibold, color: currentDiff >= 0 ? theme.palette.trend.up : theme.palette.trend.down, fontVariantNumeric: 'tabular-nums' }}>
-                                    {currentDiff >= 0 ? '+' : ''}{currentDiff.toFixed(2)}
+                                <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.semibold, color: currentDiff === 0 ? theme.palette.trend.ref : (currentDiff > 0 ? theme.palette.trend.up : theme.palette.trend.down), fontVariantNumeric: 'tabular-nums' }}>
+                                    {currentDiff === 0 ? currentDiff.toFixed(2) : (currentDiff > 0 ? '+' : '') + currentDiff.toFixed(2)}
                                 </Typography>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, px: 0.75, py: 0.25, bgcolor: currentDiff >= 0 ? theme.palette.trend.up : theme.palette.trend.down, color: '#fff', borderRadius: 1 }}>
-                                    <Box component="span" sx={{ fontSize: '0.65em', display: 'flex', mt: '0.5px' }}>
-                                        {currentDiff >= 0 ? '▲' : '▼'}
-                                    </Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, px: 0.75, py: 0.25, bgcolor: currentDiff === 0 ? theme.palette.trend.ref : (currentDiff > 0 ? theme.palette.trend.up : theme.palette.trend.down), color: '#fff', borderRadius: 1 }}>
+                                    {currentDiff !== 0 && (
+                                        <Box component="span" sx={{ fontSize: '0.65em', display: 'flex', mt: '0.5px' }}>
+                                            {currentDiff > 0 ? '▲' : '▼'}
+                                        </Box>
+                                    )}
                                     <Typography component="span" sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.bold, fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>
                                         {Math.abs(currentPctChange * 100).toFixed(2)}%
                                     </Typography>

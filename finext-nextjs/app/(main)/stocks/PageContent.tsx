@@ -344,8 +344,14 @@ export default function StocksContent() {
     // Client-side filtering & sorting
     const filteredData = useMemo(() => {
         if (!rawData || !Array.isArray(rawData)) return [];
+        const seenTickers = new Set<string>();
+        const deduped = rawData.filter(row => {
+            if (!row.ticker || seenTickers.has(row.ticker)) return false;
+            seenTickers.add(row.ticker);
+            return true;
+        });
         const filtered = applyFilters(
-            rawData,
+            deduped,
             store.state.selectFilters,
             store.state.rangeFilters,
             store.state.advancedFilters,

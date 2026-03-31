@@ -152,8 +152,7 @@ export default function WatchlistColumn({
 
     const sortedTickers = useMemo(() => {
         const tickers = watchlist.stock_symbols;
-        if (isManualSort) return tickers;
-        return [...tickers].sort((a, b) => {
+        const base = isManualSort ? tickers : [...tickers].sort((a, b) => {
             const da = stockDataMap.get(a);
             const db = stockDataMap.get(b);
             let av = 0, bv = 0;
@@ -162,6 +161,7 @@ export default function WatchlistColumn({
             else                               { av = da?.trading_value ?? 0; bv = db?.trading_value ?? 0; }
             return sort.endsWith('_asc') ? av - bv : bv - av;
         });
+        return base.filter((ticker, index, arr) => arr.indexOf(ticker) === index);
     }, [watchlist.stock_symbols, sort, isManualSort, stockDataMap]);
 
     // Tickers available for autocomplete (exclude already added)

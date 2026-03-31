@@ -374,7 +374,7 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
         // Sorted tickers (client-side sort)
         const sort = (wl.sort ?? 'manual') as WatchlistSort;
         const isManualSort = sort === 'manual';
-        const sortedTickers = isManualSort
+        const sortedTickers = (isManualSort
             ? wl.stock_symbols
             : [...wl.stock_symbols].sort((a, b) => {
                 const da = stockDataMap.get(a);
@@ -384,7 +384,7 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                 else if (sort.startsWith('vsi'))   { av = da?.vsi ?? 0;        bv = db?.vsi ?? 0; }
                 else                               { av = da?.trading_value ?? 0; bv = db?.trading_value ?? 0; }
                 return sort.endsWith('_asc') ? av - bv : bv - av;
-            });
+            })).filter((ticker, index, arr) => arr.indexOf(ticker) === index);
 
         // Tickers available for autocomplete
         const existing = new Set(wl.stock_symbols);
