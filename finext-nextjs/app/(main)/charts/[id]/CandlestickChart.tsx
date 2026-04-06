@@ -26,6 +26,7 @@ import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import type { ChartRawData } from './PageContent';
 import IndicatorsPanel from './IndicatorsPanel';
 import WatchlistPanel from './WatchlistPanel';
+import DetailPanel from './DetailPanel';
 import { INDICATOR_GROUPS, getIndicatorColor, type AreaIndicator, type BandIndicator, type DualLineIndicator, type LineIndicator, type VolumeLineIndicator } from './indicatorConfig';
 import { BandFillPrimitive } from './BandFillPrimitive';
 import type { Timeframe } from './aggregateTimeframe';
@@ -42,12 +43,14 @@ interface CandlestickChartProps {
     priceTagMode: PriceTagMode;
     showIndicatorsPanel: boolean;
     showWatchlistPanel: boolean;
+    showDetailPanel: boolean;
     enabledIndicators: Record<string, boolean>;
     onToggleIndicator: (key: string) => void;
     onClearAllIndicators: () => void;
     onResetDefaultIndicators?: () => void;
     onCloseIndicatorsPanel?: () => void;
     onCloseWatchlistPanel?: () => void;
+    onCloseDetailPanel?: () => void;
     onTickerChange?: (ticker: string) => void;
     onLoadMore?: () => void;
     hasMoreData?: boolean;
@@ -132,7 +135,7 @@ const INDUSTRY_TICKERS = new Set([
     'YTE'
 ]);
 
-export default function CandlestickChart({ data, ticker, timeframe, chartType, showIndicators, showVolume, showLegend, priceTagMode, showIndicatorsPanel, showWatchlistPanel, enabledIndicators, onToggleIndicator, onClearAllIndicators, onResetDefaultIndicators, onCloseIndicatorsPanel, onCloseWatchlistPanel, onTickerChange, onLoadMore, hasMoreData }: CandlestickChartProps) {
+export default function CandlestickChart({ data, ticker, timeframe, chartType, showIndicators, showVolume, showLegend, priceTagMode, showIndicatorsPanel, showWatchlistPanel, showDetailPanel, enabledIndicators, onToggleIndicator, onClearAllIndicators, onResetDefaultIndicators, onCloseIndicatorsPanel, onCloseWatchlistPanel, onCloseDetailPanel, onTickerChange, onLoadMore, hasMoreData }: CandlestickChartProps) {
     const theme = useTheme();
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
@@ -1186,6 +1189,21 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
                         }}
                     />
                 </Box>
+
+                {/* Detail Panel - mobile Drawer only (desktop handled by PageContent) */}
+                {isMobile && (
+                    <Drawer
+                        anchor="right"
+                        open={showDetailPanel}
+                        onClose={onCloseDetailPanel}
+                        variant="temporary"
+                        elevation={0}
+                        ModalProps={{ keepMounted: true }}
+                        sx={{ '& .MuiDrawer-paper': { width: 280, backdropFilter: 'blur(12px)' } }}
+                    >
+                        <DetailPanel ticker={ticker} todayData={data} />
+                    </Drawer>
+                )}
 
                 {/* Indicators Panel - mobile Drawer only (desktop handled by PageContent) */}
                 {isMobile && (

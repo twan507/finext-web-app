@@ -12,6 +12,7 @@ import ChartToolbar from './ChartToolbar';
 import ChartSkeleton from './ChartSkeleton';
 import IndicatorsPanel from './IndicatorsPanel';
 import WatchlistPanel from './WatchlistPanel';
+import DetailPanel from './DetailPanel';
 import type { TickerItem } from './ChartToolbar';
 import { aggregateByTimeframe, type Timeframe } from './aggregateTimeframe';
 
@@ -32,6 +33,11 @@ export interface ChartRawData {
     // Biến động giá
     diff: number | null;
     pct_change: number | null;
+
+    // Dữ liệu bổ sung Detail Panel
+    vsi?: number | null;
+    trading_value?: number | null;
+    cap_value?: number | null;
 
     // ─── Chỉ báo vẽ LINE trên biểu đồ volume ───
     vsma5: number | null;
@@ -142,9 +148,16 @@ export default function ChartPageContent({ ticker: initialTicker }: ChartPageCon
     const showLegend = toolbarPrefs.showLegend;
     const priceTagMode = toolbarPrefs.priceTagMode;
     const timeframe = toolbarPrefs.timeframe as Timeframe;
-    const showIndicatorsPanel = toolbarPrefs.showIndicatorsPanel;
-    const showWatchlistPanel = toolbarPrefs.showWatchlistPanel;
     const [isFullscreen, setIsFullscreen] = useState(false);
+
+    // ── Panel visibility: mobile = local state (default closed), desktop = persisted prefs ──
+    const [mobileDetailPanel, setMobileDetailPanel] = useState(false);
+    const [mobileIndicatorsPanel, setMobileIndicatorsPanel] = useState(false);
+    const [mobileWatchlistPanel, setMobileWatchlistPanel] = useState(false);
+
+    const showDetailPanel = isMobile ? mobileDetailPanel : toolbarPrefs.showDetailPanel;
+    const showIndicatorsPanel = isMobile ? mobileIndicatorsPanel : toolbarPrefs.showIndicatorsPanel;
+    const showWatchlistPanel = isMobile ? mobileWatchlistPanel : toolbarPrefs.showWatchlistPanel;
 
     // Handle ESC key to exit fullscreen
     useEffect(() => {
@@ -427,12 +440,14 @@ export default function ChartPageContent({ ticker: initialTicker }: ChartPageCon
             priceTagMode={priceTagMode}
             showIndicatorsPanel={showIndicatorsPanel}
             showWatchlistPanel={showWatchlistPanel}
+            showDetailPanel={showDetailPanel}
             enabledIndicators={enabledIndicators}
             onToggleIndicator={toggleIndicator}
             onClearAllIndicators={clearAll}
             onResetDefaultIndicators={resetToDefault}
-            onCloseIndicatorsPanel={() => updateToolbarPrefs({ showIndicatorsPanel: false })}
-            onCloseWatchlistPanel={() => updateToolbarPrefs({ showWatchlistPanel: false })}
+            onCloseIndicatorsPanel={() => isMobile ? setMobileIndicatorsPanel(false) : updateToolbarPrefs({ showIndicatorsPanel: false })}
+            onCloseWatchlistPanel={() => isMobile ? setMobileWatchlistPanel(false) : updateToolbarPrefs({ showWatchlistPanel: false })}
+            onCloseDetailPanel={() => isMobile ? setMobileDetailPanel(false) : updateToolbarPrefs({ showDetailPanel: false })}
             onTickerChange={handleTickerChange}
             onLoadMore={loadMoreHistory}
             hasMoreData={hasMoreHistory}
@@ -469,6 +484,7 @@ export default function ChartPageContent({ ticker: initialTicker }: ChartPageCon
                 priceTagMode={priceTagMode}
                 showIndicatorsPanel={showIndicatorsPanel}
                 showWatchlistPanel={showWatchlistPanel}
+                showDetailPanel={showDetailPanel}
                 isFullscreen={isFullscreen}
                 timeframe={timeframe}
                 onTimeframeChange={(tf) => updateToolbarPrefs({ timeframe: tf })}
@@ -478,8 +494,9 @@ export default function ChartPageContent({ ticker: initialTicker }: ChartPageCon
                 onToggleVolume={() => updateToolbarPrefs({ showVolume: !showVolume })}
                 onToggleLegend={() => updateToolbarPrefs({ showLegend: !showLegend })}
                 onCyclePriceTagMode={() => updateToolbarPrefs({ priceTagMode: priceTagMode === 'value' ? 'both' : priceTagMode === 'both' ? 'none' : 'value' })}
-                onToggleIndicatorsPanel={() => updateToolbarPrefs({ showIndicatorsPanel: !toolbarPrefs.showIndicatorsPanel })}
-                onToggleWatchlistPanel={() => updateToolbarPrefs({ showWatchlistPanel: !toolbarPrefs.showWatchlistPanel })}
+                onToggleIndicatorsPanel={() => isMobile ? setMobileIndicatorsPanel(prev => !prev) : updateToolbarPrefs({ showIndicatorsPanel: !toolbarPrefs.showIndicatorsPanel })}
+                onToggleWatchlistPanel={() => isMobile ? setMobileWatchlistPanel(prev => !prev) : updateToolbarPrefs({ showWatchlistPanel: !toolbarPrefs.showWatchlistPanel })}
+                onToggleDetailPanel={() => isMobile ? setMobileDetailPanel(prev => !prev) : updateToolbarPrefs({ showDetailPanel: !toolbarPrefs.showDetailPanel })}
                 onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
             />
 
@@ -489,6 +506,14 @@ export default function ChartPageContent({ ticker: initialTicker }: ChartPageCon
                 <Box sx={{ flex: 1, overflow: 'hidden' }}>
                     {renderChartArea()}
                 </Box>
+
+                {/* Detail panel — desktop inline, trước Indicators & Watchlist (mobile drawer handled inside CandlestickChart) */}
+                {!isMobile && showDetailPanel && (
+                    <DetailPanel
+                        ticker={ticker}
+                        todayData={todayData}
+                    />
+                )}
 
                 {/* Indicators panel — desktop inline (mobile drawer handled inside CandlestickChart) */}
                 {!isMobile && showIndicatorsPanel && (

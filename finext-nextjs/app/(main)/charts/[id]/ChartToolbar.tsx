@@ -33,6 +33,7 @@ import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import LabelIcon from '@mui/icons-material/Label';
 import LabelOffIcon from '@mui/icons-material/LabelOff';
 import SellIcon from '@mui/icons-material/Sell';
+import AnalyticsOutlinedIcon from '@mui/icons-material/AnalyticsOutlined';
 import { getResponsiveFontSize } from 'theme/tokens';
 import type { Timeframe } from './aggregateTimeframe';
 import type { PriceTagMode } from 'hooks/useChartStore';
@@ -51,6 +52,7 @@ interface ChartToolbarProps {
     showLegend?: boolean;
     showIndicatorsPanel?: boolean;
     showWatchlistPanel?: boolean;
+    showDetailPanel?: boolean;
     priceTagMode?: PriceTagMode;
     isFullscreen?: boolean;
     timeframe?: Timeframe;
@@ -63,6 +65,7 @@ interface ChartToolbarProps {
     onCyclePriceTagMode?: () => void;
     onToggleIndicatorsPanel?: () => void;
     onToggleWatchlistPanel?: () => void;
+    onToggleDetailPanel?: () => void;
     onToggleFullscreen?: () => void;
 }
 
@@ -77,6 +80,7 @@ export default function ChartToolbar({
     showLegend = true,
     showIndicatorsPanel = false,
     showWatchlistPanel = false,
+    showDetailPanel = true,
     priceTagMode = 'value',
     isFullscreen = false,
     timeframe = '1D',
@@ -89,6 +93,7 @@ export default function ChartToolbar({
     onCyclePriceTagMode,
     onToggleIndicatorsPanel,
     onToggleWatchlistPanel,
+    onToggleDetailPanel,
     onToggleFullscreen,
 }: ChartToolbarProps) {
     const theme = useTheme();
@@ -604,6 +609,29 @@ export default function ChartToolbar({
             {/* Right fixed group: Indicators/Watchlist section + Fullscreen */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    {/* Detail Panel */}
+                    <Tooltip title={showDetailPanel ? 'Ẩn thông tin' : 'Hiện thông tin'}>
+                        <Button
+                            size="small"
+                            onClick={onToggleDetailPanel}
+                            startIcon={<AnalyticsOutlinedIcon fontSize="small" />}
+                            sx={{
+                                minWidth: 'auto',
+                                px: { xs: 0.5, sm: 1 },
+                                py: 0.5,
+                                color: showDetailPanel ? 'primary.main' : 'text.secondary',
+                                borderRadius: 0.5,
+                                textTransform: 'none',
+                                fontSize: getResponsiveFontSize('xs'),
+                                fontWeight: 600,
+                                '& .MuiButton-startIcon': { mr: { xs: 0, sm: 0.75 }, ml: 0 },
+                                '&:hover': { color: 'primary.main', backgroundColor: 'transparent' },
+                            }}
+                        >
+                            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Thông tin</Box>
+                        </Button>
+                    </Tooltip>
+
                     {/* Indicators Panel */}
                     <Tooltip title={showIndicatorsPanel ? "Ẩn các chỉ báo" : "Hiện các chỉ báo"}>
                         <Button
@@ -630,13 +658,13 @@ export default function ChartToolbar({
                             }}
                         >
                             <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                                Các chỉ báo
+                                Chỉ báo
                             </Box>
                         </Button>
                     </Tooltip>
 
                     {/* Watchlist Panel */}
-                    <Tooltip title={showWatchlistPanel ? "Ẩn danh sách theo dõi" : "Hiện danh sách theo dõi"}>
+                    <Tooltip title={showWatchlistPanel ? "Ẩn Watchlists" : "Hiện Watchlists"}>
                         <Button
                             size="small"
                             onClick={onToggleWatchlistPanel}
@@ -661,7 +689,7 @@ export default function ChartToolbar({
                             }}
                         >
                             <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                                Theo dõi
+                                Watchlists
                             </Box>
                         </Button>
                     </Tooltip>

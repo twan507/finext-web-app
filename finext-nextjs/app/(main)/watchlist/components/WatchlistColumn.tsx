@@ -128,18 +128,22 @@ export default function WatchlistColumn({
         setIsRenaming(false);
     };
 
-    // Aggregate pct_change
+    // Aggregate pct_change — weighted average by trading_value, fallback to simple average
     const aggregateChange = useMemo(() => {
-        let total = 0;
-        let count = 0;
+        let weightedSum = 0, totalWeight = 0, simpleSum = 0, simpleCount = 0;
         watchlist.stock_symbols.forEach(ticker => {
             const d = stockDataMap.get(ticker);
             if (d && d.pct_change != null) {
-                total += d.pct_change;
-                count++;
+                const w = d.trading_value ?? 0;
+                weightedSum += d.pct_change * w;
+                totalWeight += w;
+                simpleSum += d.pct_change;
+                simpleCount++;
             }
         });
-        return count > 0 ? total / count : null;
+        return simpleCount > 0
+            ? (totalWeight > 0 ? weightedSum / totalWeight : simpleSum / simpleCount)
+            : null;
     }, [watchlist.stock_symbols, stockDataMap]);
 
     const headerColor = aggregateChange != null
@@ -186,8 +190,8 @@ export default function WatchlistColumn({
 
     const fmt = {
         price: (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-        diff: (n: number) => `${n > 0 ? '+' : ''}${n.toFixed(2)}`,
-        pct: (n: number) => `${(n * 100) > 0 ? '+' : ''}${(n * 100).toFixed(2)}%`,
+        diff: (n: number) => { const v = parseFloat(n.toFixed(2)); return `${v > 0 ? '+' : ''}${v.toFixed(2)}`; },
+        pct: (n: number) => { const v = parseFloat((n * 100).toFixed(2)); return `${v > 0 ? '+' : ''}${v.toFixed(2)}%`; },
         vsi: (n: number) => `${(n * 100).toFixed(0)}%`,
         gtgd: (n: number) => {
             // n is pre-divided by 10^9, restore then format

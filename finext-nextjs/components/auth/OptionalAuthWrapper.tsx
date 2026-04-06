@@ -62,8 +62,8 @@ export function OptionalAuthWrapper({
 
     if (needsGate) {
         return (
-            <Box sx={{ position: 'relative', overflow: 'hidden' }}>
-                <Box sx={{ p: compact ? 0 : { xs: 3, md: 3 } }}>
+            <Box sx={{ position: 'relative', overflow: 'hidden', ...(compact ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' } : {}) }}>
+                <Box sx={{ p: compact ? 0 : { xs: 3, md: 3 }, ...(compact ? { flex: 1 } : {}) }}>
                     {children}
                 </Box>
                 <AuthGateOverlay compact={compact} />

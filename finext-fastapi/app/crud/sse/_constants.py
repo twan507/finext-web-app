@@ -72,6 +72,10 @@ CHART_DATA_PROJECTION = {
     # Biến động giá
     "diff": 1,
     "pct_change": 1,
+    # Dữ liệu bổ sung cho Detail Panel
+    "vsi": 1,
+    "trading_value": 1,
+    "cap_value": 1,
     # ─── Chỉ báo vẽ LINE trên biểu đồ volume ───
     "vsma5": 1,
     "vsma60": 1,

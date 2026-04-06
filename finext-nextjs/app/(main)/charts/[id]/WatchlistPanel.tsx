@@ -36,6 +36,7 @@ import AddWatchlistDialog from '../../watchlist/components/AddWatchlistDialog';
 import ConfirmDialog from '../../watchlist/components/ConfirmDialog';
 import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
 import { BASIC_AND_ABOVE } from '@/components/auth/features';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 interface StockData {
     ticker: string;
@@ -89,6 +90,8 @@ interface WatchlistPanelProps {
 export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
+    const { session, loading: authLoading } = useAuth();
+    const isLoggedIn = !!session;
 
     const [watchlists, setWatchlists] = useState<Watchlist[]>([]);
     const [loading, setLoading] = useState(true);
@@ -114,8 +117,8 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
     // DnD sensors for stock reorder
     const stockSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-    // SSE: all stock data
-    const { data: stockDataRaw } = useSseCache<StockData[]>({ keyword: 'home_today_stock' });
+    // SSE: all stock data — only subscribe when logged in
+    const { data: stockDataRaw } = useSseCache<StockData[]>({ keyword: 'home_today_stock', enabled: isLoggedIn });
 
     const stockDataMap = useMemo(() => {
         const map = new Map<string, StockData>();
@@ -147,6 +150,10 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
     }, [stockDataRaw]);
 
     const fetchWatchlists = useCallback(async () => {
+        if (!isLoggedIn) {
+            setLoading(false);
+            return;
+        }
         try {
             const res = await apiClient<Watchlist[]>({
                 url: '/api/v1/watchlists/me',
@@ -159,9 +166,9 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [isLoggedIn]);
 
-    useEffect(() => { fetchWatchlists(); }, [fetchWatchlists]);
+    useEffect(() => { if (!authLoading) fetchWatchlists(); }, [fetchWatchlists, authLoading]);
 
     // Derived pages list
     const pages = useMemo(() => {
@@ -310,8 +317,8 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
 
     const fmt = {
         price: (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-        diff: (n: number) => `${n > 0 ? '+' : ''}${n.toFixed(2)}`,
-        pct: (n: number) => `${(n * 100) > 0 ? '+' : ''}${(n * 100).toFixed(2)}%`,
+        diff: (n: number) => { const v = parseFloat(n.toFixed(2)); return `${v > 0 ? '+' : ''}${v.toFixed(2)}`; },
+        pct: (n: number) => { const v = parseFloat((n * 100).toFixed(2)); return `${v > 0 ? '+' : ''}${v.toFixed(2)}%`; },
         vsi: (n: number) => `${(n * 100).toFixed(0)}%`,
         gtgd: (n: number) => {
             const v = n * 1_000_000_000;
@@ -360,13 +367,21 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
         const collapsed = wl.collapsed ?? false;
         const isRenaming = renamingId === wlId;
 
-        // Aggregate pct_change
-        let total = 0, count = 0;
+        // Aggregate pct_change — weighted average by trading_value, fallback to simple average
+        let weightedSum = 0, totalWeight = 0, simpleSum = 0, simpleCount = 0;
         wl.stock_symbols.forEach(ticker => {
             const d = stockDataMap.get(ticker);
-            if (d && d.pct_change != null) { total += d.pct_change; count++; }
+            if (d && d.pct_change != null) {
+                const w = d.trading_value ?? 0;
+                weightedSum += d.pct_change * w;
+                totalWeight += w;
+                simpleSum += d.pct_change;
+                simpleCount++;
+            }
         });
-        const aggregateChange = count > 0 ? total / count : null;
+        const aggregateChange = simpleCount > 0
+            ? (totalWeight > 0 ? weightedSum / totalWeight : simpleSum / simpleCount)
+            : null;
         const headerColor = aggregateChange != null
             ? getTrendColor(aggregateChange * 100, theme)
             : theme.palette.text.secondary;

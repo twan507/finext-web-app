@@ -262,9 +262,10 @@ export default function WatchlistContent() {
         });
     }, [findColumnIndex]);
 
-    // SSE: all stock data
+    // SSE: all stock data — only subscribe when logged in
     const { data: stockDataRaw } = useSseCache<StockData[]>({
         keyword: 'home_today_stock',
+        enabled: !!session,
     });
 
     const stockDataMap = useMemo(() => {
@@ -299,6 +300,10 @@ export default function WatchlistContent() {
     }, [stockDataRaw]);
 
     const fetchWatchlists = useCallback(async () => {
+        if (!session) {
+            setLoading(false);
+            return;
+        }
         try {
             const res = await apiClient<Watchlist[]>({
                 url: '/api/v1/watchlists/me',
@@ -312,11 +317,11 @@ export default function WatchlistContent() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [session]);
 
     useEffect(() => {
-        if (session) fetchWatchlists();
-    }, [session, fetchWatchlists]);
+        if (!authLoading) fetchWatchlists();
+    }, [authLoading, fetchWatchlists]);
 
     // Build visual columns from coordinates
     type ColumnItem =
