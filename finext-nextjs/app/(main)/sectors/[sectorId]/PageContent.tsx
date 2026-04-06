@@ -389,7 +389,7 @@ export default function SectorDetailContent() {
     }, [timeRange, ticker]);
 
     // ========== REST - History Data for line charts ==========
-    const { data: histLineTicker = [] } = useQuery({
+    const { data: histLineTicker = [], isLoading: histLineTickerLoading } = useQuery({
         queryKey: ['sectors', 'hist_index_line', ticker, LINE_SESSIONS],
         queryFn: async () => {
             const response = await apiClient<RawMarketData[]>({
@@ -877,6 +877,7 @@ export default function SectorDetailContent() {
                             todayAllData={todayAllData}
                             itdAllData={itdAllData}
                             histLineTicker={histLineTicker}
+                            histLineTickerLoading={histLineTickerLoading}
                             histLineVNINDEX={histLineVNINDEX}
                             historyTrendData={historyTrendData}
                             trendTodayData={trendTodayData}

@@ -59,6 +59,7 @@ export const metadata: Metadata = {
     'đầu tư chứng khoán',
     'stock screener Vietnam',
   ],
+  applicationName: 'Finext',
   authors: [{ name: 'Finext Team' }],
   creator: 'Finext',
   publisher: 'Finext',
@@ -283,13 +284,23 @@ export default function RootLayout({
                 },
                 {
                   '@type': 'SiteNavigationElement',
+                  name: 'Nhóm cổ phiếu',
+                  url: 'https://finext.vn/groups',
+                },
+                {
+                  '@type': 'SiteNavigationElement',
                   name: 'Báo cáo',
                   url: 'https://finext.vn/reports',
                 },
                 {
                   '@type': 'SiteNavigationElement',
-                  name: 'Chính sách bảo mật',
-                  url: 'https://finext.vn/policies/privacy',
+                  name: 'Ủng hộ Finext',
+                  url: 'https://finext.vn/plans',
+                },
+                {
+                  '@type': 'SiteNavigationElement',
+                  name: 'Mở tài khoản',
+                  url: 'https://finext.vn/open-account',
                 },
               ],
             }),

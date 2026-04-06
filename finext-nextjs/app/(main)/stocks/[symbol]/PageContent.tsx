@@ -745,6 +745,7 @@ export default function StockDetailContent() {
                     <Box sx={{ mt: 4 }}>
                         <DongTienSection
                             ticker={ticker}
+                            historyLoading={historyLoading}
                             dongTienDates={dongTienDates}
                             t5ScoreData={t5ScoreData}
                             t0ScoreData={t0ScoreData}

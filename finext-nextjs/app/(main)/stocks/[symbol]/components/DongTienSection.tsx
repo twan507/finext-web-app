@@ -8,14 +8,15 @@ import { ISseRequest } from 'services/core/types';
 import { sseClient, getFromCache } from 'services/sseClient';
 import VsiITDStockLineChart from '../../../groups/[groupId]/components/VsiScoreItdLineChart';
 import RankingLineChart from './RankingLineChart';
+import SubChartSkeleton from 'components/common/SubChartSkeleton';
 
 const SucManhDongTien = dynamic(
     () => import('../../../groups/[groupId]/components/SucManhDongTien'),
-    { ssr: false, loading: () => <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 2 }} /> }
+    { ssr: false, loading: () => <SubChartSkeleton height={280} variant="mixed" legendCount={2} /> }
 );
 const TuongQuanDongTien = dynamic(
     () => import('../../../groups/components/TuongQuanDongTien'),
-    { ssr: false, loading: () => <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 2 }} /> }
+    { ssr: false, loading: () => <SubChartSkeleton height={280} variant="line" legendCount={3} /> }
 );
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -34,6 +35,7 @@ interface ItdRecord {
 
 interface DongTienSectionProps {
     ticker: string;
+    historyLoading: boolean;
     // Pre-computed chart data from parent
     dongTienDates: string[];
     t5ScoreData: number[];
@@ -77,6 +79,7 @@ function build1DTradingTimeline(referenceTimestamp?: number): number[] {
 
 export default function DongTienSection({
     ticker,
+    historyLoading,
     dongTienDates,
     t5ScoreData,
     t0ScoreData,
@@ -88,7 +91,7 @@ export default function DongTienSection({
 }: DongTienSectionProps) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-    const hasData = dongTienDates.length > 0;
+    const hasData = !historyLoading && dongTienDates.length > 0;
 
     const isMountedRef = useRef<boolean>(true);
     const itdStockSseRef = useRef<{ unsubscribe: () => void } | null>(null);
@@ -225,7 +228,7 @@ export default function DongTienSection({
                         chartHeight="280px"
                     />
                 ) : (
-                    <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 2 }} />
+                    <SubChartSkeleton height={280} variant="line" legendCount={2} />
                 )}
             </Box>
 
@@ -268,8 +271,12 @@ export default function DongTienSection({
                     flexDirection: isMobile ? 'column' : 'row',
                     gap: isMobile ? 2 : 5,
                 }}>
-                    <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 2, flex: 1 }} />
-                    <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 2, flex: 1 }} />
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <SubChartSkeleton height={280} variant="mixed" legendCount={2} />
+                    </Box>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <SubChartSkeleton height={280} variant="line" legendCount={3} />
+                    </Box>
                 </Box>
             )}
             <Typography color="text.secondary" sx={{
@@ -280,7 +287,7 @@ export default function DongTienSection({
             }}>
                 Diễn biến xếp hạng cổ phiếu {ticker}
             </Typography>
-            {rankingDates.length > 0 ? (
+            {!historyLoading && rankingDates.length > 0 ? (
                 <RankingLineChart
                     dates={rankingDates}
                     marketRankData={marketRankData}
@@ -288,7 +295,7 @@ export default function DongTienSection({
                     chartHeight="280px"
                 />
             ) : (
-                <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 2 }} />
+                <SubChartSkeleton height={280} variant="line" legendCount={2} />
             )}
         </Box>
     );

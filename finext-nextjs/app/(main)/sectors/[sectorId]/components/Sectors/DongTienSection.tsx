@@ -6,6 +6,7 @@ import { Box, Typography, Skeleton, useTheme, useMediaQuery } from '@mui/materia
 import { RawMarketData } from 'app/(main)/components/marketSection/MarketIndexChart';
 import MarketTrendChart, { RawTrendData, transformTrendData, TrendChartData, TrendTimeRange } from 'app/(main)/markets/components/TinHieuSecion/MarketTrendChart';
 import TuongQuanDongTien from 'app/(main)/groups/components/TuongQuanDongTien';
+import SubChartSkeleton from 'components/common/SubChartSkeleton';
 
 
 const SucManhDongTien = dynamic(
@@ -15,7 +16,7 @@ const SucManhDongTien = dynamic(
 
 const VsiITDIndexLineChart = dynamic(
     () => import('app/(main)/groups/[groupId]/components/VsiScoreItdLineChart'),
-    { ssr: false, loading: () => <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 2 }} /> }
+    { ssr: false, loading: () => <SubChartSkeleton height={280} variant="line" legendCount={2} /> }
 );
 
 function build1DTradingTimeline(referenceTimestamp?: number): number[] {
@@ -39,6 +40,7 @@ interface DongTienSectionProps {
     todayAllData: Record<string, RawMarketData[]>;
     itdAllData: Record<string, RawMarketData[]>;
     histLineTicker: RawMarketData[];
+    histLineTickerLoading: boolean;
     histLineVNINDEX: RawMarketData[];
     historyTrendData: RawTrendData[];
     trendTodayData: RawTrendData[];
@@ -96,6 +98,7 @@ export default function DongTienSection({
     todayAllData,
     itdAllData,
     histLineTicker,
+    histLineTickerLoading,
     histLineVNINDEX,
     historyTrendData,
     trendTodayData,
@@ -246,7 +249,7 @@ export default function DongTienSection({
                         chartHeight="280px"
                     />
                 ) : (
-                    <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 2 }} />
+                    <SubChartSkeleton height={280} variant="line" legendCount={2} />
                 )}
             </Box>
 
@@ -259,36 +262,48 @@ export default function DongTienSection({
             }}>
                 {/* Left: Sức mạnh dòng tiền */}
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <SucManhDongTien
-                        title=""
-                        chartHeight="300px"
-                        dates={dongTienDates}
-                        t5ScoreData={t5ScoreData}
-                        t0ScoreData={t0ScoreData}
-                    />
+                    {!histLineTickerLoading && dongTienDates.length > 0 ? (
+                        <SucManhDongTien
+                            title=""
+                            chartHeight="300px"
+                            dates={dongTienDates}
+                            t5ScoreData={t5ScoreData}
+                            t0ScoreData={t0ScoreData}
+                        />
+                    ) : (
+                        <SubChartSkeleton height={300} variant="mixed" legendCount={2} />
+                    )}
                 </Box>
 
                 {/* Right: Tương quan */}
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <TuongQuanDongTien
-                        chartHeight="300px"
-                        dates={tuongQuanDates}
-                        series={tuongQuanSeries}
-                        unit="percent"
-                    />
+                    {!histLineTickerLoading && tuongQuanDates.length > 0 ? (
+                        <TuongQuanDongTien
+                            chartHeight="300px"
+                            dates={tuongQuanDates}
+                            series={tuongQuanSeries}
+                            unit="percent"
+                        />
+                    ) : (
+                        <SubChartSkeleton height={300} variant="line" legendCount={3} />
+                    )}
                 </Box>
             </Box>
 
             {/* Bottom: Cấu trúc sóng */}
             <Box sx={{ mt: 3 }}>
                 <SectionTitle>Xu hướng nhóm {indexName}</SectionTitle>
-                <MarketTrendChart
-                    chartData={trendChartData}
-                    isLoading={isTrendLoading}
-                    timeRange={trendTimeRange}
-                    onTimeRangeChange={setTrendTimeRange}
-                    height={345}
-                />
+                {!isTrendLoading ? (
+                    <MarketTrendChart
+                        chartData={trendChartData}
+                        isLoading={isTrendLoading}
+                        timeRange={trendTimeRange}
+                        onTimeRangeChange={setTrendTimeRange}
+                        height={345}
+                    />
+                ) : (
+                    <SubChartSkeleton height={345} variant="trend" legendCount={4} />
+                )}
             </Box>
         </Box>
     );

@@ -464,9 +464,11 @@ export default function DetailPanel({ ticker, todayData }: DetailPanelProps) {
                                 </Typography>
                             )}
                         </Box>
-                        <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.bold, color: 'text.primary', lineHeight: 1.3, mb: 0.5 }}>
-                            {lastToday.ticker_name}
-                        </Typography>
+                        {(isStock || isIndustry) && (
+                            <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.bold, color: 'text.primary', lineHeight: 1.3, mb: 0.5 }}>
+                                {lastToday.ticker_name}
+                            </Typography>
+                        )}
                     </Box>
                 ) : (
                     <Skeleton variant="text" width="70%" height={22} />

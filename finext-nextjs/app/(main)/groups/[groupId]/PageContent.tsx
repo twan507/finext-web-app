@@ -23,17 +23,18 @@ import type { RawTrendData, TrendChartData, TrendTimeRange } from '../../markets
 import { transformTrendData } from '../../markets/components/TinHieuSecion/MarketTrendChart';
 import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
 import { ADVANCED_AND_ABOVE } from '@/components/auth/features';
+import SubChartSkeleton from 'components/common/SubChartSkeleton';
 
 // Lazy load heavy chart components
 const VsiITDIndexLineChart = dynamic(
     () => import('./components/VsiScoreItdLineChart'),
-    { ssr: false, loading: () => <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 2 }} /> }
+    { ssr: false, loading: () => <SubChartSkeleton height={280} variant="line" legendCount={2} /> }
 );
 
 const MarketIndexChart = dynamic(
     () => import('../../components/marketSection/MarketIndexChart').then(mod => ({ default: mod.default })),
     {
-        loading: () => <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 2 }} />,
+        loading: () => <SubChartSkeleton height={400} variant="mixed" legendCount={2} />,
         ssr: false
     }
 );
@@ -46,7 +47,7 @@ const SucManhDongTien = dynamic(
 const MarketTrendChart = dynamic(
     () => import('../../markets/components/TinHieuSecion/MarketTrendChart'),
     {
-        loading: () => <Skeleton variant="rectangular" height={345} sx={{ borderRadius: 2 }} />,
+        loading: () => <SubChartSkeleton height={345} variant="trend" legendCount={4} />,
         ssr: false,
     }
 );
@@ -320,7 +321,7 @@ export default function GroupDetailContent() {
     }, [timeRange, ticker]);
 
     // ========== REST - History Data for line charts (ticker, ~20 sessions) ==========
-    const { data: histLineTicker = [] } = useQuery({
+    const { data: histLineTicker = [], isLoading: histLineTickerLoading } = useQuery({
         queryKey: ['groups', 'hist_index_line', ticker, LINE_SESSIONS],
         queryFn: async () => {
             const response = await apiClient<RawMarketData[]>({
@@ -834,7 +835,7 @@ export default function GroupDetailContent() {
                                 chartHeight="280px"
                             />
                         ) : (
-                            <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 2 }} />
+                            <SubChartSkeleton height={280} variant="line" legendCount={2} />
                         )}
                     </Box>
                 </Box>
@@ -851,36 +852,48 @@ export default function GroupDetailContent() {
                     }}>
                         {/* Left: Sức mạnh dòng tiền */}
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <SucManhDongTien
-                                title=""
-                                chartHeight="300px"
-                                dates={dongTienDates}
-                                t5ScoreData={t5ScoreData}
-                                t0ScoreData={t0ScoreData}
-                            />
+                            {!histLineTickerLoading && dongTienDates.length > 0 ? (
+                                <SucManhDongTien
+                                    title=""
+                                    chartHeight="300px"
+                                    dates={dongTienDates}
+                                    t5ScoreData={t5ScoreData}
+                                    t0ScoreData={t0ScoreData}
+                                />
+                            ) : (
+                                <SubChartSkeleton height={300} variant="mixed" legendCount={2} />
+                            )}
                         </Box>
 
                         {/* Right: Tương quan biến động giá và dòng tiền */}
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <TuongQuanDongTien
-                                chartHeight="300px"
-                                dates={tuongQuanDates}
-                                series={tuongQuanSeries}
-                                unit="percent"
-                            />
+                            {!histLineTickerLoading && tuongQuanDates.length > 0 ? (
+                                <TuongQuanDongTien
+                                    chartHeight="300px"
+                                    dates={tuongQuanDates}
+                                    series={tuongQuanSeries}
+                                    unit="percent"
+                                />
+                            ) : (
+                                <SubChartSkeleton height={300} variant="line" legendCount={3} />
+                            )}
                         </Box>
                     </Box>
 
                     {/* Bottom: Cấu trúc sóng */}
                     <Box sx={{ mt: 3 }}>
                         <SectionTitle>Xu hướng nhóm {indexName}</SectionTitle>
-                        <MarketTrendChart
-                            chartData={trendChartData}
-                            isLoading={isTrendLoading}
-                            timeRange={trendTimeRange}
-                            onTimeRangeChange={setTrendTimeRange}
-                            height={345}
-                        />
+                        {!isTrendLoading ? (
+                            <MarketTrendChart
+                                chartData={trendChartData}
+                                isLoading={isTrendLoading}
+                                timeRange={trendTimeRange}
+                                onTimeRangeChange={setTrendTimeRange}
+                                height={345}
+                            />
+                        ) : (
+                            <SubChartSkeleton height={345} variant="trend" legendCount={4} />
+                        )}
                     </Box>
                 </Box>
 
