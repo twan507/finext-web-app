@@ -16,7 +16,7 @@ import { apiClient } from 'services/apiClient';
 import { ISseRequest } from 'services/core/types';
 import { sseClient } from 'services/sseClient';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
-import { getVsiColor } from 'theme/colorHelpers';
+import { getVsiColor, getPriceColor } from 'theme/colorHelpers';
 import { ApexOptions } from 'apexcharts';
 import PanelNewsList from './PanelNewsList';
 import ReportList from 'app/(main)/reports/components/ReportList';
@@ -356,11 +356,6 @@ export default function DetailPanel({ ticker, todayData }: DetailPanelProps) {
     const pct = pctChange != null ? pctChange * 100 : null;
     const isUp = (pct ?? 0) > 0;
     const isRefPrice = Math.abs(pct ?? 0) <= 0.005;
-    const priceColor = isRefPrice
-        ? theme.palette.trend?.ref || '#f59e0b'
-        : isUp
-            ? theme.palette.trend?.up || '#26a69a'
-            : theme.palette.trend?.down || '#ef5350';
 
     // ── ITD SSE ──────────────────────────────────────────────────────────────
     const [itdData, setItdData] = useState<ItdRecord[]>([]);
@@ -413,6 +408,11 @@ export default function DetailPanel({ ticker, todayData }: DetailPanelProps) {
         refetchOnWindowFocus: false,
     });
     const stockMeta: StockMeta = stockMetaArr[0] || {};
+
+    // Tính màu trần/sàn sau khi có stockMeta.exchange
+    const priceColor = pctChange != null
+        ? getPriceColor(pctChange, isStock ? (stockMeta.exchange ?? 'HSX') : 'HSX', theme)
+        : theme.palette.trend?.ref || '#f59e0b';
 
     // ── REST: Finratios (P/E, P/B, EPS) ─────────────────────────────────────
     const finratiosEndpoint = isStock ? 'finratios_stock' : 'finratios_industry';
@@ -489,14 +489,41 @@ export default function DetailPanel({ ticker, todayData }: DetailPanelProps) {
 
                 {/* Price row */}
                 {lastToday ? (
-                    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, flexWrap: 'wrap' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', mt: 0.25 }}>
                         <Typography sx={{ fontSize: getResponsiveFontSize('lg'), fontWeight: fontWeight.bold, color: priceColor, lineHeight: 1 }}>
                             {fmtPrice(lastToday.close)}
                         </Typography>
-                        <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: priceColor, fontWeight: fontWeight.semibold }}>
-                            {lastToday.diff != null ? (lastToday.diff >= 0 ? '+' : '') + fmtPrice(lastToday.diff) : ''}
-                            {pct != null ? ` (${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%)` : ''}
-                        </Typography>
+                        {lastToday.diff != null && (
+                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: priceColor, fontWeight: fontWeight.semibold, lineHeight: 1 }}>
+                                {(lastToday.diff > 0 ? '+' : '') + fmtPrice(lastToday.diff)}
+                            </Typography>
+                        )}
+                        {pct != null && (
+                            <Box
+                                component="span"
+                                sx={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '2px',
+                                    px: 0.6,
+                                    py: 0.35,
+                                    borderRadius: 1,
+                                    bgcolor: priceColor,
+                                    color: '#fff',
+                                    fontSize: getResponsiveFontSize('xs'),
+                                    fontWeight: fontWeight.semibold,
+                                    lineHeight: 1,
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
+                                {!isRefPrice && (
+                                    <span style={{ fontSize: '0.65em', lineHeight: 1 }}>
+                                        {isUp ? '▲' : '▼'}
+                                    </span>
+                                )}
+                                {Math.abs(pct).toFixed(2)}%
+                            </Box>
+                        )}
                     </Box>
                 ) : (
                     <Skeleton variant="text" width="60%" height={28} />

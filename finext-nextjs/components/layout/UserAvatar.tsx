@@ -157,16 +157,30 @@ const UserAvatar: React.FC<UserMenuProps> = ({ variant = 'icon', onNavigate, com
         closeSignInModal();
     };
 
+    // Chỉ dùng để mount flag
     useEffect(() => {
         setMounted(true);
+    }, []);
+
+    // Tách subscription fetch ra useEffect riêng với dependency chính xác hơn
+    // Dùng subscription_id thay vì toàn bộ session object để tránh re-fetch không cần thiết
+    const subscriptionId = session?.user?.subscription_id;
+    const isLoggedIn = !!session;
+
+    useEffect(() => {
+        // Stale flag để tránh race condition khi effect re-run
+        let stale = false;
 
         const fetchSubscriptionDetails = async () => {
-            if (session?.user?.subscription_id) {
+            if (subscriptionId) {
                 try {
                     const response = await apiClient<ISubscription>({
-                        url: `/api/v1/subscriptions/${session.user.subscription_id}`,
+                        url: `/api/v1/subscriptions/${subscriptionId}`,
                         method: 'GET',
                     });
+
+                    // Kiểm tra stale trước khi set state - nếu effect đã bị cleanup thì bỏ qua
+                    if (stale) return;
 
                     if (response.data?.license_key) {
                         setLicenseKey(response.data.license_key);
@@ -176,6 +190,7 @@ const UserAvatar: React.FC<UserMenuProps> = ({ variant = 'icon', onNavigate, com
                                     url: `/api/v1/licenses/${response.data.license_id}`,
                                     method: 'GET',
                                 });
+                                if (stale) return;
                                 if (licenseResponse.data?.color) {
                                     setLicenseColor(licenseResponse.data.color);
                                 }
@@ -188,27 +203,40 @@ const UserAvatar: React.FC<UserMenuProps> = ({ variant = 'icon', onNavigate, com
                         setLicenseColor('#1565c0');
                     }
                 } catch {
+                    if (stale) return;
                     // Silently handle subscription fetch errors (e.g., on page refresh race conditions)
                     // Fallback to default values
                     setLicenseKey('BASIC');
                     setLicenseColor('#1565c0');
                 } finally {
-                    setIsLoading(false);
+                    if (!stale) {
+                        setIsLoading(false);
+                    }
                 }
-            } else {
+            } else if (isLoggedIn) {
+                // Đã đăng nhập nhưng không có subscription_id
                 setLicenseKey('BASIC');
                 setLicenseColor('#1565c0');
+                setIsLoading(false);
+            } else {
+                // Chưa đăng nhập
                 setIsLoading(false);
             }
         };
 
-        if (session) {
+        if (isLoggedIn) {
+            // Reset loading khi subscription_id thay đổi để hiển thị skeleton
+            setIsLoading(true);
             fetchSubscriptionDetails();
         } else {
             setIsLoading(false);
         }
 
-    }, [session]);
+        // Cleanup: đánh dấu stale khi effect re-run hoặc unmount
+        return () => {
+            stale = true;
+        };
+    }, [subscriptionId, isLoggedIn]);
 
     const handleClick = () => {
         onNavigate?.();
