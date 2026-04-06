@@ -10,6 +10,7 @@ import {
     Divider,
 } from '@mui/material';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from 'services/apiClient';
 import { ISseRequest } from 'services/core/types';
@@ -46,6 +47,15 @@ export function getTickerType(ticker: string): TickerType {
     if (INDUSTRY_TICKERS.has(t)) return 'industry';
     if (INDEX_TICKERS.has(t)) return 'index';
     return 'stock';
+}
+
+function getTickerDetailUrl(ticker: string, type: TickerType): string {
+    const t = ticker.toLowerCase();
+    switch (type) {
+        case 'stock': return `/stocks/${t}`;
+        case 'industry': return `/sectors/${t}`;
+        case 'index': return `/groups/${t}`;
+    }
 }
 
 // ─── ITD data type (from home_itd_stock / home_itd_index) ────────────────────
@@ -103,8 +113,8 @@ function fmtTy(val: number | null | undefined): string {
     const v = val * 1_000_000_000;
     if (v >= 1_000_000_000) {
         const b = v / 1_000_000_000;
-        // >= 1000B: dùng , chia hàng nghìn
-        if (b >= 1000) return b.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + 'B';
+        // >= 1000B: dùng , chia hàng nghìn và bỏ số thập phân
+        if (b >= 1000) return b.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + 'B';
         return b.toFixed(2) + 'B';
     }
     if (v >= 1_000_000) return (v / 1_000_000).toFixed(2) + 'M';
@@ -454,21 +464,24 @@ export default function DetailPanel({ ticker, todayData }: DetailPanelProps) {
                 {/* Ticker name */}
                 {lastToday?.ticker_name ? (
                     <Box>
-                        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
-                            <Typography sx={{ fontSize: getResponsiveFontSize('md'), fontWeight: fontWeight.bold, color: 'text.secondary', lineHeight: 1.3, mb: 0.5 }}>
-                                {ticker}
+
+                        {(isStock || isIndustry) && (
+                            <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.bold, color: 'text.primary', lineHeight: 1.3, mb: 0.5 }}>
+                                {lastToday.ticker_name}
                             </Typography>
+                        )}
+                        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
+                            <Link href={getTickerDetailUrl(ticker, tickerType)} style={{ textDecoration: 'none' }}>
+                                <Typography sx={{ fontSize: getResponsiveFontSize('md'), fontWeight: fontWeight.bold, color: 'text.primary', lineHeight: 1.3, mb: 0.5, '&:hover': { color: 'primary.main' }, transition: 'color 0.15s', cursor: 'pointer' }}>
+                                    {ticker}
+                                </Typography>
+                            </Link>
                             {isStock && stockMeta.exchange && (
                                 <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.bold, color: 'text.secondary', lineHeight: 1.3, mb: 0.5 }}>
                                     • {stockMeta.exchange}
                                 </Typography>
                             )}
                         </Box>
-                        {(isStock || isIndustry) && (
-                            <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.bold, color: 'text.primary', lineHeight: 1.3, mb: 0.5 }}>
-                                {lastToday.ticker_name}
-                            </Typography>
-                        )}
                     </Box>
                 ) : (
                     <Skeleton variant="text" width="70%" height={22} />
@@ -532,21 +545,79 @@ export default function DetailPanel({ ticker, todayData }: DetailPanelProps) {
                         <ItdChart data={itdData} pctChange={pctChange} isDark={isDark} />
                     </Box>
 
-                    <Divider sx={{ my: 0.5 }} />
-
                     {/* OHLCV Stats */}
+                    <Divider sx={{ my: 0.5 }} />
                     <StatRow label="Mở cửa" value={fmtPrice(lastToday?.open)} />
                     <StatRow label="Cao nhất" value={fmtPrice(lastToday?.high)} valueColor={theme.palette.trend?.up} />
                     <StatRow label="Thấp nhất" value={fmtPrice(lastToday?.low)} valueColor={theme.palette.trend?.down} />
                     <StatRow label="Giá hiện tại" value={fmtPrice(lastToday?.close)} valueColor={priceColor} />
-                    <StatRow label="KLGD" value={fmtVolume(lastToday?.volume)} />
+                    <StatRow label="Khối lượng giao dịch" value={fmtVolume(lastToday?.volume)} />
                     <StatRow
-                        label="Chỉ số khoản"
+                        label="Chỉ số thanh khoản"
                         value={fmtVsi((lastToday as any)?.vsi)}
                         valueColor={(lastToday as any)?.vsi != null ? getVsiColor((lastToday as any).vsi, theme) : undefined}
                     />
-                    <StatRow label="GTGD" value={fmtTy((lastToday as any)?.trading_value)} />
+                    <StatRow label="Giá trị giao dịch" value={fmtTy((lastToday as any)?.trading_value)} />
                     <StatRow label="Vốn hoá" value={fmtTy((lastToday as any)?.cap_value)} />
+
+
+                    {/* Performance grid (2×2) */}
+                    {lastToday && (
+                        <>
+                            <Divider sx={{ my: 0.5 }} />
+                            <Box sx={{ px: 1.5, py: 1 }}>
+                                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.75 }}>
+                                    {([
+                                        { label: '1 Tuần', value: (lastToday as any)?.w_pct },
+                                        { label: '1 Tháng', value: (lastToday as any)?.m_pct },
+                                        { label: '1 Quý', value: (lastToday as any)?.q_pct },
+                                        { label: '1 Năm', value: (lastToday as any)?.y_pct },
+                                    ] as { label: string; value: number | null | undefined }[]).map((item) => {
+                                        const pctVal = item.value != null && !isNaN(item.value) ? item.value * 100 : null;
+                                        const isPositive = (pctVal ?? 0) > 0;
+                                        const isNeutral = pctVal == null || Math.abs(pctVal) <= 0.005;
+                                        const cellColor = isNeutral
+                                            ? (theme.palette.trend?.ref || '#f59e0b')
+                                            : isPositive
+                                                ? (theme.palette.trend?.up || '#26a69a')
+                                                : (theme.palette.trend?.down || '#ef5350');
+                                        const bgColor = isNeutral
+                                            ? (isDark ? 'rgba(245,158,11,0.12)' : 'rgba(245,158,11,0.08)')
+                                            : isPositive
+                                                ? (isDark ? 'rgba(38,166,154,0.12)' : 'rgba(38,166,154,0.08)')
+                                                : (isDark ? 'rgba(239,83,80,0.12)' : 'rgba(239,83,80,0.08)');
+                                        const displayStr = pctVal != null
+                                            ? `${pctVal >= 0 ? '+' : ''}${pctVal.toFixed(2)}%`
+                                            : '—';
+
+                                        return (
+                                            <Box
+                                                key={item.label}
+                                                sx={{
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    py: 0.75,
+                                                    borderRadius: 1,
+                                                    backgroundColor: bgColor,
+                                                    border: '1px solid',
+                                                    borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+                                                }}
+                                            >
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.bold, color: cellColor, lineHeight: 1.3 }}>
+                                                    {displayStr}
+                                                </Typography>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('xxs').md, color: 'text.secondary', lineHeight: 1.3, mt: 0.15 }}>
+                                                    {item.label}
+                                                </Typography>
+                                            </Box>
+                                        );
+                                    })}
+                                </Box>
+                            </Box>
+                        </>
+                    )}
 
                     {/* Stock metadata (only for stocks) */}
                     {isStock && (
@@ -564,7 +635,7 @@ export default function DetailPanel({ ticker, todayData }: DetailPanelProps) {
                             <Divider sx={{ my: 0.5 }} />
                             <StatRow label="P/E" value={fmtRatio(latestFinratios?.ryd21)} />
                             <StatRow label="P/B" value={fmtRatio(latestFinratios?.ryd25)} />
-                            <StatRow label="EPS" value={fmtEps(latestFinratios?.ryd14)} />
+                            <StatRow label="EPS (VNĐ)" value={fmtEps(latestFinratios?.ryd14)} />
                         </>
                     )}
 

@@ -76,6 +76,11 @@ CHART_DATA_PROJECTION = {
     "vsi": 1,
     "trading_value": 1,
     "cap_value": 1,
+    # Performance (% biến động theo kỳ)
+    "w_pct": 1,
+    "m_pct": 1,
+    "q_pct": 1,
+    "y_pct": 1,
     # ─── Chỉ báo vẽ LINE trên biểu đồ volume ───
     "vsma5": 1,
     "vsma60": 1,

@@ -39,6 +39,12 @@ export interface ChartRawData {
     trading_value?: number | null;
     cap_value?: number | null;
 
+    // Performance (% biến động theo kỳ)
+    w_pct?: number | null;
+    m_pct?: number | null;
+    q_pct?: number | null;
+    y_pct?: number | null;
+
     // ─── Chỉ báo vẽ LINE trên biểu đồ volume ───
     vsma5: number | null;
     vsma60: number | null;
