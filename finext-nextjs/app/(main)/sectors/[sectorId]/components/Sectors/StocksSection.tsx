@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { Box, Typography } from '@mui/material';
 
 import SectorStockTable, { SectorStockRowData } from '../SectorStockTable';
-import { StockData } from 'app/(main)/components/marketSection/MarketVolatility';
+import { StockData } from 'app/(main)/home/components/marketSection/MarketVolatility';
 
 interface StocksSectionProps {
     ticker: string;

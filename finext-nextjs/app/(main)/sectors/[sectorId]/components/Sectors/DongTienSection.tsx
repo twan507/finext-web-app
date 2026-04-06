@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Box, Typography, Skeleton, useTheme, useMediaQuery } from '@mui/material';
-import { RawMarketData } from 'app/(main)/components/marketSection/MarketIndexChart';
+import { RawMarketData } from 'app/(main)/home/components/marketSection/MarketIndexChart';
 import MarketTrendChart, { RawTrendData, transformTrendData, TrendChartData, TrendTimeRange } from 'app/(main)/markets/components/TinHieuSecion/MarketTrendChart';
 import TuongQuanDongTien from 'app/(main)/groups/components/TuongQuanDongTien';
 import SubChartSkeleton from 'components/common/SubChartSkeleton';

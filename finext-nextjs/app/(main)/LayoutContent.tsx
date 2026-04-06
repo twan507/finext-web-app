@@ -33,7 +33,7 @@ import SearchBar from '../../components/layout/SearchBar';
 import Footer from '@/components/layout/Footer';
 import { layoutTokens, iconSize, borderRadius, shadows, transitions, spacing, getResponsiveFontSize, fontWeight } from '../../theme/tokens';
 import AuthButtons from '@/components/auth/AuthButtons';
-import ConsultationSection from './components/ConsultationSection';
+import ConsultationSection from './home/components/ConsultationSection';
 import PwaTitleBar from '@/components/layout/PwaTitleBar';
 
 interface NavItem {

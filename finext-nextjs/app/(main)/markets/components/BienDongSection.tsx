@@ -6,7 +6,7 @@ import BreadthPolarChart from './BienDongSection/BreadthPolarChart';
 import FlowBarChart from './BienDongSection/FlowBarChart';
 import VsiGaugeChart from './BienDongSection/VsiGaugeChart';
 import StockTreemap from './BienDongSection/StockTreemap';
-import type { StockData } from '../../components/marketSection/MarketVolatility';
+import type { StockData } from '../../home/components/marketSection/MarketVolatility';
 import { ISseRequest } from 'services/core/types';
 import { sseClient, getFromCache } from 'services/sseClient';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';

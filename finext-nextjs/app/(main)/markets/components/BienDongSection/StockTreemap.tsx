@@ -4,7 +4,7 @@ import { useMemo, memo, useCallback } from 'react';
 import { Box, useTheme, Skeleton } from '@mui/material';
 import dynamic from 'next/dynamic';
 import { ApexOptions } from 'apexcharts';
-import type { StockData } from '../../../components/marketSection/MarketVolatility';
+import type { StockData } from '../../../home/components/marketSection/MarketVolatility';
 import { fontWeight, trendColors } from 'theme/tokens';
 
 /** Get VSI color hex based on VSI value (mirrors colorHelpers.ts getVsiColor logic) */

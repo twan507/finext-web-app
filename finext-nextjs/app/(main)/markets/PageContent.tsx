@@ -6,9 +6,9 @@ import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { Box, Typography, useTheme, Skeleton, alpha } from '@mui/material';
 
-import type { RawMarketData, ChartData, TimeRange } from '../components/marketSection/MarketIndexChart';
-import { transformToChartData } from '../components/marketSection/MarketIndexChart';
-import IndexTable from '../components/marketSection/IndexTable';
+import type { RawMarketData, ChartData, TimeRange } from '../home/components/marketSection/MarketIndexChart';
+import { transformToChartData } from '../home/components/marketSection/MarketIndexChart';
+import IndexTable from '../home/components/marketSection/IndexTable';
 
 
 
@@ -34,7 +34,7 @@ import {
 
 // Lazy load heavy chart component
 const MarketIndexChart = dynamic(
-  () => import('../components/marketSection/MarketIndexChart').then(mod => ({ default: mod.default })),
+  () => import('../home/components/marketSection/MarketIndexChart').then(mod => ({ default: mod.default })),
   {
     loading: () => <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 2 }} />,
     ssr: false

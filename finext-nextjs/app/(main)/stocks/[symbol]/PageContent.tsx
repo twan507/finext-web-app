@@ -6,9 +6,9 @@ import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { Box, Typography, Skeleton, useTheme, alpha } from '@mui/material';
 
-import type { RawMarketData, ChartData, TimeRange } from '../../components/marketSection/MarketIndexChart';
-import { transformToChartData } from '../../components/marketSection/MarketIndexChart';
-import IndexDetailPanel from '../../components/marketSection/IndexDetailPanel';
+import type { RawMarketData, ChartData, TimeRange } from '../../home/components/marketSection/MarketIndexChart';
+import { transformToChartData } from '../../home/components/marketSection/MarketIndexChart';
+import IndexDetailPanel from '../../home/components/marketSection/IndexDetailPanel';
 
 import { ISseRequest } from 'services/core/types';
 import { sseClient, getFromCache } from 'services/sseClient';
@@ -20,12 +20,12 @@ import PriceMapSection from './components/PriceMapSection';
 import NewsSection from './components/NewsSection';
 import StockFinRatiosSection from './components/StockFinRatiosSection';
 
-import type { StockData } from '../../components/marketSection/MarketVolatility';
+import type { StockData } from '../../home/components/marketSection/MarketVolatility';
 import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
 import { ADVANCED_AND_ABOVE, BASIC_AND_ABOVE } from '@/components/auth/features';
 
 const MarketIndexChart = dynamic(
-    () => import('../../components/marketSection/MarketIndexChart').then(mod => ({ default: mod.default })),
+    () => import('../../home/components/marketSection/MarketIndexChart').then(mod => ({ default: mod.default })),
     {
         loading: () => <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 2 }} />,
         ssr: false

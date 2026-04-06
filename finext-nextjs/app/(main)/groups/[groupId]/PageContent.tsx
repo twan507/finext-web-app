@@ -6,9 +6,9 @@ import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { Box, Typography, Skeleton, useTheme, useMediaQuery } from '@mui/material';
 
-import type { RawMarketData, ChartData, TimeRange } from '../../components/marketSection/MarketIndexChart';
-import { transformToChartData } from '../../components/marketSection/MarketIndexChart';
-import IndexDetailPanel from '../../components/marketSection/IndexDetailPanel';
+import type { RawMarketData, ChartData, TimeRange } from '../../home/components/marketSection/MarketIndexChart';
+import { transformToChartData } from '../../home/components/marketSection/MarketIndexChart';
+import IndexDetailPanel from '../../home/components/marketSection/IndexDetailPanel';
 
 import { ISseRequest } from 'services/core/types';
 import { sseClient, getFromCache } from 'services/sseClient';
@@ -18,7 +18,7 @@ import { getResponsiveFontSize, fontWeight, getGlassCard, borderRadius, duration
 // Reuse components
 import TuongQuanDongTien from '../components/TuongQuanDongTien';
 import GroupStockTable, { GroupStockRowData } from './components/GroupStockTable';
-import type { StockData } from '../../components/marketSection/MarketVolatility';
+import type { StockData } from '../../home/components/marketSection/MarketVolatility';
 import type { RawTrendData, TrendChartData, TrendTimeRange } from '../../markets/components/TinHieuSecion/MarketTrendChart';
 import { transformTrendData } from '../../markets/components/TinHieuSecion/MarketTrendChart';
 import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
@@ -32,7 +32,7 @@ const VsiITDIndexLineChart = dynamic(
 );
 
 const MarketIndexChart = dynamic(
-    () => import('../../components/marketSection/MarketIndexChart').then(mod => ({ default: mod.default })),
+    () => import('../../home/components/marketSection/MarketIndexChart').then(mod => ({ default: mod.default })),
     {
         loading: () => <SubChartSkeleton height={400} variant="mixed" legendCount={2} />,
         ssr: false

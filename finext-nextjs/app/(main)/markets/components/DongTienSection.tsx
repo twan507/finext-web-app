@@ -7,7 +7,7 @@ import { useQueries } from '@tanstack/react-query';
 import { Box, Typography, useTheme, useMediaQuery } from '@mui/material';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import TimeframeSelector from 'components/common/TimeframeSelector';
-import type { RawMarketData } from '../../components/marketSection/MarketIndexChart';
+import type { RawMarketData } from '../../home/components/marketSection/MarketIndexChart';
 import { apiClient } from 'services/apiClient';
 import DongTienStackedBarChart from './DongTienSection/TuongQuanBarChart';
 import DongTienLineChart from './DongTienSection/TuongQuanLineChart';
@@ -443,176 +443,176 @@ export default function DongTienSection({ histIndexData, todayAllData, itdAllDat
 
     return (
         <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
-        <Box sx={{ py: 3 }}>
-            <Typography
-                color="text.secondary"
-                sx={{
-                    fontSize: getResponsiveFontSize('lg'),
-                    fontWeight: fontWeight.semibold,
-                    mb: 0,
-                    textTransform: 'uppercase',
-                }}
-            >
-                Tương quan biến động giá và dòng tiền
-            </Typography>
-            {!isMobile && (
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <TimeframeSelector
-                        value={timeRange}
-                        onChange={handleTimeRangeChange}
-                        options={['1D', '1W', '1M', '3M', '6M', '1Y']}
-                        sx={{ my: 1, display: 'inline-flex', width: 'fit-content' }}
-                    />
-                </Box>
-            )}
-            <Box
-                sx={{
-                    display: 'flex',
-                    flexDirection: isMobile ? 'column' : 'row',
-                    gap: isMobile ? 2 : 5,
-                }}
-            >
-                <Box sx={{ flex: 2, minWidth: 0, ...(isMobile && { mt: 2 }) }}>
-                    <DongTienStackedBarChart dates={barDates} series={barSeries} />
-                </Box>
-                {isMobile && (
+            <Box sx={{ py: 3 }}>
+                <Typography
+                    color="text.secondary"
+                    sx={{
+                        fontSize: getResponsiveFontSize('lg'),
+                        fontWeight: fontWeight.semibold,
+                        mb: 0,
+                        textTransform: 'uppercase',
+                    }}
+                >
+                    Tương quan biến động giá và dòng tiền
+                </Typography>
+                {!isMobile && (
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                         <TimeframeSelector
                             value={timeRange}
                             onChange={handleTimeRangeChange}
                             options={['1D', '1W', '1M', '3M', '6M', '1Y']}
-                            sx={{ display: 'inline-flex', width: 'fit-content' }}
+                            sx={{ my: 1, display: 'inline-flex', width: 'fit-content' }}
                         />
                     </Box>
                 )}
-                <Box sx={{ flex: 3, minWidth: 0 }}>
-                    {timeRange === '1D' ? (
-                        <DongTienLineChart
-                            mode="itd"
-                            itdSeries={itdSeries!}
-                            indexToTimestamp={indexToTimestamp!}
-                            xAxisMax={xAxisMax}
-                        />
-                    ) : (
-                        <DongTienLineChart dates={lineDates} series={lineSeries} />
+                <Box
+                    sx={{
+                        display: 'flex',
+                        flexDirection: isMobile ? 'column' : 'row',
+                        gap: isMobile ? 2 : 5,
+                    }}
+                >
+                    <Box sx={{ flex: 2, minWidth: 0, ...(isMobile && { mt: 2 }) }}>
+                        <DongTienStackedBarChart dates={barDates} series={barSeries} />
+                    </Box>
+                    {isMobile && (
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                            <TimeframeSelector
+                                value={timeRange}
+                                onChange={handleTimeRangeChange}
+                                options={['1D', '1W', '1M', '3M', '6M', '1Y']}
+                                sx={{ display: 'inline-flex', width: 'fit-content' }}
+                            />
+                        </Box>
                     )}
+                    <Box sx={{ flex: 3, minWidth: 0 }}>
+                        {timeRange === '1D' ? (
+                            <DongTienLineChart
+                                mode="itd"
+                                itdSeries={itdSeries!}
+                                indexToTimestamp={indexToTimestamp!}
+                                xAxisMax={xAxisMax}
+                            />
+                        ) : (
+                            <DongTienLineChart dates={lineDates} series={lineSeries} />
+                        )}
+                    </Box>
                 </Box>
-            </Box>
 
-            {/* ========== DÒNG TIỀN NHÓM CỔ PHIẾU ========== */}
-            <Typography
-                color="text.secondary"
-                sx={{
-                    fontSize: getResponsiveFontSize('lg'),
-                    fontWeight: fontWeight.semibold,
-                    mt: 4,
-                    mb: 3,
-                    textTransform: 'uppercase',
-                }}
-            >
-                Nhóm dòng tiền
-            </Typography>
-            <Box
-                sx={{
-                    display: 'grid',
-                    gridTemplateColumns: {
-                        xs: '1fr',                    // Mobile (< 768px): 1 cột
-                        md: '1fr 1fr',                // Tablet (768px – 1199px): 2×2
-                        lg: '3fr 2fr 2fr 3fr',       // Desktop (≥ 1200px): 4 cột
-                    },
-                    gap: 2,
-                }}
-            >
-                <Box sx={{ minWidth: 0 }}>
-                    <DongTienTrongPhien
-                        title="Dòng tiền trong phiên"
-                        categories={nhomCpCategories}
-                        series={nhomCpBar1Series}
-                        unit="number"
-                    />
+                {/* ========== DÒNG TIỀN NHÓM CỔ PHIẾU ========== */}
+                <Typography
+                    color="text.secondary"
+                    sx={{
+                        fontSize: getResponsiveFontSize('lg'),
+                        fontWeight: fontWeight.semibold,
+                        mt: 4,
+                        mb: 3,
+                        textTransform: 'uppercase',
+                    }}
+                >
+                    Nhóm dòng tiền
+                </Typography>
+                <Box
+                    sx={{
+                        display: 'grid',
+                        gridTemplateColumns: {
+                            xs: '1fr',                    // Mobile (< 768px): 1 cột
+                            md: '1fr 1fr',                // Tablet (768px – 1199px): 2×2
+                            lg: '3fr 2fr 2fr 3fr',       // Desktop (≥ 1200px): 4 cột
+                        },
+                        gap: 2,
+                    }}
+                >
+                    <Box sx={{ minWidth: 0 }}>
+                        <DongTienTrongPhien
+                            title="Dòng tiền trong phiên"
+                            categories={nhomCpCategories}
+                            series={nhomCpBar1Series}
+                            unit="number"
+                        />
+                    </Box>
+                    <Box sx={{ minWidth: 0 }}>
+                        <ChiSoThanhKhoan
+                            title="Chỉ số thanh khoản"
+                            categories={nhomCpCategories}
+                            series={nhomCpBar2Series}
+                            unit="percent"
+                        />
+                    </Box>
+                    <Box sx={{ minWidth: 0, ...(!isTablet && { ml: -2 }) }}>
+                        <PhanBoDongTien
+                            title="Phân bổ dòng tiền"
+                            categories={nhomCpCategories}
+                            flowData={nhomCpFlowData}
+                        />
+                    </Box>
+                    <Box sx={{ minWidth: 0 }}>
+                        <DongTienTrongTuan
+                            title="Dòng tiền trong tuần"
+                            categories={nhomCpCategories}
+                            daySeriesData={nhomCpStackedData}
+                            unit="number"
+                        />
+                    </Box>
                 </Box>
-                <Box sx={{ minWidth: 0 }}>
-                    <ChiSoThanhKhoan
-                        title="Chỉ số thanh khoản"
-                        categories={nhomCpCategories}
-                        series={nhomCpBar2Series}
-                        unit="percent"
-                    />
-                </Box>
-                <Box sx={{ minWidth: 0, ...(!isTablet && { ml: -2 }) }}>
-                    <PhanBoDongTien
-                        title="Phân bổ dòng tiền"
-                        categories={nhomCpCategories}
-                        flowData={nhomCpFlowData}
-                    />
-                </Box>
-                <Box sx={{ minWidth: 0 }}>
-                    <DongTienTrongTuan
-                        title="Dòng tiền trong tuần"
-                        categories={nhomCpCategories}
-                        daySeriesData={nhomCpStackedData}
-                        unit="number"
-                    />
-                </Box>
-            </Box>
 
-            {/* ========== DÒNG TIỀN NHÓM VỐN HOÁ ========== */}
-            <Typography
-                color="text.secondary"
-                sx={{
-                    fontSize: getResponsiveFontSize('lg'),
-                    fontWeight: fontWeight.semibold,
-                    mt: 4,
-                    mb: 3,
-                    textTransform: 'uppercase',
-                }}
-            >
-                Nhóm vốn hoá
-            </Typography>
-            <Box
-                sx={{
-                    display: 'grid',
-                    gridTemplateColumns: {
-                        xs: '1fr',                    // Mobile (<768px): 1 cột
-                        md: '1fr 1fr',                // Tablet (768px – 1199px): 2×2
-                        lg: '3fr 2fr 2fr 3fr',       // Desktop (≥ 1200px): 4 cột
-                    },
-                    gap: 2,
-                }}
-            >
-                <Box sx={{ minWidth: 0 }}>
-                    <DongTienTrongPhien
-                        title="Dòng tiền trong phiên"
-                        categories={mcCategories}
-                        series={mcBar1Series}
-                        unit="number"
-                    />
-                </Box>
-                <Box sx={{ minWidth: 0 }}>
-                    <ChiSoThanhKhoan
-                        title="Chỉ số thanh khoản"
-                        categories={mcCategories}
-                        series={mcBar2Series}
-                        unit="percent"
-                    />
-                </Box>
-                <Box sx={{ minWidth: 0, ...(!isTablet && { ml: -2 }) }}>
-                    <PhanBoDongTien
-                        title="Phân bổ dòng tiền"
-                        categories={mcCategories}
-                        flowData={mcFlowData}
-                    />
-                </Box>
-                <Box sx={{ minWidth: 0 }}>
-                    <DongTienTrongTuan
-                        title="Dòng tiền trong tuần"
-                        categories={mcCategories}
-                        daySeriesData={mcStackedData}
-                        unit="number"
-                    />
+                {/* ========== DÒNG TIỀN NHÓM VỐN HOÁ ========== */}
+                <Typography
+                    color="text.secondary"
+                    sx={{
+                        fontSize: getResponsiveFontSize('lg'),
+                        fontWeight: fontWeight.semibold,
+                        mt: 4,
+                        mb: 3,
+                        textTransform: 'uppercase',
+                    }}
+                >
+                    Nhóm vốn hoá
+                </Typography>
+                <Box
+                    sx={{
+                        display: 'grid',
+                        gridTemplateColumns: {
+                            xs: '1fr',                    // Mobile (<768px): 1 cột
+                            md: '1fr 1fr',                // Tablet (768px – 1199px): 2×2
+                            lg: '3fr 2fr 2fr 3fr',       // Desktop (≥ 1200px): 4 cột
+                        },
+                        gap: 2,
+                    }}
+                >
+                    <Box sx={{ minWidth: 0 }}>
+                        <DongTienTrongPhien
+                            title="Dòng tiền trong phiên"
+                            categories={mcCategories}
+                            series={mcBar1Series}
+                            unit="number"
+                        />
+                    </Box>
+                    <Box sx={{ minWidth: 0 }}>
+                        <ChiSoThanhKhoan
+                            title="Chỉ số thanh khoản"
+                            categories={mcCategories}
+                            series={mcBar2Series}
+                            unit="percent"
+                        />
+                    </Box>
+                    <Box sx={{ minWidth: 0, ...(!isTablet && { ml: -2 }) }}>
+                        <PhanBoDongTien
+                            title="Phân bổ dòng tiền"
+                            categories={mcCategories}
+                            flowData={mcFlowData}
+                        />
+                    </Box>
+                    <Box sx={{ minWidth: 0 }}>
+                        <DongTienTrongTuan
+                            title="Dòng tiền trong tuần"
+                            categories={mcCategories}
+                            daySeriesData={mcStackedData}
+                            unit="number"
+                        />
+                    </Box>
                 </Box>
             </Box>
-        </Box>
         </OptionalAuthWrapper>
     );
 }

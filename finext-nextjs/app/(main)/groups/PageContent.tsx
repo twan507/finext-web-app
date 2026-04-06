@@ -7,7 +7,7 @@ import { getResponsiveFontSize, fontWeight, getGlassCard, getGlassHighlight, get
 import { ISseRequest } from 'services/core/types';
 import { sseClient, getFromCache } from 'services/sseClient';
 import { apiClient } from 'services/apiClient';
-import type { RawMarketData } from '../components/marketSection/MarketIndexChart';
+import type { RawMarketData } from '../home/components/marketSection/MarketIndexChart';
 import StockTable, { IndexRowData } from './components/StockTable';
 import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
 import { ADVANCED_AND_ABOVE } from '@/components/auth/features';

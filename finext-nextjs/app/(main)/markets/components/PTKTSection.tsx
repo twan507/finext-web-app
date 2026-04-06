@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from 'services/apiClient';
 import { sseClient, getFromCache } from 'services/sseClient';
 import { ISseRequest } from 'services/core/types';
-import type { RawMarketData } from 'app/(main)/components/marketSection/MarketIndexChart';
+import type { RawMarketData } from 'app/(main)/home/components/marketSection/MarketIndexChart';
 import dynamic from 'next/dynamic';
 
 const VNINDEXPriceMap = dynamic(
@@ -67,15 +67,15 @@ export default function PTKTSection() {
         sseRef.current = sseClient<RawMarketData[]>(
             requestProps,
             {
-                onOpen: () => {},
+                onOpen: () => { },
                 onData: (data) => {
                     if (isMountedRef.current && data && Array.isArray(data)) {
                         const items = data.filter((d) => d.ticker === TICKER);
                         if (items.length > 0) setLatestPrice(items[items.length - 1]);
                     }
                 },
-                onError: () => {},
-                onClose: () => {},
+                onError: () => { },
+                onClose: () => { },
             },
             { cacheTtl: 5 * 60 * 1000, useCache: true }
         );
