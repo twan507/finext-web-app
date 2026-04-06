@@ -1,18 +1,20 @@
 'use client';
 
-import { Box, Typography, useTheme, useMediaQuery } from '@mui/material';
+import { Box, useTheme, useMediaQuery } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
-import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import { apiClient } from 'services/apiClient';
 
 import NNTDSummaryPanel from './NNTD/NNTDSummaryPanel';
 import NNTDBarChart from './NNTD/NNTDBarChart';
 import NNTDTreemap from './NNTD/NNTDTreemap';
 import type { NNTDRecord } from './NNTD/NNTDSummaryPanel';
+import ChartSectionTitle from 'components/common/ChartSectionTitle';
+import { useMarketUpdateTime } from '../../../../hooks/useMarketUpdateTime';
 
 export default function TuDoanhSection() {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const updateTime = useMarketUpdateTime();
 
     // ========== Polling via useQuery — refetch every 10s ==========
     const { data: tdData = [] } = useQuery<NNTDRecord[]>({
@@ -65,16 +67,11 @@ export default function TuDoanhSection() {
 
             {/* Row 2: Treemap (full width) */}
             <Box>
-                <Typography
-                    color="text.secondary"
-                    sx={{
-                        fontSize: getResponsiveFontSize('lg'),
-                        fontWeight: fontWeight.semibold,
-                        textTransform: 'uppercase',
-                    }}
-                >
-                    Bản đồ giao dịch tự doanh
-                </Typography>
+                <ChartSectionTitle
+                    title="Bản đồ giao dịch tự doanh"
+                    description="Biểu đồ thể hiện giá trị mua/bán ròng của khối tự doanh theo từng mã cổ phiếu"
+                    updateTime={updateTime}
+                />
                 <NNTDTreemap data={tdData} seriesName="TD mua ròng" />
             </Box>
         </Box>

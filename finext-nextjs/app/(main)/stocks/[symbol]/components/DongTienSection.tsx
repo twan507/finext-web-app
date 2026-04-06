@@ -9,6 +9,8 @@ import { sseClient, getFromCache } from 'services/sseClient';
 import VsiITDStockLineChart from '../../../groups/[groupId]/components/VsiScoreItdLineChart';
 import RankingLineChart from './RankingLineChart';
 import SubChartSkeleton from 'components/common/SubChartSkeleton';
+import ChartSectionTitle from 'components/common/ChartSectionTitle';
+import { useMarketUpdateTime } from 'hooks/useMarketUpdateTime';
 
 const SucManhDongTien = dynamic(
     () => import('../../../groups/[groupId]/components/SucManhDongTien'),
@@ -92,6 +94,8 @@ export default function DongTienSection({
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const hasData = !historyLoading && dongTienDates.length > 0;
+
+    const updateTime = useMarketUpdateTime();
 
     const isMountedRef = useRef<boolean>(true);
     const itdStockSseRef = useRef<{ unsubscribe: () => void } | null>(null);
@@ -208,14 +212,12 @@ export default function DongTienSection({
 
     return (
         <Box>
-            <Typography color="text.secondary" sx={{
-                fontSize: getResponsiveFontSize('lg'),
-                fontWeight: fontWeight.semibold,
-                textTransform: 'uppercase',
-                mb: 1,
-            }}>
-                Dòng tiền Cổ phiếu {ticker} trong phiên
-            </Typography>
+            <ChartSectionTitle
+                title={`Dòng tiền Cổ phiếu ${ticker} trong phiên`}
+                description="Theo dõi biến động dòng tiền mua/bán chủ động và chỉ số thanh khoản VSI trong ngày của cổ phiếu."
+                updateTime={updateTime}
+                sx={{ mb: 1 }}
+            />
 
             {/* Chỉ số thanh khoản ITD */}
             <Box sx={{ mt: 2, mb: isMobile ? 2 : 3 }}>
@@ -232,14 +234,12 @@ export default function DongTienSection({
                 )}
             </Box>
 
-            <Typography color="text.secondary" sx={{
-                fontSize: getResponsiveFontSize('lg'),
-                fontWeight: fontWeight.semibold,
-                textTransform: 'uppercase',
-                mb: 2,
-            }}>
-                Dòng tiền Cổ phiếu {ticker} trong tháng
-            </Typography>
+            <ChartSectionTitle
+                title={`Dòng tiền Cổ phiếu ${ticker} trong tháng`}
+                description="Thống kê lịch sử sức mạnh dòng tiền của cổ phiếu và độ tương quan so với thị trường chung."
+                updateTime={updateTime}
+                sx={{ mb: 2 }}
+            />
 
             {/* Sức mạnh dòng tiền + Tương quan */}
             {hasData ? (
@@ -279,14 +279,12 @@ export default function DongTienSection({
                     </Box>
                 </Box>
             )}
-            <Typography color="text.secondary" sx={{
-                fontSize: getResponsiveFontSize('lg'),
-                fontWeight: fontWeight.semibold,
-                textTransform: 'uppercase',
-                mb: 1,
-            }}>
-                Diễn biến xếp hạng cổ phiếu {ticker}
-            </Typography>
+            <ChartSectionTitle
+                title={`Diễn biến xếp hạng cổ phiếu ${ticker}`}
+                description="Theo dõi xếp hạng sức mạnh dòng tiền của cổ phiếu so với toàn thị trường và trong cùng ngành."
+                updateTime={updateTime}
+                sx={{ mb: 1 }}
+            />
             {!historyLoading && rankingDates.length > 0 ? (
                 <RankingLineChart
                     dates={rankingDates}

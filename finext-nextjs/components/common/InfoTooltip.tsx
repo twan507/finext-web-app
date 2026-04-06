@@ -5,8 +5,8 @@ import { Tooltip as MuiTooltip, Typography, useTheme } from '@mui/material';
 import { getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
 
 interface InfoTooltipProps {
-    /** Nội dung hiển thị khi hover */
-    title: string;
+    /** Nội dung hiển thị khi hover (string hoặc JSX) */
+    title: React.ReactNode;
     /** Element trigger (mặc định là icon ⓘ) */
     children?: React.ReactElement;
     /** Vị trí tooltip */
@@ -39,15 +39,12 @@ export default function InfoTooltip({
             component="span"
             sx={{
                 fontSize: getResponsiveFontSize('xxs'),
+                fontWeight: fontWeight.bold,
                 color: theme.palette.text.disabled,
                 lineHeight: 1,
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
-                transition: 'color 0.15s ease',
-                '&:hover': {
-                    color: theme.palette.primary.main,
-                },
             }}
         >
             ⓘ
@@ -67,7 +64,6 @@ export default function InfoTooltip({
                         bgcolor: isDark ? 'rgba(30, 30, 35, 0.95)' : 'rgba(255, 255, 255, 0.95)',
                         color: theme.palette.text.primary,
                         fontSize: getResponsiveFontSize('xs'),
-                        fontWeight: fontWeight.medium,
                         lineHeight: 1.5,
                         px: 1.5,
                         py: 1,

@@ -42,6 +42,8 @@ from app.crud.sse.search_stocks import search_stocks
 from app.crud.sse.search_index import search_index
 from app.crud.sse.search_news import search_news
 from app.crud.sse.search_reports import search_reports
+# Market meta keywords
+from app.crud.sse.market_update_time import market_update_time
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +95,8 @@ SSE_QUERY_REGISTRY: Dict[str, Any] = {
     "search_index": search_index,
     "search_news": search_news,
     "search_reports": search_reports,
+    # Market meta
+    "market_update_time": market_update_time,
 }
 
 

@@ -9,6 +9,8 @@ import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import TimeframeSelector from 'components/common/TimeframeSelector';
 import type { RawMarketData } from '../../home/components/marketSection/MarketIndexChart';
 import { apiClient } from 'services/apiClient';
+import ChartSectionTitle from 'components/common/ChartSectionTitle';
+import { useMarketUpdateTime } from '../../../../hooks/useMarketUpdateTime';
 import DongTienStackedBarChart from './DongTienSection/TuongQuanBarChart';
 import DongTienLineChart from './DongTienSection/TuongQuanLineChart';
 import DongTienTrongPhien from './DongTienSection/DongTienTrongPhien';
@@ -120,6 +122,7 @@ export default function DongTienSection({ histIndexData, todayAllData, itdAllDat
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
     const [timeRange, setTimeRange] = useState<TimeRange>('1D');
+    const updateTime = useMarketUpdateTime();
 
     const handleTimeRangeChange = (_event: React.MouseEvent<HTMLElement>, newRange: TimeRange | null) => {
         if (newRange !== null) setTimeRange(newRange);
@@ -444,17 +447,11 @@ export default function DongTienSection({ histIndexData, todayAllData, itdAllDat
     return (
         <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
             <Box sx={{ py: 3 }}>
-                <Typography
-                    color="text.secondary"
-                    sx={{
-                        fontSize: getResponsiveFontSize('lg'),
-                        fontWeight: fontWeight.semibold,
-                        mb: 0,
-                        textTransform: 'uppercase',
-                    }}
-                >
-                    Tương quan biến động giá và dòng tiền
-                </Typography>
+                <ChartSectionTitle
+                    title="Tương quan biến động giá và dòng tiền"
+                    description="So sánh biến động giá VNINDEX, FNXINDEX với chỉ số dòng tiền qua các khoảng thời gian"
+                    updateTime={updateTime}
+                />
                 {!isMobile && (
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                         <TimeframeSelector
@@ -500,18 +497,12 @@ export default function DongTienSection({ histIndexData, todayAllData, itdAllDat
                 </Box>
 
                 {/* ========== DÒNG TIỀN NHÓM CỔ PHIẾU ========== */}
-                <Typography
-                    color="text.secondary"
-                    sx={{
-                        fontSize: getResponsiveFontSize('lg'),
-                        fontWeight: fontWeight.semibold,
-                        mt: 4,
-                        mb: 3,
-                        textTransform: 'uppercase',
-                    }}
-                >
-                    Nhóm dòng tiền
-                </Typography>
+                <ChartSectionTitle
+                    title="Nhóm dòng tiền"
+                    description="Thống kê dòng tiền trong phiên, thanh khoản, phân bổ và xu hướng tuần theo nhóm cổ phiếu Finext"
+                    updateTime={updateTime}
+                    sx={{ mt: 4 }}
+                />
                 <Box
                     sx={{
                         display: 'grid',
@@ -557,18 +548,12 @@ export default function DongTienSection({ histIndexData, todayAllData, itdAllDat
                 </Box>
 
                 {/* ========== DÒNG TIỀN NHÓM VỐN HOÁ ========== */}
-                <Typography
-                    color="text.secondary"
-                    sx={{
-                        fontSize: getResponsiveFontSize('lg'),
-                        fontWeight: fontWeight.semibold,
-                        mt: 4,
-                        mb: 3,
-                        textTransform: 'uppercase',
-                    }}
-                >
-                    Nhóm vốn hoá
-                </Typography>
+                <ChartSectionTitle
+                    title="Nhóm vốn hoá"
+                    description="Thống kê dòng tiền trong phiên, thanh khoản, phân bổ và xu hướng tuần theo nhóm vốn hoá (Large, Mid, Small)"
+                    updateTime={updateTime}
+                    sx={{ mt: 4 }}
+                />
                 <Box
                     sx={{
                         display: 'grid',

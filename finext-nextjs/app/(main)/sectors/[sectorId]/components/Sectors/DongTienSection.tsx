@@ -7,6 +7,8 @@ import { RawMarketData } from 'app/(main)/home/components/marketSection/MarketIn
 import MarketTrendChart, { RawTrendData, transformTrendData, TrendChartData, TrendTimeRange } from 'app/(main)/markets/components/TinHieuSecion/MarketTrendChart';
 import TuongQuanDongTien from 'app/(main)/groups/components/TuongQuanDongTien';
 import SubChartSkeleton from 'components/common/SubChartSkeleton';
+import ChartSectionTitle from 'components/common/ChartSectionTitle';
+import { useMarketUpdateTime } from 'hooks/useMarketUpdateTime';
 
 
 const SucManhDongTien = dynamic(
@@ -75,22 +77,7 @@ function buildCumsum(data: RawMarketData[], fieldExtractor: (d: RawMarketData) =
     return values.map(v => parseFloat((v - base).toFixed(2)));
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
-    const { getResponsiveFontSize, fontWeight } = require('theme/tokens');
-    return (
-        <Typography
-            color="text.secondary"
-            sx={{
-                fontSize: getResponsiveFontSize('lg'),
-                fontWeight: fontWeight.semibold,
-                textTransform: 'uppercase',
-                mb: 1,
-            }}
-        >
-            {children}
-        </Typography>
-    );
-}
+
 
 export default function DongTienSection({
     ticker,
@@ -106,6 +93,7 @@ export default function DongTienSection({
 }: DongTienSectionProps) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const updateTime = useMarketUpdateTime();
 
     const [trendTimeRange, setTrendTimeRange] = useState<TrendTimeRange>(isMobile ? '1M' : '3M');
 
@@ -238,7 +226,12 @@ export default function DongTienSection({
 
     return (
         <Box>
-            <SectionTitle>nhóm {indexName} trong phiên</SectionTitle>
+            <ChartSectionTitle
+                title={`nhóm ${indexName} trong phiên`}
+                description="Theo dõi biến động dòng tiền mua/bán chủ động và chỉ số thanh khoản VSI trong ngày của nhóm."
+                updateTime={updateTime}
+                sx={{ mb: 1 }}
+            />
             <Box sx={{ mt: 2, mb: 3 }}>
                 {vsiSeriesData.length > 0 ? (
                     <VsiITDIndexLineChart
@@ -253,7 +246,12 @@ export default function DongTienSection({
                 )}
             </Box>
 
-            <SectionTitle>nhóm {indexName} trong tháng</SectionTitle>
+            <ChartSectionTitle
+                title={`nhóm ${indexName} trong tháng`}
+                description="Thống kê lịch sử sức mạnh dòng tiền của nhóm và độ tương quan so với thị trường chung."
+                updateTime={updateTime}
+                sx={{ mt: 2 }}
+            />
             <Box sx={{
                 display: 'flex',
                 flexDirection: isMobile ? 'column' : 'row',
@@ -292,7 +290,12 @@ export default function DongTienSection({
 
             {/* Bottom: Cấu trúc sóng */}
             <Box sx={{ mt: 3 }}>
-                <SectionTitle>Xu hướng nhóm {indexName}</SectionTitle>
+                <ChartSectionTitle
+                    title={`Xu hướng nhóm ${indexName}`}
+                    description="Biểu đồ xu hướng và cường độ sóng của nhóm qua các chu kỳ."
+                    updateTime={updateTime}
+                    sx={{ mb: 1 }}
+                />
                 {!isTrendLoading ? (
                     <MarketTrendChart
                         chartData={trendChartData}

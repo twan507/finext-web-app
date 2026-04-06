@@ -24,6 +24,8 @@ import { transformTrendData } from '../../markets/components/TinHieuSecion/Marke
 import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
 import { ADVANCED_AND_ABOVE } from '@/components/auth/features';
 import SubChartSkeleton from 'components/common/SubChartSkeleton';
+import ChartSectionTitle from 'components/common/ChartSectionTitle';
+import { useMarketUpdateTime } from 'hooks/useMarketUpdateTime';
 
 // Lazy load heavy chart components
 const VsiITDIndexLineChart = dynamic(
@@ -122,23 +124,6 @@ function buildCumsum(data: RawMarketData[], fieldExtractor: (d: RawMarketData) =
     return values.map(v => parseFloat((v - base).toFixed(2)));
 }
 
-// ========== SECTION TITLE ==========
-function SectionTitle({ children }: { children: React.ReactNode }) {
-    return (
-        <Typography
-            color="text.secondary"
-            sx={{
-                fontSize: getResponsiveFontSize('lg'),
-                fontWeight: fontWeight.semibold,
-                textTransform: 'uppercase',
-                mb: 1,
-            }}
-        >
-            {children}
-        </Typography>
-    );
-}
-
 export default function GroupDetailContent() {
     const params = useParams();
     const router = useRouter();
@@ -147,6 +132,7 @@ export default function GroupDetailContent() {
     const isDark = theme.palette.mode === 'dark';
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'));
+    const updateTime = useMarketUpdateTime();
 
     // Dropdown state
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -824,7 +810,12 @@ export default function GroupDetailContent() {
             <OptionalAuthWrapper requireAuth={true} requiredFeatures={ADVANCED_AND_ABOVE}>
                 {/* ========== ITD SECTION: VSI intraday chart ========== */}
                 <Box sx={{ mt: 4 }}>
-                    <SectionTitle>Nhóm {indexName} trong phiên</SectionTitle>
+                    <ChartSectionTitle
+                        title={`Nhóm ${indexName} trong phiên`}
+                        description="Theo dõi biến động dòng tiền mua/bán chủ động và chỉ số thanh khoản VSI trong ngày của nhóm."
+                        updateTime={updateTime}
+                        sx={{ mb: 1 }}
+                    />
                     <Box sx={{ mt: 2 }}>
                         {vsiSeriesData.length > 0 ? (
                             <VsiITDIndexLineChart
@@ -843,7 +834,12 @@ export default function GroupDetailContent() {
                 {/* ========== BOTTOM SECTION: 3 Charts ========== */}
                 <Box sx={{ mt: 4 }}>
                     {/* Top row: 2 charts side by side */}
-                    <SectionTitle>Nhóm {indexName} trong tháng</SectionTitle>
+                    <ChartSectionTitle
+                        title={`Nhóm ${indexName} trong tháng`}
+                        description="Thống kê lịch sử sức mạnh dòng tiền của nhóm và độ tương quan so với thị trường chung."
+                        updateTime={updateTime}
+                        sx={{ mb: 1 }}
+                    />
                     <Box sx={{
                         display: 'flex',
                         flexDirection: isMobile ? 'column' : 'row',
@@ -882,7 +878,12 @@ export default function GroupDetailContent() {
 
                     {/* Bottom: Cấu trúc sóng */}
                     <Box sx={{ mt: 3 }}>
-                        <SectionTitle>Xu hướng nhóm {indexName}</SectionTitle>
+                        <ChartSectionTitle
+                            title={`Xu hướng nhóm ${indexName}`}
+                            description="Biểu đồ xu hướng và cường độ sóng của nhóm qua các chu kỳ."
+                            updateTime={updateTime}
+                            sx={{ mb: 1 }}
+                        />
                         {!isTrendLoading ? (
                             <MarketTrendChart
                                 chartData={trendChartData}
@@ -899,7 +900,14 @@ export default function GroupDetailContent() {
 
                 {/* ========== STOCK TABLE: Top 10 cổ phiếu giao dịch cao nhất ========== */}
                 <Box sx={{ mt: 4 }}>
-                    <Box sx={{ mb: 2 }}><SectionTitle>Cổ phiếu nổi bật nhóm {indexName}</SectionTitle></Box>
+                    <Box sx={{ mb: 2 }}>
+                        <ChartSectionTitle
+                            title={`Cổ phiếu nổi bật nhóm ${indexName}`}
+                            description="Danh sách các cổ phiếu có giá trị giao dịch cao nhất trong nhóm."
+                            updateTime={updateTime}
+                            sx={{ mb: 0 }}
+                        />
+                    </Box>
                     <GroupStockTable
                         data={topStocks}
                         isLoading={stockData.length === 0}

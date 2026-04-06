@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { Box, Typography, useTheme, useMediaQuery } from '@mui/material';
+import { Box, useTheme, useMediaQuery } from '@mui/material';
 import BreadthPolarChart from './BienDongSection/BreadthPolarChart';
 import FlowBarChart from './BienDongSection/FlowBarChart';
 import VsiGaugeChart from './BienDongSection/VsiGaugeChart';
@@ -9,7 +9,8 @@ import StockTreemap from './BienDongSection/StockTreemap';
 import type { StockData } from '../../home/components/marketSection/MarketVolatility';
 import { ISseRequest } from 'services/core/types';
 import { sseClient, getFromCache } from 'services/sseClient';
-import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
+import ChartSectionTitle from 'components/common/ChartSectionTitle';
+import { useMarketUpdateTime } from '../../../../hooks/useMarketUpdateTime';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -30,6 +31,7 @@ export default function BienDongSection() {
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'));
     const chartHeight = '250px';
+    const updateTime = useMarketUpdateTime();
 
     const isMountedRef = useRef<boolean>(true);
     const todayStockSseRef = useRef<{ unsubscribe: () => void } | null>(null);
@@ -147,19 +149,7 @@ export default function BienDongSection() {
     }, [itdData]);
 
     // ========== Chart title component ==========
-    const chartTitle = (title: string) => (
-        <Typography
-            color="text.secondary"
-            sx={{
-                fontSize: getResponsiveFontSize('lg'),
-                fontWeight: fontWeight.semibold,
-                mb: 0,
-                textTransform: 'uppercase',
-            }}
-        >
-            {title}
-        </Typography>
-    );
+    // (replaced by ChartSectionTitle)
 
     return (
         <Box sx={{ py: 3 }}>
@@ -178,7 +168,11 @@ export default function BienDongSection() {
                         minWidth: 0,
                     }}
                 >
-                    {chartTitle('Độ rộng thị trường')}
+                    <ChartSectionTitle
+                        title="Độ rộng thị trường"
+                        description="Tỷ lệ số mã cổ phiếu tăng giá, giảm giá và không đổi trên toàn thị trường trong phiên giao dịch"
+                        updateTime={updateTime}
+                    />
                     <BreadthPolarChart
                         series={[priceIncrease, priceUnchanged, priceDecrease]}
                         labels={['Tăng giá', 'Không đổi', 'Giảm giá']}
@@ -194,7 +188,11 @@ export default function BienDongSection() {
                         minWidth: 0,
                     }}
                 >
-                    {chartTitle('Phân bổ dòng tiền')}
+                    <ChartSectionTitle
+                        title="Phân bổ dòng tiền"
+                        description="Tổng giá trị giao dịch được phân bổ theo chiều hướng dòng tiền: tiền vào, tiền ra và không đổi"
+                        updateTime={updateTime}
+                    />
                     <FlowBarChart
                         flowIn={flowIn}
                         flowOut={flowOut}
@@ -211,22 +209,21 @@ export default function BienDongSection() {
                         minWidth: 0,
                     }}
                 >
-                    {chartTitle('Chỉ số thanh khoản')}
+                    <ChartSectionTitle
+                        title="Chỉ số thanh khoản"
+                        description="Chỉ số VSI đo lường thanh khoản thị trường: 100% là mức trung bình của tuần, trên 100% nghĩa là thanh khoản cao hơn bình thường, dưới 100% là thấp hơn"
+                        updateTime={updateTime}
+                    />
                     <VsiGaugeChart value={vsiLastValue} />
                 </Box>
             </Box>
 
             <Box sx={{ mt: 3 }}>
-                <Typography
-                    color="text.secondary"
-                    sx={{
-                        fontSize: getResponsiveFontSize('lg'),
-                        fontWeight: fontWeight.semibold,
-                        textTransform: 'uppercase',
-                    }}
-                >
-                    Bản đồ thị trường
-                </Typography>
+                <ChartSectionTitle
+                    title="Bản đồ thị trường"
+                    description="Biểu đồ thể hiện biến động giá của các cổ phiếu theo nhóm ngành, kích thước tương ứng giá trị giao dịch"
+                    updateTime={updateTime}
+                />
                 <StockTreemap data={stockData} />
             </Box>
         </Box>

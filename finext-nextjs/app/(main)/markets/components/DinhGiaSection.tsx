@@ -10,6 +10,8 @@ import FinancialsLineChart from './DinhGiaSection/FinancialsLineChart';
 import FinancialsBarChart from './DinhGiaSection/FinancialsBarChart';
 import PENganhChart from './DinhGiaSection/PENganhChart';
 import type { PENganhDataPoint } from './DinhGiaSection/PENganhChart';
+import ChartSectionTitle from 'components/common/ChartSectionTitle';
+import { useMarketUpdateTime } from '../../../../hooks/useMarketUpdateTime';
 
 // ========== PE Ngành: danh sách ticker ngành ==========
 const PE_NGANH_TICKERS = [
@@ -168,6 +170,7 @@ function DinhGiaSkeleton({ isMobile }: { isMobile: boolean }) {
 export default function DinhGiaSection() {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const updateTime = useMarketUpdateTime();
 
     // ========== Fetch finratios_industry for FNXINDEX ==========
     const { data: rawFinratios = [] } = useQuery<FinratiosRecord[]>({
@@ -283,17 +286,11 @@ export default function DinhGiaSection() {
                 {/* Left: 3 synchronized charts stacked */}
                 <Box sx={{ flex: 3, minWidth: 0 }}>
                     {/* Chart 1: P/E Line */}
-                    <Typography
-                        color="text.secondary"
-                        sx={{
-                            fontSize: getResponsiveFontSize('lg'),
-                            fontWeight: fontWeight.semibold,
-                            mb: 0,
-                            textTransform: 'uppercase',
-                        }}
-                    >
-                        Thống kê định giá thị trường việt nam
-                    </Typography>
+                    <ChartSectionTitle
+                        title="Thống kê định giá thị trường Việt Nam"
+                        description="Biểu đồ P/E, vốn hoá, lợi nhuận và doanh thu theo quý của toàn thị trường Việt Nam"
+                        updateTime={updateTime}
+                    />
                     <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('sm'), mb: 0.5, mt: 2 }}>
                         P/E thị trường Việt Nam
                     </Typography>
@@ -384,17 +381,11 @@ export default function DinhGiaSection() {
 
                 {/* Right: PE Ngành Bar Chart */}
                 <Box sx={{ flex: 2, minWidth: 0 }}>
-                    <Typography
-                        color="text.secondary"
-                        sx={{
-                            fontSize: getResponsiveFontSize('lg'),
-                            fontWeight: fontWeight.semibold,
-                            mb: 0,
-                            textTransform: 'uppercase',
-                        }}
-                    >
-                        P/E Ngành nghề
-                    </Typography>
+                    <ChartSectionTitle
+                        title="P/E Ngành nghề"
+                        description="So sánh chỉ số P/E hiện tại giữa các nhóm ngành với P/E trung bình thị trường"
+                        updateTime={updateTime}
+                    />
                     <PENganhChart data={peNganhData} marketPE={latestMarketPE} />
                 </Box>
             </Box>
