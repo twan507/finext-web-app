@@ -97,7 +97,7 @@ export default function DisclaimerContent() {
           }}
         >
           Finext là nền tảng cung cấp công cụ phân tích và dữ liệu chứng khoán mang tính chất
-          tham khảo. Finext <strong>không phải</strong> là công ty chứng khoán, tổ chức tư vấn đầu
+          tham khảo. Finext <strong>không phải</strong> là công ty chứng khoán, tổ chức trao đổi đầu
           tư, hoặc quỹ quản lý tài sản. Mọi thông tin trên nền tảng không cấu thành lời khuyên
           đầu tư hay khuyến nghị giao dịch.
         </Typography>
@@ -112,8 +112,8 @@ export default function DisclaimerContent() {
         <ul>
           <li>Đưa ra khuyến nghị mua, bán, hoặc nắm giữ bất kỳ chứng khoán cụ thể nào</li>
           <li>Cam kết hoặc đảm bảo bất kỳ kết quả đầu tư hay mức lợi nhuận nào</li>
-          <li>Cung cấp dịch vụ tư vấn đầu tư cá nhân</li>
-          <li>Thay thế vai trò của các tổ chức tư vấn tài chính được cấp phép</li>
+          <li>Cung cấp dịch vụ trao đổi đầu tư cá nhân</li>
+          <li>Thay thế vai trò của các tổ chức trao đổi tài chính được cấp phép</li>
         </ul>
       </Section>
 
@@ -182,7 +182,7 @@ export default function DisclaimerContent() {
         Chúng tôi khuyến nghị bạn:
         <ul>
           <li>Tự trang bị kiến thức tài chính và hiểu rõ mức độ chấp nhận rủi ro của bản thân</li>
-          <li>Tham khảo ý kiến từ tổ chức tư vấn đầu tư được cấp phép trước khi đưa ra quyết
+          <li>Tham khảo ý kiến từ tổ chức trao đổi đầu tư được cấp phép trước khi đưa ra quyết
             định quan trọng</li>
           <li>Không đầu tư bằng tiền bạn không sẵn sàng chấp nhận mất</li>
           <li>Đa dạng hóa danh mục đầu tư để giảm thiểu rủi ro</li>

@@ -204,6 +204,15 @@ export default function ChartPageContent({ ticker: initialTicker }: ChartPageCon
         [],
     );
 
+    // Đồng bộ lại thẻ title trên tab khi người dùng đổi ticker bằng internal state
+    useEffect(() => {
+        // Dùng setTimeout nhỏ để đảm bảo nó chạy sau quá trình render của Next.js (nếu có)
+        const timer = setTimeout(() => {
+            document.title = `Biểu đồ ${ticker.toUpperCase()} | Finext`;
+        }, 5);
+        return () => clearTimeout(timer);
+    }, [ticker]);
+
     // ─── History: REST lazy-load (responsive chunks, newest first) ───
     const baseChunk = isMobile ? 120 : isTablet ? 180 : 240;
     const chunkSize = timeframe === '1M' ? baseChunk * 3 : timeframe === '1W' ? baseChunk * 2 : baseChunk;

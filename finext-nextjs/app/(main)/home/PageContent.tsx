@@ -77,6 +77,16 @@ const emptyChartData: ChartData = {
 };
 
 export default function HomeContent() {
+    // Đổi tên tab trên Client-side ngay khi component được render
+    useEffect(() => {
+        // Next.js có cơ chế tự động nạp lại title sau lần render đầu tiên,
+        // Dùng setTimeout để đảm bảo lệnh đổi tên của mình chạy ghi đè sau cùng
+        const timer = setTimeout(() => {
+            document.title = "Trang chủ | Finext";
+        }, 5);
+        return () => clearTimeout(timer);
+    }, []);
+
     const [ticker, setTicker] = useState<string>('VNINDEX');
 
     // Lifted timeRange state từ chart component

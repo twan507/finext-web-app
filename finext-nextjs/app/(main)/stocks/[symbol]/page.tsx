@@ -9,10 +9,10 @@ export async function generateMetadata({ params }: StockDetailPageProps): Promis
     const { symbol } = await params;
     const upper = symbol.toUpperCase();
     return {
-        title: `${upper} - Chi tiết cổ phiếu`,
+        title: `Cổ phiếu ${upper}`,
         description: `Phân tích chi tiết cổ phiếu ${upper}: biểu đồ giá, chỉ số tài chính, tin tức và dữ liệu tham khảo.`,
         openGraph: {
-            title: `${upper} - Chi tiết cổ phiếu | Finext`,
+            title: `Cổ phiếu ${upper} | Finext`,
             description: `Phân tích chi tiết cổ phiếu ${upper}: biểu đồ giá, chỉ số tài chính, tin tức và dữ liệu tham khảo.`,
         },
     };

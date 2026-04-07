@@ -3,10 +3,10 @@ import { Metadata } from 'next';
 import ReportsContent from './PageContent';
 
 export const metadata: Metadata = {
-    title: 'Báo cáo',
+    title: 'Báo cáo tổng hợp',
     description: 'Tổng hợp báo cáo phân tích, bản tin doanh nghiệp và thị trường hàng ngày.',
     openGraph: {
-        title: 'Báo cáo | Finext',
+        title: 'Báo cáo tổng hợp | Finext',
         description: 'Tổng hợp báo cáo phân tích, bản tin doanh nghiệp và thị trường hàng ngày.',
     },
 };

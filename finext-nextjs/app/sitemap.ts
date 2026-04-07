@@ -14,12 +14,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             changeFrequency: 'daily',
             priority: 1,
         },
-        {
-            url: `${baseUrl}/home`,
-            lastModified: currentDate,
-            changeFrequency: 'daily',
-            priority: 0.9,
-        },
         // ── Sản phẩm chính (priority cao → Google ưu tiên sitelinks) ──
         {
             url: `${baseUrl}/markets`,
