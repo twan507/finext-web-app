@@ -185,7 +185,7 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
                     }
 
                     const seriesDataArr: MultiLineSeriesData[] = [];
-                    for (const [seriesName, points] of groups) {
+                    Array.from(groups.entries()).forEach(([seriesName, points]) => {
                         const seen = new Set<number>();
                         const lineData: PriceData[] = [];
                         for (const p of points) {
@@ -194,7 +194,7 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
                             seen.add(ts);
                             lineData.push({ time: ts, value: p.close });
                         }
-                        if (lineData.length === 0) continue;
+                        if (lineData.length === 0) return;
 
                         const lastClose = lineData[lineData.length - 1].value;
                         const lastRaw = points[points.length - 1];
@@ -218,7 +218,7 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
                             pctChange,
                             priceChange: priceDiff,
                         });
-                    }
+                    });
 
                     setMultiLineData(seriesDataArr);
 
