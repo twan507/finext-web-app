@@ -20,6 +20,7 @@ import {
   ChevronRight as ChevronRightIcon,
   CandlestickChartOutlined,
   StarBorderPurple500Outlined,
+  FilterAltOutlined,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   ArrowBack as ArrowBackIcon,
@@ -45,6 +46,7 @@ interface NavItem {
 const navigationStructure: NavItem[] = [
   { text: 'Biểu đồ kĩ thuật', href: '/charts', icon: <CandlestickChartOutlined /> },
   { text: 'Danh sách theo dõi', href: '/watchlist', icon: <StarBorderPurple500Outlined /> },
+  { text: 'Bộ lọc thông minh', href: '/stocks', icon: <FilterAltOutlined /> },
 ];
 
 // Top navigation tabs (like in Simplize)
@@ -80,7 +82,7 @@ const topNavTabs: TopNavTab[] = [
     ]
   },
   {
-    label: 'Nhóm & Ngành',
+    label: 'Cổ phiếu',
     href: '/groups',
     description: 'Đánh giá sức mạnh nhóm ngành và đón đầu sự luân chuyển dòng tiền.',
     icon: 'fluent-color:diversity-16',
@@ -89,6 +91,7 @@ const topNavTabs: TopNavTab[] = [
       { label: 'Phân tích nhóm', href: '/groups/FNXINDEX', icon: 'fluent-color:molecule-48' },
       { label: 'Ngành nghề', href: '/sectors', icon: 'fluent-color:data-pie-20' },
       { label: 'Phân tích ngành', href: '/sectors/NGANHANG', icon: 'fluent-color:chart-multiple-24' },
+      { label: 'Phân tích cổ phiếu', href: '/stocks/AAA', icon: 'fluent-color:search-sparkle-48' },
     ]
   },
   {
@@ -102,13 +105,14 @@ const topNavTabs: TopNavTab[] = [
     ]
   },
   {
-    label: 'Cổ phiếu',
-    href: '/stocks',
-    description: 'Công cụ phân tích và sàng lọc cổ phiếu chuyên nghiệp.',
-    icon: 'fluent-color:search-sparkle-16',
+    label: 'Khác',
+    href: '/international',
+    description: 'Thông tin thị trường quốc tế, vĩ mô và tài sản khác.',
+    icon: 'fluent-color:globe-24',
     submenu: [
-      { label: 'Bộ lọc thông minh', href: '/stocks', icon: 'fluent-color:list-bar-32', description: 'Sàng lọc cơ hội đầu tư với bộ tiêu chí kỹ thuật và cơ bản' },
-      { label: 'Phân tích cổ phiếu', href: '/stocks/AAA', icon: 'fluent-color:data-trending-16', description: 'Phân tích chuyên sâu từng cổ phiếu với đa chiều dữ liệu' },
+      { label: 'Thị trường quốc tế', href: '/international', icon: 'fluent-color:planet-32' },
+      { label: 'Kinh tế vĩ mô', href: '/macro', icon: 'fluent-color:building-government-search-32' },
+      { label: 'Hàng hóa', href: '/commodities', icon: 'fluent-color:list-bar-16' },
     ]
   },
 ];

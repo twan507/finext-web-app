@@ -2,6 +2,7 @@
 
 import { useMemo, memo, useCallback } from 'react';
 import { Box, useTheme, Skeleton } from '@mui/material';
+import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { ApexOptions } from 'apexcharts';
 import type { StockData } from '../../../home/components/marketSection/MarketVolatility';
@@ -154,14 +155,30 @@ const TreemapChart = memo(function TreemapChart({
     series,
     height,
     isDark,
+    onStockClick,
 }: {
     series: ApexAxisChartSeries;
     height: string;
     isDark: boolean;
+    onStockClick: (ticker: string) => void;
 }) {
     const options: ApexOptions = useMemo(
         () => ({
             ...STATIC_OPTIONS,
+            chart: {
+                ...STATIC_OPTIONS.chart,
+                events: {
+                    click: function (event, chartContext, config) {
+                        const { seriesIndex, dataPointIndex, config: chartConfig } = config;
+                        if (seriesIndex !== undefined && dataPointIndex !== undefined && dataPointIndex !== -1) {
+                            const ticker = chartConfig.series[seriesIndex]?.data?.[dataPointIndex]?.x;
+                            if (ticker) {
+                                onStockClick(ticker);
+                            }
+                        }
+                    }
+                }
+            },
             tooltip: {
                 enabled: true,
                 custom: function ({ seriesIndex, dataPointIndex, w }: any) {
@@ -218,7 +235,7 @@ const TreemapChart = memo(function TreemapChart({
                 },
             },
         }),
-        [isDark]
+        [isDark, onStockClick]
     );
 
     return <Chart options={options} series={series} type="treemap" height={height} width="100%" />;
@@ -229,6 +246,11 @@ const TreemapChart = memo(function TreemapChart({
 export default function StockTreemap({ data, chartHeight = '550px' }: StockTreemapProps) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
+    const router = useRouter();
+
+    const handleStockClick = useCallback((ticker: string) => {
+        router.push(`/stocks/${ticker}`);
+    }, [router]);
 
     // Series: only depends on data (not theme) → stable on theme switch
     const series = useMemo(() => {
@@ -304,6 +326,9 @@ export default function StockTreemap({ data, chartHeight = '550px' }: StockTreem
                     rx: '0 !important',
                     ry: '0 !important',
                 },
+                '& .apexcharts-series rect': {
+                    cursor: 'pointer',
+                },
             }}
         >
             {isLoading ? (
@@ -328,7 +353,7 @@ export default function StockTreemap({ data, chartHeight = '550px' }: StockTreem
                     <Skeleton variant="rectangular" animation="wave" sx={{ position: 'absolute', top: 'calc(80% + 2px)', left: 'calc(73% + 4px)', width: 'calc(9% - 1px)', height: 'calc(20% - 2px)', borderRadius: 0 }} />
                 </Box>
             ) : (
-                <TreemapChart series={series} height={chartHeight} isDark={isDark} />
+                <TreemapChart series={series} height={chartHeight} isDark={isDark} onStockClick={handleStockClick} />
             )}
         </Box>
     );

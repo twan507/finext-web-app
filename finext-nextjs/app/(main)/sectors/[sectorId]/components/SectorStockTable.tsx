@@ -1,16 +1,19 @@
 'use client';
 
 import { useMemo, useCallback, useState } from 'react';
-import { Box, Typography, Skeleton, useTheme, useMediaQuery, Pagination, Stack } from '@mui/material';
+import { Box, Typography, Skeleton, useTheme, useMediaQuery, Pagination, Stack, Tooltip, alpha } from '@mui/material';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import { useRouter } from 'next/navigation';
 import {
     getResponsiveFontSize,
     fontWeight,
     borderRadius,
     transitions,
     spacing,
+    durations,
 } from 'theme/tokens';
 import { getPriceColor, getFlowColor, getVsiColor } from 'theme/colorHelpers';
 
@@ -243,6 +246,7 @@ function IndexRow({
 }) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
+    const router = useRouter();
 
     const dividerColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
     const hoverBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)';
@@ -251,15 +255,67 @@ function IndexRow({
         switch (column.key) {
             case 'ticker':
                 return (
-                    <Typography
-                        sx={{
-                            fontSize: getResponsiveFontSize('sm'),
-                            fontWeight: fontWeight.bold,
-                            color: 'text.primary',
-                        }}
-                    >
-                        {row.ticker}
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                        <Typography
+                            onClick={() => router.push(`/stocks/${row.ticker}`)}
+                            sx={{
+                                cursor: 'pointer',
+                                fontSize: getResponsiveFontSize('sm'),
+                                fontWeight: fontWeight.bold,
+                                color: 'text.primary',
+                                transition: `color ${durations.fast}`,
+                                '&:hover': { color: theme.palette.primary.main },
+                            }}
+                        >
+                            {row.ticker}
+                        </Typography>
+
+                        <Tooltip
+                            title="Mở chart"
+                            placement="right"
+                            arrow={false}
+                            componentsProps={{
+                                tooltip: {
+                                    sx: {
+                                        bgcolor: isDark ? alpha('#1e1e1e', 0.92) : alpha('#fff', 0.92),
+                                        color: theme.palette.text.primary,
+                                        border: 'none',
+                                        borderRadius: `${borderRadius.sm}px`,
+                                        fontSize: getResponsiveFontSize('xs'),
+                                        fontWeight: fontWeight.medium,
+                                        backdropFilter: 'blur(8px)',
+                                        boxShadow: isDark
+                                            ? '0 4px 16px rgba(0,0,0,0.5)'
+                                            : '0 4px 12px rgba(0,0,0,0.15)',
+                                        px: 1,
+                                        py: 0.5,
+                                    },
+                                },
+                            }}
+                        >
+                            <Box
+                                component="span"
+                                onClick={(e: React.MouseEvent) => {
+                                    e.stopPropagation();
+                                    router.push(`/charts/${row.ticker}`);
+                                }}
+                                sx={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    color: alpha(theme.palette.text.secondary, 0.4),
+                                    flexShrink: 0,
+                                    transition: `color ${durations.fast}`,
+                                    '&:hover': {
+                                        color: theme.palette.primary.main,
+                                    },
+                                }}
+                            >
+                                <TrendingUpIcon sx={{ fontSize: 15 }} />
+                            </Box>
+                        </Tooltip>
+                    </Box>
                 );
 
             case 'close':

@@ -674,8 +674,9 @@ export default function SectorDetailContent() {
 
     return (
         <Box sx={{ py: 2 }}>
-            {/* Title with dropdown sector selector */}
-            <Box ref={dropdownRef} sx={{ position: 'relative', display: 'inline-block', mb: 2 }}>
+            {/* Title with dropdown sector selector and Mở biểu đồ button */}
+            <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', mb: 2 }}>
+                <Box ref={dropdownRef} sx={{ position: 'relative', display: 'inline-block' }}>
                 <Box
                     component="button"
                     onClick={() => setDropdownOpen(prev => !prev)}
@@ -817,6 +818,29 @@ export default function SectorDetailContent() {
                         })}
                     </Box>
                 )}
+                </Box>
+
+                {/* Chart Button */}
+                <Box
+                    component="span"
+                    onClick={() => router.push(`/charts/${ticker}`)}
+                    sx={{ textDecoration: 'none', cursor: 'pointer', mb: '4px' }}
+                >
+                    <Typography sx={{
+                        fontSize: getResponsiveFontSize('sm'),
+                        fontWeight: fontWeight.bold,
+                        color: theme.palette.primary.main,
+                        bgcolor: alpha(theme.palette.primary.main, 0.1),
+                        px: 1.5,
+                        py: 0.5,
+                        borderRadius: `${borderRadius.sm}px`,
+                        transition: 'background 0.2s',
+                        '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.15) },
+                        userSelect: 'none',
+                    }}>
+                        Mở biểu đồ ↗
+                    </Typography>
+                </Box>
             </Box>
 
             {/* ========== TOP SECTION: Chart (left) + Detail Panel (right) ========== */}
