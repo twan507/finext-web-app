@@ -44,6 +44,9 @@ from app.crud.sse.search_news import search_news
 from app.crud.sse.search_reports import search_reports
 # Market meta keywords
 from app.crud.sse.market_update_time import market_update_time
+# Other Ticker (Commodities, World, Crypto)
+from app.crud.sse.latest_other_ticker import latest_other_ticker
+from app.crud.sse.other_ticker import other_ticker
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +100,9 @@ SSE_QUERY_REGISTRY: Dict[str, Any] = {
     "search_reports": search_reports,
     # Market meta
     "market_update_time": market_update_time,
+    # Other Ticker
+    "latest_other_ticker": latest_other_ticker,
+    "other_ticker": other_ticker,
 }
 
 
