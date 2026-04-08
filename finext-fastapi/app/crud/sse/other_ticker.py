@@ -27,6 +27,7 @@ async def other_ticker(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]
         "name": 1,
         "group": 1,
         "category": 1,
+        "cat_order": 1,
     }
 
     find_query = {}

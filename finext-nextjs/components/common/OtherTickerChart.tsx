@@ -39,6 +39,7 @@ interface HistoricalPoint {
     m_pct?: number | null;
     q_pct?: number | null;
     y_pct?: number | null;
+    cat_order?: number;
 }
 
 const getPctByTimeRange = (record: HistoricalPoint, timeRange: OtherChartTimeRange): number => {
@@ -64,6 +65,7 @@ interface MultiLineSeriesData {
     lastClose: number;
     pctChange: number;
     priceChange: number;
+    catOrder: number;
 }
 
 export interface OtherTickerChartProps {
@@ -223,8 +225,11 @@ export default function OtherTickerChart({ ticker, name, chartMode, unit, height
                             lastClose,
                             pctChange,
                             priceChange: priceDiff,
+                            catOrder: lastRaw.cat_order ?? 999,
                         });
                     });
+
+                    seriesDataArr.sort((a, b) => a.catOrder - b.catOrder);
 
                     multiLastRawRef.current = rawMap;
                     setMultiLineData(seriesDataArr);
@@ -346,7 +351,7 @@ export default function OtherTickerChart({ ticker, name, chartMode, unit, height
             if (isMultiLine && multiSeriesRef.current.length > 0) {
                 // Multi-line tooltip
                 const lines: { name: string; value: number; color: string }[] = [];
-                let y = param.point.y;
+                let topCoord: number | null = null;
                 multiSeriesRef.current.forEach((series, idx) => {
                     const seriesData = param.seriesData.get(series);
                     if (seriesData && 'value' in seriesData) {
@@ -357,9 +362,10 @@ export default function OtherTickerChart({ ticker, name, chartMode, unit, height
                             color: LINE_COLORS[idx % LINE_COLORS.length],
                         });
                         const coord = series.priceToCoordinate(val);
-                        if (coord !== null) y = coord;
+                        if (coord !== null && (topCoord === null || coord < topCoord)) topCoord = coord;
                     }
                 });
+                const y = topCoord ?? param.point.y;
                 if (lines.length === 0) { setTooltipData(null); return; }
                 setTooltipData({ visible: true, x: param.point.x, y, time: timeStr, price: lines[0].value, lines });
             } else if (seriesRef.current) {

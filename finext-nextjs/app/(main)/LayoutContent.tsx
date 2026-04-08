@@ -45,8 +45,8 @@ interface NavItem {
 
 const navigationStructure: NavItem[] = [
   { text: 'Biểu đồ kĩ thuật', href: '/charts', icon: <CandlestickChartOutlined /> },
-  { text: 'Danh sách theo dõi', href: '/watchlist', icon: <StarBorderPurple500Outlined /> },
   { text: 'Bộ lọc thông minh', href: '/stocks', icon: <FilterAltOutlined /> },
+  { text: 'Danh sách theo dõi', href: '/watchlist', icon: <StarBorderPurple500Outlined /> },
 ];
 
 // Top navigation tabs (like in Simplize)

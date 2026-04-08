@@ -49,7 +49,7 @@ interface ColumnDef {
 }
 
 const getColumns = (): ColumnDef[] => [
-    { key: 'display_name', label: 'Hàng hóa / Chỉ số', align: 'left', minWidth: 160, sortable: true },
+    { key: 'display_name', label: 'Chỉ số / Hàng hoá', align: 'left', minWidth: 160, sortable: true },
     { key: 'close', label: 'Giá trị', align: 'right', minWidth: 100, sortable: true },
     { key: 'pct_change', label: 'Ngày', align: 'right', minWidth: 85, sortable: true },
     { key: 'w_pct', label: 'Tuần', align: 'right', minWidth: 85, sortable: true, hideOnMobile: true },

@@ -8,8 +8,8 @@ import { NewsBreadcrumb } from '../news/components';
 import { getResponsiveFontSize, fontWeight, transitions, layoutTokens } from 'theme/tokens';
 
 const CATEGORIES = [
-    { id: 'global_index', label: 'Chỉ số thế giới' },
-    { id: 'fx', label: 'Forex' },
+    { id: 'global_index', label: 'Chứng khoán' },
+    { id: 'fx', label: 'Ngoại hối' },
     { id: 'bonds', label: 'Trái phiếu' },
     { id: 'crypto', label: 'Tiền mã hóa' },
 ] as const;
