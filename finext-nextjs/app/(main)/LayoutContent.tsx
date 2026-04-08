@@ -36,6 +36,7 @@ import { layoutTokens, iconSize, borderRadius, shadows, transitions, spacing, ge
 import AuthButtons from '@/components/auth/AuthButtons';
 import ConsultationSection from './home/components/ConsultationSection';
 import PwaTitleBar from '@/components/layout/PwaTitleBar';
+import MobileBottomBar from '@/components/layout/MobileBottomBar';
 
 interface NavItem {
   text: string;
@@ -1052,67 +1053,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         )}
 
         {/* MOBILE BOTTOM BAR - chỉ hiện trên mobile (< md) */}
-        <Box
-          component="nav"
-          aria-label="Mobile navigation"
-          sx={{
-            display: { xs: 'flex', md: 'none' },
-            position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: 50,
-            zIndex: theme.zIndex.appBar,
-            alignItems: 'center',
-            justifyContent: 'space-around',
-            bgcolor: theme.palette.component.appBar.background,
-            borderTop: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
-            boxShadow: shadows.appBar,
-            backdropFilter: 'blur(8px)',
-          }}
-        >
-          <MuiIconButton
-            onClick={() => router.back()}
-            aria-label="Quay lại"
-            sx={{
-              flex: 1,
-              height: '100%',
-              borderRadius: 0,
-              color: theme.palette.text.secondary,
-              '&:hover': { color: theme.palette.primary.main, bgcolor: 'transparent' },
-            }}
-          >
-            <ArrowBackIcon />
-          </MuiIconButton>
-
-          <MuiIconButton
-            onClick={handleDrawerToggle}
-            aria-label="Mở menu"
-            sx={{
-              flex: 1,
-              height: '100%',
-              borderRadius: 0,
-              color: theme.palette.text.secondary,
-              '&:hover': { color: theme.palette.primary.main, bgcolor: 'transparent' },
-            }}
-          >
-            <MenuIcon />
-          </MuiIconButton>
-
-          <MuiIconButton
-            onClick={() => window.location.reload()}
-            aria-label="Tải lại trang"
-            sx={{
-              flex: 1,
-              height: '100%',
-              borderRadius: 0,
-              color: theme.palette.text.secondary,
-              '&:hover': { color: theme.palette.primary.main, bgcolor: 'transparent' },
-            }}
-          >
-            <RefreshIcon />
-          </MuiIconButton>
-        </Box>
+        <MobileBottomBar />
       </Box>
     </Box >
   );

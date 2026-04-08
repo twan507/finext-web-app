@@ -305,6 +305,8 @@ export default function OtherTickerChart({ ticker, name, chartMode, unit, height
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [timeRange]);
 
+    const chartHeight = isMultiLine ? height : height + 32;
+
     // ========== Init chart ==========
     const initChart = useCallback(() => {
         if (!chartContainerRef.current) return;
@@ -317,7 +319,7 @@ export default function OtherTickerChart({ ticker, name, chartMode, unit, height
                 horzLines: { color: colors.gridColor, style: LineStyle.Solid },
             },
             width: chartContainerRef.current.clientWidth,
-            height,
+            height: chartHeight,
             crosshair: {
                 mode: CrosshairMode.Normal,
                 vertLine: { color: colors.crosshairColor, width: 1, style: LineStyle.Dashed },
@@ -388,7 +390,7 @@ export default function OtherTickerChart({ ticker, name, chartMode, unit, height
         };
         window.addEventListener('resize', handleResize);
         return () => { window.removeEventListener('resize', handleResize); };
-    }, [height, colors, isMultiLine, multiLineData]);
+    }, [chartHeight, colors, isMultiLine, multiLineData]);
 
     // ========== Render chart ==========
     useEffect(() => {
@@ -555,8 +557,8 @@ export default function OtherTickerChart({ ticker, name, chartMode, unit, height
 
     const headerHeight = 78;
     const controlsHeight = 48;
-    const legendHeight = 32;
-    const totalHeight = headerHeight + controlsHeight + legendHeight + height;
+    const legendHeight = isMultiLine ? 32 : 0;
+    const totalHeight = headerHeight + controlsHeight + legendHeight + chartHeight;
 
     return (
         <Box sx={{ width: '100%', minHeight: totalHeight }}>
@@ -605,11 +607,11 @@ export default function OtherTickerChart({ ticker, name, chartMode, unit, height
             {/* ========== Controls ========== */}
             <Stack
                 direction="row"
-                justifyContent="space-between"
+                justifyContent="flex-start"
                 alignItems="center"
                 useFlexGap
                 flexWrap="wrap"
-                spacing={2}
+                spacing={1}
                 sx={{ mb: 2, minHeight: controlsHeight }}
             >
                 <TimeframeSelector
@@ -617,28 +619,27 @@ export default function OtherTickerChart({ ticker, name, chartMode, unit, height
                     onChange={handleTimeRangeChange}
                     options={['1W', '1M', '3M', '1Y']}
                 />
-
-                <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end" sx={{ flexGrow: { xs: 1, sm: 0 } }}>
-                    <PanZoomToggle enabled={panZoomEnabled} onClick={handleTogglePanZoom} />
-                </Stack>
+                <PanZoomToggle enabled={panZoomEnabled} onClick={handleTogglePanZoom} />
             </Stack>
 
             {/* ========== Multi-line Legend ========== */}
-            <Stack direction="row" flexWrap="wrap" spacing={2} justifyContent="center" sx={{ mb: 1.5, minHeight: 20 }}>
-                {isMultiLine && multiLineData.map((series, idx) => (
-                    <Stack key={series.name} direction="row" alignItems="center" spacing={0.5}>
-                        <Box sx={{ width: 12, height: 3, borderRadius: 1, bgcolor: LINE_COLORS[idx % LINE_COLORS.length] }} />
-                        <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.textSecondary }}>
-                            {series.name}
-                        </Typography>
-                    </Stack>
-                ))}
-            </Stack>
+            {isMultiLine && (
+                <Stack direction="row" flexWrap="wrap" spacing={2} justifyContent="center" sx={{ mb: 1.5, minHeight: 20 }}>
+                    {multiLineData.map((series, idx) => (
+                        <Stack key={series.name} direction="row" alignItems="center" spacing={0.5}>
+                            <Box sx={{ width: 12, height: 3, borderRadius: 1, bgcolor: LINE_COLORS[idx % LINE_COLORS.length] }} />
+                            <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.textSecondary }}>
+                                {series.name}
+                            </Typography>
+                        </Stack>
+                    ))}
+                </Stack>
+            )}
 
             {/* ========== Chart container ========== */}
             <Box
                 onMouseLeave={() => setTooltipData(null)}
-                sx={{ width: '100%', height, borderRadius: 1, overflow: 'hidden', position: 'relative' }}
+                sx={{ width: '100%', height: chartHeight, borderRadius: 1, overflow: 'hidden', position: 'relative' }}
             >
                 {isLoading && (
                     <Box sx={{
