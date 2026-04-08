@@ -13,7 +13,6 @@ import {
 
 const BAR_HEIGHT = 52;
 const FAB_SIZE = 58;
-const NOTCH_GAP = 72; // Khoảng trống giữa cho notch
 const CURVE_DEPTH = 30; // Độ sâu lõm notch
 const SCROLL_THRESHOLD = 10;
 
@@ -86,7 +85,7 @@ export default function MobileBottomBar() {
             <Box
                 sx={{
                     position: 'absolute',
-                    bottom: BAR_HEIGHT - CURVE_DEPTH - FAB_SIZE / 2 + 20,
+                    bottom: BAR_HEIGHT - CURVE_DEPTH - FAB_SIZE / 2 + 18,
                     left: '50%',
                     transform: visible ? 'translateX(-50%)' : 'translateX(-50%) translateY(20px)',
                     zIndex: 3,
@@ -101,16 +100,18 @@ export default function MobileBottomBar() {
                         width: FAB_SIZE,
                         height: FAB_SIZE,
                         borderRadius: '50%',
-                        bgcolor: theme.palette.background.paper,
-                        boxShadow: 'none',
+                        bgcolor: 'transparent',
+                        boxShadow: `0 0 12px ${alpha(theme.palette.primary.main, 0.35)}, 0 0 24px ${alpha(theme.palette.primary.main, 0.15)}`,
                         overflow: 'hidden',
                         p: 0,
                         transition: 'box-shadow 0.25s ease, transform 0.2s ease',
                         '&:hover': {
-                            boxShadow: `0 4px 18px ${alpha(theme.palette.primary.main, 0.2)}`,
+                            bgcolor: 'transparent',
+                            boxShadow: `0 0 16px ${alpha(theme.palette.primary.main, 0.5)}, 0 0 32px ${alpha(theme.palette.primary.main, 0.25)}`,
                             transform: 'scale(1.05)',
                         },
                         '&:active': {
+                            bgcolor: 'transparent',
                             transform: 'scale(0.95)',
                         },
                     }}
@@ -129,47 +130,13 @@ export default function MobileBottomBar() {
             <Box
                 sx={{
                     position: 'absolute',
-                    bottom: -4,
+                    bottom: -8,
                     left: 0,
                     right: 0,
-                    height: BAR_HEIGHT + 4,
+                    height: BAR_HEIGHT + 8,
                     pointerEvents: 'auto',
-                    boxShadow: `0 -4px 12px ${alpha(theme.palette.common.black, 0.18)}`,
                 }}
             >
-                {/* SVG background với notch lõm xuống */}
-                <Box
-                    component="svg"
-                    viewBox="0 0 400 100"
-                    preserveAspectRatio="none"
-                    sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        filter: `drop-shadow(0 -4px 8px ${alpha(theme.palette.common.black, 0.25)})`,
-                    }}
-                >
-                    <path
-                        d={`
-              M 0,0
-              L ${200 - NOTCH_GAP},0
-              C ${200 - NOTCH_GAP + 20},0 ${200 - NOTCH_GAP / 2},${CURVE_DEPTH * 100 / BAR_HEIGHT} 200,${CURVE_DEPTH * 100 / BAR_HEIGHT}
-              C ${200 + NOTCH_GAP / 2},${CURVE_DEPTH * 100 / BAR_HEIGHT} ${200 + NOTCH_GAP - 20},0 ${200 + NOTCH_GAP},0
-              L 400,0
-              L 400,100
-              L 0,100
-              Z
-            `}
-                        fill={bgColor}
-                        stroke={borderColor}
-                        strokeWidth="0.8"
-                        vectorEffect="non-scaling-stroke"
-                    />
-                </Box>
-
-                {/* Backdrop blur */}
                 <Box
                     sx={{
                         position: 'absolute',
@@ -177,6 +144,9 @@ export default function MobileBottomBar() {
                         left: 0,
                         width: '100%',
                         height: '100%',
+                        bgcolor: alpha(bgColor, 0.60),
+                        borderTop: `1px solid ${borderColor}`,
+                        boxShadow: `0 -6px 15px ${alpha(theme.palette.common.black, 0.05)}, 0 -2px 15px ${alpha(theme.palette.common.white, 0.15)}`,
                         backdropFilter: 'blur(12px)',
                     }}
                 />
@@ -189,6 +159,7 @@ export default function MobileBottomBar() {
                         display: 'flex',
                         alignItems: 'center',
                         height: '100%',
+                        pb: '11px',
                         px: 0,
                     }}
                 >
@@ -199,14 +170,14 @@ export default function MobileBottomBar() {
                             aria-label="Quay lại"
                             sx={iconButtonSx}
                         >
-                            <ArrowBackIcon sx={{ fontSize: 22 }} />
+                            <ArrowBackIcon sx={{ fontSize: 26 }} />
                         </MuiIconButton>
                         <MuiIconButton
                             onClick={() => router.push('/charts')}
                             aria-label="Biểu đồ"
                             sx={iconButtonSx}
                         >
-                            <CandlestickChartOutlined sx={{ fontSize: 22 }} />
+                            <CandlestickChartOutlined sx={{ fontSize: 26 }} />
                         </MuiIconButton>
                     </Box>
 
@@ -220,14 +191,14 @@ export default function MobileBottomBar() {
                             aria-label="Watchlist"
                             sx={iconButtonSx}
                         >
-                            <StarBorderPurple500Outlined sx={{ fontSize: 22 }} />
+                            <StarBorderPurple500Outlined sx={{ fontSize: 26 }} />
                         </MuiIconButton>
                         <MuiIconButton
                             onClick={() => router.push('/stocks')}
                             aria-label="Bộ lọc"
                             sx={iconButtonSx}
                         >
-                            <FilterAltOutlined sx={{ fontSize: 22 }} />
+                            <FilterAltOutlined sx={{ fontSize: 26 }} />
                         </MuiIconButton>
                     </Box>
                 </Box>
