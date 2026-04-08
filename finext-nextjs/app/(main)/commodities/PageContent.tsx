@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Box, Typography, useTheme, alpha } from '@mui/material';
 import OtherTickerTable, { OtherTickerData } from '@/components/common/OtherTickerTable';
 import OtherTickerChart from '@/components/common/OtherTickerChart';
@@ -72,14 +73,30 @@ function SubNavbar({ activeTab, onTabChange }: {
     );
 }
 
+const VALID_TABS: CategoryId[] = ['metals', 'energy', 'chemical', 'agriculture'];
+
 export default function CommoditiesContent() {
-    const [activeTab, setActiveTab] = useState<CategoryId>('energy');
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const tabParam = searchParams.get('tab') as CategoryId | null;
+
+    const [activeTab, setActiveTab] = useState<CategoryId>(() => {
+        if (tabParam && VALID_TABS.includes(tabParam)) return tabParam;
+        return 'metals';
+    });
     const [selectedRow, setSelectedRow] = useState<OtherTickerData | null>(null);
+
+    useEffect(() => {
+        if (tabParam && VALID_TABS.includes(tabParam) && tabParam !== activeTab) {
+            setActiveTab(tabParam);
+        }
+    }, [tabParam]);
 
     const handleTabChange = useCallback((tab: CategoryId) => {
         setActiveTab(tab);
         setSelectedRow(null);
-    }, []);
+        router.push(`?tab=${tab}`, { scroll: false });
+    }, [router]);
 
     const handleTickerSelect = useCallback((row: OtherTickerData) => {
         setSelectedRow(row);
