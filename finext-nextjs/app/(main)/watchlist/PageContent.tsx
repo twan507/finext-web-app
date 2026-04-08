@@ -549,9 +549,9 @@ export default function WatchlistContent() {
     // Loading state — dots animation matching global app loading
     if (loading) {
         return (
-            <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
-                <Box sx={{ py: 2 }}>
-                    {renderTitle()}
+            <Box sx={{ py: 2 }}>
+                {renderTitle()}
+                <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
                     <Box
                         sx={{
                             display: 'flex',
@@ -572,16 +572,16 @@ export default function WatchlistContent() {
                             <DotLoading />
                         </Box>
                     </Box>
-                </Box>
-            </OptionalAuthWrapper>
+                </OptionalAuthWrapper>
+            </Box>
         );
     }
 
     if (watchlists.length === 0) {
         return (
-            <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
-                <Box sx={{ py: 2 }}>
-                    {renderTitle()}
+            <Box sx={{ py: 2 }}>
+                {renderTitle()}
+                <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 8, gap: 2 }}>
                         <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('md'), fontWeight: fontWeight.medium }}>
                             Bạn chưa có Watchlist
@@ -623,16 +623,16 @@ export default function WatchlistContent() {
                         editingWatchlist={editingWatchlist}
                         industries={industries}
                     />
-                </Box>
-            </OptionalAuthWrapper>
+                </OptionalAuthWrapper>
+            </Box>
         );
     }
 
     return (
-        <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
-            <Box sx={{ py: 2 }}>
-                {renderTitle()}
+        <Box sx={{ py: 2 }}>
+            {renderTitle()}
 
+            <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
                 {/* Page selector */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5, flexWrap: 'wrap' }}>
                     {pages.map((p: number) => (
@@ -860,7 +860,7 @@ export default function WatchlistContent() {
                         {snackbar.message}
                     </Alert>
                 </Snackbar>
-            </Box>
-        </OptionalAuthWrapper>
+            </OptionalAuthWrapper>
+        </Box>
     );
 }

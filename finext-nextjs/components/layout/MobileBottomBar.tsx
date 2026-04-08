@@ -10,15 +10,20 @@ import {
     StarBorderPurple500Outlined,
     FilterAltOutlined,
 } from '@mui/icons-material';
+import { useAuth } from '@/components/auth/AuthProvider';
+import { useSignInModal } from '@/hooks/useSignInModal';
+import SignInModal from '@/app/(auth)/components/LoginModal';
 
-const BAR_HEIGHT = 52;
-const FAB_SIZE = 58;
-const CURVE_DEPTH = 30; // Độ sâu lõm notch
+const BAR_HEIGHT = 44;
+const FAB_SIZE = 50;
+const CURVE_DEPTH = 26; // Độ sâu lõm notch
 const SCROLL_THRESHOLD = 10;
 
 export default function MobileBottomBar() {
     const theme = useTheme();
     const router = useRouter();
+    const { session } = useAuth();
+    const { isOpen: isSignInOpen, openModal: openSignInModal, closeModal: closeSignInModal } = useSignInModal();
     const [visible, setVisible] = useState(true);
     const lastScrollY = useRef(0);
     const ticking = useRef(false);
@@ -49,8 +54,8 @@ export default function MobileBottomBar() {
     const borderColor = alpha(theme.palette.divider, 0.12);
 
     const iconButtonSx = {
-        width: 42,
-        height: 42,
+        width: 38,
+        height: 38,
         borderRadius: '10px',
         color: theme.palette.text.secondary,
         transition: 'color 0.2s ease, background-color 0.2s ease',
@@ -62,6 +67,14 @@ export default function MobileBottomBar() {
             transform: 'scale(0.92)',
         },
     };
+
+    const handleLogoClick = useCallback(() => {
+        if (session) {
+            router.push('/profile');
+        } else {
+            openSignInModal();
+        }
+    }, [session, router, openSignInModal]);
 
     return (
         <Box
@@ -85,7 +98,7 @@ export default function MobileBottomBar() {
             <Box
                 sx={{
                     position: 'absolute',
-                    bottom: BAR_HEIGHT - CURVE_DEPTH - FAB_SIZE / 2 + 18,
+                    bottom: BAR_HEIGHT - CURVE_DEPTH - FAB_SIZE / 2 + 16,
                     left: '50%',
                     transform: visible ? 'translateX(-50%)' : 'translateX(-50%) translateY(20px)',
                     zIndex: 3,
@@ -94,7 +107,7 @@ export default function MobileBottomBar() {
                 }}
             >
                 <MuiIconButton
-                    onClick={() => router.push('/profile')}
+                    onClick={handleLogoClick}
                     aria-label="Trang cá nhân"
                     sx={{
                         width: FAB_SIZE,
@@ -159,7 +172,7 @@ export default function MobileBottomBar() {
                         display: 'flex',
                         alignItems: 'center',
                         height: '100%',
-                        pb: '11px',
+                        pb: '6px',
                         px: 0,
                     }}
                 >
@@ -203,6 +216,11 @@ export default function MobileBottomBar() {
                     </Box>
                 </Box>
             </Box>
+
+            <SignInModal
+                open={isSignInOpen}
+                onClose={closeSignInModal}
+            />
         </Box>
     );
 }
