@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { Box, Typography, useTheme, alpha } from '@mui/material';
 import OtherTickerTable, { OtherTickerData } from '@/components/common/OtherTickerTable';
 import OtherTickerChart from '@/components/common/OtherTickerChart';
+import { NewsBreadcrumb } from '../news/components';
 import { getResponsiveFontSize, fontWeight, transitions, layoutTokens } from 'theme/tokens';
 
 const CATEGORIES = [
@@ -86,9 +87,11 @@ export default function InternationalContent() {
 
     return (
         <Box sx={{ py: 3 }}>
-            <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1'), mb: 2 }}>
-                Thị trường quốc tế
-            </Typography>
+            <NewsBreadcrumb
+                items={[]}
+                sectionLabel="Thị trường quốc tế"
+                sectionHref="/international"
+            />
 
             <Box sx={{ flex: 1, minWidth: 0 }}>
                 {selectedRow && (
@@ -97,6 +100,7 @@ export default function InternationalContent() {
                         ticker={selectedRow.ticker}
                         name={selectedRow.name || selectedRow.ticker_name || selectedRow.ticker}
                         chartMode={selectedRow.chart}
+                        unit={selectedRow.unit}
                         height={345}
                     />
                 )}

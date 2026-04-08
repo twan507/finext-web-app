@@ -27,10 +27,10 @@ import {
     Stack,
     Chip,
     useTheme,
-    CircularProgress,
     Tooltip
 } from '@mui/material';
 import TimeframeSelector from 'components/common/TimeframeSelector';
+import DotLoading from 'components/common/DotLoading';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import CandlestickChartIcon from '@mui/icons-material/CandlestickChart';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
@@ -1177,8 +1177,7 @@ export default function MarketIndexChart({
                             zIndex: 1,
                         }}
                     >
-                        <CircularProgress />
-                        <Typography color="text.secondary">Đang tải dữ liệu biểu đồ...</Typography>
+                        <DotLoading />
                     </Box>
                 )}
 

@@ -3,7 +3,8 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
 import { BASIC_AND_ABOVE } from '@/components/auth/features';
-import { Box, Typography, CircularProgress, useTheme, useMediaQuery, Snackbar, Alert } from '@mui/material';
+import { Box, Typography, useTheme, useMediaQuery, Snackbar, Alert } from '@mui/material';
+import DotLoading from 'components/common/DotLoading';
 import AddIcon from '@mui/icons-material/Add';
 import {
     DndContext,
@@ -533,7 +534,7 @@ export default function WatchlistContent() {
     if (authLoading) {
         return (
             <Box sx={{ py: 6, display: 'flex', justifyContent: 'center' }}>
-                <CircularProgress size={32} />
+                <DotLoading />
             </Box>
         );
     }
@@ -568,33 +569,7 @@ export default function WatchlistContent() {
                                 gap: 2,
                             }}
                         >
-                            <Box
-                                className="root-loading-dots"
-                                sx={{
-                                    display: 'flex',
-                                    gap: '6px',
-                                    '& > span': {
-                                        width: '7px',
-                                        height: '7px',
-                                        borderRadius: '50%',
-                                        bgcolor: 'primary.main',
-                                        animation: 'dotBounce 1.4s ease-in-out infinite both',
-                                    },
-                                    '& > span:nth-child(1)': { animationDelay: '-0.32s' },
-                                    '& > span:nth-child(2)': { animationDelay: '-0.16s' },
-                                    '& > span:nth-child(3)': { animationDelay: '0s' },
-                                    '& > span:nth-child(4)': { animationDelay: '0.16s' },
-                                    '@keyframes dotBounce': {
-                                        '0%, 80%, 100%': { transform: 'scale(0.4)', opacity: 0.4 },
-                                        '40%': { transform: 'scale(1)', opacity: 1 },
-                                    },
-                                }}
-                            >
-                                <span />
-                                <span />
-                                <span />
-                                <span />
-                            </Box>
+                            <DotLoading />
                         </Box>
                     </Box>
                 </Box>

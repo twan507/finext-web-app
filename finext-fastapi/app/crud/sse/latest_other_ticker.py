@@ -4,9 +4,7 @@ from app.core.database import get_database
 from app.crud.sse._helpers import get_collection_data, STOCK_DB
 
 
-async def latest_other_ticker(
-    ticker: Optional[str] = None, categories: Optional[str] = None, **kwargs
-) -> Dict[str, Any]:
+async def latest_other_ticker(ticker: Optional[str] = None, categories: Optional[str] = None, **kwargs) -> Dict[str, Any]:
     """
     Lấy dữ liệu today của latest_other_ticker (Commodities, Crypto, World Index, etc.)
     Có thể filter theo ticker hoặc group (thông qua categories param).
@@ -17,9 +15,6 @@ async def latest_other_ticker(
         "_id": 0,
         "date": 1,
         "ticker": 1,
-        "open": 1,
-        "high": 1,
-        "low": 1,
         "close": 1,
         "unit": 1,
         "ticker_name": 1,
@@ -33,20 +28,19 @@ async def latest_other_ticker(
         "name": 1,
         "group": 1,
         "category": 1,
+        "cat_order": 1,
     }
 
     find_query = {}
     if ticker:
         find_query["ticker"] = ticker
-    
+
     if categories:
         # Sử dụng categories param để filter theo group (VD: 'commodities', 'crypto')
         cats = [c.strip() for c in categories.split(",")]
         if cats:
             find_query["group"] = {"$in": cats}
 
-    df = await get_collection_data(
-        stock_db, "latest_other_ticker", find_query=find_query, projection=projection
-    )
+    df = await get_collection_data(stock_db, "latest_other_ticker", find_query=find_query, projection=projection)
 
     return df.to_dict(orient="records")

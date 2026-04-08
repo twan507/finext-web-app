@@ -47,7 +47,7 @@ export default function NewsBreadcrumb({
         return (
             <Breadcrumbs
                 separator="/"
-                sx={{ mb: spacing.sm }}
+                sx={{ mb: 3 }}
             >
                 <BreadcrumbSkeleton width={60} />
                 <BreadcrumbSkeleton width={50} />
@@ -59,7 +59,7 @@ export default function NewsBreadcrumb({
     return (
         <Breadcrumbs
             separator="/"
-            sx={{ mb: spacing.sm }}
+            sx={{ mb: 3 }}
         >
             {/* Trang chủ */}
             <MuiLink

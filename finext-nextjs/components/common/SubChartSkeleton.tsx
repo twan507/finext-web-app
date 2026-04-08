@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Box, Skeleton, useTheme, keyframes } from '@mui/material';
+import DotLoading from 'components/common/DotLoading';
 
 // ── Animations ───────────────────────────────────────────────────────────────
 
@@ -278,30 +279,7 @@ export default function SubChartSkeleton({
                         justifyContent: 'center',
                     }}
                 >
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            gap: '5px',
-                            '& > span': {
-                                width: '6px',
-                                height: '6px',
-                                borderRadius: '50%',
-                                bgcolor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)',
-                                animation: 'subChartDotBounce 1.4s ease-in-out infinite both',
-                            },
-                            '& > span:nth-of-type(1)': { animationDelay: '-0.32s' },
-                            '& > span:nth-of-type(2)': { animationDelay: '-0.16s' },
-                            '& > span:nth-of-type(3)': { animationDelay: '0s' },
-                            '@keyframes subChartDotBounce': {
-                                '0%, 80%, 100%': { transform: 'scale(0.4)', opacity: 0.3 },
-                                '40%': { transform: 'scale(1)', opacity: 0.8 },
-                            },
-                        }}
-                    >
-                        <span />
-                        <span />
-                        <span />
-                    </Box>
+                    <DotLoading size={6} gap={5} color={isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'} />
                 </Box>
             </Box>
 

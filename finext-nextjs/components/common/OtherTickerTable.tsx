@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { Box, Typography, Skeleton, useTheme, useMediaQuery, Theme, Pagination, Stack } from '@mui/material';
+import { Box, Typography, Skeleton, useTheme, useMediaQuery, Theme } from '@mui/material';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { useSseCache } from '@/services/sseClient';
 import { getTrendColor } from 'theme/colorHelpers';
-import { transitions, getResponsiveFontSize, fontWeight, borderRadius, spacing } from 'theme/tokens';
+import { transitions, getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
 
 export interface OtherTickerData {
     ticker: string;
@@ -28,6 +28,7 @@ export interface OtherTickerData {
     name: string;
     group: string;
     category: string;
+    cat_order: number;
 }
 
 type SortDirection = 'asc' | 'desc' | null;
@@ -138,12 +139,14 @@ function IndexRow({ row, columns, isLast, isMobile, isTablet, isSelected, onSele
                     </Typography>
                 );
             }
-            case 'close':
+            case 'close': {
+                const closeValue = row.close != null ? (row.unit === '%' ? row.close * 100 : row.close) : null;
                 return (
                     <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.semibold, color: 'text.primary' }}>
-                        {row.close != null ? row.close.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+                        {closeValue != null ? closeValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
                     </Typography>
                 );
+            }
             case 'pct_change':
                 return renderPctCell(row.pct_change);
             case 'w_pct':
@@ -212,7 +215,7 @@ function SkeletonRow({ columns, isMobile, isTablet }: { columns: ColumnDef[]; is
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const dividerColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
-    
+
     return (
         <Box component="tr">
             {columns.map((col) => {
@@ -233,12 +236,11 @@ const ITEMS_PER_PAGE = 10;
 interface OtherTickerTableProps {
     group?: string;
     category?: string;
-    hidePagination?: boolean;
     selectedName?: string | null;
     onTickerSelect?: (row: OtherTickerData) => void;
 }
 
-export default function OtherTickerTable({ group, category, hidePagination = false, selectedName, onTickerSelect }: OtherTickerTableProps) {
+export default function OtherTickerTable({ group, category, selectedName, onTickerSelect }: OtherTickerTableProps) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'));
@@ -246,7 +248,6 @@ export default function OtherTickerTable({ group, category, hidePagination = fal
 
     const columns = useMemo(() => getColumns(), []);
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: null });
-    const [currentPage, setCurrentPage] = useState(1);
 
     const queryParams: any = {};
     if (group) queryParams.categories = group;
@@ -263,7 +264,6 @@ export default function OtherTickerTable({ group, category, hidePagination = fal
             if (prev.direction === 'desc') return { key: dataKey, direction: 'asc' };
             return { key: null, direction: null };
         });
-        setCurrentPage(1);
     }, []);
 
     const dataToDisplay = useMemo(() => {
@@ -271,13 +271,10 @@ export default function OtherTickerTable({ group, category, hidePagination = fal
         if (category && finalData.length > 0) {
             finalData = finalData.filter((t: OtherTickerData) => t.category === category);
         }
+        // Default sort by cat_order within each category
+        finalData = [...finalData].sort((a, b) => (a.cat_order ?? 999) - (b.cat_order ?? 999));
         return finalData;
     }, [rawData, category]);
-
-    // Reset page khi đổi category
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [category]);
 
     // Auto-select ticker đầu tiên khi chưa có ticker nào được chọn
     useEffect(() => {
@@ -309,12 +306,7 @@ export default function OtherTickerTable({ group, category, hidePagination = fal
         });
     }, [dataToDisplay, sortConfig]);
 
-    const totalPages = Math.max(1, Math.ceil(sortedData.length / ITEMS_PER_PAGE));
-    const paginatedData = useMemo(() => {
-        if (hidePagination) return sortedData;
-        const start = (currentPage - 1) * ITEMS_PER_PAGE;
-        return sortedData.slice(start, start + ITEMS_PER_PAGE);
-    }, [sortedData, currentPage, hidePagination]);
+    const paginatedData = sortedData;
 
     const visibleColumns = useMemo(() => columns.filter((col) => {
         if (isMobile && col.hideOnMobile) return false;
@@ -396,20 +388,7 @@ export default function OtherTickerTable({ group, category, hidePagination = fal
                 </Box>
             )}
 
-            {!isLoading && dataToDisplay.length > 0 && totalPages > 1 && !hidePagination && (
-                <Stack direction="row" justifyContent="center" sx={{ mt: spacing.sm }}>
-                    <Pagination
-                        count={totalPages}
-                        page={currentPage}
-                        onChange={(_event, page) => setCurrentPage(page)}
-                        siblingCount={0}
-                        boundaryCount={3}
-                        color="primary"
-                        size="large"
-                        sx={{ '& .MuiPaginationItem-root': { borderRadius: `${borderRadius.md}px` } }}
-                    />
-                </Stack>
-            )}
+
         </Box>
     );
 }

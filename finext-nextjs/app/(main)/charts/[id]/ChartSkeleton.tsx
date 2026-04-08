@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Box, Skeleton, useTheme, keyframes } from '@mui/material';
+import DotLoading from 'components/common/DotLoading';
 
 // Shimmer animation
 const shimmer = keyframes`
@@ -47,32 +48,7 @@ export default function ChartSkeleton() {
           justifyContent: 'center',
         }}
       >
-        <Box
-          sx={{
-            display: 'flex',
-            gap: '6px',
-            '& > span': {
-              width: '7px',
-              height: '7px',
-              borderRadius: '50%',
-              bgcolor: 'primary.main',
-              animation: 'dotBounce 1.4s ease-in-out infinite both',
-            },
-            '& > span:nth-child(1)': { animationDelay: '-0.32s' },
-            '& > span:nth-child(2)': { animationDelay: '-0.16s' },
-            '& > span:nth-child(3)': { animationDelay: '0s' },
-            '& > span:nth-child(4)': { animationDelay: '0.16s' },
-            '@keyframes dotBounce': {
-              '0%, 80%, 100%': { transform: 'scale(0.4)', opacity: 0.4 },
-              '40%': { transform: 'scale(1)', opacity: 1 },
-            },
-          }}
-        >
-          <span />
-          <span />
-          <span />
-          <span />
-        </Box>
+        <DotLoading />
       </Box>
 
       {/* Legend skeleton */}

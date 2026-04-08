@@ -4,12 +4,12 @@ import React from 'react';
 import {
     Box,
     Typography,
-    CircularProgress,
     LinearProgress,
     Skeleton,
     useTheme,
     alpha,
 } from '@mui/material';
+import DotLoading from 'components/common/DotLoading';
 import {
     spacing,
     borderRadius,
@@ -238,11 +238,9 @@ export default function LoadingState({
             case 'spinner':
             default:
                 return (
-                    <CircularProgress
-                        size={config.spinnerSize}
-                        color={color}
-                        variant={isDeterminate ? 'determinate' : 'indeterminate'}
-                        value={progress}
+                    <DotLoading
+                        size={config.dotSize}
+                        color={theme.palette.primary.main}
                     />
                 );
         }

@@ -6,21 +6,17 @@ import {
     IChartApi,
     ISeriesApi,
     AreaSeries,
-    CandlestickSeries,
     LineSeries,
     ColorType,
     CrosshairMode,
     LineStyle,
     UTCTimestamp,
-    OhlcData,
     SingleValueData,
     Time,
 } from 'lightweight-charts';
 import {
     Box,
     Typography,
-    ToggleButton,
-    ToggleButtonGroup,
     Stack,
     Chip,
     useTheme,
@@ -28,26 +24,38 @@ import {
 } from '@mui/material';
 import TimeframeSelector from 'components/common/TimeframeSelector';
 import PanZoomToggle from 'components/common/PanZoomToggle';
-import ShowChartIcon from '@mui/icons-material/ShowChart';
-import CandlestickChartIcon from '@mui/icons-material/CandlestickChart';
+import DotLoading from 'components/common/DotLoading';
 import { getResponsiveFontSize, fontWeight, getGlassCard } from 'theme/tokens';
 import { apiClient } from 'services/apiClient';
 
-export type OtherChartTimeRange = '1M' | '3M' | '1Y' | 'ALL';
-type ChartType = 'area' | 'candlestick';
+export type OtherChartTimeRange = '1W' | '1M' | '3M' | '1Y';
 
 interface HistoricalPoint {
     date: string;
     name: string;
-    open: number;
-    high: number;
-    low: number;
     close: number;
     pct_change?: number;
+    w_pct?: number | null;
+    m_pct?: number | null;
+    q_pct?: number | null;
+    y_pct?: number | null;
 }
 
+const getPctByTimeRange = (record: HistoricalPoint, timeRange: OtherChartTimeRange): number => {
+    let raw: number | null | undefined;
+    switch (timeRange) {
+        case '1W': raw = record.w_pct; break;
+        case '1M': raw = record.m_pct; break;
+        case '3M': raw = record.q_pct; break;
+        case '1Y': raw = record.y_pct; break;
+    }
+    if (raw != null && !isNaN(raw)) return parseFloat((raw * 100).toFixed(2));
+    // fallback to pct_change
+    if (record.pct_change != null && !isNaN(record.pct_change)) return parseFloat((record.pct_change * 100).toFixed(2));
+    return 0;
+};
+
 interface PriceData { time: UTCTimestamp; value: number; }
-interface CandleData { time: UTCTimestamp; open: number; high: number; low: number; close: number; }
 
 // Multi-line: mỗi name là 1 series
 interface MultiLineSeriesData {
@@ -62,7 +70,9 @@ export interface OtherTickerChartProps {
     ticker: string;
     name?: string;
     chartMode?: string; // "line" | "candle" etc. from DB's `chart` field
+    unit?: string;
     height?: number;
+    defaultTimeRange?: OtherChartTimeRange;
 }
 
 // Palette for multi-line series
@@ -90,6 +100,7 @@ const getArrow = (pctChange: number): string => {
 const getVisibleRange = (timeRange: OtherChartTimeRange, dataLength: number) => {
     let pointsToShow: number;
     switch (timeRange) {
+        case '1W': pointsToShow = 5; break;
         case '1M': pointsToShow = 22; break;
         case '3M': pointsToShow = 66; break;
         case '1Y': pointsToShow = 252; break;
@@ -99,24 +110,24 @@ const getVisibleRange = (timeRange: OtherChartTimeRange, dataLength: number) => 
     return { from: dataLength - visible - 0.5, to: dataLength - 0.5 };
 };
 
-export default function OtherTickerChart({ ticker, name, chartMode, height = 345 }: OtherTickerChartProps) {
+export default function OtherTickerChart({ ticker, name, chartMode, unit, height = 345, defaultTimeRange = '3M' }: OtherTickerChartProps) {
     const theme = useTheme();
     const isDarkMode = theme.palette.mode === 'dark';
 
     const isMultiLine = chartMode === 'line';
+    const isPercentUnit = unit === '%';
+    const unitMultiplier = isPercentUnit ? 100 : 1;
 
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
-    const seriesRef = useRef<ISeriesApi<'Area'> | ISeriesApi<'Candlestick'> | null>(null);
+    const seriesRef = useRef<ISeriesApi<'Area'> | null>(null);
     const multiSeriesRef = useRef<ISeriesApi<'Line'>[]>([]);
 
-    const [timeRange, setTimeRange] = useState<OtherChartTimeRange>('3M');
-    const [chartType, setChartType] = useState<ChartType>('area');
+    const [timeRange, setTimeRange] = useState<OtherChartTimeRange>(defaultTimeRange);
     const [isLoading, setIsLoading] = useState(true);
 
     // Single mode data
     const [areaData, setAreaData] = useState<PriceData[]>([]);
-    const [candleData, setCandleData] = useState<CandleData[]>([]);
 
     // Multi-line mode data
     const [multiLineData, setMultiLineData] = useState<MultiLineSeriesData[]>([]);
@@ -125,6 +136,11 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
     const [priceChange, setPriceChange] = useState(0);
     const [percentChange, setPercentChange] = useState(0);
 
+    // Store last raw record for dynamic pct lookup
+    const lastRawRecordRef = useRef<HistoricalPoint | null>(null);
+    // Multi-line: store last raw records per series
+    const multiLastRawRef = useRef<Map<string, HistoricalPoint>>(new Map());
+
     const [panZoomEnabled, setPanZoomEnabled] = useState(false);
     const savedLogicalRangeRef = useRef<{ from: number; to: number } | null>(null);
     const hasSetInitialRangeRef = useRef(false);
@@ -132,12 +148,10 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
     const [tooltipData, setTooltipData] = useState<{
         visible: boolean; x: number; y: number;
         time: string; price: number;
-        open?: number; high?: number; low?: number; close?: number;
         lines?: { name: string; value: number; color: string }[];
     } | null>(null);
 
     const prevTimeRangeRef = useRef<OtherChartTimeRange>(timeRange);
-    const prevChartTypeRef = useRef<ChartType>(chartType);
 
     const colors = useMemo(() => ({
         chartBackground: theme.palette.background.paper,
@@ -184,6 +198,7 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
                         groups.get(key)!.push(item);
                     }
 
+                    const rawMap = new Map<string, HistoricalPoint>();
                     const seriesDataArr: MultiLineSeriesData[] = [];
                     Array.from(groups.entries()).forEach(([seriesName, points]) => {
                         const seen = new Set<number>();
@@ -192,24 +207,15 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
                             const ts = dateToTimestamp(p.date);
                             if (seen.has(ts)) continue;
                             seen.add(ts);
-                            lineData.push({ time: ts, value: p.close });
+                            lineData.push({ time: ts, value: p.close * unitMultiplier });
                         }
                         if (lineData.length === 0) return;
 
                         const lastClose = lineData[lineData.length - 1].value;
                         const lastRaw = points[points.length - 1];
-                        let pctChange = 0;
-                        let priceDiff = 0;
-
-                        if (lastRaw?.pct_change != null && lastRaw.pct_change !== 0) {
-                            pctChange = parseFloat((lastRaw.pct_change * 100).toFixed(2));
-                            const prevClose = lastClose / (1 + lastRaw.pct_change);
-                            priceDiff = parseFloat((lastClose - prevClose).toFixed(2));
-                        } else if (lineData.length >= 2) {
-                            const prevClose = lineData[lineData.length - 2].value;
-                            priceDiff = parseFloat((lastClose - prevClose).toFixed(2));
-                            pctChange = prevClose !== 0 ? parseFloat(((priceDiff / prevClose) * 100).toFixed(2)) : 0;
-                        }
+                        rawMap.set(seriesName, lastRaw);
+                        const pctChange = getPctByTimeRange(lastRaw, timeRange);
+                        const priceDiff = pctChange !== 0 ? parseFloat((lastClose - lastClose / (1 + pctChange / 100)).toFixed(2)) : 0;
 
                         seriesDataArr.push({
                             name: seriesName,
@@ -220,6 +226,7 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
                         });
                     });
 
+                    multiLastRawRef.current = rawMap;
                     setMultiLineData(seriesDataArr);
 
                     // Set header info from the selected name or first series
@@ -230,10 +237,9 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
                         setPercentChange(target.pctChange);
                     }
                 } else {
-                    // ========== Single mode: area/candlestick ==========
+                    // ========== Single mode: area ==========
                     const seen = new Set<number>();
                     const area: PriceData[] = [];
-                    const candle: CandleData[] = [];
 
                     for (const item of sorted) {
                         if (typeof item.close !== 'number' || isNaN(item.close)) continue;
@@ -241,39 +247,21 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
                         if (seen.has(ts)) continue;
                         seen.add(ts);
 
-                        area.push({ time: ts, value: item.close });
-                        candle.push({
-                            time: ts,
-                            open: item.open ?? item.close,
-                            high: item.high ?? item.close,
-                            low: item.low ?? item.close,
-                            close: item.close,
-                        });
+                        area.push({ time: ts, value: item.close * unitMultiplier });
                     }
 
                     setAreaData(area);
-                    setCandleData(candle);
 
                     if (area.length > 0) {
                         const lastClose = area[area.length - 1].value;
                         setCurrentPrice(lastClose);
 
                         const lastRaw = sorted[sorted.length - 1];
-                        if (lastRaw?.pct_change != null && lastRaw.pct_change !== 0) {
-                            const pct = lastRaw.pct_change * 100;
-                            setPercentChange(parseFloat(pct.toFixed(2)));
-                            const prevClose = lastClose / (1 + lastRaw.pct_change);
-                            setPriceChange(parseFloat((lastClose - prevClose).toFixed(2)));
-                        } else if (area.length >= 2) {
-                            const prevClose = area[area.length - 2].value;
-                            const diff = lastClose - prevClose;
-                            const pct = prevClose !== 0 ? (diff / prevClose) * 100 : 0;
-                            setPriceChange(parseFloat(diff.toFixed(2)));
-                            setPercentChange(parseFloat(pct.toFixed(2)));
-                        } else {
-                            setPriceChange(0);
-                            setPercentChange(0);
-                        }
+                        lastRawRecordRef.current = lastRaw;
+                        const pct = getPctByTimeRange(lastRaw, timeRange);
+                        setPercentChange(pct);
+                        const priceDiff = pct !== 0 ? parseFloat((lastClose - lastClose / (1 + pct / 100)).toFixed(2)) : 0;
+                        setPriceChange(priceDiff);
                     }
                 }
 
@@ -282,7 +270,35 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
             .catch(() => { if (!cancelled) setIsLoading(false); });
 
         return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ticker, isMultiLine, name]);
+
+    // ========== Update pct when timeRange changes ==========
+    useEffect(() => {
+        if (isLoading) return;
+        if (isMultiLine) {
+            const targetName = name || multiLineData[0]?.name;
+            const rawRecord = targetName ? multiLastRawRef.current.get(targetName) : undefined;
+            if (rawRecord) {
+                const target = multiLineData.find(s => s.name === targetName);
+                if (target) {
+                    const pct = getPctByTimeRange(rawRecord, timeRange);
+                    const priceDiff = pct !== 0 ? parseFloat((target.lastClose - target.lastClose / (1 + pct / 100)).toFixed(2)) : 0;
+                    setPercentChange(pct);
+                    setPriceChange(priceDiff);
+                }
+            }
+        } else {
+            const rawRecord = lastRawRecordRef.current;
+            if (rawRecord && currentPrice > 0) {
+                const pct = getPctByTimeRange(rawRecord, timeRange);
+                setPercentChange(pct);
+                const priceDiff = pct !== 0 ? parseFloat((currentPrice - currentPrice / (1 + pct / 100)).toFixed(2)) : 0;
+                setPriceChange(priceDiff);
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [timeRange]);
 
     // ========== Init chart ==========
     const initChart = useCallback(() => {
@@ -307,7 +323,7 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
                 scaleMargins: { top: 0.1, bottom: 0.1 },
             },
             localization: { locale: 'vi-VN' },
-            timeScale: { borderColor: colors.borderColor, timeVisible: false, secondsVisible: false },
+            timeScale: { borderColor: colors.borderColor, timeVisible: false, secondsVisible: false, rightOffset: 0 },
             handleScroll: { mouseWheel: false, pressedMouseMove: false, horzTouchDrag: false, vertTouchDrag: false },
             handleScale: { axisPressedMouseMove: false, mouseWheel: false, pinch: false },
         });
@@ -349,25 +365,13 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
             } else if (seriesRef.current) {
                 // Single series tooltip
                 const seriesData = param.seriesData.get(seriesRef.current);
-                if (!seriesData) { setTooltipData(null); return; }
+                if (!seriesData || !('value' in seriesData)) { setTooltipData(null); return; }
 
-                const isArea = 'value' in seriesData;
-                let price: number;
-                if (isArea) { price = (seriesData as SingleValueData<Time>).value; }
-                else { price = (seriesData as OhlcData<Time>).close; }
-
+                const price = (seriesData as SingleValueData<Time>).value;
                 const coordinate = seriesRef.current.priceToCoordinate(price);
                 if (coordinate === null) { setTooltipData(null); return; }
 
-                if (isArea) {
-                    setTooltipData({ visible: true, x: param.point.x, y: coordinate, time: timeStr, price });
-                } else {
-                    const ohlc = seriesData as OhlcData<Time>;
-                    setTooltipData({
-                        visible: true, x: param.point.x, y: coordinate, time: timeStr,
-                        price: ohlc.close, open: ohlc.open, high: ohlc.high, low: ohlc.low, close: ohlc.close,
-                    });
-                }
+                setTooltipData({ visible: true, x: param.point.x, y: coordinate, time: timeStr, price });
             }
         });
 
@@ -390,7 +394,7 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
 
         // Clean old series
         if (seriesRef.current) { chart.removeSeries(seriesRef.current); seriesRef.current = null; }
-        multiSeriesRef.current.forEach(s => { try { chart.removeSeries(s); } catch {} });
+        multiSeriesRef.current.forEach(s => { try { chart.removeSeries(s); } catch { } });
         multiSeriesRef.current = [];
 
         if (isMultiLine) {
@@ -405,18 +409,13 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
                     crosshairMarkerRadius: 4,
                     crosshairMarkerBorderColor: color,
                     crosshairMarkerBackgroundColor: colors.chartBackground,
-                    title: series.name,
-                    priceScaleId: idx === 0 ? 'right' : `line_${idx}`,
+                    priceLineVisible: false,
+                    priceScaleId: 'right',
                 });
                 lineSeries.setData(series.data);
                 multiSeriesRef.current.push(lineSeries);
 
                 if (series.data.length > maxDataLen) maxDataLen = series.data.length;
-
-                // Hide extra price scales (only show right = first series)
-                if (idx > 0) {
-                    chart.priceScale(`line_${idx}`).applyOptions({ visible: false });
-                }
             });
 
             // Set visible range
@@ -426,38 +425,31 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
                 hasSetInitialRangeRef.current = true;
             }
         } else {
-            // ========== Single series (area / candlestick) ==========
-            const dataLength = chartType === 'area' ? areaData.length : candleData.length;
+            // ========== Single series (area only) ==========
+            const dataLength = areaData.length;
             if (dataLength === 0) return;
 
-            if (chartType === 'area') {
-                seriesRef.current = chart.addSeries(AreaSeries, {
-                    lineColor: colors.line,
-                    topColor: colors.areaTop,
-                    bottomColor: colors.areaBottom,
-                    lineWidth: 2,
-                    crosshairMarkerVisible: true,
-                    crosshairMarkerRadius: 4,
-                    crosshairMarkerBorderColor: colors.line,
-                    crosshairMarkerBackgroundColor: colors.chartBackground,
-                });
-                (seriesRef.current as ISeriesApi<'Area'>).setData(areaData);
-            } else {
-                seriesRef.current = chart.addSeries(CandlestickSeries, {
-                    upColor: colors.upColor,
-                    downColor: colors.downColor,
-                    borderVisible: false,
-                    wickUpColor: colors.upColor,
-                    wickDownColor: colors.downColor,
-                });
-                (seriesRef.current as ISeriesApi<'Candlestick'>).setData(candleData);
-            }
+            seriesRef.current = chart.addSeries(AreaSeries, {
+                lineColor: colors.line,
+                topColor: colors.areaTop,
+                bottomColor: colors.areaBottom,
+                lineWidth: 2,
+                crosshairMarkerVisible: true,
+                crosshairMarkerRadius: 4,
+                crosshairMarkerBorderColor: colors.line,
+                crosshairMarkerBackgroundColor: colors.chartBackground,
+                lastValueVisible: true,
+                priceLineVisible: true,
+                priceLineStyle: LineStyle.Dashed,
+                priceLineColor: colors.line,
+            });
+            (seriesRef.current as ISeriesApi<'Area'>).setData(areaData);
 
             const range = getVisibleRange(timeRange, dataLength);
             chart.timeScale().setVisibleLogicalRange(range);
             hasSetInitialRangeRef.current = true;
         }
-    }, [isLoading, initChart, isMultiLine, multiLineData, chartType, areaData, candleData, timeRange, colors]);
+    }, [isLoading, initChart, isMultiLine, multiLineData, areaData, timeRange, colors]);
 
     // Update visible range when timeRange changes
     useEffect(() => {
@@ -469,13 +461,13 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
         if (isMultiLine) {
             dataLength = Math.max(...multiLineData.map(s => s.data.length), 0);
         } else {
-            dataLength = chartType === 'area' ? areaData.length : candleData.length;
+            dataLength = areaData.length;
         }
         if (dataLength > 0 && !panZoomEnabled) {
             const range = getVisibleRange(timeRange, dataLength);
             chartRef.current.timeScale().setVisibleLogicalRange(range);
         }
-    }, [timeRange, isMultiLine, multiLineData, chartType, areaData, candleData, panZoomEnabled]);
+    }, [timeRange, isMultiLine, multiLineData, areaData, panZoomEnabled]);
 
     // ========== Update colors on theme change ==========
     useEffect(() => {
@@ -488,22 +480,15 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
                 horzLine: { color: colors.crosshairColor, width: 1, style: LineStyle.Dashed },
             },
             rightPriceScale: { borderColor: colors.borderColor },
-            timeScale: { borderColor: colors.borderColor },
+            timeScale: { borderColor: colors.borderColor, rightOffset: 0 },
         });
         if (!isMultiLine && seriesRef.current) {
-            if (chartType === 'area') {
-                (seriesRef.current as ISeriesApi<'Area'>).applyOptions({
-                    lineColor: colors.line, topColor: colors.areaTop, bottomColor: colors.areaBottom,
-                    crosshairMarkerBorderColor: colors.line, crosshairMarkerBackgroundColor: colors.chartBackground,
-                });
-            } else {
-                (seriesRef.current as ISeriesApi<'Candlestick'>).applyOptions({
-                    upColor: colors.upColor, downColor: colors.downColor,
-                    wickUpColor: colors.upColor, wickDownColor: colors.downColor,
-                });
-            }
+            (seriesRef.current as ISeriesApi<'Area'>).applyOptions({
+                lineColor: colors.line, topColor: colors.areaTop, bottomColor: colors.areaBottom,
+                crosshairMarkerBorderColor: colors.line, crosshairMarkerBackgroundColor: colors.chartBackground,
+            });
         }
-    }, [colors, chartType, isMultiLine]);
+    }, [colors, isMultiLine]);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -541,7 +526,7 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
                     if (isMultiLine) {
                         dataLength = Math.max(...multiLineData.map(s => s.data.length), 0);
                     } else {
-                        dataLength = chartType === 'area' ? areaData.length : candleData.length;
+                        dataLength = areaData.length;
                     }
                     if (dataLength > 0) {
                         const range = getVisibleRange(timeRange, dataLength);
@@ -552,13 +537,11 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
             }
             return next;
         });
-    }, [timeRange, chartType, areaData, candleData, isMultiLine, multiLineData]);
+    }, [timeRange, areaData, isMultiLine, multiLineData]);
 
     const handleTimeRangeChange = (_e: React.MouseEvent<HTMLElement>, val: OtherChartTimeRange | null) => {
         if (val) setTimeRange(val);
     };
-
-    const handleChartTypeChange = (type: ChartType) => { setChartType(type); };
 
     const changeColor = getChangeColor(percentChange, theme);
     const arrow = getArrow(percentChange);
@@ -566,28 +549,37 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
 
     const headerHeight = 78;
     const controlsHeight = 48;
-    const totalHeight = headerHeight + controlsHeight + height;
+    const legendHeight = 32;
+    const totalHeight = headerHeight + controlsHeight + legendHeight + height;
 
     return (
         <Box sx={{ width: '100%', minHeight: totalHeight }}>
             {/* ========== Header ========== */}
             <Box sx={{ mb: 2, height: headerHeight }}>
                 {isLoading ? (
-                    <Stack direction="row" alignItems="center" spacing={1.5}>
-                        <Box sx={{ width: 120, height: 32, bgcolor: colors.buttonBackground, borderRadius: 1 }} />
-                        <Box sx={{ width: 60, height: 24, bgcolor: colors.buttonBackground, borderRadius: 1 }} />
-                        <Box sx={{ width: 80, height: 24, bgcolor: colors.buttonBackground, borderRadius: 2 }} />
-                    </Stack>
+                    <Box>
+                        <Skeleton variant="text" width={140} height={28} sx={{ borderRadius: 1 }} />
+                        <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mt: 0.5 }}>
+                            <Skeleton variant="rectangular" width={112} height={32} sx={{ borderRadius: 1 }} />
+                            <Skeleton variant="rectangular" width={68} height={24} sx={{ borderRadius: 1 }} />
+                            <Skeleton variant="rectangular" width={84} height={24} sx={{ borderRadius: 3 }} />
+                        </Stack>
+                    </Box>
                 ) : (
                     <>
-                        <Stack direction="row" alignItems="center" spacing={1.5}>
+                        <Typography sx={{ fontWeight: fontWeight.bold, color: colors.textPrimary, fontSize: getResponsiveFontSize('h3') }}>
+                            {name || ticker}
+                        </Typography>
+                        <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mt: 0.5 }}>
                             <Typography variant="h4" sx={{ fontWeight: fontWeight.bold, color: colors.textPrimary, fontSize: getResponsiveFontSize('h3') }}>
                                 {currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </Typography>
-                            <Typography sx={{ color: changeColor, fontWeight: fontWeight.bold, fontSize: getResponsiveFontSize('lg') }}>
-                                {priceChange !== 0 && Math.abs(percentChange) > 0.005 ? (isPositive ? '+' : '-') : ''}
-                                {Math.abs(priceChange).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </Typography>
+                            {!isPercentUnit && (
+                                <Typography sx={{ color: changeColor, fontWeight: fontWeight.bold, fontSize: getResponsiveFontSize('lg') }}>
+                                    {priceChange !== 0 && Math.abs(percentChange) > 0.005 ? (isPositive ? '+' : '-') : ''}
+                                    {Math.abs(priceChange).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </Typography>
+                            )}
                             <Chip
                                 label={`${arrow}${arrow ? ' ' : ''}${Math.abs(percentChange).toFixed(2)}%`}
                                 size="small"
@@ -600,9 +592,6 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
                                 }}
                             />
                         </Stack>
-                        <Typography sx={{ color: colors.textSecondary, fontSize: getResponsiveFontSize('md'), mt: 0.5 }}>
-                            {name || ticker}
-                        </Typography>
                     </>
                 )}
             </Box>
@@ -620,63 +609,25 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
                 <TimeframeSelector
                     value={timeRange}
                     onChange={handleTimeRangeChange}
-                    options={['1M', '3M', '1Y', 'ALL']}
+                    options={['1W', '1M', '3M', '1Y']}
                 />
 
                 <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end" sx={{ flexGrow: { xs: 1, sm: 0 } }}>
-                    {/* Chart type toggle — chỉ hiện khi KHÔNG phải multi-line */}
-                    {!isMultiLine && (
-                        <ToggleButtonGroup
-                            value={chartType}
-                            exclusive
-                            onChange={(_event, newType) => { if (newType !== null) handleChartTypeChange(newType); }}
-                            size="small"
-                            sx={{
-                                borderRadius: 2,
-                                overflow: 'hidden',
-                                ...(() => {
-                                    const g = getGlassCard(isDarkMode);
-                                    return { background: g.background, backdropFilter: g.backdropFilter, WebkitBackdropFilter: g.WebkitBackdropFilter, border: g.border };
-                                })(),
-                                '& .MuiToggleButton-root': {
-                                    color: colors.buttonText, border: 'none', height: 34,
-                                    px: { xs: 1, sm: 1.5 }, backgroundColor: 'transparent',
-                                    position: 'relative', borderRadius: '0 !important', transition: 'color 0.2s',
-                                    '&::after': {
-                                        content: '""', position: 'absolute', bottom: 4, left: '50%',
-                                        transform: 'translateX(-50%)', width: '60%', height: '2px',
-                                        backgroundColor: 'transparent', borderRadius: '1px', transition: 'background-color 0.2s',
-                                    },
-                                    '&:hover': { backgroundColor: 'transparent' },
-                                    '&.Mui-selected': {
-                                        backgroundColor: 'transparent', color: colors.buttonBackgroundActive,
-                                        '&::after': { backgroundColor: colors.buttonBackgroundActive },
-                                    },
-                                },
-                            }}
-                        >
-                            <ToggleButton value="area"><ShowChartIcon fontSize="small" /></ToggleButton>
-                            <ToggleButton value="candlestick"><CandlestickChartIcon fontSize="small" /></ToggleButton>
-                        </ToggleButtonGroup>
-                    )}
-
                     <PanZoomToggle enabled={panZoomEnabled} onClick={handleTogglePanZoom} />
                 </Stack>
             </Stack>
 
             {/* ========== Multi-line Legend ========== */}
-            {isMultiLine && multiLineData.length > 1 && (
-                <Stack direction="row" flexWrap="wrap" spacing={2} sx={{ mb: 1.5 }}>
-                    {multiLineData.map((series, idx) => (
-                        <Stack key={series.name} direction="row" alignItems="center" spacing={0.5}>
-                            <Box sx={{ width: 12, height: 3, borderRadius: 1, bgcolor: LINE_COLORS[idx % LINE_COLORS.length] }} />
-                            <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.textSecondary }}>
-                                {series.name}
-                            </Typography>
-                        </Stack>
-                    ))}
-                </Stack>
-            )}
+            <Stack direction="row" flexWrap="wrap" spacing={2} justifyContent="center" sx={{ mb: 1.5, minHeight: 20 }}>
+                {isMultiLine && multiLineData.map((series, idx) => (
+                    <Stack key={series.name} direction="row" alignItems="center" spacing={0.5}>
+                        <Box sx={{ width: 12, height: 3, borderRadius: 1, bgcolor: LINE_COLORS[idx % LINE_COLORS.length] }} />
+                        <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.textSecondary }}>
+                            {series.name}
+                        </Typography>
+                    </Stack>
+                ))}
+            </Stack>
 
             {/* ========== Chart container ========== */}
             <Box
@@ -687,93 +638,66 @@ export default function OtherTickerChart({ ticker, name, chartMode, height = 345
                     <Box sx={{
                         position: 'absolute', inset: 0, zIndex: 1,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        bgcolor: 'background.default',
+                        bgcolor: colors.containerBackground,
                     }}>
-                        <Skeleton variant="rectangular" width="100%" height="100%" sx={{ borderRadius: 1 }} />
+                        <DotLoading />
                     </Box>
                 )}
 
                 <Box ref={chartContainerRef} sx={{ width: '100%', height: '100%' }} />
 
                 {/* Tooltip */}
-                {tooltipData?.visible && (
-                    <Box
-                        sx={{
-                            position: 'absolute',
-                            left: tooltipData.x + 15,
-                            top: tooltipData.y - 30,
-                            backgroundColor: isDarkMode ? 'rgba(30, 30, 30, 0.9)' : 'rgba(255, 255, 255, 0.9)',
-                            border: 'none',
-                            borderRadius: 1.5,
-                            padding: '6px 10px',
-                            pointerEvents: 'none',
-                            zIndex: 10,
-                            transform: tooltipData.x > (chartContainerRef.current?.clientWidth || 0) - 150
-                                ? 'translateX(-100%) translateX(-30px)'
-                                : 'none',
-                        }}
-                    >
-                        <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.textSecondary, mb: 0.5, fontWeight: fontWeight.medium }}>
-                            {tooltipData.time}
-                        </Typography>
+                {tooltipData?.visible && (() => {
+                    const containerWidth = chartContainerRef.current?.clientWidth || 0;
+                    const containerHeight = chartContainerRef.current?.clientHeight || 0;
+                    const flipX = tooltipData.x > containerWidth - 180;
+                    const flipY = tooltipData.y < 60;
+                    return (
+                        <Box
+                            sx={{
+                                position: 'absolute',
+                                left: flipX ? tooltipData.x - 15 : tooltipData.x + 15,
+                                top: flipY ? tooltipData.y + 10 : tooltipData.y - 30,
+                                transform: flipX ? 'translateX(-100%)' : 'none',
+                                backgroundColor: isDarkMode ? 'rgba(30, 30, 30, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+                                border: 'none',
+                                borderRadius: 1.5,
+                                padding: '6px 10px',
+                                pointerEvents: 'none',
+                                zIndex: 10,
+                                whiteSpace: 'nowrap',
+                            }}
+                        >
+                            <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.textSecondary, mb: 0.5, fontWeight: fontWeight.medium }}>
+                                {tooltipData.time}
+                            </Typography>
 
-                        {tooltipData.lines ? (
-                            // Multi-line tooltip
-                            <Box>
-                                {tooltipData.lines.map((line) => (
-                                    <Stack key={line.name} direction="row" spacing={1} alignItems="center">
-                                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: line.color, flexShrink: 0 }} />
-                                        <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.textSecondary, minWidth: 40 }}>
-                                            {line.name}:
-                                        </Typography>
-                                        <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.textPrimary, fontWeight: fontWeight.medium }}>
-                                            {line.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                        </Typography>
-                                    </Stack>
-                                ))}
-                            </Box>
-                        ) : tooltipData.open !== undefined ? (
-                            // Candlestick tooltip
-                            <Box>
+                            {tooltipData.lines ? (
+                                // Multi-line tooltip
+                                <Box>
+                                    {tooltipData.lines.map((line) => (
+                                        <Stack key={line.name} direction="row" spacing={1} alignItems="center">
+                                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: line.color, flexShrink: 0 }} />
+                                            <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.textSecondary, minWidth: 40 }}>
+                                                {line.name}:
+                                            </Typography>
+                                            <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.textPrimary, fontWeight: fontWeight.medium }}>
+                                                {line.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </Typography>
+                                        </Stack>
+                                    ))}
+                                </Box>
+                            ) : (
+                                // Area tooltip
                                 <Stack direction="row" spacing={1} alignItems="center">
-                                    <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.textSecondary, minWidth: 20 }}>O:</Typography>
-                                    <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.textPrimary, fontWeight: fontWeight.medium }}>
-                                        {tooltipData.open?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.line, fontWeight: fontWeight.medium }}>
+                                        {tooltipData.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </Typography>
                                 </Stack>
-                                <Stack direction="row" spacing={1} alignItems="center">
-                                    <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.textSecondary, minWidth: 20 }}>H:</Typography>
-                                    <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.upColor, fontWeight: fontWeight.medium }}>
-                                        {tooltipData.high?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                    </Typography>
-                                </Stack>
-                                <Stack direction="row" spacing={1} alignItems="center">
-                                    <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.textSecondary, minWidth: 20 }}>L:</Typography>
-                                    <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.downColor, fontWeight: fontWeight.medium }}>
-                                        {tooltipData.low?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                    </Typography>
-                                </Stack>
-                                <Stack direction="row" spacing={1} alignItems="center">
-                                    <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.textSecondary, minWidth: 20 }}>C:</Typography>
-                                    <Typography sx={{
-                                        fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium,
-                                        color: (tooltipData.close ?? 0) >= (tooltipData.open ?? 0) ? colors.upColor : colors.downColor,
-                                    }}>
-                                        {tooltipData.close?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                    </Typography>
-                                </Stack>
-                            </Box>
-                        ) : (
-                            // Area tooltip
-                            <Stack direction="row" spacing={1} alignItems="center">
-                                <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: colors.textSecondary }}>Giá:</Typography>
-                                <Typography sx={{ fontSize: getResponsiveFontSize('md'), color: colors.line, fontWeight: fontWeight.medium }}>
-                                    {tooltipData.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </Typography>
-                            </Stack>
-                        )}
-                    </Box>
-                )}
+                            )}
+                        </Box>
+                    );
+                })()}
             </Box>
         </Box>
     );

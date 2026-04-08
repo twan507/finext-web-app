@@ -8,9 +8,10 @@ import { NewsBreadcrumb } from '../news/components';
 import { getResponsiveFontSize, fontWeight, transitions, layoutTokens } from 'theme/tokens';
 
 const CATEGORIES = [
-    { id: 'economy', label: 'Kinh tế vĩ mô' },
-    { id: 'monetary', label: 'Lãi suất tiền tệ' },
-    { id: 'exchange_rate', label: 'Tỷ giá VNĐ' },
+    { id: 'metals', label: 'Kim loại' },
+    { id: 'energy', label: 'Năng lượng' },
+    { id: 'chemical', label: 'Hóa chất' },
+    { id: 'agriculture', label: 'Nông sản' },
 ] as const;
 
 type CategoryId = typeof CATEGORIES[number]['id'];
@@ -71,8 +72,8 @@ function SubNavbar({ activeTab, onTabChange }: {
     );
 }
 
-export default function MacroContent() {
-    const [activeTab, setActiveTab] = useState<CategoryId>('economy');
+export default function CommoditiesContent() {
+    const [activeTab, setActiveTab] = useState<CategoryId>('energy');
     const [selectedRow, setSelectedRow] = useState<OtherTickerData | null>(null);
 
     const handleTabChange = useCallback((tab: CategoryId) => {
@@ -85,11 +86,11 @@ export default function MacroContent() {
     }, []);
 
     return (
-        <Box sx={{ py: 2 }}>
+        <Box sx={{ py: 3 }}>
             <NewsBreadcrumb
                 items={[]}
-                sectionLabel="Kinh tế vĩ mô"
-                sectionHref="/macro"
+                sectionLabel="Hàng hóa"
+                sectionHref="/commodities"
             />
 
             <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -101,7 +102,6 @@ export default function MacroContent() {
                         chartMode={selectedRow.chart}
                         unit={selectedRow.unit}
                         height={345}
-                        defaultTimeRange="1Y"
                     />
                 )}
             </Box>
@@ -112,7 +112,7 @@ export default function MacroContent() {
 
             <Box sx={{ mt: 3 }}>
                 <OtherTickerTable
-                    group="macro"
+                    group="commodities"
                     category={activeTab}
                     selectedName={selectedRow?.name ?? null}
                     onTickerSelect={handleTickerSelect}
