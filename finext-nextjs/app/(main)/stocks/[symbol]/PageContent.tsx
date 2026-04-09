@@ -46,7 +46,7 @@ const LINE_SESSIONS = 20;
 // ========== SUB-NAVBAR TABS CONFIG ==========
 const STOCK_TABS = [
     { id: 'cashflow', label: 'Dòng tiền' },
-    { id: 'pricemap', label: 'PTKT' },
+    { id: 'pricemap', label: 'Kỹ thuật' },
     { id: 'news', label: 'Tin tức' },
 ] as const;
 

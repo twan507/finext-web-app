@@ -63,7 +63,7 @@ const MARKET_TABS = [
   { id: 'volatility', label: 'Biến động' },
   { id: 'cashflow', label: 'Dòng tiền' },
   { id: 'valuation', label: 'Định giá' },
-  { id: 'ptkt', label: 'PTKT' },
+  { id: 'ptkt', label: 'Kỹ thuật' },
   { id: 'foreign', label: 'Nước ngoài' },
   { id: 'proprietary', label: 'Tự doanh' },
 ] as const;
