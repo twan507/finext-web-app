@@ -4,7 +4,7 @@ import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react'
 import { Box, Typography, useTheme, useMediaQuery } from '@mui/material';
 import { apiClient } from 'services/apiClient';
 import { ISseRequest } from 'services/core/types';
-import { sseClient, getFromCache } from 'services/sseClient';
+import { sseClient } from 'services/sseClient';
 import useChartStore from 'hooks/useChartStore';
 import { zIndex } from 'theme/tokens';
 import CandlestickChart from './CandlestickChart';
@@ -340,7 +340,7 @@ export default function ChartPageContent({ ticker: initialTicker }: ChartPageCon
                     // Closed
                 },
             },
-            { cacheTtl: 5 * 60 * 1000, useCache: true },
+            {},
         );
 
         return () => {

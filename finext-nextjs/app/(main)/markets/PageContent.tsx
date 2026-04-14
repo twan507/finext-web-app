@@ -23,7 +23,7 @@ import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
 import { BASIC_AND_ABOVE, ADVANCED_AND_ABOVE } from '@/components/auth/features';
 
 import { ISseRequest } from 'services/core/types';
-import { sseClient, getFromCache } from 'services/sseClient';
+import { sseClient } from 'services/sseClient';
 import { apiClient } from 'services/apiClient';
 import {
   getResponsiveFontSize,
@@ -166,32 +166,10 @@ export default function MarketsContent() {
   const itdSseRef = useRef<{ unsubscribe: () => void } | null>(null);
 
   // ========== STATE ==========
-  const [todayAllData, setTodayAllData] = useState<IndexDataByTicker>(() => {
-    const cached = getFromCache<RawMarketData[]>('home_today_index');
-    if (cached && Array.isArray(cached)) {
-      const grouped: IndexDataByTicker = {};
-      cached.forEach((item: RawMarketData) => {
-        const t = item.ticker;
-        if (t) { if (!grouped[t]) grouped[t] = []; grouped[t].push(item); }
-      });
-      return grouped;
-    }
-    return {};
-  });
+  const [todayAllData, setTodayAllData] = useState<IndexDataByTicker>({});
 
   // ITD data (từ SSE home_itd_index - cho TẤT CẢ indexes)
-  const [itdAllData, setItdAllData] = useState<IndexDataByTicker>(() => {
-    const cached = getFromCache<RawMarketData[]>('home_itd_index');
-    if (cached && Array.isArray(cached)) {
-      const grouped: IndexDataByTicker = {};
-      cached.forEach((item: RawMarketData) => {
-        const t = item.ticker;
-        if (t) { if (!grouped[t]) grouped[t] = []; grouped[t].push(item); }
-      });
-      return grouped;
-    }
-    return {};
-  });
+  const [itdAllData, setItdAllData] = useState<IndexDataByTicker>({});
 
   // Combined EOD data (history + today)
   const [eodData, setEodData] = useState<ChartData>(emptyChartData);
@@ -200,14 +178,7 @@ export default function MarketsContent() {
   const [intradayData, setIntradayData] = useState<ChartData>(emptyChartData);
 
   // Loading & Error states
-  const [isLoading, setIsLoading] = useState<boolean>(() => {
-    const todayCache = getFromCache<RawMarketData[]>('home_today_index');
-    if (todayCache && Array.isArray(todayCache)) {
-      const hasTodayForTicker = todayCache.some(item => item.ticker === 'VNINDEX');
-      return !hasTodayForTicker;
-    }
-    return true;
-  });
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   // ========== REST - History Data (lazy load) ==========
@@ -318,7 +289,7 @@ export default function MarketsContent() {
       },
       onError: (sseError) => { if (isMountedRef.current) console.warn('[SSE Today] Error:', sseError.message); },
       onClose: () => { }
-    }, { cacheTtl: 5 * 60 * 1000, useCache: true });
+    });
 
     return () => { isMountedRef.current = false; if (todaySseRef.current) todaySseRef.current.unsubscribe(); };
   }, []);
@@ -343,7 +314,7 @@ export default function MarketsContent() {
       },
       onError: (sseError) => { if (isMountedRef.current) console.warn('[SSE ITD] Error:', sseError.message); },
       onClose: () => { }
-    }, { cacheTtl: 5 * 60 * 1000, useCache: true });
+    });
 
     return () => { isMountedRef.current = false; if (itdSseRef.current) itdSseRef.current.unsubscribe(); };
   }, []);

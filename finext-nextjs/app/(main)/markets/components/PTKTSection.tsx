@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Box, Skeleton } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from 'services/apiClient';
-import { sseClient, getFromCache } from 'services/sseClient';
+import { sseClient } from 'services/sseClient';
 import { ISseRequest } from 'services/core/types';
 import type { RawMarketData } from 'app/(main)/home/components/marketSection/MarketIndexChart';
 import dynamic from 'next/dynamic';
@@ -42,14 +42,7 @@ export default function PTKTSection() {
     });
 
     // ── Current price (SSE home_today_index) ─────────────────────────────────
-    const [latestPrice, setLatestPrice] = useState<RawMarketData | null>(() => {
-        const cached = getFromCache<RawMarketData[]>('home_today_index');
-        if (cached && Array.isArray(cached)) {
-            const items = cached.filter((d) => d.ticker === TICKER);
-            return items.length > 0 ? items[items.length - 1] : null;
-        }
-        return null;
-    });
+    const [latestPrice, setLatestPrice] = useState<RawMarketData | null>(null);
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -77,7 +70,6 @@ export default function PTKTSection() {
                 onError: () => { },
                 onClose: () => { },
             },
-            { cacheTtl: 5 * 60 * 1000, useCache: true }
         );
 
         return () => {

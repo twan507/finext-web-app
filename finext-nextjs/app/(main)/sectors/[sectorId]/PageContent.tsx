@@ -11,7 +11,7 @@ import { transformToChartData } from '../../home/components/marketSection/Market
 import IndexDetailPanel from '../../home/components/marketSection/IndexDetailPanel';
 
 import { ISseRequest } from 'services/core/types';
-import { sseClient, getFromCache } from 'services/sseClient';
+import { sseClient } from 'services/sseClient';
 import { apiClient } from 'services/apiClient';
 import { getResponsiveFontSize, fontWeight, getGlassCard, borderRadius, durations, easings, transitions, layoutTokens } from 'theme/tokens';
 
@@ -235,32 +235,10 @@ export default function SectorDetailContent() {
     const [timeRange, setTimeRange] = useState<TimeRange>('3M');
 
     // ========== STATE ==========
-    const [todayAllData, setTodayAllData] = useState<IndexDataByTicker>(() => {
-        const cached = getFromCache<RawMarketData[]>('home_today_index');
-        if (cached && Array.isArray(cached)) {
-            const grouped: IndexDataByTicker = {};
-            cached.forEach((item: RawMarketData) => {
-                const t = item.ticker;
-                if (t) { if (!grouped[t]) grouped[t] = []; grouped[t].push(item); }
-            });
-            return grouped;
-        }
-        return {};
-    });
+    const [todayAllData, setTodayAllData] = useState<IndexDataByTicker>({});
 
     // ITD data
-    const [itdAllData, setItdAllData] = useState<IndexDataByTicker>(() => {
-        const cached = getFromCache<RawMarketData[]>('home_itd_index');
-        if (cached && Array.isArray(cached)) {
-            const grouped: IndexDataByTicker = {};
-            cached.forEach((item: RawMarketData) => {
-                const t = item.ticker;
-                if (t) { if (!grouped[t]) grouped[t] = []; grouped[t].push(item); }
-            });
-            return grouped;
-        }
-        return {};
-    });
+    const [itdAllData, setItdAllData] = useState<IndexDataByTicker>({});
 
     // Combined EOD data
     const [eodData, setEodData] = useState<ChartData>(emptyChartData);
@@ -269,14 +247,7 @@ export default function SectorDetailContent() {
     const [intradayData, setIntradayData] = useState<ChartData>(emptyChartData);
 
     // Loading state
-    const [isLoading, setIsLoading] = useState<boolean>(() => {
-        const todayCache = getFromCache<RawMarketData[]>('home_today_index');
-        if (todayCache && Array.isArray(todayCache)) {
-            const hasTodayForTicker = todayCache.some(item => item.ticker === ticker);
-            return !hasTodayForTicker;
-        }
-        return true;
-    });
+    const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error] = useState<string | null>(null);
 
     // Dynamic industry list from today data
@@ -456,7 +427,7 @@ export default function SectorDetailContent() {
             },
             onError: (sseError) => { if (isMountedRef.current) console.warn('[SSE Today] Error:', sseError.message); },
             onClose: () => { }
-        }, { cacheTtl: 5 * 60 * 1000, useCache: true });
+        });
 
         return () => { isMountedRef.current = false; if (todaySseRef.current) todaySseRef.current.unsubscribe(); };
     }, []);
@@ -481,19 +452,13 @@ export default function SectorDetailContent() {
             },
             onError: (sseError) => { if (isMountedRef.current) console.warn('[SSE ITD] Error:', sseError.message); },
             onClose: () => { }
-        }, { cacheTtl: 5 * 60 * 1000, useCache: true });
+        });
 
         return () => { isMountedRef.current = false; if (itdSseRef.current) itdSseRef.current.unsubscribe(); };
     }, []);
 
     // ========== SSE - Today Trend Data ==========
-    const [trendTodayData, setTrendTodayData] = useState<RawTrendData[]>(() => {
-        const cached = getFromCache<RawTrendData[]>('home_today_trend');
-        if (cached && Array.isArray(cached)) {
-            return cached.filter((item) => item.ticker === ticker);
-        }
-        return [];
-    });
+    const [trendTodayData, setTrendTodayData] = useState<RawTrendData[]>([]);
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -516,7 +481,7 @@ export default function SectorDetailContent() {
                 if (isMountedRef.current) console.warn('[SSE Trend] Error:', sseError.message);
             },
             onClose: () => { },
-        }, { cacheTtl: 5 * 60 * 1000, useCache: true });
+        });
 
         return () => {
             isMountedRef.current = false;
@@ -639,10 +604,7 @@ export default function SectorDetailContent() {
     });
 
     // ========== SSE - Today Stock Data ==========
-    const [stockData, setStockData] = useState<StockData[]>(() => {
-        const cached = getFromCache<StockData[]>('home_today_stock');
-        return cached && Array.isArray(cached) ? cached : [];
-    });
+    const [stockData, setStockData] = useState<StockData[]>([]);
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -664,7 +626,7 @@ export default function SectorDetailContent() {
                 if (isMountedRef.current) console.warn('[SSE Stock] Error:', sseError.message);
             },
             onClose: () => { },
-        }, { cacheTtl: 5 * 60 * 1000, useCache: true });
+        });
 
         return () => {
             isMountedRef.current = false;

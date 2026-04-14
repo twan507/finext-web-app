@@ -383,7 +383,7 @@ export default function DetailPanel({ ticker, todayData }: DetailPanelProps) {
             },
             onError: () => { },
             onClose: () => { },
-        }, { cacheTtl: 5 * 60 * 1000, useCache: true });
+        });
 
         return () => {
             isMountedRef.current = false;

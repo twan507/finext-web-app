@@ -5,7 +5,7 @@ import { Box, Typography, useTheme, useMediaQuery, Skeleton } from '@mui/materia
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import dynamic from 'next/dynamic';
 import { ISseRequest } from 'services/core/types';
-import { sseClient, getFromCache } from 'services/sseClient';
+import { sseClient } from 'services/sseClient';
 import VsiITDStockLineChart from '../../../groups/[groupId]/components/VsiScoreItdLineChart';
 import RankingLineChart from './RankingLineChart';
 import SubChartSkeleton from 'components/common/SubChartSkeleton';
@@ -101,13 +101,7 @@ export default function DongTienSection({
     const itdStockSseRef = useRef<{ unsubscribe: () => void } | null>(null);
 
     // SSE state: home_itd_stock
-    const [itdStockData, setItdStockData] = useState<ItdRecord[]>(() => {
-        const cached = getFromCache<ItdRecord[]>('home_itd_stock');
-        if (cached && Array.isArray(cached)) {
-            return cached.filter((r) => r.ticker === ticker);
-        }
-        return [];
-    });
+    const [itdStockData, setItdStockData] = useState<ItdRecord[]>([]);
 
     // ========== SSE - ITD Stock Data ==========
     useEffect(() => {
@@ -138,7 +132,6 @@ export default function DongTienSection({
                 },
                 onClose: () => { },
             },
-            { cacheTtl: 5 * 60 * 1000, useCache: true }
         );
 
         return () => {

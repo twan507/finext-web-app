@@ -8,7 +8,7 @@ import VsiGaugeChart from './BienDongSection/VsiGaugeChart';
 import StockTreemap from './BienDongSection/StockTreemap';
 import type { StockData } from '../../home/components/marketSection/MarketVolatility';
 import { ISseRequest } from 'services/core/types';
-import { sseClient, getFromCache } from 'services/sseClient';
+import { sseClient } from 'services/sseClient';
 import ChartSectionTitle from 'components/common/ChartSectionTitle';
 import { useMarketUpdateTime } from '../../../../hooks/useMarketUpdateTime';
 
@@ -38,19 +38,10 @@ export default function BienDongSection() {
     const itdIndexSseRef = useRef<{ unsubscribe: () => void } | null>(null);
 
     // SSE state: home_today_stock
-    const [stockData, setStockData] = useState<StockData[]>(() => {
-        const cached = getFromCache<StockData[]>('home_today_stock');
-        return cached && Array.isArray(cached) ? cached : [];
-    });
+    const [stockData, setStockData] = useState<StockData[]>([]);
 
     // SSE state: home_itd_index (for VSI chart)
-    const [itdData, setItdData] = useState<ItdRecord[]>(() => {
-        const cached = getFromCache<ItdRecord[]>('home_itd_index');
-        if (cached && Array.isArray(cached)) {
-            return cached.filter((r) => r.ticker === 'FNXINDEX');
-        }
-        return [];
-    });
+    const [itdData, setItdData] = useState<ItdRecord[]>([]);
 
     // ========== SSE - Today Stock Data ==========
     useEffect(() => {
@@ -80,7 +71,6 @@ export default function BienDongSection() {
                 },
                 onClose: () => { },
             },
-            { cacheTtl: 5 * 60 * 1000, useCache: true }
         );
 
         return () => {
@@ -118,7 +108,6 @@ export default function BienDongSection() {
                 },
                 onClose: () => { },
             },
-            { cacheTtl: 5 * 60 * 1000, useCache: true }
         );
 
         return () => {

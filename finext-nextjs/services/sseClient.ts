@@ -1,6 +1,6 @@
 // finext-nextjs/services/sseClient.ts
 import queryString from 'query-string';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { API_BASE_URL } from './core/config';
 import {
   ISseRequest,
@@ -10,23 +10,15 @@ import {
 } from './core/types';
 
 /**
- * SSE Client với Cache và Connection Sharing
- * 
+ * SSE Client với Connection Sharing
+ *
  * Các tính năng:
- * 1. Cache dữ liệu SSE theo keyword/URL
- * 2. Stale-while-revalidate: Trả về cache ngay lập tức, đồng thời subscribe updates
- * 3. Connection sharing: Nhiều subscribers dùng chung 1 connection
- * 4. Auto-reconnect khi connection bị đóng
- * 5. TTL (Time-To-Live) cho cache
+ * 1. Connection sharing: Nhiều subscribers dùng chung 1 connection
+ * 2. Auto-reconnect khi connection bị đóng
+ * 3. Visibility management: Ngắt khi tab ẩn, kết nối lại khi tab hiện
  */
 
 // ========== Types ==========
-interface CacheEntry<T = any> {
-  data: T;
-  timestamp: number;
-  keyword: string;
-}
-
 interface Subscriber<T = any> {
   id: string;
   onData: (data: T) => void;
@@ -45,42 +37,12 @@ interface ConnectionEntry<T = any> {
 }
 
 // ========== Constants ==========
-const DEFAULT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_BASE_DELAY = 1000; // 1 second
 const MAX_RECONNECT_DELAY = 30000; // 30 seconds
 
-// ========== Cache Storage ==========
-const cache = new Map<string, CacheEntry>();
+// ========== Connection Storage ==========
 const connections = new Map<string, ConnectionEntry>();
-
-// ========== Cache Eviction ==========
-// Tự động dọn cache entries hết TTL mỗi 5 phút, tránh memory leak khi để trang mở lâu
-let cacheCleanupTimer: ReturnType<typeof setInterval> | null = null;
-
-function startCacheCleanup(): void {
-  if (cacheCleanupTimer) return; // Đã chạy rồi
-  cacheCleanupTimer = setInterval(() => {
-    const now = Date.now();
-    cache.forEach((entry, key) => {
-      if (now - entry.timestamp > DEFAULT_CACHE_TTL) {
-        cache.delete(key);
-      }
-    });
-  }, DEFAULT_CACHE_TTL); // Chạy mỗi 5 phút
-}
-
-function stopCacheCleanup(): void {
-  if (cacheCleanupTimer) {
-    clearInterval(cacheCleanupTimer);
-    cacheCleanupTimer = null;
-  }
-}
-
-// Bắt đầu cleanup khi module được load (client-side only)
-if (typeof window !== 'undefined') {
-  startCacheCleanup();
-}
 
 // ========== Visibility Management ==========
 // Ngắt tất cả SSE khi tab ẩn, kết nối lại khi tab hiện.
@@ -127,7 +89,7 @@ function generateSubscriberId(): string {
   return `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-function getCacheKey(keyword: string, queryParams?: Record<string, any>): string {
+function getConnectionKey(keyword: string, queryParams?: Record<string, any>): string {
   const params = queryParams ? { ...queryParams } : {};
   // Loại bỏ keyword khỏi params vì đã dùng làm key chính
   delete params.keyword;
@@ -147,7 +109,7 @@ function getReconnectDelay(attempts: number): number {
 /**
  * Kiểm tra dữ liệu nhận được có phải "trống" không.
  * Khi DB đang ghi đè collection, server trả về [] hoặc {}.
- * Trong trường hợp này, giữ nguyên cache cũ thay vì ghi đè bằng dữ liệu trống.
+ * Trong trường hợp này, bỏ qua dữ liệu trống.
  */
 function isEmptyData(data: any): boolean {
   if (data === null || data === undefined) return true;
@@ -159,65 +121,8 @@ function isEmptyData(data: any): boolean {
 // ========== Core Functions ==========
 
 /**
- * Lấy dữ liệu từ cache (nếu có và chưa hết hạn)
- */
-export function getFromCache<T = any>(
-  keyword: string,
-  queryParams?: Record<string, any>,
-  ttl: number = DEFAULT_CACHE_TTL
-): T | null {
-  const cacheKey = getCacheKey(keyword, queryParams);
-  const entry = cache.get(cacheKey);
-
-  if (!entry) return null;
-
-  const now = Date.now();
-  if (now - entry.timestamp > ttl) {
-    // Cache đã hết hạn
-    cache.delete(cacheKey);
-    return null;
-  }
-
-  return entry.data as T;
-}
-
-/**
- * Lưu dữ liệu vào cache
- */
-export function setToCache<T = any>(
-  keyword: string,
-  data: T,
-  queryParams?: Record<string, any>
-): void {
-  const cacheKey = getCacheKey(keyword, queryParams);
-  cache.set(cacheKey, {
-    data,
-    timestamp: Date.now(),
-    keyword
-  });
-}
-
-/**
- * Xóa cache cho một keyword cụ thể
- */
-export function clearCache(keyword?: string): void {
-  if (keyword) {
-    // Xóa tất cả cache entries có keyword này
-    const entries = Array.from(cache.entries());
-    entries.forEach(([key, entry]) => {
-      if (entry.keyword === keyword) {
-        cache.delete(key);
-      }
-    });
-  } else {
-    // Xóa toàn bộ cache
-    cache.clear();
-  }
-}
-
-/**
- * Tạo hoặc tái sử dụng SSE connection với caching
- * 
+ * Tạo hoặc tái sử dụng SSE connection
+ *
  * @param props - Cấu hình SSE request
  * @param callbacks - Callbacks xử lý events
  * @param options - Tùy chọn bổ sung
@@ -227,38 +132,19 @@ export function sseClient<DataType = any>(
   props: ISseRequest,
   callbacks: ISseCallbacks<DataType>,
   options: {
-    /** Cache TTL in ms (default: 5 minutes) */
-    cacheTtl?: number;
-    /** Có sử dụng cache không (default: true) */
-    useCache?: boolean;
     /** Có tự động reconnect không (default: true) */
     autoReconnect?: boolean;
   } = {}
 ): { unsubscribe: () => void; subscriberId: string } {
-  const { url, queryParams = {}, requireAuth = false } = props;
+  const { url, queryParams = {} } = props;
   const { onData, onError, onOpen, onClose } = callbacks;
-  const {
-    cacheTtl = DEFAULT_CACHE_TTL,
-    useCache = true,
-    autoReconnect = true
-  } = options;
+  const { autoReconnect = true } = options;
 
   const keyword = queryParams.keyword as string || url;
-  const connectionKey = getCacheKey(keyword, queryParams);
+  const connectionKey = getConnectionKey(keyword, queryParams);
   const subscriberId = generateSubscriberId();
 
-  // ========== 1. Trả về cached data ngay lập tức nếu có ==========
-  if (useCache) {
-    const cachedData = getFromCache<DataType>(keyword, queryParams, cacheTtl);
-    if (cachedData !== null) {
-      // Schedule callback để đảm bảo nó chạy sau khi function return
-      setTimeout(() => {
-        onData(cachedData);
-      }, 0);
-    }
-  }
-
-  // ========== 2. Kiểm tra và tái sử dụng connection ==========
+  // ========== 1. Kiểm tra và tái sử dụng connection ==========
   let connectionEntry = connections.get(connectionKey);
 
   if (!connectionEntry) {
@@ -295,7 +181,7 @@ export function sseClient<DataType = any>(
     };
   }
 
-  // ========== 3. Tạo connection mới ==========
+  // ========== 2. Tạo connection mới ==========
   function createConnection() {
     const entry = connections.get(connectionKey);
     if (!entry) return;
@@ -328,8 +214,6 @@ export function sseClient<DataType = any>(
           const parsedData = JSON.parse(event.data);
 
           // ===== Skip empty data (DB overwrite protection) =====
-          // Khi DB đang ghi đè collection, server trả về [] hoặc {}.
-          // Giữ nguyên cache cũ, không broadcast dữ liệu trống.
           if (isEmptyData(parsedData)) {
             return;
           }
@@ -344,11 +228,6 @@ export function sseClient<DataType = any>(
             entry.lastError = error;
             entry.subscribers.forEach(sub => sub.onError?.(error));
             return;
-          }
-
-          // ===== Cache dữ liệu =====
-          if (useCache) {
-            setToCache(keyword, parsedData, queryParams);
           }
 
           // ===== Broadcast to all subscribers =====
@@ -509,16 +388,12 @@ export function closeAllConnections(): void {
     }
   });
   connections.clear();
-  // Restart cache cleanup timer (reset cycle)
-  stopCacheCleanup();
-  startCacheCleanup();
 }
 
 /**
- * Lấy thông tin debug về cache và connections
+ * Lấy thông tin debug về connections
  */
 export function getDebugInfo(): {
-  cacheEntries: number;
   activeConnections: number;
   connectionDetails: Array<{
     key: string;
@@ -535,7 +410,6 @@ export function getDebugInfo(): {
   }));
 
   return {
-    cacheEntries: cache.size,
     activeConnections: connections.size,
     connectionDetails
   };
@@ -553,8 +427,6 @@ export function createSseSubscription<T>(
     onError?: (error: SseError) => void;
     onOpen?: () => void;
     onClose?: () => void;
-    cacheTtl?: number;
-    useCache?: boolean;
   } = {}
 ): { unsubscribe: () => void } {
   const {
@@ -562,9 +434,7 @@ export function createSseSubscription<T>(
     queryParams = {},
     onError,
     onOpen = () => { },
-    onClose = () => { },
-    cacheTtl,
-    useCache = true
+    onClose = () => { }
   } = options;
 
   return sseClient<T>(
@@ -577,23 +447,20 @@ export function createSseSubscription<T>(
       onError: onError || ((err) => console.warn(`[SSE ${keyword}]`, err.message)),
       onOpen,
       onClose
-    },
-    { cacheTtl, useCache }
+    }
   );
 }
 
 // ========== React Hooks ==========
 
 /**
- * Options cho useSseCache hook
+ * Options cho useSseData hook
  */
 export interface UseSseCacheOptions<T> {
   keyword: string;
   url?: string;
   queryParams?: Record<string, any>;
   enabled?: boolean;
-  cacheTtl?: number;
-  useCache?: boolean;
   transform?: (data: T) => T;
   onData?: (data: T) => void;
   onError?: (error: SseError) => void;
@@ -606,13 +473,12 @@ export interface UseSseCacheResult<T> {
   isLoading: boolean;
   error: SseError | null;
   isConnected: boolean;
-  clearCache: () => void;
   debugInfo: ReturnType<typeof getDebugInfo>;
 }
 
 /**
- * Hook để sử dụng SSE với cache trong React components.
- * Tương tự usePollingClient nhưng dùng SSE thay vì REST polling.
+ * Hook để sử dụng SSE trong React components.
+ * Dữ liệu realtime, không cache.
  */
 export function useSseCache<T = any>(
   options: UseSseCacheOptions<T>
@@ -622,8 +488,6 @@ export function useSseCache<T = any>(
     url = '/api/v1/sse/stream',
     queryParams = {},
     enabled = true,
-    cacheTtl = DEFAULT_CACHE_TTL,
-    useCache: useCacheOption = true,
     transform,
     onData,
     onError,
@@ -634,17 +498,8 @@ export function useSseCache<T = any>(
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
   const isMountedRef = useRef(true);
 
-  const [data, setData] = useState<T | null>(() => {
-    if (!useCacheOption) return null;
-    const cached = getFromCache<T>(keyword, queryParams, cacheTtl);
-    return cached ? (transform ? transform(cached) : cached) : null;
-  });
-
-  const [isLoading, setIsLoading] = useState<boolean>(() => {
-    if (!useCacheOption) return true;
-    return getFromCache<T>(keyword, queryParams, cacheTtl) === null;
-  });
-
+  const [data, setData] = useState<T | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<SseError | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
@@ -701,8 +556,7 @@ export function useSseCache<T = any>(
             onClose?.();
           }
         }
-      },
-      { cacheTtl, useCache: useCacheOption }
+      }
     );
 
     return () => {
@@ -714,18 +568,11 @@ export function useSseCache<T = any>(
     };
   }, [keyword, enabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const clearKeywordCache = useCallback(() => {
-    clearCache(keyword);
-    setData(null);
-    setIsLoading(true);
-  }, [keyword]);
-
   return {
     data,
     isLoading,
     error,
     isConnected,
-    clearCache: clearKeywordCache,
     debugInfo: getDebugInfo()
   };
 }

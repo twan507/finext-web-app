@@ -11,7 +11,7 @@ import { transformToChartData } from '../../home/components/marketSection/Market
 import IndexDetailPanel from '../../home/components/marketSection/IndexDetailPanel';
 
 import { ISseRequest } from 'services/core/types';
-import { sseClient, getFromCache } from 'services/sseClient';
+import { sseClient } from 'services/sseClient';
 import { apiClient } from 'services/apiClient';
 import { getResponsiveFontSize, fontWeight, getGlassCard, borderRadius, durations, easings, transitions, layoutTokens } from 'theme/tokens';
 
@@ -215,18 +215,7 @@ export default function StockDetailContent() {
     const [timeRange, setTimeRange] = useState<TimeRange>('3M');
 
     // ========== STATE ==========
-    const [todayAllData, setTodayAllData] = useState<StockDataByTicker>(() => {
-        const cached = getFromCache<RawMarketData[]>('home_today_stock');
-        if (cached && Array.isArray(cached)) {
-            const grouped: StockDataByTicker = {};
-            cached.forEach((item: RawMarketData) => {
-                const t = item.ticker;
-                if (t) { if (!grouped[t]) grouped[t] = []; grouped[t].push(item); }
-            });
-            return grouped;
-        }
-        return {};
-    });
+    const [todayAllData, setTodayAllData] = useState<StockDataByTicker>({});
 
     // Combined EOD data
     const [eodData, setEodData] = useState<ChartData>(emptyChartData);
@@ -347,7 +336,7 @@ export default function StockDetailContent() {
             },
             onError: (sseError) => { if (isMountedRef.current) console.warn('[SSE Today Stock] Error:', sseError.message); },
             onClose: () => { }
-        }, { cacheTtl: 5 * 60 * 1000, useCache: true });
+        });
 
         return () => { isMountedRef.current = false; if (todaySseRef.current) todaySseRef.current.unsubscribe(); };
     }, []);
@@ -377,7 +366,7 @@ export default function StockDetailContent() {
             },
             onError: (sseError) => { if (isMountedRef.current) console.warn('[SSE ITD Stock] Error:', sseError.message); },
             onClose: () => { }
-        }, { cacheTtl: 5 * 60 * 1000, useCache: true });
+        });
 
         return () => {
             isMountedRef.current = false;

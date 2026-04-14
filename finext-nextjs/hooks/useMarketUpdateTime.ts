@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { sseClient, getFromCache } from 'services/sseClient';
+import { sseClient } from 'services/sseClient';
 import { ISseRequest } from 'services/core/types';
 
 interface MarketUpdateTimeData {
@@ -39,10 +39,7 @@ export function useMarketUpdateTime(): string | null {
         }
     };
 
-    const [updateTime, setUpdateTime] = useState<string | null>(() => {
-        const cached = getFromCache<MarketUpdateTimeData>('market_update_time');
-        return parseUpdateTime(cached);
-    });
+    const [updateTime, setUpdateTime] = useState<string | null>(null);
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -73,7 +70,7 @@ export function useMarketUpdateTime(): string | null {
                 },
                 onClose: () => { },
             },
-            { cacheTtl: 5 * 60 * 1000, useCache: true }
+            {}
         );
 
         return () => {

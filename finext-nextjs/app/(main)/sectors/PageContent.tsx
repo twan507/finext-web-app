@@ -5,7 +5,7 @@ import { Box, Typography, useTheme, useMediaQuery } from '@mui/material';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { getResponsiveFontSize, fontWeight, getGlassCard, getGlassHighlight, getGlassEdgeLight, borderRadius } from 'theme/tokens';
 import { ISseRequest } from 'services/core/types';
-import { sseClient, getFromCache } from 'services/sseClient';
+import { sseClient } from 'services/sseClient';
 import { apiClient } from 'services/apiClient';
 import type { RawMarketData } from '../home/components/marketSection/MarketIndexChart';
 import StockTable, { IndexRowData } from '../groups/components/StockTable';
@@ -87,13 +87,7 @@ export default function SectorsContent() {
     const todaySseRef = useRef<{ unsubscribe: () => void } | null>(null);
 
     // Raw data map (keeps all data for chart computations)
-    const [rawDataMap, setRawDataMap] = useState<Map<string, RawIndexData>>(() => {
-        const cached = getFromCache<RawIndexData[]>('home_today_index');
-        if (cached && Array.isArray(cached)) {
-            return buildRawMap(cached);
-        }
-        return new Map();
-    });
+    const [rawDataMap, setRawDataMap] = useState<Map<string, RawIndexData>>(new Map());
 
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
@@ -114,10 +108,7 @@ export default function SectorsContent() {
     // Table data (filtered to only industries)
     const indexData = useMemo(() => transformData(rawDataMap), [rawDataMap]);
 
-    const [isLoading, setIsLoading] = useState<boolean>(() => {
-        const cached = getFromCache<RawIndexData[]>('home_today_index');
-        return !(cached && Array.isArray(cached) && cached.length > 0);
-    });
+    const [isLoading, setIsLoading] = useState<boolean>(true);
 
     // SSE subscription
     useEffect(() => {
@@ -150,7 +141,7 @@ export default function SectorsContent() {
                 },
                 onClose: () => { },
             },
-            { cacheTtl: 5 * 60 * 1000, useCache: true },
+            {},
         );
 
         return () => {

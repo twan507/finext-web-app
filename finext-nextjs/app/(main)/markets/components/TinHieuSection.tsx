@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from 'services/apiClient';
 import { ISseRequest } from 'services/core/types';
-import { sseClient, getFromCache } from 'services/sseClient';
+import { sseClient } from 'services/sseClient';
 import type { RawTrendData, TrendChartData, TrendTimeRange } from './TinHieuSecion/MarketTrendChart';
 import { transformTrendData } from './TinHieuSecion/MarketTrendChart';
 
@@ -75,13 +75,7 @@ export default function TinHieuSection() {
     });
 
     // ========== SSE — Today Trend Data ==========
-    const [trendTodayData, setTrendTodayData] = useState<RawTrendData[]>(() => {
-        const cached = getFromCache<RawTrendData[]>('home_today_trend');
-        if (cached && Array.isArray(cached)) {
-            return cached.filter((item) => item.ticker === 'FNXINDEX');
-        }
-        return [];
-    });
+    const [trendTodayData, setTrendTodayData] = useState<RawTrendData[]>([]);
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -111,7 +105,6 @@ export default function TinHieuSection() {
                 },
                 onClose: () => { },
             },
-            { cacheTtl: 5 * 60 * 1000, useCache: true }
         );
 
         return () => {

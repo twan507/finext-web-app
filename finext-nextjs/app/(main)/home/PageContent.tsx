@@ -44,7 +44,7 @@ const IndustryStocksSection = dynamic(
 // Import API clients
 import { apiClient } from 'services/apiClient';
 import { ISseRequest } from 'services/core/types';
-import { sseClient, getFromCache } from 'services/sseClient';
+import { sseClient } from 'services/sseClient';
 import MarketVolatility from './components/marketSection/MarketVolatility';
 
 // Danh sách các index cho mini charts
@@ -108,39 +108,11 @@ export default function HomeContent() {
 
     // Today data (từ SSE home_today_index - cho TẤT CẢ indexes)
     // Khởi tạo từ cache nếu có
-    const [todayAllData, setTodayAllData] = useState<IndexDataByTicker>(() => {
-        const cached = getFromCache<RawMarketData[]>('home_today_index');
-        if (cached && Array.isArray(cached)) {
-            const grouped: IndexDataByTicker = {};
-            cached.forEach((item: RawMarketData) => {
-                const t = item.ticker;
-                if (t) {
-                    if (!grouped[t]) grouped[t] = [];
-                    grouped[t].push(item);
-                }
-            });
-            return grouped;
-        }
-        return {};
-    });
+    const [todayAllData, setTodayAllData] = useState<IndexDataByTicker>({});
 
     // ITD data (từ SSE home_itd_index - cho TẤT CẢ indexes)
     // Khởi tạo từ cache nếu có
-    const [itdAllData, setItdAllData] = useState<IndexDataByTicker>(() => {
-        const cached = getFromCache<RawMarketData[]>('home_itd_index');
-        if (cached && Array.isArray(cached)) {
-            const grouped: IndexDataByTicker = {};
-            cached.forEach((item: RawMarketData) => {
-                const t = item.ticker;
-                if (t) {
-                    if (!grouped[t]) grouped[t] = [];
-                    grouped[t].push(item);
-                }
-            });
-            return grouped;
-        }
-        return {};
-    });
+    const [itdAllData, setItdAllData] = useState<IndexDataByTicker>({});
 
     // Combined EOD data (history + today)
     const [eodData, setEodData] = useState<ChartData>(emptyChartData);
@@ -150,29 +122,14 @@ export default function HomeContent() {
 
     // Today Stock data (từ SSE home_today_stock - cho Market Trend Section)
     // Khởi tạo từ cache nếu có
-    const [todayStockData, setTodayStockData] = useState<any[]>(() => {
-        const cached = getFromCache<any[]>('home_today_stock');
-        return cached && Array.isArray(cached) ? cached : [];
-    });
-    const [isStockDataLoading, setIsStockDataLoading] = useState<boolean>(() => {
-        // Nếu có cache, không cần loading
-        const cached = getFromCache<any[]>('home_today_stock');
-        return !(cached && Array.isArray(cached) && cached.length > 0);
-    });
+    const [todayStockData, setTodayStockData] = useState<any[]>([]);
+    const [isStockDataLoading, setIsStockDataLoading] = useState<boolean>(true);
 
 
 
     // Loading & Error states
     // Khởi tạo loading dựa trên cache có sẵn
-    const [isLoading, setIsLoading] = useState<boolean>(() => {
-        const todayCache = getFromCache<RawMarketData[]>('home_today_index');
-        // Nếu có cache today data cho ticker mặc định, có thể hiển thị ngay
-        if (todayCache && Array.isArray(todayCache)) {
-            const hasTodayForTicker = todayCache.some(item => item.ticker === 'VNINDEX');
-            return !hasTodayForTicker;
-        }
-        return true;
-    });
+    const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
     // ========== LUỒNG 1: REST - History Data (lazy load) ==========
@@ -313,8 +270,7 @@ export default function HomeContent() {
                 onClose: () => {
                     // Closed
                 }
-            },
-            { cacheTtl: 5 * 60 * 1000, useCache: true } // Cache 5 phút
+            }
         );
 
         return () => {
@@ -370,8 +326,7 @@ export default function HomeContent() {
                 onClose: () => {
                     // Closed
                 }
-            },
-            { cacheTtl: 5 * 60 * 1000, useCache: true } // Cache 5 phút
+            }
         );
 
         return () => {
@@ -470,8 +425,7 @@ export default function HomeContent() {
                 onClose: () => {
                     // Closed
                 }
-            },
-            { cacheTtl: 5 * 60 * 1000, useCache: true } // Cache 5 phút
+            }
         );
 
         return () => {
