@@ -91,11 +91,11 @@ function extractFieldData(
 }
 
 // Default number of candles to show on first render
-const DEFAULT_VISIBLE_BARS_DESKTOP = 180;
-const DEFAULT_VISIBLE_BARS_TABLET = 120;
-const DEFAULT_VISIBLE_BARS_MOBILE = 60;
-const INITIAL_RIGHT_MARGIN_DESKTOP = 10; // Khoảng trống bên phải nến cuối khi render lần đầu
-const INITIAL_RIGHT_MARGIN_MOBILE = 10;
+const DEFAULT_VISIBLE_BARS_DESKTOP = 150;
+const DEFAULT_VISIBLE_BARS_TABLET = 100;
+const DEFAULT_VISIBLE_BARS_MOBILE = 50;
+const INITIAL_RIGHT_MARGIN_DESKTOP = 15; // Khoảng trống bên phải nến cuối khi render lần đầu
+const INITIAL_RIGHT_MARGIN_MOBILE = 15;
 // Lazy load: trigger loadMore khi scroll gần cạnh trái (logical index < threshold)
 const LOAD_MORE_THRESHOLD = 50;
 

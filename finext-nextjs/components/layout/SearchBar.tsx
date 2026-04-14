@@ -635,12 +635,35 @@ export default function SearchBar({
         triggerSearch(searchValue);
     };
 
+    // Helper to get the first navigable path from current results
+    const getFirstResultPath = (): string | null => {
+        if (results.stocks.length > 0) return `/stocks/${results.stocks[0].ticker}`;
+        if (results.indexes.length > 0) {
+            const item = results.indexes[0];
+            return item.type === 'industry' ? `/sectors/${item.ticker}` : `/groups/${item.ticker}`;
+        }
+        if (results.news.length > 0) return `/news/${results.news[0].article_slug}`;
+        if (results.reports.length > 0) return `/reports/${results.reports[0].report_slug}`;
+        return null;
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            const path = getFirstResultPath();
+            if (path) {
+                handleNavigate(path);
+            }
+        }
+    };
+
     const handleBlur = () => {
         // Delay so that clicks on result items register first
         setTimeout(() => {
             setShowDropdown(false);
             setIsFocused(false);
-        }, 180);
+            setSearchValue('');
+            setResults({ stocks: [], indexes: [], news: [], reports: [] });
+        }, 150);
     };
 
     const inputSx = {
@@ -710,6 +733,7 @@ export default function SearchBar({
                             onChange={handleChange}
                             onFocus={() => setIsFocused(true)}
                             onBlur={() => setIsFocused(false)}
+                            onKeyDown={handleKeyDown}
                             placeholder="Tìm cổ phiếu, nhóm ngành, tin tức..."
                             variant="outlined"
                             InputProps={{
@@ -769,6 +793,7 @@ export default function SearchBar({
                 onChange={handleChange}
                 onFocus={handleFocus}
                 onBlur={handleBlur}
+                onKeyDown={handleKeyDown}
                 placeholder={isFocused ? '' : currentPlaceholder || placeholder}
                 variant="outlined"
                 InputProps={{
@@ -816,6 +841,7 @@ export default function SearchBar({
             <Fade in={showDropdown}>
                 <Paper
                     elevation={0}
+                    onMouseDown={(e) => e.preventDefault()}
                     sx={{
                         display: showDropdown ? 'block' : 'none',
                         position: 'absolute',
