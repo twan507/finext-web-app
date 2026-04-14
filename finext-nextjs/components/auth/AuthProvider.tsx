@@ -1,16 +1,16 @@
 // finext-nextjs/components/AuthProvider.tsx
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 // User type ở đây sẽ là User từ session.ts, đã được cập nhật
-import { getSession, clearSession, SessionData, saveSession as saveSessionToStorage, updateAccessToken, User, getAccessToken } from 'services/core/session';
+import { getSession, clearSession, SessionData, saveSession as saveSessionToStorage, getAccessToken } from 'services/core/session';
 import { apiClient, clearApiCache } from 'services/apiClient';
 import { clearCache as clearSseCache, closeAllConnections as closeAllSseConnections } from 'services/sseClient';
 import { logoutApi } from 'services/authService';
 // UserSchema cũng cần được import nếu bạn dùng nó trực tiếp ở đây
-import { LoginResponse, UserSchema } from 'services/core/types';
-import { formatErrorForUser, safeLogError, isAuthError, safeHandleError, shouldLogError } from 'utils/errorHandler';
+import { UserSchema } from 'services/core/types';
+import { isAuthError, safeLogError } from 'utils/errorHandler';
 import { useNotification } from '../provider/NotificationProvider';
 
 
@@ -37,16 +37,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { showNotification } = useNotification();
 
-  const fetchAndSetSessionData = useCallback(async (existingToken?: string | null) => {
+  // Dùng ref cho showNotification để tránh stale closure trong useCallback
+  const showNotificationRef = useRef(showNotification);
+  useEffect(() => {
+    showNotificationRef.current = showNotification;
+  }, [showNotification]);
+
+  /**
+   * Fetch session data từ API.
+   * Dựa hoàn toàn vào apiClient._sendRequestWithRefresh() để xử lý 401 + refresh token.
+   * KHÔNG tự gọi /refresh-token ở đây để tránh race condition.
+   * 
+   * @param silent - Nếu true, không hiển thị notification khi gặp lỗi auth (dùng khi app khởi động)
+   */
+  const fetchAndSetSessionData = useCallback(async (existingToken?: string | null, silent: boolean = false) => {
     setLoading(true);
     try {
       // Nếu không có token hiện tại, thử lấy từ session storage
       const tokenToUse = existingToken || getAccessToken();
       if (!tokenToUse) {
-        throw new Error("No access token available for fetching session data.");
+        // Không có token → user chưa đăng nhập, không cần báo lỗi
+        clearSession();
+        setSession(null);
+        setFeatures([]);
+        setPermissions([]);
+        return;
       }
 
-      // API Client đã tự động thêm token vào header nếu có
+      // apiClient đã tự động thêm token vào header và xử lý refresh nếu cần
       const [userResponse, featuresResponse, permissionsResponse] = await Promise.all([
         apiClient<UserSchema>({ url: '/api/v1/auth/me', method: 'GET' }),
         apiClient<string[]>({ url: '/api/v1/auth/me/features', method: 'GET' }),
@@ -54,9 +72,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ]);
 
       if (userResponse.status === 200 && userResponse.data && featuresResponse.status === 200 && permissionsResponse.status === 200) {
+        // Lấy token hiện tại từ localStorage (có thể đã được refresh bởi apiClient)
+        const currentToken = getAccessToken() || tokenToUse;
         const newSessionData: SessionData = {
-          user: userResponse.data, // userResponse.data giờ sẽ có subscription_id
-          accessToken: tokenToUse, // Sử dụng token đang dùng để fetch
+          user: userResponse.data,
+          accessToken: currentToken,
           features: featuresResponse.data || [],
           permissions: permissionsResponse.data || [],
         };
@@ -65,67 +85,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setFeatures(newSessionData.features);
         setPermissions(newSessionData.permissions);
       } else {
-        // Xử lý lỗi cụ thể hơn nếu cần
         throw new Error(userResponse.message || featuresResponse.message || "Failed to fetch user/features data.");
       }
     } catch (error: any) {
-      // Use safe error handler to prevent empty error object issues
-      const errorInfo = safeHandleError(error, 'AuthProvider.fetchAndSetSessionData', 'Authentication check failed');
-
-      // Use safe log error to prevent logging empty error objects
       if (process.env.NODE_ENV === 'development') {
         safeLogError(error, 'AuthProvider.fetchAndSetSessionData');
       }
 
-      // Nếu lỗi là 401 và không phải lỗi từ refresh-token, thử refresh
-      if (isAuthError(error) && !error.message?.includes('refresh-token')) {
-        try {
-          const refreshTokenResponse = await apiClient<LoginResponse>({
-            url: '/api/v1/auth/refresh-token',
-            method: 'POST',
-            requireAuth: false,
-            withCredentials: true,
-          });
+      // apiClient đã tự xử lý refresh token khi gặp 401.
+      // Nếu vẫn đến đây với lỗi auth → refresh cũng đã thất bại → session thực sự hết hạn.
+      if (isAuthError(error)) {
+        // Clear session vì refresh token cũng đã fail (apiClient đã clearSession rồi, nhưng đảm bảo state React cũng được clear)
+        clearSession();
+        setSession(null);
+        setFeatures([]);
+        setPermissions([]);
 
-          if (refreshTokenResponse.data?.access_token) {
-            updateAccessToken(refreshTokenResponse.data.access_token);
-            await fetchAndSetSessionData(refreshTokenResponse.data.access_token);
-            return;
-          } else {
-            clearSession();
-            setSession(null);
-            setFeatures([]);
-            setPermissions([]);
-            // Hiển thị thông báo session hết hạn
-            showNotification(errorInfo.userMessage, errorInfo.severity);
-          }
-        } catch (refreshError: any) {
-          // Use safe error handler for refresh token errors too
-          const refreshErrorInfo = safeHandleError(refreshError, 'AuthProvider.refreshToken', 'Token refresh failed');
-
-          // Use safe log error to prevent logging empty error objects
-          if (process.env.NODE_ENV === 'development') {
-            safeLogError(refreshError, 'AuthProvider.refreshToken');
-          }
-
-          clearSession();
-          setSession(null);
-          setFeatures([]);
-          setPermissions([]);
-          // Hiển thị thông báo lỗi refresh token
-          showNotification(refreshErrorInfo.userMessage, refreshErrorInfo.severity);
+        // Chỉ hiển thị notification nếu KHÔNG phải silent mode
+        // Silent mode dùng khi app khởi động: nếu token hết hạn → im lặng, user tự đăng nhập lại
+        if (!silent) {
+          showNotificationRef.current('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 'warning');
         }
-      } else if (isAuthError(error)) {
-        // Lỗi authentication khác, hiển thị notification
-        showNotification(errorInfo.userMessage, errorInfo.severity);
-      } else if (errorInfo.shouldShowToUser) {
-        // Lỗi khác cần hiển thị cho user (network, etc.)
-        showNotification(errorInfo.userMessage, errorInfo.severity);
+      } else {
+        // Lỗi khác (network, server, etc.) — giữ session cũ nếu có, chỉ log lỗi
+        // Không clear session vì có thể chỉ là lỗi tạm thời
+        if (!silent) {
+          showNotificationRef.current('Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.', 'error');
+        }
       }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, []); // Không cần dependency vì dùng ref cho showNotification
 
 
   const refreshSessionData = useCallback(async () => {
@@ -137,8 +128,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initialCheck = async () => {
       const savedSession = getSession();
       if (savedSession && savedSession.accessToken) {
-        // Thay vì chỉ setSession, gọi fetchAndSetSessionData để xác thực và lấy dữ liệu mới nhất
-        await fetchAndSetSessionData(savedSession.accessToken);
+        // Silent mode = true: nếu token hết hạn, im lặng clear session
+        // Không hiển thị notification "phiên hết hạn" khi mới vào trang
+        await fetchAndSetSessionData(savedSession.accessToken, true);
       } else {
         setSession(null);
         setFeatures([]);

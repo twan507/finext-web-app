@@ -66,10 +66,15 @@ export function getPermissions(): string[] {
 }
 
 export function updateAccessToken(accessToken: string): void {
+    if (typeof window === 'undefined') return;
     const session = getSession();
-    if (session && typeof window !== 'undefined') {
+    if (session) {
         const newSession = { ...session, accessToken };
         localStorage.setItem(SESSION_KEY, JSON.stringify(newSession));
+    } else {
+        // Session không tồn tại, có thể đã bị clear bởi tab khác
+        // Log warning nhưng không crash — caller sẽ xử lý tạo session mới khi cần
+        console.warn('[Session] updateAccessToken called but no session found in localStorage. Token not saved.');
     }
 }
 

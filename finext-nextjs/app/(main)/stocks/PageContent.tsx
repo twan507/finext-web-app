@@ -145,38 +145,38 @@ function PresetChip({ preset, active, onClick, isDark, theme }: PresetChipProps)
             }}
             arrow
         >
-        <Box
-            component="button"
-            onClick={onClick}
-            sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 0.75,
-                px: 1.25,
-                py: 0.5,
-                borderRadius: `${borderRadius.pill}px`,
-                border: `1px solid ${active
-                    ? alpha(theme.palette.primary.main, 0.5)
-                    : alpha(theme.palette.divider, 0.4)
-                }`,
-                bgcolor: active
-                    ? alpha(theme.palette.primary.main, 0.12)
-                    : 'transparent',
-                color: active ? theme.palette.primary.main : theme.palette.text.secondary,
-                cursor: 'pointer',
-                background: 'none',
-                fontSize: getResponsiveFontSize('xs'),
-                fontWeight: active ? fontWeight.bold : fontWeight.medium,
-                transition: `all ${durations.fast} ${easings.easeOut}`,
-                '&:hover': {
-                    bgcolor: alpha(theme.palette.primary.main, 0.08),
-                    borderColor: alpha(theme.palette.primary.main, 0.3),
-                },
-            }}
-        >
-            <Icon icon={preset.iconifyIcon} width={14} />
-            {preset.label}
-        </Box>
+            <Box
+                component="button"
+                onClick={onClick}
+                sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 0.75,
+                    px: 1.25,
+                    py: 0.5,
+                    borderRadius: `${borderRadius.pill}px`,
+                    border: `1px solid ${active
+                        ? alpha(theme.palette.primary.main, 0.5)
+                        : alpha(theme.palette.divider, 0.4)
+                        }`,
+                    bgcolor: active
+                        ? alpha(theme.palette.primary.main, 0.12)
+                        : 'transparent',
+                    color: active ? theme.palette.primary.main : theme.palette.text.secondary,
+                    cursor: 'pointer',
+                    background: 'none',
+                    fontSize: getResponsiveFontSize('xs'),
+                    fontWeight: active ? fontWeight.bold : fontWeight.medium,
+                    transition: `all ${durations.fast} ${easings.easeOut}`,
+                    '&:hover': {
+                        bgcolor: alpha(theme.palette.primary.main, 0.08),
+                        borderColor: alpha(theme.palette.primary.main, 0.3),
+                    },
+                }}
+            >
+                <Icon icon={preset.iconifyIcon} width={14} />
+                {preset.label}
+            </Box>
         </Tooltip>
     );
 }

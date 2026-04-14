@@ -288,10 +288,10 @@ async def refresh_access_token(
             detail="Could not validate refresh token. Please log in again.",
         )
 
-    # Lấy device info hiện tại
+    # Lấy device info hiện tại (chỉ User-Agent, không bao gồm IP để tránh force logout khi đổi mạng)
     user_agent = request.headers.get("user-agent", "Unknown (Refresh)")
     client_host = request.client.host if request.client else "Unknown (Refresh)"
-    current_device_info = f"{user_agent} ({client_host})"
+    current_device_info = user_agent
 
     # TÌM SESSION bằng refresh_jti (CORE LOGIC CHANGE)
     session = await get_session_by_refresh_jti(db, refresh_jti)
@@ -308,13 +308,13 @@ async def refresh_access_token(
         )
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token session")
 
-    # VALIDATE DEVICE INFO (NEW SECURITY FEATURE)
+    # VALIDATE DEVICE INFO (chỉ so sánh User-Agent, cho phép IP thay đổi)
     stored_device_info = session.device_info
     if stored_device_info != current_device_info:
-        # Device changed = XÓA SESSION + FORCE LOGOUT
+        # Device (User-Agent) changed = XÓA SESSION + FORCE LOGOUT
         await delete_session_by_id(db, str(session.id))
         logger.warning(
-            f"Device changed for user {user_id}. Session deleted. Stored: {stored_device_info} vs Current: {current_device_info}"
+            f"User-Agent changed for user {user_id}. Session deleted. Stored: {stored_device_info} vs Current: {current_device_info}"
         )
 
         # XÓA REFRESH TOKEN COOKIE
@@ -328,6 +328,10 @@ async def refresh_access_token(
             samesite=cast(Literal["lax", "none", "strict"], COOKIE_SAMESITE),
         )
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Device changed. Please login again.")
+    elif client_host != "Unknown (Refresh)":
+        # Log IP change nhưng KHÔNG force logout
+        # Extract stored IP nếu có trong device_info cũ (format cũ có IP)
+        logger.info(f"Refresh token used from IP {client_host} for user {user_id}")
 
     # Validate user
     user = await get_user_by_id_db(db, user_id=user_id)
@@ -429,7 +433,7 @@ async def login_for_access_token(
 
     user_agent = request.headers.get("user-agent", "Unknown")
     client_host = request.client.host if request.client else "Unknown"
-    device_info = f"{user_agent} ({client_host})"
+    device_info = user_agent  # Chỉ lưu User-Agent, không bao gồm IP
 
     logger.info(f"🔄 Creating session for user {user.email} with access_jti: {access_jti}")
     session_result = await create_session(
@@ -525,7 +529,7 @@ async def login_with_otp(
 
     user_agent = request.headers.get("user-agent", "Unknown")
     client_host = request.client.host if request.client else "Unknown"
-    device_info = f"{user_agent} ({client_host})"
+    device_info = user_agent  # Chỉ lưu User-Agent, không bao gồm IP
     await create_session(db, SessionCreate(user_id=user_id_str, access_jti=access_jti, refresh_jti=refresh_jti, device_info=device_info))
 
     response_content_data = JWTTokenResponse(access_token=access_token_str)
@@ -781,7 +785,7 @@ async def google_oauth_callback(
 
     user_agent = request.headers.get("user-agent", "Unknown (Google Login)")
     client_host = request.client.host if request.client else "Unknown (Google Login)"
-    device_info = f"{user_agent} ({client_host})"
+    device_info = user_agent  # Chỉ lưu User-Agent, không bao gồm IP
     await create_session(db, SessionCreate(user_id=user_id_str, access_jti=access_jti, refresh_jti=refresh_jti, device_info=device_info))
 
     response_content_data = JWTTokenResponse(access_token=access_token_str)

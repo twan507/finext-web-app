@@ -58,13 +58,13 @@ interface IndustryInfo {
 type WatchlistSort = 'pct_change_asc' | 'pct_change_desc' | 'vsi_asc' | 'vsi_desc' | 'trading_value_asc' | 'trading_value_desc' | 'manual';
 
 const SORT_OPTIONS: { key: WatchlistSort; label: string }[] = [
-    { key: 'manual',             label: 'Thủ công' },
-    { key: 'pct_change_desc',    label: '% Thay đổi ↓' },
-    { key: 'pct_change_asc',     label: '% Thay đổi ↑' },
-    { key: 'vsi_desc',           label: 'Thanh khoản ↓' },
-    { key: 'vsi_asc',            label: 'Thanh khoản ↑' },
+    { key: 'manual', label: 'Thủ công' },
+    { key: 'pct_change_desc', label: '% Thay đổi ↓' },
+    { key: 'pct_change_asc', label: '% Thay đổi ↑' },
+    { key: 'vsi_desc', label: 'Thanh khoản ↓' },
+    { key: 'vsi_asc', label: 'Thanh khoản ↑' },
     { key: 'trading_value_desc', label: 'GTGD ↓' },
-    { key: 'trading_value_asc',  label: 'GTGD ↑' },
+    { key: 'trading_value_asc', label: 'GTGD ↑' },
 ];
 
 interface Watchlist {
@@ -396,8 +396,8 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                 const db = stockDataMap.get(b);
                 let av = 0, bv = 0;
                 if (sort.startsWith('pct_change')) { av = da?.pct_change ?? 0; bv = db?.pct_change ?? 0; }
-                else if (sort.startsWith('vsi'))   { av = da?.vsi ?? 0;        bv = db?.vsi ?? 0; }
-                else                               { av = da?.trading_value ?? 0; bv = db?.trading_value ?? 0; }
+                else if (sort.startsWith('vsi')) { av = da?.vsi ?? 0; bv = db?.vsi ?? 0; }
+                else { av = da?.trading_value ?? 0; bv = db?.trading_value ?? 0; }
                 return sort.endsWith('_asc') ? av - bv : bv - av;
             })).filter((ticker, index, arr) => arr.indexOf(ticker) === index);
 
@@ -522,38 +522,38 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                                                     {(dragListeners) => {
                                                         const cardDragSx = isManualSort ? { cursor: 'grab', '&:active': { cursor: 'grabbing' } } : {};
                                                         return (
-                                                        <Box
-                                                            {...(dragListeners ?? {})}
-                                                            onClick={() => onTickerChange?.(ticker)}
-                                                            sx={{
-                                                                ...cardDragSx,
-                                                                px: 1, py: 0.5,
-                                                                borderRadius: `${borderRadius.sm}px`,
-                                                                bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-                                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                                cursor: isManualSort ? 'grab' : 'pointer',
-                                                                '&:hover .remove-btn': { opacity: 1 },
-                                                            }}
-                                                        >
-                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
-                                                                <Typography
-                                                                    onPointerDown={e => e.stopPropagation()}
-                                                                    onClick={() => onTickerChange?.(ticker)}
-                                                                    sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: 'text.primary', cursor: 'pointer' }}
-                                                                >
-                                                                    {ticker}
-                                                                </Typography>
-                                                            </Box>
                                                             <Box
-                                                                component="span"
-                                                                className="remove-btn"
-                                                                onPointerDown={e => e.stopPropagation()}
-                                                                onClick={(e) => { e.stopPropagation(); handleUpdateStocks(wl, wl.stock_symbols.filter(s => s !== ticker)); }}
-                                                                sx={{ display: 'inline-flex', cursor: 'pointer', opacity: 0, transition: `opacity ${durations.fast}, color ${durations.fast}`, color: alpha(theme.palette.text.secondary, 0.3), '&:hover': { color: theme.palette.error.main } }}
+                                                                {...(dragListeners ?? {})}
+                                                                onClick={() => onTickerChange?.(ticker)}
+                                                                sx={{
+                                                                    ...cardDragSx,
+                                                                    px: 1, py: 0.5,
+                                                                    borderRadius: `${borderRadius.sm}px`,
+                                                                    bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                                                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                                    cursor: isManualSort ? 'grab' : 'pointer',
+                                                                    '&:hover .remove-btn': { opacity: 1 },
+                                                                }}
                                                             >
-                                                                <CloseIcon sx={{ fontSize: 12 }} />
+                                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+                                                                    <Typography
+                                                                        onPointerDown={e => e.stopPropagation()}
+                                                                        onClick={() => onTickerChange?.(ticker)}
+                                                                        sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: 'text.primary', cursor: 'pointer' }}
+                                                                    >
+                                                                        {ticker}
+                                                                    </Typography>
+                                                                </Box>
+                                                                <Box
+                                                                    component="span"
+                                                                    className="remove-btn"
+                                                                    onPointerDown={e => e.stopPropagation()}
+                                                                    onClick={(e) => { e.stopPropagation(); handleUpdateStocks(wl, wl.stock_symbols.filter(s => s !== ticker)); }}
+                                                                    sx={{ display: 'inline-flex', cursor: 'pointer', opacity: 0, transition: `opacity ${durations.fast}, color ${durations.fast}`, color: alpha(theme.palette.text.secondary, 0.3), '&:hover': { color: theme.palette.error.main } }}
+                                                                >
+                                                                    <CloseIcon sx={{ fontSize: 12 }} />
+                                                                </Box>
                                                             </Box>
-                                                        </Box>
                                                         );
                                                     }}
                                                 </SortableStockRow>
@@ -570,63 +570,63 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                                                 {(dragListeners) => {
                                                     const cardDragSx = isManualSort ? { cursor: 'grab', '&:active': { cursor: 'grabbing' } } : {};
                                                     return (
-                                                    <Box
-                                                        {...(dragListeners ?? {})}
-                                                        onClick={() => onTickerChange?.(ticker)}
-                                                        sx={{
-                                                            ...cardDragSx,
-                                                            px: 1, py: 0.5,
-                                                            borderRadius: `${borderRadius.sm}px`,
-                                                            background: cardBg,
-                                                            cursor: isManualSort ? 'grab' : 'pointer',
-                                                            transition: `background ${durations.fast}`,
-                                                            '&:hover': { background: cardBgHover },
-                                                            '&:hover .remove-btn': { opacity: 1 },
-                                                        }}
-                                                    >
-                                                        {/* Grid 3 cột: left | center | right */}
-                                                        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', alignItems: 'center' }}>
-                                                            {/* [0,0] Ticker + remove */}
-                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
-                                                                <Typography
-                                                                    onPointerDown={e => e.stopPropagation()}
-                                                                    onClick={() => onTickerChange?.(ticker)}
-                                                                    sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.bold, color: changeColor, cursor: 'pointer' }}
-                                                                >
-                                                                    {ticker}
-                                                                </Typography>
-                                                                <Box
-                                                                    component="span"
-                                                                    className="remove-btn"
-                                                                    onPointerDown={e => e.stopPropagation()}
-                                                                    onClick={(e) => { e.stopPropagation(); handleUpdateStocks(wl, wl.stock_symbols.filter(s => s !== ticker)); }}
-                                                                    sx={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', color: alpha(theme.palette.text.secondary, 0.35), opacity: 0, transition: `opacity ${durations.fast}, color ${durations.fast}`, '&:hover': { color: theme.palette.error.main } }}
-                                                                >
-                                                                    <CloseIcon sx={{ fontSize: 12 }} />
+                                                        <Box
+                                                            {...(dragListeners ?? {})}
+                                                            onClick={() => onTickerChange?.(ticker)}
+                                                            sx={{
+                                                                ...cardDragSx,
+                                                                px: 1, py: 0.5,
+                                                                borderRadius: `${borderRadius.sm}px`,
+                                                                background: cardBg,
+                                                                cursor: isManualSort ? 'grab' : 'pointer',
+                                                                transition: `background ${durations.fast}`,
+                                                                '&:hover': { background: cardBgHover },
+                                                                '&:hover .remove-btn': { opacity: 1 },
+                                                            }}
+                                                        >
+                                                            {/* Grid 3 cột: left | center | right */}
+                                                            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', alignItems: 'center' }}>
+                                                                {/* [0,0] Ticker + remove */}
+                                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+                                                                    <Typography
+                                                                        onPointerDown={e => e.stopPropagation()}
+                                                                        onClick={() => onTickerChange?.(ticker)}
+                                                                        sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.bold, color: changeColor, cursor: 'pointer' }}
+                                                                    >
+                                                                        {ticker}
+                                                                    </Typography>
+                                                                    <Box
+                                                                        component="span"
+                                                                        className="remove-btn"
+                                                                        onPointerDown={e => e.stopPropagation()}
+                                                                        onClick={(e) => { e.stopPropagation(); handleUpdateStocks(wl, wl.stock_symbols.filter(s => s !== ticker)); }}
+                                                                        sx={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', color: alpha(theme.palette.text.secondary, 0.35), opacity: 0, transition: `opacity ${durations.fast}, color ${durations.fast}`, '&:hover': { color: theme.palette.error.main } }}
+                                                                    >
+                                                                        <CloseIcon sx={{ fontSize: 12 }} />
+                                                                    </Box>
                                                                 </Box>
+                                                                {/* [0,1] +-% */}
+                                                                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: changeColor, fontVariantNumeric: 'tabular-nums', textAlign: 'center' }}>
+                                                                    {fmt.pct(data.pct_change)}
+                                                                </Typography>
+                                                                {/* [0,2] VSI */}
+                                                                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: vsiColor, fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
+                                                                    {fmt.vsi(data.vsi ?? 0)}
+                                                                </Typography>
+                                                                {/* [1,0] Giá */}
+                                                                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: 'text.primary', fontVariantNumeric: 'tabular-nums', mt: 0.25 }}>
+                                                                    {fmt.price(data.close)}
+                                                                </Typography>
+                                                                {/* [1,1] +- */}
+                                                                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: changeColor, fontVariantNumeric: 'tabular-nums', textAlign: 'center', mt: 0.25 }}>
+                                                                    {fmt.diff(data.diff)}
+                                                                </Typography>
+                                                                {/* [1,2] GTGD */}
+                                                                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: 'text.secondary', fontVariantNumeric: 'tabular-nums', textAlign: 'right', mt: 0.25 }}>
+                                                                    {data.trading_value != null ? fmt.gtgd(data.trading_value) : '—'}
+                                                                </Typography>
                                                             </Box>
-                                                            {/* [0,1] +-% */}
-                                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: changeColor, fontVariantNumeric: 'tabular-nums', textAlign: 'center' }}>
-                                                                {fmt.pct(data.pct_change)}
-                                                            </Typography>
-                                                            {/* [0,2] VSI */}
-                                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: vsiColor, fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
-                                                                {fmt.vsi(data.vsi ?? 0)}
-                                                            </Typography>
-                                                            {/* [1,0] Giá */}
-                                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: 'text.primary', fontVariantNumeric: 'tabular-nums', mt: 0.25 }}>
-                                                                {fmt.price(data.close)}
-                                                            </Typography>
-                                                            {/* [1,1] +- */}
-                                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: changeColor, fontVariantNumeric: 'tabular-nums', textAlign: 'center', mt: 0.25 }}>
-                                                                {fmt.diff(data.diff)}
-                                                            </Typography>
-                                                            {/* [1,2] GTGD */}
-                                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: 'text.secondary', fontVariantNumeric: 'tabular-nums', textAlign: 'right', mt: 0.25 }}>
-                                                                {data.trading_value != null ? fmt.gtgd(data.trading_value) : '—'}
-                                                            </Typography>
                                                         </Box>
-                                                    </Box>
                                                     );
                                                 }}
                                             </SortableStockRow>
@@ -682,207 +682,207 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
             }}
         >
             <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE} compact>
-            {/* Header */}
-            <Box sx={{ px: 1.5, py: 1, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.bold, color: 'text.primary' }}>
-                    Danh sách theo dõi
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 0.25 }}>
-                    <Tooltip title="Làm mới" placement="bottom" arrow={false} slotProps={tooltipSlotProps}>
-                        <IconButton size="small" onClick={() => { setLoading(true); fetchWatchlists(); }} sx={{ color: 'text.secondary', p: 0.25 }}>
-                            <RefreshIcon sx={{ fontSize: 16 }} />
-                        </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Tạo mới" placement="bottom" arrow={false} slotProps={tooltipSlotProps}>
-                        <IconButton size="small" onClick={() => openCreate(nextCoordinate)} sx={{ color: 'text.secondary', p: 0.25 }}>
-                            <AddIcon sx={{ fontSize: 18 }} />
-                        </IconButton>
-                    </Tooltip>
+                {/* Header */}
+                <Box sx={{ px: 1.5, py: 1, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.bold, color: 'text.primary' }}>
+                        Danh sách theo dõi
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 0.25 }}>
+                        <Tooltip title="Làm mới" placement="bottom" arrow={false} slotProps={tooltipSlotProps}>
+                            <IconButton size="small" onClick={() => { setLoading(true); fetchWatchlists(); }} sx={{ color: 'text.secondary', p: 0.25 }}>
+                                <RefreshIcon sx={{ fontSize: 16 }} />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Tạo mới" placement="bottom" arrow={false} slotProps={tooltipSlotProps}>
+                            <IconButton size="small" onClick={() => openCreate(nextCoordinate)} sx={{ color: 'text.secondary', p: 0.25 }}>
+                                <AddIcon sx={{ fontSize: 18 }} />
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
                 </Box>
-            </Box>
 
-            {/* Page selector */}
-            <Box sx={{ px: 1, py: 0.75, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
-                {pages.map(p => (
+                {/* Page selector */}
+                <Box sx={{ px: 1, py: 0.75, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                    {pages.map(p => (
+                        <Box
+                            key={p}
+                            onClick={() => setCurrentPage(p)}
+                            sx={{
+                                px: 1, py: 0.25,
+                                borderRadius: `${borderRadius.sm}px`,
+                                cursor: 'pointer',
+                                fontSize: getResponsiveFontSize('xs'),
+                                fontWeight: currentPage === p ? fontWeight.semibold : fontWeight.medium,
+                                color: currentPage === p ? 'primary.main' : 'text.secondary',
+                                bgcolor: currentPage === p ? (isDark ? 'rgba(99,102,241,0.14)' : 'rgba(99,102,241,0.08)') : 'transparent',
+                                border: `1px solid ${currentPage === p ? 'rgba(99,102,241,0.4)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')}`,
+                                transition: 'all 0.15s',
+                                userSelect: 'none',
+                                '&:hover': { color: 'primary.main', borderColor: 'rgba(99,102,241,0.4)' },
+                            }}
+                        >
+                            Trang {p}
+                        </Box>
+                    ))}
                     <Box
-                        key={p}
-                        onClick={() => setCurrentPage(p)}
+                        onClick={() => { if (!currentPageHasWatchlists) return; const next = Math.max(...pages) + 1; setCurrentPage(next); }}
                         sx={{
                             px: 1, py: 0.25,
                             borderRadius: `${borderRadius.sm}px`,
-                            cursor: 'pointer',
+                            cursor: currentPageHasWatchlists ? 'pointer' : 'not-allowed',
                             fontSize: getResponsiveFontSize('xs'),
-                            fontWeight: currentPage === p ? fontWeight.semibold : fontWeight.medium,
-                            color: currentPage === p ? 'primary.main' : 'text.secondary',
-                            bgcolor: currentPage === p ? (isDark ? 'rgba(99,102,241,0.14)' : 'rgba(99,102,241,0.08)') : 'transparent',
-                            border: `1px solid ${currentPage === p ? 'rgba(99,102,241,0.4)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')}`,
+                            color: currentPageHasWatchlists ? 'text.disabled' : (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'),
+                            border: `1px dashed ${currentPageHasWatchlists ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)') : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)')}`,
                             transition: 'all 0.15s',
                             userSelect: 'none',
-                            '&:hover': { color: 'primary.main', borderColor: 'rgba(99,102,241,0.4)' },
+                            opacity: currentPageHasWatchlists ? 1 : 0.6,
+                            ...(currentPageHasWatchlists && { '&:hover': { color: 'text.secondary', borderColor: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)' } }),
                         }}
                     >
-                        Trang {p}
+                        + Trang mới
                     </Box>
-                ))}
-                <Box
-                    onClick={() => { if (!currentPageHasWatchlists) return; const next = Math.max(...pages) + 1; setCurrentPage(next); }}
-                    sx={{
-                        px: 1, py: 0.25,
-                        borderRadius: `${borderRadius.sm}px`,
-                        cursor: currentPageHasWatchlists ? 'pointer' : 'not-allowed',
-                        fontSize: getResponsiveFontSize('xs'),
-                        color: currentPageHasWatchlists ? 'text.disabled' : (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'),
-                        border: `1px dashed ${currentPageHasWatchlists ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)') : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)')}`,
-                        transition: 'all 0.15s',
-                        userSelect: 'none',
-                        opacity: currentPageHasWatchlists ? 1 : 0.6,
-                        ...(currentPageHasWatchlists && { '&:hover': { color: 'text.secondary', borderColor: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)' } }),
-                    }}
-                >
-                    + Trang mới
                 </Box>
-            </Box>
 
-            {/* Content */}
-            <Box sx={{ flex: 1, overflowY: 'auto', p: 1 }}>
-                {loading ? (
-                    <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', textAlign: 'center', py: 2 }}>
-                        Đang tải...
-                    </Typography>
-                ) : watchlists.length === 0 ? (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 3, gap: 1 }}>
-                        <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', fontWeight: fontWeight.medium }}>
-                            Bạn chưa có Watchlist
+                {/* Content */}
+                <Box sx={{ flex: 1, overflowY: 'auto', p: 1 }}>
+                    {loading ? (
+                        <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', textAlign: 'center', py: 2 }}>
+                            Đang tải...
                         </Typography>
-                        <Button
-                            size="small"
-                            variant="outlined"
-                            startIcon={<AddIcon sx={{ fontSize: 16 }} />}
-                            onClick={() => openCreate([0, 0])}
-                            sx={{ textTransform: 'none', fontSize: getResponsiveFontSize('xs') }}
-                        >
-                            Tạo Watchlist
-                        </Button>
-                    </Box>
-                ) : (
-                    sortedWatchlists.map(wl => renderWatchlistCard(wl))
-                )}
-            </Box>
+                    ) : watchlists.length === 0 ? (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 3, gap: 1 }}>
+                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', fontWeight: fontWeight.medium }}>
+                                Bạn chưa có Watchlist
+                            </Typography>
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<AddIcon sx={{ fontSize: 16 }} />}
+                                onClick={() => openCreate([0, 0])}
+                                sx={{ textTransform: 'none', fontSize: getResponsiveFontSize('xs') }}
+                            >
+                                Tạo Watchlist
+                            </Button>
+                        </Box>
+                    ) : (
+                        sortedWatchlists.map(wl => renderWatchlistCard(wl))
+                    )}
+                </Box>
 
-            {/* Shared ⋮ popup menu — glassmorphism, opens LEFT since panel is on right edge */}
-            <Menu
-                anchorEl={menuAnchor}
-                open={Boolean(menuAnchor)}
-                onClose={() => { setMenuAnchor(null); setMenuWlId(null); }}
-                slotProps={{
-                    paper: {
-                        sx: {
-                            bgcolor: isDark ? 'rgba(22,22,26,0.72)' : 'rgba(255,255,255,0.72)',
-                            backdropFilter: 'blur(20px)',
-                            WebkitBackdropFilter: 'blur(20px)',
-                            border: `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.07)'}`,
-                            borderRadius: `${borderRadius.md}px`,
-                            boxShadow: isDark
-                                ? '0 8px 32px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)'
-                                : '0 8px 24px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.9)',
-                            overflow: 'hidden',
-                            px: 0.5,
+                {/* Shared ⋮ popup menu — glassmorphism, opens LEFT since panel is on right edge */}
+                <Menu
+                    anchorEl={menuAnchor}
+                    open={Boolean(menuAnchor)}
+                    onClose={() => { setMenuAnchor(null); setMenuWlId(null); }}
+                    slotProps={{
+                        paper: {
+                            sx: {
+                                bgcolor: isDark ? 'rgba(22,22,26,0.72)' : 'rgba(255,255,255,0.72)',
+                                backdropFilter: 'blur(20px)',
+                                WebkitBackdropFilter: 'blur(20px)',
+                                border: `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.07)'}`,
+                                borderRadius: `${borderRadius.md}px`,
+                                boxShadow: isDark
+                                    ? '0 8px 32px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)'
+                                    : '0 8px 24px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.9)',
+                                overflow: 'hidden',
+                                px: 0.5,
+                            },
                         },
-                    },
-                }}
-                transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-                anchorOrigin={{ horizontal: 'left', vertical: 'top' }}
-            >
-
-                {/* Sort options */}
-                {SORT_OPTIONS.map(opt => {
-                    const active = menuWl ? (menuWl.sort ?? 'manual') === opt.key : false;
-                    return (
-                        <MenuItem
-                            key={opt.key}
-                            onClick={() => {
-                                if (menuWl) handleSortChange(menuWl, opt.key);
-                                setMenuAnchor(null);
-                                setMenuWlId(null);
-                            }}
-                            sx={{
-                                py: 0.4,
-                                px: 1,
-                                gap: 0.75,
-                                fontSize: getResponsiveFontSize('xs'),
-                                borderRadius: `${borderRadius.sm}px`,
-                                color: active ? 'primary.main' : 'text.secondary',
-                                fontWeight: active ? fontWeight.semibold : 400,
-                                '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' },
-                            }}
-                        >
-                            <Box component="span" sx={{ width: 10, fontSize: 9, flexShrink: 0, color: 'primary.main' }}>
-                                {active ? '●' : ''}
-                            </Box>
-                            <Box component="span" sx={{ fontSize: getResponsiveFontSize('xs') }}>{opt.label}</Box>
-                        </MenuItem>
-                    );
-                })}
-
-                {/* Divider */}
-                <Box sx={{ my: 0.5, mx: 1, height: '1px', bgcolor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)' }} />
-
-                {/* Delete */}
-                <MenuItem
-                    onClick={() => {
-                        if (menuWlId) handleDeleteClick(menuWlId);
-                        setMenuAnchor(null);
-                        setMenuWlId(null);
                     }}
-                    sx={{
-                        py: 0.4,
-                        px: 1,
-                        gap: 0.75,
-                        color: 'error.main',
-                        fontSize: getResponsiveFontSize('xs'),
-                        borderRadius: `${borderRadius.sm}px`,
-                        '&:hover': { bgcolor: isDark ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.08)' },
-                    }}
+                    transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                    anchorOrigin={{ horizontal: 'left', vertical: 'top' }}
                 >
-                    <DeleteIcon sx={{ fontSize: 13, flexShrink: 0 }} />
-                    <Box component="span" sx={{ fontSize: getResponsiveFontSize('xs') }}>Xóa danh sách</Box>
-                </MenuItem>
-            </Menu>
 
-            <AddWatchlistDialog
-                open={dialogOpen}
-                onClose={() => { setDialogOpen(false); setEditingWatchlist(null); }}
-                onSaved={handleSaved}
-                defaultCoordinate={dialogCoordinate}
-                defaultPage={currentPage}
-                editingWatchlist={editingWatchlist}
-                industries={industries}
-            />
+                    {/* Sort options */}
+                    {SORT_OPTIONS.map(opt => {
+                        const active = menuWl ? (menuWl.sort ?? 'manual') === opt.key : false;
+                        return (
+                            <MenuItem
+                                key={opt.key}
+                                onClick={() => {
+                                    if (menuWl) handleSortChange(menuWl, opt.key);
+                                    setMenuAnchor(null);
+                                    setMenuWlId(null);
+                                }}
+                                sx={{
+                                    py: 0.4,
+                                    px: 1,
+                                    gap: 0.75,
+                                    fontSize: getResponsiveFontSize('xs'),
+                                    borderRadius: `${borderRadius.sm}px`,
+                                    color: active ? 'primary.main' : 'text.secondary',
+                                    fontWeight: active ? fontWeight.semibold : 400,
+                                    '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' },
+                                }}
+                            >
+                                <Box component="span" sx={{ width: 10, fontSize: 9, flexShrink: 0, color: 'primary.main' }}>
+                                    {active ? '●' : ''}
+                                </Box>
+                                <Box component="span" sx={{ fontSize: getResponsiveFontSize('xs') }}>{opt.label}</Box>
+                            </MenuItem>
+                        );
+                    })}
 
-            <ConfirmDialog
-                open={confirmOpen}
-                onClose={() => { setConfirmOpen(false); setDeleteTargetId(null); }}
-                onConfirm={handleDeleteConfirm}
-                title="Xóa Watchlist"
-                message="Bạn có chắc muốn xóa watchlist này? Hành động không thể hoàn tác."
-            />
+                    {/* Divider */}
+                    <Box sx={{ my: 0.5, mx: 1, height: '1px', bgcolor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)' }} />
 
-            {/* Snackbar for errors */}
-            <Snackbar
-                open={snackbar.open}
-                autoHideDuration={4000}
-                onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-            >
-                <Alert
+                    {/* Delete */}
+                    <MenuItem
+                        onClick={() => {
+                            if (menuWlId) handleDeleteClick(menuWlId);
+                            setMenuAnchor(null);
+                            setMenuWlId(null);
+                        }}
+                        sx={{
+                            py: 0.4,
+                            px: 1,
+                            gap: 0.75,
+                            color: 'error.main',
+                            fontSize: getResponsiveFontSize('xs'),
+                            borderRadius: `${borderRadius.sm}px`,
+                            '&:hover': { bgcolor: isDark ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.08)' },
+                        }}
+                    >
+                        <DeleteIcon sx={{ fontSize: 13, flexShrink: 0 }} />
+                        <Box component="span" sx={{ fontSize: getResponsiveFontSize('xs') }}>Xóa danh sách</Box>
+                    </MenuItem>
+                </Menu>
+
+                <AddWatchlistDialog
+                    open={dialogOpen}
+                    onClose={() => { setDialogOpen(false); setEditingWatchlist(null); }}
+                    onSaved={handleSaved}
+                    defaultCoordinate={dialogCoordinate}
+                    defaultPage={currentPage}
+                    editingWatchlist={editingWatchlist}
+                    industries={industries}
+                />
+
+                <ConfirmDialog
+                    open={confirmOpen}
+                    onClose={() => { setConfirmOpen(false); setDeleteTargetId(null); }}
+                    onConfirm={handleDeleteConfirm}
+                    title="Xóa Watchlist"
+                    message="Bạn có chắc muốn xóa watchlist này? Hành động không thể hoàn tác."
+                />
+
+                {/* Snackbar for errors */}
+                <Snackbar
+                    open={snackbar.open}
+                    autoHideDuration={4000}
                     onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-                    severity={snackbar.severity}
-                    variant="filled"
-                    sx={{ width: '100%' }}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
                 >
-                    {snackbar.message}
-                </Alert>
-            </Snackbar>
+                    <Alert
+                        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+                        severity={snackbar.severity}
+                        variant="filled"
+                        sx={{ width: '100%' }}
+                    >
+                        {snackbar.message}
+                    </Alert>
+                </Snackbar>
             </OptionalAuthWrapper>
         </Box>
     );

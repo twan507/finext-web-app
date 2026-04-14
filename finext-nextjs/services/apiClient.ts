@@ -115,22 +115,6 @@ if (typeof window !== 'undefined') {
 // ========== Token Refresh Logic ==========
 let isRefreshing = false;
 let refreshPromise: Promise<string | null> | null = null;
-let failedQueue: Array<{ resolve: (value: any) => void; reject: (reason?: any) => void; props: IRequest }> = [];
-
-const processQueue = (error: any | null, token: string | null = null) => {
-    failedQueue.forEach(prom => {
-        if (error) {
-            prom.reject(error);
-        } else {
-            const newHeaders = { ...prom.props.headers };
-            if (token) {
-                newHeaders['Authorization'] = `Bearer ${token}`;
-            }
-            _sendRequest({ ...prom.props, headers: newHeaders }).then(prom.resolve).catch(prom.reject);
-        }
-    });
-    failedQueue = [];
-};
 
 // ========== Core Request Function ==========
 const _sendRequest = async <TResponseData = any>(
@@ -319,6 +303,8 @@ const _sendRequestWithRefresh = async <TResponseData = any>(
         const isRefreshablePath = !noRefreshPaths.some(path => originalRequestProps.url.includes(path));
 
         if (is401 && needsAuth && isRefreshablePath) {
+            // Nếu đã có refresh đang chạy, đợi nó hoàn thành rồi retry
+            // Nếu chưa có, bắt đầu refresh mới
             if (!isRefreshing) {
                 isRefreshing = true;
                 refreshPromise = (async () => {
@@ -332,24 +318,28 @@ const _sendRequestWithRefresh = async <TResponseData = any>(
 
                         if (refreshResponseStandard.data?.access_token) {
                             updateAccessToken(refreshResponseStandard.data.access_token);
-                            processQueue(null, refreshResponseStandard.data.access_token);
                             return refreshResponseStandard.data.access_token;
                         } else {
                             throw new Error(refreshResponseStandard.message || "Refresh token response did not contain access_token.");
                         }
                     } catch (e: any) {
-                        processQueue(e, null);
+                        // Refresh thất bại — clear session (token hết hạn hoàn toàn)
                         clearSession();
                         throw e instanceof Error ? e : new Error(e.message || 'Refresh token failed');
                     } finally {
                         isRefreshing = false;
-                        refreshPromise = null;
+                        // Không set refreshPromise = null ở đây
+                        // để các request đang đợi vẫn nhận được kết quả
+                        // refreshPromise sẽ tự được GC khi không còn reference
                     }
                 })();
             }
 
             try {
                 const newAccessToken = await refreshPromise;
+                // Reset refreshPromise sau khi tất cả đã nhận kết quả
+                refreshPromise = null;
+
                 if (newAccessToken) {
                     const newHeaders = { ...originalRequestProps.headers, Authorization: `Bearer ${newAccessToken}` };
                     return await _sendRequest<TResponseData>({ ...originalRequestProps, headers: newHeaders });
@@ -357,9 +347,11 @@ const _sendRequestWithRefresh = async <TResponseData = any>(
                     throw apiError;
                 }
             } catch (refreshProcessError) {
+                refreshPromise = null;
                 throw refreshProcessError;
             }
         }
         throw error;
     }
 };
+

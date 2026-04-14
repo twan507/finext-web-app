@@ -60,7 +60,7 @@ export function useMarketUpdateTime(): string | null {
         sseRef.current = sseClient<MarketUpdateTimeData>(
             requestProps,
             {
-                onOpen: () => {},
+                onOpen: () => { },
                 onData: (data) => {
                     if (isMountedRef.current) {
                         setUpdateTime(parseUpdateTime(data));
@@ -71,7 +71,7 @@ export function useMarketUpdateTime(): string | null {
                         console.warn('[SSE market_update_time] Error:', err.message);
                     }
                 },
-                onClose: () => {},
+                onClose: () => { },
             },
             { cacheTtl: 5 * 60 * 1000, useCache: true }
         );
