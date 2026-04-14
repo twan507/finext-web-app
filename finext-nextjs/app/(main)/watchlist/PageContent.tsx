@@ -19,7 +19,8 @@ import {
     type DragOverEvent,
     type DragEndEvent,
 } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { SortableContext, verticalListSortingStrategy, horizontalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { createPortal } from 'react-dom';
 import { fontWeight, getResponsiveFontSize, borderRadius } from 'theme/tokens';
 import { useSseCache } from 'services/sseClient';
@@ -90,6 +91,46 @@ function DroppableColumn({ colIdx, isDark, isActive, isMobile, children }: {
     );
 }
 
+function SortablePageTab({ page, isActive, isDark, onClick }: {
+    page: number;
+    isActive: boolean;
+    isDark: boolean;
+    onClick: () => void;
+}) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: `page-${page}` });
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+    return (
+        <Box
+            ref={setNodeRef}
+            style={style}
+            {...attributes}
+            {...listeners}
+            onClick={onClick}
+            sx={{
+                px: 1.25, py: 0.35,
+                borderRadius: `${borderRadius.sm}px`,
+                cursor: 'pointer',
+                fontSize: getResponsiveFontSize('xs'),
+                fontWeight: isActive ? fontWeight.semibold : fontWeight.medium,
+                color: isActive ? 'primary.main' : 'text.secondary',
+                bgcolor: isActive
+                    ? (isDark ? 'rgba(99,102,241,0.14)' : 'rgba(99,102,241,0.08)')
+                    : 'transparent',
+                border: `1px solid ${isActive ? 'rgba(99,102,241,0.4)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')}`,
+                transition: 'all 0.15s',
+                userSelect: 'none',
+                '&:hover': { color: 'primary.main', borderColor: 'rgba(99,102,241,0.4)' },
+            }}
+        >
+            Trang {page}
+        </Box>
+    );
+}
+
 export default function WatchlistContent() {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
@@ -106,11 +147,16 @@ export default function WatchlistContent() {
     const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
     const [currentPage, setCurrentPage] = useState(1);
 
-    // ── DnD state ──
+    // ── DnD state (cards) ──
     const [activeId, setActiveId] = useState<string | null>(null);
     const [isReordering, setIsReordering] = useState(false);
     const watchlistsBeforeDrag = useRef<Watchlist[]>([]);
     const watchlistsRef = useRef<Watchlist[]>([]);
+
+    // ── DnD state (page tabs) ──
+    const pageSensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    );
 
     // Keep ref in sync with state so handlers can read latest without stale closures
     useEffect(() => { watchlistsRef.current = watchlists; }, [watchlists]);
@@ -337,6 +383,52 @@ export default function WatchlistContent() {
         pageNums.add(currentPage);
         return Array.from(pageNums).sort((a, b) => a - b);
     }, [watchlists, currentPage]);
+
+    const pageSortableIds = useMemo(() => pages.map(p => `page-${p}`), [pages]);
+
+    const handlePageDragEnd = useCallback((event: DragEndEvent) => {
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+
+        const oldIndex = pageSortableIds.indexOf(active.id as string);
+        const newIndex = pageSortableIds.indexOf(over.id as string);
+        if (oldIndex === -1 || newIndex === -1) return;
+
+        const reordered = arrayMove(pages, oldIndex, newIndex);
+
+        // Build mapping: old page number -> new page number (1-based position)
+        const pageMapping: { old_page: number; new_page: number }[] = [];
+        reordered.forEach((oldPageNum, idx) => {
+            const newPageNum = idx + 1;
+            if (oldPageNum !== newPageNum) {
+                pageMapping.push({ old_page: oldPageNum, new_page: newPageNum });
+            }
+        });
+
+        if (pageMapping.length === 0) return;
+
+        // Optimistic UI update
+        setWatchlists(prev => prev.map(w => {
+            const mapping = pageMapping.find(m => m.old_page === (w.page ?? 1));
+            if (mapping) return { ...w, page: mapping.new_page };
+            return w;
+        }));
+
+        // Update currentPage if it was moved
+        const currentMapping = pageMapping.find(m => m.old_page === currentPage);
+        if (currentMapping) setCurrentPage(currentMapping.new_page);
+
+        // Persist to backend
+        apiClient({
+            url: '/api/v1/watchlists/reorder-pages',
+            method: 'POST',
+            body: { page_mapping: pageMapping },
+            requireAuth: true,
+        }).catch(() => {
+            // Rollback on failure
+            fetchWatchlists();
+        });
+    }, [pages, pageSortableIds, currentPage, fetchWatchlists]);
 
     // Next coordinate for current page — append to last column, or start new column if < MAX_COLS
     const nextCoordinate = useMemo<[number, number]>(() => {
@@ -633,31 +725,25 @@ export default function WatchlistContent() {
             {renderTitle()}
 
             <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
-                {/* Page selector */}
+                {/* Page selector — draggable tabs */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5, flexWrap: 'wrap' }}>
-                    {pages.map((p: number) => (
-                        <Box
-                            key={p}
-                            onClick={() => setCurrentPage(p)}
-                            sx={{
-                                px: 1.25, py: 0.35,
-                                borderRadius: `${borderRadius.sm}px`,
-                                cursor: 'pointer',
-                                fontSize: getResponsiveFontSize('xs'),
-                                fontWeight: currentPage === p ? fontWeight.semibold : fontWeight.medium,
-                                color: currentPage === p ? 'primary.main' : 'text.secondary',
-                                bgcolor: currentPage === p
-                                    ? (isDark ? 'rgba(99,102,241,0.14)' : 'rgba(99,102,241,0.08)')
-                                    : 'transparent',
-                                border: `1px solid ${currentPage === p ? 'rgba(99,102,241,0.4)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')}`,
-                                transition: 'all 0.15s',
-                                userSelect: 'none',
-                                '&:hover': { color: 'primary.main', borderColor: 'rgba(99,102,241,0.4)' },
-                            }}
-                        >
-                            Trang {p}
-                        </Box>
-                    ))}
+                    <DndContext
+                        sensors={pageSensors}
+                        collisionDetection={rectIntersection}
+                        onDragEnd={handlePageDragEnd}
+                    >
+                        <SortableContext items={pageSortableIds} strategy={horizontalListSortingStrategy}>
+                            {pages.map((p: number) => (
+                                <SortablePageTab
+                                    key={p}
+                                    page={p}
+                                    isActive={currentPage === p}
+                                    isDark={isDark}
+                                    onClick={() => setCurrentPage(p)}
+                                />
+                            ))}
+                        </SortableContext>
+                    </DndContext>
                     {(() => {
                         const canAddPage = watchlists.some(w => (w.page ?? 1) === currentPage);
                         return (

@@ -7,7 +7,7 @@ from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pymongo import UpdateOne
 
-from app.schemas.watchlists import WatchlistCreate, WatchlistUpdate, WatchlistInDB, WatchlistReorder
+from app.schemas.watchlists import WatchlistCreate, WatchlistUpdate, WatchlistInDB, WatchlistReorder, WatchlistPageReorder
 from app.utils.types import PyObjectId
 
 logger = logging.getLogger(__name__)
@@ -170,6 +170,52 @@ async def reorder_watchlists(db: AsyncIOMotorDatabase, user_id: PyObjectId, reor
     result = await db[WATCHLIST_COLLECTION].bulk_write(operations, ordered=False)
     logger.info(f"Reorder watchlists for user {user_id}: modified {result.modified_count}/{len(operations)}")
     return result.modified_count
+
+
+async def reorder_pages(db: AsyncIOMotorDatabase, user_id: PyObjectId, reorder_data: WatchlistPageReorder) -> int:
+    """Swap page numbers for all watchlists owned by user_id based on page_mapping."""
+    if not ObjectId.is_valid(user_id):
+        raise ValueError(f"Định dạng User ID không hợp lệ: {user_id}")
+
+    # Build mapping: old_page -> new_page
+    mapping = {item.old_page: item.new_page for item in reorder_data.page_mapping}
+
+    # Only update pages that actually change
+    changed_mapping = {old: new for old, new in mapping.items() if old != new}
+    if not changed_mapping:
+        return 0
+
+    now = datetime.now(timezone.utc)
+
+    # Use a temporary page (negative) to avoid conflicts during swap
+    # Step 1: old_page -> -(new_page) (temporary)
+    # Step 2: -(new_page) -> new_page (final)
+    operations_step1 = [
+        UpdateOne(
+            {"user_id": ObjectId(user_id), "page": old_page},
+            {"$set": {"page": -(new_page), "updated_at": now}},
+        )
+        for old_page, new_page in changed_mapping.items()
+    ]
+
+    operations_step2 = [
+        UpdateOne(
+            {"user_id": ObjectId(user_id), "page": -(new_page)},
+            {"$set": {"page": new_page, "updated_at": now}},
+        )
+        for new_page in changed_mapping.values()
+    ]
+
+    total_modified = 0
+    if operations_step1:
+        result1 = await db[WATCHLIST_COLLECTION].bulk_write(operations_step1, ordered=False)
+        total_modified += result1.modified_count
+    if operations_step2:
+        result2 = await db[WATCHLIST_COLLECTION].bulk_write(operations_step2, ordered=False)
+        total_modified += result2.modified_count
+
+    logger.info(f"Reorder pages for user {user_id}: modified {total_modified} documents")
+    return total_modified
 
 
 # <<<< PHẦN BỔ SUNG MỚI >>>>

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.database import get_database
-from app.schemas.watchlists import WatchlistCreate, WatchlistPublic, WatchlistUpdate, WatchlistReorder
+from app.schemas.watchlists import WatchlistCreate, WatchlistPublic, WatchlistUpdate, WatchlistReorder, WatchlistPageReorder
 from app.schemas.users import UserInDB  # Giữ nguyên UserInDB cho current_user
 from app.utils.types import PyObjectId
 from app.utils.response_wrapper import StandardApiResponse, api_response_wrapper
@@ -105,6 +105,28 @@ async def reorder_my_watchlists(
 ):
     try:
         modified_count = await crud_watchlists.reorder_watchlists(
+            db, user_id=current_user.id, reorder_data=reorder_data
+        )
+        return {"modified_count": modified_count}
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
+
+@router.post(
+    "/reorder-pages",
+    response_model=StandardApiResponse[dict],
+    summary="[User] Đổi thứ tự các trang watchlist",
+    dependencies=[Depends(require_permission("watchlist", "manage_own"))],
+    tags=["watchlists"],
+)
+@api_response_wrapper(default_success_message="Đổi thứ tự trang thành công.")
+async def reorder_my_watchlist_pages(
+    reorder_data: WatchlistPageReorder,
+    current_user: UserInDB = Depends(get_current_active_user),
+    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
+):
+    try:
+        modified_count = await crud_watchlists.reorder_pages(
             db, user_id=current_user.id, reorder_data=reorder_data
         )
         return {"modified_count": modified_count}

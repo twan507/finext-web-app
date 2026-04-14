@@ -81,6 +81,25 @@ class WatchlistPublicAdmin(WatchlistBase):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
 
+class WatchlistPageReorderItem(BaseModel):
+    old_page: int = Field(..., ge=1, description="Số trang cũ")
+    new_page: int = Field(..., ge=1, description="Số trang mới")
+
+
+class WatchlistPageReorder(BaseModel):
+    page_mapping: List[WatchlistPageReorderItem] = Field(..., min_length=1)
+
+    @model_validator(mode='after')
+    def check_no_duplicates(self) -> 'WatchlistPageReorder':
+        old_pages = [item.old_page for item in self.page_mapping]
+        new_pages = [item.new_page for item in self.page_mapping]
+        if len(old_pages) != len(set(old_pages)):
+            raise ValueError("Duplicate old_page values in page reorder request")
+        if len(new_pages) != len(set(new_pages)):
+            raise ValueError("Duplicate new_page values in page reorder request")
+        return self
+
+
 class WatchlistReorderItem(BaseModel):
     id: PyObjectId
     coordinate: List[int] = Field(..., min_length=2, max_length=2, description="[col, row], values >= 0")
