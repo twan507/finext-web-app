@@ -19,6 +19,7 @@ import DongTienSection from './components/DongTienSection';
 import PriceMapSection from './components/PriceMapSection';
 import NewsSection from './components/NewsSection';
 import StockFinRatiosSection from './components/StockFinRatiosSection';
+import StockFinancialsSection from './components/StockFinancialsSection';
 
 import type { StockData } from '../../home/components/marketSection/MarketVolatility';
 import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
@@ -47,6 +48,7 @@ const LINE_SESSIONS = 20;
 const STOCK_TABS = [
     { id: 'cashflow', label: 'Dòng tiền' },
     { id: 'pricemap', label: 'Kỹ thuật' },
+    { id: 'financials', label: 'Tài Chính' },
     { id: 'news', label: 'Tin tức' },
 ] as const;
 
@@ -153,14 +155,14 @@ export default function StockDetailContent() {
 
     // Active tab state - sync with URL
     const [activeTab, setActiveTab] = useState<StockTabId>(() => {
-        const validTabs: StockTabId[] = ['cashflow', 'pricemap', 'news'];
+        const validTabs: StockTabId[] = ['cashflow', 'pricemap', 'financials', 'news'];
         if (tabParam && validTabs.includes(tabParam)) return tabParam;
         return 'cashflow';
     });
 
     // Sync activeTab when URL search param changes
     useEffect(() => {
-        const validTabs: StockTabId[] = ['cashflow', 'pricemap', 'news'];
+        const validTabs: StockTabId[] = ['cashflow', 'pricemap', 'financials', 'news'];
         if (tabParam && validTabs.includes(tabParam) && tabParam !== activeTab) {
             setActiveTab(tabParam);
         }
@@ -762,6 +764,15 @@ export default function StockDetailContent() {
                             currentDiff={todayAllData[ticker]?.[todayAllData[ticker].length - 1]?.diff}
                             currentPctChange={todayAllData[ticker]?.[todayAllData[ticker].length - 1]?.pct_change}
                         />
+                    </Box>
+                </OptionalAuthWrapper>
+            )}
+
+            {/* Tài Chính → ADVANCED */}
+            {activeTab === 'financials' && (
+                <OptionalAuthWrapper requireAuth={true} requiredFeatures={ADVANCED_AND_ABOVE}>
+                    <Box sx={{ mt: 4 }}>
+                        <StockFinancialsSection ticker={ticker} />
                     </Box>
                 </OptionalAuthWrapper>
             )}
