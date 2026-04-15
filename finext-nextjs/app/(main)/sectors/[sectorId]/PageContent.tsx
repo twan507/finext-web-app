@@ -19,6 +19,7 @@ import DongTienSection from './components/Sectors/DongTienSection';
 import StocksSection from './components/Sectors/StocksSection';
 import NewsSection from './components/Sectors/NewsSection';
 import FinRatiosSection from './components/Sectors/FinRatiosSection';
+import FinancialsSection from './components/Sectors/FinancialsSection';
 
 import type { StockData } from '../../home/components/marketSection/MarketVolatility';
 import { transformTrendData, type RawTrendData, type TrendChartData } from '../../markets/components/TinHieuSecion/MarketTrendChart';
@@ -48,6 +49,7 @@ const LINE_SESSIONS = 20;
 const SECTOR_TABS = [
     { id: 'cashflow', label: 'Dòng tiền' },
     { id: 'stocks', label: 'Cổ phiếu' },
+    { id: 'financials', label: 'Tài Chính' },
     { id: 'news', label: 'Tin tức' },
 ] as const;
 
@@ -171,14 +173,14 @@ export default function SectorDetailContent() {
 
     // Active tab state - sync with URL
     const [activeTab, setActiveTab] = useState<SectorTabId>(() => {
-        const validTabs: SectorTabId[] = ['cashflow', 'stocks', 'news'];
+        const validTabs: SectorTabId[] = ['cashflow', 'stocks', 'financials', 'news'];
         if (tabParam && validTabs.includes(tabParam)) return tabParam;
         return 'cashflow';
     });
 
     // Sync activeTab when URL search param changes
     useEffect(() => {
-        const validTabs: SectorTabId[] = ['cashflow', 'stocks', 'news'];
+        const validTabs: SectorTabId[] = ['cashflow', 'stocks', 'financials', 'news'];
         if (tabParam && validTabs.includes(tabParam) && tabParam !== activeTab) {
             setActiveTab(tabParam);
         }
@@ -861,6 +863,15 @@ export default function SectorDetailContent() {
                             indexName={indexName}
                             stockData={stockData}
                         />
+                    </Box>
+                </OptionalAuthWrapper>
+            )}
+
+            {/* Tài Chính → ADVANCED */}
+            {activeTab === 'financials' && (
+                <OptionalAuthWrapper requireAuth={true} requiredFeatures={ADVANCED_AND_ABOVE}>
+                    <Box sx={{ mt: 4 }}>
+                        <FinancialsSection ticker={ticker} indexName={indexName} />
                     </Box>
                 </OptionalAuthWrapper>
             )}
