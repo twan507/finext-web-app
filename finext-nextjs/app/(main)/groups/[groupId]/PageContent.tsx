@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
-import { Box, Typography, Skeleton, useTheme, useMediaQuery, alpha } from '@mui/material';
+import { Box, Typography, Skeleton, useTheme, useMediaQuery } from '@mui/material';
 
 import type { RawMarketData, ChartData, TimeRange } from '../../home/components/marketSection/MarketIndexChart';
 import { transformToChartData } from '../../home/components/marketSection/MarketIndexChart';
@@ -747,27 +747,6 @@ export default function GroupDetailContent() {
                 )}
                 </Box>
 
-                {/* Chart Button */}
-                <Box
-                    component="span"
-                    onClick={() => router.push(`/charts/${ticker}`)}
-                    sx={{ textDecoration: 'none', cursor: 'pointer', mb: '4px' }}
-                >
-                    <Typography sx={{
-                        fontSize: getResponsiveFontSize('sm'),
-                        fontWeight: fontWeight.bold,
-                        color: theme.palette.primary.main,
-                        bgcolor: alpha(theme.palette.primary.main, 0.1),
-                        px: 1.5,
-                        py: 0.5,
-                        borderRadius: `${borderRadius.sm}px`,
-                        transition: 'background 0.2s',
-                        '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.15) },
-                        userSelect: 'none',
-                    }}>
-                        Mở biểu đồ ↗
-                    </Typography>
-                </Box>
             </Box>
 
             {/* ========== TOP SECTION: Chart (left) + Detail Panel (right) ========== */}

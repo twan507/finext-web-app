@@ -682,27 +682,6 @@ export default function StockDetailContent() {
                 )}
                 </Box>
 
-                {/* Chart Button */}
-                <Box
-                    component="span"
-                    onClick={() => router.push(`/charts/${ticker}`)}
-                    sx={{ textDecoration: 'none', cursor: 'pointer', mb: '4px' }}
-                >
-                    <Typography sx={{
-                        fontSize: getResponsiveFontSize('sm'),
-                        fontWeight: fontWeight.bold,
-                        color: theme.palette.primary.main,
-                        bgcolor: alpha(theme.palette.primary.main, 0.1),
-                        px: 1.5,
-                        py: 0.5,
-                        borderRadius: `${borderRadius.sm}px`,
-                        transition: 'background 0.2s',
-                        '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.15) },
-                        userSelect: 'none',
-                    }}>
-                        Mở biểu đồ ↗
-                    </Typography>
-                </Box>
             </Box>
 
             {/* ========== TOP SECTION: Chart (left) + Detail Panel (right) ========== */}
