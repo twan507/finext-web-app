@@ -4,14 +4,34 @@ import type { Metadata } from 'next';
 import PageContent from './home/PageContent'; // Import component từ thư mục home cũ
 
 export const metadata: Metadata = {
-    // Để nguyên tên tiếng Anh đanh thép này cho Google ăn index 
-    title: { absolute: 'Finext' },
+    title: {
+        absolute: 'Finext - Your Next Financial Step',
+    },
     description:
-        'Finext là nền tảng phân tích và hỗ trợ đầu tư chứng khoán được xây dựng bởi đội ngũ chuyên gia. Chúng tôi cung cấp hệ thống công cụ toàn diện — từ dữ liệu thị trường realtime, phân tích dòng tiền thông minh, đến bộ lọc cổ phiếu nâng cao và báo cáo chiến lược định kỳ — giúp nhà đầu tư cá nhân tiếp cận phương pháp đầu tư bài bản, hiệu quả.',
+        'Finext — Nền tảng phân tích chứng khoán thông minh. Theo dõi thị trường, sàng lọc cổ phiếu, phân tích dòng tiền và đọc báo cáo chuyên sâu cho nhà đầu tư Việt Nam.',
     openGraph: {
-        title: 'Finext',
+        type: 'website',
+        locale: 'vi_VN',
+        siteName: 'Finext',
+        url: 'https://finext.vn',
+        title: 'Finext - Phân Tích & Sàng Lọc Cổ Phiếu Thông Minh',
         description:
-            'Finext là nền tảng phân tích và hỗ trợ đầu tư chứng khoán được xây dựng bởi đội ngũ chuyên gia. Chúng tôi cung cấp hệ thống công cụ toàn diện — từ dữ liệu thị trường realtime, phân tích dòng tiền thông minh, đến bộ lọc cổ phiếu nâng cao và báo cáo chiến lược định kỳ — giúp nhà đầu tư cá nhân tiếp cận phương pháp đầu tư bài bản, hiệu quả.',
+            'Nền tảng phân tích chứng khoán thông minh cho nhà đầu tư Việt Nam. Theo dõi thị trường, sàng lọc cổ phiếu và đọc báo cáo chuyên sâu.',
+        images: [
+            {
+                url: '/finext-panel.png',
+                width: 1200,
+                height: 630,
+                alt: 'Finext - Phân Tích & Sàng Lọc Cổ Phiếu Thông Minh',
+            },
+        ],
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'Finext - Phân Tích & Sàng Lọc Cổ Phiếu Thông Minh',
+        description:
+            'Nền tảng phân tích chứng khoán thông minh cho nhà đầu tư Việt Nam.',
+        images: ['/finext-panel.png'],
     },
     alternates: {
         canonical: 'https://finext.vn',

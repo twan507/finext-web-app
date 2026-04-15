@@ -42,11 +42,12 @@ interface NavItem {
   text: string;
   href: string;
   icon: React.ReactElement<SvgIconProps>;
+  exactMatch?: boolean;
 }
 
 const navigationStructure: NavItem[] = [
   { text: 'Biểu đồ kĩ thuật', href: '/charts', icon: <CandlestickChartOutlined /> },
-  { text: 'Bộ lọc thông minh', href: '/stocks', icon: <FilterAltOutlined /> },
+  { text: 'Bộ lọc thông minh', href: '/stocks', icon: <FilterAltOutlined />, exactMatch: true },
   { text: 'Danh sách theo dõi', href: '/watchlist', icon: <StarBorderPurple500Outlined /> },
 ];
 
@@ -192,7 +193,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       }}>
         <List sx={{ py: 1, mt: 2, width: '100%' }}>
           {navigationStructure.map((item) => {
-            const isActive = item.href === '/' ? currentPathname === '/' : currentPathname.startsWith(item.href);
+            const isActive = item.href === '/' ? currentPathname === '/' : item.exactMatch ? currentPathname === item.href : currentPathname.startsWith(item.href);
             return (
               <ListItem key={item.text} disablePadding sx={{ mb: 2 }}>
                 <Tooltip
@@ -395,7 +396,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         </ListItemButton>
         <Collapse in={expandedMenus['section-tools']} timeout="auto" unmountOnExit>
           {navigationStructure.map((item) => {
-            const isActive = currentPathname.startsWith(item.href);
+            const isActive = item.exactMatch ? currentPathname === item.href : currentPathname.startsWith(item.href);
             return (
               <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
                 <Link href={item.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
@@ -578,7 +579,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         </ListItemButton>
         <Collapse in={expandedMenus['section-tools']} timeout="auto" unmountOnExit>
           {navigationStructure.map((item) => {
-            const isActive = currentPathname.startsWith(item.href);
+            const isActive = item.exactMatch ? currentPathname === item.href : currentPathname.startsWith(item.href);
             return (
               <ListItem key={item.text} disablePadding sx={{ mb: 0.25 }}>
                 <Link href={item.href} passHref style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
