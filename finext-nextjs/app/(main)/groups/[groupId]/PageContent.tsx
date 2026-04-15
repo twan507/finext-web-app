@@ -54,6 +54,11 @@ const MarketTrendChart = dynamic(
     }
 );
 
+const UniTreeMap = dynamic(
+    () => import('components/common/UniTreeMap'),
+    { ssr: false }
+);
+
 // Type cho SSE data
 type IndexDataByTicker = Record<string, RawMarketData[]>;
 
@@ -580,23 +585,30 @@ export default function GroupDetailContent() {
         };
     }, []);
 
+    // Filter stocks by current group (shared helper)
+    const filterByGroup = useCallback((stocks: StockData[]): StockData[] => {
+        switch (ticker) {
+            case 'FNXINDEX': return stocks;
+            case 'FNX100': return stocks.filter(s => s.top100 === 1);
+            case 'VUOTTROI': return stocks.filter(s => s.category_name === 'Finext Vượt trội');
+            case 'ONDINH': return stocks.filter(s => s.category_name === 'Finext Ổn định');
+            case 'SUKIEN': return stocks.filter(s => s.category_name === 'Finext Sự kiện');
+            case 'LARGECAP': return stocks.filter(s => s.marketcap_name === 'Finext LargeCap');
+            case 'MIDCAP': return stocks.filter(s => s.marketcap_name === 'Finext MidCap');
+            case 'SMALLCAP': return stocks.filter(s => s.marketcap_name === 'Finext SmallCap');
+            default: return stocks;
+        }
+    }, [ticker]);
+
+    // All stocks filtered by group (for treemap)
+    const filteredStockData = useMemo(() => {
+        if (stockData.length === 0) return [];
+        return filterByGroup(stockData);
+    }, [stockData, filterByGroup]);
+
     // Top 10 stocks by trading_value, filtered by current group
     const topStocks: GroupStockRowData[] = useMemo(() => {
         if (stockData.length === 0) return [];
-
-        const filterByGroup = (stocks: StockData[]): StockData[] => {
-            switch (ticker) {
-                case 'FNXINDEX': return stocks;
-                case 'FNX100': return stocks.filter(s => s.top100 === 1);
-                case 'VUOTTROI': return stocks.filter(s => s.category_name === 'Finext Vượt trội');
-                case 'ONDINH': return stocks.filter(s => s.category_name === 'Finext Ổn định');
-                case 'SUKIEN': return stocks.filter(s => s.category_name === 'Finext Sự kiện');
-                case 'LARGECAP': return stocks.filter(s => s.marketcap_name === 'Finext LargeCap');
-                case 'MIDCAP': return stocks.filter(s => s.marketcap_name === 'Finext MidCap');
-                case 'SMALLCAP': return stocks.filter(s => s.marketcap_name === 'Finext SmallCap');
-                default: return stocks;
-            }
-        };
 
         const filtered = filterByGroup(stockData);
         return [...filtered]
@@ -898,6 +910,21 @@ export default function GroupDetailContent() {
                         data={topStocks}
                         isLoading={stockData.length === 0}
                         skeletonRows={10}
+                    />
+                </Box>
+
+                {/* ========== TREEMAP: Bản đồ nhóm ========== */}
+                <Box sx={{ mt: 4 }}>
+                    <ChartSectionTitle
+                        title={`Bản đồ nhóm ${indexName}`}
+                        description="Biểu đồ treemap thể hiện biến động giá và giá trị giao dịch của các cổ phiếu trong nhóm."
+                        updateTime={updateTime}
+                        sx={{ mb: 1 }}
+                    />
+                    <UniTreeMap
+                        data={filteredStockData}
+                        chartHeight="550px"
+                        seriesName={indexName}
                     />
                 </Box>
             </OptionalAuthWrapper>

@@ -6,6 +6,7 @@ import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 
 interface NewsSectionProps {
     ticker: string;
+    indexName: string;
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -24,10 +25,10 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
     );
 }
 
-export default function NewsSection({ ticker }: NewsSectionProps) {
+export default function NewsSection({ ticker, indexName }: NewsSectionProps) {
     return (
         <Box>
-            <Box sx={{ mb: 2 }}><SectionTitle>TỔNG HỢP BẢN TIN LIÊN QUAN</SectionTitle></Box>
+            <Box sx={{ mb: 2 }}><SectionTitle>BẢN TIN LIÊN QUAN NGÀNH {indexName.toUpperCase()}</SectionTitle></Box>
             <ReportList
                 ticker={ticker}
                 pageSize={5}

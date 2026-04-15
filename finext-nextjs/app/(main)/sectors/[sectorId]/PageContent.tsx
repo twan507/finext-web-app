@@ -890,7 +890,7 @@ export default function SectorDetailContent() {
             {activeTab === 'news' && (
                 <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
                     <Box sx={{ mt: 4 }}>
-                        <NewsSection ticker={ticker} />
+                        <NewsSection ticker={ticker} indexName={indexName} />
                     </Box>
                 </OptionalAuthWrapper>
             )}
