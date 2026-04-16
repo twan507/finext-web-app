@@ -150,7 +150,7 @@ export function isInvalidNumber(v: unknown): boolean {
     return v == null || v === 0 || (typeof v === 'number' && (isNaN(v) || !isFinite(v)));
 }
 
-export function formatMetricValue(key: string, rawValue: number | null | undefined): string {
+export function formatMetricValue(key: string, rawValue: number | null | undefined, noUnit = false): string {
     if (isInvalidNumber(rawValue)) return '—';
     const cfg = METRIC_FORMAT_CONFIG[key];
     if (!cfg) return String(rawValue);
@@ -158,11 +158,11 @@ export function formatMetricValue(key: string, rawValue: number | null | undefin
     switch (cfg.format) {
         case 'pct':
         case 'growth_pct':
-            return `${v.toFixed(2)}%`;
+            return noUnit ? v.toFixed(2) : `${v.toFixed(2)}%`;
         case 'multiple':
-            return `${v.toFixed(2)}x`;
+            return noUnit ? v.toFixed(2) : `${v.toFixed(2)}x`;
         case 'days':
-            return `${v.toFixed(1)} ngày`;
+            return noUnit ? v.toFixed(1) : `${v.toFixed(1)} ngày`;
         default:
             return v.toFixed(2);
     }

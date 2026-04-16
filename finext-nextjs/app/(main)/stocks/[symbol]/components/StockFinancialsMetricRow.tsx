@@ -30,7 +30,7 @@ export default function StockFinancialsMetricRow({ metric, isFocused, onFocus }:
             onClick={onFocus}
             sx={{
                 display: 'grid',
-                gridTemplateColumns: '16px 1fr 100px 100px 84px 104px',
+                gridTemplateColumns: '16px 1fr repeat(4, minmax(min-content, 150px))',
                 columnGap: 1,
                 alignItems: 'center',
                 py: 0.625,
@@ -75,7 +75,7 @@ export default function StockFinancialsMetricRow({ metric, isFocused, onFocus }:
                 {metric.displayDelta}
             </Typography>
 
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                 <StockFinancialsSvgSparkline values={metric.sparklineValues} width={68} height={18} color={sparklineColor} />
             </Box>
 
@@ -83,7 +83,7 @@ export default function StockFinancialsMetricRow({ metric, isFocused, onFocus }:
                 fontSize: getResponsiveFontSize('xs'), color: theme.palette.text.disabled,
                 textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontFamily: 'monospace', whiteSpace: 'nowrap',
             }}>
-                {metric.displayMin}–{metric.displayMax}
+                {metric.displayMin} / {metric.displayMax}
             </Typography>
         </Box>
     );

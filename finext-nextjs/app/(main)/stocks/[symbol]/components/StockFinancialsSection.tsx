@@ -119,8 +119,8 @@ export default function StockFinancialsSection({ ticker }: Props) {
                 displayDelta,
                 deltaColor,
                 sparklineValues: values,
-                displayMin: formatMetricValue(key, minRaw),
-                displayMax: formatMetricValue(key, maxRaw),
+                displayMin: formatMetricValue(key, minRaw, true),
+                displayMax: formatMetricValue(key, maxRaw, true),
             };
         }
 

@@ -31,15 +31,15 @@ export default function StockFinancialsMetricSection({ title, metrics, focusedKe
 
             {/* Column headers */}
             <Box sx={{
-                display: 'grid', gridTemplateColumns: '16px 1fr 100px 100px 84px 104px',
+                display: 'grid', gridTemplateColumns: '16px 1fr repeat(4, minmax(min-content, 150px))',
                 columnGap: 1, alignItems: 'center', px: 0.5, pb: 0.5,
             }}>
                 <Box />
                 <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: theme.palette.text.disabled }}>Chỉ số</Typography>
                 <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: theme.palette.text.disabled, textAlign: 'right' }}>Giá trị</Typography>
                 <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: theme.palette.text.disabled, textAlign: 'right' }}>{deltaLabel}</Typography>
-                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: theme.palette.text.disabled, textAlign: 'center' }}>Xu hướng</Typography>
-                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: theme.palette.text.disabled, textAlign: 'right' }}>Min–Max</Typography>
+                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: theme.palette.text.disabled, textAlign: 'right' }}>Xu hướng</Typography>
+                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: theme.palette.text.disabled, textAlign: 'right' }}>Min / Max</Typography>
             </Box>
 
             {metrics.map((metric) => (

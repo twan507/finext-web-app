@@ -191,14 +191,19 @@ export function isInvalidNumber(v: unknown): boolean {
 }
 
 /** Format currency_bn: raw value is VND → convert to tỷ */
-function formatCurrencyBn(raw: number): string {
+function formatCurrencyBn(raw: number, noUnit = false): string {
     const bn = raw / 1_000_000_000;
+    if (noUnit) {
+        if (Math.abs(bn) >= 1000) return Math.round(bn).toLocaleString('en-US');
+        if (Math.abs(bn) >= 1) return bn.toFixed(1);
+        return bn.toFixed(2);
+    }
     if (Math.abs(bn) >= 1000) return `${Math.round(bn).toLocaleString('en-US')} tỷ`;
     if (Math.abs(bn) >= 1) return `${bn.toFixed(1)} tỷ`;
     return `${bn.toFixed(2)} tỷ`;
 }
 
-export function formatMetricValue(key: string, rawValue: number | null | undefined): string {
+export function formatMetricValue(key: string, rawValue: number | null | undefined, noUnit = false): string {
     if (isInvalidNumber(rawValue)) return '—';
     const cfg = METRIC_FORMAT_CONFIG[key];
     if (!cfg) return String(rawValue);
@@ -206,13 +211,13 @@ export function formatMetricValue(key: string, rawValue: number | null | undefin
     switch (cfg.format) {
         case 'pct':
         case 'growth_pct':
-            return `${v.toFixed(2)}%`;
+            return noUnit ? v.toFixed(2) : `${v.toFixed(2)}%`;
         case 'multiple':
-            return `${v.toFixed(2)}x`;
+            return noUnit ? v.toFixed(2) : `${v.toFixed(2)}x`;
         case 'days':
-            return `${v.toFixed(1)} ngày`;
+            return noUnit ? v.toFixed(1) : `${v.toFixed(1)} ngày`;
         case 'currency_bn':
-            return formatCurrencyBn(rawValue as number);
+            return formatCurrencyBn(rawValue as number, noUnit);
         default:
             return v.toFixed(2);
     }
@@ -228,14 +233,14 @@ export function formatMetricDelta(
     const cfg = METRIC_FORMAT_CONFIG[key];
     if (!cfg) return { text: '—', color: 'neutral' };
 
-    // Neutral for higher_is_better === null (balance sheet items)
+    // Neutral direction items (balance sheet) — color by change direction
     if (cfg.higherIsBetter === null) {
-        // currency_bn delta as % change
         if (cfg.format === 'currency_bn' && currentValue != null && prevValue != null && prevValue !== 0) {
             const pctChange = ((currentValue - prevValue) / Math.abs(prevValue)) * 100;
             if (Math.abs(pctChange) < 0.01) return { text: '=', color: 'neutral' };
             const sign = pctChange > 0 ? '+' : '';
-            return { text: `${sign}${pctChange.toFixed(1)}%`, color: 'neutral' };
+            const color = pctChange > 0 ? 'success' : 'error';
+            return { text: `${sign}${pctChange.toFixed(1)}%`, color };
         }
         return { text: '—', color: 'neutral' };
     }

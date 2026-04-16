@@ -30,7 +30,7 @@ export default function FinancialsMetricRow({ metric, isFocused, onFocus }: Fina
             onClick={onFocus}
             sx={{
                 display: 'grid',
-                gridTemplateColumns: '16px 1fr 100px 100px 84px 104px',
+                gridTemplateColumns: '16px 1fr repeat(4, minmax(min-content, 150px))',
                 columnGap: 1,
                 alignItems: 'center',
                 py: 0.625,
@@ -102,7 +102,7 @@ export default function FinancialsMetricRow({ metric, isFocused, onFocus }: Fina
             </Typography>
 
             {/* Sparkline SVG */}
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                 <FinancialsSvgSparkline
                     values={metric.sparklineValues}
                     width={68}
@@ -122,7 +122,7 @@ export default function FinancialsMetricRow({ metric, isFocused, onFocus }: Fina
                     whiteSpace: 'nowrap',
                 }}
             >
-                {metric.displayMin}–{metric.displayMax}
+                {metric.displayMin} / {metric.displayMax}
             </Typography>
         </Box>
     );
