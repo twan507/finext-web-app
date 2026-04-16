@@ -123,6 +123,7 @@ export default function FinancialsFocusChart({
                 },
                 axisBorder: { show: false },
                 axisTicks: { show: false },
+                tooltip: { enabled: false },
             },
             yaxis: [
                 {

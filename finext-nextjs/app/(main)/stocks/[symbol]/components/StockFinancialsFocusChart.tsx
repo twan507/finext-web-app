@@ -81,7 +81,7 @@ export default function StockFinancialsFocusChart({ metricKey, metricName, perio
         xaxis: {
             categories: xCategories,
             labels: { style: { colors: theme.palette.text.disabled, fontSize: '10px', fontFamily: 'inherit' } },
-            axisBorder: { show: false }, axisTicks: { show: false },
+            axisBorder: { show: false }, axisTicks: { show: false }, tooltip: { enabled: false },
         },
         yaxis: [
             {
