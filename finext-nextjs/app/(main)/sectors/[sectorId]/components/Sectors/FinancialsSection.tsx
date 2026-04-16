@@ -32,15 +32,16 @@ export default function FinancialsSection({ ticker, indexName }: FinancialsSecti
 
     const [mode, setMode] = useState<'Q' | 'Y'>('Q');
     const [focusKey, setFocusKey] = useState<string>(FOCUS_METRIC_DEFAULT);
+    const [selectedRecordIndex, setSelectedRecordIndex] = useState<number>(-1);
 
-    // ── Fetch industry financial records ────────────────────────────────────
-    const { data: rawRecords = [], isLoading } = useQuery<FinstatsRecord[]>({
-        queryKey: ['finstats_industry', ticker.toUpperCase(), mode],
+    // ── Fetch industry financial records — prefetch BOTH modes ─────────────
+    const { data: rawRecordsQ = [], isLoading: isLoadingQ } = useQuery<FinstatsRecord[]>({
+        queryKey: ['finstats_industry', ticker.toUpperCase(), 'Q'],
         queryFn: async () => {
             const res = await apiClient<FinstatsRecord[]>({
                 url: '/api/v1/sse/rest/finstats_industry',
                 method: 'GET',
-                queryParams: { ticker: ticker.toUpperCase(), sort_by: mode },
+                queryParams: { ticker: ticker.toUpperCase(), sort_by: 'Q' },
                 requireAuth: false,
             });
             return res.data ?? [];
@@ -48,6 +49,24 @@ export default function FinancialsSection({ ticker, indexName }: FinancialsSecti
         staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
     });
+
+    const { data: rawRecordsY = [], isLoading: isLoadingY } = useQuery<FinstatsRecord[]>({
+        queryKey: ['finstats_industry', ticker.toUpperCase(), 'Y'],
+        queryFn: async () => {
+            const res = await apiClient<FinstatsRecord[]>({
+                url: '/api/v1/sse/rest/finstats_industry',
+                method: 'GET',
+                queryParams: { ticker: ticker.toUpperCase(), sort_by: 'Y' },
+                requireAuth: false,
+            });
+            return res.data ?? [];
+        },
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+    });
+
+    const rawRecords = mode === 'Q' ? rawRecordsQ : rawRecordsY;
+    const isLoading = mode === 'Q' ? isLoadingQ : isLoadingY;
 
     // ── Fetch metric name map (finstats_map) ─────────────────────────────────
     const { data: finstatsMapEntries = [] } = useQuery<FinstatsMapEntry[]>({
@@ -75,6 +94,14 @@ export default function FinancialsSection({ ticker, indexName }: FinancialsSecti
     const industryName = latestRecord?.industry_name ?? indexName;
     const latestPeriod = latestRecord?.period ?? '';
 
+    // -1 sentinel = "use last". Clamp to valid range.
+    const resolvedIndex =
+        sortedRecords.length === 0
+            ? 0
+            : selectedRecordIndex >= 0 && selectedRecordIndex < sortedRecords.length
+            ? selectedRecordIndex
+            : sortedRecords.length - 1;
+
     // ── Metric name map — filter by industryType ─────────────────────────────
     const metricNameMap = useMemo(() => {
         const map: Record<string, string> = {};
@@ -101,9 +128,9 @@ export default function FinancialsSection({ ticker, indexName }: FinancialsSecti
                 return v as number;
             });
 
-            const latestRaw = values[values.length - 1];
-            const prevRaw = values.length >= 2 ? values[values.length - 2] : null;
-            const deltaRaw = latestRaw != null && prevRaw != null ? latestRaw - prevRaw : null;
+            const selectedRaw = values[resolvedIndex] ?? null;
+            const prevRaw = resolvedIndex >= 1 ? (values[resolvedIndex - 1] ?? null) : null;
+            const deltaRaw = selectedRaw != null && prevRaw != null ? selectedRaw - prevRaw : null;
 
             const validValues = values.filter((v): v is number => v != null);
             const minRaw = validValues.length > 0 ? Math.min(...validValues) : null;
@@ -114,19 +141,19 @@ export default function FinancialsSection({ ticker, indexName }: FinancialsSecti
             result[key] = {
                 key,
                 name: (metricNameMap[key] ?? key).replace(/ YoY$| QoQ$/i, ''),
-                value: latestRaw,
-                displayValue: formatMetricValue(key, latestRaw),
+                value: selectedRaw,
+                displayValue: formatMetricValue(key, selectedRaw),
                 delta: deltaRaw,
                 displayDelta,
                 deltaColor,
-                sparklineValues: values,
+                sparklineValues: values.length > 1 ? values.slice(1) : values,
                 displayMin: formatMetricValue(key, minRaw, true),
                 displayMax: formatMetricValue(key, maxRaw, true),
             };
         }
 
         return result;
-    }, [sortedRecords, industryType, metricNameMap]);
+    }, [sortedRecords, industryType, metricNameMap, resolvedIndex]);
 
     // ── Focus chart data ──────────────────────────────────────────────────────
     const focusChartData = useMemo(() => {
@@ -145,12 +172,16 @@ export default function FinancialsSection({ ticker, indexName }: FinancialsSecti
     // ── Handlers ─────────────────────────────────────────────────────────────
     const handleFocusChange = (key: string) => {
         setFocusKey(key);
-        chartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        if (chartRef.current) {
+            const y = chartRef.current.getBoundingClientRect().top + window.scrollY - 140;
+            window.scrollTo({ top: y, behavior: 'smooth' });
+        }
     };
 
     const handleModeChange = (newMode: 'Q' | 'Y') => {
         setMode(newMode);
         setFocusKey(FOCUS_METRIC_DEFAULT);
+        setSelectedRecordIndex(-1);
     };
 
     // ── Loading skeleton ──────────────────────────────────────────────────────
@@ -189,7 +220,7 @@ export default function FinancialsSection({ ticker, indexName }: FinancialsSecti
         <Box sx={{ mt: 2 }}>
             <FinancialsHeaderBar
                 industryName={industryName}
-                period={latestPeriod}
+                period={sortedRecords[resolvedIndex]?.period ?? latestPeriod}
                 mode={mode}
                 onModeChange={handleModeChange}
             />
@@ -201,6 +232,8 @@ export default function FinancialsSection({ ticker, indexName }: FinancialsSecti
                     periods={focusChartData.periods}
                     values={focusChartData.values}
                     mode={mode}
+                    selectedBarIndex={Math.max(0, resolvedIndex - 1)}
+                    onBarClick={(barIndex) => setSelectedRecordIndex(barIndex + 1)}
                 />
             </Box>
 

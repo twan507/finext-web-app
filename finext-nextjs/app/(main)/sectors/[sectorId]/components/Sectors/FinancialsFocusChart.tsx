@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Box, Typography, useTheme } from '@mui/material';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import dynamic from 'next/dynamic';
@@ -20,6 +20,8 @@ interface FinancialsFocusChartProps {
     periods: string[];            // asc order, e.g. ["2024_1", ..., "2025_4"]
     values: (number | null)[];    // raw values (chưa nhân multiplier)
     mode: 'Q' | 'Y';
+    selectedBarIndex: number;
+    onBarClick: (barIndex: number) => void;
 }
 
 export default function FinancialsFocusChart({
@@ -28,6 +30,8 @@ export default function FinancialsFocusChart({
     periods,
     values,
     mode,
+    selectedBarIndex,
+    onBarClick,
 }: FinancialsFocusChartProps) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
@@ -35,10 +39,11 @@ export default function FinancialsFocusChart({
     const multiplier = cfg?.multiplier ?? 1;
     const isCurrencyBn = false; // sector financials has no currency_bn metrics
 
-    // Latest value & delta for header display
-    const latestRaw = values.length > 0 ? values[values.length - 1] : null;
-    const prevRaw = values.length > 1 ? values[values.length - 2] : null;
-    const deltaRaw = latestRaw != null && prevRaw != null ? latestRaw - prevRaw : null;
+    // Selected value & delta for header display
+    // selectedBarIndex is index into shownValues; shownValues[i] = values[i+1]
+    const selectedRaw = (selectedBarIndex + 1 < values.length) ? values[selectedBarIndex + 1] : null;
+    const prevRaw = (selectedBarIndex >= 0 && selectedBarIndex < values.length) ? values[selectedBarIndex] : null;
+    const deltaRaw = selectedRaw != null && prevRaw != null ? selectedRaw - prevRaw : null;
     const { text: deltaText, color: deltaColor } = formatMetricDelta(metricKey, deltaRaw);
 
     const deltaColorMap = {
@@ -50,7 +55,7 @@ export default function FinancialsFocusChart({
     // Drop the oldest record so every displayed bar has a valid delta point.
     // Q: 9 fetched → show 8 | Y: 6 fetched → show 5
     const shownPeriods = useMemo(() => (periods.length > 1 ? periods.slice(1) : periods), [periods]);
-    const shownValues  = useMemo(() => (values.length  > 1 ? values.slice(1)  : values),  [values]);
+    const shownValues = useMemo(() => (values.length > 1 ? values.slice(1) : values), [values]);
 
     // Bar series — scaled by multiplier
     const displayValues = useMemo(
@@ -73,6 +78,26 @@ export default function FinancialsFocusChart({
 
     const primaryColor = theme.palette.primary.main;
     const deltaLineColor = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)';
+    const dimColor = isDark ? 'rgba(139,92,246,0.25)' : 'rgba(139,92,246,0.2)';
+
+    const barData = useMemo(
+        () =>
+            displayValues.map((v, i) => ({
+                x: xCategories[i] ?? '',
+                y: v,
+                fillColor: i === selectedBarIndex ? primaryColor : dimColor,
+            })),
+        [displayValues, xCategories, selectedBarIndex, primaryColor, dimColor],
+    );
+
+    const deltaData = useMemo(
+        () =>
+            deltaValues.map((v, i) => ({
+                x: xCategories[i] ?? '',
+                y: v,
+            })),
+        [deltaValues, xCategories],
+    );
 
     const yAxisFormatter = (val: number) => {
         if (val == null) return '';
@@ -88,6 +113,31 @@ export default function FinancialsFocusChart({
         }
     };
 
+    // Click handler: determine which column was clicked based on X position
+    const handleChartClick = useCallback((_event: any, chartContext: any, config: any) => {
+        // If ApexCharts resolved a dataPointIndex, use it directly
+        if (config?.dataPointIndex != null && config.dataPointIndex >= 0) {
+            onBarClick(config.dataPointIndex);
+            return;
+        }
+        // Fallback: calculate column from mouse X position within plot area
+        const chartEl = chartContext?.el as HTMLElement | undefined;
+        if (!chartEl) return;
+        const plotArea = chartEl.querySelector('.apexcharts-plot-area') as HTMLElement | null;
+        if (!plotArea) return;
+        const rect = plotArea.getBoundingClientRect();
+        const clientX = (_event as MouseEvent)?.clientX;
+        if (clientX == null) return;
+        const relX = clientX - rect.left;
+        const colCount = xCategories.length;
+        if (colCount === 0) return;
+        const colWidth = rect.width / colCount;
+        const idx = Math.floor(relX / colWidth);
+        if (idx >= 0 && idx < colCount) {
+            onBarClick(idx);
+        }
+    }, [onBarClick, xCategories]);
+
     const options: ApexOptions = useMemo(
         () => ({
             chart: {
@@ -97,6 +147,13 @@ export default function FinancialsFocusChart({
                 animations: { enabled: true, speed: 350 },
                 zoom: { enabled: false },
                 fontFamily: 'inherit',
+                events: {
+                    click: handleChartClick,
+                },
+            },
+            states: {
+                hover: { filter: { type: 'none' } },
+                active: { filter: { type: 'none' } },
             },
             colors: [primaryColor, deltaLineColor],
             stroke: {
@@ -113,11 +170,11 @@ export default function FinancialsFocusChart({
             },
             dataLabels: { enabled: false },
             xaxis: {
-                categories: xCategories,
+                type: 'category',
                 labels: {
                     style: {
                         colors: theme.palette.text.disabled,
-                        fontSize: '10px',
+                        fontSize: '12px',
                         fontFamily: 'inherit',
                     },
                 },
@@ -131,7 +188,7 @@ export default function FinancialsFocusChart({
                     labels: {
                         style: {
                             colors: theme.palette.text.disabled,
-                            fontSize: '10px',
+                            fontSize: '12px',
                             fontFamily: 'inherit',
                         },
                         formatter: yAxisFormatter,
@@ -145,7 +202,7 @@ export default function FinancialsFocusChart({
                     labels: {
                         style: {
                             colors: theme.palette.text.disabled,
-                            fontSize: '10px',
+                            fontSize: '12px',
                             fontFamily: 'inherit',
                         },
                         formatter: (val: number) => {
@@ -160,10 +217,10 @@ export default function FinancialsFocusChart({
             ],
             grid: {
                 borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
-                strokeDashArray: 3,
+                strokeDashArray: 0,
                 yaxis: { lines: { show: true } },
                 xaxis: { lines: { show: false } },
-                padding: { left: 0, right: 8 },
+                padding: { left: 15, right: 15 },
             },
             legend: { show: false },
             tooltip: {
@@ -206,15 +263,15 @@ export default function FinancialsFocusChart({
             },
         }),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [xCategories, isDark, theme, cfg, primaryColor, deltaLineColor],
+        [xCategories, isDark, theme, cfg, primaryColor, deltaLineColor, handleChartClick],
     );
 
     const series = useMemo(
         () => [
-            { name: metricName, type: 'bar', data: displayValues },
-            { name: `Δ ${mode === 'Q' ? 'QoQ' : 'YoY'}`, type: 'line', data: deltaValues },
+            { name: metricName, type: 'bar', data: barData },
+            { name: `Δ ${mode === 'Q' ? 'QoQ' : 'YoY'}`, type: 'line', data: deltaData },
         ],
-        [metricName, displayValues, deltaValues, mode],
+        [metricName, barData, deltaData, mode],
     );
 
     return (
@@ -241,7 +298,7 @@ export default function FinancialsFocusChart({
                         fontFamily: 'monospace',
                     }}
                 >
-                    {formatMetricValue(metricKey, latestRaw)}
+                    {formatMetricValue(metricKey, selectedRaw)}
                 </Typography>
                 <Typography
                     sx={{
@@ -260,6 +317,7 @@ export default function FinancialsFocusChart({
             </Box>
 
             <Box sx={{
+                cursor: 'pointer',
                 '& .apexcharts-tooltip': { boxShadow: 'none !important', filter: 'none !important', background: 'transparent !important', border: 'none !important' },
                 '& .apexcharts-tooltip.apexcharts-theme-light, & .apexcharts-tooltip.apexcharts-theme-dark': { boxShadow: 'none !important', filter: 'none !important', background: 'transparent !important' },
             }}>

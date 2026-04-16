@@ -15,7 +15,7 @@ export default function StockFinancialsSvgSparkline({
     height = 18,
     color = 'currentColor',
 }: Props) {
-    const path = useMemo(() => {
+    const bars = useMemo(() => {
         if (!values || values.length < 2) return null;
 
         const validValues = values.filter((v): v is number => v != null && isFinite(v));
@@ -23,31 +23,26 @@ export default function StockFinancialsSvgSparkline({
 
         const min = Math.min(...validValues);
         const max = Math.max(...validValues);
-        const range = max === min ? 1 : max - min;
+        // Use 0 as baseline when all values are positive, matching the FocusChart y-axis
+        const baseline = Math.min(0, min);
+        const range = max - baseline || 1;
 
         const n = values.length;
-        const xStep = width / (n - 1);
-        const padY = 2;
+        const gap = 1.5;
+        const barWidth = (width - gap * (n - 1)) / n;
+        const padY = 1;
+        const usableHeight = height - padY * 2;
 
-        const points = values.map((v, i) => {
+        return values.map((v, i) => {
             if (v == null || !isFinite(v)) return null;
-            const x = i * xStep;
-            const y = padY + (height - padY * 2) * (1 - (v - min) / range);
-            return { x, y };
+            const barH = Math.max(1.5, usableHeight * ((v - baseline) / range));
+            const x = i * (barWidth + gap);
+            const y = padY + usableHeight - barH;
+            return { x, y, w: barWidth, h: barH };
         });
-
-        let d = '';
-        let penDown = false;
-        for (const pt of points) {
-            if (pt == null) { penDown = false; continue; }
-            d += penDown ? ` L ${pt.x.toFixed(1)} ${pt.y.toFixed(1)}` : `M ${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`;
-            penDown = true;
-        }
-
-        return d || null;
     }, [values, width, height]);
 
-    if (!path) {
+    if (!bars) {
         return (
             <svg width={width} height={height} aria-hidden="true">
                 <line x1="0" y1={height / 2} x2={width} y2={height / 2} stroke="currentColor" strokeOpacity="0.15" strokeWidth="1" />
@@ -56,8 +51,20 @@ export default function StockFinancialsSvgSparkline({
     }
 
     return (
-        <svg width={width} height={height} overflow="visible" aria-hidden="true">
-            <path d={path} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <svg width={width} height={height} aria-hidden="true">
+            {bars.map((bar, i) =>
+                bar ? (
+                    <rect
+                        key={i}
+                        x={bar.x}
+                        y={bar.y}
+                        width={bar.w}
+                        height={bar.h}
+                        rx={1}
+                        fill={color}
+                    />
+                ) : null,
+            )}
         </svg>
     );
 }

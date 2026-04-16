@@ -74,7 +74,7 @@ export default function FinancialsHeaderBar({
             </Box>
 
             {/* Row 2: period */}
-            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', mt: 0.25 }}>
+            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', mt: 0.5 }}>
                 Kỳ: {periodDisplay}
             </Typography>
         </Box>
