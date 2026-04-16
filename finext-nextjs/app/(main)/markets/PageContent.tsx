@@ -411,7 +411,7 @@ export default function MarketsContent() {
       case 'ptkt':
         return (
           <OptionalAuthWrapper requireAuth={true} requiredFeatures={ADVANCED_AND_ABOVE}>
-            <PTKTSection />
+            <PTKTSection todayAllData={todayAllData} />
           </OptionalAuthWrapper>
         );
       case 'foreign':
