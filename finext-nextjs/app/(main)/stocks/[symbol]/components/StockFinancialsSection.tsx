@@ -112,7 +112,7 @@ export default function StockFinancialsSection({ ticker }: Props) {
 
             result[key] = {
                 key,
-                name: metricNameMap[key] ?? key,
+                name: (metricNameMap[key] ?? key).replace(/ YoY$| QoQ$/i, ''),
                 value: latestRaw,
                 displayValue: formatMetricValue(key, latestRaw),
                 delta: deltaRaw,
@@ -208,9 +208,7 @@ export default function StockFinancialsSection({ ticker }: Props) {
                     .map((k) => processedMetrics[k])
                     .filter((m): m is ProcessedMetric => m != null);
 
-                const sectionTitle = section.id === 'growth'
-                    ? `${section.title} (${mode === 'Q' ? 'QoQ' : 'YoY'})`
-                    : section.title;
+                const sectionTitle = section.title;
 
                 return (
                     <StockFinancialsMetricSection

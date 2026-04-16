@@ -84,7 +84,6 @@ export const METRIC_FORMAT_CONFIG: Record<string, MetricFormatConfig> = {
 
     // ── Revenue & currency_bn items ──
     rev:    { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: true, multiplier: 1 },
-    isi103: { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: true, multiplier: 1 },
 
     // ── Balance sheet (currency_bn, neutral) ──
     bsa53: { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
@@ -141,8 +140,6 @@ export const METRIC_FORMAT_CONFIG: Record<string, MetricFormatConfig> = {
     bsb104: { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
     nob44:  { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
 
-    // ── Ngân hàng — provision ──
-    isb27: { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: false, multiplier: 1 },
 };
 
 // ============================================================
@@ -168,18 +165,18 @@ export const STOCK_SECTIONS: Record<IndustryType, SectionConfig[]> = {
     ],
     BAOHIEM: [
         { id: 'profitability', title: 'HIỆU QUẢ HOẠT ĐỘNG',   metrics: ['ryq12', 'ryq14', 'ryq25', 'ryq29', 'ryq71'] },
-        { id: 'growth',        title: 'TĂNG TRƯỞNG',           metrics: ['rev', 'isi103', 'ryq34', 'ryq39'] },
+        { id: 'growth',        title: 'TĂNG TRƯỞNG',           metrics: ['rev', 'ryq34', 'ryq39'] },
         { id: 'scale',         title: 'QUY MÔ',                metrics: ['bsa53', 'bsa54', 'bsa78', 'bsa2', 'bsa67'] },
         { id: 'cashflow',      title: 'DÒNG TIỀN',             metrics: ['cfa18', 'cfa26', 'cfa34'] },
     ],
     NGANHANG: [
         { id: 'profitability', title: 'HIỆU QUẢ & SINH LỜI',  metrics: ['ryq12', 'ryq14', 'ryq44', 'ryq45', 'ryq46', 'ryq47', 'ryq48'] },
         { id: 'asset_quality', title: 'CHẤT LƯỢNG TÀI SẢN',   metrics: ['ryq58', 'ryq59', 'ryq60', 'ryq61', 'ryq57'] },
-        { id: 'capital',       title: 'AN TOÀN VỐN',           metrics: ['nob151', 'ryq54', 'ryq55', 'ryq71'] },
+        { id: 'capital',       title: 'AN TOÀN VỐN',           metrics: ['nob151', 'ryq54', 'ryq55'] },
         { id: 'liquidity_casa', title: 'THANH KHOẢN & CASA',   metrics: ['casa', 'nob66', 'bsb113'] },
         { id: 'growth',        title: 'TĂNG TRƯỞNG',           metrics: ['rev', 'ryq67', 'rtq50', 'rtq51', 'ryq39'] },
         { id: 'scale',         title: 'QUY MÔ',                metrics: ['bsa53', 'bsa78', 'bsa80', 'nob65', 'bsb104', 'nob44'] },
-        { id: 'cashflow',      title: 'DÒNG TIỀN',             metrics: ['isb27', 'cfa18', 'cfa26', 'cfa34'] },
+        { id: 'cashflow',      title: 'DÒNG TIỀN',             metrics: ['cfa18', 'cfa26', 'cfa34'] },
     ],
 };
 

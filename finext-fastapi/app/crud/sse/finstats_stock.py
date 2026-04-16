@@ -29,8 +29,6 @@ _PROJECTION = {
     "cfa18": 1, "cfa26": 1, "cfa34": 1,
     # Chứng khoán — investment assets
     "bsa8": 1, "bsa5": 1, "bsa10": 1, "bsa43": 1,
-    # Bảo hiểm
-    "isi103": 1,
     # Ngân hàng — profitability
     "ryq44": 1, "ryq45": 1, "ryq46": 1, "ryq47": 1, "ryq48": 1,
     # Ngân hàng — asset quality
@@ -43,8 +41,8 @@ _PROJECTION = {
     "ryq67": 1, "rtq50": 1, "rtq51": 1,
     # Ngân hàng — scale
     "nob65": 1, "bsb104": 1, "nob44": 1,
-    # Ngân hàng — cashflow/provision
-    "isb27": 1,
+    # Ngân hàng — cashflow
+
 }
 
 

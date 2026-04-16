@@ -33,6 +33,7 @@ export default function FinancialsFocusChart({
     const isDark = theme.palette.mode === 'dark';
     const cfg = METRIC_FORMAT_CONFIG[metricKey];
     const multiplier = cfg?.multiplier ?? 1;
+    const isCurrencyBn = false; // sector financials has no currency_bn metrics
 
     // Latest value & delta for header display
     const latestRaw = values.length > 0 ? values[values.length - 1] : null;
@@ -94,6 +95,7 @@ export default function FinancialsFocusChart({
                 toolbar: { show: false },
                 background: 'transparent',
                 animations: { enabled: true, speed: 350 },
+                zoom: { enabled: false },
                 fontFamily: 'inherit',
             },
             colors: [primaryColor, deltaLineColor],
@@ -164,10 +166,42 @@ export default function FinancialsFocusChart({
             },
             legend: { show: false },
             tooltip: {
-                theme: isDark ? 'dark' : 'light',
-                style: { fontFamily: 'inherit', fontSize: '11px' },
                 shared: true,
                 intersect: false,
+                custom: function ({ series: s, dataPointIndex, w }: any) {
+                    const label = xCategories[dataPointIndex] || '';
+                    const bgColor = isDark ? 'rgba(26,26,26,0.9)' : 'rgba(255,255,255,0.9)';
+                    const textColor = isDark ? '#e0e0e0' : '#333333';
+                    let seriesHTML = '';
+                    s.forEach((sd: any[], idx: number) => {
+                        const value = sd[dataPointIndex];
+                        if (value == null) return;
+                        const name = w.globals.seriesNames[idx];
+                        const color = w.globals.colors[idx];
+                        let formatted: string;
+                        if (idx === 0) {
+                            if (isCurrencyBn) {
+                                formatted = `${Math.round(value).toLocaleString('en-US')} tỷ`;
+                            } else {
+                                const unit = cfg?.unit ?? '';
+                                formatted = `${value.toFixed(cfg?.format === 'days' ? 1 : 2)}${unit}`;
+                            }
+                        } else {
+                            const sign = value > 0 ? '+' : '';
+                            const dUnit = isCurrencyBn ? '%' : (cfg?.deltaUnit ?? '');
+                            formatted = `${sign}${value.toFixed(2)}${dUnit ? ' ' + dUnit : ''}`;
+                        }
+                        seriesHTML += `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;">
+                            <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+                            <span style="flex:1;font-size:11px;">${name}:</span>
+                            <span style="font-weight:600;font-size:11px;">${formatted}</span>
+                        </div>`;
+                    });
+                    return `<div style="background:${bgColor};border:none;border-radius:6px;padding:10px 12px;color:${textColor};min-width:150px;box-shadow:none;filter:none;">
+                        <div style="font-weight:600;margin-bottom:5px;font-size:11px;">${label}</div>
+                        ${seriesHTML}
+                    </div>`;
+                },
             },
         }),
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -224,7 +258,12 @@ export default function FinancialsFocusChart({
                 </Typography>
             </Box>
 
-            <Chart type="line" options={options} series={series} height={200} />
+            <Box sx={{
+                '& .apexcharts-tooltip': { boxShadow: 'none !important', filter: 'none !important', background: 'transparent !important', border: 'none !important' },
+                '& .apexcharts-tooltip.apexcharts-theme-light, & .apexcharts-tooltip.apexcharts-theme-dark': { boxShadow: 'none !important', filter: 'none !important', background: 'transparent !important' },
+            }}>
+                <Chart type="line" options={options} series={series} height={200} />
+            </Box>
         </Box>
     );
 }
