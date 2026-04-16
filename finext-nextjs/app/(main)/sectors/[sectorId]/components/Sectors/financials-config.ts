@@ -146,8 +146,8 @@ export const FOCUS_METRIC_DEFAULT = 'ryq12'; // ROE — focus mặc định cho 
 // FORMAT UTILS
 // ============================================================
 
-function isInvalidNumber(v: unknown): boolean {
-    return v == null || (typeof v === 'number' && (isNaN(v) || !isFinite(v)));
+export function isInvalidNumber(v: unknown): boolean {
+    return v == null || v === 0 || (typeof v === 'number' && (isNaN(v) || !isFinite(v)));
 }
 
 export function formatMetricValue(key: string, rawValue: number | null | undefined): string {

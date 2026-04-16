@@ -186,8 +186,8 @@ export const FOCUS_METRIC_DEFAULT = 'ryq12'; // ROE
 // FORMAT UTILS
 // ============================================================
 
-function isInvalidNumber(v: unknown): boolean {
-    return v == null || (typeof v === 'number' && (isNaN(v) || !isFinite(v)));
+export function isInvalidNumber(v: unknown): boolean {
+    return v == null || v === 0 || (typeof v === 'number' && (isNaN(v) || !isFinite(v)));
 }
 
 /** Format currency_bn: raw value is VND → convert to tỷ */

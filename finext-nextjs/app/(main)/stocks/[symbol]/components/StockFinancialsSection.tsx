@@ -13,7 +13,7 @@ import {
     type ProcessedMetric,
     STOCK_SECTIONS,
     FOCUS_METRIC_DEFAULT,
-    METRIC_FORMAT_CONFIG,
+    isInvalidNumber,
     formatMetricValue,
     formatMetricDelta,
 } from './stock-financials-config';
@@ -96,8 +96,8 @@ export default function StockFinancialsSection({ ticker }: Props) {
         for (const key of allKeys) {
             const values: (number | null)[] = sortedRecords.map((r) => {
                 const v = r[key] as number | null | undefined;
-                if (v == null || (typeof v === 'number' && (isNaN(v) || !isFinite(v)))) return null;
-                return v;
+                if (isInvalidNumber(v)) return null;
+                return v as number;
             });
 
             const latestRaw = values[values.length - 1];
@@ -132,8 +132,8 @@ export default function StockFinancialsSection({ ticker }: Props) {
         const periods = sortedRecords.map((r) => r.period);
         const values: (number | null)[] = sortedRecords.map((r) => {
             const v = r[focusKey] as number | null | undefined;
-            if (v == null || (typeof v === 'number' && (isNaN(v) || !isFinite(v)))) return null;
-            return v;
+            if (isInvalidNumber(v)) return null;
+            return v as number;
         });
         return { periods, values };
     }, [sortedRecords, focusKey]);
