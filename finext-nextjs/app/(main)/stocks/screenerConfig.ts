@@ -148,7 +148,7 @@ export const FILTER_PRESETS: FilterPreset[] = [
         iconifyIcon: 'solar:rocket-bold-duotone',
         description: 'Cổ phiếu tăng > 5% trong tuần',
         filters: {
-            rangeFilters: { w_pct: { min: 5, max: null } },
+            rangeFilters: { w_pct: { min: 0.05, max: null } },
         },
     },
     {
@@ -188,8 +188,8 @@ export const FILTER_PRESETS: FilterPreset[] = [
         description: 'Xếp hạng tốt trong ngành và thị trường',
         filters: {
             rangeFilters: {
-                market_rank_pct: { min: 70, max: null },
-                industry_rank_pct: { min: 50, max: null },
+                market_rank_pct: { min: 0.70, max: null },
+                industry_rank_pct: { min: 0.50, max: null },
             },
         },
     },

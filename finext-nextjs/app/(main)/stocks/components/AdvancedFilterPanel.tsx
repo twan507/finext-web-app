@@ -44,7 +44,7 @@ interface RangeFilterDef {
 const RANGE_FILTER_DEFS: RangeFilterDef[] = [
     { field: 'pct_change',       label: 'Giá',          group: 'pricevol', unit: '%',     isPct: true,  sliderMin: -7,   sliderMax: 7,    step: 0.1 },
     { field: 'trading_value',    label: 'Giá trị GD',  group: 'pricevol', unit: 'Tỷ',                sliderMin: 0,    sliderMax: 100,  step: 0.1, logScale: true },
-    { field: 'vsi',              label: 'Thanh Khoản', group: 'pricevol', unit: '%',                   sliderMin: 0,    sliderMax: 150,  step: 5 },
+    { field: 'vsi',              label: 'Thanh Khoản', group: 'pricevol', unit: '%',     isPct: true,  sliderMin: 0,    sliderMax: 150,  step: 5 },
     { field: 'w_pct',            label: '% Tuần',      group: 'change',   unit: '%',     isPct: true,  sliderMin: -20,  sliderMax: 20,   step: 0.5 },
     { field: 'm_pct',            label: '% Tháng',     group: 'change',   unit: '%',     isPct: true,  sliderMin: -20,  sliderMax: 20,   step: 0.5 },
     { field: 'q_pct',            label: '% Quý',       group: 'change',   unit: '%',     isPct: true,  sliderMin: -20,  sliderMax: 20,   step: 0.5 },
