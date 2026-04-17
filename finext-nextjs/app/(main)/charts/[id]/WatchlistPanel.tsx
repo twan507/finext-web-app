@@ -23,6 +23,8 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 import { DndContext, closestCenter, rectIntersection, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, horizontalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
@@ -146,6 +148,8 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
     // Menu state — per watchlist card
     const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
     const [menuWlId, setMenuWlId] = useState<string | null>(null);
+    // Sub-menu state for "Move to page"
+    const [moveMenuAnchor, setMoveMenuAnchor] = useState<null | HTMLElement>(null);
 
     // Inline rename state
     const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -379,6 +383,38 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
 
     const cancelRename = () => {
         setRenamingId(null);
+    };
+
+    // Move to page
+    const handleMoveToPage = async (wl: Watchlist, targetPage: number) => {
+        const wlId = wl.id || wl._id!;
+        const oldPage = wl.page ?? 1;
+        if (targetPage === oldPage) return;
+
+        // Find a valid coordinate in the target page (append to first column)
+        const targetPageWls = watchlists.filter(w => (w.page ?? 1) === targetPage);
+        const col0Items = targetPageWls.filter(w => w.coordinate[0] === 0);
+        const newRow = col0Items.length > 0 ? Math.max(...col0Items.map(w => w.coordinate[1])) + 1 : 0;
+        const newCoordinate: [number, number] = [0, newRow];
+
+        // Optimistic update
+        setWatchlists(prev => prev.map(w =>
+            (w.id || w._id) === wlId
+                ? { ...w, page: targetPage, coordinate: newCoordinate }
+                : w
+        ));
+
+        try {
+            await apiClient({
+                url: `/api/v1/watchlists/${wlId}`,
+                method: 'PUT',
+                body: { page: targetPage, coordinate: newCoordinate },
+                requireAuth: true,
+            });
+        } catch (err) {
+            console.error('Move to page failed:', err);
+            fetchWatchlists();
+        }
     };
 
     // Sort change
@@ -907,12 +943,33 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                     {/* Divider */}
                     <Box sx={{ my: 0.5, mx: 1, height: '1px', bgcolor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)' }} />
 
+                    {/* Move to page */}
+                    {pages.length > 1 && (
+                        <MenuItem
+                            onClick={(e) => setMoveMenuAnchor(e.currentTarget)}
+                            sx={{
+                                py: 0.4,
+                                px: 1,
+                                gap: 0.75,
+                                fontSize: getResponsiveFontSize('xs'),
+                                borderRadius: `${borderRadius.sm}px`,
+                                color: 'primary.main',
+                                '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' },
+                            }}
+                        >
+                            <DriveFileMoveIcon sx={{ fontSize: 13, flexShrink: 0 }} />
+                            <Box component="span" sx={{ fontSize: getResponsiveFontSize('xs'), flex: 1 }}>Chuyển trang</Box>
+                            <ChevronRightIcon sx={{ fontSize: 14, ml: -0.5, mt: 0.25 }} />
+                        </MenuItem>
+                    )}
+
                     {/* Delete */}
                     <MenuItem
                         onClick={() => {
                             if (menuWlId) handleDeleteClick(menuWlId);
                             setMenuAnchor(null);
                             setMenuWlId(null);
+                            setMoveMenuAnchor(null);
                         }}
                         sx={{
                             py: 0.4,
@@ -927,6 +984,63 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                         <DeleteIcon sx={{ fontSize: 13, flexShrink: 0 }} />
                         <Box component="span" sx={{ fontSize: getResponsiveFontSize('xs') }}>Xóa danh sách</Box>
                     </MenuItem>
+                </Menu>
+
+                {/* Sub-menu: Move to page */}
+                <Menu
+                    anchorEl={moveMenuAnchor}
+                    open={Boolean(moveMenuAnchor)}
+                    onClose={() => setMoveMenuAnchor(null)}
+                    slotProps={{
+                        paper: {
+                            sx: {
+                                bgcolor: isDark ? 'rgba(22,22,26,0.72)' : 'rgba(255,255,255,0.72)',
+                                backdropFilter: 'blur(20px)',
+                                WebkitBackdropFilter: 'blur(20px)',
+                                border: `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.07)'}`,
+                                borderRadius: `${borderRadius.md}px`,
+                                boxShadow: isDark
+                                    ? '0 8px 32px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)'
+                                    : '0 8px 24px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.9)',
+                                overflow: 'hidden',
+                                px: 0.5,
+                                minWidth: 100,
+                            },
+                        },
+                    }}
+                    transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                    anchorOrigin={{ horizontal: 'left', vertical: 'top' }}
+                >
+                    {pages.map(p => {
+                        const isCurrent = menuWl ? p === (menuWl.page ?? 1) : false;
+                        return (
+                            <MenuItem
+                                key={p}
+                                disabled={isCurrent}
+                                onClick={() => {
+                                    if (menuWl) handleMoveToPage(menuWl, p);
+                                    setMoveMenuAnchor(null);
+                                    setMenuAnchor(null);
+                                    setMenuWlId(null);
+                                }}
+                                sx={{
+                                    py: 0.4,
+                                    px: 1,
+                                    gap: 0.75,
+                                    fontSize: getResponsiveFontSize('xs'),
+                                    borderRadius: `${borderRadius.sm}px`,
+                                    fontWeight: isCurrent ? fontWeight.semibold : fontWeight.medium,
+                                    color: isCurrent ? 'primary.main' : 'text.secondary',
+                                    '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' },
+                                }}
+                            >
+                                <Box component="span" sx={{ width: 10, fontSize: 9, flexShrink: 0, color: 'primary.main' }}>
+                                    {isCurrent ? '●' : ''}
+                                </Box>
+                                Trang {p}
+                            </MenuItem>
+                        );
+                    })}
                 </Menu>
 
                 <AddWatchlistDialog

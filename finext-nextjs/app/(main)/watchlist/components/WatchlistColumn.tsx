@@ -560,13 +560,13 @@ export default function WatchlistColumn({
                             gap: 0.75,
                             fontSize: getResponsiveFontSize('xs'),
                             borderRadius: `${borderRadius.sm}px`,
-                            color: 'text.secondary',
+                            color: 'primary.main',
                             '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' },
                         }}
                     >
                         <DriveFileMoveIcon sx={{ fontSize: 13, flexShrink: 0 }} />
                         <Box component="span" sx={{ fontSize: getResponsiveFontSize('xs'), flex: 1 }}>Chuyển trang</Box>
-                        <ChevronRightIcon sx={{ fontSize: 14, color: 'text.disabled', ml: 'auto' }} />
+                        <ChevronRightIcon sx={{ fontSize: 14, ml: -0.5, mt: 0.25 }} />
                     </MenuItem>
                 )}
 
