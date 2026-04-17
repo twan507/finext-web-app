@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from pymongo import UpdateOne
+from pymongo import UpdateOne, UpdateMany
 
 from app.schemas.watchlists import WatchlistCreate, WatchlistUpdate, WatchlistInDB, WatchlistReorder, WatchlistPageReorder
 from app.utils.types import PyObjectId
@@ -190,8 +190,9 @@ async def reorder_pages(db: AsyncIOMotorDatabase, user_id: PyObjectId, reorder_d
     # Use a temporary page (negative) to avoid conflicts during swap
     # Step 1: old_page -> -(new_page) (temporary)
     # Step 2: -(new_page) -> new_page (final)
+    # IMPORTANT: Use UpdateMany — each page can have multiple watchlists
     operations_step1 = [
-        UpdateOne(
+        UpdateMany(
             {"user_id": ObjectId(user_id), "page": old_page},
             {"$set": {"page": -(new_page), "updated_at": now}},
         )
@@ -199,7 +200,7 @@ async def reorder_pages(db: AsyncIOMotorDatabase, user_id: PyObjectId, reorder_d
     ]
 
     operations_step2 = [
-        UpdateOne(
+        UpdateMany(
             {"user_id": ObjectId(user_id), "page": -(new_page)},
             {"$set": {"page": new_page, "updated_at": now}},
         )

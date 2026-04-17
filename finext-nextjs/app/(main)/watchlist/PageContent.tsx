@@ -623,6 +623,51 @@ export default function WatchlistContent() {
         }
     };
 
+    const handleMoveToPage = async (wl: Watchlist, targetPage: number) => {
+        const wlId = wl.id || wl._id!;
+        const oldPage = wl.page ?? 1;
+        if (targetPage === oldPage) return;
+
+        // Find a valid coordinate in the target page (append to first column)
+        const targetPageWls = watchlistsRef.current.filter(w => (w.page ?? 1) === targetPage);
+        const col0Items = targetPageWls.filter(w => w.coordinate[0] === 0);
+        const newRow = col0Items.length > 0 ? Math.max(...col0Items.map(w => w.coordinate[1])) + 1 : 0;
+        const newCoordinate: [number, number] = [0, newRow];
+
+        // Optimistic update
+        setWatchlists(prev => {
+            // Move the watchlist to the target page with new coordinate
+            const updated = prev.map(w =>
+                (w.id || w._id) === wlId
+                    ? { ...w, page: targetPage, coordinate: newCoordinate }
+                    : w
+            );
+            // Re-normalize the source column (fill gaps in row indices)
+            const sourceCol = wl.coordinate[0];
+            const sourceColItems = updated
+                .filter(w => w.coordinate[0] === sourceCol && (w.page ?? 1) === oldPage && (w.id || w._id) !== wlId)
+                .sort((a, b) => a.coordinate[1] - b.coordinate[1])
+                .map((w, idx) => ({ ...w, coordinate: [sourceCol, idx] as [number, number] }));
+            const others = updated.filter(
+                w => !(w.coordinate[0] === sourceCol && (w.page ?? 1) === oldPage && (w.id || w._id) !== wlId)
+            );
+            return [...others.filter(w => (w.id || w._id) === wlId || !(w.coordinate[0] === sourceCol && (w.page ?? 1) === oldPage)), ...sourceColItems];
+        });
+
+        try {
+            await apiClient({
+                url: `/api/v1/watchlists/${wlId}`,
+                method: 'PUT',
+                body: { page: targetPage, coordinate: newCoordinate },
+                requireAuth: true,
+            });
+        } catch (err) {
+            console.error('Move to page failed:', err);
+            // Rollback
+            fetchWatchlists();
+        }
+    };
+
     if (authLoading) {
         return (
             <Box sx={{ py: 6, display: 'flex', justifyContent: 'center' }}>
@@ -783,6 +828,8 @@ export default function WatchlistContent() {
                                 onReorderStocks={(newSymbols) => handleUpdateStocks(wl, newSymbols)}
                                 onAddStock={(ticker) => handleUpdateStocks(wl, [...wl.stock_symbols, ticker])}
                                 onRemoveStock={(ticker) => handleUpdateStocks(wl, wl.stock_symbols.filter(s => s !== ticker))}
+                                onMoveToPage={(targetPage) => handleMoveToPage(wl, targetPage)}
+                                availablePages={pages}
                             />
                         ))}
                         <Box
@@ -860,6 +907,8 @@ export default function WatchlistContent() {
                                                                 onRemoveStock={(ticker) =>
                                                                     handleUpdateStocks(item.wl, item.wl.stock_symbols.filter(s => s !== ticker))
                                                                 }
+                                                                onMoveToPage={(targetPage) => handleMoveToPage(item.wl, targetPage)}
+                                                                availablePages={pages}
                                                                 dragHandleProps={dragHandleProps}
                                                             />
                                                         )}

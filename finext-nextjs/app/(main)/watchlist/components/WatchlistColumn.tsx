@@ -21,6 +21,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -76,6 +78,8 @@ interface WatchlistColumnProps {
     onReorderStocks: (newSymbols: string[]) => void;
     onAddStock: (ticker: string) => void;
     onRemoveStock: (ticker: string) => void;
+    onMoveToPage?: (targetPage: number) => void;
+    availablePages?: number[];
     dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
     forceCollapsed?: boolean;
 }
@@ -91,6 +95,8 @@ export default function WatchlistColumn({
     onReorderStocks,
     onAddStock,
     onRemoveStock,
+    onMoveToPage,
+    availablePages,
     dragHandleProps,
     forceCollapsed,
 }: WatchlistColumnProps) {
@@ -103,6 +109,8 @@ export default function WatchlistColumn({
 
     // Menu state
     const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
+    // Sub-menu state for "Move to page"
+    const [moveMenuAnchor, setMoveMenuAnchor] = useState<null | HTMLElement>(null);
 
     // Inline rename state
     const [isRenaming, setIsRenaming] = useState(false);
@@ -542,9 +550,29 @@ export default function WatchlistColumn({
                 {/* Divider */}
                 <Box sx={{ my: 0.5, mx: 1, height: '1px', bgcolor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)' }} />
 
+                {/* Move to page */}
+                {onMoveToPage && availablePages && availablePages.length > 1 && (
+                    <MenuItem
+                        onClick={(e) => setMoveMenuAnchor(e.currentTarget)}
+                        sx={{
+                            py: 0.4,
+                            px: 1,
+                            gap: 0.75,
+                            fontSize: getResponsiveFontSize('xs'),
+                            borderRadius: `${borderRadius.sm}px`,
+                            color: 'text.secondary',
+                            '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' },
+                        }}
+                    >
+                        <DriveFileMoveIcon sx={{ fontSize: 13, flexShrink: 0 }} />
+                        <Box component="span" sx={{ fontSize: getResponsiveFontSize('xs'), flex: 1 }}>Chuyển trang</Box>
+                        <ChevronRightIcon sx={{ fontSize: 14, color: 'text.disabled', ml: 'auto' }} />
+                    </MenuItem>
+                )}
+
                 {/* Delete */}
                 <MenuItem
-                    onClick={() => { setMenuAnchor(null); onDelete(); }}
+                    onClick={() => { setMenuAnchor(null); setMoveMenuAnchor(null); onDelete(); }}
                     sx={{
                         py: 0.4,
                         px: 1,
@@ -558,6 +586,62 @@ export default function WatchlistColumn({
                     <DeleteIcon sx={{ fontSize: 13, flexShrink: 0 }} />
                     <Box component="span" sx={{ fontSize: getResponsiveFontSize('xs') }}>Xóa danh sách</Box>
                 </MenuItem>
+            </Menu>
+
+            {/* Sub-menu: Move to page */}
+            <Menu
+                anchorEl={moveMenuAnchor}
+                open={Boolean(moveMenuAnchor)}
+                onClose={() => setMoveMenuAnchor(null)}
+                slotProps={{
+                    paper: {
+                        sx: {
+                            bgcolor: isDark ? 'rgba(22,22,26,0.72)' : 'rgba(255,255,255,0.72)',
+                            backdropFilter: 'blur(20px)',
+                            WebkitBackdropFilter: 'blur(20px)',
+                            border: `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.07)'}`,
+                            borderRadius: `${borderRadius.md}px`,
+                            boxShadow: isDark
+                                ? '0 8px 32px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)'
+                                : '0 8px 24px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.9)',
+                            overflow: 'hidden',
+                            px: 0.5,
+                            minWidth: 100,
+                        },
+                    },
+                }}
+                transformOrigin={{ horizontal: 'left', vertical: 'top' }}
+                anchorOrigin={{ horizontal: 'right', vertical: 'top' }}
+            >
+                {availablePages?.map(p => {
+                    const isCurrent = p === (watchlist.page ?? 1);
+                    return (
+                        <MenuItem
+                            key={p}
+                            disabled={isCurrent}
+                            onClick={() => {
+                                setMoveMenuAnchor(null);
+                                setMenuAnchor(null);
+                                onMoveToPage?.(p);
+                            }}
+                            sx={{
+                                py: 0.4,
+                                px: 1,
+                                gap: 0.75,
+                                fontSize: getResponsiveFontSize('xs'),
+                                borderRadius: `${borderRadius.sm}px`,
+                                fontWeight: isCurrent ? fontWeight.semibold : fontWeight.medium,
+                                color: isCurrent ? 'primary.main' : 'text.secondary',
+                                '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' },
+                            }}
+                        >
+                            <Box component="span" sx={{ width: 10, fontSize: 9, flexShrink: 0, color: 'primary.main' }}>
+                                {isCurrent ? '●' : ''}
+                            </Box>
+                            Trang {p}
+                        </MenuItem>
+                    );
+                })}
             </Menu>
 
             {/* ── Stock rows ── */}
