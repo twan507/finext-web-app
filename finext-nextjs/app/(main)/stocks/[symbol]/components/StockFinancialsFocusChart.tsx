@@ -94,8 +94,14 @@ export default function StockFinancialsFocusChart({ metricKey, metricName, perio
         }
     };
 
-    // Click handler: determine which column was clicked based on X position
+    // Empty-area clicks: compute column from X position (original behavior).
+    // Skip if click target is a bar — dataPointSelection owns bar clicks and firing both
+    // causes the X-fallback to override with a stale index on first renders.
     const handleChartClick = useCallback((_event: any, chartContext: any, config: any) => {
+        const target = _event?.target as HTMLElement | null | undefined;
+        if (target && typeof target.closest === 'function' && target.closest('.apexcharts-bar-area, .apexcharts-series-bar')) {
+            return;
+        }
         if (config?.dataPointIndex != null && config.dataPointIndex >= 0) {
             onBarClick(config.dataPointIndex);
             return;
@@ -112,16 +118,21 @@ export default function StockFinancialsFocusChart({ metricKey, metricName, perio
         if (colCount === 0) return;
         const colWidth = rect.width / colCount;
         const idx = Math.floor(relX / colWidth);
-        if (idx >= 0 && idx < colCount) {
-            onBarClick(idx);
-        }
+        if (idx >= 0 && idx < colCount) onBarClick(idx);
     }, [onBarClick, xCategories]);
+
+    // Direct bar click — ApexCharts gives idx; ignore deselect (idx < 0) to prevent double-click reset
+    const handleBarSelection = useCallback((_event: any, _chartContext: any, config: any) => {
+        const idx = config?.dataPointIndex;
+        if (idx != null && idx >= 0) onBarClick(idx);
+    }, [onBarClick]);
 
     const options: ApexOptions = useMemo(() => ({
         chart: {
             type: 'line', toolbar: { show: false }, background: 'transparent', animations: { enabled: true, speed: 350 }, fontFamily: 'inherit', zoom: { enabled: false },
             events: {
                 click: handleChartClick,
+                dataPointSelection: handleBarSelection,
             },
         },
         states: {
@@ -195,7 +206,7 @@ export default function StockFinancialsFocusChart({ metricKey, metricName, perio
                 </div>`;
             },
         },
-    }), [xCategories, isDark, theme, cfg, primaryColor, deltaLineColor, handleChartClick]);
+    }), [xCategories, isDark, theme, cfg, primaryColor, deltaLineColor, handleChartClick, handleBarSelection]);
 
     const series = useMemo(() => [
         { name: metricName, type: 'bar', data: barData },
