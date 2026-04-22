@@ -11,7 +11,7 @@ const SECTION_LABEL = 'Hướng dẫn sử dụng';
 const SECTION_HREF = '/guides/overview';
 
 const GUIDE_TABS: { label: string; href: string }[] = [
-  { label: 'Tổng quan', href: '/guides/overview' },
+  { label: 'Tổng quan tính năng', href: '/guides/overview' },
   { label: 'Bộ lọc cổ phiếu', href: '/guides/stock-screener' },
   { label: 'Biểu đồ và Watchlist', href: '/guides/charts-watchlist' },
 ];

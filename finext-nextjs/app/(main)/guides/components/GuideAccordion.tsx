@@ -60,7 +60,7 @@ export default function GuideAccordion({ title, icon, defaultExpanded = false, c
         )}
         <Typography
           sx={{
-            fontSize: getResponsiveFontSize('lg'),
+            fontSize: getResponsiveFontSize('md'),
             fontWeight: fontWeight.semibold,
             color: theme.palette.text.primary,
           }}

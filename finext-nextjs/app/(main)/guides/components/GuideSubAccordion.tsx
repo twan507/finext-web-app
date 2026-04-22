@@ -58,7 +58,7 @@ export default function GuideSubAccordion({ title, icon, defaultExpanded = false
         <Typography
           sx={{
             fontSize: getResponsiveFontSize('md'),
-            fontWeight: fontWeight.semibold,
+            fontWeight: fontWeight.medium,
             color: theme.palette.text.primary,
           }}
         >

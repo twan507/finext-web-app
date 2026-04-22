@@ -612,7 +612,7 @@ Replace with:
     links: [
       { label: 'Tổng quan tính năng', href: '/guides/overview' },
       { label: 'Bộ lọc cổ phiếu', href: '/guides/stock-screener' },
-      { label: 'Biểu đồ & Watchlist', href: '/guides/charts-watchlist' },
+      { label: 'Biểu đồ và Watchlist', href: '/guides/charts-watchlist' },
     ],
   },
 ```
