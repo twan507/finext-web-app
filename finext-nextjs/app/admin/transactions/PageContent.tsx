@@ -7,7 +7,7 @@ import AdminBreadcrumb from '../components/AdminBreadcrumb';
 import {
   Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Chip, IconButton, Alert, CircularProgress,
-  TablePagination, Tooltip, Button, TextField, MenuItem, useTheme,
+  Tooltip, Button, TextField, MenuItem, useTheme,
   Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle
 } from '@mui/material';
 import {
@@ -22,6 +22,8 @@ import {
 import { format, parseISO } from 'date-fns';
 import { getResponsiveFontSize, borderRadiusTop, fontWeight } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
+import TablePaginationStyled from '../components/TablePaginationStyled';
+import LicenseChip from '../components/LicenseChip';
 import {
   SortConfig,
   ColumnConfig,
@@ -647,12 +649,9 @@ export default function TransactionsPage() {
                         minWidth: columnConfigs[1].minWidth
                       }}>
                         {transaction.license_key ? (
-                          <Chip
-                            label={transaction.license_key}
-                            size="small"
-                            variant="outlined"
+                          <LicenseChip
+                            licenseKey={transaction.license_key}
                             sx={{
-                              fontFamily: 'monospace',
                               maxWidth: expandedView ? 'none' : 200,
                               '& .MuiChip-label': {
                                 overflow: 'hidden',
@@ -902,41 +901,13 @@ export default function TransactionsPage() {
                 </TableBody>
               </Table>
             </TableContainer>
-            <TablePagination
-              rowsPerPageOptions={[5, 10, 25, 50, { label: 'ALL', value: 99999 }]}
-              component="div"
+            <TablePaginationStyled
               count={displayTotalCount}
               rowsPerPage={rowsPerPage}
               page={page}
               onPageChange={handleChangePage}
               onRowsPerPageChange={handleChangeRowsPerPage}
-              labelRowsPerPage={
-                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                  Dòng mỗi trang:
-                </Box>
-              }
-              sx={{
-                '& .MuiTablePagination-toolbar': {
-                  minHeight: { xs: 48, sm: 52 },
-                  px: { xs: 1, sm: 2 }
-                },
-                '& .MuiTablePagination-selectLabel': {
-                  fontSize: getResponsiveFontSize('xxs'),
-                  margin: 0
-                },
-                '& .MuiTablePagination-displayedRows': {
-                  fontSize: getResponsiveFontSize('xxs'),
-                  margin: 0
-                },
-                '& .MuiTablePagination-select': {
-                  fontSize: getResponsiveFontSize('xxs')
-                },
-                '& .MuiTablePagination-actions': {
-                  '& .MuiIconButton-root': {
-                    padding: { xs: '4px', sm: '8px' }
-                  }
-                }
-              }} />
+            />
           </>
         )}
       </Paper>      <CreateTransactionModal

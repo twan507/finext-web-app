@@ -7,7 +7,7 @@ import AdminBreadcrumb from '../components/AdminBreadcrumb';
 import {
     Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
     TableHead, TableRow, Button, Chip, IconButton, Alert, CircularProgress,
-    TablePagination, Tooltip, useTheme, Dialog, DialogTitle,
+    Tooltip, useTheme, Dialog, DialogTitle,
     DialogContent, DialogContentText, DialogActions
 } from '@mui/material';
 import {
@@ -22,6 +22,7 @@ import {
 import { format as formatDate, parseISO } from 'date-fns';
 import { getResponsiveFontSize, borderRadiusTop } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
+import TablePaginationStyled from '../components/TablePaginationStyled';
 import {
     SortConfig,
     ColumnConfig,
@@ -660,15 +661,13 @@ const OtpsPage: React.FC = () => {
                         </TableContainer>
 
                         {/* Pagination */}
-                        <TablePagination
+                        <TablePaginationStyled
                             rowsPerPageOptions={[5, 10, 25, 50, 100, { value: 99999, label: 'ALL' }]}
-                            component="div"
                             count={displayTotalCount}
                             rowsPerPage={rowsPerPage}
                             page={page}
                             onPageChange={handleChangePage}
                             onRowsPerPageChange={handleChangeRowsPerPage}
-                            labelRowsPerPage="Số dòng mỗi trang:"
                             labelDisplayedRows={({ from, to, count }) => `${from}-${to} của ${count !== -1 ? count : `hơn ${to}`}`}
                         />
                     </>

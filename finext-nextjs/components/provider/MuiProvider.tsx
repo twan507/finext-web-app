@@ -115,6 +115,10 @@ export function MuiProvider({ children }: { children: React.ReactNode }) {
             root: ({ theme, ownerState }) => ({
               height: '22px',
               fontSize: getResponsiveFontSize('sm').md,
+              cursor: ownerState.onClick || ownerState.clickable ? 'pointer' : 'default',
+              '& .MuiChip-label': {
+                cursor: 'inherit',
+              },
               ...(ownerState.color === 'success' && {
                 backgroundColor: theme.palette.component.chip.successBackground,
                 color: theme.palette.component.chip.successColor,

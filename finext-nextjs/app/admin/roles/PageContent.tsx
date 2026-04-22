@@ -7,7 +7,7 @@ import AdminBreadcrumb from '../components/AdminBreadcrumb';
 import {
     Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
     TableHead, TableRow, Button, Chip, IconButton, Alert, CircularProgress,
-    TablePagination, Tooltip, useTheme, Dialog, DialogTitle,
+    Tooltip, useTheme, Dialog, DialogTitle,
     DialogContent, DialogContentText, DialogActions
 } from '@mui/material';
 import {
@@ -23,6 +23,7 @@ import {
 import { format, parseISO } from 'date-fns';
 import { getResponsiveFontSize, borderRadiusTop, fontWeight } from 'theme/tokens';
 import SortableTableHead from '../components/SortableTableHead';
+import TablePaginationStyled from '../components/TablePaginationStyled';
 import {
     SortConfig,
     ColumnConfig,
@@ -584,33 +585,12 @@ export default function RolesPage() {
                                 </TableBody>
                             </Table>
                         </TableContainer>
-                        <TablePagination
-                            rowsPerPageOptions={[5, 10, 25, 50, { label: 'ALL', value: 99999 }]}
-                            component="div"
+                        <TablePaginationStyled
                             count={displayTotalCount}
                             rowsPerPage={rowsPerPage}
                             page={page}
                             onPageChange={handleChangePage}
                             onRowsPerPageChange={handleChangeRowsPerPage}
-                            labelRowsPerPage={
-                                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                                    Dòng mỗi trang:
-                                </Box>
-                            }
-                            sx={{
-                                '& .MuiTablePagination-toolbar': {
-                                    minHeight: { xs: 48, sm: 52 },
-                                    px: { xs: 1, sm: 2 }
-                                },
-                                '& .MuiTablePagination-selectLabel': {
-                                    fontSize: getResponsiveFontSize('xxs'),
-                                    display: { xs: 'none', sm: 'block' }
-                                },
-                                '& .MuiTablePagination-displayedRows': {
-                                    fontSize: getResponsiveFontSize('xxs'),
-                                    margin: 0
-                                }
-                            }}
                         />
                     </>
                 )}

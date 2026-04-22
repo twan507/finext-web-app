@@ -7,7 +7,7 @@ import AdminBreadcrumb from '../components/AdminBreadcrumb';
 import {
     Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
     TableHead, TableRow, Button, Chip, IconButton, Alert, CircularProgress,
-    TablePagination, Tooltip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
+    Tooltip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
     TextField, useTheme, InputAdornment
 } from '@mui/material';
 import {
@@ -24,6 +24,7 @@ import { format, parseISO } from 'date-fns';
 import { getResponsiveFontSize, borderRadiusTop } from 'theme/tokens';
 import BrokerSearch from './components/BrokerSearch';
 import SortableTableHead from '../components/SortableTableHead';
+import TablePaginationStyled from '../components/TablePaginationStyled';
 import AddBrokerModal from './components/AddBrokerModal';
 import {
     SortConfig,
@@ -764,40 +765,13 @@ export default function BrokersPage() {
                                     )}
                                 </TableBody>
                             </Table>
-                        </TableContainer>                        <TablePagination
-                            rowsPerPageOptions={[5, 10, 50, { label: 'ALL', value: 99999 }]}
-                            component="div"
+                        </TableContainer>
+                        <TablePaginationStyled
                             count={displayTotalCount}
                             rowsPerPage={rowsPerPage}
                             page={page}
                             onPageChange={handleChangePage}
-                            onRowsPerPageChange={handleChangeRowsPerPage} labelRowsPerPage={
-                                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                                    Dòng mỗi trang:
-                                </Box>
-                            }
-                            sx={{
-                                '& .MuiTablePagination-toolbar': {
-                                    minHeight: { xs: 48, sm: 52 },
-                                    px: { xs: 1, sm: 2 }
-                                },
-                                '& .MuiTablePagination-selectLabel': {
-                                    fontSize: getResponsiveFontSize('xxs'),
-                                    margin: 0
-                                },
-                                '& .MuiTablePagination-displayedRows': {
-                                    fontSize: getResponsiveFontSize('xxs'),
-                                    margin: 0
-                                },
-                                '& .MuiTablePagination-select': {
-                                    fontSize: getResponsiveFontSize('xxs')
-                                },
-                                '& .MuiTablePagination-actions': {
-                                    '& .MuiIconButton-root': {
-                                        padding: { xs: '4px', sm: '8px' }
-                                    }
-                                }
-                            }}
+                            onRowsPerPageChange={handleChangeRowsPerPage}
                         />
                     </>
                 )}

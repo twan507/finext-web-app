@@ -9,6 +9,7 @@ import { RecentTransactionItem, formatCurrency } from '../types';
 import { borderRadius, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import Link from 'next/link';
 import { parseISO, format as formatDateFns } from 'date-fns';
+import LicenseChip from '../../components/LicenseChip';
 
 interface Props {
     transactions: RecentTransactionItem[];
@@ -133,12 +134,14 @@ const RecentTransactions: React.FC<Props> = ({ transactions }) => {
 
                                 {/* Gói — center */}
                                 <TableCell align="center" sx={cellSx}>
-                                    <Chip
-                                        label={tx.license_key || '—'}
-                                        size="small"
-                                        variant="outlined"
-                                        sx={{ fontFamily: 'monospace', ...chipSx }}
-                                    />
+                                    {tx.license_key ? (
+                                        <LicenseChip
+                                            licenseKey={tx.license_key}
+                                            sx={chipSx}
+                                        />
+                                    ) : (
+                                        <Chip label="—" size="small" variant="outlined" sx={chipSx} />
+                                    )}
                                 </TableCell>
 
                                 {/* Số tiền — center */}

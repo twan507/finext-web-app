@@ -7,7 +7,7 @@ import AdminBreadcrumb from '../components/AdminBreadcrumb';
 import {
   Box, Typography, Paper, TableContainer, TextField,
   Table, TableHead, TableRow, TableCell, TableBody, Chip, IconButton,
-  Alert, Button, TablePagination, Avatar, Tooltip, CircularProgress,
+  Alert, Button, Avatar, Tooltip, CircularProgress,
   Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
   useTheme
 } from '@mui/material';
@@ -22,6 +22,8 @@ import UserSearch from './components/UserSearch';
 import AddUserModal from './components/AddUserModal';
 import EditUserModal from './components/EditUserModal';
 import SortableTableHead from '../components/SortableTableHead';
+import TablePaginationStyled from '../components/TablePaginationStyled';
+import LicenseChip from '../components/LicenseChip';
 import {
   SortConfig,
   ColumnConfig,
@@ -486,39 +488,23 @@ const UsersPage: React.FC = () => {
     });
   };
   // Helper function to get subscription info
-  const getSubscriptionInfo = (userId: string): { status: string; color: 'success' | 'default' | 'primary'; details?: SubscriptionPublic; loading?: boolean } => {
-    // If subscriptions are still loading, show loading state
-    if (subscriptionsLoading) {
-      return { status: '...', color: 'primary', loading: true };
-    }
+  type SubscriptionInfo =
+    | { kind: 'loading' }
+    | { kind: 'none' }
+    | { kind: 'pending' }
+    | { kind: 'license'; licenseKey: string; isActive: boolean; details: SubscriptionPublic };
 
-    // Check if user has subscription_id assigned
+  const getSubscriptionInfo = (userId: string): SubscriptionInfo => {
+    if (subscriptionsLoading) return { kind: 'loading' };
+
     const user = users.find(u => u.id === userId);
-    if (!user?.subscription_id) {
-      return { status: 'Basic', color: 'default' };
-    }
+    if (!user?.subscription_id) return { kind: 'none' };
 
     const subscription = subscriptions.get(userId);
-    if (!subscription) {
-      // User has subscription_id but we couldn't fetch the subscription details
-      // This might indicate an issue or the subscription is still loading
-      return { status: 'Loading...', color: 'primary' };
-    }
+    if (!subscription) return { kind: 'pending' };
 
     const isActive = subscription.is_active && new Date(subscription.expiry_date) > new Date();
-
-    // For better display, show the actual license key for active subscriptions
-    // or "Expired" with the license key for inactive ones
-    let displayStatus = subscription.license_key;
-    if (!isActive) {
-      displayStatus = `${subscription.license_key} (Expired)`;
-    }
-
-    return {
-      status: displayStatus,
-      color: isActive ? 'success' : 'default',
-      details: subscription
-    };
+    return { kind: 'license', licenseKey: subscription.license_key, isActive, details: subscription };
   };
   // Helper function to check if a user is protected
   const isUserProtected = (userEmail: string): boolean => {
@@ -729,48 +715,58 @@ const UsersPage: React.FC = () => {
                         width: expandedView ? 'auto' : columnConfigs[2].minWidth
                       }}>
                         {(() => {
-                          const subscriptionInfo = getSubscriptionInfo(user.id);
-                          return (<Tooltip title={
-                            subscriptionInfo.loading ?
-                              'Loading subscription info...' :
-                              subscriptionInfo.details ?
-                                (() => {
-                                  try {
-                                    // Parse UTC date and convert to GMT+7
-                                    const utcDate = parseISO(subscriptionInfo.details.expiry_date);
-                                    const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
-                                    return `Expires: ${format(gmt7Date, 'dd/MM/yyyy HH:mm')}`;
-                                  } catch (error) {
-                                    return 'Expires: Invalid date';
+                          const info = getSubscriptionInfo(user.id);
+
+                          if (info.kind === 'loading') {
+                            return (
+                              <Tooltip title="Loading subscription info...">
+                                <Chip
+                                  size="small"
+                                  label={
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                      <CircularProgress size={12} sx={{ color: 'inherit' }} />
+                                      <Typography variant="caption">Loading...</Typography>
+                                    </Box>
                                   }
-                                })() :
-                                'No active subscription'
-                          }>
-                            <Chip
-                              label={subscriptionInfo.loading ?
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                  <CircularProgress
-                                    size={12}
-                                    sx={{
-                                      color: 'inherit',
-                                      '& .MuiCircularProgress-svg': {
-                                        filter: (theme) => theme.palette.mode === 'dark' ? 'brightness(1.2)' : 'brightness(0.8)'
-                                      }
-                                    }}
-                                  />
-                                  <Typography variant="caption">Loading...</Typography>
-                                </Box> :
-                                subscriptionInfo.status
-                              }
-                              color={subscriptionInfo.color}
-                              size="small"
-                              sx={subscriptionInfo.loading ? {
-                                '& .MuiChip-label': {
-                                  color: (theme) => theme.palette.mode === 'dark' ? '#003768' : '#e6f7ff'
-                                }
-                              } : {}}
+                                />
+                              </Tooltip>
+                            );
+                          }
+
+                          if (info.kind === 'none') {
+                            return <Chip label="Basic" size="small" />;
+                          }
+
+                          if (info.kind === 'pending') {
+                            return (
+                              <Tooltip title="Loading subscription info...">
+                                <Chip label="Loading..." size="small" color="primary" />
+                              </Tooltip>
+                            );
+                          }
+
+                          // info.kind === 'license'
+                          const chip = (
+                            <LicenseChip
+                              licenseKey={info.licenseKey}
+                              isActive={info.isActive}
+                              label={info.isActive ? info.licenseKey : `${info.licenseKey} (Expired)`}
                             />
-                          </Tooltip>);
+                          );
+
+                          if (info.licenseKey === 'BASIC') return chip;
+
+                          const tooltipTitle = (() => {
+                            try {
+                              const utcDate = parseISO(info.details.expiry_date);
+                              const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+                              return `Expires: ${format(gmt7Date, 'dd/MM/yyyy HH:mm')}`;
+                            } catch {
+                              return 'Expires: Invalid date';
+                            }
+                          })();
+
+                          return <Tooltip title={tooltipTitle}>{chip}</Tooltip>;
                         })()}
                       </TableCell>
                       <TableCell sx={{
@@ -944,73 +940,12 @@ const UsersPage: React.FC = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-            <TablePagination
-              rowsPerPageOptions={[5, 10, 50, { label: 'All', value: 99999 }]}
-              component="div"
+            <TablePaginationStyled
               count={displayTotalCount}
               rowsPerPage={rowsPerPage}
               page={page}
               onPageChange={handleChangePage}
               onRowsPerPageChange={handleChangeRowsPerPage}
-              labelRowsPerPage={
-                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                  Rows per page:
-                </Box>
-              }
-              SelectProps={{
-                sx: {
-                  '& .MuiSelect-select.MuiTablePagination-select': {
-                    fontSize: getResponsiveFontSize('xs'),
-                    minHeight: 0,
-                    py: 0.5,
-                  },
-                  '& .MuiSelect-icon': {
-                    fontSize: '1.1rem',
-                  },
-                },
-                MenuProps: {
-                  PaperProps: {
-                    sx: {
-                      mt: 0.5,
-                      borderRadius: 1.5,
-                      boxShadow: 3,
-                      minWidth: '72px !important',
-                      '& .MuiList-root': {
-                        py: 0.5,
-                      },
-                      '& .MuiMenuItem-root': {
-                        fontSize: getResponsiveFontSize('xs'),
-                        minHeight: 'auto',
-                        py: 0.75,
-                        px: 1.5,
-                        justifyContent: 'center',
-                      },
-                    },
-                  },
-                },
-              }}
-              sx={{
-                '& .MuiTablePagination-toolbar': {
-                  minHeight: { xs: 48, sm: 52 },
-                  px: { xs: 1, sm: 2 }
-                },
-                '& .MuiTablePagination-selectLabel': {
-                  fontSize: getResponsiveFontSize('xs'),
-                  margin: 0
-                },
-                '& .MuiTablePagination-displayedRows': {
-                  fontSize: getResponsiveFontSize('xxs'),
-                  margin: 0
-                },
-                '& .MuiTablePagination-select': {
-                  fontSize: getResponsiveFontSize('xs')
-                },
-                '& .MuiTablePagination-actions': {
-                  '& .MuiIconButton-root': {
-                    padding: { xs: '4px', sm: '8px' }
-                  }
-                }
-              }}
             />
           </>
         )}
