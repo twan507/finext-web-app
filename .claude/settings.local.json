@@ -20,8 +20,9 @@
       "Bash(ls -la \"app/\\(main\\)/charts/[id]/\")",
       "Bash(cat \"app/\\(main\\)/charts/[id]/PageContent.tsx\")",
       "Bash(cat \"app/\\(main\\)/charts/[id]/CandlestickChart.tsx\")",
-      "Bash(head -100 \"app/\\(main\\)/charts/[id]/ChartToolbar.tsx\")"
-    
+      "Bash(head -100 \"app/\\(main\\)/charts/[id]/ChartToolbar.tsx\")",
+      "Bash(./node_modules/.bin/tsc --noEmit -p .)",
+      "Bash(finext-nextjs/node_modules/.bin/tsc --noEmit -p finext-nextjs)"
     ]
   }
 }

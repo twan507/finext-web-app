@@ -6,7 +6,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { Icon } from '@iconify/react';
 import { fontWeight, getResponsiveFontSize } from 'theme/tokens';
 
-interface GuideAccordionProps {
+interface GuideSubAccordionProps {
   title: string;
   icon?: string;
   defaultExpanded?: boolean;
@@ -14,13 +14,10 @@ interface GuideAccordionProps {
 }
 
 /**
- * Collapsible section với style tối giản (không card wrap):
- * - Header chỉ là 1 hàng: icon + title + chevron, không background
- * - Hover: subtle bg change
- * - Border top/bottom tạo divider giữa các accordion
- * - Expanded: content indent nhẹ, có thanh màu primary bên trái tạo visual grouping
+ * Nested toggle bar: cùng style với GuideAccordion nhưng nhỏ hơn 1 cấp,
+ * dùng cho các sub-section bên trong 1 GuideAccordion.
  */
-export default function GuideAccordion({ title, icon, defaultExpanded = false, children }: GuideAccordionProps) {
+export default function GuideSubAccordion({ title, icon, defaultExpanded = false, children }: GuideSubAccordionProps) {
   const theme = useTheme();
 
   return (
@@ -31,36 +28,36 @@ export default function GuideAccordion({ title, icon, defaultExpanded = false, c
       sx={{
         background: 'transparent',
         boxShadow: 'none',
-        borderBottom: `1px solid ${theme.palette.divider}`,
+        borderBottom: `1px dashed ${theme.palette.divider}`,
         '&:before': { display: 'none' },
         '&:first-of-type': {
-          borderTop: `1px solid ${theme.palette.divider}`,
+          borderTop: `1px dashed ${theme.palette.divider}`,
         },
       }}
     >
       <AccordionSummary
-        expandIcon={<ExpandMoreIcon />}
+        expandIcon={<ExpandMoreIcon sx={{ fontSize: 20 }} />}
         sx={{
           px: 0,
-          minHeight: 56,
-          '&.Mui-expanded': { minHeight: 56 },
+          minHeight: 44,
+          '&.Mui-expanded': { minHeight: 44 },
           '& .MuiAccordionSummary-content': {
             display: 'flex',
             alignItems: 'center',
-            gap: 1.5,
-            my: 1.5,
-            '&.Mui-expanded': { my: 1.5 },
+            gap: 1.25,
+            my: 1,
+            '&.Mui-expanded': { my: 1 },
           },
         }}
       >
         {icon && (
           <Box sx={{ display: 'flex', alignItems: 'center', color: theme.palette.primary.main }}>
-            <Icon icon={icon} width={20} height={20} />
+            <Icon icon={icon} width={18} height={18} />
           </Box>
         )}
         <Typography
           sx={{
-            fontSize: getResponsiveFontSize('lg'),
+            fontSize: getResponsiveFontSize('md'),
             fontWeight: fontWeight.semibold,
             color: theme.palette.text.primary,
           }}
@@ -71,11 +68,11 @@ export default function GuideAccordion({ title, icon, defaultExpanded = false, c
       <AccordionDetails
         sx={{
           px: 0,
-          pt: 0,
-          pb: 2,
-          pl: { xs: 0, md: 3.5 },
-          borderLeft: { xs: 'none', md: `2px solid ${theme.palette.primary.main}` },
-          ml: { xs: 0, md: 1 },
+          pt: 0.5,
+          pb: 0.75,
+          pl: { xs: 0, md: 2.5 },
+          borderLeft: { xs: 'none', md: `2px dashed ${theme.palette.divider}` },
+          ml: { xs: 0, md: 0.5 },
         }}
       >
         {children}

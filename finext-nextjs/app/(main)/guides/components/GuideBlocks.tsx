@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Image from 'next/image';
-import { Box, Typography, useTheme, Collapse } from '@mui/material';
+import { Box, Typography, useTheme } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { getResponsiveFontSize, fontWeight, getGlassCard } from 'theme/tokens';
 
@@ -46,57 +46,54 @@ interface FigureProps {
 }
 
 export function Figure({ src, alt, width = 1600, height = 100, caption, sx }: FigureProps) {
-  const [open, setOpen] = useState(false);
-  const theme = useTheme();
-
   return (
     <Box sx={{ my: 1, ...sx }}>
-      <Box
-        onClick={() => setOpen(!open)}
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1,
-          py: 0.75,
-          px: 1.5,
-          borderRadius: 1,
-          cursor: 'pointer',
-          color: 'text.secondary',
-          border: `1px dashed ${theme.palette.divider}`,
-          transition: 'background 0.15s, color 0.15s',
-          '&:hover': {
-            bgcolor: theme.palette.action.hover,
-            color: 'text.primary',
-            borderColor: theme.palette.primary.main,
-          },
-        }}
-      >
-        <Icon icon="mdi:image-outline" width={18} height={18} />
-        <Typography sx={{ ...smallTextSx, flex: 1, userSelect: 'none' }}>
-          {open ? `Ẩn ảnh: ${alt}` : `Xem ảnh minh họa: ${alt}`}
-        </Typography>
-        <Icon
-          icon="mdi:chevron-down"
-          width={20}
-          height={20}
-          style={{
-            transform: open ? 'rotate(180deg)' : 'none',
-            transition: 'transform 0.2s',
-          }}
-        />
-      </Box>
-      <Collapse in={open} unmountOnExit>
-        <Box sx={{ mt: 1.25 }}>
-          <Image
-            src={src}
-            alt={alt}
-            width={width}
-            height={height}
-            style={{ width: '100%', height: 'auto', borderRadius: 8, display: 'block' }}
-          />
-          {caption && <Typography sx={captionSx}>{caption}</Typography>}
-        </Box>
-      </Collapse>
+      <Image
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        style={{ width: '100%', height: 'auto', borderRadius: 8, display: 'block' }}
+      />
+      {caption && <Typography sx={captionSx}>{caption}</Typography>}
+    </Box>
+  );
+}
+
+// ============================================================================
+// InfoBox — card kiểu "info" dùng để bọc đoạn mô tả trong sub-accordion
+// (hiện trước Figure để user đọc nội dung trước khi xem ảnh)
+// ============================================================================
+
+interface InfoBoxProps {
+  children: React.ReactNode;
+}
+
+export function InfoBox({ children }: InfoBoxProps) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  return (
+    <Box
+      sx={{
+        ...getGlassCard(isDark),
+        borderRadius: 1.5,
+        p: 2,
+        mt: 1,
+        mb: 2,
+        display: 'flex',
+        gap: 1.25,
+        alignItems: 'flex-start',
+      }}
+    >
+      <Icon
+        icon="mdi:information-outline"
+        width={20}
+        height={20}
+        style={{ color: theme.palette.primary.main, flexShrink: 0, marginTop: 2 }}
+      />
+      <Typography component="div" sx={{ ...bodyTextSx, flex: 1 }}>
+        {children}
+      </Typography>
     </Box>
   );
 }
@@ -239,10 +236,9 @@ interface TimelineItemProps {
   title: string;
   children: React.ReactNode;
   image?: React.ReactNode;
-  isLast?: boolean;
 }
 
-export function TimelineItem({ label, title, children, image, isLast = false }: TimelineItemProps) {
+export function TimelineItem({ label, title, children, image }: TimelineItemProps) {
   const theme = useTheme();
   return (
     <Box sx={{ display: 'flex', gap: 2, position: 'relative' }}>
@@ -269,20 +265,18 @@ export function TimelineItem({ label, title, children, image, isLast = false }: 
         >
           {label}
         </Box>
-        {!isLast && (
-          <Box
-            sx={{
-              flex: 1,
-              width: 2,
-              bgcolor: theme.palette.divider,
-              my: 1,
-              minHeight: 40,
-            }}
-          />
-        )}
+        <Box
+          sx={{
+            flex: 1,
+            width: 2,
+            bgcolor: theme.palette.divider,
+            my: 1,
+            minHeight: 40,
+          }}
+        />
       </Box>
       {/* Right column: content */}
-      <Box sx={{ flex: 1, minWidth: 0, pb: isLast ? 0 : 3 }}>
+      <Box sx={{ flex: 1, minWidth: 0, pb: 3 }}>
         <Typography sx={{ ...bodyTextSx, fontWeight: fontWeight.semibold, mb: 1 }}>
           {title}
         </Typography>
