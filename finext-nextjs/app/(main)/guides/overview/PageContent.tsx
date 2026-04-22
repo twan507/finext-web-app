@@ -147,7 +147,7 @@ export default function OverviewContent() {
 
             <FeatureCard
               title="Dòng tiền"
-              icon="mdi:cash-flow"
+              icon="mdi:cash-multiple"
               image={
                 <Figure
                   src="/guides/overview/markets-tab-dong-tien.png"
@@ -260,7 +260,7 @@ export default function OverviewContent() {
             <Box sx={stackSx}>
               <FeatureCard
                 title="Dòng tiền"
-                icon="mdi:cash-flow"
+                icon="mdi:cash-multiple"
                 image={
                   <Figure
                     src="/guides/overview/stocks-symbol-tab-cashflow.png"
@@ -484,7 +484,7 @@ export default function OverviewContent() {
 
             <FeatureCard
               title="Nhóm dòng tiền"
-              icon="mdi:cash-flow"
+              icon="mdi:cash-multiple"
               image={
                 <Figure
                   src="/guides/overview/groups-chart-dongtien.png"
