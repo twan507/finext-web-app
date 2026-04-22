@@ -23,8 +23,7 @@ _PROJECTION = {
     # Growth & revenue
     "rev": 1, "ryq34": 1, "ryq39": 1,
     # Balance sheet (scale)
-    "bsa53": 1, "bsa1": 1, "bsa23": 1, "bsa54": 1, "bsa78": 1, "bsa2": 1, "bsa80": 1,
-    "bsa67": 1,
+    "bsa53": 1, "bsa1": 1, "bsa23": 1, "bsa54": 1, "bsa78": 1, "bsa2": 1, "bsa80": 1, "bsa67": 1,
     # Cashflow
     "cfa18": 1, "cfa26": 1, "cfa34": 1,
     # Chứng khoán — investment assets

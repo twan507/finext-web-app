@@ -56,7 +56,7 @@ async def finratios_stock(
         "finratios_stock",
         find_query=find_query,
         projection=projection,
-        sort=[("date", 1)],
+        sort=[("date", -1)],
     )
 
     return finratios_df.to_dict(orient="records")
