@@ -82,21 +82,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             changeFrequency: 'monthly',
             priority: 0.8,
         },
-        // ── Finext Learning ──
+        // ── Hướng dẫn sử dụng ──
         {
-            url: `${baseUrl}/learning/technical-analysis`,
+            url: `${baseUrl}/guides/overview`,
             lastModified: currentDate,
             changeFrequency: 'weekly',
             priority: 0.6,
         },
         {
-            url: `${baseUrl}/learning/fundamental-analysis`,
+            url: `${baseUrl}/guides/stock-screener`,
             lastModified: currentDate,
             changeFrequency: 'weekly',
             priority: 0.6,
         },
         {
-            url: `${baseUrl}/learning/cash-flow-analysis`,
+            url: `${baseUrl}/guides/charts-watchlist`,
             lastModified: currentDate,
             changeFrequency: 'weekly',
             priority: 0.6,

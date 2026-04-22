@@ -31,7 +31,7 @@ export default function robots(): MetadataRoute.Robots {
                     '/groups',
                     '/reports',
                     '/charts',
-                    '/learning/',
+                    '/guides/',
                     '/policies/',
                     '/support/',
                 ],

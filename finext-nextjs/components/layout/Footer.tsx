@@ -17,11 +17,11 @@ const footerLinks = {
     ],
   },
   hoTro: {
-    title: 'Finext Learning',
+    title: 'Hướng dẫn sử dụng',
     links: [
-      { label: 'Phân tích kỹ thuật', href: '/learning/technical-analysis' },
-      { label: 'Phân tích cơ bản', href: '/learning/fundamental-analysis' },
-      { label: 'Phân tích dòng tiền', href: '/learning/cash-flow-analysis' },
+      { label: 'Tổng quan tính năng', href: '/guides/overview' },
+      { label: 'Bộ lọc cổ phiếu', href: '/guides/stock-screener' },
+      { label: 'Biểu đồ & Watchlist', href: '/guides/charts-watchlist' },
     ],
   },
   huongDan: {
