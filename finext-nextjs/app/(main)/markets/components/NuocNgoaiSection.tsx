@@ -17,7 +17,8 @@ export default function NuocNgoaiSection() {
     const updateTime = useMarketUpdateTime();
 
     // ========== Polling via useQuery — refetch every 10s ==========
-    const { data: nnData = [] } = useQuery<NNTDRecord[]>({
+    // Stock-level data: dùng cho Treemap (per-ticker)
+    const { data: nnStockData = [] } = useQuery<NNTDRecord[]>({
         queryKey: ['markets', 'nntd_stock'],
         queryFn: async () => {
             const response = await apiClient<NNTDRecord[]>({
@@ -27,6 +28,25 @@ export default function NuocNgoaiSection() {
                 requireAuth: false,
             });
             return response.data || [];
+        },
+        refetchInterval: 10_000,
+        staleTime: 5_000,
+        refetchOnWindowFocus: false,
+    });
+
+    // Index-level data: dùng cho Summary Panel + Bar Chart
+    // Chỉ lấy 3 index: VNINDEX, HNXINDEX, UPINDEX
+    const INDEX_TICKERS = ['VNINDEX', 'HNXINDEX', 'UPINDEX'];
+    const { data: nnIndexData = [] } = useQuery<NNTDRecord[]>({
+        queryKey: ['markets', 'nntd_index'],
+        queryFn: async () => {
+            const response = await apiClient<NNTDRecord[]>({
+                url: '/api/v1/sse/rest/nntd_index',
+                method: 'GET',
+                queryParams: { nntd_type: 'NN' },
+                requireAuth: false,
+            });
+            return (response.data || []).filter((r) => INDEX_TICKERS.includes(r.ticker));
         },
         refetchInterval: 10_000,
         staleTime: 5_000,
@@ -51,7 +71,7 @@ export default function NuocNgoaiSection() {
                         minWidth: 0,
                     }}
                 >
-                    <NNTDSummaryPanel data={nnData} />
+                    <NNTDSummaryPanel data={nnIndexData} />
                 </Box>
 
                 {/* Bar Chart */}
@@ -61,7 +81,7 @@ export default function NuocNgoaiSection() {
                         minWidth: 0,
                     }}
                 >
-                    <NNTDBarChart data={nnData} />
+                    <NNTDBarChart data={nnIndexData} />
                 </Box>
             </Box>
 
@@ -72,7 +92,7 @@ export default function NuocNgoaiSection() {
                     description="Biểu đồ thể hiện giá trị mua/bán ròng của khối ngoại theo từng mã cổ phiếu"
                     updateTime={updateTime}
                 />
-                <NNTDTreemap data={nnData} />
+                <NNTDTreemap data={nnStockData} />
             </Box>
         </Box>
     );

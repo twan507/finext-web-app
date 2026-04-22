@@ -17,7 +17,8 @@ export default function TuDoanhSection() {
     const updateTime = useMarketUpdateTime();
 
     // ========== Polling via useQuery — refetch every 10s ==========
-    const { data: tdData = [] } = useQuery<NNTDRecord[]>({
+    // Stock-level data: dùng cho Treemap (per-ticker)
+    const { data: tdStockData = [] } = useQuery<NNTDRecord[]>({
         queryKey: ['markets', 'nntd_stock_td'],
         queryFn: async () => {
             const response = await apiClient<NNTDRecord[]>({
@@ -27,6 +28,25 @@ export default function TuDoanhSection() {
                 requireAuth: false,
             });
             return response.data || [];
+        },
+        refetchInterval: 10_000,
+        staleTime: 5_000,
+        refetchOnWindowFocus: false,
+    });
+
+    // Index-level data: dùng cho Summary Panel + Bar Chart
+    // Chỉ lấy 3 index: VNINDEX, HNXINDEX, UPINDEX
+    const INDEX_TICKERS = ['VNINDEX', 'HNXINDEX', 'UPINDEX'];
+    const { data: tdIndexData = [] } = useQuery<NNTDRecord[]>({
+        queryKey: ['markets', 'nntd_index_td'],
+        queryFn: async () => {
+            const response = await apiClient<NNTDRecord[]>({
+                url: '/api/v1/sse/rest/nntd_index',
+                method: 'GET',
+                queryParams: { nntd_type: 'TD' },
+                requireAuth: false,
+            });
+            return (response.data || []).filter((r) => INDEX_TICKERS.includes(r.ticker));
         },
         refetchInterval: 10_000,
         staleTime: 5_000,
@@ -51,7 +71,7 @@ export default function TuDoanhSection() {
                         minWidth: 0,
                     }}
                 >
-                    <NNTDSummaryPanel data={tdData} />
+                    <NNTDSummaryPanel data={tdIndexData} />
                 </Box>
 
                 {/* Bar Chart */}
@@ -61,7 +81,7 @@ export default function TuDoanhSection() {
                         minWidth: 0,
                     }}
                 >
-                    <NNTDBarChart data={tdData} title="Giá trị Tự Doanh mua ròng (tỷ)" />
+                    <NNTDBarChart data={tdIndexData} title="Giá trị Tự Doanh mua ròng (tỷ)" />
                 </Box>
             </Box>
 
@@ -72,7 +92,7 @@ export default function TuDoanhSection() {
                     description="Biểu đồ thể hiện giá trị mua/bán ròng của khối tự doanh theo từng mã cổ phiếu"
                     updateTime={updateTime}
                 />
-                <NNTDTreemap data={tdData} seriesName="TD mua ròng" />
+                <NNTDTreemap data={tdStockData} seriesName="TD mua ròng" />
             </Box>
         </Box>
     );

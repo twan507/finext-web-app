@@ -17,6 +17,7 @@ from app.crud.sse.home_hist_stock import home_hist_stock
 from app.crud.sse.home_today_stock import home_today_stock
 from app.crud.sse.home_nn_stock import home_nn_stock
 from app.crud.sse.nntd_stock import nntd_stock
+from app.crud.sse.nntd_index import nntd_index
 from app.crud.sse.home_today_industry import home_today_industry
 from app.crud.sse.home_hist_industry import home_hist_industry
 from app.crud.sse.home_history_trend import home_history_trend
@@ -67,6 +68,7 @@ SSE_QUERY_REGISTRY: Dict[str, Any] = {
     "home_today_stock": home_today_stock,
     "home_nn_stock": home_nn_stock,
     "nntd_stock": nntd_stock,
+    "nntd_index": nntd_index,
     # Industry queries
     "home_today_industry": home_today_industry,
     "home_hist_industry": home_hist_industry,
