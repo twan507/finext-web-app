@@ -30,7 +30,8 @@
       "Bash(xargs -0 grep -l \"Typography\")"
     ],
     "additionalDirectories": [
-      "D:\\twan_projects\\finext-web-app\\finext-nextjs\\app\\(main)\\sectors\\[sectorId]\\components"
+      "D:\\twan_projects\\finext-web-app\\finext-nextjs\\app\\(main)\\sectors\\[sectorId]\\components",
+      "d:\\twan-projects\\finext-web-app\\finext-nextjs\\public\\guides"
     ]
   }
 }

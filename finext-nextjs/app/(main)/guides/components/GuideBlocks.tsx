@@ -43,18 +43,28 @@ interface FigureProps {
   height?: number;
   caption?: string;
   sx?: object;
+  natural?: boolean;
 }
 
-export function Figure({ src, alt, width = 1600, height = 100, caption, sx }: FigureProps) {
+export function Figure({ src, alt, width = 1600, height = 100, caption, sx, natural = false }: FigureProps) {
   return (
     <Box sx={{ my: 1, ...sx }}>
-      <Image
-        src={src}
-        alt={alt}
-        width={width}
-        height={height}
-        style={{ width: '100%', height: 'auto', borderRadius: 8, display: 'block' }}
-      />
+      {natural ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt={alt}
+          style={{ maxWidth: '100%', height: 'auto', borderRadius: 8, display: 'block' }}
+        />
+      ) : (
+        <Image
+          src={src}
+          alt={alt}
+          width={width}
+          height={height}
+          style={{ width: '100%', height: 'auto', borderRadius: 8, display: 'block' }}
+        />
+      )}
       {caption && <Typography sx={captionSx}>{caption}</Typography>}
     </Box>
   );

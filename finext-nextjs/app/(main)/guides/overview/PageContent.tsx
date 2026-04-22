@@ -3,11 +3,9 @@
 import { Box, Typography } from '@mui/material';
 import GuideAccordion from '../components/GuideAccordion';
 import GuideSubAccordion from '../components/GuideSubAccordion';
-import GuideBreadcrumb from '../components/GuideBreadcrumb';
 import {
   bodyTextSx,
   smallTextSx,
-  pageTitleSx,
   Figure,
   Step,
   FeatureCard,
@@ -23,10 +21,6 @@ const stackSx = { display: 'flex', flexDirection: 'column', gap: 2, my: 2 } as c
 export default function OverviewContent() {
   return (
     <Box sx={{ py: spacing.xs }}>
-      <GuideBreadcrumb items={[]} />
-
-      <Typography sx={pageTitleSx}>Tổng quan các tính năng</Typography>
-
       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
 
         {/* ========================================================================
