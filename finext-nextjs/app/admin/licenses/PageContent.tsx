@@ -14,7 +14,6 @@ import {
     VerifiedUser as LicenseIcon,
     Add as AddIcon,
     EditSquare as EditIcon,
-    Delete as DeleteIcon,
     UnfoldMore as ExpandIcon,
     UnfoldLess as CollapseIcon,
     AddCircle as ActivateIcon,
@@ -74,11 +73,6 @@ export default function LicensesPage() {
     const [openCreateModal, setOpenCreateModal] = useState(false);
     const [openEditModal, setOpenEditModal] = useState(false);
     const [selectedLicense, setSelectedLicense] = useState<LicensePublic | null>(null);
-
-    // Delete Dialog state
-    const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-    const [licenseToDelete, setLicenseToDelete] = useState<LicensePublic | null>(null);
-    const [deleteLoading, setDeleteLoading] = useState(false);
 
     // Action dialogs state
     const [actionLicense, setActionLicense] = useState<LicensePublic | null>(null);
@@ -402,43 +396,6 @@ export default function LicensesPage() {
     };
 
     // Delete handlers
-    const handleOpenDeleteDialog = (license: LicensePublic) => {
-        setLicenseToDelete(license);
-        setOpenDeleteDialog(true);
-    };
-
-    const handleCloseDeleteDialog = () => {
-        setLicenseToDelete(null);
-        setOpenDeleteDialog(false);
-        setDeleteLoading(false);
-    };
-
-    const handleDeleteLicense = async () => {
-        if (!licenseToDelete) return;
-
-        setDeleteLoading(true);
-        setError(null);
-
-        try {
-            const response = await apiClient({
-                url: `/api/v1/licenses/${licenseToDelete.id}`,
-                method: 'DELETE',
-            });
-
-            if (response.status === 200) {
-                fetchLicenses(); // Refresh list
-                handleCloseDeleteDialog();
-            } else {
-                setError(response.message || 'Không thể xóa license.');
-            }
-        } catch (delError: any) {
-            setError(delError.message || 'Lỗi khi xóa license. License có thể đang được sử dụng.');
-            handleCloseDeleteDialog();
-        } finally {
-            setDeleteLoading(false);
-        }
-    };
-
     const handleAddLicense = () => {
         setOpenCreateModal(true);
     };
@@ -750,25 +707,6 @@ export default function LicensesPage() {
                                                             <EditIcon fontSize="small" />
                                                         </IconButton>
                                                     </Tooltip>
-
-                                                    <Tooltip title={license.is_active ? "Không thể xóa license đang hoạt động. Hủy kích hoạt trước." : "Xóa license"}>
-                                                        <span>
-                                                            <IconButton
-                                                                size="small"
-                                                                onClick={() => handleOpenDeleteDialog(license)}
-                                                                color="error"
-                                                                disabled={license.is_active}
-                                                                sx={{
-                                                                    minWidth: { xs: 32, sm: 'auto' },
-                                                                    width: { xs: 32, sm: 'auto' },
-                                                                    height: { xs: 32, sm: 'auto' },
-                                                                    opacity: license.is_active ? 0.5 : 1
-                                                                }}
-                                                            >
-                                                                <DeleteIcon fontSize="small" />
-                                                            </IconButton>
-                                                        </span>
-                                                    </Tooltip>
                                                 </Box>
                                             </TableCell>
                                         </TableRow>
@@ -1003,119 +941,6 @@ export default function LicensesPage() {
                         sx={{ minWidth: 140 }}
                     >
                         Xác nhận kích hoạt
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            {/* Delete Confirmation Dialog */}
-            <Dialog
-                open={openDeleteDialog}
-                onClose={!deleteLoading ? handleCloseDeleteDialog : undefined}
-                maxWidth="sm"
-                fullWidth
-            >
-                <DialogTitle sx={{ color: 'error.main', fontWeight: 'bold' }}>
-                    ⚠️ Xác nhận xóa license
-                </DialogTitle>
-                <DialogContent>
-                    {licenseToDelete && (
-                        <Box sx={{
-                            p: 2,
-                            bgcolor: theme.palette.component.modal.noteBackground,
-                            borderRadius: 1,
-                            border: '1px solid',
-                            borderColor: theme.palette.component.modal.noteBorder,
-                            mb: 2
-                        }}>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                                <Box>
-                                    <Typography variant="body2" color="text.secondary" fontWeight="bold">
-                                        License Key: {licenseToDelete.key}
-                                    </Typography>
-                                </Box>
-                                <Box>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Tên gói: {licenseToDelete.name}
-                                    </Typography>
-                                </Box>
-                                <Box>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Giá: {licenseToDelete.price.toLocaleString('vi-VN')} VNĐ
-                                    </Typography>
-                                </Box>                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Trạng thái:
-                                    </Typography>
-                                    <Chip
-                                        label={licenseToDelete.is_active ? 'Đang hoạt động' : 'Không hoạt động'}
-                                        color={licenseToDelete.is_active ? 'success' : 'default'}
-                                        size="small"
-                                        variant={licenseToDelete.is_active ? "filled" : "outlined"}
-                                        sx={{ fontWeight: 'medium' }}
-                                    />
-                                </Box>
-                            </Box>
-                        </Box>
-                    )}
-
-                    <Box sx={{
-                        p: 2,
-                        bgcolor: theme.palette.component.modal.noteBackground,
-                        borderRadius: 1,
-                        border: `1px solid ${theme.palette.component.modal.noteBorder}`,
-                        mb: 2,
-                        position: 'relative',
-                        '&::before': {
-                            content: '""',
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            height: '3px',
-                            bgcolor: 'error.main',
-                            borderRadius: borderRadiusTop('sm')
-                        }
-                    }}>
-                        <Typography
-                            variant="body2"
-                            fontWeight="bold"
-                            sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 1,
-                                color: 'error.main',
-                                mb: 1
-                            }}
-                        >
-                            ⚠️ Cảnh báo quan trọng:
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText, mb: 1 }}>
-                            • Hành động này không thể hoàn tác
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText, mb: 1 }}>
-                            • License sẽ bị xóa vĩnh viễn khỏi hệ thống
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: theme.palette.component.modal.noteText, mb: 1 }}>
-                            • Chỉ có thể xóa license đã được hủy kích hoạt
-                        </Typography>
-                    </Box>
-                </DialogContent>
-                <DialogActions sx={{ p: 3, pt: 1 }}>
-                    <Button
-                        onClick={handleCloseDeleteDialog}
-                        disabled={deleteLoading}
-                        variant="outlined"
-                    >
-                        Hủy
-                    </Button>
-                    <Button
-                        onClick={handleDeleteLicense}
-                        color="error"
-                        variant="contained"
-                        disabled={deleteLoading}
-                        startIcon={deleteLoading ? <CircularProgress size={20} /> : null}
-                    >
-                        {deleteLoading ? 'Đang xóa...' : 'Xóa license'}
                     </Button>
                 </DialogActions>
             </Dialog>

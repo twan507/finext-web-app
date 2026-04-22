@@ -1,8 +1,9 @@
 # finext-fastapi/app/routers/emails.py
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Dict
+
 
 from fastapi import APIRouter, HTTPException, Request
 
@@ -11,6 +12,7 @@ from app.utils.response_wrapper import StandardApiResponse, api_response_wrapper
 from app.schemas.emails import MessageResponse, ConsultationRequest, OpenAccountRequest, PlanInquiryRequest
 from app.core.config import MAIL_FROM
 
+_TZ_VN = timezone(timedelta(hours=7))
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -50,7 +52,7 @@ async def send_consultation_request(
 
     try:
         subject = f"[Finext] Yêu cầu trao đổi từ {request_data.customer_name}"
-        submitted_at = datetime.now().strftime("%H:%M %d/%m/%Y")
+        submitted_at = datetime.now(_TZ_VN).strftime("%H:%M %d/%m/%Y")
 
         template_body = {
             "customer_name": request_data.customer_name,
@@ -93,7 +95,7 @@ async def send_open_account_request(
 
     try:
         subject = f"[Finext] Mở tài khoản chứng khoán — {request_data.customer_name}"
-        submitted_at = datetime.now().strftime("%H:%M %d/%m/%Y")
+        submitted_at = datetime.now(_TZ_VN).strftime("%H:%M %d/%m/%Y")
 
         template_body = {
             "customer_name": request_data.customer_name,
@@ -135,7 +137,7 @@ async def send_plan_inquiry_request(
 
     try:
         subject = f"[Finext] Trao đổi gói thành viên — {request_data.customer_name}"
-        submitted_at = datetime.now().strftime("%H:%M %d/%m/%Y")
+        submitted_at = datetime.now(_TZ_VN).strftime("%H:%M %d/%m/%Y")
 
         template_body = {
             "customer_name": request_data.customer_name,

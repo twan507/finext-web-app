@@ -957,13 +957,45 @@ const UsersPage: React.FC = () => {
                   Rows per page:
                 </Box>
               }
+              SelectProps={{
+                sx: {
+                  '& .MuiSelect-select.MuiTablePagination-select': {
+                    fontSize: getResponsiveFontSize('xs'),
+                    minHeight: 0,
+                    py: 0.5,
+                  },
+                  '& .MuiSelect-icon': {
+                    fontSize: '1.1rem',
+                  },
+                },
+                MenuProps: {
+                  PaperProps: {
+                    sx: {
+                      mt: 0.5,
+                      borderRadius: 1.5,
+                      boxShadow: 3,
+                      minWidth: '72px !important',
+                      '& .MuiList-root': {
+                        py: 0.5,
+                      },
+                      '& .MuiMenuItem-root': {
+                        fontSize: getResponsiveFontSize('xs'),
+                        minHeight: 'auto',
+                        py: 0.75,
+                        px: 1.5,
+                        justifyContent: 'center',
+                      },
+                    },
+                  },
+                },
+              }}
               sx={{
                 '& .MuiTablePagination-toolbar': {
                   minHeight: { xs: 48, sm: 52 },
                   px: { xs: 1, sm: 2 }
                 },
                 '& .MuiTablePagination-selectLabel': {
-                  fontSize: getResponsiveFontSize('xxs'),
+                  fontSize: getResponsiveFontSize('xs'),
                   margin: 0
                 },
                 '& .MuiTablePagination-displayedRows': {
@@ -971,7 +1003,7 @@ const UsersPage: React.FC = () => {
                   margin: 0
                 },
                 '& .MuiTablePagination-select': {
-                  fontSize: getResponsiveFontSize('xxs')
+                  fontSize: getResponsiveFontSize('xs')
                 },
                 '& .MuiTablePagination-actions': {
                   '& .MuiIconButton-root': {

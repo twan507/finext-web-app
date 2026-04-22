@@ -8,6 +8,7 @@ import { OpenInNew as OpenInNewIcon } from '@mui/icons-material';
 import { RecentTransactionItem, formatCurrency } from '../types';
 import { borderRadius, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import Link from 'next/link';
+import { parseISO, format as formatDateFns } from 'date-fns';
 
 interface Props {
     transactions: RecentTransactionItem[];
@@ -38,10 +39,9 @@ function getTypeChip(type: string) {
 
 function formatDate(dateStr: string): string {
     try {
-        const d = new Date(dateStr);
-        const time = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-        const date = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        return `${time} ${date}`;
+        const utcDate = parseISO(dateStr);
+        const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+        return formatDateFns(gmt7Date, 'HH:mm dd/MM/yyyy');
     } catch {
         return dateStr;
     }
