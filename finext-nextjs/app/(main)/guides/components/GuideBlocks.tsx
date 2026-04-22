@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { Box, Typography, useTheme } from '@mui/material';
+import { Box, Collapse, Typography, useTheme } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { getResponsiveFontSize, fontWeight, getGlassCard } from 'theme/tokens';
 
@@ -106,10 +106,14 @@ interface StepProps {
   num: number;
   title: string;
   children: React.ReactNode;
+  media?: React.ReactNode;
 }
 
-export function Step({ num, title, children }: StepProps) {
+export function Step({ num, title, children, media }: StepProps) {
   const theme = useTheme();
+  const [open, setOpen] = React.useState(false);
+  const hasMedia = Boolean(media);
+
   return (
     <Box sx={{ display: 'flex', gap: 2, my: 2.5 }}>
       <Box
@@ -131,10 +135,41 @@ export function Step({ num, title, children }: StepProps) {
         {num}
       </Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography sx={{ ...bodyTextSx, fontWeight: fontWeight.semibold, mb: 1 }}>
-          {title}
-        </Typography>
+        <Box
+          onClick={hasMedia ? () => setOpen((v) => !v) : undefined}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            cursor: hasMedia ? 'pointer' : 'default',
+            userSelect: hasMedia ? 'none' : 'auto',
+            minHeight: 32,
+            mb: 1,
+          }}
+        >
+          <Typography sx={{ ...bodyTextSx, fontWeight: fontWeight.semibold, flex: 1 }}>
+            {title}
+          </Typography>
+          {hasMedia && (
+            <Icon
+              icon="mdi:chevron-down"
+              width={22}
+              height={22}
+              style={{
+                color: theme.palette.text.secondary,
+                flexShrink: 0,
+                transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s ease',
+              }}
+            />
+          )}
+        </Box>
         <Box sx={bodyTextSx}>{children}</Box>
+        {hasMedia && (
+          <Collapse in={open} timeout="auto" unmountOnExit>
+            <Box sx={{ mt: 1 }}>{media}</Box>
+          </Collapse>
+        )}
       </Box>
     </Box>
   );
@@ -155,6 +190,9 @@ interface FeatureCardProps {
 export function FeatureCard({ title, icon, image, children }: FeatureCardProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const [open, setOpen] = React.useState(false);
+  const hasImage = Boolean(image);
+
   return (
     <Box
       sx={{
@@ -166,18 +204,44 @@ export function FeatureCard({ title, icon, image, children }: FeatureCardProps) 
         gap: 1,
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Box
+        onClick={hasImage ? () => setOpen((v) => !v) : undefined}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          cursor: hasImage ? 'pointer' : 'default',
+          userSelect: hasImage ? 'none' : 'auto',
+        }}
+      >
         {icon && (
           <Icon icon={icon} width={20} height={20} style={{ color: theme.palette.primary.main }} />
         )}
-        <Typography sx={{ ...bodyTextSx, fontWeight: fontWeight.semibold }}>
+        <Typography sx={{ ...bodyTextSx, fontWeight: fontWeight.semibold, flex: 1 }}>
           {title}
         </Typography>
+        {hasImage && (
+          <Icon
+            icon="mdi:chevron-down"
+            width={20}
+            height={20}
+            style={{
+              color: theme.palette.text.secondary,
+              flexShrink: 0,
+              transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 0.2s ease',
+            }}
+          />
+        )}
       </Box>
       <Typography component="div" sx={smallTextSx}>
         {children}
       </Typography>
-      {image && <Box sx={{ mt: 0.5 }}>{image}</Box>}
+      {hasImage && (
+        <Collapse in={open} timeout="auto" unmountOnExit>
+          <Box sx={{ mt: 0.5 }}>{image}</Box>
+        </Collapse>
+      )}
     </Box>
   );
 }
@@ -196,6 +260,9 @@ interface CalloutProps {
 export function Callout({ icon, title, children, image }: CalloutProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const [open, setOpen] = React.useState(false);
+  const hasImage = Boolean(image);
+
   return (
     <Box
       sx={{
@@ -206,7 +273,16 @@ export function Callout({ icon, title, children, image }: CalloutProps) {
         borderLeft: `3px solid ${theme.palette.primary.main}`,
       }}
     >
-      <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
+      <Box
+        onClick={hasImage ? () => setOpen((v) => !v) : undefined}
+        sx={{
+          display: 'flex',
+          gap: 1.5,
+          alignItems: 'flex-start',
+          cursor: hasImage ? 'pointer' : 'default',
+          userSelect: hasImage ? 'none' : 'auto',
+        }}
+      >
         <Icon
           icon={icon}
           width={22}
@@ -221,8 +297,26 @@ export function Callout({ icon, title, children, image }: CalloutProps) {
             {children}
           </Typography>
         </Box>
+        {hasImage && (
+          <Icon
+            icon="mdi:chevron-down"
+            width={22}
+            height={22}
+            style={{
+              color: theme.palette.text.secondary,
+              flexShrink: 0,
+              marginTop: 2,
+              transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 0.2s ease',
+            }}
+          />
+        )}
       </Box>
-      {image && <Box sx={{ mt: 1.5 }}>{image}</Box>}
+      {hasImage && (
+        <Collapse in={open} timeout="auto" unmountOnExit>
+          <Box sx={{ mt: 1.5 }}>{image}</Box>
+        </Collapse>
+      )}
     </Box>
   );
 }

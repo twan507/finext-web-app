@@ -72,7 +72,8 @@ export default function GuideAccordion({ title, icon, defaultExpanded = false, c
         sx={{
           px: 0,
           pt: 0,
-          pb: 2,
+          pb: 3,
+          mb: 1.5,
           pl: { xs: 0, md: 3.5 },
           borderLeft: { xs: 'none', md: `2px solid ${theme.palette.primary.main}` },
           ml: { xs: 0, md: 1 },
