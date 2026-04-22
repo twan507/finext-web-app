@@ -399,7 +399,7 @@ export default function MarketsContent() {
   const renderActiveSection = () => {
     switch (activeTab) {
       case 'volatility':
-        return <BienDongSection />;
+        return <BienDongSection todayAllData={todayAllData} />;
       case 'cashflow':
         return <DongTienSection histIndexData={histIndexData} todayAllData={todayAllData} itdAllData={itdAllData} />;
       case 'valuation':

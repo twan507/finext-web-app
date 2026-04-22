@@ -14,19 +14,17 @@ import { useMarketUpdateTime } from '../../../../hooks/useMarketUpdateTime';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface ItdRecord {
+interface TodayIndexRecord {
     ticker: string;
-    ticker_name?: string;
-    date: string;
-    close: number;
-    volume: number;
-    diff?: number;
-    pct_change?: number;
     vsi?: number;
 }
 
+interface BienDongSectionProps {
+    todayAllData: Record<string, TodayIndexRecord[]>;
+}
 
-export default function BienDongSection() {
+
+export default function BienDongSection({ todayAllData }: BienDongSectionProps) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'));
@@ -35,13 +33,9 @@ export default function BienDongSection() {
 
     const isMountedRef = useRef<boolean>(true);
     const todayStockSseRef = useRef<{ unsubscribe: () => void } | null>(null);
-    const itdIndexSseRef = useRef<{ unsubscribe: () => void } | null>(null);
 
     // SSE state: home_today_stock
     const [stockData, setStockData] = useState<StockData[]>([]);
-
-    // SSE state: home_itd_index (for VSI chart)
-    const [itdData, setItdData] = useState<ItdRecord[]>([]);
 
     // ========== SSE - Today Stock Data ==========
     useEffect(() => {
@@ -79,43 +73,6 @@ export default function BienDongSection() {
         };
     }, []);
 
-    // ========== SSE - ITD Index Data (for VSI) ==========
-    useEffect(() => {
-        isMountedRef.current = true;
-
-        if (itdIndexSseRef.current) {
-            itdIndexSseRef.current.unsubscribe();
-            itdIndexSseRef.current = null;
-        }
-
-        const requestProps: ISseRequest = {
-            url: '/api/v1/sse/stream',
-            queryParams: { keyword: 'home_itd_index', ticker: 'FNXINDEX' },
-        };
-
-        itdIndexSseRef.current = sseClient<ItdRecord[]>(
-            requestProps,
-            {
-                onOpen: () => { },
-                onData: (receivedData) => {
-                    if (isMountedRef.current && receivedData && Array.isArray(receivedData)) {
-                        const filtered = receivedData.filter((r) => r.ticker === 'FNXINDEX');
-                        setItdData(filtered);
-                    }
-                },
-                onError: (err) => {
-                    if (isMountedRef.current) console.warn('[SSE BienDong ITD] Error:', err.message);
-                },
-                onClose: () => { },
-            },
-        );
-
-        return () => {
-            isMountedRef.current = false;
-            if (itdIndexSseRef.current) itdIndexSseRef.current.unsubscribe();
-        };
-    }, []);
-
     // ========== DATA PROCESSING ==========
 
     // Breadth: count by pct_change
@@ -130,12 +87,11 @@ export default function BienDongSection() {
 
     // ========== VSI GAUGE DATA ==========
     const vsiLastValue = useMemo(() => {
-        const sorted = [...itdData]
-            .filter((r) => typeof r.vsi === 'number' && !isNaN(r.vsi))
-            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-        if (sorted.length === 0) return null;
-        return parseFloat(((sorted[sorted.length - 1].vsi ?? 0) * 100).toFixed(2));
-    }, [itdData]);
+        const fnxRecord = todayAllData['FNXINDEX']?.[0];
+        const vsi = fnxRecord?.vsi;
+        if (typeof vsi !== 'number' || isNaN(vsi)) return null;
+        return parseFloat((vsi * 100).toFixed(2));
+    }, [todayAllData]);
 
     // ========== Chart title component ==========
     // (replaced by ChartSectionTitle)

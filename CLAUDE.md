@@ -19,6 +19,69 @@ Web app: Python backend + TypeScript/Node.js frontend.
 
 ---
 
+# Core Principles (Karpathy-style)
+
+Nền tảng hành vi áp dụng cho **mọi task**, trước khi đi vào protocol cụ thể bên dưới.
+Tradeoff: bias theo hướng cẩn trọng hơn tốc độ. Với task nhỏ, dùng judgment.
+
+## 1. Think Before Coding
+
+**Không giả định. Không giấu sự mơ hồ. Nêu rõ tradeoff.**
+
+Trước khi implement:
+- Nêu assumption của bạn một cách explicit. Nếu không chắc, hãy hỏi.
+- Nếu có nhiều cách hiểu, trình bày tất cả — không tự chọn trong im lặng.
+- Nếu có cách đơn giản hơn, nói ra. Push back khi hợp lý.
+- Nếu có điều không rõ, dừng lại. Gọi tên điều đó. Hỏi.
+
+## 2. Simplicity First
+
+**Ít code nhất để giải quyết vấn đề. Không viết thứ suy đoán.**
+
+- Không thêm feature ngoài phạm vi yêu cầu.
+- Không abstraction cho code chỉ dùng 1 lần.
+- Không "flexibility" hay "configurability" không được yêu cầu.
+- Không error handling cho tình huống không thể xảy ra.
+- Nếu viết 200 dòng mà có thể 50, viết lại.
+
+Tự hỏi: "Senior engineer có nói cái này over-complicated không?" Nếu có, đơn giản hóa.
+
+## 3. Surgical Changes
+
+**Chỉ chạm cái bắt buộc phải chạm. Chỉ dọn dẹp thứ chính mình bày ra.**
+
+Khi sửa code hiện có:
+- Không "cải thiện" code, comment, hoặc formatting xung quanh.
+- Không refactor thứ không hỏng.
+- Theo style hiện có, dù bạn sẽ viết khác.
+- Nếu thấy dead code không liên quan, nhắc — đừng xóa.
+
+Khi thay đổi của bạn tạo ra orphan:
+- Xóa import/variable/function mà thay đổi CỦA BẠN làm unused.
+- Không xóa dead code đã tồn tại từ trước trừ khi được yêu cầu.
+
+Test: Mỗi dòng đã sửa phải truy ngược được về yêu cầu của user.
+
+## 4. Goal-Driven Execution
+
+**Định nghĩa success criteria. Lặp cho đến khi verified.**
+
+Biến task thành goal có thể verify được:
+- "Add validation" → "Viết test cho invalid input, rồi làm nó pass"
+- "Fix the bug" → "Viết test tái hiện bug, rồi làm nó pass"
+- "Refactor X" → "Đảm bảo test pass cả trước và sau"
+
+Với task nhiều bước, nêu plan ngắn:
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
+
+Success criteria mạnh cho phép loop độc lập. Criteria yếu ("làm nó work") cần liên tục clarify.
+
+---
+
 # MiniMax Working Rules
 
 ## Context Management (Critical)
