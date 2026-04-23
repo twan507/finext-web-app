@@ -14,8 +14,8 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { useSignInModal } from '@/hooks/useSignInModal';
 import SignInModal from '@/app/(auth)/components/LoginModal';
 
-const BAR_HEIGHT = 44;
-const FAB_SIZE = 50;
+const BAR_HEIGHT = 56;
+const FAB_SIZE = 60;
 const CURVE_DEPTH = 26; // Độ sâu lõm notch
 const SCROLL_THRESHOLD = 10;
 

@@ -20,8 +20,8 @@ const footerLinks = {
     title: 'Hướng dẫn sử dụng',
     links: [
       { label: 'Tổng quan tính năng', href: '/guides/overview' },
-      { label: 'Bộ lọc cổ phiếu', href: '/guides/stock-screener' },
       { label: 'Biểu đồ và Watchlist', href: '/guides/charts-watchlist' },
+      { label: 'Bộ lọc cổ phiếu', href: '/guides/stock-screener' },
     ],
   },
   huongDan: {

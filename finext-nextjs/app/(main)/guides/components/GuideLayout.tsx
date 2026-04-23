@@ -12,8 +12,8 @@ const SECTION_HREF = '/guides/overview';
 
 const GUIDE_TABS: { label: string; href: string }[] = [
   { label: 'Tổng quan tính năng', href: '/guides/overview' },
-  { label: 'Bộ lọc cổ phiếu', href: '/guides/stock-screener' },
   { label: 'Biểu đồ và Watchlist', href: '/guides/charts-watchlist' },
+  { label: 'Bộ lọc cổ phiếu', href: '/guides/stock-screener' },
 ];
 
 interface GuideLayoutProps {
@@ -101,6 +101,8 @@ export default function GuideLayout({ children }: GuideLayoutProps) {
                 py: 0.75,
                 px: 1.5,
                 textTransform: 'none',
+                textAlign: 'center',
+                lineHeight: 1.3,
                 fontSize: getResponsiveFontSize('sm'),
                 fontWeight: isActive ? fontWeight.semibold : fontWeight.medium,
                 borderRadius: 1.5,

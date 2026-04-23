@@ -47,8 +47,8 @@ interface NavItem {
 
 const navigationStructure: NavItem[] = [
   { text: 'Biểu đồ kĩ thuật', href: '/charts', icon: <CandlestickChartOutlined /> },
-  { text: 'Bộ lọc thông minh', href: '/stocks', icon: <FilterAltOutlined />, exactMatch: true },
   { text: 'Danh sách theo dõi', href: '/watchlist', icon: <StarBorderPurple500Outlined /> },
+  { text: 'Bộ lọc thông minh', href: '/stocks', icon: <FilterAltOutlined />, exactMatch: true },
 ];
 
 // Top navigation tabs (like in Simplize)
@@ -1014,7 +1014,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               flexDirection: 'column',
               height: `calc(100dvh - ${layoutTokens.appBarHeight}px - env(titlebar-area-height, 0px))`,
               overflow: 'hidden',
-              pb: { xs: '44px', md: 0 },
+              pb: { xs: '56px', md: 0 },
             }}
           >
             {children}
