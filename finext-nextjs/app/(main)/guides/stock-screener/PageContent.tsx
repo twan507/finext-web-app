@@ -188,7 +188,48 @@ export default function StockScreenerContent() {
         </GuideAccordion>
 
         {/* ========================================================================
-            ACCORDION 4: TÙY CHỈNH CỘT HIỂN THỊ
+            ACCORDION 4: ĐỔI VIEW BẢNG KẾT QUẢ
+        ======================================================================== */}
+        <GuideAccordion title="Đổi góc nhìn bảng kết quả" icon="mdi:view-dashboard-outline">
+          <Typography sx={bodyTextSx} paragraph>
+            Cùng một tập mã có thể được đọc theo nhiều góc nhìn khác nhau tuỳ vào câu
+            hỏi đang cần trả lời. Thay vì đổi cột thủ công mỗi lần chuyển chủ đề phân
+            tích, các góc nhìn dựng sẵn bố trí cột theo từng mục đích — chọn tab tương
+            ứng là bảng tự tái cấu trúc.
+          </Typography>
+
+          <GuideSubAccordion title="Các góc nhìn dựng sẵn" icon="mdi:tab">
+            <InfoBox>
+              Tổng quan cung cấp cái nhìn chung với các chỉ tiêu cơ bản, phù hợp khi
+              mới bắt đầu lọc và chưa xác định rõ chủ đề. Dòng tiền đặt trọng tâm vào
+              các chỉ tiêu cường độ dòng tiền và xếp hạng — góc nhìn quen thuộc với
+              nhà đầu tư theo trường phái dòng tiền. Vùng kỹ thuật tập trung vào các
+              cột phân loại vị trí giá theo chỉ báo, phù hợp cho giao dịch theo tín
+              hiệu kỹ thuật. Tuỳ chỉnh là góc nhìn tự thiết lập.
+            </InfoBox>
+            <Figure
+              src="/guides/stock-screener/views-tabs.png"
+              alt="Các tab góc nhìn dựng sẵn"
+              natural
+            />
+          </GuideSubAccordion>
+
+          <GuideSubAccordion title="Góc nhìn tuỳ chỉnh" icon="mdi:tune">
+            <InfoBox>
+              Bảng được lưu theo lựa chọn cá nhân — mở lại trang vào phiên sau vẫn giữ
+              nguyên cấu hình, không cần thiết lập lại. Phù hợp khi bạn đã có một bộ
+              cột ưa thích và muốn quay lại đúng bảng đó mỗi lần mở bộ lọc.
+            </InfoBox>
+            <Figure
+              src="/guides/stock-screener/views-custom.png"
+              alt="Góc nhìn tuỳ chỉnh với biểu tượng cấu hình"
+              natural
+            />
+          </GuideSubAccordion>
+        </GuideAccordion>
+
+        {/* ========================================================================
+            ACCORDION 5: TÙY CHỈNH CỘT HIỂN THỊ
         ======================================================================== */}
         <GuideAccordion title="Tùy chỉnh cột hiển thị" icon="mdi:table-column">
           <Typography sx={bodyTextSx} paragraph>
@@ -236,47 +277,6 @@ export default function StockScreenerContent() {
             <Figure
               src="/guides/stock-screener/columns-reset.png"
               alt="Khôi phục cột mặc định"
-              natural
-            />
-          </GuideSubAccordion>
-        </GuideAccordion>
-
-        {/* ========================================================================
-            ACCORDION 5: ĐỔI VIEW BẢNG KẾT QUẢ
-        ======================================================================== */}
-        <GuideAccordion title="Đổi góc nhìn bảng kết quả" icon="mdi:view-dashboard-outline">
-          <Typography sx={bodyTextSx} paragraph>
-            Cùng một tập mã có thể được đọc theo nhiều góc nhìn khác nhau tuỳ vào câu
-            hỏi đang cần trả lời. Thay vì đổi cột thủ công mỗi lần chuyển chủ đề phân
-            tích, các góc nhìn dựng sẵn bố trí cột theo từng mục đích — chọn tab tương
-            ứng là bảng tự tái cấu trúc.
-          </Typography>
-
-          <GuideSubAccordion title="Các góc nhìn dựng sẵn" icon="mdi:tab">
-            <InfoBox>
-              Tổng quan cung cấp cái nhìn chung với các chỉ tiêu cơ bản, phù hợp khi
-              mới bắt đầu lọc và chưa xác định rõ chủ đề. Dòng tiền đặt trọng tâm vào
-              các chỉ tiêu cường độ dòng tiền và xếp hạng — góc nhìn quen thuộc với
-              nhà đầu tư theo trường phái dòng tiền. Vùng kỹ thuật tập trung vào các
-              cột phân loại vị trí giá theo chỉ báo, phù hợp cho giao dịch theo tín
-              hiệu kỹ thuật. Tuỳ chỉnh là góc nhìn tự thiết lập.
-            </InfoBox>
-            <Figure
-              src="/guides/stock-screener/views-tabs.png"
-              alt="Các tab góc nhìn dựng sẵn"
-              natural
-            />
-          </GuideSubAccordion>
-
-          <GuideSubAccordion title="Góc nhìn tuỳ chỉnh" icon="mdi:tune">
-            <InfoBox>
-              Bảng được lưu theo lựa chọn cá nhân — mở lại trang vào phiên sau vẫn giữ
-              nguyên cấu hình, không cần thiết lập lại. Phù hợp khi bạn đã có một bộ
-              cột ưa thích và muốn quay lại đúng bảng đó mỗi lần mở bộ lọc.
-            </InfoBox>
-            <Figure
-              src="/guides/stock-screener/views-custom.png"
-              alt="Góc nhìn tuỳ chỉnh với biểu tượng cấu hình"
               natural
             />
           </GuideSubAccordion>

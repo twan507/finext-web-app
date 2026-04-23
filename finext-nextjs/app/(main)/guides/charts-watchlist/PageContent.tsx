@@ -59,153 +59,65 @@ export default function ChartsWatchlistContent() {
             một cú bấm, không phải đi sâu vào menu cấu hình.
           </Typography>
 
-          <GuideSubAccordion title="Tìm và đổi mã" icon="mdi:magnify">
+          <GuideSubAccordion title="Các nút điều khiển biểu đồ" icon="mdi:tune-variant">
             <InfoBox>
-              Gõ mã chứng khoán hoặc tên doanh nghiệp, hệ thống gợi ý ngay các kết quả
-              phù hợp — dùng phím mũi tên di chuyển trong danh sách gợi ý, Enter để
-              chọn. Khi đổi mã, biểu đồ và các bảng thông tin phụ cập nhật đồng thời
-              để bức tranh luôn nhất quán theo đối tượng đang xem.
+              <Box component="span" sx={{ display: 'block', mb: 1 }}>
+                <strong>Ô tìm mã:</strong> gõ mã chứng khoán hoặc tên doanh nghiệp,
+                dropdown gợi ý mở ngay các kết quả phù hợp. Khi đổi mã, biểu đồ và
+                các bảng thông tin phụ cùng cập nhật để bức tranh luôn nhất quán theo
+                đối tượng đang xem.
+              </Box>
+              <Box component="span" sx={{ display: 'block', mb: 1 }}>
+                <strong>Khung thời gian:</strong> ba khung cơ bản — ngày cho diễn biến
+                gần và các mẫu hình ngắn hạn, tuần lọc bớt nhiễu để nhìn xu hướng
+                trung hạn, tháng cho góc nhìn dài hạn đánh giá chu kỳ nhiều năm. Các
+                chỉ báo tự tính lại theo khung mới.
+              </Box>
+              <Box component="span" sx={{ display: 'block', mb: 1 }}>
+                <strong>Loại biểu đồ:</strong> nến giữ đủ bốn giá trị mở cửa, cao nhất,
+                thấp nhất, đóng cửa của mỗi phiên — nền tảng để đọc các mẫu hình nến.
+                Đường chỉ nối các điểm đóng cửa, mặt đồ thị gọn hơn, hợp khi quan sát
+                xu hướng dài hạn hay so sánh nhiều mã.
+              </Box>
+              <Box component="span" sx={{ display: 'block' }}>
+                <strong>Điều chỉnh hiển thị:</strong> bật tắt từng thành phần — các
+                đường chỉ báo trên đồ thị, thanh khối lượng phía dưới, bảng chú thích
+                chỉ báo, nhãn giá bên phải. Tắt bớt khi chỉ cần nhìn xu hướng thuần
+                tuý, bật đủ khi phân tích chi tiết có nhiều lớp chồng nhau.
+              </Box>
             </InfoBox>
             <Figure
-              src="/guides/charts-watchlist/chart-toolbar-search.png"
-              alt="Ô tìm và đổi mã"
+              src="/guides/charts-watchlist/chart-toolbar-controls.png"
+              alt="Các nút điều khiển biểu đồ: tìm mã, khung thời gian, loại biểu đồ, toggle hiển thị"
               natural
             />
           </GuideSubAccordion>
 
-          <GuideSubAccordion title="Khung thời gian" icon="mdi:calendar-range">
+          <GuideSubAccordion title="Bố cục và bảng phụ" icon="mdi:view-dashboard-outline">
             <InfoBox>
-              Chuyển qua lại giữa khung ngày, tuần, và tháng tuỳ theo góc nhìn đang
-              cần. Khung ngày phù hợp để phân tích các diễn biến gần nhất và các mẫu
-              hình ngắn hạn. Khung tuần lọc bớt nhiễu để nhìn xu hướng trung hạn. Khung
-              tháng cho góc nhìn dài hạn, hữu ích khi đánh giá chu kỳ nhiều năm hay
-              các vùng hỗ trợ kháng cự lịch sử. Các chỉ báo tự tính lại theo khung mới
-              được chọn.
+              <Box component="span" sx={{ display: 'block', mb: 1 }}>
+                <strong>Chế độ toàn màn hình:</strong> biểu đồ mở rộng ra toàn bộ màn
+                hình, che menu và bảng phụ để dành không gian tối đa cho việc đọc đồ
+                thị. Phù hợp khi phân tích trên màn hình nhỏ hoặc trình bày biểu đồ
+                trong buổi họp nhóm.
+              </Box>
+              <Box component="span" sx={{ display: 'block' }}>
+                <strong>Mở và đóng bảng phụ:</strong> ba bảng có thể hiển thị cạnh
+                biểu đồ — chi tiết mã kèm tin tức, bảng chỉ báo kỹ thuật, và watchlist
+                để chuyển mã nhanh. Bật bảng nào cần, tắt bảng nào chưa dùng đến,
+                không gian biểu đồ tự điều chỉnh để tận dụng phần trống.
+              </Box>
             </InfoBox>
             <Figure
-              src="/guides/charts-watchlist/chart-toolbar-timeframe.png"
-              alt="Nút chuyển khung thời gian"
-              natural
-            />
-          </GuideSubAccordion>
-
-          <GuideSubAccordion title="Loại biểu đồ" icon="mdi:chart-line-variant">
-            <InfoBox>
-              Biểu đồ nến giữ lại đầy đủ bốn giá trị quan trọng của mỗi phiên — mở
-              cửa, cao nhất, thấp nhất, đóng cửa — cho phép đọc các mẫu hình nến, một
-              trong những công cụ được dùng nhiều nhất trong phân tích kỹ thuật. Biểu
-              đồ đường chỉ nối các điểm đóng cửa, mặt đồ thị gọn hơn, phù hợp khi
-              muốn quan sát xu hướng dài hạn hay so sánh diễn biến giữa nhiều mã mà
-              không bị chi tiết trong phiên làm rối.
-            </InfoBox>
-            <Figure
-              src="/guides/charts-watchlist/chart-toolbar-type.png"
-              alt="Chuyển giữa biểu đồ nến và đường"
-              natural
-            />
-          </GuideSubAccordion>
-
-          <GuideSubAccordion title="Điều chỉnh hiển thị" icon="mdi:eye-outline">
-            <InfoBox>
-              Có thể bật tắt từng thành phần của biểu đồ — các đường chỉ báo đang vẽ
-              trên đồ thị, thanh khối lượng ở phía dưới, bảng chú thích chỉ báo, cùng
-              với cách hiển thị nhãn giá bên phải. Khi chỉ cần nhìn xu hướng thuần
-              tuý, tắt bớt để đồ thị sạch. Khi phân tích chi tiết có nhiều chỉ báo
-              chồng lớp, bật đủ để không phải đoán.
-            </InfoBox>
-            <Figure
-              src="/guides/charts-watchlist/chart-toolbar-display.png"
-              alt="Các nút điều chỉnh hiển thị"
-              natural
-            />
-          </GuideSubAccordion>
-
-          <GuideSubAccordion title="Chế độ toàn màn hình" icon="mdi:fullscreen">
-            <InfoBox>
-              Biểu đồ mở rộng ra toàn bộ màn hình, che tất cả menu và bảng phụ để
-              dành không gian tối đa cho việc đọc đồ thị. Phù hợp khi phân tích trên
-              màn hình nhỏ hoặc khi muốn trình bày biểu đồ trong buổi họp nhóm.
-            </InfoBox>
-            <Figure
-              src="/guides/charts-watchlist/chart-toolbar-fullscreen.png"
-              alt="Chế độ toàn màn hình"
-              natural
-            />
-          </GuideSubAccordion>
-
-          <GuideSubAccordion title="Mở và đóng các bảng phụ" icon="mdi:dock-right">
-            <InfoBox>
-              Ba bảng phụ có thể hiển thị cạnh biểu đồ: bảng chi tiết với thông tin
-              nhanh về mã và tin tức liên quan, bảng chỉ báo để bật tắt các công cụ kỹ
-              thuật, và bảng watchlist để chuyển mã nhanh giữa các mã đang theo dõi.
-              Bật bảng nào cần, tắt bảng nào chưa dùng đến — không gian biểu đồ tự
-              điều chỉnh để tận dụng phần trống.
-            </InfoBox>
-            <Figure
-              src="/guides/charts-watchlist/chart-toolbar-panels.png"
-              alt="Các nút mở đóng bảng phụ"
+              src="/guides/charts-watchlist/chart-toolbar-layout.png"
+              alt="Nút toàn màn hình và các nút mở đóng bảng phụ"
               natural
             />
           </GuideSubAccordion>
         </GuideAccordion>
-
+        
         {/* ------------------------------------------------------------------ */}
-        <GuideAccordion title="Bảng chỉ báo" icon="mdi:chart-bell-curve">
-          <Typography sx={bodyTextSx} paragraph>
-            Bảng chỉ báo là nơi chọn công cụ kỹ thuật để vẽ lên đồ thị — từ các đường
-            trung bình động quen thuộc đến các mức Fibonacci, các vùng Volume Profile
-            và các điểm Pivot theo nhiều khung thời gian khác nhau. Lựa chọn của bạn
-            được lưu lại giữa các phiên, không phải bật tắt lại mỗi lần mở trang.
-          </Typography>
-
-          <GuideSubAccordion title="Các nhóm chỉ báo" icon="mdi:folder-outline">
-            <InfoBox>
-              Các chỉ báo được phân theo nhóm chức năng để dễ tìm — đường trung bình
-              cho góc nhìn xu hướng, Pivot Point cho các mốc xoay chiều tiềm năng,
-              Fibonacci cho các mức điều chỉnh và mở rộng, Volume Profile cho các vùng
-              giá có khối lượng giao dịch lớn trong lịch sử. Mở từng nhóm để thấy các
-              biến thể bên trong.
-            </InfoBox>
-            <Figure
-              src="/guides/charts-watchlist/indicators-groups.png"
-              alt="Các nhóm chỉ báo kỹ thuật"
-              natural
-            />
-          </GuideSubAccordion>
-
-          <GuideSubAccordion title="Bật tắt chỉ báo" icon="mdi:toggle-switch-outline">
-            <InfoBox>
-              Trạng thái bật tắt của mỗi chỉ báo được hiển thị rõ bằng dấu hiệu thị
-              giác — đang bật hay đang tắt nhìn là biết. Bấm để đổi trạng thái, đồ
-              thị phản hồi ngay lập tức. Khi đồ thị đã quá nhiều đường chồng chéo,
-              dùng chức năng xoá toàn bộ để trở lại nền sạch, hoặc khôi phục mặc
-              định để về bộ chỉ báo cơ bản thường dùng.
-            </InfoBox>
-            <Figure
-              src="/guides/charts-watchlist/indicators-toggle.png"
-              alt="Bật tắt chỉ báo"
-              natural
-            />
-          </GuideSubAccordion>
-
-          <GuideSubAccordion title="Chỉ báo theo nhiều khung thời gian" icon="mdi:calendar-multiple">
-            <InfoBox>
-              Một chỉ báo có thể được tính trên nhiều khung khác nhau — Pivot Point
-              tuần, Pivot Point tháng, Pivot Point quý, Pivot Point năm đều có ý
-              nghĩa riêng. Khi một mức giá trùng với nhiều khung cùng lúc, đó thường
-              là điểm có độ tin cậy cao hơn so với một mức chỉ xuất hiện ở một khung
-              đơn lẻ. Bật vài khung cùng lúc để tìm các điểm đồng thuận đa khung.
-            </InfoBox>
-            <Figure
-              src="/guides/charts-watchlist/indicators-timeframes.png"
-              alt="Chỉ báo theo nhiều khung thời gian"
-              natural
-            />
-          </GuideSubAccordion>
-        </GuideAccordion>
-
-        {/* ------------------------------------------------------------------ */}
-        <GuideAccordion title="Bảng tin tức" icon="mdi:newspaper">
+        <GuideAccordion title="Bảng thông tin" icon="mdi:newspaper">
           <Typography sx={bodyTextSx} paragraph>
             Bảng phụ đặt cạnh biểu đồ có hai tab — một tab cho bức tranh tóm tắt về
             mã đang xem, và một tab cho các bài viết liên quan. Đặt ngay cạnh đồ thị
@@ -246,6 +158,61 @@ export default function ChartsWatchlistContent() {
           </GuideSubAccordion>
         </GuideAccordion>
       </Box>
+
+      {/* ------------------------------------------------------------------ */}
+      <GuideAccordion title="Bảng chỉ báo" icon="mdi:chart-bell-curve">
+        <Typography sx={bodyTextSx} paragraph>
+          Bảng chỉ báo là nơi chọn công cụ kỹ thuật để vẽ lên đồ thị — từ các đường
+          trung bình động quen thuộc đến các mức Fibonacci, các vùng Volume Profile
+          và các điểm Pivot theo nhiều khung thời gian khác nhau. Lựa chọn của bạn
+          được lưu lại giữa các phiên, không phải bật tắt lại mỗi lần mở trang.
+        </Typography>
+
+        <GuideSubAccordion title="Các nhóm chỉ báo" icon="mdi:folder-outline">
+          <InfoBox>
+            Các chỉ báo được phân theo nhóm chức năng để dễ tìm — đường trung bình
+            cho góc nhìn xu hướng, Pivot Point cho các mốc xoay chiều tiềm năng,
+            Fibonacci cho các mức điều chỉnh và mở rộng, Volume Profile cho các vùng
+            giá có khối lượng giao dịch lớn trong lịch sử. Mở từng nhóm để thấy các
+            biến thể bên trong.
+          </InfoBox>
+          <Figure
+            src="/guides/charts-watchlist/indicators-groups.png"
+            alt="Các nhóm chỉ báo kỹ thuật"
+            natural
+          />
+        </GuideSubAccordion>
+
+        <GuideSubAccordion title="Bật tắt chỉ báo" icon="mdi:toggle-switch-outline">
+          <InfoBox>
+            Trạng thái bật tắt của mỗi chỉ báo được hiển thị rõ bằng dấu hiệu thị
+            giác — đang bật hay đang tắt nhìn là biết. Bấm để đổi trạng thái, đồ
+            thị phản hồi ngay lập tức. Khi đồ thị đã quá nhiều đường chồng chéo,
+            dùng chức năng xoá toàn bộ để trở lại nền sạch, hoặc khôi phục mặc
+            định để về bộ chỉ báo cơ bản thường dùng.
+          </InfoBox>
+          <Figure
+            src="/guides/charts-watchlist/indicators-toggle.png"
+            alt="Bật tắt chỉ báo"
+            natural
+          />
+        </GuideSubAccordion>
+
+        <GuideSubAccordion title="Chỉ báo theo nhiều khung thời gian" icon="mdi:calendar-multiple">
+          <InfoBox>
+            Một chỉ báo có thể được tính trên nhiều khung khác nhau — Pivot Point
+            tuần, Pivot Point tháng, Pivot Point quý, Pivot Point năm đều có ý
+            nghĩa riêng. Khi một mức giá trùng với nhiều khung cùng lúc, đó thường
+            là điểm có độ tin cậy cao hơn so với một mức chỉ xuất hiện ở một khung
+            đơn lẻ. Bật vài khung cùng lúc để tìm các điểm đồng thuận đa khung.
+          </InfoBox>
+          <Figure
+            src="/guides/charts-watchlist/indicators-timeframes.png"
+            alt="Chỉ báo theo nhiều khung thời gian"
+            natural
+          />
+        </GuideSubAccordion>
+      </GuideAccordion>
 
       {/* ========================================================================
           SECTION: WATCHLIST
@@ -334,30 +301,24 @@ export default function ChartsWatchlistContent() {
             />
           </GuideSubAccordion>
 
-          <GuideSubAccordion title="Xoá danh sách" icon="mdi:delete-outline">
+          <GuideSubAccordion title="Xoá và chuyển trang" icon="mdi:dots-horizontal">
             <InfoBox>
-              Chọn thao tác xoá, hệ thống yêu cầu xác nhận trước khi thực hiện. Sau
-              khi xoá, các danh sách còn lại tự dồn lại trong cột để không để lại
-              khoảng trống — lưới nhìn luôn gọn mà không cần thao tác sắp xếp thủ
-              công.
+              <Box component="span" sx={{ display: 'block', mb: 1 }}>
+                <strong>Xoá danh sách:</strong> chọn thao tác xoá trong menu ngữ cảnh,
+                hệ thống yêu cầu xác nhận trước khi thực hiện. Sau khi xoá, các danh
+                sách còn lại tự dồn lại trong cột để không để lại khoảng trống — lưới
+                nhìn luôn gọn mà không cần sắp xếp thủ công.
+              </Box>
+              <Box component="span" sx={{ display: 'block' }}>
+                <strong>Chuyển sang trang khác:</strong> một danh sách đã tạo ở trang
+                này có thể chuyển sang trang khác mà không phải tạo lại. Tiện khi tổ
+                chức lại theo chủ đề — ví dụ ban đầu gộp chung, về sau muốn tách các
+                danh sách cùng ngành về cùng một trang để tiện so sánh.
+              </Box>
             </InfoBox>
             <Figure
-              src="/guides/charts-watchlist/watchlist-delete.png"
-              alt="Xoá danh sách"
-              natural
-            />
-          </GuideSubAccordion>
-
-          <GuideSubAccordion title="Chuyển sang trang khác" icon="mdi:swap-horizontal">
-            <InfoBox>
-              Một danh sách đã tạo ở trang này có thể chuyển sang trang khác mà không
-              phải tạo lại từ đầu. Tiện khi tổ chức lại theo chủ đề, ví dụ ban đầu
-              gộp chung nhưng về sau muốn tách các danh sách cùng ngành về cùng một
-              trang để tiện so sánh.
-            </InfoBox>
-            <Figure
-              src="/guides/charts-watchlist/watchlist-move-page.png"
-              alt="Chuyển danh sách sang trang khác"
+              src="/guides/charts-watchlist/watchlist-context-menu.png"
+              alt="Menu ngữ cảnh với tuỳ chọn xoá và chuyển trang"
               natural
             />
           </GuideSubAccordion>
@@ -372,67 +333,29 @@ export default function ChartsWatchlistContent() {
             trí các thẻ tự chuẩn lại để lưới giữ được sự cân đối.
           </Typography>
 
-          <GuideSubAccordion title="Kéo thả trong cùng cột" icon="mdi:arrow-up-down">
-            <InfoBox>
-              Kéo thẻ lên hoặc xuống trong cột để đổi thứ tự. Trong lúc kéo có hiệu
-              ứng thị giác hiển thị thẻ đang được di chuyển để dễ nhắm vị trí dự
-              định thả. Cách dùng hiệu quả là đưa các danh sách đang quan tâm nhất
-              lên đầu cột, các danh sách ít kiểm tra hơn xuống dưới.
-            </InfoBox>
-            <Figure
-              src="/guides/charts-watchlist/watchlist-drag-column.png"
-              alt="Kéo thả trong cùng cột"
-              natural
-            />
-          </GuideSubAccordion>
-
-          <GuideSubAccordion title="Kéo thả giữa các cột" icon="mdi:arrow-left-right">
-            <InfoBox>
-              Kéo thẻ sang cột khác trong cùng trang để tổ chức lại bố cục. Phù hợp
-              khi muốn đặt các danh sách có tính chất tương tự gần nhau — ví dụ các
-              danh sách ngành cùng một cột, các danh sách ý tưởng giao dịch ở cột
-              khác — để mắt dễ nhận ra nhóm khi quét ngang.
-            </InfoBox>
-            <Figure
-              src="/guides/charts-watchlist/watchlist-drag-across.png"
-              alt="Kéo thả giữa các cột"
-              natural
-            />
-          </GuideSubAccordion>
-
-          <GuideSubAccordion title="Sắp xếp thứ tự các trang" icon="mdi:tab">
-            <InfoBox>
-              Các tab trang ở đầu khu vực watchlist cũng có thể kéo thả để đổi thứ
-              tự. Cách làm quen thuộc là đưa trang dùng hàng ngày lên đầu, các trang
-              dùng ít hơn hoặc để dự phòng lùi ra sau — giảm số lần phải tìm đúng
-              tab khi mở lại trang.
-            </InfoBox>
-            <Figure
-              src="/guides/charts-watchlist/watchlist-drag-tabs.png"
-              alt="Sắp xếp thứ tự tab trang"
-              natural
-            />
-          </GuideSubAccordion>
-        </GuideAccordion>
-
-        {/* ------------------------------------------------------------------ */}
-        <GuideAccordion title="Hộp thoại xác nhận" icon="mdi:alert-circle-outline">
-          <Typography sx={bodyTextSx} paragraph>
-            Với các thao tác không thể hoàn tác — chủ yếu là xoá danh sách — hệ thống
-            yêu cầu xác nhận trước khi thực hiện để tránh mất dữ liệu do nhấn nhầm.
-            Một bước xác nhận thêm có vẻ dư trong các trường hợp đơn giản, nhưng là
-            tấm lưới an toàn quan trọng khi thao tác nhanh.
-          </Typography>
           <InfoBox>
-            Hộp thoại xác nhận gồm biểu tượng cảnh báo, tiêu đề, mô tả ngắn về thao
-            tác sắp thực hiện và hai nút lựa chọn — một nút trung tính để huỷ thao
-            tác, một nút màu đỏ nổi bật để xác nhận tiếp tục. Phần nền phía sau được
-            làm mờ để sự chú ý dồn vào nội dung trong hộp thoại, tránh tình huống bấm
-            ra ngoài gây nhầm lẫn.
+            <Box component="span" sx={{ display: 'block', mb: 1 }}>
+              <strong>Kéo thả trong cùng cột:</strong> kéo thẻ lên xuống để đổi thứ tự.
+              Trong lúc kéo có hiệu ứng thị giác hiển thị thẻ đang di chuyển để dễ
+              nhắm vị trí thả. Cách dùng hiệu quả là đưa các danh sách đang quan tâm
+              nhất lên đầu cột, các danh sách ít kiểm tra hơn xuống dưới.
+            </Box>
+            <Box component="span" sx={{ display: 'block', mb: 1 }}>
+              <strong>Kéo thả giữa các cột:</strong> kéo thẻ sang cột khác trong cùng
+              trang để tổ chức lại bố cục. Phù hợp khi muốn đặt các danh sách cùng
+              tính chất gần nhau — ví dụ các danh sách ngành một cột, các danh sách ý
+              tưởng giao dịch ở cột khác — để mắt dễ nhận ra nhóm khi quét ngang.
+            </Box>
+            <Box component="span" sx={{ display: 'block' }}>
+              <strong>Sắp xếp thứ tự tab trang:</strong> các tab trang ở đầu khu vực
+              watchlist cũng có thể kéo thả để đổi thứ tự. Đưa trang dùng hàng ngày
+              lên đầu, các trang dùng ít hoặc dự phòng lùi ra sau — giảm số lần phải
+              tìm đúng tab khi mở lại trang.
+            </Box>
           </InfoBox>
           <Figure
-            src="/guides/charts-watchlist/confirm-dialog.png"
-            alt="Hộp thoại xác nhận"
+            src="/guides/charts-watchlist/watchlist-drag.png"
+            alt="Kéo thả ở ba cấp độ: trong cùng cột, giữa các cột, và tab trang"
             natural
           />
         </GuideAccordion>
