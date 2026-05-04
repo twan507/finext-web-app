@@ -55,9 +55,9 @@ export const getFlowColor = (t0Score: number, theme: Theme): string => {
  */
 export const getVsiColor = (vsi: number, theme: Theme): string => {
     if (vsi === 0) return theme.palette.trend.ref; // Yellow
-    if (vsi < 0.6) return theme.palette.trend.floor; // Cyan/Blue (Sàn)
-    if (vsi < 0.9) return theme.palette.trend.down; // Red
-    if (vsi < 1.2) return theme.palette.trend.ref; // Yellow
+    if (vsi < 0.5) return theme.palette.trend.floor; // Cyan/Blue (Sàn)
+    if (vsi < 0.8) return theme.palette.trend.down; // Red
+    if (vsi < 1.0) return theme.palette.trend.ref; // Yellow
     if (vsi < 1.5) return theme.palette.trend.up; // Green
     return theme.palette.trend.ceil; // Purple (Ceiling)
 };

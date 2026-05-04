@@ -20,10 +20,11 @@ interface VsiGaugeChartProps {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function getVsiLabel(vsiRaw: number): string {
-    if (vsiRaw < 0.6) return 'Rất thấp';
-    if (vsiRaw < 0.9) return 'Thấp';
-    if (vsiRaw < 1.2) return 'Trung bình';
-    if (vsiRaw < 1.5) return 'Cao';
+    if (vsiRaw < 0.5) return 'Rất thấp';
+    if (vsiRaw < 0.8) return 'Thấp';
+    if (vsiRaw < 1.0) return 'Trung bình';
+    if (vsiRaw < 1.2) return 'Cao';
+    if (vsiRaw < 1.5) return 'Rất cao';
     return 'Rất cao';
 }
 
@@ -80,7 +81,11 @@ export default function VsiGaugeChart({ value, chartHeight = '250px' }: VsiGauge
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }), [theme, arcColor, trackColor]);
 
-    const series = useMemo(() => [parseFloat(displayValue.toFixed(2))], [displayValue]);
+    // Arc fills 0–120 range (scaled to ApexCharts' internal 0–100)
+    const series = useMemo(
+        () => [Math.min(parseFloat((displayValue / 1.2).toFixed(2)), 100)],
+        [displayValue],
+    );
 
     return (
         <Box sx={{ width: '100%', height: chartHeight, position: 'relative', overflow: 'hidden' }}>
