@@ -39,15 +39,15 @@ interface UniTreeMapProps {
 
 const HEATMAP_COLORS = [
     '#e11d1d',
-    '#e3431a',
-    '#e56916',
-    '#e78f12',
-    '#e9b50d',
+    '#e43232',
+    '#e74b4b',
+    '#ea6464',
+    '#ec8282',
     '#eadb08',
-    '#c2d40e',
-    '#99ce14',
-    '#71c71a',
-    '#48c020',
+    '#82e186',
+    '#5fd764',
+    '#42cd48',
+    '#2cc332',
     '#20b927',
 ];
 
@@ -65,7 +65,7 @@ const FIXED_RANGE = 0.06;
 
 function pickColor(pctChange: number, exchange?: string): string {
     const MID = 5;
-    if (Math.abs(pctChange) < 0.0003) return HEATMAP_COLORS[MID];
+    if (Math.abs(pctChange) < 1e-9) return HEATMAP_COLORS[MID];
 
     const limit = getExchangeLimit(exchange);
     if (pctChange >= limit) return CEIL_COLOR;
@@ -73,11 +73,11 @@ function pickColor(pctChange: number, exchange?: string): string {
 
     if (pctChange < 0) {
         const t = Math.min(Math.abs(pctChange) / FIXED_RANGE, 1);
-        const index = MID - Math.round(t * MID);
+        const index = MID - Math.ceil(t * MID);
         return HEATMAP_COLORS[Math.max(0, index)];
     } else {
         const t = Math.min(pctChange / FIXED_RANGE, 1);
-        const index = MID + Math.round(t * MID);
+        const index = MID + Math.ceil(t * MID);
         return HEATMAP_COLORS[Math.min(10, index)];
     }
 }

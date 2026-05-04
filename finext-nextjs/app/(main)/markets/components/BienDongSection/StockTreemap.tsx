@@ -40,15 +40,15 @@ interface StockTreemapProps {
 // Fixed values — NO theme dependency
 const HEATMAP_COLORS = [
     '#e11d1d', // 0:  trend.down — đỏ đậm (FIXED)
-    '#e3431a', // 1:  cam đỏ đậm
-    '#e56916', // 2:  cam đỏ
-    '#e78f12', // 3:  cam
-    '#e9b50d', // 4:  cam vàng
+    '#e43232', // 1:  đỏ đậm
+    '#e74b4b', // 2:  đỏ vừa
+    '#ea6464', // 3:  đỏ nhạt
+    '#ec8282', // 4:  đỏ nhạt nhất (vẫn rõ đỏ)
     '#eadb08', // 5:  trend.ref — vàng (FIXED, chính giữa)
-    '#c2d40e', // 6:  vàng xanh
-    '#99ce14', // 7:  xanh nhạt
-    '#71c71a', // 8:  xanh lá nhạt
-    '#48c020', // 9:  xanh lá trung
+    '#82e186', // 6:  xanh nhạt nhất (vẫn rõ xanh)
+    '#5fd764', // 7:  xanh nhạt
+    '#42cd48', // 8:  xanh vừa
+    '#2cc332', // 9:  xanh đậm
     '#20b927', // 10: trend.up — xanh đậm (FIXED)
 ];
 
@@ -76,7 +76,7 @@ const FIXED_RANGE = 0.06;
  */
 function pickColor(pctChange: number, exchange?: string): string {
     const MID = 5;
-    if (Math.abs(pctChange) < 0.0003) return HEATMAP_COLORS[MID];
+    if (Math.abs(pctChange) < 1e-9) return HEATMAP_COLORS[MID];
 
     // Check ceil/floor based on exchange — highest priority
     const limit = getExchangeLimit(exchange);
@@ -84,14 +84,14 @@ function pickColor(pctChange: number, exchange?: string): string {
     if (pctChange <= -limit) return FLOOR_COLOR;
 
     if (pctChange < 0) {
-        // t=0 → index 4 (nhạt); t=1 → index 0 (đỏ đậm = -5%)
+        // t>0 → index 4 (nhạt nhất); t=1 → index 0 (đỏ đậm = -5%)
         const t = Math.min(Math.abs(pctChange) / FIXED_RANGE, 1);
-        const index = MID - Math.round(t * MID); // maps 4..0
+        const index = MID - Math.ceil(t * MID); // maps 4..0
         return HEATMAP_COLORS[Math.max(0, index)];
     } else {
-        // t=0 → index 6 (nhạt); t=1 → index 10 (xanh đậm = +5%)
+        // t>0 → index 6 (nhạt nhất); t=1 → index 10 (xanh đậm = +5%)
         const t = Math.min(pctChange / FIXED_RANGE, 1);
-        const index = MID + Math.round(t * MID); // maps 6..10
+        const index = MID + Math.ceil(t * MID); // maps 6..10
         return HEATMAP_COLORS[Math.min(10, index)];
     }
 }

@@ -20,15 +20,15 @@ interface NNTDTreemapProps {
 // ── 11-stop heatmap palette (same as StockTreemap) ────────────────────────────
 const HEATMAP_COLORS = [
     '#e11d1d', // 0:  trend.down
-    '#e3431a', // 1
-    '#e56916', // 2
-    '#e78f12', // 3
-    '#e9b50d', // 4
+    '#e43232', // 1
+    '#e74b4b', // 2
+    '#ea6464', // 3
+    '#ec8282', // 4
     '#eadb08', // 5:  trend.ref (mid)
-    '#c2d40e', // 6
-    '#99ce14', // 7
-    '#71c71a', // 8
-    '#48c020', // 9
+    '#82e186', // 6
+    '#5fd764', // 7
+    '#42cd48', // 8
+    '#2cc332', // 9
     '#20b927', // 10: trend.up
 ];
 
@@ -37,15 +37,15 @@ const HEATMAP_COLORS = [
  */
 function pickColor(netValue: number, maxNeg: number, maxPos: number): string {
     const MID = 5;
-    if (Math.abs(netValue) < 0.001) return HEATMAP_COLORS[MID];
+    if (Math.abs(netValue) < 1e-9) return HEATMAP_COLORS[MID];
 
     if (netValue < 0) {
-        const t = maxNeg < 0.001 ? 0 : Math.min(Math.abs(netValue) / maxNeg, 1);
-        const index = MID - Math.round(t * MID);
+        const t = maxNeg < 1e-9 ? 0 : Math.min(Math.abs(netValue) / maxNeg, 1);
+        const index = t === 0 ? MID : MID - Math.ceil(t * MID);
         return HEATMAP_COLORS[Math.max(0, index)];
     } else {
-        const t = maxPos < 0.001 ? 0 : Math.min(netValue / maxPos, 1);
-        const index = MID + Math.round(t * MID);
+        const t = maxPos < 1e-9 ? 0 : Math.min(netValue / maxPos, 1);
+        const index = t === 0 ? MID : MID + Math.ceil(t * MID);
         return HEATMAP_COLORS[Math.min(10, index)];
     }
 }
