@@ -598,8 +598,6 @@ export default function StocksContent() {
                             gap: 1,
                             px: 1,
                             py: 1,
-                            borderTop: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
-                            mt: 0.5,
                         }}>
                             {/* Left: page info + per-page selector */}
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
