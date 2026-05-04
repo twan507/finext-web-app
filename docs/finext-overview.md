@@ -229,8 +229,8 @@ finext-nextjs/app/
 │   │   └── aggregateTimeframe.ts     # Aggregate candles theo timeframe
 │   ├── sectors/            # Phân tích nhóm ngành
 │   ├── groups/             # Nhóm cổ phiếu tùy chọn
-│   ├── commodities/        # Hàng hóa
-│   ├── international/      # Thị trường quốc tế
+│   ├── commodities/        # Thị trường hàng hóa
+│   ├── international/      # Tài chính quốc tế
 │   ├── macro/              # Kinh tế vĩ mô
 │   ├── news/               # Tin tức
 │   ├── reports/            # Báo cáo (có server-side fetch)

@@ -276,22 +276,24 @@ export default function OtherTickerChart({ ticker, name, chartMode, unit, height
 
         return () => { cancelled = true; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [ticker, isMultiLine, name]);
+    }, [ticker, isMultiLine]);
 
-    // ========== Update pct when timeRange changes ==========
+    // ========== Sync header info when name/timeRange/data changes ==========
     useEffect(() => {
         if (isLoading) return;
         if (isMultiLine) {
-            const targetName = name || multiLineData[0]?.name;
-            const rawRecord = targetName ? multiLastRawRef.current.get(targetName) : undefined;
+            if (multiLineData.length === 0) return;
+            const target = multiLineData.find(s => s.name === name) || multiLineData[0];
+            setCurrentPrice(target.lastClose);
+            const rawRecord = multiLastRawRef.current.get(target.name);
             if (rawRecord) {
-                const target = multiLineData.find(s => s.name === targetName);
-                if (target) {
-                    const pct = getPctByTimeRange(rawRecord, timeRange);
-                    const priceDiff = pct !== 0 ? parseFloat((target.lastClose - target.lastClose / (1 + pct / 100)).toFixed(2)) : 0;
-                    setPercentChange(pct);
-                    setPriceChange(priceDiff);
-                }
+                const pct = getPctByTimeRange(rawRecord, timeRange);
+                const priceDiff = pct !== 0 ? parseFloat((target.lastClose - target.lastClose / (1 + pct / 100)).toFixed(2)) : 0;
+                setPercentChange(pct);
+                setPriceChange(priceDiff);
+            } else {
+                setPercentChange(target.pctChange);
+                setPriceChange(target.priceChange);
             }
         } else {
             const rawRecord = lastRawRecordRef.current;
@@ -303,7 +305,7 @@ export default function OtherTickerChart({ ticker, name, chartMode, unit, height
             }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [timeRange]);
+    }, [timeRange, name, isLoading, multiLineData]);
 
     const chartHeight = isMultiLine ? height : height + 32;
 
@@ -557,7 +559,8 @@ export default function OtherTickerChart({ ticker, name, chartMode, unit, height
 
     const headerHeight = 78;
     const controlsHeight = 48;
-    const legendHeight = isMultiLine ? 32 : 0;
+    const showLegend = isMultiLine && multiLineData.length > 1;
+    const legendHeight = showLegend ? 32 : 0;
     const totalHeight = headerHeight + controlsHeight + legendHeight + chartHeight;
 
     return (
@@ -623,7 +626,7 @@ export default function OtherTickerChart({ ticker, name, chartMode, unit, height
             </Stack>
 
             {/* ========== Multi-line Legend ========== */}
-            {isMultiLine && (
+            {showLegend && (
                 <Stack direction="row" flexWrap="wrap" spacing={2} justifyContent="center" sx={{ mb: 1.5, minHeight: 20 }}>
                     {multiLineData.map((series, idx) => (
                         <Stack key={series.name} direction="row" alignItems="center" spacing={0.5}>

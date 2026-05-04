@@ -112,7 +112,7 @@ export default function MacroContent() {
             <Box sx={{ flex: 1, minWidth: 0 }}>
                 {selectedRow && (
                     <OtherTickerChart
-                        key={selectedRow.name}
+                        key={selectedRow.ticker}
                         ticker={selectedRow.ticker}
                         name={selectedRow.name || selectedRow.ticker_name || selectedRow.ticker}
                         chartMode={selectedRow.chart}

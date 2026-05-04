@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import CommoditiesContent from './PageContent';
 
 export const metadata: Metadata = {
-    title: 'Hàng hóa — Vàng, Dầu thô, Nông sản & Kim loại',
+    title: 'Thị trường hàng hóa',
     description:
         'Theo dõi giá vàng, dầu thô WTI/Brent, bạc, đồng, nông sản… Biểu đồ giá hàng hóa cập nhật liên tục, phân tích cung cầu và xu hướng thị trường.',
     keywords: [
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
         'commodity',
     ],
     openGraph: {
-        title: 'Hàng hóa — Vàng, Dầu thô, Nông sản & Kim loại | Finext',
+        title: 'Thị trường hàng hóa | Finext',
         description:
             'Giá vàng, dầu thô, nông sản, kim loại cập nhật liên tục. Biểu đồ trực quan và phân tích xu hướng thị trường hàng hóa.',
     },

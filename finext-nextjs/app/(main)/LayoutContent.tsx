@@ -112,9 +112,9 @@ const topNavTabs: TopNavTab[] = [
     description: 'Thông tin thị trường quốc tế, vĩ mô và tài sản khác.',
     icon: 'fluent-color:globe-24',
     submenu: [
-      { label: 'Thị trường quốc tế', href: '/international', icon: 'fluent-color:planet-32' },
+      { label: 'Tài chính quốc tế', href: '/international', icon: 'fluent-color:planet-32' },
       { label: 'Kinh tế vĩ mô', href: '/macro', icon: 'fluent-color:building-government-search-32' },
-      { label: 'Hàng hóa', href: '/commodities', icon: 'fluent-color:list-bar-16' },
+      { label: 'Thị trường hàng hóa', href: '/commodities', icon: 'fluent-color:list-bar-16' },
     ]
   },
 ];

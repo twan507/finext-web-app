@@ -106,14 +106,14 @@ export default function InternationalContent() {
         <Box sx={{ py: 3 }}>
             <NewsBreadcrumb
                 items={[]}
-                sectionLabel="Thị trường quốc tế"
+                sectionLabel="Tài chính quốc tế"
                 sectionHref="/international"
             />
 
             <Box sx={{ flex: 1, minWidth: 0 }}>
                 {selectedRow && (
                     <OtherTickerChart
-                        key={selectedRow.name}
+                        key={selectedRow.ticker}
                         ticker={selectedRow.ticker}
                         name={selectedRow.name || selectedRow.ticker_name || selectedRow.ticker}
                         chartMode={selectedRow.chart}

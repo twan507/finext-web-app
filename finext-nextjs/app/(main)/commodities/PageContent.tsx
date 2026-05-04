@@ -106,14 +106,14 @@ export default function CommoditiesContent() {
         <Box sx={{ py: 3 }}>
             <NewsBreadcrumb
                 items={[]}
-                sectionLabel="Hàng hóa"
+                sectionLabel="Thị trường hàng hóa"
                 sectionHref="/commodities"
             />
 
             <Box sx={{ flex: 1, minWidth: 0 }}>
                 {selectedRow && (
                     <OtherTickerChart
-                        key={selectedRow.name}
+                        key={selectedRow.ticker}
                         ticker={selectedRow.ticker}
                         name={selectedRow.name || selectedRow.ticker_name || selectedRow.ticker}
                         chartMode={selectedRow.chart}
