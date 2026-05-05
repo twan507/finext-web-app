@@ -41,6 +41,11 @@ const IndustryStocksSection = dynamic(
     { loading: () => <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, my: 2 }} /> }
 );
 
+const FeaturedStocksSection = dynamic(
+    () => import('./components/featuredStocks/FeaturedStocksSection'),
+    { loading: () => <Skeleton variant="rectangular" height={500} sx={{ borderRadius: 2, my: 2 }} /> }
+);
+
 // Import API clients
 import { apiClient } from 'services/apiClient';
 import { ISseRequest } from 'services/core/types';
@@ -507,7 +512,13 @@ export default function HomeContent() {
                 />
             </Box>
 
-
+            {/* Section 1.5b: Cổ phiếu nổi bật (thuộc cùng nhóm Diễn biến thị trường) */}
+            <Box sx={{ mt: { xs: 2, md: 1.5, lg: 3 } }}>
+                <FeaturedStocksSection
+                    stockData={todayStockData}
+                    isLoading={isStockDataLoading}
+                />
+            </Box>
 
             {/* Section 3: Ngành */}
             <Box sx={{ mt: 5 }}>
