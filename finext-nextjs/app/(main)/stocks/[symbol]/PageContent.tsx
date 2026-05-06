@@ -18,7 +18,8 @@ import { getResponsiveFontSize, fontWeight, getGlassCard, borderRadius, duration
 import DongTienSection from './components/DongTienSection';
 import PriceMapSection from './components/PriceMapSection';
 import NewsSection from './components/NewsSection';
-import StockFinRatiosSection from './components/StockFinRatiosSection';
+import StockInfoSection, { type StockInfoData } from './components/StockInfoSection';
+import StockKeyMetricsPanel from './components/StockKeyMetricsPanel';
 import StockFinancialsSection from './components/StockFinancialsSection';
 
 import type { StockData } from '../../home/components/marketSection/MarketVolatility';
@@ -172,6 +173,9 @@ export default function StockDetailContent() {
         setActiveTab(newTab);
         router.push(`?tab=${newTab}`, { scroll: false });
     };
+
+    // View mode toggle: 'chart' shows MarketIndexChart, 'info' shows StockFinRatiosSection
+    const [viewMode, setViewMode] = useState<'chart' | 'info'>('info');
 
     // Dropdown state
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -393,6 +397,23 @@ export default function StockDetailContent() {
         refetchOnWindowFocus: false,
     });
 
+    // ========== REST - Stock Info (overview/business_area) ==========
+    const { data: stockInfo = null } = useQuery<StockInfoData | null>({
+        queryKey: ['stock', 'info_stock', ticker],
+        queryFn: async () => {
+            const response = await apiClient<StockInfoData[]>({
+                url: '/api/v1/sse/rest/info_stock',
+                method: 'GET',
+                queryParams: { ticker },
+                requireAuth: false,
+            });
+            const list = response.data || [];
+            return list.length > 0 ? list[0] : null;
+        },
+        staleTime: 30 * 60 * 1000,
+        refetchOnWindowFocus: false,
+    });
+
     // ========== REST - Chart Indicator Data (for PriceMap, defer until chart ready) ==========
     const { data: chartIndicatorData = null } = useQuery({
         queryKey: ['stock', 'chart_history_data', ticker],
@@ -527,8 +548,8 @@ export default function StockDetailContent() {
 
     return (
         <Box sx={{ py: 2 }}>
-            {/* Title with dropdown stock selector and Mở biểu đồ button */}
-            <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', mb: 2 }}>
+            {/* Title with dropdown stock selector + view mode toggle */}
+            <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', mb: 2, gap: 2 }}>
                 <Box ref={dropdownRef} sx={{ position: 'relative', display: 'inline-block' }}>
                 <Box
                     component="button"
@@ -684,45 +705,128 @@ export default function StockDetailContent() {
                 )}
                 </Box>
 
+                {/* View mode toggle: Thông tin / Biểu đồ — sliding pill */}
+                <Box sx={{
+                    position: 'relative',
+                    display: 'inline-flex',
+                    p: 0.5,
+                    borderRadius: `${borderRadius.lg}px`,
+                    ...getGlassCard(isDark),
+                    flexShrink: 0,
+                }}>
+                    {/* Sliding active indicator */}
+                    <Box
+                        aria-hidden
+                        sx={{
+                            position: 'absolute',
+                            top: 4,
+                            bottom: 4,
+                            left: 4,
+                            width: 'calc(50% - 4px)',
+                            bgcolor: theme.palette.primary.main,
+                            borderRadius: `${borderRadius.md}px`,
+                            transform: viewMode === 'chart' ? 'translateX(100%)' : 'translateX(0)',
+                            transition: `transform ${durations.normal} ${easings.easeOut}`,
+                            pointerEvents: 'none',
+                            zIndex: 0,
+                        }}
+                    />
+                    {([
+                        { id: 'info', label: 'Thông tin' },
+                        { id: 'chart', label: 'Biểu đồ' },
+                    ] as const).map((opt) => {
+                        const active = viewMode === opt.id;
+                        return (
+                            <Box
+                                key={opt.id}
+                                component="button"
+                                onClick={() => setViewMode(opt.id)}
+                                sx={{
+                                    position: 'relative',
+                                    zIndex: 1,
+                                    flex: 1,
+                                    px: { xs: 1.5, md: 2 },
+                                    py: 0.75,
+                                    border: 'none',
+                                    outline: 'none',
+                                    cursor: 'pointer',
+                                    bgcolor: 'transparent',
+                                    color: active ? theme.palette.primary.contrastText : theme.palette.text.secondary,
+                                    fontFamily: 'inherit',
+                                    fontSize: getResponsiveFontSize('sm'),
+                                    fontWeight: active ? fontWeight.semibold : fontWeight.medium,
+                                    transition: `color ${durations.normal} ${easings.easeOut}`,
+                                    whiteSpace: 'nowrap',
+                                    '&:hover': {
+                                        color: active ? theme.palette.primary.contrastText : theme.palette.primary.main,
+                                    },
+                                }}
+                            >
+                                {opt.label}
+                            </Box>
+                        );
+                    })}
+                </Box>
             </Box>
 
-            {/* ========== TOP SECTION: Chart (left) + Detail Panel (right) ========== */}
+            {/* ========== TOP SECTION: Chart/Info (left) + Detail Panel (right) ========== */}
             <Box sx={{
                 display: 'flex',
                 flexDirection: { xs: 'column', md: 'row' },
                 gap: { xs: 2, md: 3 },
             }}>
-                {/* Left: Chart */}
+                {/* Left: Chart or Info (toggle controlled) */}
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <MarketIndexChart
-                        key={ticker}
-                        symbol={ticker}
-                        title={stockName}
-                        eodData={eodData}
-                        intradayData={intradayData}
-                        isLoading={isLoading}
-                        error={error}
-                        timeRange={timeRange}
-                        onTimeRangeChange={setTimeRange}
-                        onLoadMore={loadMoreHistory}
-                    />
-
-                    {/* FinRatios Section - same width as chart */}
-                    <StockFinRatiosSection
-                        rawData={finratiosData}
-                        todayStockData={todayAllData[ticker]?.[0]}
-                    />
+                    {viewMode === 'chart' ? (
+                        <MarketIndexChart
+                            key={ticker}
+                            symbol={ticker}
+                            title={stockName}
+                            eodData={eodData}
+                            intradayData={intradayData}
+                            isLoading={isLoading}
+                            error={error}
+                            timeRange={timeRange}
+                            onTimeRangeChange={setTimeRange}
+                            onLoadMore={loadMoreHistory}
+                        />
+                    ) : (
+                        <StockInfoSection
+                            info={stockInfo}
+                            todayData={todayAllData[ticker] || []}
+                        />
+                    )}
                 </Box>
 
-                {/* Right: Index Detail Panel */}
+                {/* Tall vertical divider giữa left & right — chỉ ở info view (desktop) */}
+                {viewMode === 'info' && (
+                    <Box
+                        sx={{
+                            display: { xs: 'none', md: 'block' },
+                            width: '1px',
+                            bgcolor: 'divider',
+                            alignSelf: 'stretch',
+                            flexShrink: 0,
+                        }}
+                    />
+                )}
+
+                {/* Right: Detail Panel (chart view) hoặc Key Metrics (info view) */}
                 <Box sx={{
-                    width: { xs: '100%', md: 340 },
+                    width: { xs: '100%', md: viewMode === 'info' ? 520 : 340 },
                     flexShrink: 0,
                 }}>
-                    <IndexDetailPanel
-                        indexName={''}
-                        todayData={todayAllData[ticker] || []}
-                    />
+                    {viewMode === 'chart' ? (
+                        <IndexDetailPanel
+                            indexName={''}
+                            todayData={todayAllData[ticker] || []}
+                        />
+                    ) : (
+                        <StockKeyMetricsPanel
+                            rawData={finratiosData}
+                            todayStockData={todayAllData[ticker]?.[0]}
+                        />
+                    )}
                 </Box>
             </Box>
 

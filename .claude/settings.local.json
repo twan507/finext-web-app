@@ -23,7 +23,11 @@
       "Bash(head -100 \"app/\\(main\\)/charts/[id]/ChartToolbar.tsx\")",
       "Bash(./node_modules/.bin/tsc --noEmit -p .)",
       "Bash(finext-nextjs/node_modules/.bin/tsc --noEmit -p finext-nextjs)",
-      "Bash(dir /B d:\\\\twan_projects\\\\finext-web-app)"
+      "Bash(dir /B d:\\\\twan_projects\\\\finext-web-app)",
+      "Bash(rm \"d:/twan_projects/finext-web-app/finext-nextjs/app/\\(main\\)/stocks/[symbol]/components/StockFinRatiosSection.tsx\")"
+    ],
+    "additionalDirectories": [
+      "d:\\twan_projects\\finext-web-app\\finext-nextjs\\app\\(main)\\stocks\\[symbol]\\components"
     ]
   }
 }

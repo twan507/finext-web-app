@@ -31,6 +31,7 @@ from app.crud.sse.finratios_industry import finratios_industry
 from app.crud.sse.finstats_map import finstats_map
 from app.crud.sse.finstats_industry import finstats_industry
 from app.crud.sse.finstats_stock import finstats_stock
+from app.crud.sse.info_stock import info_stock
 from app.crud.sse.news_daily import news_daily
 from app.crud.sse.news_categories import news_categories
 from app.crud.sse.news_count import news_count
@@ -96,6 +97,8 @@ SSE_QUERY_REGISTRY: Dict[str, Any] = {
     "finstats_map": finstats_map,
     "finstats_industry": finstats_industry,
     "finstats_stock": finstats_stock,
+    # Stock info
+    "info_stock": info_stock,
     # Screener queries
     "screener_stock_data": screener_stock_data,
     "screener_stock_meta": screener_stock_meta,
