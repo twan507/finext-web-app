@@ -297,7 +297,7 @@ function IndexRow({
                                 component="span"
                                 onClick={(e: React.MouseEvent) => {
                                     e.stopPropagation();
-                                    router.push(`/charts/${row.ticker}`);
+                                    router.push(`/charts/${row.ticker.toLowerCase()}`);
                                 }}
                                 sx={{
                                     display: 'inline-flex',

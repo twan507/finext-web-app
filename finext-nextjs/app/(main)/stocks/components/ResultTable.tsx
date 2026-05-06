@@ -309,7 +309,7 @@ export default function ResultTable({ data, columns, sortField, sortOrder, onTog
                                                         component="span"
                                                         onClick={(e: React.MouseEvent) => {
                                                             e.stopPropagation();
-                                                            router.push(`/charts/${String(val).toUpperCase()}`);
+                                                            router.push(`/charts/${String(val).toLowerCase()}`);
                                                         }}
                                                         sx={{
                                                             display: 'inline-flex',

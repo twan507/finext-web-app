@@ -131,12 +131,12 @@ export default function ChartPageContent({ ticker: initialTicker }: ChartPageCon
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'));
 
-    // Internal ticker state — tránh router.push gây remount toàn bộ component tree
-    const [ticker, setTicker] = useState(initialTicker);
+    // Internal ticker state — luôn UPPERCASE cho data/display, URL thì lowercase
+    const [ticker, setTicker] = useState(initialTicker.toUpperCase());
 
     // Sync nếu prop thay đổi từ bên ngoài (e.g. direct URL navigation)
     useEffect(() => {
-        setTicker(initialTicker);
+        setTicker(initialTicker.toUpperCase());
     }, [initialTicker]);
 
     // Persistent chart state (survives reload / tab switch)
@@ -198,8 +198,8 @@ export default function ChartPageContent({ ticker: initialTicker }: ChartPageCon
     // Handler đổi ticker — update state + URL mà không navigate (giữ component tree mounted)
     const handleTickerChange = useCallback(
         (newTicker: string) => {
-            setTicker(newTicker);
-            window.history.pushState(null, '', `/charts/${newTicker}`);
+            setTicker(newTicker.toUpperCase());
+            window.history.pushState(null, '', `/charts/${newTicker.toLowerCase()}`);
         },
         [],
     );

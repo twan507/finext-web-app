@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ChartDetailPage({ params }: Props) {
     const { id } = await params;
-    const ticker = id || 'VNINDEX';
+    const ticker = (id || 'VNINDEX').toUpperCase();
 
     return <ChartPageContent ticker={ticker} />;
 }

@@ -9,7 +9,7 @@ export default function ChartsPage() {
 
     useEffect(() => {
         const ticker = loadLastTicker();
-        router.replace(`/charts/${ticker}`);
+        router.replace(`/charts/${ticker.toLowerCase()}`);
     }, [router]);
 
     return null;

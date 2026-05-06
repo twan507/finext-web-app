@@ -328,7 +328,7 @@ export default function WatchlistColumn({
                         <Tooltip title="Mở chart" placement="right" arrow={false} slotProps={tooltipSlotProps}>
                             <Box
                                 component="span"
-                                onClick={() => router.push(`/charts/${ticker.toUpperCase()}`)}
+                                onClick={() => router.push(`/charts/${ticker.toLowerCase()}`)}
                                 onPointerDown={e => e.stopPropagation()}
                                 sx={{
                                     display: 'inline-flex',

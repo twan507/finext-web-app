@@ -375,11 +375,7 @@ export default function DetailPanel({ ticker, todayData }: DetailPanelProps) {
             onOpen: () => { },
             onData: (data) => {
                 if (!isMountedRef.current || !data || !Array.isArray(data)) return;
-                if (isStock) {
-                    setItdData(data.filter((d) => d.ticker === ticker));
-                } else {
-                    setItdData(data.filter((d) => d.ticker === ticker.toUpperCase()));
-                }
+                setItdData(data.filter((d) => d.ticker === ticker));
             },
             onError: () => { },
             onClose: () => { },
@@ -432,10 +428,10 @@ export default function DetailPanel({ ticker, todayData }: DetailPanelProps) {
         refetchOnWindowFocus: false,
     });
 
-    // Latest finratios record
+    // Latest finratios record (backend trả về DESC theo date — record [0] là mới nhất)
     const latestFinratios = useMemo<FinratiosRecord | null>(() => {
         if (!finratiosArr || finratiosArr.length === 0) return null;
-        return finratiosArr[finratiosArr.length - 1];
+        return finratiosArr[0];
     }, [finratiosArr]);
 
     // ── Panel container styles ─────────────────────────────────────────────
