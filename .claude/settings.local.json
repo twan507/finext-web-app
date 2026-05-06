@@ -25,7 +25,9 @@
       "Bash(finext-nextjs/node_modules/.bin/tsc --noEmit -p finext-nextjs)",
       "Bash(dir /B d:\\\\twan_projects\\\\finext-web-app)",
       "Bash(rm \"d:/twan_projects/finext-web-app/finext-nextjs/app/\\(main\\)/stocks/[symbol]/components/StockFinRatiosSection.tsx\")",
-      "Bash(dir \"d:\\\\twan_projects\\\\finext-web-app\\\\finext-nextjs\\\\app\\\\\\(main\\)\\\\stocks\\\\[symbol]\\\\components\")"
+      "Bash(dir \"d:\\\\twan_projects\\\\finext-web-app\\\\finext-nextjs\\\\app\\\\\\(main\\)\\\\stocks\\\\[symbol]\\\\components\")",
+      "WebFetch(domain:docs.sepay.vn)",
+      "WebFetch(domain:sepay.vn)"
     ],
     "additionalDirectories": [
       "d:\\twan_projects\\finext-web-app\\finext-nextjs\\app\\(main)\\stocks\\[symbol]\\components"
