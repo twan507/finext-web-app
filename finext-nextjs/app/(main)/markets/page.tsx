@@ -5,10 +5,11 @@ import PageContent from './PageContent';
 
 export const metadata: Metadata = {
   title: 'Thị trường',
-  description: 'Tổng quan xu hướng, đánh giá rủi ro và xác định chu kỳ thị trường chứng khoán Việt Nam.',
+  description: 'Tổng quan thị trường chứng khoán Việt Nam: VN-Index, VN30, HNX-Index, dòng tiền, biến động, định giá và chu kỳ thị trường — cập nhật theo thời gian thực.',
+  keywords: ['thị trường chứng khoán', 'VN-Index', 'VN30', 'HNX-Index', 'UPCOM', 'dòng tiền thị trường', 'biến động thị trường', 'chu kỳ thị trường', 'định giá thị trường'],
   openGraph: {
     title: 'Thị trường | Finext',
-    description: 'Tổng quan xu hướng, đánh giá rủi ro và xác định chu kỳ thị trường chứng khoán Việt Nam.',
+    description: 'Tổng quan thị trường chứng khoán Việt Nam: VN-Index, VN30, dòng tiền, biến động và định giá thị trường — cập nhật theo thời gian thực.',
   },
 };
 

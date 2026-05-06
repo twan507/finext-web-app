@@ -3,10 +3,11 @@ import PageContent from './PageContent';
 
 export const metadata: Metadata = {
     title: 'Tin tức thị trường',
-    description: 'Cập nhật tin tức thị trường tài chính và các sự kiện nổi bật theo thời gian thực.',
+    description: 'Tin tức chứng khoán, tài chính và doanh nghiệp Việt Nam cập nhật theo thời gian thực: thông tin doanh nghiệp, sự kiện thị trường, kết quả kinh doanh và phân tích chuyên sâu.',
+    keywords: ['tin tức chứng khoán', 'tin tức thị trường', 'tin tức tài chính', 'tin doanh nghiệp', 'kết quả kinh doanh', 'sự kiện thị trường', 'tin chứng khoán Việt Nam'],
     openGraph: {
         title: 'Tin tức thị trường | Finext',
-        description: 'Cập nhật tin tức thị trường tài chính và các sự kiện nổi bật theo thời gian thực.',
+        description: 'Tin tức chứng khoán, tài chính và doanh nghiệp Việt Nam: thông tin doanh nghiệp, kết quả kinh doanh và phân tích chuyên sâu — cập nhật liên tục.',
     },
 };
 

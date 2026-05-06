@@ -22,7 +22,8 @@
       "Bash(cat \"app/\\(main\\)/charts/[id]/CandlestickChart.tsx\")",
       "Bash(head -100 \"app/\\(main\\)/charts/[id]/ChartToolbar.tsx\")",
       "Bash(./node_modules/.bin/tsc --noEmit -p .)",
-      "Bash(finext-nextjs/node_modules/.bin/tsc --noEmit -p finext-nextjs)"
+      "Bash(finext-nextjs/node_modules/.bin/tsc --noEmit -p finext-nextjs)",
+      "Bash(dir /B d:\\\\twan_projects\\\\finext-web-app)"
     ]
   }
 }

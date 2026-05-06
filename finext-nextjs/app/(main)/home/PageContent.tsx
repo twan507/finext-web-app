@@ -462,6 +462,26 @@ export default function HomeContent() {
 
     return (
         <Box sx={{ py: 2 }}>
+            {/* SEO: H1 thương hiệu ẩn (visually-hidden, Googlebot/screen reader đọc được)
+                Lưu ý: phải dùng '1px' chuỗi vì MUI sx hiểu width:1 = 100% gây overflow */}
+            <Box
+                component="h1"
+                sx={{
+                    position: 'absolute',
+                    width: '1px',
+                    height: '1px',
+                    padding: 0,
+                    margin: '-1px',
+                    overflow: 'hidden',
+                    clip: 'rect(0,0,0,0)',
+                    whiteSpace: 'nowrap',
+                    border: 0,
+                    left: 0,
+                    top: 0,
+                }}
+            >
+                Finext — Nền tảng phân tích và sàng lọc cổ phiếu thông minh cho nhà đầu tư Việt Nam
+            </Box>
             {/* Mini Index Cards */}
             <Box
                 sx={{

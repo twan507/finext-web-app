@@ -230,7 +230,6 @@ export default function RootLayout({
                   '@id': 'https://finext.vn/#website',
                   url: 'https://finext.vn',
                   name: 'Finext',
-                  alternateName: 'Finext - Your Next Financial Step',
                   description:
                     'Nền tảng phân tích chứng khoán thông minh cho nhà đầu tư Việt Nam',
                   inLanguage: 'vi',
