@@ -562,6 +562,7 @@ export default function StockDetailContent() {
                         border: 'none',
                         padding: 0,
                         cursor: 'pointer',
+                        textAlign: 'left',
                         color: 'text.primary',
                         '&:hover .stock-chevron': {
                             color: 'primary.main',
@@ -773,7 +774,7 @@ export default function StockDetailContent() {
             <Box sx={{
                 display: 'flex',
                 flexDirection: { xs: 'column', md: 'row' },
-                gap: { xs: 2, md: 3 },
+                gap: 3,
             }}>
                 {/* Left: Chart or Info (toggle controlled) */}
                 <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -798,15 +799,15 @@ export default function StockDetailContent() {
                     )}
                 </Box>
 
-                {/* Tall vertical divider giữa left & right — chỉ ở info view (desktop) */}
+                {/* Divider giữa left & right — info view: vertical (desktop) / horizontal (mobile) */}
                 {viewMode === 'info' && (
                     <Box
                         sx={{
-                            display: { xs: 'none', md: 'block' },
-                            width: '1px',
                             bgcolor: 'divider',
-                            alignSelf: 'stretch',
                             flexShrink: 0,
+                            alignSelf: 'stretch',
+                            width: { xs: '100%', md: '1px' },
+                            height: { xs: '1px', md: 'auto' },
                         }}
                     />
                 )}

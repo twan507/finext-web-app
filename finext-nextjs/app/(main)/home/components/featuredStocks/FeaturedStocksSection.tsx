@@ -17,7 +17,7 @@ import type { StockData } from '../marketSection/MarketVolatility';
 
 const SCORE_VSI_CAP = 2;
 const TOP_N = 10;
-const CAROUSEL_INTERVAL = 10000;
+const CAROUSEL_INTERVAL = 20000;
 
 interface FeaturedStocksSectionProps {
     stockData?: StockData[];

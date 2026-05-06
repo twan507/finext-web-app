@@ -655,6 +655,7 @@ export default function SectorDetailContent() {
                         border: 'none',
                         padding: 0,
                         cursor: 'pointer',
+                        textAlign: 'left',
                         color: 'text.primary',
                         '&:hover .index-chevron': {
                             color: 'primary.main',

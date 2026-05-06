@@ -57,6 +57,31 @@ export default function Carousel({
     const [touchEnd, setTouchEnd] = useState<number | null>(null);
     const minSwipeDistance = 50;
 
+    // Track horizontally-scrollable child under the touch target.
+    // Why: child tables with overflowX:auto would otherwise be hijacked by
+    // the carousel swipe — user can't scroll the table horizontally on mobile.
+    const scrollableChildRef = useRef<HTMLElement | null>(null);
+    const initialScrollLeftRef = useRef(0);
+
+    const findScrollableChild = (
+        target: HTMLElement | null,
+        container: HTMLElement,
+    ): HTMLElement | null => {
+        let el: HTMLElement | null = target;
+        while (el && el !== container && container.contains(el)) {
+            const style = window.getComputedStyle(el);
+            const overflowX = style.overflowX;
+            if (
+                (overflowX === 'auto' || overflowX === 'scroll') &&
+                el.scrollWidth > el.clientWidth
+            ) {
+                return el;
+            }
+            el = el.parentElement;
+        }
+        return null;
+    };
+
     // Carousel Logic
     const triggerSlideChange = useCallback((nextIndex: number) => {
         if (nextIndex === currentSlide) return;
@@ -105,30 +130,53 @@ export default function Carousel({
     };
 
     const endDrag = () => {
-        if (!touchStart || !touchEnd) return;
+        if (!touchStart || !touchEnd) {
+            scrollableChildRef.current = null;
+            return;
+        }
 
         const distance = touchStart - touchEnd;
         const isLeftSwipe = distance > minSwipeDistance;
         const isRightSwipe = distance < -minSwipeDistance;
 
-        if (isLeftSwipe) {
-            // Next slide
+        // If a scrollable child captured the gesture, only advance the carousel
+        // when that child is at the edge in the swipe direction (both at start
+        // and end of the gesture).
+        const scrollable = scrollableChildRef.current;
+        let allowNext = isLeftSwipe;
+        let allowPrev = isRightSwipe;
+        if (scrollable) {
+            const maxScroll = scrollable.scrollWidth - scrollable.clientWidth;
+            const startedAtRight = initialScrollLeftRef.current >= maxScroll - 1;
+            const startedAtLeft = initialScrollLeftRef.current <= 0;
+            const endedAtRight = scrollable.scrollLeft >= maxScroll - 1;
+            const endedAtLeft = scrollable.scrollLeft <= 0;
+            allowNext = isLeftSwipe && startedAtRight && endedAtRight;
+            allowPrev = isRightSwipe && startedAtLeft && endedAtLeft;
+        }
+
+        if (allowNext) {
             const nextIndex = (currentSlide + 1) % slides.length;
             triggerSlideChange(nextIndex);
         }
-        if (isRightSwipe) {
-            // Prev slide
+        if (allowPrev) {
             const prevIndex = (currentSlide - 1 + slides.length) % slides.length;
             triggerSlideChange(prevIndex);
         }
-        // Reset (optional, but good for cleanliness)
         setTouchStart(null);
         setTouchEnd(null);
+        scrollableChildRef.current = null;
     };
 
     // Touch Handlers
     const handleTouchStart = (e: React.TouchEvent) => {
         setIsPaused(true);
+        const child = findScrollableChild(
+            e.target as HTMLElement,
+            e.currentTarget as HTMLElement,
+        );
+        scrollableChildRef.current = child;
+        initialScrollLeftRef.current = child?.scrollLeft ?? 0;
         startDrag(e.targetTouches[0].clientX);
     };
 
@@ -167,6 +215,23 @@ export default function Carousel({
         endDrag(); // Handle drag release outside
     };
 
+    // Reset horizontal scroll of any scrollable descendants when the slide
+    // changes — React reuses DOM nodes across slides of the same type, so
+    // scrollLeft would otherwise persist from the previous slide.
+    const slideContainerRef = useRef<HTMLDivElement | null>(null);
+    useEffect(() => {
+        const container = slideContainerRef.current;
+        if (!container) return;
+        container.querySelectorAll<HTMLElement>('*').forEach((el) => {
+            if (el.scrollWidth > el.clientWidth) {
+                const style = window.getComputedStyle(el);
+                if (style.overflowX === 'auto' || style.overflowX === 'scroll') {
+                    el.scrollLeft = 0;
+                }
+            }
+        });
+    }, [currentSlide]);
+
     // Auto-play
     useEffect(() => {
         if (autoPlayInterval <= 0 || isPaused) return;
@@ -184,6 +249,7 @@ export default function Carousel({
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: height, ...sx as object }}>
             <Box
+                ref={slideContainerRef}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
