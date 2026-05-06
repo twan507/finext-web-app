@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import {
     Box, Typography, useTheme, Divider, Dialog, DialogTitle, DialogContent, IconButton, Stack, Chip,
+    type Theme,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import {
@@ -26,7 +27,7 @@ interface StockInfoSectionProps {
 const OVERVIEW_CLAMP_CHARS = 280;
 
 // Helpers — đồng bộ với MarketIndexChart header
-const getChangeColor = (pctPercent: number, theme: ReturnType<typeof useTheme>): string => {
+const getChangeColor = (pctPercent: number, theme: Theme): string => {
     if (Math.abs(pctPercent) <= 0.005) return theme.palette.trend.ref;
     return pctPercent > 0 ? theme.palette.trend.up : theme.palette.trend.down;
 };
