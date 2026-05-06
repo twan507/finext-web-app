@@ -192,6 +192,41 @@ export default function ResultTable({ data, columns, sortField, sortOrder, onTog
                                 >
                                     <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.3 }}>
                                         {col.shortLabel ?? col.label}
+                                        {col.tooltip && (
+                                            <Tooltip
+                                                title={col.tooltip}
+                                                placement="top"
+                                                arrow
+                                                slotProps={{
+                                                    tooltip: {
+                                                        sx: {
+                                                            fontSize: getResponsiveFontSize('xs'),
+                                                            maxWidth: 280,
+                                                            lineHeight: 1.5,
+                                                        },
+                                                    },
+                                                }}
+                                            >
+                                                <Box
+                                                    component="span"
+                                                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                                    onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
+                                                    draggable={false}
+                                                    onDragStart={(e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); }}
+                                                    sx={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        flexShrink: 0,
+                                                        color: alpha(theme.palette.text.disabled, 0.7),
+                                                        cursor: 'default',
+                                                        ml: 0.15,
+                                                        '&:hover': { color: theme.palette.primary.main },
+                                                    }}
+                                                >
+                                                    <Icon icon="solar:info-circle-linear" width={12} height={12} />
+                                                </Box>
+                                            </Tooltip>
+                                        )}
                                         {col.sortable && (
                                             isSorted ? (
                                                 <Icon

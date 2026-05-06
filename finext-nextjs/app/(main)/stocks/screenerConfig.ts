@@ -16,6 +16,7 @@ export interface ColumnDef {
     align?: 'left' | 'right' | 'center';
     format?: 'price' | 'diff' | 'pct' | 'volume' | 'value' | 'tỷ' | 'tỷ0' | 'score' | 'flow' | 'text' | 'rank' | 'vsi';
     sortable?: boolean;
+    tooltip?: string;
 }
 
 export interface FilterPreset {
@@ -38,49 +39,49 @@ export const ALL_COLUMNS: ColumnDef[] = [
     { field: 'category_name', label: 'Nhóm Dòng tiền', group: 'info', width: 120, align: 'left', format: 'text', sortable: true },
 
     // Giá & OHLCV
-    { field: 'open', label: 'Mở cửa', group: 'price', width: 85, align: 'right', format: 'price', sortable: true },
-    { field: 'high', label: 'Cao nhất', group: 'price', width: 85, align: 'right', format: 'price', sortable: true },
-    { field: 'low', label: 'Thấp nhất', group: 'price', width: 85, align: 'right', format: 'price', sortable: true },
+    { field: 'open', label: 'Mở cửa', group: 'price', width: 85, align: 'right', format: 'price', sortable: true, tooltip: 'Giá khớp lệnh đầu phiên' },
+    { field: 'high', label: 'Cao nhất', group: 'price', width: 85, align: 'right', format: 'price', sortable: true, tooltip: 'Giá cao nhất trong phiên' },
+    { field: 'low', label: 'Thấp nhất', group: 'price', width: 85, align: 'right', format: 'price', sortable: true, tooltip: 'Giá thấp nhất trong phiên' },
     { field: 'close', label: 'Giá', group: 'price', width: 85, align: 'right', format: 'price', sortable: true },
-    { field: 'diff', label: '±', group: 'price', width: 70, align: 'right', format: 'diff', sortable: true },
-    { field: 'pct_change', label: '±%', group: 'price', width: 75, align: 'right', format: 'pct', sortable: true },
-    { field: 'volume', label: 'KLGD', group: 'price', width: 95, align: 'right', format: 'volume', sortable: true },
-    { field: 'trading_value', label: 'GTGD', group: 'price', width: 100, align: 'right', format: 'tỷ', sortable: true },
-    { field: 'cap_value', label: 'Vốn hóa TT', shortLabel: 'VHTT', group: 'info', width: 110, align: 'right', format: 'tỷ0', sortable: true },
+    { field: 'diff', label: '±', group: 'price', width: 70, align: 'right', format: 'diff', sortable: true, tooltip: 'Mức thay đổi giá tuyệt đối so với giá tham chiếu' },
+    { field: 'pct_change', label: '±%', group: 'price', width: 75, align: 'right', format: 'pct', sortable: true, tooltip: 'Mức thay đổi giá theo % so với giá tham chiếu' },
+    { field: 'volume', label: 'KLGD', group: 'price', width: 95, align: 'right', format: 'volume', sortable: true, tooltip: 'Khối lượng giao dịch khớp lệnh trong phiên' },
+    { field: 'trading_value', label: 'GTGD', group: 'price', width: 100, align: 'right', format: 'tỷ', sortable: true, tooltip: 'Giá trị giao dịch trong phiên' },
+    { field: 'cap_value', label: 'Vốn hóa TT', shortLabel: 'VHTT', group: 'info', width: 110, align: 'right', format: 'tỷ0', sortable: true, tooltip: 'Vốn hoá thị trường: tổng giá trị vốn hoá của cổ phiếu' },
 
     // % thay đổi theo khung
-    { field: 'w_pct', label: '% Tuần', group: 'change', width: 80, align: 'right', format: 'pct', sortable: true },
-    { field: 'm_pct', label: '% Tháng', group: 'change', width: 80, align: 'right', format: 'pct', sortable: true },
-    { field: 'q_pct', label: '% Quý', group: 'change', width: 80, align: 'right', format: 'pct', sortable: true },
-    { field: 'y_pct', label: '% Năm', group: 'change', width: 80, align: 'right', format: 'pct', sortable: true },
+    { field: 'w_pct', label: '% Tuần', group: 'change', width: 80, align: 'right', format: 'pct', sortable: true, tooltip: 'Tỷ lệ % thay đổi giá so với cuối tuần trước' },
+    { field: 'm_pct', label: '% Tháng', group: 'change', width: 80, align: 'right', format: 'pct', sortable: true, tooltip: 'Tỷ lệ % thay đổi giá so với cuối tháng trước' },
+    { field: 'q_pct', label: '% Quý', group: 'change', width: 80, align: 'right', format: 'pct', sortable: true, tooltip: 'Tỷ lệ % thay đổi giá so với cuối quý trước' },
+    { field: 'y_pct', label: '% Năm', group: 'change', width: 80, align: 'right', format: 'pct', sortable: true, tooltip: 'Tỷ lệ % thay đổi giá so với cuối năm trước' },
 
     // Volume indicators
-    { field: 'vsi', label: 'CSTK', group: 'price', width: 75, align: 'right', format: 'vsi', sortable: true },
+    { field: 'vsi', label: 'CSTK', group: 'price', width: 75, align: 'right', format: 'vsi', sortable: true, tooltip: 'Chỉ số thanh khoản: so sánh thanh khoản phiên hiện tại với thanh khoản trung bình của tuần' },
 
     // Dòng tiền & Xếp hạng
-    { field: 't0_score', label: 'DT Phiên', group: 'cashflow', width: 75, align: 'right', format: 'flow', sortable: true },
-    { field: 't5_score', label: 'DT Tuần', group: 'cashflow', width: 75, align: 'right', format: 'flow', sortable: true },
-    { field: 'market_rank_pct', label: 'XHTT', group: 'cashflow', width: 70, align: 'right', format: 'rank', sortable: true },
-    { field: 'industry_rank_pct', label: 'XH Ngành', group: 'cashflow', width: 80, align: 'right', format: 'rank', sortable: true },
+    { field: 't0_score', label: 'DT Phiên', group: 'cashflow', width: 75, align: 'right', format: 'flow', sortable: true, tooltip: 'Sức mạnh dòng tiền: thể hiện cường độ tiền vào / ra cổ phiếu trong phiên hiện tại' },
+    { field: 't5_score', label: 'DT Tuần', group: 'cashflow', width: 75, align: 'right', format: 'flow', sortable: true, tooltip: 'Sức mạnh dòng tiền: thể hiện cường độ tiền vào / ra cổ phiếu tích luỹ trong tuần' },
+    { field: 'market_rank_pct', label: 'XHTT', group: 'cashflow', width: 70, align: 'right', format: 'rank', sortable: true, tooltip: 'Xếp hạng thị trường: vị trí phân vị của cổ phiếu so với toàn bộ thị trường — giá trị càng cao, cổ phiếu càng đứng trên nhiều mã khác' },
+    { field: 'industry_rank_pct', label: 'XH Ngành', group: 'cashflow', width: 80, align: 'right', format: 'rank', sortable: true, tooltip: 'Xếp hạng ngành: vị trí phân vị của cổ phiếu trong nội bộ ngành — giá trị càng cao, cổ phiếu càng dẫn đầu ngành' },
 
 
     // Zone classifications
-    { field: 'w_zone', label: 'Zone W', group: 'zones', width: 90, align: 'center', format: 'text', sortable: true },
-    { field: 'm_zone', label: 'Zone M', group: 'zones', width: 90, align: 'center', format: 'text', sortable: true },
-    { field: 'q_zone', label: 'Zone Q', group: 'zones', width: 90, align: 'center', format: 'text', sortable: true },
-    { field: 'y_zone', label: 'Zone Y', group: 'zones', width: 90, align: 'center', format: 'text', sortable: true },
-    { field: 'w_ma_zone', label: 'MA Zone W', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true },
-    { field: 'm_ma_zone', label: 'MA Zone M', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true },
-    { field: 'q_ma_zone', label: 'MA Zone Q', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true },
-    { field: 'y_ma_zone', label: 'MA Zone Y', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true },
-    { field: 'w_fibo_zone', label: 'Fibo Zone W', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true },
-    { field: 'm_fibo_zone', label: 'Fibo Zone M', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true },
-    { field: 'q_fibo_zone', label: 'Fibo Zone Q', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true },
-    { field: 'y_fibo_zone', label: 'Fibo Zone Y', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true },
-    { field: 'w_vp_zone', label: 'VP Zone W', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true },
-    { field: 'm_vp_zone', label: 'VP Zone M', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true },
-    { field: 'q_vp_zone', label: 'VP Zone Q', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true },
-    { field: 'y_vp_zone', label: 'VP Zone Y', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true },
+    { field: 'w_zone', label: 'Zone W', group: 'zones', width: 90, align: 'center', format: 'text', sortable: true, tooltip: 'Vị thế giá tổng hợp theo phân tích kỹ thuật — khung tuần' },
+    { field: 'm_zone', label: 'Zone M', group: 'zones', width: 90, align: 'center', format: 'text', sortable: true, tooltip: 'Vị thế giá tổng hợp theo phân tích kỹ thuật — khung tháng' },
+    { field: 'q_zone', label: 'Zone Q', group: 'zones', width: 90, align: 'center', format: 'text', sortable: true, tooltip: 'Vị thế giá tổng hợp theo phân tích kỹ thuật — khung quý' },
+    { field: 'y_zone', label: 'Zone Y', group: 'zones', width: 90, align: 'center', format: 'text', sortable: true, tooltip: 'Vị thế giá tổng hợp theo phân tích kỹ thuật — khung năm' },
+    { field: 'w_ma_zone', label: 'MA Zone W', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true, tooltip: 'Vị thế giá tương đối so với hệ thống đường trung bình động (MA) — khung tuần' },
+    { field: 'm_ma_zone', label: 'MA Zone M', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true, tooltip: 'Vị thế giá tương đối so với hệ thống đường trung bình động (MA) — khung tháng' },
+    { field: 'q_ma_zone', label: 'MA Zone Q', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true, tooltip: 'Vị thế giá tương đối so với hệ thống đường trung bình động (MA) — khung quý' },
+    { field: 'y_ma_zone', label: 'MA Zone Y', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true, tooltip: 'Vị thế giá tương đối so với hệ thống đường trung bình động (MA) — khung năm' },
+    { field: 'w_fibo_zone', label: 'Fibo Zone W', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true, tooltip: 'Vị thế giá tương đối so với các mức Fibonacci retracement — khung tuần' },
+    { field: 'm_fibo_zone', label: 'Fibo Zone M', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true, tooltip: 'Vị thế giá tương đối so với các mức Fibonacci retracement — khung tháng' },
+    { field: 'q_fibo_zone', label: 'Fibo Zone Q', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true, tooltip: 'Vị thế giá tương đối so với các mức Fibonacci retracement — khung quý' },
+    { field: 'y_fibo_zone', label: 'Fibo Zone Y', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true, tooltip: 'Vị thế giá tương đối so với các mức Fibonacci retracement — khung năm' },
+    { field: 'w_vp_zone', label: 'VP Zone W', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true, tooltip: 'Vị thế giá trong cấu trúc Volume Profile — khung tuần' },
+    { field: 'm_vp_zone', label: 'VP Zone M', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true, tooltip: 'Vị thế giá trong cấu trúc Volume Profile — khung tháng' },
+    { field: 'q_vp_zone', label: 'VP Zone Q', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true, tooltip: 'Vị thế giá trong cấu trúc Volume Profile — khung quý' },
+    { field: 'y_vp_zone', label: 'VP Zone Y', group: 'zones', width: 100, align: 'center', format: 'text', sortable: true, tooltip: 'Vị thế giá trong cấu trúc Volume Profile — khung năm' },
 ];
 
 // Field lookup map

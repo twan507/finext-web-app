@@ -27,7 +27,8 @@
       "Bash(find /d/twan_projects/finext-web-app/finext-nextjs/services -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))",
       "Bash(ls -la /d/twan_projects/finext-web-app/finext-nextjs/app/admin/*/)",
       "Bash(xargs -I {} find {} -type f -name \"*.tsx\")",
-      "Bash(xargs -0 grep -l \"Typography\")"
+      "Bash(xargs -0 grep -l \"Typography\")",
+      "Bash(git commit *)"
     ],
     "additionalDirectories": [
       "D:\\twan_projects\\finext-web-app\\finext-nextjs\\app\\(main)\\sectors\\[sectorId]\\components",

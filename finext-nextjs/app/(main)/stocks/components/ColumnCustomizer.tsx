@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Box, Typography, Checkbox, Dialog, DialogTitle, DialogContent, DialogActions, Button, useTheme, alpha, Divider } from '@mui/material';
+import { Box, Typography, Checkbox, Dialog, DialogTitle, DialogContent, DialogActions, Button, useTheme, alpha, Divider, Tooltip } from '@mui/material';
+import { Icon } from '@iconify/react';
 import { getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
 import { ALL_COLUMNS, COLUMN_GROUPS, TABLE_VIEWS } from '../screenerConfig';
 
@@ -145,6 +146,36 @@ export default function ColumnCustomizer({ open, onClose, selectedColumns, onSet
                                             }}>
                                                 {col.label}
                                             </Typography>
+                                            {col.tooltip && (
+                                                <Tooltip
+                                                    title={col.tooltip}
+                                                    placement="top"
+                                                    arrow
+                                                    slotProps={{
+                                                        tooltip: {
+                                                            sx: {
+                                                                fontSize: getResponsiveFontSize('xs'),
+                                                                maxWidth: 280,
+                                                                lineHeight: 1.5,
+                                                            },
+                                                        },
+                                                    }}
+                                                >
+                                                    <Box
+                                                        component="span"
+                                                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                                        sx={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            ml: 0.5,
+                                                            color: 'text.disabled',
+                                                            '&:hover': { color: 'primary.main' },
+                                                        }}
+                                                    >
+                                                        <Icon icon="solar:info-circle-linear" width={13} />
+                                                    </Box>
+                                                </Tooltip>
+                                            )}
                                         </Box>
                                     );
                                 })}
