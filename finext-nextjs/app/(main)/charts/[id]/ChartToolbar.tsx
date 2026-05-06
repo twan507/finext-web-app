@@ -35,6 +35,7 @@ import LabelOffIcon from '@mui/icons-material/LabelOff';
 import SellIcon from '@mui/icons-material/Sell';
 import AnalyticsOutlinedIcon from '@mui/icons-material/AnalyticsOutlined';
 import { getResponsiveFontSize } from 'theme/tokens';
+import { rankByMatch } from 'utils/searchRank';
 import type { Timeframe } from './aggregateTimeframe';
 import type { PriceTagMode } from 'hooks/useChartStore';
 
@@ -104,17 +105,17 @@ export default function ChartToolbar({
     const anchorRef = useRef<HTMLDivElement>(null);
     const listRef = useRef<HTMLUListElement>(null);
 
-    // Filter tickers based on search value
+    // Filter + rank tickers theo độ khớp: exact → startsWith → contains+idx
     const filteredTickers = useMemo(() => {
-        if (!searchValue.trim()) return [];
-        const query = searchValue.trim().toLowerCase();
-        return tickers
-            .filter((t) => {
-                const tickerMatch = t.ticker.toLowerCase().startsWith(query);
-                const nameMatch = t.ticker_name?.toLowerCase().startsWith(query);
-                return tickerMatch || nameMatch;
-            })
-            .slice(0, MAX_RESULTS);
+        const query = searchValue.trim();
+        if (!query) return [];
+        const q = query.toUpperCase();
+        const matched = tickers.filter((t) => {
+            const tickerMatch = t.ticker.toUpperCase().includes(q);
+            const nameMatch = t.ticker_name?.toUpperCase().includes(q);
+            return tickerMatch || nameMatch;
+        });
+        return rankByMatch(matched, query, t => [t.ticker, t.ticker_name]).slice(0, MAX_RESULTS);
     }, [searchValue, tickers]);
 
     // Reset highlight when results change

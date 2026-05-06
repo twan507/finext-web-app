@@ -14,6 +14,7 @@ import { ISseRequest } from 'services/core/types';
 import { sseClient } from 'services/sseClient';
 import { apiClient } from 'services/apiClient';
 import { getResponsiveFontSize, fontWeight, getGlassCard, borderRadius, durations, easings, transitions, layoutTokens } from 'theme/tokens';
+import { rankByMatch } from 'utils/searchRank';
 
 import DongTienSection from './components/DongTienSection';
 import PriceMapSection from './components/PriceMapSection';
@@ -540,10 +541,9 @@ export default function StockDetailContent() {
 
     const filteredStockList = useMemo(() => {
         if (!searchQuery.trim()) return stockList;
-        const q = searchQuery.toLowerCase();
-        return stockList.filter(item =>
-            item.ticker.toLowerCase().includes(q)
-        );
+        const q = searchQuery.toUpperCase();
+        const filtered = stockList.filter(item => item.ticker.toUpperCase().includes(q));
+        return rankByMatch(filtered, searchQuery, item => [item.ticker]);
     }, [stockList, searchQuery]);
 
     return (
@@ -691,10 +691,12 @@ export default function StockDetailContent() {
                                         <Typography
                                             sx={{
                                                 fontSize: getResponsiveFontSize('xs'),
-                                                fontWeight: isActive ? fontWeight.semibold : fontWeight.medium,
-                                                color: isActive ? 'primary.main' : 'text.primary',
+                                                color: isActive ? 'primary.main' : 'text.secondary',
                                                 lineHeight: 1.4,
                                                 mt: 0.25,
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
                                             }}
                                         >
                                             {item.name}

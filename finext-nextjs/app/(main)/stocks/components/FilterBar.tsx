@@ -6,6 +6,7 @@ import { Box, Typography, useTheme, alpha } from '@mui/material';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { Icon } from '@iconify/react';
 import { getResponsiveFontSize, fontWeight, borderRadius, getGlassCard, durations, easings } from 'theme/tokens';
+import { rankByMatch } from 'utils/searchRank';
 
 interface FilterBarProps {
     meta: {
@@ -92,7 +93,11 @@ function GlassDropdown({ label, options, selected, onChange, onClear, searchable
     }
 
     const filteredOptions = searchable && searchQuery
-        ? options.filter(opt => opt.toLowerCase().includes(searchQuery.toLowerCase()))
+        ? rankByMatch(
+            options.filter(opt => opt.toLowerCase().includes(searchQuery.toLowerCase())),
+            searchQuery,
+            opt => [opt],
+        )
         : options;
 
     const hasSelected = selected.length > 0;

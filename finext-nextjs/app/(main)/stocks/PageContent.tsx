@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Box, Typography, useTheme, alpha, TextField, InputAdornment, Pagination, Tooltip } from '@mui/material';
+import { Box, Typography, useTheme, alpha, TextField, InputAdornment, Pagination, Tooltip, Popper, Paper, List, ListItemButton, ListItemText, ClickAwayListener } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { useRouter } from 'next/navigation';
 import { getResponsiveFontSize, fontWeight, borderRadius, getGlassCard, durations, easings } from 'theme/tokens';
@@ -17,6 +17,7 @@ import ColumnCustomizer from './components/ColumnCustomizer';
 import { FILTER_PRESETS, COLUMN_MAP } from './screenerConfig';
 import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
 import { ADVANCED_AND_ABOVE } from '@/components/auth/features';
+import { rankByMatch } from 'utils/searchRank';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -91,7 +92,17 @@ function applyFilters(
     return result;
 }
 
-function applySorting(data: Record<string, any>[], sortField: string, sortOrder: 'asc' | 'desc'): Record<string, any>[] {
+function applySorting(
+    data: Record<string, any>[],
+    sortField: string,
+    sortOrder: 'asc' | 'desc',
+    searchQuery: string,
+): Record<string, any>[] {
+    // Khi user đang search và chưa chọn cột sort cụ thể, ưu tiên rank theo độ khớp ticker/ticker_name
+    if (searchQuery.trim() && !sortField) {
+        return rankByMatch(data, searchQuery, row => [row.ticker, row.ticker_name]);
+    }
+
     // Empty sortField = default: sort A→Z by ticker, no column highlighted
     const field = sortField || 'ticker';
     const order = sortField ? sortOrder : 'asc';
@@ -329,6 +340,12 @@ export default function StocksContent() {
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(20);
 
+    // Search autocomplete state
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [highlightIndex, setHighlightIndex] = useState(-1);
+    const searchAnchorRef = useRef<HTMLDivElement>(null);
+    const suggestionListRef = useRef<HTMLUListElement>(null);
+
     // SSE data
     const { data: rawData, isLoading: dataLoading, error: dataError } = useSseCache<Record<string, any>[]>({
         keyword: 'screener_stock_data',
@@ -357,7 +374,7 @@ export default function StocksContent() {
             store.state.advancedFilters,
             store.state.searchQuery,
         );
-        return applySorting(filtered, store.state.sortField, store.state.sortOrder);
+        return applySorting(filtered, store.state.sortField, store.state.sortOrder, store.state.searchQuery);
     }, [rawData, store.state.selectFilters, store.state.rangeFilters, store.state.advancedFilters, store.state.searchQuery, store.state.sortField, store.state.sortOrder]);
 
     // Reset to page 1 when filters/sort change
@@ -387,6 +404,72 @@ export default function StocksContent() {
             if (preset) store.applyPreset(presetId, preset.filters);
         }
     }, [store]);
+
+    // Distinct ticker list cho autocomplete (dedup theo ticker)
+    const allTickers = useMemo(() => {
+        if (!rawData || !Array.isArray(rawData)) return [];
+        const seen = new Set<string>();
+        const list: { ticker: string; ticker_name: string | null }[] = [];
+        for (const row of rawData) {
+            if (!row.ticker || seen.has(row.ticker)) continue;
+            seen.add(row.ticker);
+            list.push({ ticker: String(row.ticker), ticker_name: row.ticker_name ?? null });
+        }
+        return list;
+    }, [rawData]);
+
+    const tickerSuggestions = useMemo(() => {
+        const q = store.state.searchQuery.trim();
+        if (!q) return [];
+        const Q = q.toUpperCase();
+        const matched = allTickers.filter(t =>
+            t.ticker.toUpperCase().includes(Q) || (t.ticker_name?.toUpperCase().includes(Q) ?? false),
+        );
+        return rankByMatch(matched, q, t => [t.ticker, t.ticker_name]).slice(0, 50);
+    }, [allTickers, store.state.searchQuery]);
+
+    useEffect(() => { setHighlightIndex(-1); }, [tickerSuggestions.length]);
+
+    useEffect(() => {
+        if (highlightIndex >= 0 && suggestionListRef.current) {
+            const items = suggestionListRef.current.querySelectorAll('[role="option"]');
+            items[highlightIndex]?.scrollIntoView({ block: 'nearest' });
+        }
+    }, [highlightIndex]);
+
+    const handleSelectSuggestion = useCallback((ticker: string) => {
+        store.setSearchQuery(ticker);
+        setIsSearchOpen(false);
+        setHighlightIndex(-1);
+    }, [store]);
+
+    const handleSearchKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if (!isSearchOpen || tickerSuggestions.length === 0) return;
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                setHighlightIndex(prev => (prev < tickerSuggestions.length - 1 ? prev + 1 : 0));
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                setHighlightIndex(prev => (prev > 0 ? prev - 1 : tickerSuggestions.length - 1));
+                break;
+            case 'Enter':
+                e.preventDefault();
+                if (highlightIndex >= 0 && highlightIndex < tickerSuggestions.length) {
+                    handleSelectSuggestion(tickerSuggestions[highlightIndex].ticker);
+                } else if (tickerSuggestions.length > 0) {
+                    handleSelectSuggestion(tickerSuggestions[0].ticker);
+                }
+                break;
+            case 'Escape':
+                setIsSearchOpen(false);
+                setHighlightIndex(-1);
+                break;
+        }
+    }, [isSearchOpen, tickerSuggestions, highlightIndex, handleSelectSuggestion]);
+
+    const showSuggestions = isSearchOpen && tickerSuggestions.length > 0;
 
     const totalCount = rawData?.length ?? 0;
     const statusText = dataError
@@ -420,38 +503,104 @@ export default function StocksContent() {
                     </Box>
                 </Box>
 
-                {/* Search */}
-                <TextField
-                    size="small"
-                    placeholder="Lọc theo mã CK"
-                    value={store.state.searchQuery}
-                    onChange={(e) => store.setSearchQuery(e.target.value)}
-                    InputProps={{
-                        startAdornment: (
-                            <InputAdornment position="start">
-                                <Icon icon="solar:magnifer-linear" width={16} color={theme.palette.text.secondary} />
-                            </InputAdornment>
-                        ),
-                        endAdornment: store.state.searchQuery ? (
-                            <InputAdornment position="end">
-                                <Box
-                                    component="button"
-                                    onClick={() => store.setSearchQuery('')}
-                                    sx={{ background: 'none', border: 'none', cursor: 'pointer', p: 0.25, display: 'flex', color: 'text.disabled' }}
-                                >
-                                    <Icon icon="solar:close-circle-bold" width={16} />
-                                </Box>
-                            </InputAdornment>
-                        ) : undefined,
-                    }}
-                    sx={{
-                        width: { xs: '100%', sm: 260 },
-                        '& .MuiOutlinedInput-root': {
-                            borderRadius: `${borderRadius.md}px`,
-                            fontSize: getResponsiveFontSize('sm'),
-                        },
-                    }}
-                />
+                {/* Search with ticker autocomplete suggestions */}
+                <ClickAwayListener onClickAway={() => { setIsSearchOpen(false); setHighlightIndex(-1); }}>
+                    <Box ref={searchAnchorRef} sx={{ position: 'relative', width: { xs: '100%', sm: 260 } }}>
+                        <TextField
+                            fullWidth
+                            size="small"
+                            placeholder="Lọc theo mã cổ phiếu"
+                            value={store.state.searchQuery}
+                            onChange={(e) => {
+                                store.setSearchQuery(e.target.value);
+                                setIsSearchOpen(true);
+                            }}
+                            onFocus={() => { if (store.state.searchQuery.trim()) setIsSearchOpen(true); }}
+                            onKeyDown={handleSearchKeyDown}
+                            autoComplete="off"
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <Icon icon="solar:magnifer-linear" width={16} color={theme.palette.text.secondary} />
+                                    </InputAdornment>
+                                ),
+                                endAdornment: store.state.searchQuery ? (
+                                    <InputAdornment position="end">
+                                        <Box
+                                            component="button"
+                                            onClick={() => { store.setSearchQuery(''); setIsSearchOpen(false); }}
+                                            sx={{ background: 'none', border: 'none', cursor: 'pointer', p: 0.25, display: 'flex', color: 'text.disabled' }}
+                                        >
+                                            <Icon icon="solar:close-circle-bold" width={16} />
+                                        </Box>
+                                    </InputAdornment>
+                                ) : undefined,
+                            }}
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    borderRadius: `${borderRadius.md}px`,
+                                    fontSize: getResponsiveFontSize('sm'),
+                                },
+                            }}
+                        />
+                        <Popper
+                            open={showSuggestions}
+                            anchorEl={searchAnchorRef.current}
+                            placement="bottom-start"
+                            style={{ zIndex: 1300, width: searchAnchorRef.current?.clientWidth }}
+                            modifiers={[{ name: 'offset', options: { offset: [0, 4] } }]}
+                        >
+                            <Paper
+                                elevation={0}
+                                sx={{
+                                    maxHeight: 320,
+                                    overflow: 'auto',
+                                    border: 1,
+                                    borderColor: 'divider',
+                                    bgcolor: isDark ? 'rgba(30, 30, 30, 0.85)' : 'rgba(255, 255, 255, 0.95)',
+                                    backdropFilter: 'blur(8px)',
+                                    borderRadius: `${borderRadius.md}px`,
+                                }}
+                            >
+                                <List dense disablePadding ref={suggestionListRef} role="listbox">
+                                    {tickerSuggestions.map((item, idx) => {
+                                        const isHighlighted = idx === highlightIndex;
+                                        return (
+                                            <ListItemButton
+                                                key={item.ticker}
+                                                role="option"
+                                                selected={isHighlighted}
+                                                onClick={() => handleSelectSuggestion(item.ticker)}
+                                                sx={{
+                                                    py: 0.5,
+                                                    px: 1.5,
+                                                    '&.Mui-selected': {
+                                                        bgcolor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
+                                                    },
+                                                }}
+                                            >
+                                                <ListItemText
+                                                    primary={
+                                                        <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.semibold, color: 'text.primary' }}>
+                                                            {item.ticker}
+                                                        </Typography>
+                                                    }
+                                                    secondary={
+                                                        item.ticker_name && (
+                                                            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                {item.ticker_name}
+                                                            </Typography>
+                                                        )
+                                                    }
+                                                />
+                                            </ListItemButton>
+                                        );
+                                    })}
+                                </List>
+                            </Paper>
+                        </Popper>
+                    </Box>
+                </ClickAwayListener>
             </Box>
 
             {/* ─── ADVANCED GATE: Preset chips + Filters + Table ─── */}

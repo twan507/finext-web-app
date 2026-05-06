@@ -27,6 +27,7 @@ import { Icon } from '@iconify/react';
 import { useRouter } from 'next/navigation';
 import { getResponsiveFontSize, borderRadius, fontWeight, iconSize, shadows } from 'theme/tokens';
 import { apiClient } from 'services/apiClient';
+import { rankByMatch } from 'utils/searchRank';
 
 // ============================================================================
 // TYPES
@@ -158,14 +159,14 @@ function useSearchLogic() {
         const sortByDate = <T extends { created_at?: string }>(arr: T[]) =>
             [...arr].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''));
 
-        // Client-side filter stocks by ticker only, sorted A→Z
+        // Client-side filter stocks by ticker; rank theo độ khớp khi có query, A→Z khi rỗng
         const filteredStocks = trimmed
-            ? sortByTicker(allStocks.filter(s => s.ticker?.toUpperCase().includes(q))).slice(0, MAX_PER_SECTION)
+            ? rankByMatch(allStocks.filter(s => s.ticker?.toUpperCase().includes(q)), q, s => [s.ticker]).slice(0, MAX_PER_SECTION)
             : sortByTicker(allStocks).slice(0, MAX_PER_SECTION);
 
-        // Client-side filter indexes by ticker only, sorted A→Z
+        // Client-side filter indexes by ticker; rank theo độ khớp khi có query, A→Z khi rỗng
         const filteredIndexes = trimmed
-            ? sortByTicker(allIndexes.filter(s => s.ticker?.toUpperCase().includes(q))).slice(0, MAX_PER_SECTION)
+            ? rankByMatch(allIndexes.filter(s => s.ticker?.toUpperCase().includes(q)), q, s => [s.ticker]).slice(0, MAX_PER_SECTION)
             : sortByTicker(allIndexes).slice(0, MAX_PER_SECTION);
 
         // Remote search for news + reports (always called, empty query returns latest)

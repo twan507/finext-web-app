@@ -34,6 +34,7 @@ import { getResponsiveFontSize, fontWeight, borderRadius, durations } from 'them
 import { getPriceColor, getVsiColor, getTrendColor } from 'theme/colorHelpers';
 import { useSseCache } from 'services/sseClient';
 import { apiClient } from 'services/apiClient';
+import { rankByMatch } from 'utils/searchRank';
 import AddWatchlistDialog from '../../watchlist/components/AddWatchlistDialog';
 import ConfirmDialog from '../../watchlist/components/ConfirmDialog';
 import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
@@ -1131,7 +1132,8 @@ function AutocompleteAdd({ tickerOptions, onAdd, isDark }: { tickerOptions: Tick
             filterOptions={(options, { inputValue }) => {
                 const q = inputValue.toUpperCase();
                 if (!q) return options.slice(0, 20);
-                return options.filter(o => o.ticker.includes(q)).slice(0, 20);
+                const matched = options.filter(o => o.ticker.includes(q));
+                return rankByMatch(matched, inputValue, o => [o.ticker, o.name]).slice(0, 20);
             }}
             onChange={(_, val) => {
                 if (val) {
