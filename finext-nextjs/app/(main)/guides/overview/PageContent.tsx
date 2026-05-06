@@ -418,72 +418,72 @@ export default function OverviewContent() {
             title="Khám phá 4 phần phân tích chuyên sâu"
             media={
               <Box sx={stackSx}>
-              <FeatureCard
-                title="Dòng tiền"
-                icon="mdi:cash-multiple"
-                image={
-                  <Figure
-                    src="/guides/overview/stocks-symbol-tab-cashflow.png"
-                    alt="Phần Dòng tiền"
-                    sx={{ my: 0 }}
-                  />
-                }
-              >
-                Sức mạnh dòng tiền của mã so với toàn thị trường và so với ngành đang
-                thuộc, tương quan giữa dòng tiền và biến động giá qua nhiều phiên, cùng
-                xếp hạng của mã trong ngành và trên thị trường. Yêu cầu gói hội viên phù
-                hợp.
-              </FeatureCard>
+                <FeatureCard
+                  title="Dòng tiền"
+                  icon="mdi:cash-multiple"
+                  image={
+                    <Figure
+                      src="/guides/overview/stocks-symbol-tab-cashflow.png"
+                      alt="Phần Dòng tiền"
+                      sx={{ my: 0 }}
+                    />
+                  }
+                >
+                  Sức mạnh dòng tiền của mã so với toàn thị trường và so với ngành đang
+                  thuộc, tương quan giữa dòng tiền và biến động giá qua nhiều phiên, cùng
+                  xếp hạng của mã trong ngành và trên thị trường. Yêu cầu gói hội viên phù
+                  hợp.
+                </FeatureCard>
 
-              <FeatureCard
-                title="Kỹ thuật"
-                icon="mdi:chart-timeline-variant"
-                image={
-                  <Figure
-                    src="/guides/overview/stocks-symbol-tab-pricemap.png"
-                    alt="Phần Kỹ thuật"
-                    sx={{ my: 0 }}
-                  />
-                }
-              >
-                Bản đồ giá trực quan: các vùng giao dịch tập trung khối lượng lớn, các
-                mức hỗ trợ và kháng cự trọng yếu, kèm một số chỉ báo kỹ thuật phổ biến.
-                Phù hợp cho giao dịch ngắn hạn và xác định vùng mua bán. Yêu cầu gói hội
-                viên phù hợp.
-              </FeatureCard>
+                <FeatureCard
+                  title="Kỹ thuật"
+                  icon="mdi:chart-timeline-variant"
+                  image={
+                    <Figure
+                      src="/guides/overview/stocks-symbol-tab-pricemap.png"
+                      alt="Phần Kỹ thuật"
+                      sx={{ my: 0 }}
+                    />
+                  }
+                >
+                  Bản đồ giá trực quan: các vùng giao dịch tập trung khối lượng lớn, các
+                  mức hỗ trợ và kháng cự trọng yếu, kèm một số chỉ báo kỹ thuật phổ biến.
+                  Phù hợp cho giao dịch ngắn hạn và xác định vùng mua bán. Yêu cầu gói hội
+                  viên phù hợp.
+                </FeatureCard>
 
-              <FeatureCard
-                title="Tài Chính"
-                icon="mdi:file-chart"
-                image={
-                  <Figure
-                    src="/guides/overview/stocks-symbol-tab-financials.png"
-                    alt="Phần Tài Chính"
-                    sx={{ my: 0 }}
-                  />
-                }
-              >
-                Báo cáo tài chính qua nhiều quý và nhiều năm — doanh thu, lợi nhuận, tài
-                sản, nợ vay, dòng tiền — đi kèm biểu đồ xu hướng từng chỉ tiêu để đánh
-                giá chất lượng kinh doanh theo chuỗi thời gian. Yêu cầu gói hội viên phù
-                hợp.
-              </FeatureCard>
+                <FeatureCard
+                  title="Tài chính"
+                  icon="mdi:file-chart"
+                  image={
+                    <Figure
+                      src="/guides/overview/stocks-symbol-tab-financials.png"
+                      alt="Phần Tài chính"
+                      sx={{ my: 0 }}
+                    />
+                  }
+                >
+                  Báo cáo tài chính qua nhiều quý và nhiều năm — doanh thu, lợi nhuận, tài
+                  sản, nợ vay, dòng tiền — đi kèm biểu đồ xu hướng từng chỉ tiêu để đánh
+                  giá chất lượng kinh doanh theo chuỗi thời gian. Yêu cầu gói hội viên phù
+                  hợp.
+                </FeatureCard>
 
-              <FeatureCard
-                title="Tin tức"
-                icon="mdi:newspaper-variant-outline"
-                image={
-                  <Figure
-                    src="/guides/overview/stocks-symbol-tab-news.png"
-                    alt="Phần Tin tức"
-                    sx={{ my: 0 }}
-                  />
-                }
-              >
-                Các bài viết có nhắc đến mã: tin từ doanh nghiệp, báo cáo phân tích, sự
-                kiện liên quan. Đặt cạnh biểu đồ giá giúp hiểu bối cảnh đằng sau mỗi biến
-                động đáng chú ý — cơ sở để hạn chế các phản ứng cảm tính với tin.
-              </FeatureCard>
+                <FeatureCard
+                  title="Tin tức"
+                  icon="mdi:newspaper-variant-outline"
+                  image={
+                    <Figure
+                      src="/guides/overview/stocks-symbol-tab-news.png"
+                      alt="Phần Tin tức"
+                      sx={{ my: 0 }}
+                    />
+                  }
+                >
+                  Các bài viết có nhắc đến mã: tin từ doanh nghiệp, báo cáo phân tích, sự
+                  kiện liên quan. Đặt cạnh biểu đồ giá giúp hiểu bối cảnh đằng sau mỗi biến
+                  động đáng chú ý — cơ sở để hạn chế các phản ứng cảm tính với tin.
+                </FeatureCard>
               </Box>
             }
           >

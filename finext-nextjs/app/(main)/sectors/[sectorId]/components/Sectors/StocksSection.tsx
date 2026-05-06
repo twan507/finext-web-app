@@ -1,11 +1,13 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box } from '@mui/material';
 import dynamic from 'next/dynamic';
 
 import SectorStockTable, { SectorStockRowData } from '../SectorStockTable';
 import { StockData } from 'app/(main)/home/components/marketSection/MarketVolatility';
+import ChartSectionTitle from 'components/common/ChartSectionTitle';
+import { useMarketUpdateTime } from 'hooks/useMarketUpdateTime';
 
 const UniTreeMap = dynamic(() => import('components/common/UniTreeMap'), { ssr: false });
 
@@ -15,28 +17,12 @@ interface StocksSectionProps {
     stockData: StockData[];
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
-    const { getResponsiveFontSize, fontWeight } = require('theme/tokens');
-    return (
-        <Typography
-            color="text.secondary"
-            sx={{
-                fontSize: getResponsiveFontSize('lg'),
-                fontWeight: fontWeight.semibold,
-                textTransform: 'uppercase',
-                mb: 1,
-            }}
-        >
-            {children}
-        </Typography>
-    );
-}
-
 export default function StocksSection({
     ticker,
     indexName,
     stockData,
 }: StocksSectionProps) {
+    const updateTime = useMarketUpdateTime();
     // Filter stocks by this sector's industry_name
     const filteredStocks: StockData[] = useMemo(() => {
         if (stockData.length === 0) return [];
@@ -66,14 +52,24 @@ export default function StocksSection({
 
     return (
         <Box>
-            <Box sx={{ mb: 2 }}><SectionTitle>CỔ PHIẾU NỔI BẬT NGÀNH {indexName.toUpperCase()}</SectionTitle></Box>
+            <ChartSectionTitle
+                title={`Cổ phiếu nổi bật ngành ${indexName}`}
+                description="Danh sách các cổ phiếu có giá trị giao dịch cao nhất trong ngành."
+                updateTime={updateTime}
+                sx={{ mb: 1 }}
+            />
             <SectorStockTable
                 data={sectorStocks}
                 isLoading={stockData.length === 0}
                 skeletonRows={10}
             />
             <Box sx={{ mt: 4 }}>
-                <Box sx={{ mb: 2 }}><SectionTitle>BẢN ĐỒ NGÀNH {indexName.toUpperCase()}</SectionTitle></Box>
+                <ChartSectionTitle
+                    title={`Bản đồ ngành ${indexName}`}
+                    description="Bản đồ thể hiện biến động giá và giá trị giao dịch của các cổ phiếu trong ngành."
+                    updateTime={updateTime}
+                    sx={{ mb: 1 }}
+                />
                 <UniTreeMap
                     data={filteredStocks}
                     chartHeight="550px"

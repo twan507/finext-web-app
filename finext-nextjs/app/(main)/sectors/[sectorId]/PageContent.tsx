@@ -49,7 +49,7 @@ const LINE_SESSIONS = 20;
 const SECTOR_TABS = [
     { id: 'cashflow', label: 'Dòng tiền' },
     { id: 'stocks', label: 'Cổ phiếu' },
-    { id: 'financials', label: 'Tài Chính' },
+    { id: 'financials', label: 'Tài chính' },
     { id: 'news', label: 'Tin tức' },
 ] as const;
 
@@ -644,152 +644,152 @@ export default function SectorDetailContent() {
             {/* Title with dropdown sector selector and Mở biểu đồ button */}
             <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', mb: 2 }}>
                 <Box ref={dropdownRef} sx={{ position: 'relative', display: 'inline-block' }}>
-                <Box
-                    component="button"
-                    onClick={() => setDropdownOpen(prev => !prev)}
-                    sx={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        background: 'none',
-                        border: 'none',
-                        padding: 0,
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        color: 'text.primary',
-                        '&:hover .index-chevron': {
-                            color: 'primary.main',
-                        },
-                    }}
-                >
-                    {indexName ? (
-                        <Typography
-                            variant="h1"
-                            sx={{
-                                fontSize: getResponsiveFontSize('h1'),
-                                lineHeight: 1.2,
-                                userSelect: 'none',
-                            }}
-                        >
-                            {indexName}
-                        </Typography>
-                    ) : (
-                        <Skeleton variant="text" width={220} sx={{ fontSize: getResponsiveFontSize('h1') }} />
-                    )}
                     <Box
-                        className="index-chevron"
+                        component="button"
+                        onClick={() => setDropdownOpen(prev => !prev)}
                         sx={{
-                            fontSize: getResponsiveFontSize('h1'),
-                            fontWeight: fontWeight.semibold,
-                            color: 'text.secondary',
-                            lineHeight: 1.2,
-                            transform: dropdownOpen ? 'rotate(90deg) translateX(5px) translateY(-5px)' : 'rotate(0deg) translateY(0)',
-                            transition: `transform ${durations.normal} ${easings.easeOut}`,
-                            display: 'flex',
+                            display: 'inline-flex',
                             alignItems: 'center',
-                        }}
-                    >
-                        ›
-                    </Box>
-                </Box>
-
-                {/* Dropdown menu */}
-                {dropdownOpen && (
-                    <Box
-                        sx={{
-                            position: 'absolute',
-                            top: 'calc(100% + 8px)',
-                            left: 0,
-                            zIndex: 1300,
-                            minWidth: 220,
-                            maxHeight: 400,
-                            overflowY: 'auto',
-                            borderRadius: `${borderRadius.lg}px`,
-                            ...getGlassCard(isDark),
-                            animation: `dropdownFadeIn ${durations.fast} ${easings.easeOut}`,
-                            '@keyframes dropdownFadeIn': {
-                                from: { opacity: 0, transform: 'translateY(-6px)' },
-                                to: { opacity: 1, transform: 'translateY(0)' },
+                            gap: 1,
+                            background: 'none',
+                            border: 'none',
+                            padding: 0,
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            color: 'text.primary',
+                            '&:hover .index-chevron': {
+                                color: 'primary.main',
                             },
                         }}
                     >
-                        {/* Search input */}
-                        <Box sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
-                            <Box
-                                component="input"
-                                ref={searchInputRef}
-                                type="text"
-                                placeholder="Tìm ngành..."
-                                value={searchQuery}
-                                onChange={(e: any) => setSearchQuery(e.target.value)}
-                                onKeyDown={(e: any) => {
-                                    if (e.key === 'Enter' && filteredIndustryList.length > 0) {
-                                        handleSelectSector(filteredIndustryList[0].ticker);
-                                    }
-                                }}
-                                autoFocus
+                        {indexName ? (
+                            <Typography
+                                variant="h1"
                                 sx={{
-                                    width: '100%',
-                                    bgcolor: 'transparent',
-                                    border: 'none',
-                                    outline: 'none',
-                                    color: 'text.primary',
-                                    fontSize: getResponsiveFontSize('md'),
-                                    fontFamily: 'inherit',
-                                    '&::placeholder': {
-                                        color: 'text.secondary',
-                                        opacity: 0.7,
-                                    },
+                                    fontSize: getResponsiveFontSize('h1'),
+                                    lineHeight: 1.2,
+                                    userSelect: 'none',
                                 }}
-                            />
+                            >
+                                {indexName}
+                            </Typography>
+                        ) : (
+                            <Skeleton variant="text" width={220} sx={{ fontSize: getResponsiveFontSize('h1') }} />
+                        )}
+                        <Box
+                            className="index-chevron"
+                            sx={{
+                                fontSize: getResponsiveFontSize('h1'),
+                                fontWeight: fontWeight.semibold,
+                                color: 'text.secondary',
+                                lineHeight: 1.2,
+                                transform: dropdownOpen ? 'rotate(90deg) translateX(5px) translateY(-5px)' : 'rotate(0deg) translateY(0)',
+                                transition: `transform ${durations.normal} ${easings.easeOut}`,
+                                display: 'flex',
+                                alignItems: 'center',
+                            }}
+                        >
+                            ›
                         </Box>
+                    </Box>
 
-                        {filteredIndustryList.map((item) => {
-                            const isActive = item.ticker === ticker;
-                            return (
+                    {/* Dropdown menu */}
+                    {dropdownOpen && (
+                        <Box
+                            sx={{
+                                position: 'absolute',
+                                top: 'calc(100% + 8px)',
+                                left: 0,
+                                zIndex: 1300,
+                                minWidth: 220,
+                                maxHeight: 400,
+                                overflowY: 'auto',
+                                borderRadius: `${borderRadius.lg}px`,
+                                ...getGlassCard(isDark),
+                                animation: `dropdownFadeIn ${durations.fast} ${easings.easeOut}`,
+                                '@keyframes dropdownFadeIn': {
+                                    from: { opacity: 0, transform: 'translateY(-6px)' },
+                                    to: { opacity: 1, transform: 'translateY(0)' },
+                                },
+                            }}
+                        >
+                            {/* Search input */}
+                            <Box sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
                                 <Box
-                                    key={item.ticker}
-                                    component="button"
-                                    onClick={() => handleSelectSector(item.ticker)}
+                                    component="input"
+                                    ref={searchInputRef}
+                                    type="text"
+                                    placeholder="Tìm ngành..."
+                                    value={searchQuery}
+                                    onChange={(e: any) => setSearchQuery(e.target.value)}
+                                    onKeyDown={(e: any) => {
+                                        if (e.key === 'Enter' && filteredIndustryList.length > 0) {
+                                            handleSelectSector(filteredIndustryList[0].ticker);
+                                        }
+                                    }}
+                                    autoFocus
                                     sx={{
-                                        display: 'block',
                                         width: '100%',
-                                        textAlign: 'left',
-                                        background: isActive
-                                            ? isDark
-                                                ? 'rgba(180, 126, 255, 0.15)'
-                                                : 'rgba(139, 92, 246, 0.08)'
-                                            : 'transparent',
+                                        bgcolor: 'transparent',
                                         border: 'none',
-                                        borderBottom: '1px solid',
-                                        borderColor: 'divider',
-                                        cursor: 'pointer',
-                                        px: 2,
-                                        py: 1.25,
-                                        transition: `background ${durations.fastest} ${easings.easeOut}`,
-                                        '&:last-child': { borderBottom: 'none' },
-                                        '&:hover': {
-                                            background: isDark
-                                                ? 'rgba(255, 255, 255, 0.06)'
-                                                : 'rgba(0, 0, 0, 0.04)',
+                                        outline: 'none',
+                                        color: 'text.primary',
+                                        fontSize: getResponsiveFontSize('md'),
+                                        fontFamily: 'inherit',
+                                        '&::placeholder': {
+                                            color: 'text.secondary',
+                                            opacity: 0.7,
                                         },
                                     }}
-                                >
-                                    <Typography
+                                />
+                            </Box>
+
+                            {filteredIndustryList.map((item) => {
+                                const isActive = item.ticker === ticker;
+                                return (
+                                    <Box
+                                        key={item.ticker}
+                                        component="button"
+                                        onClick={() => handleSelectSector(item.ticker)}
                                         sx={{
-                                            fontSize: getResponsiveFontSize('md'),
-                                            fontWeight: isActive ? fontWeight.semibold : fontWeight.medium,
-                                            color: isActive ? 'primary.main' : 'text.primary',
-                                            lineHeight: 1.4,
+                                            display: 'block',
+                                            width: '100%',
+                                            textAlign: 'left',
+                                            background: isActive
+                                                ? isDark
+                                                    ? 'rgba(180, 126, 255, 0.15)'
+                                                    : 'rgba(139, 92, 246, 0.08)'
+                                                : 'transparent',
+                                            border: 'none',
+                                            borderBottom: '1px solid',
+                                            borderColor: 'divider',
+                                            cursor: 'pointer',
+                                            px: 2,
+                                            py: 1.25,
+                                            transition: `background ${durations.fastest} ${easings.easeOut}`,
+                                            '&:last-child': { borderBottom: 'none' },
+                                            '&:hover': {
+                                                background: isDark
+                                                    ? 'rgba(255, 255, 255, 0.06)'
+                                                    : 'rgba(0, 0, 0, 0.04)',
+                                            },
                                         }}
                                     >
-                                        {item.name}
-                                    </Typography>
-                                </Box>
-                            );
-                        })}
-                    </Box>
-                )}
+                                        <Typography
+                                            sx={{
+                                                fontSize: getResponsiveFontSize('md'),
+                                                fontWeight: isActive ? fontWeight.semibold : fontWeight.medium,
+                                                color: isActive ? 'primary.main' : 'text.primary',
+                                                lineHeight: 1.4,
+                                            }}
+                                        >
+                                            {item.name}
+                                        </Typography>
+                                    </Box>
+                                );
+                            })}
+                        </Box>
+                    )}
                 </Box>
 
             </Box>
@@ -875,7 +875,7 @@ export default function SectorDetailContent() {
                 </OptionalAuthWrapper>
             )}
 
-            {/* Tài Chính → ADVANCED */}
+            {/* Tài chính → ADVANCED */}
             {activeTab === 'financials' && (
                 <OptionalAuthWrapper requireAuth={true} requiredFeatures={ADVANCED_AND_ABOVE}>
                     <Box sx={{ mt: 4 }}>

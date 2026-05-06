@@ -1,4 +1,4 @@
-// stock-financials-config.ts — Types, format utils, metric config, section layout cho tab Tài Chính cổ phiếu
+// stock-financials-config.ts — Types, format utils, metric config, section layout cho tab Tài chính cổ phiếu
 
 // ============================================================
 // TYPES
@@ -66,16 +66,16 @@ export const METRIC_FORMAT_CONFIG: Record<string, MetricFormatConfig> = {
 
     // ── Health / leverage ──
     ryq71: { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: false, multiplier: 1 },
-    ryq6:  { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: false, multiplier: 1 },
+    ryq6: { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: false, multiplier: 1 },
     ryq77: { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: true, multiplier: 1 },
-    ryq3:  { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: true, multiplier: 1 },
-    ryq2:  { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: true, multiplier: 1 },
-    ryq1:  { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: true, multiplier: 1 },
+    ryq3: { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: true, multiplier: 1 },
+    ryq2: { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: true, multiplier: 1 },
+    ryq1: { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: true, multiplier: 1 },
 
     // ── Working-capital efficiency ──
-    ryq16:    { format: 'days', unit: 'ngày', deltaUnit: 'ngày', higherIsBetter: false, multiplier: 1 },
-    ryq18:    { format: 'days', unit: 'ngày', deltaUnit: 'ngày', higherIsBetter: false, multiplier: 1 },
-    ryq20:    { format: 'days', unit: 'ngày', deltaUnit: 'ngày', higherIsBetter: true, multiplier: 1 },
+    ryq16: { format: 'days', unit: 'ngày', deltaUnit: 'ngày', higherIsBetter: false, multiplier: 1 },
+    ryq18: { format: 'days', unit: 'ngày', deltaUnit: 'ngày', higherIsBetter: false, multiplier: 1 },
+    ryq20: { format: 'days', unit: 'ngày', deltaUnit: 'ngày', higherIsBetter: true, multiplier: 1 },
     cashCycle: { format: 'days', unit: 'ngày', deltaUnit: 'ngày', higherIsBetter: false, multiplier: 1 },
 
     // ── Growth ──
@@ -83,21 +83,21 @@ export const METRIC_FORMAT_CONFIG: Record<string, MetricFormatConfig> = {
     ryq39: { format: 'growth_pct', unit: '%', deltaUnit: 'pp', higherIsBetter: true, multiplier: 100 },
 
     // ── Revenue & currency_bn items ──
-    rev:    { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: true, multiplier: 1 },
+    rev: { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: true, multiplier: 1 },
 
     // ── Balance sheet (currency_bn, neutral) ──
     bsa53: { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
-    bsa1:  { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
+    bsa1: { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
     bsa23: { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
     bsa54: { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
     bsa78: { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
-    bsa2:  { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
+    bsa2: { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
     bsa80: { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
     bsa67: { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
 
     // ── Chứng khoán investment assets (currency_bn, neutral) ──
-    bsa8:  { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
-    bsa5:  { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
+    bsa8: { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
+    bsa5: { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
     bsa10: { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
     bsa43: { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
 
@@ -122,12 +122,12 @@ export const METRIC_FORMAT_CONFIG: Record<string, MetricFormatConfig> = {
 
     // ── Ngân hàng — capital ──
     nob151: { format: 'pct', unit: '%', deltaUnit: 'pp', higherIsBetter: true, multiplier: 100 },
-    ryq54:  { format: 'pct', unit: '%', deltaUnit: 'pp', higherIsBetter: true, multiplier: 100 },
-    ryq55:  { format: 'pct', unit: '%', deltaUnit: 'pp', higherIsBetter: true, multiplier: 100 },
+    ryq54: { format: 'pct', unit: '%', deltaUnit: 'pp', higherIsBetter: true, multiplier: 100 },
+    ryq55: { format: 'pct', unit: '%', deltaUnit: 'pp', higherIsBetter: true, multiplier: 100 },
 
     // ── Ngân hàng — liquidity & CASA ──
-    casa:   { format: 'pct', unit: '%', deltaUnit: 'pp', higherIsBetter: true, multiplier: 100 },
-    nob66:  { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: true, multiplier: 1 },
+    casa: { format: 'pct', unit: '%', deltaUnit: 'pp', higherIsBetter: true, multiplier: 100 },
+    nob66: { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: true, multiplier: 1 },
     bsb113: { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: true, multiplier: 1 },
 
     // ── Ngân hàng — growth ──
@@ -136,9 +136,9 @@ export const METRIC_FORMAT_CONFIG: Record<string, MetricFormatConfig> = {
     rtq51: { format: 'growth_pct', unit: '%', deltaUnit: 'pp', higherIsBetter: true, multiplier: 100 },
 
     // ── Ngân hàng — scale (currency_bn, neutral) ──
-    nob65:  { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
+    nob65: { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
     bsb104: { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
-    nob44:  { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
+    nob44: { format: 'currency_bn', unit: 'tỷ', deltaUnit: '%', higherIsBetter: null, multiplier: 1 },
 
 };
 
@@ -148,35 +148,35 @@ export const METRIC_FORMAT_CONFIG: Record<string, MetricFormatConfig> = {
 
 export const STOCK_SECTIONS: Record<IndustryType, SectionConfig[]> = {
     SXKD: [
-        { id: 'profitability', title: 'HIỆU QUẢ HOẠT ĐỘNG',   metrics: ['ryq12', 'ryq14', 'ryq25', 'ryq27', 'ryq29', 'ryq31', 'ryq91'] },
-        { id: 'health',        title: 'SỨC KHỎE TÀI CHÍNH',   metrics: ['ryq71', 'ryq6', 'ryq77', 'ryq3', 'ryq2', 'ryq1'] },
-        { id: 'efficiency',    title: 'HIỆU SUẤT SỬ DỤNG',    metrics: ['ryq16', 'ryq18', 'ryq20', 'cashCycle'] },
-        { id: 'growth',        title: 'TĂNG TRƯỞNG',           metrics: ['rev', 'ryq34', 'ryq39'] },
-        { id: 'scale',         title: 'QUY MÔ TÀI SẢN',       metrics: ['bsa53', 'bsa1', 'bsa23', 'bsa54', 'bsa78', 'bsa2'] },
-        { id: 'cashflow',      title: 'DÒNG TIỀN',             metrics: ['cfa18', 'cfa26', 'cfa34'] },
+        { id: 'profitability', title: 'HIỆU QUẢ HOẠT ĐỘNG', metrics: ['ryq12', 'ryq14', 'ryq25', 'ryq27', 'ryq29', 'ryq31', 'ryq91'] },
+        { id: 'health', title: 'SỨC KHỎE TÀI CHÍNH', metrics: ['ryq71', 'ryq6', 'ryq77', 'ryq3', 'ryq2', 'ryq1'] },
+        { id: 'efficiency', title: 'HIỆU SUẤT SỬ DỤNG', metrics: ['ryq16', 'ryq18', 'ryq20', 'cashCycle'] },
+        { id: 'growth', title: 'TĂNG TRƯỞNG', metrics: ['rev', 'ryq34', 'ryq39'] },
+        { id: 'scale', title: 'QUY MÔ TÀI SẢN', metrics: ['bsa53', 'bsa1', 'bsa23', 'bsa54', 'bsa78', 'bsa2'] },
+        { id: 'cashflow', title: 'DÒNG TIỀN', metrics: ['cfa18', 'cfa26', 'cfa34'] },
     ],
     CHUNGKHOAN: [
-        { id: 'profitability', title: 'HIỆU QUẢ HOẠT ĐỘNG',   metrics: ['ryq12', 'ryq14', 'ryq25', 'ryq29', 'ryq31'] },
-        { id: 'risk_leverage', title: 'RỦI RO & ĐÒN BẨY',     metrics: ['ryq71', 'ryq6', 'ryq77', 'ryq1'] },
-        { id: 'growth',        title: 'TĂNG TRƯỞNG',           metrics: ['rev', 'ryq34', 'ryq39'] },
+        { id: 'profitability', title: 'HIỆU QUẢ HOẠT ĐỘNG', metrics: ['ryq12', 'ryq14', 'ryq25', 'ryq29', 'ryq31'] },
+        { id: 'risk_leverage', title: 'RỦI RO & ĐÒN BẨY', metrics: ['ryq71', 'ryq6', 'ryq77', 'ryq1'] },
+        { id: 'growth', title: 'TĂNG TRƯỞNG', metrics: ['rev', 'ryq34', 'ryq39'] },
         { id: 'investment_assets', title: 'CƠ CẤU TÀI SẢN ĐẦU TƯ', metrics: ['bsa8', 'bsa5', 'bsa10', 'bsa43'] },
-        { id: 'scale',         title: 'QUY MÔ',                metrics: ['bsa53', 'bsa54', 'bsa78', 'bsa2'] },
-        { id: 'cashflow',      title: 'DÒNG TIỀN',             metrics: ['cfa18', 'cfa26', 'cfa34'] },
+        { id: 'scale', title: 'QUY MÔ', metrics: ['bsa53', 'bsa54', 'bsa78', 'bsa2'] },
+        { id: 'cashflow', title: 'DÒNG TIỀN', metrics: ['cfa18', 'cfa26', 'cfa34'] },
     ],
     BAOHIEM: [
-        { id: 'profitability', title: 'HIỆU QUẢ HOẠT ĐỘNG',   metrics: ['ryq12', 'ryq14', 'ryq25', 'ryq29', 'ryq71'] },
-        { id: 'growth',        title: 'TĂNG TRƯỞNG',           metrics: ['rev', 'ryq34', 'ryq39'] },
-        { id: 'scale',         title: 'QUY MÔ',                metrics: ['bsa53', 'bsa54', 'bsa78', 'bsa2', 'bsa67'] },
-        { id: 'cashflow',      title: 'DÒNG TIỀN',             metrics: ['cfa18', 'cfa26', 'cfa34'] },
+        { id: 'profitability', title: 'HIỆU QUẢ HOẠT ĐỘNG', metrics: ['ryq12', 'ryq14', 'ryq25', 'ryq29', 'ryq71'] },
+        { id: 'growth', title: 'TĂNG TRƯỞNG', metrics: ['rev', 'ryq34', 'ryq39'] },
+        { id: 'scale', title: 'QUY MÔ', metrics: ['bsa53', 'bsa54', 'bsa78', 'bsa2', 'bsa67'] },
+        { id: 'cashflow', title: 'DÒNG TIỀN', metrics: ['cfa18', 'cfa26', 'cfa34'] },
     ],
     NGANHANG: [
-        { id: 'profitability', title: 'HIỆU QUẢ & SINH LỜI',  metrics: ['ryq12', 'ryq14', 'ryq44', 'ryq45', 'ryq46', 'ryq47', 'ryq48'] },
-        { id: 'asset_quality', title: 'CHẤT LƯỢNG TÀI SẢN',   metrics: ['ryq58', 'ryq59', 'ryq60', 'ryq61', 'ryq57'] },
-        { id: 'capital',       title: 'AN TOÀN VỐN',           metrics: ['nob151', 'ryq54', 'ryq55'] },
-        { id: 'liquidity_casa', title: 'THANH KHOẢN & CASA',   metrics: ['casa', 'nob66', 'bsb113'] },
-        { id: 'growth',        title: 'TĂNG TRƯỞNG',           metrics: ['rev', 'ryq67', 'rtq50', 'rtq51', 'ryq39'] },
-        { id: 'scale',         title: 'QUY MÔ',                metrics: ['bsa53', 'bsa78', 'bsa80', 'nob65', 'bsb104', 'nob44'] },
-        { id: 'cashflow',      title: 'DÒNG TIỀN',             metrics: ['cfa18', 'cfa26', 'cfa34'] },
+        { id: 'profitability', title: 'HIỆU QUẢ & SINH LỜI', metrics: ['ryq12', 'ryq14', 'ryq44', 'ryq45', 'ryq46', 'ryq47', 'ryq48'] },
+        { id: 'asset_quality', title: 'CHẤT LƯỢNG TÀI SẢN', metrics: ['ryq58', 'ryq59', 'ryq60', 'ryq61', 'ryq57'] },
+        { id: 'capital', title: 'AN TOÀN VỐN', metrics: ['nob151', 'ryq54', 'ryq55'] },
+        { id: 'liquidity_casa', title: 'THANH KHOẢN & CASA', metrics: ['casa', 'nob66', 'bsb113'] },
+        { id: 'growth', title: 'TĂNG TRƯỞNG', metrics: ['rev', 'ryq67', 'rtq50', 'rtq51', 'ryq39'] },
+        { id: 'scale', title: 'QUY MÔ', metrics: ['bsa53', 'bsa78', 'bsa80', 'nob65', 'bsb104', 'nob44'] },
+        { id: 'cashflow', title: 'DÒNG TIỀN', metrics: ['cfa18', 'cfa26', 'cfa34'] },
     ],
 };
 

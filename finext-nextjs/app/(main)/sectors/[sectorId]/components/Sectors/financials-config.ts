@@ -1,4 +1,4 @@
-// financials-config.ts — Types, format utils, metric config, section layout cho tab Tài Chính ngành
+// financials-config.ts — Types, format utils, metric config, section layout cho tab Tài chính ngành
 
 // ============================================================
 // TYPES
@@ -71,34 +71,34 @@ export const METRIC_FORMAT_CONFIG: Record<string, MetricFormatConfig> = {
     ryq91: { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: true, multiplier: 1 },
 
     // Financial health
-    ryq1:  { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: true,  multiplier: 1 },
-    ryq2:  { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: true,  multiplier: 1 },
-    ryq3:  { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: true,  multiplier: 1 },
-    ryq6:  { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: false, multiplier: 1 },
+    ryq1: { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: true, multiplier: 1 },
+    ryq2: { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: true, multiplier: 1 },
+    ryq3: { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: true, multiplier: 1 },
+    ryq6: { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: false, multiplier: 1 },
     ryq71: { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: false, multiplier: 1 },
-    ryq77: { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: true,  multiplier: 1 },
+    ryq77: { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: true, multiplier: 1 },
     cashCycle: { format: 'days', unit: 'ngày', deltaUnit: 'ngày', higherIsBetter: false, multiplier: 1 },
 
     // Working-capital efficiency
     ryq16: { format: 'days', unit: 'ngày', deltaUnit: 'ngày', higherIsBetter: false, multiplier: 1 },
     ryq18: { format: 'days', unit: 'ngày', deltaUnit: 'ngày', higherIsBetter: false, multiplier: 1 },
-    ryq20: { format: 'days', unit: 'ngày', deltaUnit: 'ngày', higherIsBetter: true,  multiplier: 1 },
+    ryq20: { format: 'days', unit: 'ngày', deltaUnit: 'ngày', higherIsBetter: true, multiplier: 1 },
 
     // Growth
     ryq34: { format: 'growth_pct', unit: '%', deltaUnit: 'pp', higherIsBetter: true, multiplier: 100 },
     ryq39: { format: 'growth_pct', unit: '%', deltaUnit: 'pp', higherIsBetter: true, multiplier: 100 },
 
     // Banking — income / efficiency
-    ryq44: { format: 'pct', unit: '%', deltaUnit: 'pp', higherIsBetter: true,  multiplier: 100 }, // NIM
-    ryq45: { format: 'pct', unit: '%', deltaUnit: 'pp', higherIsBetter: true,  multiplier: 100 }, // YOEA
+    ryq44: { format: 'pct', unit: '%', deltaUnit: 'pp', higherIsBetter: true, multiplier: 100 }, // NIM
+    ryq45: { format: 'pct', unit: '%', deltaUnit: 'pp', higherIsBetter: true, multiplier: 100 }, // YOEA
     ryq46: { format: 'pct', unit: '%', deltaUnit: 'pp', higherIsBetter: false, multiplier: 100 }, // COF
-    ryq47: { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: true,  multiplier: 1 }, // TN ngoài lãi/TN lãi
+    ryq47: { format: 'multiple', unit: 'x', deltaUnit: '', higherIsBetter: true, multiplier: 1 }, // TN ngoài lãi/TN lãi
     ryq48: { format: 'pct', unit: '%', deltaUnit: 'pp', higherIsBetter: false, multiplier: 100 }, // CIR
 
     // Banking — asset quality
     ryq58: { format: 'pct', unit: '%', deltaUnit: 'pp', higherIsBetter: false, multiplier: 100 }, // NPL
-    ryq59: { format: 'pct', unit: '%', deltaUnit: 'pp', higherIsBetter: true,  multiplier: 100 }, // Bao phủ nợ xấu
-    ryq60: { format: 'pct', unit: '%', deltaUnit: 'pp', higherIsBetter: true,  multiplier: 100 }, // Dự phòng/Cho vay
+    ryq59: { format: 'pct', unit: '%', deltaUnit: 'pp', higherIsBetter: true, multiplier: 100 }, // Bao phủ nợ xấu
+    ryq60: { format: 'pct', unit: '%', deltaUnit: 'pp', higherIsBetter: true, multiplier: 100 }, // Dự phòng/Cho vay
     ryq61: { format: 'pct', unit: '%', deltaUnit: 'pp', higherIsBetter: false, multiplier: 100 }, // Chi phí tín dụng
     ryq57: { format: 'pct', unit: '%', deltaUnit: 'pp', higherIsBetter: false, multiplier: 100 }, // LDR
 
@@ -118,25 +118,25 @@ export const METRIC_FORMAT_CONFIG: Record<string, MetricFormatConfig> = {
 
 export const INDUSTRY_SECTIONS: Record<IndustryType, SectionConfig[]> = {
     SXKD: [
-        { id: 'profitability', title: 'HIỆU QUẢ HOẠT ĐỘNG',   metrics: ['ryq12', 'ryq14', 'ryq25', 'ryq27', 'ryq29', 'ryq31', 'ryq91'] },
-        { id: 'health',        title: 'SỨC KHỎE TÀI CHÍNH',   metrics: ['ryq1', 'ryq2', 'ryq3', 'ryq6', 'ryq71', 'ryq77', 'cashCycle'] },
-        { id: 'efficiency',    title: 'HIỆU SUẤT SỬ DỤNG',    metrics: ['ryq16', 'ryq18', 'ryq20'] },
-        { id: 'growth',        title: 'TĂNG TRƯỞNG',           metrics: ['ryq34', 'ryq39'] },
+        { id: 'profitability', title: 'HIỆU QUẢ HOẠT ĐỘNG', metrics: ['ryq12', 'ryq14', 'ryq25', 'ryq27', 'ryq29', 'ryq31', 'ryq91'] },
+        { id: 'health', title: 'SỨC KHỎE TÀI CHÍNH', metrics: ['ryq1', 'ryq2', 'ryq3', 'ryq6', 'ryq71', 'ryq77', 'cashCycle'] },
+        { id: 'efficiency', title: 'HIỆU SUẤT SỬ DỤNG', metrics: ['ryq16', 'ryq18', 'ryq20'] },
+        { id: 'growth', title: 'TĂNG TRƯỞNG', metrics: ['ryq34', 'ryq39'] },
     ],
     NGANHANG: [
-        { id: 'profitability', title: 'HIỆU QUẢ & SINH LỜI',  metrics: ['ryq12', 'ryq14', 'ryq44', 'ryq45', 'ryq46', 'ryq47', 'ryq48'] },
-        { id: 'asset_quality', title: 'CHẤT LƯỢNG TÀI SẢN',   metrics: ['ryq58', 'ryq59', 'ryq60', 'ryq61', 'ryq57'] },
-        { id: 'capital',       title: 'AN TOÀN VỐN',           metrics: ['ryq54', 'ryq55'] },
-        { id: 'growth',        title: 'TĂNG TRƯỞNG',           metrics: ['rtq50', 'rtq51', 'ryq39', 'ryq67'] },
+        { id: 'profitability', title: 'HIỆU QUẢ & SINH LỜI', metrics: ['ryq12', 'ryq14', 'ryq44', 'ryq45', 'ryq46', 'ryq47', 'ryq48'] },
+        { id: 'asset_quality', title: 'CHẤT LƯỢNG TÀI SẢN', metrics: ['ryq58', 'ryq59', 'ryq60', 'ryq61', 'ryq57'] },
+        { id: 'capital', title: 'AN TOÀN VỐN', metrics: ['ryq54', 'ryq55'] },
+        { id: 'growth', title: 'TĂNG TRƯỞNG', metrics: ['rtq50', 'rtq51', 'ryq39', 'ryq67'] },
     ],
     CHUNGKHOAN: [
-        { id: 'profitability', title: 'HIỆU QUẢ',              metrics: ['ryq12', 'ryq14', 'ryq25', 'ryq29', 'ryq31', 'ryq71'] },
-        { id: 'risk_leverage', title: 'RỦI RO & ĐÒN BẨY',     metrics: ['ryq6', 'ryq1', 'ryq77'] },
-        { id: 'growth',        title: 'TĂNG TRƯỞNG',           metrics: ['ryq34', 'ryq39'] },
+        { id: 'profitability', title: 'HIỆU QUẢ', metrics: ['ryq12', 'ryq14', 'ryq25', 'ryq29', 'ryq31', 'ryq71'] },
+        { id: 'risk_leverage', title: 'RỦI RO & ĐÒN BẨY', metrics: ['ryq6', 'ryq1', 'ryq77'] },
+        { id: 'growth', title: 'TĂNG TRƯỞNG', metrics: ['ryq34', 'ryq39'] },
     ],
     BAOHIEM: [
-        { id: 'profitability', title: 'HIỆU QUẢ',              metrics: ['ryq12', 'ryq14', 'ryq25', 'ryq71'] },
-        { id: 'growth',        title: 'TĂNG TRƯỞNG',           metrics: ['ryq34', 'ryq39'] },
+        { id: 'profitability', title: 'HIỆU QUẢ', metrics: ['ryq12', 'ryq14', 'ryq25', 'ryq71'] },
+        { id: 'growth', title: 'TĂNG TRƯỞNG', metrics: ['ryq34', 'ryq39'] },
     ],
 };
 

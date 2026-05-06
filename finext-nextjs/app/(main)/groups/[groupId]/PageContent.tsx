@@ -887,14 +887,12 @@ export default function GroupDetailContent() {
 
                 {/* ========== STOCK TABLE: Top 10 cổ phiếu giao dịch cao nhất ========== */}
                 <Box sx={{ mt: 4 }}>
-                    <Box sx={{ mb: 2 }}>
-                        <ChartSectionTitle
-                            title={`Cổ phiếu nổi bật nhóm ${indexName}`}
-                            description="Danh sách các cổ phiếu có giá trị giao dịch cao nhất trong nhóm."
-                            updateTime={updateTime}
-                            sx={{ mb: 0 }}
-                        />
-                    </Box>
+                    <ChartSectionTitle
+                        title={`Cổ phiếu nổi bật nhóm ${indexName}`}
+                        description="Danh sách các cổ phiếu có giá trị giao dịch cao nhất trong nhóm."
+                        updateTime={updateTime}
+                        sx={{ mb: 1 }}
+                    />
                     <GroupStockTable
                         data={topStocks}
                         isLoading={stockData.length === 0}
