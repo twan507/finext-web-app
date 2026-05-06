@@ -518,10 +518,13 @@ export default function SectorDetailContent() {
     }, [historyData, todayAllData, ticker, historyLoading]);
 
     // Get display name for ticker
+    // Đợi ticker_name từ data trước khi hiển thị; trong lúc load trả '' để render skeleton, tránh flick từ ticker → ticker_name.
     const indexName = useMemo(() => {
         const firstRecord = historyData[0] || todayAllData[ticker]?.[0] || itdAllData[ticker]?.[0];
-        return firstRecord?.ticker_name || ticker;
-    }, [historyData, todayAllData, itdAllData, ticker]);
+        if (firstRecord?.ticker_name) return firstRecord.ticker_name;
+        if (historyLoading || isLoading) return '';
+        return ticker;
+    }, [historyData, todayAllData, itdAllData, ticker, historyLoading, isLoading]);
 
     // ========== CHART 1: Sức mạnh dòng tiền ==========
     const { dongTienDates, t5ScoreData, t0ScoreData } = useMemo(() => {
@@ -658,16 +661,20 @@ export default function SectorDetailContent() {
                         },
                     }}
                 >
-                    <Typography
-                        variant="h1"
-                        sx={{
-                            fontSize: getResponsiveFontSize('h1'),
-                            lineHeight: 1.2,
-                            userSelect: 'none',
-                        }}
-                    >
-                        {indexName}
-                    </Typography>
+                    {indexName ? (
+                        <Typography
+                            variant="h1"
+                            sx={{
+                                fontSize: getResponsiveFontSize('h1'),
+                                lineHeight: 1.2,
+                                userSelect: 'none',
+                            }}
+                        >
+                            {indexName}
+                        </Typography>
+                    ) : (
+                        <Skeleton variant="text" width={220} sx={{ fontSize: getResponsiveFontSize('h1') }} />
+                    )}
                     <Box
                         className="index-chevron"
                         sx={{

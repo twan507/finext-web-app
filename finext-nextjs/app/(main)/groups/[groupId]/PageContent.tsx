@@ -92,12 +92,12 @@ function build1DTradingTimeline(referenceTimestamp?: number): number[] {
 const INDEX_LIST: { ticker: string; name: string }[] = [
     { ticker: 'FNXINDEX', name: 'Finext Index' },
     { ticker: 'FNX100', name: 'Finext 100' },
-    { ticker: 'VUOTTROI', name: 'Finext Vượt trội' },
-    { ticker: 'ONDINH', name: 'Finext Ổn định' },
-    { ticker: 'SUKIEN', name: 'Finext Sự kiện' },
-    { ticker: 'LARGECAP', name: 'Finext LargeCap' },
-    { ticker: 'MIDCAP', name: 'Finext MidCap' },
-    { ticker: 'SMALLCAP', name: 'Finext SmallCap' },
+    { ticker: 'VUOTTROI', name: 'Dòng tiền Vượt trội' },
+    { ticker: 'ONDINH', name: 'Dòng tiền Ổn định' },
+    { ticker: 'SUKIEN', name: 'Dòng tiền Sự kiện' },
+    { ticker: 'LARGECAP', name: 'Vốn hóa lớn' },
+    { ticker: 'MIDCAP', name: 'Vốn hóa trung bình' },
+    { ticker: 'SMALLCAP', name: 'Vốn hóa nhỏ' },
 ];
 
 // ========== HELPERS ==========
@@ -439,10 +439,15 @@ export default function GroupDetailContent() {
     }, [historyData, todayAllData, ticker, historyLoading]);
 
     // Get display name for ticker
+    // Ưu tiên INDEX_LIST (đồng bộ, không flick) → ticker_name từ data → '' khi đang load → ticker.
     const indexName = useMemo(() => {
+        const fromList = INDEX_LIST.find(x => x.ticker === ticker)?.name;
+        if (fromList) return fromList;
         const firstRecord = historyData[0] || todayAllData[ticker]?.[0] || itdAllData[ticker]?.[0];
-        return firstRecord?.ticker_name || ticker;
-    }, [historyData, todayAllData, itdAllData, ticker]);
+        if (firstRecord?.ticker_name) return firstRecord.ticker_name;
+        if (historyLoading) return '';
+        return ticker;
+    }, [historyData, todayAllData, itdAllData, ticker, historyLoading]);
 
     // ========== CHART 1: Sức mạnh dòng tiền (line t5_score + bar t0_score) ==========
     const { dongTienDates, t5ScoreData, t0ScoreData } = useMemo(() => {
@@ -590,12 +595,12 @@ export default function GroupDetailContent() {
         switch (ticker) {
             case 'FNXINDEX': return stocks;
             case 'FNX100': return stocks.filter(s => s.top100 === 1);
-            case 'VUOTTROI': return stocks.filter(s => s.category_name === 'Finext Vượt trội');
-            case 'ONDINH': return stocks.filter(s => s.category_name === 'Finext Ổn định');
-            case 'SUKIEN': return stocks.filter(s => s.category_name === 'Finext Sự kiện');
-            case 'LARGECAP': return stocks.filter(s => s.marketcap_name === 'Finext LargeCap');
-            case 'MIDCAP': return stocks.filter(s => s.marketcap_name === 'Finext MidCap');
-            case 'SMALLCAP': return stocks.filter(s => s.marketcap_name === 'Finext SmallCap');
+            case 'VUOTTROI': return stocks.filter(s => s.category_name === 'Dòng tiền Vượt trội');
+            case 'ONDINH': return stocks.filter(s => s.category_name === 'Dòng tiền Ổn định');
+            case 'SUKIEN': return stocks.filter(s => s.category_name === 'Dòng tiền Sự kiện');
+            case 'LARGECAP': return stocks.filter(s => s.marketcap_name === 'Vốn hóa lớn');
+            case 'MIDCAP': return stocks.filter(s => s.marketcap_name === 'Vốn hóa trung bình');
+            case 'SMALLCAP': return stocks.filter(s => s.marketcap_name === 'Vốn hóa nhỏ');
             default: return stocks;
         }
     }, [ticker]);
@@ -652,16 +657,20 @@ export default function GroupDetailContent() {
                         },
                     }}
                 >
-                    <Typography
-                        variant="h1"
-                        sx={{
-                            fontSize: getResponsiveFontSize('h1'),
-                            lineHeight: 1.2,
-                            userSelect: 'none',
-                        }}
-                    >
-                        {indexName}
-                    </Typography>
+                    {indexName ? (
+                        <Typography
+                            variant="h1"
+                            sx={{
+                                fontSize: getResponsiveFontSize('h1'),
+                                lineHeight: 1.2,
+                                userSelect: 'none',
+                            }}
+                        >
+                            {indexName}
+                        </Typography>
+                    ) : (
+                        <Skeleton variant="text" width={220} sx={{ fontSize: getResponsiveFontSize('h1') }} />
+                    )}
                     {/* Chevron indicator */}
                     <Box
                         className="index-chevron"

@@ -4,12 +4,12 @@ import PageContent from './PageContent';
 const INDEX_LIST: Record<string, string> = {
     'FNXINDEX': 'Finext Index',
     'FNX100': 'Finext 100',
-    'VUOTTROI': 'Finext Vượt trội',
-    'ONDINH': 'Finext Ổn định',
-    'SUKIEN': 'Finext Sự kiện',
-    'LARGECAP': 'Finext LargeCap',
-    'MIDCAP': 'Finext MidCap',
-    'SMALLCAP': 'Finext SmallCap',
+    'VUOTTROI': 'Dòng tiền Vượt trội',
+    'ONDINH': 'Dòng tiền Ổn định',
+    'SUKIEN': 'Dòng tiền Sự kiện',
+    'LARGECAP': 'Vốn hóa lớn',
+    'MIDCAP': 'Vốn hóa trung bình',
+    'SMALLCAP': 'Vốn hóa nhỏ',
 };
 
 export async function generateMetadata({
