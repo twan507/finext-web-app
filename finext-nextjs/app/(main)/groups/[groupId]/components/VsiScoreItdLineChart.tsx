@@ -77,14 +77,14 @@ export default function VsiITDStockLineChart({
                 data: seriesData,
                 color: chartColors[0],
                 yAxisIndex: 0,
-                format: (val: number) => `${val.toFixed(0)}%`,
+                format: (val: number) => `${val.toFixed(1)}%`,
             },
             {
                 seriesName: 'Dòng tiền trong phiên',
                 data: t0ScoreSeriesData,
                 color: chartColors[1],
                 yAxisIndex: 1,
-                format: (val: number) => `${val.toFixed(1)}`,
+                format: (val: number) => `${val.toFixed(2)}`,
             },
         ];
         return annotationDefs
@@ -240,7 +240,7 @@ export default function VsiITDStockLineChart({
 
                 const vsiValue = series[0]?.[dataPointIndex];
                 const t0Value = series[1]?.[dataPointIndex];
-                const formattedVsi = vsiValue != null ? `${vsiValue.toFixed(2)}%` : '—';
+                const formattedVsi = vsiValue != null ? `${vsiValue.toFixed(1)}%` : '—';
                 const formattedT0 = t0Value != null ? `${t0Value.toFixed(2)}` : '—';
                 const vsiColor = w.globals.colors[0];
                 const t0Color = w.globals.colors[1];

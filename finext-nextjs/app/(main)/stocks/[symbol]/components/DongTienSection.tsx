@@ -158,7 +158,7 @@ export default function DongTienSection({
         const vsiPoints = sortedData
             .map((r) => ({
                 ts: Math.floor((new Date(r.date).getTime() + 7 * 60 * 60 * 1000) / (60 * 1000)) * (60 * 1000),
-                vsi: parseFloat(((r.vsi ?? 0) * 100).toFixed(2)),
+                vsi: parseFloat(((r.vsi ?? 0) * 100).toFixed(1)),
                 t0: parseFloat((r.t0_score ?? 0).toFixed(2)),
             }))
             .filter((p) => {
