@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import SectorDetailContent from './PageContent';
 
 interface SectorDetailPageProps {
@@ -51,6 +52,10 @@ export async function generateMetadata({ params }: SectorDetailPageProps): Promi
     };
 }
 
-export default function SectorDetailPage() {
+export default async function SectorDetailPage({ params }: SectorDetailPageProps) {
+    const { sectorId } = await params;
+    if (!SECTOR_LIST[sectorId.toUpperCase()]) {
+        notFound();
+    }
     return <SectorDetailContent />;
 }

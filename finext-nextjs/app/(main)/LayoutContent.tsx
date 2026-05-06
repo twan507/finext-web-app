@@ -90,10 +90,10 @@ const topNavTabs: TopNavTab[] = [
     icon: 'fluent-color:diversity-16',
     submenu: [
       { label: 'Nhóm cổ phiếu', href: '/groups', icon: 'fluent-color:diversity-48' },
-      { label: 'Phân tích nhóm', href: '/groups/FNXINDEX', icon: 'fluent-color:molecule-48' },
+      { label: 'Phân tích nhóm', href: '/groups/fnxindex', icon: 'fluent-color:molecule-48' },
       { label: 'Ngành nghề', href: '/sectors', icon: 'fluent-color:data-pie-20' },
-      { label: 'Phân tích ngành', href: '/sectors/NGANHANG', icon: 'fluent-color:chart-multiple-24' },
-      { label: 'Phân tích cổ phiếu', href: '/stocks/AAA', icon: 'fluent-color:search-sparkle-48' },
+      { label: 'Phân tích ngành', href: '/sectors/nganhang', icon: 'fluent-color:chart-multiple-24' },
+      { label: 'Phân tích cổ phiếu', href: '/stocks/aaa', icon: 'fluent-color:search-sparkle-48' },
     ]
   },
   {

@@ -253,8 +253,8 @@ export default function WatchlistColumn({
                 >
                     <Typography
                         component="a"
-                        href={`/stocks/${ticker}`}
-                        onClick={(e: React.MouseEvent) => { e.preventDefault(); router.push(`/stocks/${ticker.toUpperCase()}`); }}
+                        href={`/stocks/${ticker.toLowerCase()}`}
+                        onClick={(e: React.MouseEvent) => { e.preventDefault(); router.push(`/stocks/${ticker.toLowerCase()}`); }}
                         onPointerDown={e => e.stopPropagation()}
                         sx={{
                             fontSize: getResponsiveFontSize('xs'),
@@ -312,8 +312,8 @@ export default function WatchlistColumn({
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
                         <Typography
                             component="a"
-                            href={`/stocks/${ticker}`}
-                            onClick={(e: React.MouseEvent) => { e.preventDefault(); router.push(`/stocks/${ticker.toUpperCase()}`); }}
+                            href={`/stocks/${ticker.toLowerCase()}`}
+                            onClick={(e: React.MouseEvent) => { e.preventDefault(); router.push(`/stocks/${ticker.toLowerCase()}`); }}
                             onPointerDown={e => e.stopPropagation()}
                             sx={{
                                 fontSize: getResponsiveFontSize('xs'),

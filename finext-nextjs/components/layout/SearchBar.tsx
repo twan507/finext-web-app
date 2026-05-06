@@ -476,7 +476,7 @@ function ResultsPanel({ results, isLoading, query, onNavigate }: ResultsPanelPro
                         <StockResultItem
                             key={item.ticker}
                             item={item}
-                            onClick={() => onNavigate(`/stocks/${item.ticker}`)}
+                            onClick={() => onNavigate(`/stocks/${item.ticker.toLowerCase()}`)}
                         />
                     ))}
                 </>
@@ -493,7 +493,7 @@ function ResultsPanel({ results, isLoading, query, onNavigate }: ResultsPanelPro
                         <IndexResultItem
                             key={item.ticker}
                             item={item}
-                            onClick={() => onNavigate(item.type === 'industry' ? `/sectors/${item.ticker}` : `/groups/${item.ticker}`)}
+                            onClick={() => onNavigate(item.type === 'industry' ? `/sectors/${item.ticker.toLowerCase()}` : `/groups/${item.ticker.toLowerCase()}`)}
                         />
                     ))}
                 </>
@@ -637,10 +637,10 @@ export default function SearchBar({
 
     // Helper to get the first navigable path from current results
     const getFirstResultPath = (): string | null => {
-        if (results.stocks.length > 0) return `/stocks/${results.stocks[0].ticker}`;
+        if (results.stocks.length > 0) return `/stocks/${results.stocks[0].ticker.toLowerCase()}`;
         if (results.indexes.length > 0) {
             const item = results.indexes[0];
-            return item.type === 'industry' ? `/sectors/${item.ticker}` : `/groups/${item.ticker}`;
+            return item.type === 'industry' ? `/sectors/${item.ticker.toLowerCase()}` : `/groups/${item.ticker.toLowerCase()}`;
         }
         if (results.news.length > 0) return `/news/${results.news[0].article_slug}`;
         if (results.reports.length > 0) return `/reports/${results.reports[0].report_slug}`;

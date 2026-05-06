@@ -271,7 +271,7 @@ export default function ResultTable({ data, columns, sortField, sortOrder, onTog
                                                 {/* Ticker text — click opens detail page */}
                                                 <Box
                                                     component="span"
-                                                    onClick={() => router.push(`/stocks/${String(val).toUpperCase()}`)}
+                                                    onClick={() => router.push(`/stocks/${String(val).toLowerCase()}`)}
                                                     sx={{
                                                         cursor: 'pointer',
                                                         '&:hover': { color: theme.palette.primary.main },

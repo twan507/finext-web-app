@@ -209,7 +209,7 @@ export default function StockDetailContent() {
         setDropdownOpen(false);
         setSearchQuery('');
         if (selectedTicker !== ticker) {
-            router.push(`/stocks/${selectedTicker.toUpperCase()}?tab=${activeTab}`);
+            router.push(`/stocks/${selectedTicker.toLowerCase()}?tab=${activeTab}`);
         }
     }
 

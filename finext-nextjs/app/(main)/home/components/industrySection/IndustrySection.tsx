@@ -924,7 +924,7 @@ export default function IndustrySection({ todayAllData, itdAllData }: IndustrySe
                                             {/* Name - clickable to navigate to sector detail */}
                                             <Typography
                                                 component="div"
-                                                onClick={() => router.push(`/sectors/${item.ticker}`)}
+                                                onClick={() => router.push(`/sectors/${item.ticker.toLowerCase()}`)}
                                                 sx={{
                                                     fontSize: getResponsiveFontSize('md'),
                                                     flex: 1, // Allow text to take available space

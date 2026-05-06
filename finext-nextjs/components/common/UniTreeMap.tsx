@@ -232,7 +232,7 @@ export default function UniTreeMap({ data, chartHeight = '550px', seriesName = '
     const router = useRouter();
 
     const handleStockClick = useCallback((ticker: string) => {
-        router.push(`/stocks/${ticker}`);
+        router.push(`/stocks/${ticker.toLowerCase()}`);
     }, [router]);
 
     const series = useMemo(() => {

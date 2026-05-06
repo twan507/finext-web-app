@@ -257,6 +257,7 @@ export default function SectorsContent() {
             <StockTable
                 data={indexData}
                 isLoading={isLoading}
+                linkBase="/sectors"
             />
 
             {/* ========== ADVANCED GATE: Biểu đồ + Bảng định giá ========== */}

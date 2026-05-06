@@ -257,7 +257,7 @@ function IndexRow({
                 return (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                         <Typography
-                            onClick={() => router.push(`/stocks/${row.ticker}`)}
+                            onClick={() => router.push(`/stocks/${row.ticker.toLowerCase()}`)}
                             sx={{
                                 cursor: 'pointer',
                                 fontSize: getResponsiveFontSize('sm'),

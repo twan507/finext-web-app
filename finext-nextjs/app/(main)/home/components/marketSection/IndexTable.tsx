@@ -149,7 +149,7 @@ function IndexRow({ ticker, isSelected, onClick, isLast, todayData, hasDetailPag
         >
             {/* Tên index - clickable để mở detail page */}
             <Typography
-                onClick={isClickable ? () => router.push(`/groups/${ticker}`) : undefined}
+                onClick={isClickable ? () => router.push(`/groups/${ticker.toLowerCase()}`) : undefined}
                 sx={{
                     fontSize: cellFontSize,
                     fontWeight: fontWeight.medium,

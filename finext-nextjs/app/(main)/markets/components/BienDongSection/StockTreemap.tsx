@@ -249,7 +249,7 @@ export default function StockTreemap({ data, chartHeight = '550px' }: StockTreem
     const router = useRouter();
 
     const handleStockClick = useCallback((ticker: string) => {
-        router.push(`/stocks/${ticker}`);
+        router.push(`/stocks/${ticker.toLowerCase()}`);
     }, [router]);
 
     // Series: only depends on data (not theme) → stable on theme switch

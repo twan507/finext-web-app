@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import PageContent from './PageContent';
 
 const INDEX_LIST: Record<string, string> = {
@@ -19,7 +20,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
     const { groupId } = await params;
     const upper = groupId.toUpperCase();
-    
+
     // Ánh xạ id sang tên hiển thị đẹp, nếu không có thì dùng dạng hoa (ví dụ: VN30)
     const displayName = INDEX_LIST[upper] || upper;
 
@@ -33,6 +34,14 @@ export async function generateMetadata({
     };
 }
 
-export default function GroupDetailPage() {
+export default async function GroupDetailPage({
+    params,
+}: {
+    params: Promise<{ groupId: string }>;
+}) {
+    const { groupId } = await params;
+    if (!INDEX_LIST[groupId.toUpperCase()]) {
+        notFound();
+    }
     return <PageContent />;
 }

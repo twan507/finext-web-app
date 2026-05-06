@@ -164,7 +164,7 @@ export default function MarketVolatility({ stockData = [], foreignData = [], isL
                                 return (
                                     <tr key={`${stock.ticker}-${index}`}>
                                         <td style={{ padding: '8px 0', border: 'none' }}>
-                                            <Link href={`/stocks/${stock.ticker}`} style={{ textDecoration: 'none' }}>
+                                            <Link href={`/stocks/${stock.ticker.toLowerCase()}`} style={{ textDecoration: 'none' }}>
                                                 <Typography
                                                     sx={{
                                                         fontSize: getResponsiveFontSize('sm'),
@@ -244,7 +244,7 @@ export default function MarketVolatility({ stockData = [], foreignData = [], isL
                             {stocks.map((stock, index) => (
                                 <tr key={`${stock.ticker}-${index}`}>
                                     <td style={{ padding: '8px 0', border: 'none' }}>
-                                        <Link href={`/stocks/${stock.ticker}`} style={{ textDecoration: 'none' }}>
+                                        <Link href={`/stocks/${stock.ticker.toLowerCase()}`} style={{ textDecoration: 'none' }}>
                                             <Typography
                                                 sx={{
                                                     fontSize: getResponsiveFontSize('sm'),

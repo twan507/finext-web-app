@@ -276,7 +276,7 @@ export default function MiniIndexCard({ symbol, itdData, todayData = [], hideOnT
 
     if (isLoading && chartData.length === 0) {
         return (
-            <Box sx={cardSx} onClick={isClickable ? () => router.push(`/groups/${symbol}`) : undefined}>
+            <Box sx={cardSx} onClick={isClickable ? () => router.push(`/groups/${symbol.toLowerCase()}`) : undefined}>
                 <Skeleton variant="text" width="60%" height={22} />
                 <Skeleton variant="text" width="90%" height={30} sx={{ mt: 0.5 }} />
                 <Skeleton variant="rectangular" width="100%" height={60} sx={{ mt: 1, borderRadius: 1 }} />
@@ -285,7 +285,7 @@ export default function MiniIndexCard({ symbol, itdData, todayData = [], hideOnT
     }
 
     return (
-        <Box sx={cardSx} onClick={isClickable ? () => router.push(`/groups/${symbol}`) : undefined}>
+        <Box sx={cardSx} onClick={isClickable ? () => router.push(`/groups/${symbol.toLowerCase()}`) : undefined}>
             <Typography variant="body2" sx={{ fontWeight: fontWeight.semibold, color: 'text.secondary', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {tickerName}
             </Typography>

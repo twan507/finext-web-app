@@ -138,7 +138,7 @@ export default function IndustryStocksSection({ stockData = [], isLoading = fals
     // Render slide content for a single industry
     const renderIndustrySlide = (group: IndustryGroup) => (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <Link href={group.industryTicker ? `/sectors/${group.industryTicker}` : '#'} style={{ textDecoration: 'none' }}>
+            <Link href={group.industryTicker ? `/sectors/${group.industryTicker.toLowerCase()}` : '#'} style={{ textDecoration: 'none' }}>
                 <Typography
                     color="text.secondary"
                     sx={{
@@ -177,7 +177,7 @@ export default function IndustryStocksSection({ stockData = [], isLoading = fals
                             return (
                                 <tr key={stock.ticker}>
                                     <td style={{ padding: '8px 0', border: 'none' }}>
-                                        <Link href={`/stocks/${stock.ticker}`} style={{ textDecoration: 'none' }}>
+                                        <Link href={`/stocks/${stock.ticker.toLowerCase()}`} style={{ textDecoration: 'none' }}>
                                             <Typography
                                                 sx={{
                                                     fontSize: getResponsiveFontSize('sm'),

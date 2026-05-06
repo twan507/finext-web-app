@@ -248,12 +248,14 @@ function IndexRow({
     isLast,
     isMobile,
     isTablet,
+    linkBase,
 }: {
     row: IndexRowData;
     columns: ColumnDef[];
     isLast: boolean;
     isMobile: boolean;
     isTablet: boolean;
+    linkBase: string;
 }) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
@@ -267,7 +269,7 @@ function IndexRow({
 
     const handleCellClick = (key: keyof IndexRowData) => {
         if (isClickable(key)) {
-            window.location.href = `/groups/${row.ticker.toLowerCase()}`;
+            window.location.href = `${linkBase}/${row.ticker.toLowerCase()}`;
         }
     };
 
@@ -478,12 +480,14 @@ interface StockTableProps {
     data: IndexRowData[];
     isLoading?: boolean;
     skeletonRows?: number;
+    linkBase?: string;
 }
 
 export default function StockTable({
     data,
     isLoading = false,
     skeletonRows = 8,
+    linkBase = '/groups',
 }: StockTableProps) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
@@ -624,6 +628,7 @@ export default function StockTable({
                                     isLast={index === sortedData.length - 1}
                                     isMobile={isMobile}
                                     isTablet={isTablet}
+                                    linkBase={linkBase}
                                 />
                             ))
                         }
