@@ -28,7 +28,10 @@
       "Bash(ls -la /d/twan_projects/finext-web-app/finext-nextjs/app/admin/*/)",
       "Bash(xargs -I {} find {} -type f -name \"*.tsx\")",
       "Bash(xargs -0 grep -l \"Typography\")",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(Get-ChildItem -Path \"D:\\\\twan-projects\\\\finext-web-app\" -Directory)",
+      "Bash(Get-ChildItem -Path \"d:\\\\twan-projects\\\\finext-web-app\\\\finext-fastapi\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)"
     ],
     "additionalDirectories": [
       "D:\\twan_projects\\finext-web-app\\finext-nextjs\\app\\(main)\\sectors\\[sectorId]\\components",
