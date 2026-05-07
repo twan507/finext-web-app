@@ -290,6 +290,31 @@ const Footer: React.FC = () => {
             : alpha(theme.palette.background.paper, 0.5),
         }}
       >
+        {/* Compliance disclaimer (added 2026-05-07) */}
+        <Box
+          sx={{
+            width: '100%',
+            maxWidth: 1400,
+            mx: 'auto',
+            px: { xs: 1.5, md: 2, lg: 3 },
+            pt: spacing.md / 8,
+            pb: spacing.sm / 8,
+          }}
+        >
+          <Typography
+            sx={{
+              fontSize: getResponsiveFontSize('sm'),
+              color: theme.palette.text.secondary,
+              lineHeight: 1.6,
+              textAlign: { xs: 'center', md: 'left' },
+            }}
+          >
+            Finext là nền tảng cung cấp dữ liệu và công cụ phân tích kỹ thuật,
+            không phải công ty chứng khoán và không phải công ty quản lý quỹ.
+            Mọi nội dung chỉ mang tính tham khảo, không phải khuyến nghị đầu tư.
+            Người dùng chịu trách nhiệm hoàn toàn cho quyết định đầu tư của mình.
+          </Typography>
+        </Box>
         <Box
           sx={{
             width: '100%',

@@ -27,7 +27,8 @@
       "Bash(rm \"d:/twan_projects/finext-web-app/finext-nextjs/app/\\(main\\)/stocks/[symbol]/components/StockFinRatiosSection.tsx\")",
       "Bash(dir \"d:\\\\twan_projects\\\\finext-web-app\\\\finext-nextjs\\\\app\\\\\\(main\\)\\\\stocks\\\\[symbol]\\\\components\")",
       "WebFetch(domain:docs.sepay.vn)",
-      "WebFetch(domain:sepay.vn)"
+      "WebFetch(domain:sepay.vn)",
+      "Bash(python -c \"import dns.resolver; print\\('dnspython OK'\\)\")"
     ],
     "additionalDirectories": [
       "d:\\twan_projects\\finext-web-app\\finext-nextjs\\app\\(main)\\stocks\\[symbol]\\components"

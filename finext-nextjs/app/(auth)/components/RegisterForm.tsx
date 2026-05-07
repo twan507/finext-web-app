@@ -170,18 +170,20 @@ export default function RegisterForm() {
     const [googleLoading, setGoogleLoading] = useState(false);
     const [agreeTerms, setAgreeTerms] = useState(false);
     const [showOtpStep, setShowOtpStep] = useState(false);
-    const [otpCode, setOtpCode] = useState('');
     const [registeredEmail, setRegisteredEmail] = useState('');
-    const [otpLoading, setOtpLoading] = useState(false);
-    const [resendCooldown, setResendCooldown] = useState(0);
+    // Compliance pivot 2026-05-07: OTP step replaced by success message — state below unused
+    // const [otpCode, setOtpCode] = useState('');
+    // const [otpLoading, setOtpLoading] = useState(false);
+    // const [resendCooldown, setResendCooldown] = useState(0);
 
     const router = useRouter();
 
-    useEffect(() => {
-        if (resendCooldown <= 0) return;
-        const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
-        return () => clearTimeout(timer);
-    }, [resendCooldown]);
+    // Compliance pivot 2026-05-07: OTP resend cooldown disabled
+    // useEffect(() => {
+    //     if (resendCooldown <= 0) return;
+    //     const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    //     return () => clearTimeout(timer);
+    // }, [resendCooldown]);
 
     useEffect(() => {
         if (!error) return;
@@ -275,41 +277,42 @@ export default function RegisterForm() {
         }
     };
 
-    const handleVerifyOtp = async () => {
-        setOtpLoading(true);
-        setError(null);
-        setSuccessMessage(null);
-        try {
-            await apiClient<{ message?: string }>({
-                url: '/api/v1/otps/verify',
-                method: 'POST',
-                body: { email: registeredEmail, otp_type: 'email_verification', otp_code: otpCode },
-                requireAuth: false,
-            });
-            setSuccessMessage('Xác thực email thành công! Đang chuyển đến đăng nhập...');
-            setTimeout(() => router.push('/login'), 2000);
-        } catch (err: any) {
-            setError(err.message || 'Lỗi xác thực OTP. Vui lòng thử lại.');
-        } finally {
-            setOtpLoading(false);
-        }
-    };
+    // Compliance pivot 2026-05-07: OTP verify/resend disabled — admin manual approval
+    // const handleVerifyOtp = async () => {
+    //     setOtpLoading(true);
+    //     setError(null);
+    //     setSuccessMessage(null);
+    //     try {
+    //         await apiClient<{ message?: string }>({
+    //             url: '/api/v1/otps/verify',
+    //             method: 'POST',
+    //             body: { email: registeredEmail, otp_type: 'email_verification', otp_code: otpCode },
+    //             requireAuth: false,
+    //         });
+    //         setSuccessMessage('Xác thực email thành công! Đang chuyển đến đăng nhập...');
+    //         setTimeout(() => router.push('/login'), 2000);
+    //     } catch (err: any) {
+    //         setError(err.message || 'Lỗi xác thực OTP. Vui lòng thử lại.');
+    //     } finally {
+    //         setOtpLoading(false);
+    //     }
+    // };
 
-    const handleResendOtp = async () => {
-        setError(null);
-        setSuccessMessage(null);
-        try {
-            await apiClient({
-                url: '/api/v1/otps/request',
-                method: 'POST',
-                body: { email: registeredEmail, otp_type: 'email_verification' },
-                requireAuth: false,
-            });
-            setResendCooldown(60);
-        } catch (err: any) {
-            setError(err.message || 'Không thể gửi lại mã OTP. Vui lòng thử lại.');
-        }
-    };
+    // const handleResendOtp = async () => {
+    //     setError(null);
+    //     setSuccessMessage(null);
+    //     try {
+    //         await apiClient({
+    //             url: '/api/v1/otps/request',
+    //             method: 'POST',
+    //             body: { email: registeredEmail, otp_type: 'email_verification' },
+    //             requireAuth: false,
+    //         });
+    //         setResendCooldown(60);
+    //     } catch (err: any) {
+    //         setError(err.message || 'Không thể gửi lại mã OTP. Vui lòng thử lại.');
+    //     }
+    // };
 
     return (
         <Box
@@ -384,55 +387,27 @@ export default function RegisterForm() {
             </Typography>
 
             {showOtpStep ? (
+                /* Compliance pivot 2026-05-07: bỏ OTP step, hiện success message.
+                   Admin sẽ kích hoạt tài khoản thủ công trong vòng 1 giờ. */
                 <Box sx={{ width: '100%' }}>
-                    {!successMessage && (
-                        <Alert severity="info" sx={{ mb: 2 }}>
-                            Mã xác thực đã gửi đến <strong>{registeredEmail}</strong>. Vui lòng kiểm tra hộp thư (kể cả mục Spam).
-                        </Alert>
-                    )}
-                    {error && (
-                        <Alert severity="error" sx={{ mb: 1.5 }}>
-                            {error}
-                        </Alert>
-                    )}
-                    {successMessage && (
-                        <Alert severity="success" sx={{ mb: 1.5 }}>
-                            {successMessage}
-                        </Alert>
-                    )}
-                    <TextField
-                        fullWidth
-                        label="Mã xác thực (6 chữ số)"
-                        value={otpCode}
-                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleVerifyOtp(); } }}
-                        disabled={otpLoading || !!successMessage}
-                        inputProps={{ maxLength: 6, inputMode: 'numeric' }}
-                        size="small"
-                        sx={{ mb: 2 }}
-                    />
+                    <Alert severity="success" sx={{ mb: 2 }}>
+                        <strong>Yêu cầu tạo tài khoản thành công!</strong>
+                        <br />
+                        Chúng tôi đã gửi email xác nhận đến <strong>{registeredEmail}</strong>.
+                        <br />
+                        Đội ngũ Finext sẽ xét duyệt yêu cầu trong vòng <strong>1 giờ</strong>. Tài khoản sẽ được kích hoạt nếu đáp ứng đủ điều kiện.
+                    </Alert>
                     <Button
                         fullWidth
                         variant="contained"
-                        onClick={handleVerifyOtp}
-                        disabled={otpCode.length < 6 || otpLoading || !!successMessage}
+                        onClick={() => router.push('/login')}
                         sx={(t) => ({
                             py: 1, borderRadius: 2,
                             ...getGlowButton(t.palette.mode === 'dark'),
                         })}
                     >
-                        {otpLoading ? <CircularProgress size={iconSize.progressMedium} color="inherit" /> : 'Xác thực tài khoản'}
+                        Quay lại trang đăng nhập
                     </Button>
-                    <Box sx={{ textAlign: 'center', mt: 1.5 }}>
-                        <Button
-                            variant="text"
-                            size="small"
-                            onClick={handleResendOtp}
-                            disabled={resendCooldown > 0 || otpLoading || !!successMessage}
-                        >
-                            {resendCooldown > 0 ? `Gửi lại sau ${resendCooldown}s` : 'Gửi lại mã'}
-                        </Button>
-                    </Box>
                 </Box>
             ) : (
             <Box component="form" onSubmit={handleSubmit} noValidate sx={{ width: '100%' }}>
@@ -634,23 +609,27 @@ export default function RegisterForm() {
                     {loading ? <CircularProgress size={iconSize.progressMedium} color="inherit" /> : 'Đăng ký'}
                 </Button>
 
-                <Divider sx={{ my: 1.5 }}>hoặc</Divider>
-
-                {googleClientId ? (
-                    <GoogleOAuthProvider clientId={googleClientId}>
-                        <GoogleRegisterComponent
-                            setGoogleLoading={setGoogleLoading}
-                            setError={setError}
-                            disabled={loading || googleLoading || !!successMessage}
-                            loading={googleLoading}
-                        />
-                    </GoogleOAuthProvider>
-                ) : (
-                    <GoogleButton
-                        onClick={() => { }}
-                        disabled={true}
-                        fullWidth={true}
-                    />
+                {/* Compliance pivot 2026-05-07: Google register hidden — bypass admin approval flow. */}
+                {false && (
+                    <>
+                        <Divider sx={{ my: 1.5 }}>hoặc</Divider>
+                        {googleClientId ? (
+                            <GoogleOAuthProvider clientId={googleClientId!}>
+                                <GoogleRegisterComponent
+                                    setGoogleLoading={setGoogleLoading}
+                                    setError={setError}
+                                    disabled={loading || googleLoading || !!successMessage}
+                                    loading={googleLoading}
+                                />
+                            </GoogleOAuthProvider>
+                        ) : (
+                            <GoogleButton
+                                onClick={() => { }}
+                                disabled={true}
+                                fullWidth={true}
+                            />
+                        )}
+                    </>
                 )}
 
                 <Typography variant="body2" sx={{ display: 'block', textAlign: 'center', mt: 2 }}>

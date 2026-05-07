@@ -296,11 +296,7 @@ export default function RootLayout({
                   name: 'Ủng hộ Finext',
                   url: 'https://finext.vn/plans',
                 },
-                {
-                  '@type': 'SiteNavigationElement',
-                  name: 'Mở tài khoản',
-                  url: 'https://finext.vn/open-account',
-                },
+                // Compliance pivot 2026-05-07: "Mở tài khoản" removed (route blocked, see lib/blocked-routes.ts)
               ],
             }),
           }}

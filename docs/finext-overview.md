@@ -4,7 +4,7 @@
 
 **Website:** [finext.vn](https://finext.vn)
 **Repository:** [twan507/finext-web-app](https://github.com/twan507/finext-web-app)
-**Cập nhật:** 2026-05-06
+**Cập nhật:** 2026-05-07
 
 ---
 
@@ -564,6 +564,92 @@ Quy định chi tiết trong [CLAUDE.md](../CLAUDE.md):
 | `2026-04-22-user-guide-pages` | 3 trang `/guides/*` thay khu `learning`. ✅ Đã triển khai. |
 | `2026-05-05-home-featured-stocks` | Carousel "Featured Stocks" trên home theo dòng tiền. ✅ Đã triển khai. |
 | `2026-05-06-sepay-integration` | Auto-confirm thanh toán qua SePay webhook + trang `/checkout/[orderId]`. 🛠 Đang ở giai đoạn spec/plan, chưa có code. |
+| `2026-05-07-finext-compliance-pivot` | Pivot sang chế độ tham chiếu cá nhân/invite-only theo pháp luật chứng khoán Việt Nam. Sửa register flow (admin manual approval), block routes via 403 list, tier gating bypassed, news → CTA tới nguồn gốc. ✅ Đã triển khai. Xem mục 10. |
+
+---
+
+## 10. Compliance Pivot 2026-05-07
+
+> **Status:** ✅ DONE. Chuyển Finext từ pre-launch (đăng ký công khai có OTP, gói trả phí, news re-publish) sang chế độ tham chiếu cá nhân, đảm bảo tuân thủ pháp luật chứng khoán Việt Nam.
+
+**Kế hoạch chi tiết:** [`docs/superpowers/plans/2026-05-07-finext-compliance-pivot.md`](superpowers/plans/2026-05-07-finext-compliance-pivot.md)
+
+### 10.1. Thay đổi đã áp dụng
+
+#### Auth flow (BE + FE)
+
+- **Register flow rewrite:**
+  - BE bỏ OTP self-verify, thay bằng admin manual approval.
+  - DNS MX check (`email-validator` + `dnspython`) trước khi tạo user → catch domain không tồn tại.
+  - Gửi mail "yêu cầu đã ghi nhận" SYNC, fail → rollback delete user.
+  - FE register form: bỏ OTP step, thay bằng success Alert + nút "Quay lại đăng nhập".
+- **Admin activation email:**
+  - Endpoint `PUT /api/v1/users/{id}` detect transition `is_active False→True` → MX check + send mail "tài khoản đã kích hoạt" SYNC → fail → rollback DB.
+  - Template `account_activated.html` (Vietnamese, formal tone, có link `FRONTEND_URL/login`).
+- **LoginForm inactive handling:** thay vì auto request OTP → hiện message "Tài khoản chưa kích hoạt, đội ngũ Finext sẽ xác nhận trong 1 giờ".
+- **Google OAuth disconnect:** comment block JSX nút Google login + register (wrap `{false && (<>...</>)}`). User mất Google login dùng forgot-password để khôi phục. `/auth/google/callback` add vào `BLOCKED_ROUTES` → 403.
+
+#### 403-blocked routes
+
+File: [`finext-nextjs/lib/blocked-routes.ts`](../finext-nextjs/lib/blocked-routes.ts) — danh sách centralized, `middleware.ts` đọc và return 403 cho:
+- `/open-account`
+- `/profile/subscriptions`
+- `/auth/google/callback`
+
+#### SEO
+
+- `robots.ts`: giữ behavior cũ, thêm `/open-account` vào disallow.
+- `sitemap.ts`: bỏ entry `/open-account`.
+- `layout.tsx` JSON-LD: bỏ entry "Mở tài khoản". Metadata `robots` giữ nguyên `index: true, follow: true`.
+
+#### Compliance content
+
+- **Footer:** thêm disclaimer block "Finext không phải công ty chứng khoán..." trên copyright bar.
+- **News detail page** (`/news/[articleId]`): bỏ render full `html_content`, thay bằng Alert "Đây là bản tóm tắt..." + text-link "Đọc đầy đủ" → external `article.link`. Tránh re-publish nội dung báo chí.
+
+#### UI changes
+
+- **ConsultationSection** ở home: heading "Trở thành thành viên cộng đồng nhà đầu tư Chuyên Nghiệp", body "Kết nối cộng đồng nhà đầu tư nhiều kinh nghiệm...", button "Gia nhập cộng đồng" → Zalo group `https://zalo.me/g/rvogov075` (tab mới).
+- **Profile sidebar:** comment menu item "Gói đăng ký".
+- **Header:** giữ nguyên "Đăng ký" button visible (flow đăng ký vẫn mở, chỉ admin approval).
+
+#### Tier gating bypassed
+
+File: [`finext-nextjs/components/auth/features.ts`](../finext-nextjs/components/auth/features.ts) — `ADVANCED_AND_ABOVE` include `FEATURES.BASIC` ở đầu list. Mọi user logged-in (kể cả gói BASIC) xem được toàn bộ content gated trước đây ở: `/charts/[id]`, `/groups`, `/markets`, `/sectors`, `/stocks`, etc.
+
+### 10.2. Tính năng đã code nhưng đang TẮT
+
+⚠️ **Quan trọng:** các block code dưới đây đang bị disable nhưng KHÔNG xóa — sẵn sàng bật lại nếu rollback. Path khôi phục chi tiết xem trong plan.
+
+| # | Tính năng | Cách tắt | File chính |
+|---|---|---|---|
+| 1 | OTP register flow (BE) | Function `register_user()` rewrite, imports OTP-related giữ với `# noqa: F401` | `app/routers/auth.py` |
+| 2 | OTP step trong RegisterForm | State + handlers + JSX block commented | `app/(auth)/components/RegisterForm.tsx` |
+| 3 | "User is inactive" auto OTP | Branch logic đổi sang error message | `app/(auth)/components/LoginForm.tsx` |
+| 4 | Google login button | Wrap `{false && (<>Divider + Provider</>)}` | `LoginForm.tsx` |
+| 5 | Google register button | Wrap `{false && (<>Divider + Provider</>)}` | `RegisterForm.tsx` |
+| 6 | JSON-LD entry "Mở tài khoản" | Block 3 dòng comment | `app/layout.tsx` |
+| 7 | ConsultationSection `Link` import | Comment line | `home/components/ConsultationSection.tsx` |
+| 8 | Sidebar profile "Gói đăng ký" | Comment menu item + import | `(main)/profile/LayoutContent.tsx` |
+| 9 | News full content render | Wrap `dangerouslySetInnerHTML` Box trong `{false && (...)}` | `news/[articleId]/PageContent.tsx` |
+| 10 | Tier gating ADVANCED_AND_ABOVE | Include `FEATURES.BASIC` ở đầu list | `components/auth/features.ts` |
+| 11 | `/open-account` page | Code page nguyên, route bị 403 qua middleware | `BLOCKED_ROUTES` |
+| 12 | `/profile/subscriptions` page | Code page nguyên, route bị 403 qua middleware | `BLOCKED_ROUTES` |
+
+### 10.3. Files mới (created)
+
+- [`finext-nextjs/lib/blocked-routes.ts`](../finext-nextjs/lib/blocked-routes.ts) — Centralized 403 list + helper
+- `finext-fastapi/app/templates/registration_received.html` — Email template
+- `finext-fastapi/app/templates/account_activated.html` — Email template
+
+### 10.4. Phase đã skip có chủ ý
+
+| Phase | Lý do skip |
+|---|---|
+| Banner Alert ở `/stocks/[symbol]` + `/charts/[id]` | User: "đã đóng đăng kí rồi kệ cái này đi" (compliance đã đủ qua footer disclaimer + news CTA) |
+| Comment "Đăng ký" button header | User: "nút đăng ký giữ như bình thường, chỉ sửa logic sau khi đăng ký" — flow đăng ký vẫn mở |
+| Update content `/policies/{privacy,disclaimer,content}` | User: "các page đã code cứ giữ nguyên" — chỉ update khi cần thiết |
+| BE work: transactions disable, PATRON deactivate, user schema reduce | Theo nguyên tắc FE-only ngoại trừ register flow |
 
 ---
 
@@ -575,4 +661,4 @@ Quy định chi tiết trong [CLAUDE.md](../CLAUDE.md):
 
 ---
 
-*Tài liệu này được tạo bởi Claude Code dựa trên khảo sát mã nguồn thực tế và các spec/plan trong `docs/superpowers/`. Cập nhật lần cuối: 2026-05-06.*
+*Tài liệu này được tạo bởi Claude Code dựa trên khảo sát mã nguồn thực tế và các spec/plan trong `docs/superpowers/`. Cập nhật lần cuối: 2026-05-07 (compliance pivot).*

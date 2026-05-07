@@ -1,14 +1,15 @@
 # finext-fastapi/app/routers/auth.py
 import logging
 from typing import Annotated, Tuple, Any, Optional, List, Dict, Literal, cast  # Thêm List, Dict nếu bạn dùng ở đâu đó
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta  # noqa: F401  # timedelta giữ lại nếu cần (OTP register flow đã disabled)
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status, Request, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, Request, BackgroundTasks  # noqa: F401  # BackgroundTasks giữ lại nếu cần
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from jose import jwt, JWTError
+from email_validator import validate_email, EmailNotValidError
 
 from app.auth.dependencies import get_current_active_user, verify_active_session
 from app.auth.access import get_user_permissions
@@ -41,13 +42,13 @@ from app.crud.sessions import (
 )
 import app.crud.licenses as crud_licenses  # Giữ lại nếu cần
 import app.crud.subscriptions as crud_subscriptions  # Giữ lại nếu cần
-from app.crud.otps import verify_and_use_otp as crud_verify_otp, create_otp_record as crud_create_otp_record  # Giữ lại nếu cần
+from app.crud.otps import verify_and_use_otp as crud_verify_otp, create_otp_record as crud_create_otp_record  # noqa: F401  # crud_create_otp_record giữ lại nếu cần (OTP register flow disabled)
 from app.schemas.sessions import SessionCreate
 
 # SỬA: Sử dụng GoogleUserSchema từ app.schemas.users
 from app.schemas.auth import JWTTokenResponse, TokenData, ResetPasswordWithOtpRequest, ChangePasswordRequest, GoogleLoginRequest
 from app.schemas.users import UserPublic, UserInDB, UserCreate, GoogleUserSchema  # THÊM GoogleUserSchema
-from app.schemas.otps import OtpVerificationRequest, OtpTypeEnum, OtpCreateInternal  # Giữ lại nếu cần
+from app.schemas.otps import OtpVerificationRequest, OtpTypeEnum, OtpCreateInternal  # noqa: F401  # OtpCreateInternal giữ lại nếu cần
 from app.schemas.emails import MessageResponse  # Giữ lại nếu cần
 from bson import ObjectId
 from app.utils.response_wrapper import api_response_wrapper, StandardApiResponse
@@ -61,13 +62,13 @@ from app.core.config import (
     COOKIE_SAMESITE,
     COOKIE_SECURE,
     COOKIE_DOMAIN,
-    OTP_EXPIRE_MINUTES,
+    OTP_EXPIRE_MINUTES,  # noqa: F401  # giữ lại nếu cần (OTP register flow disabled)
     GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET,
     # GOOGLE_REDIRECT_URI, # Không cần thiết ở đây nếu frontend gửi redirect_uri
 )
-from app.utils.otp_utils import generate_otp_code  # Giữ lại nếu cần
-from app.utils.email_utils import send_otp_email  # Giữ lại nếu cần
+from app.utils.otp_utils import generate_otp_code  # noqa: F401  # giữ lại nếu cần (OTP register flow disabled)
+from app.utils.email_utils import send_otp_email, send_registration_received_email  # noqa: F401  # send_otp_email giữ lại nếu cần
 
 
 logger = logging.getLogger(__name__)
@@ -85,19 +86,30 @@ LogoutResponse = Tuple[None, CookieList, Optional[List[str]]]
     "/register",
     response_model=StandardApiResponse[MessageResponse],
     status_code=status.HTTP_201_CREATED,
-    summary="Đăng ký người dùng mới và gửi OTP xác thực email",
+    summary="Đăng ký người dùng mới — admin xác nhận thủ công, không OTP",
     tags=["authentication"],
 )
-@api_response_wrapper(default_success_message="Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.")
+@api_response_wrapper(default_success_message="Yêu cầu tạo tài khoản đã được ghi nhận.")
 async def register_user(
     user_data: UserCreate,  # UserCreate giờ có password là Optional
-    background_tasks: BackgroundTasks,
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
     if not user_data.password:  # Kiểm tra password cho đăng ký truyền thống
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mật khẩu là bắt buộc cho hình thức đăng ký này.")
+
+    # Compliance pivot 2026-05-07: verify DNS MX record của domain trước khi tạo user.
+    # Catch domain không tồn tại (vd: "abc@mfgsdf.cocm") trước khi SMTP submission accept-then-bounce.
     try:
-        # set_active_on_create=False vì cần OTP
+        validate_email(user_data.email, check_deliverability=True)
+    except EmailNotValidError as e:
+        logger.warning(f"Email validation failed for {user_data.email}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email không tồn tại. Vui lòng kiểm tra lại địa chỉ email.",
+        )
+
+    try:
+        # set_active_on_create=False — admin sẽ kích hoạt thủ công sau khi xác minh
         created_user = await create_user_db(db, user_create_data=user_data, set_active_on_create=False)
     except ValueError as ve:
         raise HTTPException(
@@ -111,32 +123,25 @@ async def register_user(
             detail="Không thể tạo người dùng. Vui lòng thử lại sau.",
         )
 
-    raw_otp = generate_otp_code()
-    now = datetime.now(timezone.utc)
-    internal_otp_payload = OtpCreateInternal(
-        user_id=str(created_user.id),
-        otp_type=OtpTypeEnum.EMAIL_VERIFICATION,
-        otp_code=raw_otp,
-        expires_at=now + timedelta(minutes=OTP_EXPIRE_MINUTES),
-        created_at=now,
-    )
-    otp_record = await crud_create_otp_record(db, internal_otp_payload)
-    if not otp_record:
-        # Xóa user nếu không tạo được OTP để tránh user "mồ côi" không thể active
-        await db.users.delete_one({"_id": ObjectId(created_user.id)})
-        logger.info(f"Đã xóa user {created_user.email} do không thể tạo OTP record.")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi khi tạo mã xác thực. Vui lòng thử đăng ký lại.")
-
-    background_tasks.add_task(
-        send_otp_email,
+    # Compliance pivot 2026-05-07: gửi mail "yêu cầu đã ghi nhận" SYNC để verify email tồn tại.
+    # Nếu gửi thất bại (email không tồn tại / SMTP reject) → rollback xóa user vừa tạo.
+    email_sent = await send_registration_received_email(
         email_to=created_user.email,
         full_name=created_user.full_name,
-        otp_code=raw_otp,
-        otp_type=OtpTypeEnum.EMAIL_VERIFICATION,
-        expiry_minutes=OTP_EXPIRE_MINUTES,
     )
-    # Tin nhắn thành công đã được wrapper xử lý
-    return MessageResponse(message="Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.")
+    if not email_sent:
+        await db.users.delete_one({"_id": ObjectId(created_user.id)})
+        logger.warning(
+            f"Đã xóa user {created_user.email} do gửi email registration_received thất bại."
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Không thể gửi email xác nhận. Vui lòng kiểm tra lại địa chỉ email và đăng ký lại.",
+        )
+
+    return MessageResponse(
+        message="Yêu cầu tạo tài khoản đã được ghi nhận. Đội ngũ Finext sẽ xác nhận trong vòng 1 giờ. Vui lòng kiểm tra email để biết thêm chi tiết."
+    )
 
 
 @router.get("/me", response_model=StandardApiResponse[UserPublic])
@@ -432,7 +437,7 @@ async def login_for_access_token(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi xử lý token.")
 
     user_agent = request.headers.get("user-agent", "Unknown")
-    client_host = request.client.host if request.client else "Unknown"
+    client_host = request.client.host if request.client else "Unknown"  # noqa: F841  # giữ lại để debug nếu cần, không log để bảo mật IP
     device_info = user_agent  # Chỉ lưu User-Agent, không bao gồm IP
 
     logger.info(f"🔄 Creating session for user {user.email} with access_jti: {access_jti}")
@@ -528,7 +533,7 @@ async def login_with_otp(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi xử lý token.")
 
     user_agent = request.headers.get("user-agent", "Unknown")
-    client_host = request.client.host if request.client else "Unknown"
+    client_host = request.client.host if request.client else "Unknown"  # noqa: F841  # giữ lại để debug nếu cần, không log để bảo mật IP
     device_info = user_agent  # Chỉ lưu User-Agent, không bao gồm IP
     await create_session(db, SessionCreate(user_id=user_id_str, access_jti=access_jti, refresh_jti=refresh_jti, device_info=device_info))
 
@@ -784,7 +789,7 @@ async def google_oauth_callback(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi xử lý token.")
 
     user_agent = request.headers.get("user-agent", "Unknown (Google Login)")
-    client_host = request.client.host if request.client else "Unknown (Google Login)"
+    # client_host = request.client.host if request.client else "Unknown (Google Login)"
     device_info = user_agent  # Chỉ lưu User-Agent, không bao gồm IP
     await create_session(db, SessionCreate(user_id=user_id_str, access_jti=access_jti, refresh_jti=refresh_jti, device_info=device_info))
 

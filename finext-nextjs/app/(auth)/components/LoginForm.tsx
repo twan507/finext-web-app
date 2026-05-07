@@ -313,16 +313,10 @@ function SignInFormContent() {
         } catch (err: any) {
             const errMsg = err.message || '';
             if (errMsg === 'User is inactive' || errMsg.toLowerCase().includes('inactive')) {
-                setVerifyEmail(loginEmail);
-                setShowVerifyPanel(true);
-                setShowVerifyWarning(true);
-                setResendCooldown(60);
-                apiClient({
-                    url: '/api/v1/otps/request',
-                    method: 'POST',
-                    body: { email: loginEmail, otp_type: 'email_verification' },
-                    requireAuth: false,
-                }).catch(() => {});
+                // Compliance pivot 2026-05-07: tài khoản inactive chỉ admin kích hoạt được — bỏ self-verify OTP.
+                setError(
+                    'Tài khoản của bạn chưa được kích hoạt. Đội ngũ Finext sẽ xác nhận trong vòng 1 giờ kể từ khi đăng ký. Vui lòng kiểm tra email và thử đăng nhập lại sau.'
+                );
             } else {
                 setError(errMsg || 'Lỗi kết nối hoặc có lỗi xảy ra trong quá trình đăng nhập.');
             }
@@ -595,26 +589,29 @@ function SignInFormContent() {
                     {loading ? <CircularProgress size={iconSize.progressMedium} color="inherit" /> : 'Đăng nhập'}
                 </Button>
 
-                <Divider sx={{ my: 1.5 }}>hoặc</Divider>
-
-                {/* Sửa đổi ở đây */}
-                {googleClientId ? (
-                    <GoogleOAuthProvider clientId={googleClientId}>
-                        <GoogleLoginComponent
-                            setGoogleLoading={setGoogleLoading}
-                            setError={setError}
-                            disabled={loading || googleLoading || !!successMessage || showVerifyPanel}
-                            loading={googleLoading}
-                        />
-                    </GoogleOAuthProvider>
-                ) : (
-                    <GoogleButton
-                        onClick={() => { }}
-                        disabled={true}
-                        fullWidth={true}
-                    />
+                {/* Compliance pivot 2026-05-07: Google login hidden — bypass admin approval flow.
+                    Email/password register flow still active. Forgot-password works for ex-Google users. */}
+                {false && (
+                    <>
+                        <Divider sx={{ my: 1.5 }}>hoặc</Divider>
+                        {googleClientId ? (
+                            <GoogleOAuthProvider clientId={googleClientId}>
+                                <GoogleLoginComponent
+                                    setGoogleLoading={setGoogleLoading}
+                                    setError={setError}
+                                    disabled={loading || googleLoading || !!successMessage || showVerifyPanel}
+                                    loading={googleLoading}
+                                />
+                            </GoogleOAuthProvider>
+                        ) : (
+                            <GoogleButton
+                                onClick={() => { }}
+                                disabled={true}
+                                fullWidth={true}
+                            />
+                        )}
+                    </>
                 )}
-
 
                 <Typography variant="body2" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
                     Bạn chưa có tài khoản? <Link href="/register" tabIndex={-1}>Đăng ký</Link>

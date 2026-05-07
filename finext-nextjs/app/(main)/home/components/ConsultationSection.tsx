@@ -2,7 +2,7 @@
 
 import { Box, Typography, Button, Grid, useTheme } from '@mui/material';
 import Image from 'next/image';
-import Link from 'next/link';
+// import Link from 'next/link'; // Compliance pivot 2026-05-07: button now uses native anchor (external Zalo URL)
 import { borderRadius, fontWeight, getResponsiveFontSize, getGlowButton } from 'theme/tokens';
 
 export default function ConsultationSection() {
@@ -62,7 +62,7 @@ export default function ConsultationSection() {
                                 maxWidth: '600px'
                             }}
                         >
-                            Mở tài khoản chứng khoán và nhận hỗ trợ 1:1 từ đội ngũ Finext
+                            Trở thành thành viên cộng đồng nhà đầu tư Chuyên Nghiệp
                         </Typography>
                         <Typography
                             variant="body1"
@@ -75,13 +75,15 @@ export default function ConsultationSection() {
                                 mx: { xs: 'auto', md: 0 }
                             }}
                         >
-                            Đừng bỏ lỡ cơ hội gia tăng tài sản nhờ những quyết định đầu tư kịp thời và phương pháp phân bổ vốn bài bản, hiệu quả.
+                            Kết nối cộng đồng nhà đầu tư nhiều kinh nghiệm, học hỏi và chia sẻ góc nhìn thị trường cùng phương pháp phân tích thực tế.
                         </Typography>
                         <Button
                             variant="contained"
                             size="large"
-                            component={Link}
-                            href="/open-account"
+                            component="a"
+                            href="https://zalo.me/g/rvogov075"
+                            target="_blank"
+                            rel="noopener noreferrer"
                             sx={{
                                 py: { xs: 1.25, md: 1.5 },
                                 px: { xs: 3, md: 4 },
@@ -95,7 +97,7 @@ export default function ConsultationSection() {
                                 textDecoration: 'none'
                             }}
                         >
-                            Mở tài khoản chứng khoán
+                            Gia nhập cộng đồng
                         </Button>
                     </Grid>
 

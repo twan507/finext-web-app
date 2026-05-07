@@ -4,10 +4,12 @@ import logging
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from email_validator import validate_email, EmailNotValidError
 
 from app.auth.access import require_permission
 from app.auth.dependencies import get_current_active_user
 from app.core.database import get_database
+from app.utils.email_utils import send_account_activated_email
 
 # <<<< PHẦN CẬP NHẬT IMPORT >>>>
 from app.crud.users import (
@@ -142,6 +144,21 @@ async def update_user_info_endpoint(
     if not update_dict_for_crud:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Không có dữ liệu nào được cung cấp để cập nhật.")
 
+    # Compliance pivot 2026-05-07: detect transition is_active False -> True (admin activation).
+    # Verify email deliverability via DNS MX record BEFORE persisting activation.
+    is_activation_transition = (
+        update_dict_for_crud.get("is_active") is True and target_user.is_active is False
+    )
+    if is_activation_transition:
+        try:
+            validate_email(target_user.email, check_deliverability=True)
+        except EmailNotValidError as e:
+            logger.warning(f"Cannot activate user {target_user.email}: email validation failed: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Không thể kích hoạt: email không tồn tại hoặc tên miền không hợp lệ.",
+            )
+
     try:
         updated_user_doc = await update_user_db(db, user_id_to_update_str=user_id, user_update_data=update_dict_for_crud)
         if not updated_user_doc:
@@ -150,6 +167,28 @@ async def update_user_info_endpoint(
                 status_code=status.HTTP_404_NOT_FOUND,  # Hoặc 500 tùy thuộc nguyên nhân
                 detail=f"User with ID {user_id} not found for update or update failed.",
             )
+
+        # Compliance pivot 2026-05-07: nếu vừa activate, gửi email xác nhận SYNC.
+        # Nếu gửi thất bại → rollback is_active về False để giữ flow nhất quán.
+        if is_activation_transition:
+            email_sent = await send_account_activated_email(
+                email_to=target_user.email,
+                full_name=target_user.full_name,
+            )
+            if not email_sent:
+                await update_user_db(
+                    db,
+                    user_id_to_update_str=user_id,
+                    user_update_data={"is_active": False},
+                )
+                logger.warning(
+                    f"Đã rollback is_active=False cho user {target_user.email} do gửi email account_activated thất bại."
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Không thể gửi email kích hoạt. Tài khoản chưa được kích hoạt — vui lòng kiểm tra lại địa chỉ email và thử lại.",
+                )
+
         return UserAdminResponse.model_validate(updated_user_doc)
     except ValueError as ve:  # Bắt lỗi từ CRUD (ví dụ: email trùng, ref_code không hợp lệ)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))

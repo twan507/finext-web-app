@@ -15,6 +15,8 @@ export default function robots(): MetadataRoute.Robots {
                     '/auth/',
                     '/_next/',
                     '/watchlist/',
+                    // Compliance pivot 2026-05-07: blocked routes (see lib/blocked-routes.ts)
+                    '/open-account',
                 ],
             },
             {
@@ -42,6 +44,8 @@ export default function robots(): MetadataRoute.Robots {
                     '/profile/',
                     '/watchlist/',
                     '/_next/',
+                    // Compliance pivot 2026-05-07: blocked routes
+                    '/open-account',
                 ],
             },
         ],

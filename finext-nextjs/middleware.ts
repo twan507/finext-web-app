@@ -1,6 +1,7 @@
 // finext-nextjs/middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { isBlockedRoute } from './lib/blocked-routes';
 
 // Tên cookie phải khớp với backend
 const REFRESH_COOKIE_NAME = 'finext_refresh_token';
@@ -21,6 +22,14 @@ function isProtectedRoute(pathname: string): boolean {
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Blocked routes (compliance pivot) => trả 403
+  if (isBlockedRoute(pathname)) {
+    return new NextResponse('Forbidden', {
+      status: 403,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    });
+  }
 
   // Route không cần bảo vệ => cho qua
   if (!isProtectedRoute(pathname)) {

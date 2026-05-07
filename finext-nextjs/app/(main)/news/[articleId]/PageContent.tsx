@@ -322,7 +322,46 @@ export default function PageContent({ articleId }: PageContentProps) {
                             {article.sapo}
                         </Typography>
 
-                        {/* Content */}
+                        {/* Compliance pivot 2026-05-07: thay full html_content render bằng CTA tới nguồn gốc.
+                            Tránh re-publish nội dung báo chí (bản quyền). User vẫn xem được title + sapo + image. */}
+                        <Alert
+                            severity="info"
+                            sx={{
+                                mb: spacing.sm,
+                                borderRadius: `${borderRadius.md}px`,
+                                alignItems: 'center',
+                                '& .MuiAlert-message': { flex: 1 },
+                                '& .MuiAlert-action': { alignItems: 'center', pt: 0, mr: 0 },
+                            }}
+                            action={
+                                <Button
+                                    variant="text"
+                                    size="medium"
+                                    component="a"
+                                    href={article.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    startIcon={<Launch />}
+                                    sx={{
+                                        ml: 1,
+                                        textTransform: 'none',
+                                        fontWeight: fontWeight.semibold,
+                                        whiteSpace: 'nowrap',
+                                        '&:hover': {
+                                            backgroundColor: 'transparent',
+                                            textDecoration: 'underline',
+                                        },
+                                    }}
+                                >
+                                    Đọc đầy đủ
+                                </Button>
+                            }
+                        >
+                            Đây là bản tóm tắt từ nguồn báo chí. Truy cập bài viết gốc để đọc nội dung đầy đủ.
+                        </Alert>
+
+                        {/* Compliance pivot 2026-05-07: full html_content rendering disabled — preserved via {false &&} */}
+                        {false && (
                         <Box
                             sx={{
                                 fontSize: getResponsiveFontSize('md'),
@@ -375,6 +414,7 @@ export default function PageContent({ articleId }: PageContentProps) {
                             }}
                             dangerouslySetInnerHTML={{ __html: article.html_content || '' }}
                         />
+                        )}
 
                         {/* Tickers as hashtags */}
                         {article.tickers && article.tickers.length > 0 && (

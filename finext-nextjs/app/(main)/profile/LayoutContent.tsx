@@ -7,7 +7,7 @@ import {
   PersonOutline,
   LockResetOutlined,
   DevicesOutlined,
-  CardMembership,
+  // CardMembership, // Compliance pivot 2026-05-07: only used by commented "Gói đăng ký" menu item
   LogoutOutlined
 } from '@mui/icons-material';
 import { useAuth } from '@/components/auth/AuthProvider';
@@ -19,7 +19,8 @@ interface ProfileLayoutProps {
 
 const menuItems = [
   { text: 'Thông tin cơ bản', icon: <PersonOutline />, href: '/profile/information' },
-  { text: 'Gói đăng ký', icon: <CardMembership />, href: '/profile/subscriptions' },
+  // Compliance pivot 2026-05-07: subscriptions disabled — route returns 403 via middleware
+  // { text: 'Gói đăng ký', icon: <CardMembership />, href: '/profile/subscriptions' },
   { text: 'Đổi mật khẩu', icon: <LockResetOutlined />, href: '/profile/change-password' },
   { text: 'Session đăng nhập', icon: <DevicesOutlined />, href: '/profile/login-sessions' },
 ];

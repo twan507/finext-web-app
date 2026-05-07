@@ -205,3 +205,66 @@ async def send_subscription_expiry_reminder_email(
 
     logger.info(f"Subscription expiry reminder email sent successfully to {email_to} for license {license_key}.")
     return email_sent
+
+
+async def send_registration_received_email(
+    email_to: EmailStr,
+    full_name: str,
+) -> bool:
+    """
+    Send "registration request received" email synchronously.
+    Returns True if send_email_async succeeded, False otherwise (e.g. SMTP reject for invalid recipient).
+    Caller should rollback user creation if returns False.
+
+    Used by compliance pivot 2026-05-07: register flow no longer issues OTP,
+    instead notifies user that admin will manually approve within 1 hour.
+    """
+    if not EMAIL_CONFIG_SUCCESSFUL or fm_instance is None:
+        logger.error(f"Email service not configured. Cannot send registration_received to {email_to}.")
+        return False
+
+    subject = "Yêu cầu tạo tài khoản Finext đã được ghi nhận"
+    template_body = {
+        "full_name": full_name,
+        "current_year": datetime.now(timezone.utc).year,
+    }
+
+    logger.info(f"Attempting to send registration_received email to {email_to}.")
+    return await send_email_async(
+        subject=subject,
+        recipients=[email_to],
+        template_name="registration_received.html",
+        template_body=template_body,
+    )
+
+
+async def send_account_activated_email(
+    email_to: EmailStr,
+    full_name: str,
+) -> bool:
+    """
+    Send "account activated" email synchronously.
+    Returns True if send succeeded, False otherwise.
+    Caller (admin update endpoint) should rollback is_active=True back to False if returns False.
+
+    Used by compliance pivot 2026-05-07: when admin activates an inactive account,
+    user must receive confirmation email. If email fails, activation is rolled back.
+    """
+    if not EMAIL_CONFIG_SUCCESSFUL or fm_instance is None:
+        logger.error(f"Email service not configured. Cannot send account_activated to {email_to}.")
+        return False
+
+    subject = "Tài khoản Finext của bạn đã được kích hoạt"
+    template_body = {
+        "full_name": full_name,
+        "login_url": f"{FRONTEND_URL}/login",
+        "current_year": datetime.now(timezone.utc).year,
+    }
+
+    logger.info(f"Attempting to send account_activated email to {email_to}.")
+    return await send_email_async(
+        subject=subject,
+        recipients=[email_to],
+        template_name="account_activated.html",
+        template_body=template_body,
+    )

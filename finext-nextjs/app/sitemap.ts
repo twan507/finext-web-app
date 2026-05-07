@@ -75,13 +75,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             changeFrequency: 'weekly',
             priority: 0.7,
         },
-        // ── Mở tài khoản ──
-        {
-            url: `${baseUrl}/open-account`,
-            lastModified: currentDate,
-            changeFrequency: 'monthly',
-            priority: 0.8,
-        },
+        // ── Mở tài khoản: removed by compliance pivot 2026-05-07 (route blocked) ──
         // ── Hướng dẫn sử dụng ──
         {
             url: `${baseUrl}/guides/overview`,

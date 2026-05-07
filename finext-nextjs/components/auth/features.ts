@@ -32,7 +32,11 @@ export const BASIC_AND_ABOVE: FeatureKey[] = [
 ];
 
 /** Chỉ cần advanced trở lên */
+// Compliance pivot 2026-05-07: gộp BASIC vào để mọi user logged-in (kể cả gói cơ bản)
+// xem được toàn bộ content. Lý do: bỏ tier gating, không bán gói trả phí phân tầng.
+// Nếu cần khôi phục tier gating sau này, xóa FEATURES.BASIC khỏi list dưới đây.
 export const ADVANCED_AND_ABOVE: FeatureKey[] = [
+    FEATURES.BASIC,
     FEATURES.ADVANCED,
     FEATURES.PARTNER,
     FEATURES.MANAGER,
