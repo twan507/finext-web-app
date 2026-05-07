@@ -22,6 +22,7 @@ import NewsSection from './components/NewsSection';
 import StockInfoSection, { type StockInfoData } from './components/StockInfoSection';
 import StockKeyMetricsPanel from './components/StockKeyMetricsPanel';
 import StockFinancialsSection from './components/StockFinancialsSection';
+import { getCachedStockViewMode, setCachedStockViewMode } from './viewModeStore';
 
 import type { StockData } from '../../home/components/marketSection/MarketVolatility';
 import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
@@ -176,7 +177,12 @@ export default function StockDetailContent() {
     };
 
     // View mode toggle: 'chart' shows MarketIndexChart, 'info' shows StockFinRatiosSection
-    const [viewMode, setViewMode] = useState<'chart' | 'info'>('info');
+    // Persist qua các lần đổi symbol; reset khi full page reload (module state).
+    const [viewMode, setViewModeState] = useState<'chart' | 'info'>(() => getCachedStockViewMode());
+    const setViewMode = (v: 'chart' | 'info') => {
+        setCachedStockViewMode(v);
+        setViewModeState(v);
+    };
 
     // Dropdown state
     const [dropdownOpen, setDropdownOpen] = useState(false);
