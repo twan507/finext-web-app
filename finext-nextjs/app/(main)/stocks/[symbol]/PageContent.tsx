@@ -797,6 +797,7 @@ export default function StockDetailContent() {
                         <StockInfoSection
                             info={stockInfo}
                             todayData={todayAllData[ticker] || []}
+                            marketCap={(finratiosData[0] as { ryd11?: number } | undefined)?.ryd11 ?? null}
                         />
                     )}
                 </Box>
@@ -827,7 +828,6 @@ export default function StockDetailContent() {
                     ) : (
                         <StockKeyMetricsPanel
                             rawData={finratiosData}
-                            todayStockData={todayAllData[ticker]?.[0]}
                         />
                     )}
                 </Box>

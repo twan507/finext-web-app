@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useLayoutEffect } from 'react';
 import {
     Box, Typography, useTheme, Divider, Dialog, DialogTitle, DialogContent, IconButton, Stack, Chip,
     type Theme,
@@ -9,7 +9,14 @@ import CloseIcon from '@mui/icons-material/Close';
 import {
     getResponsiveFontSize, fontWeight, borderRadius, getGlassCard, transitions,
 } from 'theme/tokens';
+import InfoTooltip from 'components/common/InfoTooltip';
 import type { IndexRawData } from '../../../home/components/marketSection/IndexDetailPanel';
+
+const GROUP_FIELDS: { key: 'industry_name' | 'category_name' | 'marketcap_name'; label: string; tooltip: string }[] = [
+    { key: 'industry_name', label: 'Ngành nghề', tooltip: 'Ngành nghề của cổ phiếu' },
+    { key: 'category_name', label: 'Nhóm dòng tiền', tooltip: 'Nhóm dòng tiền của cổ phiếu' },
+    { key: 'marketcap_name', label: 'Nhóm vốn hoá', tooltip: 'Nhóm vốn hoá của cổ phiếu' },
+];
 
 export interface StockInfoData {
     ticker: string;
@@ -22,9 +29,10 @@ export interface StockInfoData {
 interface StockInfoSectionProps {
     info: StockInfoData | null;
     todayData: IndexRawData[];
+    marketCap?: number | null;
 }
 
-const OVERVIEW_CLAMP_CHARS = 280;
+const OVERVIEW_LINE_CLAMP = 5;
 
 // Helpers — đồng bộ với MarketIndexChart header
 const getChangeColor = (pctPercent: number, theme: Theme): string => {
@@ -96,8 +104,23 @@ function FullTextDialog({ open, title, content, onClose }: {
 function ExpandableTextBlock({ title, text }: { title: string; text: string }) {
     const theme = useTheme();
     const [open, setOpen] = useState(false);
-    const isLong = text.length > OVERVIEW_CLAMP_CHARS;
-    const display = isLong ? `${text.slice(0, OVERVIEW_CLAMP_CHARS).trimEnd()}…` : text;
+    const textRef = useRef<HTMLParagraphElement>(null);
+    const [isOverflowing, setIsOverflowing] = useState(false);
+
+    useLayoutEffect(() => {
+        const el = textRef.current;
+        if (!el) return;
+        const check = () => {
+            // +1 buffer cho sub-pixel rounding
+            setIsOverflowing(el.scrollHeight > el.clientHeight + 1);
+        };
+        check();
+        const ro = new ResizeObserver(check);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [text]);
+
+    const fadeColor = theme.palette.background.default;
 
     return (
         <Box>
@@ -109,22 +132,37 @@ function ExpandableTextBlock({ title, text }: { title: string; text: string }) {
             }}>
                 {title}
             </Typography>
-            <Typography sx={{
-                fontSize: getResponsiveFontSize('sm'),
-                color: theme.palette.text.secondary,
-                lineHeight: 1.7,
-                whiteSpace: 'pre-wrap',
-            }}>
-                {display}
-                {isLong && (
+            <Box sx={{ position: 'relative' }}>
+                <Typography
+                    ref={textRef}
+                    sx={{
+                        fontSize: getResponsiveFontSize('sm'),
+                        color: theme.palette.text.secondary,
+                        lineHeight: 1.7,
+                        whiteSpace: 'pre-wrap',
+                        display: '-webkit-box',
+                        WebkitLineClamp: OVERVIEW_LINE_CLAMP,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                    }}
+                >
+                    {text}
+                </Typography>
+                {isOverflowing && (
                     <Box
                         component="span"
                         onClick={() => setOpen(true)}
                         sx={{
-                            ml: 0.5,
+                            position: 'absolute',
+                            right: 0,
+                            bottom: 0,
+                            fontSize: getResponsiveFontSize('sm'),
+                            lineHeight: 1.7,
                             color: theme.palette.primary.main,
                             cursor: 'pointer',
                             fontWeight: fontWeight.semibold,
+                            pl: 6,
+                            background: `linear-gradient(to right, transparent 0, ${fadeColor} 32px)`,
                             transition: transitions.colors,
                             '&:hover': { textDecoration: 'underline' },
                         }}
@@ -132,16 +170,19 @@ function ExpandableTextBlock({ title, text }: { title: string; text: string }) {
                         Xem thêm
                     </Box>
                 )}
-            </Typography>
+            </Box>
             <FullTextDialog open={open} title={title} content={text} onClose={() => setOpen(false)} />
         </Box>
     );
 }
 
 // ─── Main ───
-export default function StockInfoSection({ info, todayData }: StockInfoSectionProps) {
+export default function StockInfoSection({ info, todayData, marketCap }: StockInfoSectionProps) {
     const theme = useTheme();
     const latest = todayData.length > 0 ? todayData[todayData.length - 1] : null;
+    const marketCapDisplay = marketCap == null
+        ? '—'
+        : `${marketCap.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Tỷ`;
 
     const currentPrice = latest?.close ?? 0;
     const priceChange = parseFloat((latest?.diff ?? 0).toFixed(2));
@@ -206,6 +247,58 @@ export default function StockInfoSection({ info, todayData }: StockInfoSectionPr
                         {info.name}
                     </Typography>
                 )}
+
+                {/* Vốn hoá | Ngành nghề | Nhóm dòng tiền | Nhóm vốn hoá */}
+                <Box sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    columnGap: 'clamp(16px, 4vw, 80px)',
+                    rowGap: 2,
+                    mt: 2,
+                }}>
+                    {/* Vốn hoá (leftmost) */}
+                    <Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                            <Typography sx={{
+                                fontSize: getResponsiveFontSize('xs'),
+                                color: theme.palette.text.secondary,
+                                fontWeight: fontWeight.medium,
+                            }}>
+                                Vốn hoá
+                            </Typography>
+                            <InfoTooltip title="Tổng giá trị thị trường (tỷ đồng)" />
+                        </Box>
+                        <Typography sx={{
+                            fontSize: getResponsiveFontSize('sm'),
+                            fontWeight: fontWeight.semibold,
+                            color: theme.palette.text.primary,
+                        }}>
+                            {marketCapDisplay}
+                        </Typography>
+                    </Box>
+
+                    {GROUP_FIELDS.map((field) => (
+                        <Box key={field.key}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                                <Typography sx={{
+                                    fontSize: getResponsiveFontSize('xs'),
+                                    color: theme.palette.text.secondary,
+                                    fontWeight: fontWeight.medium,
+                                }}>
+                                    {field.label}
+                                </Typography>
+                                <InfoTooltip title={field.tooltip} />
+                            </Box>
+                            <Typography sx={{
+                                fontSize: getResponsiveFontSize('sm'),
+                                fontWeight: fontWeight.semibold,
+                                color: theme.palette.text.primary,
+                            }}>
+                                {(latest as any)?.[field.key] || '—'}
+                            </Typography>
+                        </Box>
+                    ))}
+                </Box>
             </Box>
 
             <Divider />

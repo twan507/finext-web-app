@@ -16,7 +16,10 @@ async def finratios_stock(
     Cấu trúc document mẫu:
         _id, date, ticker, period, industry, industry_name, type,
         isa22, rev, ryd11, ryd21, ryd25, ryd26, ryd14, ryd7,
-        ryq76, ryd28, ryd30
+        ryq76, ryd28, ryd30,
+        outstandingShare, freeFloatRate, statePercentage,
+        foreignerPercentage, foreignerRoom, maximumForeignPercentage,
+        majorHoldings
 
     Args:
         ticker: Mã ticker để filter (optional)
@@ -45,6 +48,13 @@ async def finratios_stock(
         "ryq76": 1,
         "ryd28": 1,
         "ryd30": 1,
+        "outstandingShare": 1,
+        "freeFloatRate": 1,
+        "statePercentage": 1,
+        "foreignerPercentage": 1,
+        "foreignerRoom": 1,
+        "maximumForeignPercentage": 1,
+        "majorHoldings": 1,
     }
 
     find_query = {}
