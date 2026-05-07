@@ -412,7 +412,7 @@ export default function PageContent({ articleId }: PageContentProps) {
                                     borderRadius: `0 ${borderRadius.sm}px ${borderRadius.sm}px 0`,
                                 },
                             }}
-                            dangerouslySetInnerHTML={{ __html: article.html_content || '' }}
+                            dangerouslySetInnerHTML={{ __html: article!.html_content || '' }}
                         />
                         )}
 
