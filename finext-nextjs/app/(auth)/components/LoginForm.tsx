@@ -595,7 +595,7 @@ function SignInFormContent() {
                     <>
                         <Divider sx={{ my: 1.5 }}>hoặc</Divider>
                         {googleClientId ? (
-                            <GoogleOAuthProvider clientId={googleClientId}>
+                            <GoogleOAuthProvider clientId={googleClientId!}>
                                 <GoogleLoginComponent
                                     setGoogleLoading={setGoogleLoading}
                                     setError={setError}
