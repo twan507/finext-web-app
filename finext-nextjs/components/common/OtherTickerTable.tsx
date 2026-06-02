@@ -238,15 +238,19 @@ interface OtherTickerTableProps {
     category?: string;
     selectedName?: string | null;
     onTickerSelect?: (row: OtherTickerData) => void;
+    showDailyChange?: boolean;
 }
 
-export default function OtherTickerTable({ group, category, selectedName, onTickerSelect }: OtherTickerTableProps) {
+export default function OtherTickerTable({ group, category, selectedName, onTickerSelect, showDailyChange = true }: OtherTickerTableProps) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'));
     const isTablet = useMediaQuery((theme: Theme) => theme.breakpoints.between('md', 'lg'));
 
-    const columns = useMemo(() => getColumns(), []);
+    const columns = useMemo(
+        () => getColumns().filter((col) => showDailyChange || col.key !== 'pct_change'),
+        [showDailyChange],
+    );
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: null });
 
     const queryParams: any = {};

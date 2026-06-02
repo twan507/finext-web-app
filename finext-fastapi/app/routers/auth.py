@@ -38,7 +38,6 @@ from app.crud.sessions import (
     delete_sessions_for_user_except_jti,
     get_session_by_refresh_jti,
     update_session_jtis,
-    delete_session_by_id,
 )
 import app.crud.licenses as crud_licenses  # Giữ lại nếu cần
 import app.crud.subscriptions as crud_subscriptions  # Giữ lại nếu cần
@@ -262,13 +261,10 @@ async def logout(
 
 @router.post("/refresh-token", response_model=JWTTokenResponse)
 async def refresh_access_token(
-    request: Request,
     refresh_token_str: str = Depends(get_refresh_token_from_cookie),
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ) -> JSONResponse:
-    """
-    NEW LOGIC: Refresh token với device validation và session lookup bằng refresh_jti
-    """
+    """Refresh access token bằng refresh token JWT trong cookie. Session lookup bằng refresh_jti."""
     # Decode refresh token
     try:
         refresh_payload = decode_refresh_token(refresh_token_str)
@@ -293,12 +289,7 @@ async def refresh_access_token(
             detail="Could not validate refresh token. Please log in again.",
         )
 
-    # Lấy device info hiện tại (chỉ User-Agent, không bao gồm IP để tránh force logout khi đổi mạng)
-    user_agent = request.headers.get("user-agent", "Unknown (Refresh)")
-    client_host = request.client.host if request.client else "Unknown (Refresh)"
-    current_device_info = user_agent
-
-    # TÌM SESSION bằng refresh_jti (CORE LOGIC CHANGE)
+    # TÌM SESSION bằng refresh_jti
     session = await get_session_by_refresh_jti(db, refresh_jti)
     if not session:
         logger.warning(f"Refresh token JTI {refresh_jti} not found in sessions")
@@ -312,31 +303,6 @@ async def refresh_access_token(
             samesite=cast(Literal["lax", "none", "strict"], COOKIE_SAMESITE),
         )
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token session")
-
-    # VALIDATE DEVICE INFO (chỉ so sánh User-Agent, cho phép IP thay đổi)
-    stored_device_info = session.device_info
-    if stored_device_info != current_device_info:
-        # Device (User-Agent) changed = XÓA SESSION + FORCE LOGOUT
-        await delete_session_by_id(db, str(session.id))
-        logger.warning(
-            f"User-Agent changed for user {user_id}. Session deleted. Stored: {stored_device_info} vs Current: {current_device_info}"
-        )
-
-        # XÓA REFRESH TOKEN COOKIE
-        response = JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content={"detail": "Device changed. Please login again."})
-        response.delete_cookie(
-            REFRESH_TOKEN_COOKIE_NAME,
-            domain=COOKIE_DOMAIN,
-            path="/",
-            secure=COOKIE_SECURE,
-            httponly=True,
-            samesite=cast(Literal["lax", "none", "strict"], COOKIE_SAMESITE),
-        )
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Device changed. Please login again.")
-    elif client_host != "Unknown (Refresh)":
-        # Log IP change nhưng KHÔNG force logout
-        # Extract stored IP nếu có trong device_info cũ (format cũ có IP)
-        logger.info(f"Refresh token used from IP {client_host} for user {user_id}")
 
     # Validate user
     user = await get_user_by_id_db(db, user_id=user_id)

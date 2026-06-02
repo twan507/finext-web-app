@@ -388,7 +388,13 @@ export default function ChartPageContent({ ticker: initialTicker }: ChartPageCon
         }
 
         // Map giữ nguyên insertion order → đã sorted vì history sorted + today appended cuối
-        return Array.from(dateMap.values());
+        const allValues = Array.from(dateMap.values());
+
+        // Bỏ leading zero candles: với cổ phiếu mới niêm yết, backend pad 0 cho các ngày trước
+        // ngày niêm yết. Tìm ngày đầu tiên có giá thực (close > 0) và slice từ đó.
+        // Nếu tất cả đều 0 → trả [] để chart hiện trạng thái "không có dữ liệu".
+        const firstValidIdx = allValues.findIndex((item) => (item.close ?? 0) > 0);
+        return firstValidIdx === -1 ? [] : allValues.slice(firstValidIdx);
     }, [historyData, todayData]);
 
     // Aggregate data theo timeframe (1D = nguyên gốc, 1W/1M = group by)

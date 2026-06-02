@@ -133,6 +133,7 @@ export default function MacroContent() {
                     category={activeTab}
                     selectedName={selectedRow?.name ?? null}
                     onTickerSelect={handleTickerSelect}
+                    showDailyChange={false}
                 />
             </Box>
         </Box>

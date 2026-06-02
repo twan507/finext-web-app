@@ -27,7 +27,7 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEn
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { fontWeight, getResponsiveFontSize, borderRadius, durations } from 'theme/tokens';
-import { getPriceColor, getVsiColor, getTrendColor } from 'theme/colorHelpers';
+import { getPriceColor, getTrendColor } from 'theme/colorHelpers';
 
 interface StockData {
     ticker: string;
@@ -288,7 +288,6 @@ export default function WatchlistColumn({
         }
 
         const changeColor = getPriceColor(data.pct_change, data.exchange, theme);
-        const vsiColor = getVsiColor(data.vsi ?? 0, theme);
         const cardBg = `linear-gradient(90deg, ${alpha(changeColor, 0.1)} 0%, ${alpha(changeColor, 0.05)} 50%, ${alpha(changeColor, 0.01)} 100%)`;
         const cardBgHover = `linear-gradient(90deg, ${alpha(changeColor, 0.2)} 0%, ${alpha(changeColor, 0.1)} 50%, ${alpha(changeColor, 0.02)} 100%)`;
 
@@ -300,8 +299,12 @@ export default function WatchlistColumn({
                     py: 0.5,
                     borderRadius: `${borderRadius.sm}px`,
                     background: cardBg,
-                    transition: `background ${durations.fast}`,
-                    '&:hover': { background: cardBgHover },
+                    border: `1px solid ${alpha(changeColor, 0.5)}`,
+                    transition: `background ${durations.fast}, border-color ${durations.fast}`,
+                    '&:hover': {
+                        background: cardBgHover,
+                        borderColor: alpha(changeColor, 0.4),
+                    },
                     '&:hover .remove-btn': { opacity: 1 },
                     ...cardDragSx,
                 }}
@@ -366,11 +369,11 @@ export default function WatchlistColumn({
                         {fmt.pct(data.pct_change)}
                     </Typography>
                     {/* [0,2] VSI */}
-                    <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: vsiColor, fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
+                    <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: 'text.secondary', fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
                         {fmt.vsi(data.vsi ?? 0)}
                     </Typography>
                     {/* [1,0] Giá */}
-                    <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: 'text.primary', fontVariantNumeric: 'tabular-nums', mt: 0.25 }}>
+                    <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: changeColor, fontVariantNumeric: 'tabular-nums', mt: 0.25 }}>
                         {fmt.price(data.close)}
                     </Typography>
                     {/* [1,1] +- */}

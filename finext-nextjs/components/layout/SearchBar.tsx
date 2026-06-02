@@ -105,50 +105,6 @@ const DEBOUNCE_MS = 300;
 // ============================================================================
 
 function useSearchLogic() {
-    const [allStocks, setAllStocks] = useState<SearchStock[]>([]);
-    const [allIndexes, setAllIndexes] = useState<SearchIndexItem[]>([]);
-    const [isPreloaded, setIsPreloaded] = useState(false);
-
-    // Preload stocks and indexes on first use — delay để không tranh connection với API của page
-    useEffect(() => {
-        let cancelled = false;
-
-        async function preload() {
-            if (cancelled) return;
-            try {
-                const [stocksRes, indexesRes] = await Promise.all([
-                    apiClient<SearchStock[]>({
-                        url: '/api/v1/sse/rest/search_stocks',
-                        method: 'GET',
-                        requireAuth: false,
-                        useCache: true,
-                        cacheTtl: 60 * 1000, // 1 min — giá thay đổi liên tục
-                    }),
-                    apiClient<SearchIndexItem[]>({
-                        url: '/api/v1/sse/rest/search_index',
-                        method: 'GET',
-                        requireAuth: false,
-                        useCache: true,
-                        cacheTtl: 60 * 1000, // 1 min
-                    }),
-                ]);
-                if (!cancelled) {
-                    if (stocksRes.data && Array.isArray(stocksRes.data)) setAllStocks(stocksRes.data);
-                    if (indexesRes.data && Array.isArray(indexesRes.data)) setAllIndexes(indexesRes.data);
-                    setIsPreloaded(true);
-                }
-            } catch (err) {
-                console.warn('[SearchBar] Preload failed:', err);
-            }
-        }
-
-        const timeoutId = setTimeout(preload, 1500);
-        return () => {
-            cancelled = true;
-            clearTimeout(timeoutId);
-        };
-    }, []);
-
     const search = useCallback(async (query: string): Promise<SearchResults> => {
         const trimmed = query.trim();
         const q = trimmed.toUpperCase();
@@ -159,51 +115,69 @@ function useSearchLogic() {
         const sortByDate = <T extends { created_at?: string }>(arr: T[]) =>
             [...arr].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''));
 
-        // Client-side filter stocks by ticker; rank theo độ khớp khi có query, A→Z khi rỗng
+        // Params cho news/reports — query rỗng vẫn fetch latest
+        const newsReportParams = trimmed
+            ? { search: trimmed, limit: MAX_PER_SECTION }
+            : { limit: MAX_PER_SECTION };
+
+        // Fetch song song. Stocks/indexes cache 30s vì close+pct_change update realtime.
+        // News/reports cache 5min khi query rỗng (latest list ít đổi).
+        const [stocksRes, indexesRes, newsRes, reportsRes] = await Promise.allSettled([
+            apiClient<SearchStock[]>({
+                url: '/api/v1/sse/rest/search_stocks',
+                method: 'GET',
+                requireAuth: false,
+                useCache: true,
+                cacheTtl: 30 * 1000,
+            }),
+            apiClient<SearchIndexItem[]>({
+                url: '/api/v1/sse/rest/search_index',
+                method: 'GET',
+                requireAuth: false,
+                useCache: true,
+                cacheTtl: 30 * 1000,
+            }),
+            apiClient<SearchNewsItem[]>({
+                url: '/api/v1/sse/rest/search_news',
+                method: 'GET',
+                queryParams: newsReportParams,
+                requireAuth: false,
+                useCache: !trimmed,
+                cacheTtl: 5 * 60 * 1000,
+            }),
+            apiClient<SearchReportItem[]>({
+                url: '/api/v1/sse/rest/search_reports',
+                method: 'GET',
+                queryParams: newsReportParams,
+                requireAuth: false,
+                useCache: !trimmed,
+                cacheTtl: 5 * 60 * 1000,
+            }),
+        ]);
+
+        const allStocks = stocksRes.status === 'fulfilled' && Array.isArray(stocksRes.value.data) ? stocksRes.value.data : [];
+        const allIndexes = indexesRes.status === 'fulfilled' && Array.isArray(indexesRes.value.data) ? indexesRes.value.data : [];
+        const newsData = newsRes.status === 'fulfilled' && Array.isArray(newsRes.value.data) ? newsRes.value.data : [];
+        const reportsData = reportsRes.status === 'fulfilled' && Array.isArray(reportsRes.value.data) ? reportsRes.value.data : [];
+
+        // Filter ticker; rank theo độ khớp khi có query, A→Z khi rỗng
         const filteredStocks = trimmed
             ? rankByMatch(allStocks.filter(s => s.ticker?.toUpperCase().includes(q)), q, s => [s.ticker]).slice(0, MAX_PER_SECTION)
             : sortByTicker(allStocks).slice(0, MAX_PER_SECTION);
 
-        // Client-side filter indexes by ticker; rank theo độ khớp khi có query, A→Z khi rỗng
         const filteredIndexes = trimmed
             ? rankByMatch(allIndexes.filter(s => s.ticker?.toUpperCase().includes(q)), q, s => [s.ticker]).slice(0, MAX_PER_SECTION)
             : sortByTicker(allIndexes).slice(0, MAX_PER_SECTION);
 
-        // Remote search for news + reports (always called, empty query returns latest)
-        try {
-            const params = trimmed
-                ? { search: trimmed, limit: MAX_PER_SECTION }
-                : { limit: MAX_PER_SECTION };
+        return {
+            stocks: filteredStocks,
+            indexes: filteredIndexes,
+            news: sortByDate(newsData),
+            reports: sortByDate(reportsData),
+        };
+    }, []);
 
-            const [newsRes, reportsRes] = await Promise.all([
-                apiClient<SearchNewsItem[]>({
-                    url: '/api/v1/sse/rest/search_news',
-                    method: 'GET',
-                    queryParams: params,
-                    requireAuth: false,
-                    useCache: !trimmed,
-                    cacheTtl: 5 * 60 * 1000,
-                }),
-                apiClient<SearchReportItem[]>({
-                    url: '/api/v1/sse/rest/search_reports',
-                    method: 'GET',
-                    queryParams: params,
-                    requireAuth: false,
-                    useCache: !trimmed,
-                    cacheTtl: 5 * 60 * 1000,
-                }),
-            ]);
-
-            const news = sortByDate(newsRes.data && Array.isArray(newsRes.data) ? newsRes.data : []);
-            const reports = sortByDate(reportsRes.data && Array.isArray(reportsRes.data) ? reportsRes.data : []);
-
-            return { stocks: filteredStocks, indexes: filteredIndexes, news, reports };
-        } catch {
-            return { stocks: filteredStocks, indexes: filteredIndexes, news: [], reports: [] };
-        }
-    }, [allStocks, allIndexes]);
-
-    return { search, isPreloaded };
+    return { search };
 }
 
 // ============================================================================
@@ -559,7 +533,7 @@ export default function SearchBar({
     const lgDown = useMediaQuery(theme.breakpoints.down('lg'));
     const anchorRef = useRef<HTMLDivElement>(null);
     const debounceRef = useRef<NodeJS.Timeout | null>(null);
-    const { search, isPreloaded } = useSearchLogic();
+    const { search } = useSearchLogic();
 
     // Placeholder typing animation
     const placeholderTexts = [

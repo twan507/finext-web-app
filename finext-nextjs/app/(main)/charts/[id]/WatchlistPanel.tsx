@@ -31,7 +31,7 @@ import { SortableContext, verticalListSortingStrategy, horizontalListSortingStra
 import { CSS } from '@dnd-kit/utilities';
 
 import { getResponsiveFontSize, fontWeight, borderRadius, durations } from 'theme/tokens';
-import { getPriceColor, getVsiColor, getTrendColor } from 'theme/colorHelpers';
+import { getPriceColor, getTrendColor } from 'theme/colorHelpers';
 import { useSseCache } from 'services/sseClient';
 import { apiClient } from 'services/apiClient';
 import { rankByMatch } from 'utils/searchRank';
@@ -682,7 +682,6 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                                         }
 
                                         const changeColor = getPriceColor(data.pct_change, data.exchange, theme);
-                                        const vsiColor = getVsiColor(data.vsi ?? 0, theme);
                                         const cardBg = `linear-gradient(90deg, ${alpha(changeColor, 0.1)} 0%, ${alpha(changeColor, 0.01)} 50%, ${alpha(changeColor, 0.001)} 100%)`;
                                         const cardBgHover = `linear-gradient(90deg, ${alpha(changeColor, 0.2)} 0%, ${alpha(changeColor, 0.02)} 50%, ${alpha(changeColor, 0.002)} 100%)`;
 
@@ -699,9 +698,13 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                                                                 px: 1, py: 0.5,
                                                                 borderRadius: `${borderRadius.sm}px`,
                                                                 background: cardBg,
+                                                                border: `1px solid ${alpha(changeColor, 0.5)}`,
                                                                 cursor: isManualSort ? 'grab' : 'pointer',
-                                                                transition: `background ${durations.fast}`,
-                                                                '&:hover': { background: cardBgHover },
+                                                                transition: `background ${durations.fast}, border-color ${durations.fast}`,
+                                                                '&:hover': {
+                                                                    background: cardBgHover,
+                                                                    borderColor: alpha(changeColor, 0.4),
+                                                                },
                                                                 '&:hover .remove-btn': { opacity: 1 },
                                                             }}
                                                         >
@@ -731,11 +734,11 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                                                                     {fmt.pct(data.pct_change)}
                                                                 </Typography>
                                                                 {/* [0,2] VSI */}
-                                                                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: vsiColor, fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
+                                                                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: 'text.secondary', fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
                                                                     {fmt.vsi(data.vsi ?? 0)}
                                                                 </Typography>
                                                                 {/* [1,0] Giá */}
-                                                                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: 'text.primary', fontVariantNumeric: 'tabular-nums', mt: 0.25 }}>
+                                                                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, color: changeColor, fontVariantNumeric: 'tabular-nums', mt: 0.25 }}>
                                                                     {fmt.price(data.close)}
                                                                 </Typography>
                                                                 {/* [1,1] +- */}

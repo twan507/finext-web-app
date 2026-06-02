@@ -8,6 +8,7 @@ import {
     Skeleton,
     useTheme,
     Divider,
+    alpha,
 } from '@mui/material';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -604,11 +605,7 @@ export default function DetailPanel({ ticker, todayData }: DetailPanelProps) {
                                             : isPositive
                                                 ? (theme.palette.trend?.up || '#26a69a')
                                                 : (theme.palette.trend?.down || '#ef5350');
-                                        const bgColor = isNeutral
-                                            ? (isDark ? 'rgba(245,158,11,0.12)' : 'rgba(245,158,11,0.08)')
-                                            : isPositive
-                                                ? (isDark ? 'rgba(38,166,154,0.12)' : 'rgba(38,166,154,0.08)')
-                                                : (isDark ? 'rgba(239,83,80,0.12)' : 'rgba(239,83,80,0.08)');
+                                        const bgColor = alpha(cellColor, isDark ? 0.18 : 0.15);
                                         const displayStr = pctVal != null
                                             ? `${pctVal >= 0 ? '+' : ''}${pctVal.toFixed(2)}%`
                                             : '—';

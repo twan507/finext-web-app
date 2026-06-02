@@ -69,15 +69,59 @@ function formatVolume(val: number | null | undefined): string {
     return val.toLocaleString();
 }
 
+// Tính số phiên "warmup" của một indicator: số phiên đầu mà indicator chưa đủ
+// dữ liệu thật để tính đúng. Áp cho cổ phiếu mới niêm yết, backend tính trên
+// data có pad 0 ở đầu — giá trị warmup vô nghĩa, không nên vẽ.
+//   - MA / Volume MA: period nằm trong key (ma20 → 20, vsma60 → 60)
+//   - W/M/Q/Y indicators (Open/High/Low, Pivot, Fibo, POC, VAH/VAL): 1 chu kỳ
+//     tương ứng ~5 / 22 / 66 / 252 phiên ngày
+// Scale theo timeframe vì sau khi aggregate 1W/1M, mỗi data point đại diện
+// cho nhiều phiên ngày.
+function getWarmupPeriod(field: string, timeframe: Timeframe): number {
+    let daysPeriod = 0;
+
+    const maMatch = field.match(/^ma(\d+)$/);
+    if (maMatch) daysPeriod = parseInt(maMatch[1], 10);
+
+    if (daysPeriod === 0) {
+        const vsmaMatch = field.match(/^vsma(\d+)$/);
+        if (vsmaMatch) daysPeriod = parseInt(vsmaMatch[1], 10);
+    }
+
+    if (daysPeriod === 0) {
+        if (field.startsWith('w_')) daysPeriod = 5;
+        else if (field.startsWith('m_')) daysPeriod = 20;
+        else if (field.startsWith('q_')) daysPeriod = 60;
+        else if (field.startsWith('y_')) daysPeriod = 240;
+    }
+
+    if (daysPeriod === 0) return 0;
+
+    switch (timeframe) {
+        case '1W': return Math.ceil(daysPeriod / 5);
+        case '1M': return Math.ceil(daysPeriod / 20);
+        case '1D':
+        default:
+            return daysPeriod;
+    }
+}
+
 // Extract indicator field data from raw chart data
-// Uses pre-computed _ts from mergedData to avoid repeated new Date() calls
+// Uses pre-computed _ts from mergedData to avoid repeated new Date() calls.
+// Skip `warmup` data points đầu vì indicator chưa đủ dữ liệu thật để tính.
 function extractFieldData(
     data: ChartRawData[],
     field: string,
+    timeframe: Timeframe,
 ): Array<{ time: UTCTimestamp; value: number }> {
-    const result: Array<{ time: UTCTimestamp; value: number }> = [];
+    if (data.length === 0) return [];
+    const warmup = getWarmupPeriod(field, timeframe);
+
     const seenTimestamps = new Set<number>();
-    for (const item of data) {
+    const result: Array<{ time: UTCTimestamp; value: number }> = [];
+    for (let i = 0; i < data.length; i++) {
+        if (i < warmup) continue;
+        const item = data[i];
         const timestamp = item._ts;
         if (!timestamp) continue;
         if (seenTimestamps.has(timestamp)) continue;
@@ -660,8 +704,8 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
                         if (!primitive) continue;
                         if (isVisible) {
                             const bandInd = ind as BandIndicator;
-                            const upperData = extractFieldData(data, bandInd.fields[0]);
-                            const lowerData = extractFieldData(data, bandInd.fields[1]);
+                            const upperData = extractFieldData(data, bandInd.fields[0], timeframe);
+                            const lowerData = extractFieldData(data, bandInd.fields[1], timeframe);
                             primitive.setData(upperData, lowerData);
                             const tagSeries = seriesMap.get(ind.key);
                             if (tagSeries) {
@@ -673,16 +717,16 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
                         const seriesArr = seriesMap.get(ind.key);
                         if (!seriesArr?.length || !isVisible) continue;
                         if (ind.type === 'line' || ind.type === 'volume-line') {
-                            seriesArr[0]?.setData(extractFieldData(data, (ind as any).field));
+                            seriesArr[0]?.setData(extractFieldData(data, (ind as any).field, timeframe));
                         } else if (ind.type === 'area') {
                             const areaInd = ind as AreaIndicator;
-                            seriesArr[0]?.setData(extractFieldData(data, areaInd.fields[0]));
-                            seriesArr[1]?.setData(extractFieldData(data, areaInd.fields[1]));
-                            seriesArr[2]?.setData(extractFieldData(data, areaInd.fields[2]));
+                            seriesArr[0]?.setData(extractFieldData(data, areaInd.fields[0], timeframe));
+                            seriesArr[1]?.setData(extractFieldData(data, areaInd.fields[1], timeframe));
+                            seriesArr[2]?.setData(extractFieldData(data, areaInd.fields[2], timeframe));
                         } else if (ind.type === 'dual-line') {
                             const dlInd = ind as DualLineIndicator;
-                            seriesArr[0]?.setData(extractFieldData(data, dlInd.fields[0]));
-                            seriesArr[1]?.setData(extractFieldData(data, dlInd.fields[1]));
+                            seriesArr[0]?.setData(extractFieldData(data, dlInd.fields[0], timeframe));
+                            seriesArr[1]?.setData(extractFieldData(data, dlInd.fields[1], timeframe));
                         }
                     }
                 } catch { /* skip stale/destroyed series */ }
@@ -816,8 +860,8 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
                         const tagSeries = seriesMap.get(ind.key);
                         if (isVisible) {
                             const bandInd = ind as BandIndicator;
-                            const upperData = extractFieldData(currentData, bandInd.fields[0]);
-                            const lowerData = extractFieldData(currentData, bandInd.fields[1]);
+                            const upperData = extractFieldData(currentData, bandInd.fields[0], timeframe);
+                            const lowerData = extractFieldData(currentData, bandInd.fields[1], timeframe);
                             primitive.setData(upperData, lowerData);
                             primitive.setVisible(true);
                             if (tagSeries) {
@@ -838,20 +882,20 @@ export default function CandlestickChart({ data, ticker, timeframe, chartType, s
                         if (!seriesArr?.length) continue;
                         if (isVisible) {
                             if (ind.type === 'line' || ind.type === 'volume-line') {
-                                seriesArr[0]?.setData(extractFieldData(currentData, (ind as any).field));
+                                seriesArr[0]?.setData(extractFieldData(currentData, (ind as any).field, timeframe));
                                 seriesArr[0]?.applyOptions({ visible: true });
                             } else if (ind.type === 'area') {
                                 const areaInd = ind as AreaIndicator;
-                                seriesArr[0]?.setData(extractFieldData(currentData, areaInd.fields[0]));
-                                seriesArr[1]?.setData(extractFieldData(currentData, areaInd.fields[1]));
-                                seriesArr[2]?.setData(extractFieldData(currentData, areaInd.fields[2]));
+                                seriesArr[0]?.setData(extractFieldData(currentData, areaInd.fields[0], timeframe));
+                                seriesArr[1]?.setData(extractFieldData(currentData, areaInd.fields[1], timeframe));
+                                seriesArr[2]?.setData(extractFieldData(currentData, areaInd.fields[2], timeframe));
                                 seriesArr[0]?.applyOptions({ visible: true });
                                 seriesArr[1]?.applyOptions({ visible: true });
                                 seriesArr[2]?.applyOptions({ visible: true });
                             } else if (ind.type === 'dual-line') {
                                 const dlInd = ind as DualLineIndicator;
-                                seriesArr[0]?.setData(extractFieldData(currentData, dlInd.fields[0]));
-                                seriesArr[1]?.setData(extractFieldData(currentData, dlInd.fields[1]));
+                                seriesArr[0]?.setData(extractFieldData(currentData, dlInd.fields[0], timeframe));
+                                seriesArr[1]?.setData(extractFieldData(currentData, dlInd.fields[1], timeframe));
                                 seriesArr[0]?.applyOptions({ visible: true });
                                 seriesArr[1]?.applyOptions({ visible: true });
                             }

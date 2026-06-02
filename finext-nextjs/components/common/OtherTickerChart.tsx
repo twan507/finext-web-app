@@ -621,6 +621,7 @@ export default function OtherTickerChart({ ticker, name, chartMode, unit, height
                     value={timeRange}
                     onChange={handleTimeRangeChange}
                     options={['1W', '1M', '3M', '1Y']}
+                    getLabel={(opt) => opt === '3M' ? '1Q' : opt}
                 />
                 <PanZoomToggle enabled={panZoomEnabled} onClick={handleTogglePanZoom} />
             </Stack>
