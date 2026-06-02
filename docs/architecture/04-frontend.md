@@ -108,6 +108,7 @@ Toàn màn hình, tích hợp:
 - Nến Nhật, volume, các chỉ báo (MA, RSI, MACD, Bollinger…) qua `IndicatorsPanel`.
 - `BandFillPrimitive.ts` — custom primitive cho lightweight-charts (vẽ vùng).
 - `aggregateTimeframe.ts` — gộp candle theo khung thời gian.
+- **Warmup chỉ báo cho mã mới niêm yết**: `PageContent.tsx` trim leading candles có `close=0`; `CandlestickChart.tsx::extractFieldData` skip N điểm đầu cho mỗi chỉ báo (MA{n} = n, prefix `w_/m_/q_/y_` = 5/20/60/240, quy đổi theo timeframe 1W/1M) → tránh đường MA dốc đứng từ ngày 1.
 - Side-panel: `WatchlistPanel`, `DetailPanel`, `PanelNewsList`.
 - `ChartToolbar` — chọn timeframe, indicator, công cụ vẽ.
 - Lưu mã đang xem qua store (URL `[id]`).

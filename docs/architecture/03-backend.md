@@ -193,8 +193,9 @@ Trong `lifespan` của `main.py`:
 ## 3.7 Auth Flow Highlights
 
 ### Token model
-- **Access token** (JWT) — short-lived, gửi trong header `Authorization: Bearer <token>`.
-- **Refresh token** — lưu trong DB collection `sessions`, cho phép admin/user logout từ xa.
+- **Access token** (JWT) — TTL 60 phút (`ACCESS_TOKEN_EXPIRE_MINUTES=60`), gửi trong header `Authorization: Bearer <token>`.
+- **Refresh token** — lưu trong DB collection `sessions`, TTL theo `REFRESH_TOKEN_EXPIRE_DAYS` (cấu hình theo môi trường), cho phép admin/user logout từ xa.
+- **Device binding**: `sessions.device_info` lưu User-Agent raw để hiển thị ở `/profile/login-sessions` và `/admin/sessions`. **Không** dùng để strict-compare khi refresh (đã bỏ từ 2026-05) — tránh logout giả khi browser auto-update đổi UA. Logout từ xa vẫn dùng được vì refresh xác thực bằng `session_id` trong DB.
 
 ### Đăng ký (sau compliance pivot)
 - ❌ Không còn OTP self-verify.

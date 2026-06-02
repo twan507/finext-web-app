@@ -37,7 +37,7 @@
 
 | Cơ chế | Chi tiết |
 |--------|---------|
-| **JWT access + refresh** | Access ngắn hạn, refresh lưu trong DB collection `sessions` → cho phép logout từ xa hoặc từ admin. |
+| **JWT access + refresh** | Access TTL 60 phút, refresh lưu trong DB collection `sessions` → cho phép logout từ xa hoặc từ admin. |
 | **Bcrypt** | Hash mật khẩu, work factor mặc định. |
 | **OTP qua email** | Dùng cho register (đã disable), reset password, passwordless login. Template `pwdless_login.html`. |
 | **Google OAuth 2.0** | Hợp nhất với account thường qua `google_id`. **UI hiện disabled** sau pivot 2026-05-07. |
@@ -67,6 +67,7 @@
 - Mọi session active được lưu trong collection `sessions`.
 - User xem các phiên tại `/profile/login-sessions` và logout từ xa.
 - Admin có endpoint `GET /api/v1/sessions/` để xem tất cả phiên và force logout.
+- `device_info` (User-Agent raw) lưu để hiển thị, **không strict-compare** khi refresh token (bỏ từ 2026-05 để tránh logout giả khi browser auto-update). Xác thực phiên dựa trên `session_id` trong DB.
 
 ### 5.3.6 Webhook & External Trust
 
