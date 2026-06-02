@@ -2,7 +2,7 @@
 from typing import Any, Dict, List, Optional
 
 from app.core.database import get_database
-from app.crud.sse._helpers import get_collection_data, STOCK_DB
+from app.crud.sse._helpers import get_collection_records, STOCK_DB
 
 
 # Fields to exclude from the full projection (internal/redundant)
@@ -34,12 +34,10 @@ async def screener_stock_data(
         direction = -1 if sort_order == "desc" else 1
         sort = [(sort_by, direction)]
 
-    df = await get_collection_data(
+    return await get_collection_records(
         stock_db,
         "today_stock",
         find_query=find_query,
         projection=projection,
         sort=sort,
     )
-
-    return df.to_dict(orient="records")

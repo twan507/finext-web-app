@@ -2,7 +2,7 @@
 from typing import Any, Dict, Optional
 
 from app.core.database import get_database
-from app.crud.sse._helpers import get_collection_data, STOCK_DB
+from app.crud.sse._helpers import get_collection_records, STOCK_DB
 
 
 async def phase_signal(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
@@ -42,6 +42,4 @@ async def phase_signal(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]
     }
 
     find_query = {"ticker": ticker} if ticker else {}
-    phase_df = await get_collection_data(stock_db, "phase_signal", find_query=find_query, projection=projection)
-
-    return phase_df.to_dict(orient="records")
+    return await get_collection_records(stock_db, "phase_signal", find_query=find_query, projection=projection)

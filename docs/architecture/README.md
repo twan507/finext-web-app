@@ -4,9 +4,9 @@
 > Tổ chức theo nhiều file để tiết kiệm context khi AI làm việc.
 
 **Website:** [finext.vn](https://finext.vn) · **Repository:** [twan507/finext-web-app](https://github.com/twan507/finext-web-app)
-**Stack:** Next.js 15 + FastAPI 0.115 + MongoDB · **Deploy:** Docker Compose (nginx + fastapi + nextjs)
+**Stack:** Next.js 15 + FastAPI 0.115 (uvicorn workers=2) + MongoDB standalone · **Deploy:** Docker Compose (nginx + fastapi + nextjs)
 **Status:** Production. Đã pivot sang chế độ tham chiếu cá nhân từ 2026-05-07.
-**Cập nhật:** 2026-06-02
+**Cập nhật:** 2026-06-02 (perf overhaul: SSE shared cache, multi-worker, nginx static cache + keepalive + gzip)
 
 ---
 
@@ -39,12 +39,15 @@ Nginx (SSL) → [ Next.js :3000 ] ◄── [ FastAPI :8000 ] → MongoDB (Atlas
 
 3 Docker services trong network `web-proxy`. Frontend SSR fetch backend qua Docker DNS (`INTERNAL_API_URL`). Client-side gọi public domain (`NEXT_PUBLIC_API_URL`).
 
+**VPS 8GB RAM**: Mongo standalone (~1.5-2G) + MSSQL standalone (1.5G) + OS (~1G) + web (~3.3G: nginx 256M + fastapi 1.5G + nextjs 1.5G).
+
 ### Backend (`finext-fastapi`)
-- **FastAPI 0.115+**, Python 3.13, UV package manager
+- **FastAPI 0.115+**, Python 3.13, UV package manager, **Uvicorn 2 workers** *(2026-06-02)*
 - **17 routers** prefix `/api/v1` — tất cả trả `StandardApiResponse[T]`
-- **Motor** async cho MongoDB
+- **Motor** async cho MongoDB **standalone** (`maxPoolSize=50, minPoolSize=5`)
+- **SSE polling** với shared in-process cache (1 poller / (keyword,ticker) / worker, broadcast qua `asyncio.Queue`)
 - **JWT + Refresh** auth, sessions trong DB cho remote logout
-- **APScheduler** — nhắc subscription, dọn OTP
+- **APScheduler** gated bằng `fcntl` lock — chỉ 1 worker chạy cron
 - **5 license keys** mặc định (BASIC, PATRON, PARTNER, MANAGER, ADMIN) seed lúc khởi động
 
 ### Frontend (`finext-nextjs`)

@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional
 
 from app.core.database import get_database
-from app.crud.sse._helpers import get_collection_data, STOCK_DB
+from app.crud.sse._helpers import get_collection_records, STOCK_DB
 
 
 async def latest_other_ticker(ticker: Optional[str] = None, categories: Optional[str] = None, **kwargs) -> Dict[str, Any]:
@@ -41,6 +41,4 @@ async def latest_other_ticker(ticker: Optional[str] = None, categories: Optional
         if cats:
             find_query["group"] = {"$in": cats}
 
-    df = await get_collection_data(stock_db, "latest_other_ticker", find_query=find_query, projection=projection)
-
-    return df.to_dict(orient="records")
+    return await get_collection_records(stock_db, "latest_other_ticker", find_query=find_query, projection=projection)

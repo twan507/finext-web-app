@@ -2,7 +2,7 @@
 from typing import Any, Dict, Optional
 
 from app.core.database import get_database
-from app.crud.sse._helpers import get_collection_data, STOCK_DB
+from app.crud.sse._helpers import get_collection_records, STOCK_DB
 
 
 async def home_hist_industry(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
@@ -32,6 +32,4 @@ async def home_hist_industry(ticker: Optional[str] = None, **kwargs) -> Dict[str
     if ticker:
         find_query["ticker"] = ticker
 
-    history_df = await get_collection_data(stock_db, "history_index", find_query=find_query, projection=projection)
-
-    return history_df.to_dict(orient="records")
+    return await get_collection_records(stock_db, "history_index", find_query=find_query, projection=projection)

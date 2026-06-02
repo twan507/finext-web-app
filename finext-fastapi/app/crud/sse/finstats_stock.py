@@ -1,10 +1,8 @@
 # finext-fastapi/app/crud/sse/finstats_stock.py
 from typing import Any, Dict, Optional
 
-import numpy as np
-
 from app.core.database import get_database
-from app.crud.sse._helpers import get_collection_data, STOCK_DB
+from app.crud.sse._helpers import get_collection_records, STOCK_DB
 
 # Whitelist — tất cả fields cần thiết cho 4 type ngành cấp cổ phiếu
 _PROJECTION = {
@@ -75,7 +73,8 @@ async def finstats_stock(
     else:
         find_query["period"] = {"$regex": "_[1-4]$"}
 
-    df = await get_collection_data(
+    # NaN/Inf được xử lý ở tầng response (bson_to_json_str → clean_nan_values) → không cần replace ở đây
+    return await get_collection_records(
         stock_db,
         "finstats_stock",
         find_query=find_query,
@@ -83,11 +82,3 @@ async def finstats_stock(
         sort=[("period", -1)],
         limit=None,
     )
-
-    if df.empty:
-        return []
-
-    # Replace NaN/Inf với None để JSON serialization không lỗi
-    df = df.replace([np.nan, np.inf, -np.inf], None)
-
-    return df.to_dict(orient="records")

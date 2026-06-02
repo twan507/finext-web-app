@@ -2,7 +2,7 @@
 from typing import Any, Dict, Optional
 
 from app.core.database import get_database
-from app.crud.sse._helpers import get_collection_data, STOCK_DB
+from app.crud.sse._helpers import get_collection_records, STOCK_DB
 
 
 async def finratios_stock(
@@ -61,12 +61,10 @@ async def finratios_stock(
     if ticker:
         find_query["ticker"] = ticker
 
-    finratios_df = await get_collection_data(
+    return await get_collection_records(
         stock_db,
         "finratios_stock",
         find_query=find_query,
         projection=projection,
         sort=[("date", -1)],
     )
-
-    return finratios_df.to_dict(orient="records")

@@ -2,7 +2,7 @@
 from typing import Any, Dict, Optional
 
 from app.core.database import get_database
-from app.crud.sse._helpers import get_collection_data, REF_DB
+from app.crud.sse._helpers import get_collection_records, REF_DB
 
 
 async def info_stock(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
@@ -34,11 +34,9 @@ async def info_stock(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
     if ticker:
         find_query["ticker"] = ticker
 
-    info_df = await get_collection_data(
+    return await get_collection_records(
         ref_db,
         "info_stock",
         find_query=find_query,
         projection=projection,
     )
-
-    return info_df.to_dict(orient="records")

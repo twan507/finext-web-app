@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional
 
 from app.core.database import get_database
-from app.crud.sse._helpers import get_collection_data, STOCK_DB
+from app.crud.sse._helpers import get_collection_records, STOCK_DB
 
 
 async def other_ticker(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
@@ -45,7 +45,7 @@ async def other_ticker(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]
     if limit is not None:
         limit = int(limit)
 
-    df = await get_collection_data(
+    return await get_collection_records(
         stock_db,
         "other_ticker",
         find_query=find_query,
@@ -53,5 +53,3 @@ async def other_ticker(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]
         sort=sort,
         limit=limit,
     )
-
-    return df.to_dict(orient="records")

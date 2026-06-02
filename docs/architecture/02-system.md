@@ -35,13 +35,15 @@ File: [`docker-compose.yml`](../../docker-compose.yml)
 
 | Service | Image/Build | Resources | Port |
 |---------|-------------|-----------|------|
-| `nginx` | nginx:alpine + custom config | 256M RAM | 80, 443 (host) |
-| `fastapi` | Build từ `finext-fastapi/Dockerfile` | 2G RAM, 1.5 CPU | 8000 (internal) |
-| `nextjs` | Build từ `finext-nextjs/Dockerfile` | 2G RAM, 2 CPU | 3000 (internal) |
+| `nginx` | nginx:latest + custom config | 256M RAM | 80, 443 (host) |
+| `fastapi` | Build từ `finext-fastapi/Dockerfile` | 1.5G RAM, 1.5 CPU | 8000 (internal) |
+| `nextjs` | Build từ `finext-nextjs/Dockerfile` | 1.5G RAM, 2 CPU | 3000 (internal) |
+
+**Budget RAM VPS 8GB** *(2026-06-02)*: MongoDB standalone (~1.5-2G) + MSSQL standalone (1.5G) + OS (~1G) → web app share ~3.3G (`nginx 256M + fastapi 1.5G + nextjs 1.5G`).
 
 **SSL:** Certificates trong `ssl/` (chain hợp lệ). Nginx terminate TLS, proxy HTTP đến container nội bộ.
 
-**Mongo:** **Không** chạy trong compose — dùng MongoDB Atlas hoặc instance riêng. Kết nối qua `MONGO_URI` env.
+**Mongo:** **Standalone** trên host (không phải replica set, không trong compose). Kết nối qua `MONGO_URI` env. ⚠️ Không có change streams → mọi realtime phải dùng polling (xem `03-backend.md#sse`).
 
 ---
 
@@ -92,7 +94,13 @@ finext-web-app/
 - **Nginx** là điểm duy nhất expose ra internet (80/443).
 - `fastapi` và `nextjs` chỉ giao tiếp trong network nội bộ.
 - CORS whitelist ở backend ([`finext-fastapi/app/main.py`](../../finext-fastapi/app/main.py)): `localhost:3000`, `127.0.0.1:3000`, `finext.vn`, `twan.io.vn`.
-- GZip middleware (≥ 1000 bytes) — giảm payload chart data ~80-90%.
+- **Gzip ở nginx** *(2026-06-02)* — gzip block trong [`nginx.conf`](../../nginx/nginx.conf), tắt riêng cho SSE (`gzip off` trong `location /api/v1/sse/`) để không vỡ streaming. Trước đây gzip ở `GZipMiddleware` của FastAPI, đã chuyển sang nginx để giảm CPU worker Python.
+
+## 2.5b Hiệu Năng — Cache & Keepalive *(2026-06-02)*
+
+- **Nginx upstream keepalive 32** cho cả `fastapi` và `nextjs` upstream → tái sử dụng TCP connection, giảm ~1-2ms/request dưới tải.
+- **Nginx cache Next.js static assets** — `location /_next/static/` cache 365d immutable (file có hash trong tên), `/_next/image` cache 7d, favicon/woff2/png cache 7d. Cache zone: `proxy_cache_path /var/cache/nginx/nextjs_static` (500MB max, ephemeral mỗi lần restart container).
+- **`$connection_upgrade` map** trả `''` (rỗng) cho non-WS request thay vì `close` → giữ keepalive khi không phải WebSocket.
 
 ---
 

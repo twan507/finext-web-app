@@ -7,7 +7,7 @@ Dữ liệu tĩnh (không thay đổi thường xuyên), FE cache và filter cli
 from typing import Any, Dict, Optional
 
 from app.core.database import get_database
-from app.crud.sse._helpers import get_collection_data, STOCK_DB
+from app.crud.sse._helpers import get_collection_records, STOCK_DB
 
 
 async def search_stocks(
@@ -36,11 +36,9 @@ async def search_stocks(
 
     find_query = {"ticker": ticker} if ticker else {}
 
-    today_df = await get_collection_data(
+    return await get_collection_records(
         stock_db,
         "today_stock",
         find_query=find_query,
         projection=projection,
     )
-
-    return today_df.to_dict(orient="records")

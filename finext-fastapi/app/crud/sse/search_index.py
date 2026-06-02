@@ -8,7 +8,7 @@ FE dùng field `type` để navigate đúng route: /groups/{ticker} hoặc /sect
 from typing import Any, Dict, Optional
 
 from app.core.database import get_database
-from app.crud.sse._helpers import get_collection_data, STOCK_DB
+from app.crud.sse._helpers import get_collection_records, STOCK_DB
 
 
 async def search_index(
@@ -37,11 +37,9 @@ async def search_index(
 
     find_query = {"ticker": ticker} if ticker else {}
 
-    today_df = await get_collection_data(
+    return await get_collection_records(
         stock_db,
         "today_index",
         find_query=find_query,
         projection=projection,
     )
-
-    return today_df.to_dict(orient="records")

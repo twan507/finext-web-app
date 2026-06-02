@@ -28,9 +28,12 @@ COPY ./app /code/app
 EXPOSE 8000
 
 # Lệnh để chạy ứng dụng FastAPI bằng Uvicorn khi container khởi động
+# --workers 2: chạy 2 worker process song song để tận dụng cpus=1.5 trong docker-compose.
+#   Mỗi worker = 1 event loop độc lập → tránh nghẽn khi 1 worker bị block bởi pandas/SSE.
+#   Scheduler (APScheduler) được gate bằng fcntl lock → chỉ 1 worker chạy job → không gửi mail trùng.
 # --host 0.0.0.0 cho phép truy cập từ bên ngoài container
 # --proxy-headers: Tin tưởng header X-Forwarded-Proto/X-Forwarded-For từ Nginx
 #   → Đảm bảo FastAPI tạo redirect URL với https:// thay vì http://
 #   → Ngăn chặn lỗi HTTPS→HTTP downgrade bị Safari/WebKit block hoàn toàn
 # --forwarded-allow-ips '*': Cho phép mọi IP gửi proxy headers (cần thiết trong Docker network)
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
+CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--proxy-headers", "--forwarded-allow-ips", "*"]

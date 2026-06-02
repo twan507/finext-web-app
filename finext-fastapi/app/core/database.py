@@ -22,7 +22,15 @@ async def connect_to_mongo():
         mongodb.dbs = {}
         return
     try:
-        mongodb.client = AsyncIOMotorClient(MONGODB_CONNECTION_STRING, serverSelectionTimeoutMS=5000)
+        # maxPoolSize=50: với 2 uvicorn worker → tối đa 100 connections tới Mongo.
+        # Tránh exhaust connection limit của MongoDB local hoặc Atlas free tier (500).
+        # minPoolSize=5: giữ sẵn vài connection để giảm latency lần query đầu.
+        mongodb.client = AsyncIOMotorClient(
+            MONGODB_CONNECTION_STRING,
+            serverSelectionTimeoutMS=5000,
+            maxPoolSize=50,
+            minPoolSize=5,
+        )
         await mongodb.client.admin.command("ping")
         db_names_to_connect = ["user_db", "stock_db"]
         mongodb.dbs = {}

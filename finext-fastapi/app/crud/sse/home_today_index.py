@@ -2,7 +2,7 @@
 from typing import Any, Dict, Optional
 
 from app.core.database import get_database
-from app.crud.sse._helpers import get_collection_data, STOCK_DB
+from app.crud.sse._helpers import get_collection_records, STOCK_DB
 
 
 async def home_today_index(ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
@@ -42,6 +42,4 @@ async def home_today_index(ticker: Optional[str] = None, **kwargs) -> Dict[str, 
         "type": 1,
     }
     find_query = {}
-    today_df = await get_collection_data(stock_db, "today_index", find_query=find_query, projection=projection)
-
-    return today_df.to_dict(orient="records")
+    return await get_collection_records(stock_db, "today_index", find_query=find_query, projection=projection)

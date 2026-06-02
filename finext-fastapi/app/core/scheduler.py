@@ -1,5 +1,7 @@
 # finext-fastapi/app/core/scheduler.py
 import logging
+import fcntl
+import os
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from motor.motor_asyncio import AsyncIOMotorDatabase # Cần thiết
@@ -12,6 +14,24 @@ from app.crud.promotions import run_deactivate_expired_promotions_task
 logger = logging.getLogger(__name__)
 
 scheduler = AsyncIOScheduler(timezone="Asia/Ho_Chi_Minh")
+
+# File lock để đảm bảo chỉ 1 worker chạy scheduler (uvicorn --workers > 1).
+# Worker đầu tiên acquire được lock sẽ là "leader" → chạy job.
+# Khi worker leader die, OS tự release lock → worker khác có thể take over.
+_SCHEDULER_LOCK_PATH = "/tmp/finext_scheduler.lock"
+_scheduler_lock_fd: int | None = None
+
+
+def _try_acquire_scheduler_lock() -> bool:
+    """Thử acquire exclusive file lock. Trả True nếu thành công (worker này là leader)."""
+    global _scheduler_lock_fd
+    try:
+        fd = os.open(_SCHEDULER_LOCK_PATH, os.O_CREAT | os.O_WRONLY, 0o644)
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        _scheduler_lock_fd = fd
+        return True
+    except (OSError, BlockingIOError):
+        return False
 
 async def run_daily_maintenance_tasks():
     logger.info("Starting daily maintenance tasks (00:00)...")
@@ -52,15 +72,33 @@ def add_jobs_to_scheduler():
         logger.error(f"Error adding jobs to scheduler: {e}", exc_info=True)
 
 async def start_scheduler():
-    if not scheduler.running:
-        add_jobs_to_scheduler()
-        scheduler.start()
-    else:
+    if scheduler.running:
         logger.info("Scheduler is already running.")
+        return
+
+    # Multi-worker safe: chỉ worker acquire được lock mới chạy scheduler.
+    # Các worker khác skip → không gửi mail/cron duplicate.
+    if not _try_acquire_scheduler_lock():
+        logger.info(f"Scheduler skipped on PID {os.getpid()} — another worker is the leader.")
+        return
+
+    logger.info(f"Scheduler starting on PID {os.getpid()} (leader).")
+    add_jobs_to_scheduler()
+    scheduler.start()
+
 
 async def shutdown_scheduler():
+    global _scheduler_lock_fd
     if scheduler.running:
         scheduler.shutdown(wait=False)
         logger.info("Scheduler shut down successfully.")
     else:
         logger.info("Scheduler was not running, no need to shut down.")
+    # Release lock nếu worker này là leader
+    if _scheduler_lock_fd is not None:
+        try:
+            fcntl.flock(_scheduler_lock_fd, fcntl.LOCK_UN)
+            os.close(_scheduler_lock_fd)
+        except OSError:
+            pass
+        _scheduler_lock_fd = None

@@ -233,7 +233,7 @@ finext-nextjs/
 
 - **SEO toàn diện** — JSON-LD (`WebSite`, `Organization`, `SiteNavigationElement`), OpenGraph, Twitter cards, sitemap, robots.
 - **PWA-ready** — service worker, manifest, Apple touch icon, standalone mode, dark/light theme color.
-- **Performance** — dynamic import cho các section nặng (`MarketSection`, `IndustrySection`, `FeaturedStocks`), GZip backend, font Roboto self-host (TTF local, không gọi Google Fonts).
+- **Performance** — dynamic import cho các section nặng (`MarketSection`, `IndustrySection`, `FeaturedStocks`), **gzip ở nginx** (đã chuyển từ FastAPI, 2026-06-02), font Roboto self-host (TTF local, không gọi Google Fonts), **nginx cache `/_next/static/` 365d immutable + `/_next/image` 7d** (xem [`nginx.conf`](../../nginx/nginx.conf)).
 - **Auth UX** — `AuthProvider` cache `permissions[]` và `features[]` trong localStorage; `useAuth().hasPermission()` / `hasFeature()` cho phép FE bật/tắt UI nhanh; backend vẫn enforce.
 - **Loading skeleton** thống nhất qua `LoadingState` / `Skeleton`.
 

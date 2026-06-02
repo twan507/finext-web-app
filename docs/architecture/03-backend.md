@@ -8,20 +8,27 @@
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | FastAPI ≥ 0.115.12, Uvicorn |
+| Framework | FastAPI ≥ 0.115.12, Uvicorn (`--workers 2`) *(2026-06-02)* |
 | Language | Python 3.13+, type-hinted toàn bộ |
 | Package manager | UV (Astral) — `pyproject.toml` |
 | Validation | Pydantic v2 (≥ 2.11) + pydantic-settings |
-| Database | MongoDB qua **Motor** (async) ≥ 3.7; PyMongo cho index/admin |
+| Database | MongoDB **standalone** qua **Motor** (async) ≥ 3.7; pool `maxPoolSize=50, minPoolSize=5` |
 | Auth | JWT (`python-jose`), `bcrypt`, Google OAuth (`google-auth` + `oauthlib`) |
 | Email | `fastapi-mail`, `aiosmtplib`, Jinja2 templates |
 | Storage | `boto3` — Cloudflare R2 / AWS S3 cho avatar và upload |
-| Scheduler | APScheduler — cron jobs nội bộ |
-| Data | `pandas`, `Pillow` (chart data + ảnh) |
+| Scheduler | APScheduler — cron jobs nội bộ (gated bằng fcntl lock cho multi-worker) |
+| Data | `Pillow` (ảnh). `pandas` còn trong deps nhưng SSE đã không dùng *(2026-06-02)* |
 | HTTP | `httpx` (async), `requests` (sync fallback) |
 | Test | `pytest`, `pytest-asyncio` |
 
 Entry point: [`finext-fastapi/app/main.py`](../../finext-fastapi/app/main.py).
+
+### Multi-worker *(2026-06-02)*
+
+- Uvicorn chạy `--workers 2` ([`Dockerfile`](../../finext-fastapi/Dockerfile)) → 2 process độc lập, mỗi process có event loop riêng → tránh nghẽn khi 1 worker bị block.
+- **Scheduler gate qua fcntl**: file lock ở `/tmp/finext_scheduler.lock` ([`scheduler.py`](../../finext-fastapi/app/core/scheduler.py)). Chỉ worker leader chạy cron job → không gửi mail/cron duplicate. Worker leader die → OS release lock → worker khác take over.
+- **Seeding chạy 2 lần**: lifespan mỗi worker đều gọi `seed_initial_data`. Hiện idempotent (upsert) nên OK, có thể thấy log `E11000 duplicate key` vô hại lần đầu.
+- ⚠️ **fcntl chỉ chạy trên Linux** (alpine container OK). Dev trực tiếp trên Windows không Docker sẽ fail import.
 
 ---
 
@@ -228,10 +235,44 @@ Chi tiết thay đổi auth flow: [`06-compliance-pivot.md`](06-compliance-pivot
 
 ## 3.9 SSE (Server-Sent Events)
 
-- Endpoint: `GET /api/v1/sse/stream/{keyword}` (optional `?ticker=...` filter).
-- Mỗi `keyword` map tới một data source/cron trong [`finext-fastapi/app/crud/sse/`](../../finext-fastapi/app/crud/sse/).
-- Backend dùng `EventSourceResponse` (sse-starlette).
-- Client (Next.js) dùng `services/sseClient.ts` với auto-reconnect.
-- REST fallback: `GET /api/v1/sse/rest/{keyword}` — trả snapshot khi SSE không khả dụng.
+- Endpoint: `GET /api/v1/sse/stream?keyword=<k>&ticker=<t>` (`ticker` optional).
+- Mỗi `keyword` map tới một query function trong [`finext-fastapi/app/crud/sse/`](../../finext-fastapi/app/crud/sse/) — đăng ký trong `SSE_QUERY_REGISTRY` (~39 keywords).
+- Backend dùng `StreamingResponse` thuần FastAPI (không sse-starlette).
+- Client (Next.js) dùng `services/sseClient.ts` với connection sharing + auto-reconnect.
+- REST fallback: `GET /api/v1/sse/rest/{keyword}` — trả snapshot 1 lần.
 
-Keywords phổ biến: `home_today_stock`, `vnindex_today`, `vn30_today`, `sector_strength`, ... (xem `GET /api/v1/sse/keywords` để list runtime).
+### Lý do dùng polling (không change stream)
+
+MongoDB là **standalone**, không có oplog → không hỗ trợ change streams. Vì vậy backend phải poll DB định kỳ mỗi 3s. Mọi tối ưu realtime đều xoay quanh polling.
+
+### Shared in-process cache *(2026-06-02)*
+
+[`finext-fastapi/app/routers/sse.py`](../../finext-fastapi/app/routers/sse.py) — refactor lớn để tránh N subscriber × N poll/3s.
+
+```
+       ┌─── client A ──────────┐
+       ├─── client B ──────────┤      asyncio.Queue per client
+       └─── client C ──────────┘              ▲
+                                              │ broadcast (put_nowait)
+                                      ┌───────┴────────┐
+                                      │  _poller task   │  1 task / (keyword, ticker)
+                                      │  poll 3s → hash │  trong mỗi worker process
+                                      │  → broadcast    │
+                                      └───────┬─────────┘
+                                              │
+                                              ▼
+                                          MongoDB
+```
+
+- Mỗi `(keyword, ticker)` chỉ có **1 background task** chạy trong worker process.
+- Subscriber mới: thêm vào `Set[asyncio.Queue]` của cache entry, **nhận ngay `last_payload`** cached (không phải chờ 3s).
+- Subscriber slow: queue đầy → drop frame (`QueueFull` ignored) thay vì block poller.
+- Last subscriber unsubscribe → task tự cancel + cache entry bị xoá.
+- Heartbeat `: heartbeat\n\n` mỗi 10s khi không có dữ liệu mới (giữ connection alive qua proxy).
+- ⚠️ Cache **per-worker** — với `--workers 2`, mỗi keyword có thể có 2 poller (mỗi worker 1) nhưng vẫn giảm tải N→2 thay vì N→N.
+
+### Helper query — `get_collection_records()` *(2026-06-02)*
+
+[`finext-fastapi/app/crud/sse/_helpers.py`](../../finext-fastapi/app/crud/sse/_helpers.py) — trả thẳng `List[Dict]` từ Motor cursor, **không qua pandas DataFrame**. Mọi 26 SSE crud file đã migrate sang helper này. NaN/Inf được xử lý ở tầng response (`bson_to_json_str.clean_nan_values`).
+
+Keywords phổ biến: `home_today_stock`, `home_today_index`, `home_today_industry`, `home_itd_index`, `home_itd_stock`, `chart_today_data`, `market_update_time`, ... (xem `GET /api/v1/sse/keywords` để list runtime).

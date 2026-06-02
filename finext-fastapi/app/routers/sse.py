@@ -2,14 +2,20 @@
 """
 Router SSE với giao thức chuẩn hóa.
 Chỉ có 1 API duy nhất, sử dụng keyword để xác định loại dữ liệu cần lấy.
+
+Kiến trúc shared in-process cache:
+    - Mỗi cặp (keyword, ticker) chỉ có 1 background poller chạy trong worker.
+    - Mọi subscriber chia sẻ cùng 1 nguồn dữ liệu → tránh N query DB / 3s khi có N user.
+    - Khi không còn subscriber nào, poller tự dừng và cache entry bị xoá.
 """
 
 import asyncio
 import logging
 import json
 import math
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Dict, Optional, Set
 
 from fastapi import APIRouter, Request, HTTPException, status, Query
 from fastapi.responses import StreamingResponse, JSONResponse
@@ -20,6 +26,12 @@ from app.utils.response_wrapper import StandardApiResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# Cấu hình
+SSE_POLL_INTERVAL = 3.0          # giây giữa các lần poll DB
+SSE_SUBSCRIBER_QUEUE_SIZE = 8    # buffer cho mỗi subscriber, slow consumer sẽ bị drop
+SSE_CLIENT_TIMEOUT = 10.0        # giây giữa các lần check disconnect
+SSE_ERROR_BACKOFF = 5.0          # giây nghỉ khi query lỗi
 
 
 # --- Helper để chuyển đổi BSON sang JSON ---
@@ -52,62 +64,153 @@ def bson_to_json_str(data: Any) -> str:
     return json.dumps(cleaned_data, default=default_serializer)
 
 
-# --- SSE Event Generator ---
+# ==============================================================================
+# SHARED IN-PROCESS CACHE
+# ==============================================================================
+
+
+@dataclass
+class _CacheEntry:
+    last_payload: Optional[str] = None   # "data: ...\n\n" cuối cùng (dùng cho subscriber mới)
+    last_hash: Optional[int] = None
+    subscribers: Set[asyncio.Queue] = field(default_factory=set)
+    task: Optional[asyncio.Task] = None
+
+
+_cache: Dict[str, _CacheEntry] = {}
+_cache_lock = asyncio.Lock()
+
+
+def _cache_key(keyword: str, ticker: Optional[str]) -> str:
+    return f"{keyword}|{ticker or ''}"
+
+
+async def _poller(cache_key: str, keyword: str, ticker: Optional[str]):
+    """Background task: poll DB và broadcast tới mọi subscriber của 1 cache entry."""
+    logger.info(f"SSE poller started: {cache_key}")
+    try:
+        while True:
+            entry = _cache.get(cache_key)
+            if entry is None or not entry.subscribers:
+                break
+
+            try:
+                data = await execute_sse_query(keyword, ticker)
+                payload_str = bson_to_json_str(data)
+                payload_hash = hash(payload_str)
+
+                if payload_hash != entry.last_hash:
+                    entry.last_hash = payload_hash
+                    entry.last_payload = f"data: {payload_str}\n\n"
+                    # Broadcast non-blocking — slow subscriber sẽ bị drop frame
+                    for q in list(entry.subscribers):
+                        try:
+                            q.put_nowait(entry.last_payload)
+                        except asyncio.QueueFull:
+                            logger.debug(f"Subscriber queue full, dropping frame: {cache_key}")
+            except ValueError as ve:
+                # Invalid keyword — phát error 1 lần và terminate poller
+                err_payload = f"data: {json.dumps({'error': str(ve), 'type': 'invalid_keyword'})}\n\n"
+                for q in list(entry.subscribers):
+                    try:
+                        q.put_nowait(err_payload)
+                    except asyncio.QueueFull:
+                        pass
+                logger.warning(f"SSE poller stopping due to invalid keyword: {ve}")
+                break
+            except Exception as e:
+                logger.error(f"SSE poller query error ({cache_key}): {e}", exc_info=True)
+                err_payload = f"data: {json.dumps({'error': f'Database query failed: {str(e)}', 'type': 'query_error'})}\n\n"
+                for q in list(entry.subscribers):
+                    try:
+                        q.put_nowait(err_payload)
+                    except asyncio.QueueFull:
+                        pass
+                await asyncio.sleep(SSE_ERROR_BACKOFF)
+                continue
+
+            await asyncio.sleep(SSE_POLL_INTERVAL)
+    except asyncio.CancelledError:
+        logger.info(f"SSE poller cancelled: {cache_key}")
+        raise
+    finally:
+        # Cleanup cache entry nếu không còn subscriber
+        async with _cache_lock:
+            entry = _cache.get(cache_key)
+            if entry is not None and not entry.subscribers:
+                _cache.pop(cache_key, None)
+        logger.info(f"SSE poller stopped: {cache_key}")
+
+
+async def _subscribe(keyword: str, ticker: Optional[str]) -> tuple[str, asyncio.Queue]:
+    """Đăng ký subscriber mới. Trả về (cache_key, queue)."""
+    key = _cache_key(keyword, ticker)
+    queue: asyncio.Queue = asyncio.Queue(maxsize=SSE_SUBSCRIBER_QUEUE_SIZE)
+
+    async with _cache_lock:
+        entry = _cache.get(key)
+        if entry is None:
+            entry = _CacheEntry()
+            _cache[key] = entry
+
+        entry.subscribers.add(queue)
+
+        # Đẩy ngay payload cache cuối (nếu có) → subscriber mới không phải chờ 3s
+        if entry.last_payload is not None:
+            try:
+                queue.put_nowait(entry.last_payload)
+            except asyncio.QueueFull:
+                pass
+
+        # Start poller nếu chưa chạy
+        if entry.task is None or entry.task.done():
+            entry.task = asyncio.create_task(_poller(key, keyword, ticker))
+
+    return key, queue
+
+
+async def _unsubscribe(cache_key: str, queue: asyncio.Queue):
+    """Huỷ subscriber. Nếu không còn subscriber nào, cancel poller."""
+    async with _cache_lock:
+        entry = _cache.get(cache_key)
+        if entry is None:
+            return
+        entry.subscribers.discard(queue)
+        if not entry.subscribers and entry.task and not entry.task.done():
+            entry.task.cancel()
+
+
+# --- SSE Event Generator (per-client) ---
 async def sse_event_generator(request: Request, keyword: str, ticker: Optional[str] = None):
     """
-    Generator cho SSE stream dựa trên keyword.
-    Database được chọn tự động trong từng hàm query.
-
-    Args:
-        request: FastAPI request object
-        keyword: Từ khóa xác định loại query
-        ticker: Mã ticker (VD: VNINDEX, VN30, ...)
+    Per-client generator: subscribe vào shared cache, yield payload từ queue.
+    DB không được poll trực tiếp ở đây — poller chung lo phần đó.
     """
-    last_data_hash = None
-
-    logger.info(f"SSE stream started - keyword: {keyword}, ticker: {ticker}")
+    cache_key, queue = await _subscribe(keyword, ticker)
+    logger.info(f"SSE client subscribed: {cache_key}")
 
     try:
         while True:
             if await request.is_disconnected():
-                logger.info(f"Client disconnected from SSE stream (keyword: {keyword})")
+                logger.info(f"SSE client disconnected: {cache_key}")
                 break
-
             try:
-                current_data = await execute_sse_query(keyword, ticker)
-                current_data_str = bson_to_json_str(current_data)
-                current_hash = hash(current_data_str)
-
-                if current_hash != last_data_hash:
-                    yield f"data: {current_data_str}\n\n"
-                    logger.debug(f"SSE sent (keyword: {keyword}): {len(current_data)} records")
-                    last_data_hash = current_hash
-
-            except ValueError as ve:
-                error_msg = {"error": str(ve), "type": "invalid_keyword"}
-                yield f"data: {json.dumps(error_msg)}\n\n"
-                logger.warning(f"Invalid keyword: {ve}")
-                return
-
-            except Exception as query_error:
-                logger.error(f"Query error (keyword: {keyword}): {query_error}", exc_info=True)
-                error_msg = {"error": f"Database query failed: {str(query_error)}", "type": "query_error"}
-                yield f"data: {json.dumps(error_msg)}\n\n"
-                await asyncio.sleep(5)
-                continue
-
-            await asyncio.sleep(3)
-
+                payload = await asyncio.wait_for(queue.get(), timeout=SSE_CLIENT_TIMEOUT)
+                yield payload
+            except asyncio.TimeoutError:
+                # Heartbeat — giữ connection alive khi không có dữ liệu mới
+                yield ": heartbeat\n\n"
     except asyncio.CancelledError:
-        logger.info(f"SSE stream cancelled (keyword: {keyword})")
+        logger.info(f"SSE client cancelled: {cache_key}")
     except Exception as e:
-        logger.error(f"SSE stream error (keyword: {keyword}): {e}", exc_info=True)
+        logger.error(f"SSE client error ({cache_key}): {e}", exc_info=True)
         try:
             yield f"data: {json.dumps({'error': str(e), 'type': 'stream_error'})}\n\n"
         except Exception:
             pass
     finally:
-        logger.info(f"SSE stream closed (keyword: {keyword})")
+        await _unsubscribe(cache_key, queue)
+        logger.info(f"SSE client closed: {cache_key}")
 
 
 # ==============================================================================

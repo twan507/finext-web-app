@@ -2,7 +2,7 @@
 from typing import Any, Dict, Optional
 
 from app.core.database import get_database
-from app.crud.sse._helpers import get_collection_data, STOCK_DB
+from app.crud.sse._helpers import get_collection_records, STOCK_DB
 
 
 async def finratios_industry(
@@ -60,7 +60,7 @@ async def finratios_industry(
         elif len(ticker_list) > 1:
             find_query["ticker"] = {"$in": ticker_list}
 
-    finratios_industry_df = await get_collection_data(
+    return await get_collection_records(
         stock_db,
         "finratios_industry",
         find_query=find_query,
@@ -68,5 +68,3 @@ async def finratios_industry(
         sort=[("date", -1)],
         limit=limit,
     )
-
-    return finratios_industry_df.to_dict(orient="records")
