@@ -323,8 +323,14 @@ const _sendRequestWithRefresh = async <TResponseData = any>(
                             throw new Error(refreshResponseStandard.message || "Refresh token response did not contain access_token.");
                         }
                     } catch (e: any) {
-                        // Refresh thất bại — clear session (token hết hạn hoàn toàn)
-                        clearSession();
+                        // Chỉ clear session khi refresh fail vì AUTH thật sự (401)
+                        // — token / session đã hết hạn. Với network/5xx (server hiccup,
+                        // mạng chập chờn) giữ nguyên session để retry sau, tránh
+                        // false-positive logout.
+                        const statusCode = e?.statusCode;
+                        if (statusCode === 401) {
+                            clearSession();
+                        }
                         throw e instanceof Error ? e : new Error(e.message || 'Refresh token failed');
                     } finally {
                         isRefreshing = false;

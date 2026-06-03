@@ -30,15 +30,20 @@ def create_access_token(data: Dict[str, Any]) -> str:
     
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-def create_refresh_token(data: Dict[str, Any]) -> Tuple[str, timedelta]:
-    """Tạo JWT refresh token và trả về token cùng thời gian sống."""
+def create_refresh_token(data: Dict[str, Any], jti: Optional[str] = None) -> Tuple[str, timedelta]:
+    """Tạo JWT refresh token và trả về token cùng thời gian sống.
+
+    Khi `jti` được truyền vào, tái dùng giá trị đó thay vì sinh UUID mới — dùng cho
+    flow refresh để giữ nguyên session refresh_jti, tránh race condition đa-tab
+    khi cookie cũ vẫn đang in-flight ở tab khác.
+    """
     to_encode = data.copy()
     expires_delta = timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     expire = datetime.now(timezone.utc) + expires_delta
-    
+
     to_encode.update({
         "exp": expire,
-        "jti": str(uuid.uuid4()),
+        "jti": jti or str(uuid.uuid4()),
         "token_type": "refresh"
     })
 

@@ -197,14 +197,17 @@ async def delete_session_by_id(db: AsyncIOMotorDatabase, session_id_str: PyObjec
 
 
 async def delete_sessions_for_user_except_jti(db: AsyncIOMotorDatabase, user_id_str: str, current_jti_to_keep: Optional[str]) -> int:
-    """Xóa tất cả các session của một user, ngoại trừ session có JTI được cung cấp."""
+    """Xóa tất cả các session của một user, ngoại trừ session có access_jti được cung cấp.
+
+    Caller (change-password flow) truyền access_jti của session hiện tại để giữ lại.
+    """
     if not ObjectId.is_valid(user_id_str):
         logger.warning(f"User ID không hợp lệ khi xóa sessions: {user_id_str}")
         return 0
 
     query: Dict[str, Any] = {"user_id": ObjectId(user_id_str)}
     if current_jti_to_keep:
-        query["jti"] = {"$ne": current_jti_to_keep}
+        query["access_jti"] = {"$ne": current_jti_to_keep}
 
     delete_result = await db[SESSIONS_COLLECTION].delete_many(query)
     if delete_result.deleted_count > 0:
