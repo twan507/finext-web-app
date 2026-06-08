@@ -107,8 +107,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           showNotificationRef.current('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 'warning');
         }
       } else {
-        // Lỗi khác (network, server, etc.) — giữ session cũ nếu có, chỉ log lỗi
-        // Không clear session vì có thể chỉ là lỗi tạm thời
+        // Lỗi khác (network, server, 5xx, timeout) — KHÔNG clear session,
+        // restore session từ localStorage để React state đồng bộ với storage.
+        // Nếu không restore, cold-start /admin gặp lỗi tạm thời sẽ thấy
+        // session=null trong React state → admin layout redirect /login dù
+        // localStorage vẫn còn session valid.
+        const cachedSession = getSession();
+        if (cachedSession && cachedSession.accessToken) {
+          setSession(cachedSession);
+          setFeatures(cachedSession.features || []);
+          setPermissions(cachedSession.permissions || []);
+        }
         if (!silent) {
           showNotificationRef.current('Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.', 'error');
         }

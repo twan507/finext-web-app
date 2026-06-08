@@ -5,6 +5,10 @@ import { isBlockedRoute } from './lib/blocked-routes';
 
 // Tên cookie phải khớp với backend
 const REFRESH_COOKIE_NAME = 'finext_refresh_token';
+// Cookie indicator FE tự set (xem services/core/session.ts). Dùng để middleware
+// nhận biết session khi FE/BE khác origin (dev), khi refresh cookie HttpOnly
+// không gửi qua được FE origin.
+const SESSION_FLAG_COOKIE = 'finext_session_active';
 const LOGIN_PATH = '/login';
 
 // Chỉ khai báo các route CẦN đăng nhập — tất cả route khác mặc định public
@@ -36,10 +40,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Route cần bảo vệ mà không có cookie => redirect về login
+  // Route cần bảo vệ: pass nếu CÓ refresh cookie (BE set, same-origin) HOẶC
+  // session flag cookie (FE set, hoạt động khi BE khác origin trong dev).
   const refreshTokenCookie = request.cookies.get(REFRESH_COOKIE_NAME);
-  if (!refreshTokenCookie) {
-    console.log(`Middleware: No cookie on protected path ${pathname}, redirecting to /login`);
+  const sessionFlagCookie = request.cookies.get(SESSION_FLAG_COOKIE);
+  if (!refreshTokenCookie && !sessionFlagCookie) {
+    console.log(`Middleware: No auth cookie on protected path ${pathname}, redirecting to /login`);
     const loginUrl = new URL(LOGIN_PATH, request.url);
     loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);

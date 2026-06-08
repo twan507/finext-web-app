@@ -170,9 +170,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     if (!authLoading && !session) {
-      router.push('/login');
+      const callbackUrl = encodeURIComponent(currentPathname);
+      router.replace(`/login?callbackUrl=${callbackUrl}`);
     }
-  }, [session, authLoading, router]);
+  }, [session, authLoading, router, currentPathname]);
 
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
 

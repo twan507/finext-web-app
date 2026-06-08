@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, memo, useCallback } from 'react';
+import { useMemo, memo, useCallback, useRef } from 'react';
 import { Box, useTheme, Skeleton } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -248,8 +248,17 @@ export default function StockTreemap({ data, chartHeight = '550px' }: StockTreem
     const isDark = theme.palette.mode === 'dark';
     const router = useRouter();
 
+    // Yêu cầu double-click để mở chart — tránh swipe trên mobile vô tình mở chart
+    const lastClickRef = useRef<{ ticker: string; time: number } | null>(null);
     const handleStockClick = useCallback((ticker: string) => {
-        router.push(`/stocks/${ticker.toLowerCase()}`);
+        const now = Date.now();
+        const last = lastClickRef.current;
+        if (last && last.ticker === ticker && now - last.time < 400) {
+            lastClickRef.current = null;
+            router.push(`/stocks/${ticker.toLowerCase()}`);
+        } else {
+            lastClickRef.current = { ticker, time: now };
+        }
     }, [router]);
 
     // Series: only depends on data (not theme) → stable on theme switch
