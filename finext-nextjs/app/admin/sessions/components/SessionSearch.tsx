@@ -24,6 +24,8 @@ export interface SessionPublicAdmin {
     user_id: string;
     jti: string;
     device_info?: string;
+    ip_address?: string;
+    location?: string;
     created_at: string;
     last_active_at: string;
     user_email?: string;
@@ -54,7 +56,9 @@ const SessionSearch: React.FC<SessionSearchProps> = ({
             session.user_id,
             session.user_email,
             session.jti,
-            session.device_info
+            session.device_info,
+            session.ip_address,
+            session.location
         ].filter(field => field); // Remove null/undefined values
 
         // Date fields (formatted for Vietnamese locale)

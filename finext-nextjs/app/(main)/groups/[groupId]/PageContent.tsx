@@ -611,27 +611,36 @@ export default function GroupDetailContent() {
         return filterByGroup(stockData);
     }, [stockData, filterByGroup]);
 
-    // Top 10 stocks by trading_value, filtered by current group
+    // Top 10 stocks by trading_value, filtered by current group.
+    // Dedupe theo ticker — SSE đôi khi trả nhiều bản ghi cùng mã → tránh React
+    // warning "two children with same key" trong GroupStockTable.
     const topStocks: GroupStockRowData[] = useMemo(() => {
         if (stockData.length === 0) return [];
 
         const filtered = filterByGroup(stockData);
-        return [...filtered]
-            .sort((a, b) => (b.trading_value || 0) - (a.trading_value || 0))
-            .slice(0, 10)
-            .map(s => ({
-                ticker: s.ticker,
-                exchange: s.exchange,
-                close: s.close,
-                diff: s.diff,
-                pct_change: s.pct_change,
-                industry_name: s.industry_name,
-                category_name: s.category_name,
-                marketcap_name: s.marketcap_name,
-                t0_score: s.t0_score,
-                t5_score: s.t5_score,
-                vsi: s.vsi,
-            }));
+        const sorted = [...filtered].sort((a, b) => (b.trading_value || 0) - (a.trading_value || 0));
+        const seen = new Set<string>();
+        const unique: StockData[] = [];
+        for (const s of sorted) {
+            if (s.ticker && !seen.has(s.ticker)) {
+                seen.add(s.ticker);
+                unique.push(s);
+                if (unique.length >= 10) break;
+            }
+        }
+        return unique.map(s => ({
+            ticker: s.ticker,
+            exchange: s.exchange,
+            close: s.close,
+            diff: s.diff,
+            pct_change: s.pct_change,
+            industry_name: s.industry_name,
+            category_name: s.category_name,
+            marketcap_name: s.marketcap_name,
+            t0_score: s.t0_score,
+            t5_score: s.t5_score,
+            vsi: s.vsi,
+        }));
     }, [stockData]);
 
     return (

@@ -75,7 +75,25 @@ const SessionsPage: React.FC = () => {
             sortable: true,
             sortType: 'string',
             accessor: (session: SessionPublicAdmin) => session.device_info || '',
-            minWidth: expandedView ? 300 : 200,
+            minWidth: expandedView ? 220 : 180,
+            responsive: expandedView ? undefined : { xs: 'none', sm: 'none', md: 'none' }
+        },
+        {
+            id: 'ip_address',
+            label: 'IP',
+            sortable: true,
+            sortType: 'string',
+            accessor: (session: SessionPublicAdmin) => session.ip_address || '',
+            minWidth: expandedView ? 140 : 120,
+            responsive: expandedView ? undefined : { xs: 'none', sm: 'none', md: 'none' }
+        },
+        {
+            id: 'location',
+            label: 'Vị trí',
+            sortable: true,
+            sortType: 'string',
+            accessor: (session: SessionPublicAdmin) => session.location || '',
+            minWidth: expandedView ? 180 : 140,
             responsive: expandedView ? undefined : { xs: 'none', sm: 'none', md: 'none' }
         },
         {
@@ -347,16 +365,31 @@ const SessionsPage: React.FC = () => {
         return <DeviceIcon fontSize="small" />;
     };
 
-    // Helper function to format device info
+    // Extract browser + OS readable từ User-Agent. Raw UA của các trình duyệt
+    // Chromium đều bắt đầu "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWeb..."
+    // nên truncate sẽ thấy giống hệt nhau → cần parse thành "Chrome trên Windows 10/11".
     const formatDeviceInfo = (deviceInfo?: string) => {
         if (!deviceInfo) return 'Không xác định';
+        const info = deviceInfo.toLowerCase();
 
-        // Try to extract browser and OS info
-        const parts = deviceInfo.split(' ');
-        if (parts.length > 10) {
-            return deviceInfo.substring(0, 50) + '...';
-        }
-        return deviceInfo;
+        let browser = 'Trình duyệt khác';
+        if (info.includes('edg/') || info.includes('edge/')) browser = 'Edge';
+        else if (info.includes('opr/') || info.includes('opera')) browser = 'Opera';
+        else if (info.includes('firefox')) browser = 'Firefox';
+        else if (info.includes('safari') && !info.includes('chrome')) browser = 'Safari';
+        else if (info.includes('chrome')) browser = 'Chrome';
+
+        let os = 'OS khác';
+        if (info.includes('windows nt 10.0')) os = 'Windows 10/11';
+        else if (info.includes('windows nt 6.3')) os = 'Windows 8.1';
+        else if (info.includes('windows nt 6.1')) os = 'Windows 7';
+        else if (info.includes('windows')) os = 'Windows';
+        else if (info.includes('android')) os = 'Android';
+        else if (info.includes('iphone') || info.includes('ipad')) os = 'iOS';
+        else if (info.includes('mac os x') || info.includes('macos')) os = 'macOS';
+        else if (info.includes('linux')) os = 'Linux';
+
+        return `${browser} trên ${os}`;
     };
 
     // Helper function to get time difference
@@ -491,23 +524,50 @@ const SessionsPage: React.FC = () => {
                                             </TableCell>
                                             <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[2], expandedView),
-                                                whiteSpace: expandedView ? 'nowrap' : 'normal',
+                                                whiteSpace: 'nowrap',
                                                 minWidth: columnConfigs[2].minWidth
                                             }}>
-                                                <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
-                                                    {columnConfigs[2].format?.(session.created_at || '')}
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontFamily: 'monospace' }}>
+                                                    {session.ip_address || '—'}
                                                 </Typography>
                                             </TableCell>
                                             <TableCell sx={{
                                                 ...getResponsiveDisplayStyle(columnConfigs[3], expandedView),
-                                                whiteSpace: expandedView ? 'nowrap' : 'normal',
+                                                whiteSpace: expandedView ? 'normal' : 'nowrap',
                                                 minWidth: columnConfigs[3].minWidth
+                                            }}>
+                                                <Tooltip title={session.location || 'Chưa xác định'}>
+                                                    <Typography sx={{
+                                                        fontSize: getResponsiveFontSize('sm'),
+                                                        maxWidth: expandedView ? 'none' : 140,
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: expandedView ? 'normal' : 'nowrap',
+                                                        color: session.location ? 'text.primary' : 'text.disabled'
+                                                    }}>
+                                                        {session.location || '—'}
+                                                    </Typography>
+                                                </Tooltip>
+                                            </TableCell>
+                                            <TableCell sx={{
+                                                ...getResponsiveDisplayStyle(columnConfigs[4], expandedView),
+                                                whiteSpace: expandedView ? 'nowrap' : 'normal',
+                                                minWidth: columnConfigs[4].minWidth
+                                            }}>
+                                                <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
+                                                    {columnConfigs[4].format?.(session.created_at || '')}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell sx={{
+                                                ...getResponsiveDisplayStyle(columnConfigs[5], expandedView),
+                                                whiteSpace: expandedView ? 'nowrap' : 'normal',
+                                                minWidth: columnConfigs[5].minWidth
                                             }}>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                     <TimerIcon fontSize="small" color="action" />
                                                     <Box>
                                                         <Typography sx={{ fontSize: getResponsiveFontSize('sm') }}>
-                                                            {columnConfigs[3].format?.(session.last_active_at || '')}
+                                                            {columnConfigs[5].format?.(session.last_active_at || '')}
                                                         </Typography>
                                                         <Typography sx={{
                                                             color: 'text.secondary',
@@ -519,13 +579,13 @@ const SessionsPage: React.FC = () => {
                                                 </Box>
                                             </TableCell>
                                             <TableCell sx={{
-                                                ...getResponsiveDisplayStyle(columnConfigs[4], expandedView),
+                                                ...getResponsiveDisplayStyle(columnConfigs[6], expandedView),
                                                 position: 'sticky',
                                                 right: -1,
                                                 backgroundColor: 'background.paper',
                                                 zIndex: 1,
-                                                minWidth: columnConfigs[4].minWidth,
-                                                width: columnConfigs[4].minWidth,
+                                                minWidth: columnConfigs[6].minWidth,
+                                                width: columnConfigs[6].minWidth,
                                                 whiteSpace: 'nowrap',
                                                 paddingLeft: 1,
                                                 paddingRight: 2,

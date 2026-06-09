@@ -73,6 +73,71 @@ from app.utils.email_utils import send_otp_email, send_registration_received_ema
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+
+def _get_client_ip(request: Request) -> str:
+    """Lấy IP thực của client khi đứng sau nginx/proxy.
+
+    Ưu tiên X-Forwarded-For (chuỗi IP, IP đầu tiên là client gốc), rồi đến
+    X-Real-IP do nginx set. Fallback sang request.client.host nếu không có
+    proxy. Trả "Unknown" nếu không xác định được.
+    """
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        # X-Forwarded-For: "client_ip, proxy1, proxy2" — lấy IP đầu tiên
+        return xff.split(",")[0].strip()
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip.strip()
+    return request.client.host if request.client else "Unknown"
+
+
+def _is_private_ip(ip: str) -> bool:
+    """IP private/loopback/link-local — không cần geo-lookup."""
+    if not ip or ip in ("Unknown", "127.0.0.1", "::1", "localhost"):
+        return True
+    # IPv4 private ranges
+    if ip.startswith(("10.", "192.168.", "169.254.", "172.")):
+        if ip.startswith("172."):
+            try:
+                second = int(ip.split(".")[1])
+                return 16 <= second <= 31
+            except (ValueError, IndexError):
+                return False
+        return True
+    return False
+
+
+async def _get_location_from_ip(ip: str) -> Optional[str]:
+    """Lookup vị trí địa lý từ IP qua ip-api.com (free, no key, 45 req/min).
+
+    Trả "Thành phố, Quốc gia" hoặc None nếu lookup fail/timeout/private IP.
+    Timeout ngắn (2s) để không block login lâu khi external service chậm.
+    """
+    if _is_private_ip(ip):
+        logger.info(f"Geo-IP skipped: '{ip}' là private/loopback IP")
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            resp = await client.get(
+                f"http://ip-api.com/json/{ip}",
+                params={"fields": "status,message,country,city", "lang": "vi"},
+            )
+            if resp.status_code != 200:
+                logger.warning(f"Geo-IP HTTP {resp.status_code} for {ip}: {resp.text[:200]}")
+                return None
+            data = resp.json()
+            if data.get("status") != "success":
+                logger.warning(f"Geo-IP non-success for {ip}: {data}")
+                return None
+            city = (data.get("city") or "").strip()
+            country = (data.get("country") or "").strip()
+            location = f"{city}, {country}" if city and country else (country or city or None)
+            logger.info(f"Geo-IP resolved {ip} → {location}")
+            return location
+    except (httpx.HTTPError, httpx.TimeoutException, ValueError) as e:
+        logger.warning(f"Geo-IP lookup failed for {ip}: {type(e).__name__}: {e}")
+        return None
+
 if SECRET_KEY is None:  # Kiểm tra một lần khi load module
     logger.critical("FATAL: SECRET_KEY không được thiết lập trong cấu hình.")
     raise ValueError("SECRET_KEY không được thiết lập.")
@@ -392,12 +457,21 @@ async def login_for_access_token(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi xử lý token.")
 
     user_agent = request.headers.get("user-agent", "Unknown")
-    client_host = request.client.host if request.client else "Unknown"  # noqa: F841  # giữ lại để debug nếu cần, không log để bảo mật IP
-    device_info = user_agent  # Chỉ lưu User-Agent, không bao gồm IP
+    ip_address = _get_client_ip(request)
+    location = await _get_location_from_ip(ip_address)
+    device_info = user_agent
 
-    logger.info(f"🔄 Creating session for user {user.email} with access_jti: {access_jti}")
+    logger.info(f"🔄 Creating session for user {user.email} with access_jti: {access_jti}, ip: {ip_address}, loc: {location}")
     session_result = await create_session(
-        db, SessionCreate(user_id=user_id_str, access_jti=access_jti, refresh_jti=refresh_jti, device_info=device_info)
+        db,
+        SessionCreate(
+            user_id=user_id_str,
+            access_jti=access_jti,
+            refresh_jti=refresh_jti,
+            device_info=device_info,
+            ip_address=ip_address,
+            location=location,
+        ),
     )
 
     if not session_result:
@@ -488,9 +562,20 @@ async def login_with_otp(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi xử lý token.")
 
     user_agent = request.headers.get("user-agent", "Unknown")
-    client_host = request.client.host if request.client else "Unknown"  # noqa: F841  # giữ lại để debug nếu cần, không log để bảo mật IP
-    device_info = user_agent  # Chỉ lưu User-Agent, không bao gồm IP
-    await create_session(db, SessionCreate(user_id=user_id_str, access_jti=access_jti, refresh_jti=refresh_jti, device_info=device_info))
+    ip_address = _get_client_ip(request)
+    location = await _get_location_from_ip(ip_address)
+    device_info = user_agent
+    await create_session(
+        db,
+        SessionCreate(
+            user_id=user_id_str,
+            access_jti=access_jti,
+            refresh_jti=refresh_jti,
+            device_info=device_info,
+            ip_address=ip_address,
+            location=location,
+        ),
+    )
 
     response_content_data = JWTTokenResponse(access_token=access_token_str)
     actual_response = JSONResponse(content=response_content_data.model_dump())
@@ -744,9 +829,20 @@ async def google_oauth_callback(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi xử lý token.")
 
     user_agent = request.headers.get("user-agent", "Unknown (Google Login)")
-    # client_host = request.client.host if request.client else "Unknown (Google Login)"
-    device_info = user_agent  # Chỉ lưu User-Agent, không bao gồm IP
-    await create_session(db, SessionCreate(user_id=user_id_str, access_jti=access_jti, refresh_jti=refresh_jti, device_info=device_info))
+    ip_address = _get_client_ip(request)
+    location = await _get_location_from_ip(ip_address)
+    device_info = user_agent
+    await create_session(
+        db,
+        SessionCreate(
+            user_id=user_id_str,
+            access_jti=access_jti,
+            refresh_jti=refresh_jti,
+            device_info=device_info,
+            ip_address=ip_address,
+            location=location,
+        ),
+    )
 
     response_content_data = JWTTokenResponse(access_token=access_token_str)
     actual_response = JSONResponse(content=response_content_data.model_dump())

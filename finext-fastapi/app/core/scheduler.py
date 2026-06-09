@@ -1,7 +1,7 @@
 # finext-fastapi/app/core/scheduler.py
 import logging
-import fcntl
 import os
+import sys
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from motor.motor_asyncio import AsyncIOMotorDatabase # Cần thiết
@@ -10,6 +10,12 @@ from app.core.database import get_database
 # IMPORT CÁC HÀM TASK TỪ CRUD
 from app.crud.subscriptions import run_deactivate_expired_subscriptions_task, send_expiry_reminders_task
 from app.crud.promotions import run_deactivate_expired_promotions_task
+
+# fcntl chỉ có trên Unix (Linux/Mac). Trên Windows (dev) skip lock — dev
+# thường 1 worker nên không cần đồng bộ đa worker.
+_IS_WINDOWS = sys.platform == "win32"
+if not _IS_WINDOWS:
+    import fcntl  # type: ignore[import-not-found]
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +29,13 @@ _scheduler_lock_fd: int | None = None
 
 
 def _try_acquire_scheduler_lock() -> bool:
-    """Thử acquire exclusive file lock. Trả True nếu thành công (worker này là leader)."""
+    """Thử acquire exclusive file lock. Trả True nếu thành công (worker này là leader).
+
+    Trên Windows: luôn trả True (skip lock) — dev chạy 1 worker nên không có
+    race condition giữa các worker.
+    """
+    if _IS_WINDOWS:
+        return True
     global _scheduler_lock_fd
     try:
         fd = os.open(_SCHEDULER_LOCK_PATH, os.O_CREAT | os.O_WRONLY, 0o644)
@@ -94,8 +106,8 @@ async def shutdown_scheduler():
         logger.info("Scheduler shut down successfully.")
     else:
         logger.info("Scheduler was not running, no need to shut down.")
-    # Release lock nếu worker này là leader
-    if _scheduler_lock_fd is not None:
+    # Release lock nếu worker này là leader (Unix only)
+    if not _IS_WINDOWS and _scheduler_lock_fd is not None:
         try:
             fcntl.flock(_scheduler_lock_fd, fcntl.LOCK_UN)
             os.close(_scheduler_lock_fd)

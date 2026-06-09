@@ -36,6 +36,8 @@ interface Session {
     user_id: string;
     jti: string;
     device_info?: string;
+    ip_address?: string;
+    location?: string;
     created_at: string;
     last_active_at: string;
 }
@@ -227,13 +229,15 @@ export default function PageContent() {
         return 'Trình duyệt khác';
     };
 
-    // Function để tách IP từ device_info
-    const extractIP = (deviceInfo?: string) => {
-        if (!deviceInfo) return 'Không xác định';
-
-        // Tìm IP trong dấu ngoặc đơn cuối cùng
-        const ipMatch = deviceInfo.match(/\(([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})\)$/);
-        return ipMatch ? ipMatch[1] : 'Không xác định';
+    // IP nay lưu trong field ip_address riêng. Fallback parse từ device_info cho
+    // các session cũ (legacy "User-Agent (IP)" format) trước khi backend tách field.
+    const extractIP = (sess: Session) => {
+        if (sess.ip_address) return sess.ip_address;
+        if (sess.device_info) {
+            const ipMatch = sess.device_info.match(/\(([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})\)$/);
+            if (ipMatch) return ipMatch[1];
+        }
+        return 'Không xác định';
     };
 
     // Function để tạo user agent thân thiện
@@ -440,7 +444,22 @@ export default function PageContent() {
                                                                 IP:
                                                             </Typography>
                                                             <Typography variant="caption" sx={{ fontWeight: 'medium', fontFamily: 'monospace' }}>
-                                                                {extractIP(session.device_info)}
+                                                                {extractIP(session)}
+                                                            </Typography>
+                                                        </Box>
+                                                        <Box sx={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            px: 1,
+                                                            py: 0.5,
+                                                            borderRadius: 1,
+                                                            bgcolor: 'action.hover',
+                                                        }}>
+                                                            <Typography variant="caption" color="text.disabled" sx={{ mr: 0.5 }}>
+                                                                Vị trí:
+                                                            </Typography>
+                                                            <Typography variant="caption" sx={{ fontWeight: 'medium' }}>
+                                                                {session.location || 'Không xác định'}
                                                             </Typography>
                                                         </Box>
                                                     </Box>
