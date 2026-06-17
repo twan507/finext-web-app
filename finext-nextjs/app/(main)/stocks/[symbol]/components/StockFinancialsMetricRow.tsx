@@ -3,7 +3,7 @@
 import { Box, Typography, useTheme } from '@mui/material';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import StockFinancialsSvgSparkline from './StockFinancialsSvgSparkline';
-import type { ProcessedMetric } from './stock-financials-config';
+import { FINANCIALS_GRID_COLUMNS, type ProcessedMetric } from './stock-financials-config';
 
 interface Props {
     metric: ProcessedMetric;
@@ -30,7 +30,7 @@ export default function StockFinancialsMetricRow({ metric, isFocused, onFocus }:
             onClick={onFocus}
             sx={{
                 display: 'grid',
-                gridTemplateColumns: '16px 1fr repeat(4, minmax(min-content, 150px))',
+                gridTemplateColumns: FINANCIALS_GRID_COLUMNS,
                 columnGap: 1,
                 alignItems: 'center',
                 py: 0.625,

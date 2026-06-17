@@ -183,6 +183,19 @@ export const STOCK_SECTIONS: Record<IndustryType, SectionConfig[]> = {
 export const FOCUS_METRIC_DEFAULT = 'ryq12'; // ROE
 
 // ============================================================
+// LAYOUT — grid columns dùng chung cho header & row (giữ đồng bộ)
+// ============================================================
+
+// Bề rộng cột XÁC ĐỊNH (không dùng min-content) — vì header và mỗi dòng là các grid riêng,
+// min-content khiến chúng tự co theo nội dung riêng → lệch cột. Floor px cho từng cột để không
+// co mất chữ; cap 150px giữ layout desktop như cũ.
+// Thứ tự: marker · tên · giá trị · Δ · xu hướng(sparkline 68px) · min/max.
+export const FINANCIALS_GRID_COLUMNS =
+    '16px minmax(120px, 1fr) minmax(84px, 150px) minmax(84px, 150px) minmax(72px, 150px) minmax(120px, 150px)';
+// Tổng floor các cột + gap + padding → dưới ngưỡng này bảng trượt ngang (mobile).
+export const FINANCIALS_GRID_MIN_WIDTH = 560;
+
+// ============================================================
 // FORMAT UTILS
 // ============================================================
 
