@@ -30,6 +30,9 @@ import WatchlistColumn from './components/WatchlistColumn';
 import SortableWatchlistCard from './components/SortableWatchlistCard';
 import AddWatchlistDialog from './components/AddWatchlistDialog';
 import ConfirmDialog from './components/ConfirmDialog';
+import CollapsibleSection from './components/CollapsibleSection';
+import IndexGrid from './components/IndexGrid';
+import { MARKET_INDEX_CODES, INDUSTRY_CODES, type IndexData } from './components/indexSections';
 
 interface StockData {
     ticker: string;
@@ -322,6 +325,20 @@ export default function WatchlistContent() {
         }
         return map;
     }, [stockDataRaw]);
+
+    // SSE: chỉ số (thị trường + ngành) — 1 stream trả cả 12 index + 24 ngành
+    const { data: indexDataRaw } = useSseCache<IndexData[]>({
+        keyword: 'home_today_index',
+        enabled: !!session,
+    });
+
+    const indexDataMap = useMemo(() => {
+        const map = new Map<string, IndexData>();
+        if (indexDataRaw && Array.isArray(indexDataRaw)) {
+            indexDataRaw.forEach(item => map.set(item.ticker, item));
+        }
+        return map;
+    }, [indexDataRaw]);
 
     // All tickers for autocomplete
     const allTickers = useMemo(() => {
@@ -683,6 +700,18 @@ export default function WatchlistContent() {
         </Typography>
     );
 
+    // 2 section thẻ chỉ số — dùng ở cả empty-state lẫn nhánh chính
+    const renderIndexSections = () => (
+        <>
+            <CollapsibleSection title="Chỉ số thị trường" storageKey="watchlist.section.market">
+                <IndexGrid codes={MARKET_INDEX_CODES} kind="market" dataMap={indexDataMap} />
+            </CollapsibleSection>
+            <CollapsibleSection title="Chỉ số ngành" storageKey="watchlist.section.industry">
+                <IndexGrid codes={INDUSTRY_CODES} kind="industry" dataMap={indexDataMap} />
+            </CollapsibleSection>
+        </>
+    );
+
     // Loading state — dots animation matching global app loading
     if (loading) {
         return (
@@ -719,6 +748,9 @@ export default function WatchlistContent() {
             <Box sx={{ py: 2 }}>
                 {renderTitle()}
                 <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
+                    {renderIndexSections()}
+
+                    <CollapsibleSection title="Cổ phiếu" storageKey="watchlist.section.list">
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 8, gap: 2 }}>
                         <Typography color="text.secondary" sx={{ fontSize: getResponsiveFontSize('md'), fontWeight: fontWeight.medium }}>
                             Bạn chưa có Watchlist
@@ -751,6 +783,7 @@ export default function WatchlistContent() {
                             <AddIcon className="add-icon" sx={{ fontSize: 36, color: 'primary.main', transition: 'color 0.2s' }} />
                         </Box>
                     </Box>
+                    </CollapsibleSection>
                     <AddWatchlistDialog
                         open={dialogOpen}
                         onClose={() => { setDialogOpen(false); setEditingWatchlist(null); }}
@@ -770,6 +803,10 @@ export default function WatchlistContent() {
             {renderTitle()}
 
             <OptionalAuthWrapper requireAuth={true} requiredFeatures={BASIC_AND_ABOVE}>
+                {renderIndexSections()}
+
+                <CollapsibleSection title="Cổ phiếu" storageKey="watchlist.section.list">
+
                 {/* Page selector — draggable tabs */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5, flexWrap: 'wrap' }}>
                     <DndContext
@@ -966,6 +1003,8 @@ export default function WatchlistContent() {
                         )}
                     </DndContext>
                 )}
+
+                </CollapsibleSection>
 
                 <AddWatchlistDialog
                     open={dialogOpen}

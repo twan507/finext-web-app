@@ -44,9 +44,9 @@ const DEFAULT_TOOLBAR_PREFS: ToolbarPrefs = {
     showLegend: true,
     priceTagMode: 'value',
     timeframe: '1D',
-    showDetailPanel: true,
-    showIndicatorsPanel: true,
-    showWatchlistPanel: true,
+    showDetailPanel: true,        // lần đầu: chỉ hiện panel Thông tin
+    showIndicatorsPanel: false,   // lần đầu: ẩn Chỉ báo
+    showWatchlistPanel: false,    // lần đầu: ẩn WL
 };
 
 function loadToolbarPrefs(): ToolbarPrefs {
