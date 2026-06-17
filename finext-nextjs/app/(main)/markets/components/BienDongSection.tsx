@@ -17,6 +17,7 @@ import { useMarketUpdateTime } from '../../../../hooks/useMarketUpdateTime';
 interface TodayIndexRecord {
     ticker: string;
     vsi?: number;
+    trading_value?: number;
 }
 
 interface BienDongSectionProps {
@@ -93,6 +94,12 @@ export default function BienDongSection({ todayAllData }: BienDongSectionProps) 
         return parseFloat((vsi * 100).toFixed(2));
     }, [todayAllData]);
 
+    // GTGD thị trường hiện tại — lấy trading_value (đơn vị tỷ) của FNX index
+    const fnxTradingValue = useMemo(() => {
+        const tv = todayAllData['FNXINDEX']?.[0]?.trading_value;
+        return typeof tv === 'number' && !isNaN(tv) ? tv : null;
+    }, [todayAllData]);
+
     // ========== Chart title component ==========
     // (replaced by ChartSectionTitle)
 
@@ -159,7 +166,7 @@ export default function BienDongSection({ todayAllData }: BienDongSectionProps) 
                         description="Chỉ số VSI đo lường thanh khoản thị trường: 100% là mức trung bình của tuần, trên 100% nghĩa là thanh khoản cao hơn bình thường, dưới 100% là thấp hơn"
                         updateTime={updateTime}
                     />
-                    <VsiGaugeChart value={vsiLastValue} />
+                    <VsiGaugeChart value={vsiLastValue} tradingValue={fnxTradingValue} />
                 </Box>
             </Box>
 

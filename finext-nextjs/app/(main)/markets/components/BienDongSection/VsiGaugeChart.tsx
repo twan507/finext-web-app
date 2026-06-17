@@ -14,6 +14,8 @@ const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 interface VsiGaugeChartProps {
     /** Last VSI value as percentage (0–150+), e.g. 78.06 */
     value: number | null;
+    /** GTGD thị trường hiện tại (đơn vị tỷ), từ FNX index */
+    tradingValue?: number | null;
     chartHeight?: string;
 }
 
@@ -30,7 +32,7 @@ function getVsiLabel(vsiRaw: number): string {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function VsiGaugeChart({ value, chartHeight = '250px' }: VsiGaugeChartProps) {
+export default function VsiGaugeChart({ value, tradingValue = null, chartHeight = '250px' }: VsiGaugeChartProps) {
     const theme = useTheme();
 
     const displayValue = value ?? 0;
@@ -110,15 +112,17 @@ export default function VsiGaugeChart({ value, chartHeight = '250px' }: VsiGauge
                 />
             </Box>
 
-            {/* Percentage — overlaid in hollow center */}
+            {/* Percentage + GTGD — overlaid in hollow center (căn giữa cả cụm) */}
             <Box
                 sx={{
                     position: 'absolute',
                     top: '50%',
                     left: '1%',
                     right: 0,
+                    transform: 'translateY(-30%)',
                     display: 'flex',
-                    justifyContent: 'center',
+                    flexDirection: 'column',
+                    alignItems: 'center',
                     pointerEvents: 'none',
                 }}
             >
@@ -132,6 +136,21 @@ export default function VsiGaugeChart({ value, chartHeight = '250px' }: VsiGauge
                 >
                     {value !== null ? `${displayValue.toFixed(2)}%` : '—'}
                 </Typography>
+                {/* GTGD hiện tại — dòng nhỏ dưới % */}
+                {tradingValue !== null && (
+                    <Typography
+                        sx={{
+                            fontSize: getResponsiveFontSize('sm'),
+                            fontWeight: fontWeight.medium,
+                            color: 'text.disabled',
+                            lineHeight: 1,
+                            mt: 1.25,
+                            letterSpacing: '0.02em',
+                        }}
+                    >
+                        {`GTGD ${Math.round(tradingValue).toLocaleString('en-US')} tỷ`}
+                    </Typography>
+                )}
             </Box>
 
             {/* Level badge */}

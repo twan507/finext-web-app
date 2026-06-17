@@ -707,7 +707,7 @@ export default function WatchlistContent() {
                 <IndexGrid codes={MARKET_INDEX_CODES} kind="market" dataMap={indexDataMap} />
             </CollapsibleSection>
             <CollapsibleSection title="Chỉ số ngành" storageKey="watchlist.section.industry">
-                <IndexGrid codes={INDUSTRY_CODES} kind="industry" dataMap={indexDataMap} />
+                <IndexGrid codes={INDUSTRY_CODES} kind="industry" dataMap={indexDataMap} sortByTradingValue />
             </CollapsibleSection>
         </>
     );
