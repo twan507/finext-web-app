@@ -42,10 +42,11 @@ export default function SharedPhaseHeader({ daily, isLoading, error }: SharedPha
     }
   }
   const updateStr = formatDate(latest.date);
+  const history = daily.slice(-10).map((d) => d.phase_label);
 
   return (
     <Box>
-      <PhaseHero daily={latest} streak={streak} prevPhaseVn={prevPhaseVn} />
+      <PhaseHero daily={latest} streak={streak} prevPhaseVn={prevPhaseVn} history={history} />
 
       <Box sx={{ mt: 4 }}>
         <ChartSectionTitle
