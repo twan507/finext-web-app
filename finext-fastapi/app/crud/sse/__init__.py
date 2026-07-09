@@ -26,6 +26,14 @@ from app.crud.sse.chart_ticker import chart_ticker
 from app.crud.sse.chart_history_data import chart_history_data
 from app.crud.sse.chart_today_data import chart_today_data
 from app.crud.sse.phase_signal import phase_signal
+from app.crud.sse.phase_daily import phase_daily
+from app.crud.sse.phase_comment import phase_comment
+from app.crud.sse.phase_perf import phase_perf
+from app.crud.sse.phase_basket import phase_basket
+from app.crud.sse.phase_rank import phase_rank
+from app.crud.sse.phase_comment_basket import phase_comment_basket
+from app.crud.sse.phase_trading import phase_trading
+from app.crud.sse.phase_industry import phase_industry
 from app.crud.sse.finratios_stock import finratios_stock
 from app.crud.sse.finratios_industry import finratios_industry
 from app.crud.sse.finstats_map import finstats_map
@@ -75,6 +83,15 @@ SSE_QUERY_REGISTRY: Dict[str, Any] = {
     "home_hist_industry": home_hist_industry,
     # Phase signal
     "phase_signal": phase_signal,
+    # Giai đoạn thị trường (page market-phase)
+    "phase_daily": phase_daily,
+    "phase_comment": phase_comment,
+    "phase_perf": phase_perf,
+    "phase_basket": phase_basket,
+    "phase_rank": phase_rank,
+    "phase_comment_basket": phase_comment_basket,
+    "phase_trading": phase_trading,
+    "phase_industry": phase_industry,
     # Trend queries
     "home_history_trend": home_history_trend,
     "home_today_trend": home_today_trend,

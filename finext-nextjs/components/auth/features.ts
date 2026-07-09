@@ -43,6 +43,18 @@ export const ADVANCED_AND_ABOVE: FeatureKey[] = [
     FEATURES.ADMIN,
 ];
 
+/**
+ * Advanced trở lên NHƯNG KHÔNG gồm BASIC (guard "thật" theo tier).
+ * Dùng cho các khu vực trả phí cần chặn gói cơ bản (vd tab PAID page Giai đoạn thị trường),
+ * mà không đụng tới ADVANCED_AND_ABOVE (đang cố tình gộp BASIC do compliance pivot).
+ */
+export const ADVANCED_AND_ABOVE_STRICT: FeatureKey[] = [
+    FEATURES.ADVANCED,
+    FEATURES.PARTNER,
+    FEATURES.MANAGER,
+    FEATURES.ADMIN,
+];
+
 /** Chỉ cần partner (broker) trở lên */
 export const PARTNER_AND_ABOVE: FeatureKey[] = [
     FEATURES.PARTNER,
