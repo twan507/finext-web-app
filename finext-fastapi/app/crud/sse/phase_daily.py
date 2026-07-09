@@ -4,31 +4,28 @@ from typing import Any, Dict, List
 from app.core.database import get_database
 from app.crud.sse._helpers import get_collection_records, STOCK_DB
 
-# OUTPUT fields (đèn phase, % nắm giữ, cường độ, giá FNX) + chỉ số nâng cao
-# (BREADTH/REGIME cho panel "Chỉ số nâng cao").
+# Schema gọn 12 cột. OUTPUT (đèn phase, % nắm giữ) + HƯỚNG + TIN CẬY + GATE + DIAG
+# (chỉ số cho hero + panel "Chỉ số nâng cao"). Bỏ các cột nguyên liệu đã cắt ở pipeline.
 _PROJECTION = {
     "_id": 0,
+    # OUTPUT
     "date": 1,
     "phase_label": 1,
     "market_exposure": 1,
-    "market_intensity": 1,
-    "fnx_close": 1,
-    "conf_dir": 1,
+    # HƯỚNG
     "breadth_slow": 1,
-    "breadth_fast": 1,
-    "breadth_mom": 1,
     "breadth_blend": 1,
     "breadth_aux": 1,
-    "conf_breadth": 1,
-    "breadth_w": 1,
-    "breadth_m": 1,
-    "breadth_q": 1,
-    "breadth_y": 1,
-    "vsi_long": 1,
+    # TIN CẬY
+    "conf_dir": 1,
+    "conf_flat": 1,
+    # GATE
     "corr60": 1,
     "px_ret20": 1,
+    # DIAG
+    "market_intensity": 1,
     "sub_signal": 1,
-    "composite_score": 1,
+    "fnx_close": 1,
 }
 
 

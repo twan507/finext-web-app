@@ -1,0 +1,282 @@
+<h2>Redesign Tab ① "Thị trường chung" — Ambient Signal toàn trang</h2>
+<p class="subtitle">Mockup với data thật phiên 09/07/2026. Hero (đã xong) không hiển thị lại. Cuộn xem hết rồi trả lời 2 câu hỏi cuối trang.</p>
+
+<style>
+  .mx { background:#0a0b0e; border-radius:20px; padding:28px 30px; font-family:Inter,system-ui,sans-serif; color:#e8eaf0; display:flex; flex-direction:column; gap:34px; }
+  .mx * { box-sizing:border-box; }
+  .num { font-variant-numeric:tabular-nums; }
+  /* section title (ChartSectionTitle giữ nguyên) */
+  .st { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:12px; }
+  .st h4 { margin:0; font-size:16px; font-weight:700; }
+  .st p { margin:3px 0 0; font-size:12px; color:#8b90a0; }
+  .st .upd { font-size:11px; color:#5c6170; white-space:nowrap; }
+  /* ambient glass card */
+  .ac { position:relative; overflow:hidden; border-radius:16px; background:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.09); box-shadow:0 8px 32px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.1); }
+  .ac .amb { position:absolute; inset:0; pointer-events:none; }
+  .ac .edge { position:absolute; top:0; left:0; right:0; height:1px; pointer-events:none; }
+  .ac .in { position:relative; padding:20px 22px; }
+  /* diverging bullet */
+  .dv { position:relative; height:8px; border-radius:99px; background:rgba(255,255,255,.07); margin:10px 0 4px; }
+  .dv .mid { position:absolute; left:50%; top:-3px; bottom:-3px; width:1.5px; background:rgba(255,255,255,.22); }
+  .dv .fill { position:absolute; top:0; bottom:0; border-radius:99px; }
+  .dv .mk { position:absolute; top:50%; width:13px; height:13px; border-radius:50%; transform:translate(-50%,-50%); background:#0a0b0e; }
+  .dv-lbl { display:flex; justify-content:space-between; font-size:9.5px; color:#4d515e; }
+  /* segmented bar */
+  .segs { display:flex; gap:4px; margin:10px 0 4px; }
+  .segs .s { flex:1; height:8px; border-radius:3px; background:rgba(255,255,255,.07); }
+  /* grouped vertical bars */
+  .vb { display:flex; gap:18px; align-items:flex-end; margin-top:6px; }
+  .vb .col { display:flex; flex-direction:column; align-items:center; gap:5px; }
+  .vb .track { position:relative; width:26px; height:56px; border-radius:6px; background:rgba(255,255,255,.05); }
+  .vb .base { position:absolute; left:0; right:0; top:50%; height:1px; background:rgba(255,255,255,.2); }
+  .vb .bar { position:absolute; left:4px; right:4px; border-radius:3px; }
+  .vb .vl { font-size:10.5px; color:#8b90a0; }
+  .vb .vv { font-size:11.5px; font-weight:700; }
+  /* indicator card grid */
+  .ig { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .ic { position:relative; overflow:hidden; border-radius:14px; background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.08); padding:16px 18px 14px; }
+  .ic .hd { display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+  .ic .lb { font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:#6f7482; font-weight:600; }
+  .ic .val { font-size:22px; font-weight:800; line-height:1; }
+  .ic .cmt { font-size:12px; color:#8b90a0; line-height:1.55; margin-top:10px; }
+  .ic .spk { margin-top:8px; opacity:.85; }
+  .neg { color:#ff5a5a; } .pos { color:#2ee06f; } .neu { color:#ffc752; } .vio { color:#a78bff; }
+  .chart-fake { display:block; width:100%; }
+  .kpi { display:flex; gap:12px; flex-wrap:wrap; }
+  .kt { border-radius:12px; padding:10px 14px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); min-width:118px; }
+  .kt .n { font-size:11px; color:#8b90a0; display:flex; align-items:center; gap:6px; }
+  .kt .n i { width:8px; height:8px; border-radius:2px; display:inline-block; }
+  .kt .v { font-size:19px; font-weight:800; margin-top:3px; }
+  .pill { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; padding:4px 10px; border-radius:99px; }
+</style>
+
+<div class="mx">
+
+  <!-- ═══ 1. Diễn biến & giai đoạn (chart FNX trong ambient card) ═══ -->
+  <div>
+    <div class="st">
+      <div><h4>Diễn biến &amp; giai đoạn thị trường</h4><p>Chỉ số FNX-Index với nền màu theo pha thị trường.</p></div>
+      <span class="upd">Cập nhật 09/07/2026</span>
+    </div>
+    <div class="ac">
+      <div class="amb" style="background:radial-gradient(ellipse 600px 300px at 10% -10%, rgba(245,197,24,.10), transparent 60%)"></div>
+      <div class="edge" style="background:linear-gradient(90deg,transparent,rgba(245,197,24,.5),transparent)"></div>
+      <div class="in">
+        <div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:10px">
+          <span class="pill" style="background:rgba(255,255,255,.06);color:#8b90a0">3M</span>
+          <span class="pill" style="background:rgba(124,77,255,.2);color:#c9b8ff;border:1px solid rgba(124,77,255,.45)">1Y</span>
+          <span class="pill" style="background:rgba(255,255,255,.06);color:#8b90a0">2Y</span>
+          <span class="pill" style="background:rgba(255,255,255,.06);color:#8b90a0">5Y</span>
+        </div>
+        <svg class="chart-fake" viewBox="0 0 800 180" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="fu" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2ee06f" stop-opacity=".3"/><stop offset="1" stop-color="#2ee06f" stop-opacity="0"/></linearGradient>
+            <linearGradient id="fd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff5a5a" stop-opacity=".3"/><stop offset="1" stop-color="#ff5a5a" stop-opacity="0"/></linearGradient>
+            <linearGradient id="ft" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f5c518" stop-opacity=".3"/><stop offset="1" stop-color="#f5c518" stop-opacity="0"/></linearGradient>
+          </defs>
+          <path d="M0 120 L80 100 160 110 240 70 320 60 400 40 460 55" fill="none" stroke="#2ee06f" stroke-width="2"/>
+          <path d="M0 120 L80 100 160 110 240 70 320 60 400 40 460 55 L460 180 0 180Z" fill="url(#fu)"/>
+          <path d="M460 55 L520 90 580 120 640 105" fill="none" stroke="#ff5a5a" stroke-width="2"/>
+          <path d="M460 55 L520 90 580 120 640 105 L640 180 460 180Z" fill="url(#fd)"/>
+          <path d="M640 105 L700 95 750 100 800 88" fill="none" stroke="#f5c518" stroke-width="2.5" style="filter:drop-shadow(0 0 6px rgba(245,197,24,.6))"/>
+          <path d="M640 105 L700 95 750 100 800 88 L800 180 640 180Z" fill="url(#ft)"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 2. Chẩn đoán phiên ═══ -->
+  <div>
+    <div class="st">
+      <div><h4>Chẩn đoán phiên</h4><p>Diễn giải trạng thái thị trường của phiên gần nhất.</p></div>
+      <span class="upd">Cập nhật 09/07/2026</span>
+    </div>
+    <div class="ac">
+      <div class="amb" style="background:radial-gradient(ellipse 520px 260px at 8% -20%, rgba(124,77,255,.14), transparent 60%)"></div>
+      <div class="edge" style="background:linear-gradient(90deg,transparent,rgba(167,139,255,.55),transparent)"></div>
+      <div class="in" style="display:flex;gap:16px">
+        <div style="width:44px;height:44px;flex-shrink:0;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;color:#a78bff;background:linear-gradient(145deg,rgba(124,77,255,.25),rgba(124,77,255,.06));border:1px solid rgba(124,77,255,.4);box-shadow:0 0 20px rgba(124,77,255,.25)">✦</div>
+        <div>
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
+            <span class="pill" style="background:rgba(124,77,255,.15);color:#c9b8ff;border:1px solid rgba(124,77,255,.35)">Phân tích tự động</span>
+            <span style="font-size:11px;color:#5c6170">Cập nhật lúc 17:42</span>
+          </div>
+          <div style="font-size:14px;color:#b6bac6;line-height:1.65">Thị trường tiếp tục ở pha chuyển tiếp với biên độ hẹp. Độ rộng đa khung vẫn nghiêng âm, lực cầu chưa đủ xác nhận đảo chiều; ưu tiên quan sát vùng hỗ trợ gần và duy trì tỷ trọng phòng thủ theo khuyến nghị hệ thống.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 3. Hiệu suất 3 danh mục (KPI tiles + chart trong card) ═══ -->
+  <div>
+    <div class="st">
+      <div><h4>Hiệu suất 3 danh mục so với thị trường</h4><p>Hiệu suất tích luỹ so với FNX-Index theo cửa sổ đã chọn.</p></div>
+      <span class="upd">Cập nhật 09/07/2026</span>
+    </div>
+    <div class="ac">
+      <div class="amb" style="background:radial-gradient(ellipse 620px 300px at 90% 120%, rgba(124,77,255,.09), transparent 60%)"></div>
+      <div class="edge" style="background:linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent)"></div>
+      <div class="in">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:14px">
+          <div class="kpi">
+            <div class="kt" style="box-shadow:inset 0 0 20px rgba(124,77,255,.06)"><div class="n"><i style="background:#a78bff"></i>Sóng Ngành</div><div class="v pos num">+24.1%</div></div>
+            <div class="kt"><div class="n"><i style="background:#4fc3f7"></i>Bảo Thủ</div><div class="v pos num">+15.8%</div></div>
+            <div class="kt"><div class="n"><i style="background:#ffb74d"></i>Tăng Trưởng</div><div class="v pos num">+19.3%</div></div>
+            <div class="kt" style="opacity:.75"><div class="n"><i style="background:#6f7482"></i>FNX-Index</div><div class="v num" style="color:#8b90a0">+8.6%</div></div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <span class="pill" style="background:rgba(255,255,255,.06);color:#8b90a0">1M</span>
+            <span class="pill" style="background:rgba(255,255,255,.06);color:#8b90a0">3M</span>
+            <span class="pill" style="background:rgba(124,77,255,.2);color:#c9b8ff;border:1px solid rgba(124,77,255,.45)">1N</span>
+            <span class="pill" style="background:rgba(255,255,255,.06);color:#8b90a0">Tất cả</span>
+          </div>
+        </div>
+        <svg class="chart-fake" viewBox="0 0 800 170" preserveAspectRatio="none">
+          <line x1="0" y1="130" x2="800" y2="130" stroke="rgba(255,255,255,.15)" stroke-dasharray="4 4"/>
+          <path d="M0 130 C120 120 200 90 320 80 420 74 520 60 640 48 720 42 770 40 800 36" fill="none" stroke="#a78bff" stroke-width="2.5" style="filter:drop-shadow(0 0 5px rgba(167,139,255,.5))"/>
+          <path d="M0 130 C130 126 240 108 360 100 480 92 600 78 800 66" fill="none" stroke="#ffb74d" stroke-width="2"/>
+          <path d="M0 130 C140 128 260 116 380 110 500 104 620 92 800 80" fill="none" stroke="#4fc3f7" stroke-width="2"/>
+          <path d="M0 130 C150 130 280 124 420 120 560 116 680 110 800 104" fill="none" stroke="#6f7482" stroke-width="1.5" stroke-dasharray="5 4"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 4. Chỉ số nâng cao — SHOW HẾT, grid 2 cột, mỗi chỉ số có mini-viz ═══ -->
+  <div>
+    <div class="st">
+      <div><h4>Chỉ số nâng cao</h4><p>Quan sát nội bộ · không phải khuyến nghị.</p></div>
+      <span class="upd">Cập nhật 09/07/2026</span>
+    </div>
+    <div class="ig">
+
+      <!-- Độ rộng đa khung: 4 cột dọc -->
+      <div class="ic" style="grid-row:span 1">
+        <div class="hd"><span class="lb">Độ rộng đa khung</span></div>
+        <div class="vb">
+          <div class="col"><div class="track"><div class="base"></div><div class="bar" style="top:50%;height:16%;background:#ff5a5a;box-shadow:0 0 8px rgba(255,90,90,.4)"></div></div><span class="vv neg num">−0.28</span><span class="vl">Tuần</span></div>
+          <div class="col"><div class="track"><div class="base"></div><div class="bar" style="top:50%;height:21%;background:#ff5a5a"></div></div><span class="vv neg num">−0.37</span><span class="vl">Tháng</span></div>
+          <div class="col"><div class="track"><div class="base"></div><div class="bar" style="top:50%;height:24%;background:#ff5a5a"></div></div><span class="vv neg num">−0.43</span><span class="vl">Quý</span></div>
+          <div class="col"><div class="track"><div class="base"></div><div class="bar" style="top:50%;height:32%;background:#ff5a5a;box-shadow:0 0 8px rgba(255,90,90,.5)"></div></div><span class="vv neg num">−0.58</span><span class="vl">Năm</span></div>
+        </div>
+        <div class="cmt">Độ rộng cả 4 khung thời gian đều nghiêng âm, khung năm yếu nhất — nền thị trường chưa cải thiện.</div>
+      </div>
+
+      <!-- Cảnh báo giảm nhanh: 3 cột dọc -->
+      <div class="ic">
+        <div class="hd"><span class="lb">Cảnh báo giảm nhanh</span></div>
+        <div class="vb">
+          <div class="col"><div class="track"><div class="base"></div><div class="bar" style="top:50%;height:26%;background:#ff5a5a;box-shadow:0 0 8px rgba(255,90,90,.5)"></div></div><span class="vv neg num">−0.52</span><span class="vl">Tổng hợp</span></div>
+          <div class="col"><div class="track"><div class="base"></div><div class="bar" style="top:50%;height:20%;background:#ff5a5a"></div></div><span class="vv neg num">−0.40</span><span class="vl">Nhanh</span></div>
+          <div class="col"><div class="track"><div class="base"></div><div class="bar" style="top:50%;height:32%;background:#ff5a5a;box-shadow:0 0 8px rgba(255,90,90,.5)"></div></div><span class="vv neg num">−0.64</span><span class="vl">Động lượng</span></div>
+        </div>
+        <div class="cmt">Tín hiệu giảm nhanh vẫn hiện diện, động lượng âm sâu — hạn chế gia tăng tỷ trọng ở nhịp hồi.</div>
+      </div>
+
+      <!-- Độ rộng nền: bullet + sparkline -->
+      <div class="ic">
+        <div class="hd"><span class="lb">Độ rộng nền</span><span class="val neg num">−0.45</span></div>
+        <div class="dv"><span class="mid"></span><span class="fill" style="left:27.5%;width:22.5%;background:linear-gradient(90deg,#ff5a5a,rgba(255,90,90,.25))"></span><span class="mk" style="left:27.5%;border:2.5px solid #ff5a5a;box-shadow:0 0 10px rgba(255,90,90,.6)"></span></div>
+        <div class="dv-lbl"><span>−1</span><span>0</span><span>+1</span></div>
+        <svg class="spk" width="100%" height="26" viewBox="0 0 200 26" preserveAspectRatio="none"><path d="M0 8 20 10 40 7 60 12 80 14 100 12 120 16 140 15 160 18 180 17 200 19" fill="none" stroke="rgba(255,90,90,.55)" stroke-width="1.5"/></svg>
+        <div class="cmt">Nền tích luỹ trung hạn suy yếu dần trong 60 phiên gần nhất.</div>
+      </div>
+
+      <!-- Trigger giảm độc lập -->
+      <div class="ic">
+        <div class="hd"><span class="lb">Trigger giảm độc lập</span><span class="val neg num">−0.36</span></div>
+        <div class="dv"><span class="mid"></span><span class="fill" style="left:32%;width:18%;background:linear-gradient(90deg,#ff5a5a,rgba(255,90,90,.25))"></span><span class="mk" style="left:32%;border:2.5px solid #ff5a5a;box-shadow:0 0 10px rgba(255,90,90,.6)"></span></div>
+        <div class="dv-lbl"><span>−1</span><span>0</span><span>+1</span></div>
+        <svg class="spk" width="100%" height="26" viewBox="0 0 200 26" preserveAspectRatio="none"><path d="M0 12 25 10 50 14 75 11 100 15 125 13 150 16 175 14 200 15" fill="none" stroke="rgba(255,90,90,.5)" stroke-width="1.5"/></svg>
+        <div class="cmt">Trigger phụ chưa kích hoạt vùng nguy hiểm nhưng vẫn dưới 0.</div>
+      </div>
+
+      <!-- Độ ổn định độ rộng: segmented violet -->
+      <div class="ic">
+        <div class="hd"><span class="lb">Độ ổn định độ rộng</span><span class="val vio num">0.81</span></div>
+        <div class="segs">
+          <span class="s" style="background:linear-gradient(90deg,#7c4dff,#a78bff);box-shadow:0 0 8px rgba(124,77,255,.45)"></span><span class="s" style="background:linear-gradient(90deg,#7c4dff,#a78bff)"></span><span class="s" style="background:linear-gradient(90deg,#7c4dff,#a78bff)"></span><span class="s" style="background:linear-gradient(90deg,#7c4dff,#a78bff)"></span><span class="s" style="background:linear-gradient(90deg,#7c4dff,#a78bff)"></span><span class="s" style="background:linear-gradient(90deg,#7c4dff,#a78bff)"></span><span class="s" style="background:linear-gradient(90deg,#7c4dff,#a78bff)"></span><span class="s" style="background:linear-gradient(90deg,#7c4dff,#a78bff);box-shadow:0 0 8px rgba(124,77,255,.45)"></span><span class="s"></span><span class="s"></span>
+        </div>
+        <div class="dv-lbl"><span>0 · nhiễu</span><span>1 · ổn định</span></div>
+        <svg class="spk" width="100%" height="26" viewBox="0 0 200 26" preserveAspectRatio="none"><path d="M0 14 30 12 60 13 90 10 120 9 150 8 180 7 200 6" fill="none" stroke="rgba(167,139,255,.55)" stroke-width="1.5"/></svg>
+        <div class="cmt">Tín hiệu độ rộng hiện có độ tin cậy cao, ít nhiễu.</div>
+      </div>
+
+      <!-- Điểm xu hướng 1 năm: bullet ±3 -->
+      <div class="ic">
+        <div class="hd"><span class="lb">Điểm xu hướng 1 năm</span><span class="val neg num">−0.83</span></div>
+        <div class="dv"><span class="mid"></span><span class="fill" style="left:36.2%;width:13.8%;background:linear-gradient(90deg,#ff5a5a,rgba(255,90,90,.25))"></span><span class="mk" style="left:36.2%;border:2.5px solid #ff5a5a;box-shadow:0 0 10px rgba(255,90,90,.6)"></span></div>
+        <div class="dv-lbl"><span>−3</span><span>0</span><span>+3</span></div>
+        <svg class="spk" width="100%" height="26" viewBox="0 0 200 26" preserveAspectRatio="none"><path d="M0 6 25 8 50 7 75 10 100 12 125 11 150 14 175 15 200 14" fill="none" stroke="rgba(255,90,90,.5)" stroke-width="1.5"/></svg>
+        <div class="cmt">Xu hướng 1 năm vẫn âm nhẹ, chưa xác nhận chu kỳ tăng mới.</div>
+      </div>
+
+      <!-- Thanh khoản dẫn dắt -->
+      <div class="ic">
+        <div class="hd"><span class="lb">Thanh khoản dẫn dắt</span><span class="val neg num">−0.28</span></div>
+        <div class="dv"><span class="mid"></span><span class="fill" style="left:36%;width:14%;background:linear-gradient(90deg,#ff5a5a,rgba(255,90,90,.25))"></span><span class="mk" style="left:36%;border:2.5px solid #ff5a5a;box-shadow:0 0 10px rgba(255,90,90,.6)"></span></div>
+        <div class="dv-lbl"><span>−1</span><span>0</span><span>+1</span></div>
+        <svg class="spk" width="100%" height="26" viewBox="0 0 200 26" preserveAspectRatio="none"><path d="M0 10 25 12 50 11 75 13 100 12 125 14 150 13 175 15 200 14" fill="none" stroke="rgba(255,90,90,.5)" stroke-width="1.5"/></svg>
+        <div class="cmt">Dòng tiền lớn chưa quay lại dẫn dắt thị trường.</div>
+      </div>
+
+      <!-- Đồng pha rộng–khoản: positive -->
+      <div class="ic">
+        <div class="hd"><span class="lb">Đồng pha rộng–khoản</span><span class="val pos num">+0.29</span></div>
+        <div class="dv"><span class="mid"></span><span class="fill" style="left:50%;width:14.5%;background:linear-gradient(90deg,rgba(46,224,111,.25),#2ee06f)"></span><span class="mk" style="left:64.5%;border:2.5px solid #2ee06f;box-shadow:0 0 10px rgba(46,224,111,.6)"></span></div>
+        <div class="dv-lbl"><span>−1</span><span>0</span><span>+1</span></div>
+        <svg class="spk" width="100%" height="26" viewBox="0 0 200 26" preserveAspectRatio="none"><path d="M0 18 25 16 50 17 75 14 100 15 125 12 150 13 175 11 200 12" fill="none" stroke="rgba(46,224,111,.5)" stroke-width="1.5"/></svg>
+        <div class="cmt">Độ rộng và thanh khoản đang đồng pha dương nhẹ — tín hiệu sớm cần theo dõi.</div>
+      </div>
+
+      <!-- Đồng pha giá 20 phiên -->
+      <div class="ic">
+        <div class="hd"><span class="lb">Đồng pha giá 20 phiên</span><span class="val pos num">+0.5%</span></div>
+        <div class="dv"><span class="mid"></span><span class="fill" style="left:50%;width:0.7%;background:#2ee06f"></span><span class="mk" style="left:50.7%;border:2.5px solid #2ee06f;box-shadow:0 0 10px rgba(46,224,111,.5)"></span></div>
+        <div class="dv-lbl"><span>−35%</span><span>0</span><span>+35%</span></div>
+        <svg class="spk" width="100%" height="26" viewBox="0 0 200 26" preserveAspectRatio="none"><path d="M0 14 25 13 50 15 75 12 100 14 125 13 150 12 175 13 200 12.5" fill="none" stroke="rgba(46,224,111,.45)" stroke-width="1.5"/></svg>
+        <div class="cmt">Giá 20 phiên gần như đi ngang, chưa có xung lực rõ.</div>
+      </div>
+
+      <!-- Chẩn đoán hướng (không comment) -->
+      <div class="ic" style="border-color:rgba(124,77,255,.25)">
+        <div class="hd"><span class="lb" style="color:#a78bff">Chẩn đoán hướng</span></div>
+        <div style="display:flex;gap:26px;margin-top:12px;flex-wrap:wrap">
+          <div style="flex:1;min-width:150px">
+            <div style="font-size:11.5px;color:#8b90a0;margin-bottom:6px">Độ nghiêng xu hướng</div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="val vio num" style="font-size:20px">0.77</span>
+              <div style="flex:1" class="segs" >
+                <span class="s" style="background:#7c4dff"></span><span class="s" style="background:#7c4dff"></span><span class="s" style="background:#7c4dff"></span><span class="s" style="background:#7c4dff"></span><span class="s" style="background:#7c4dff"></span><span class="s" style="background:#7c4dff"></span><span class="s" style="background:#7c4dff"></span><span class="s" style="background:#7c4dff;box-shadow:0 0 8px rgba(124,77,255,.5)"></span><span class="s"></span><span class="s"></span>
+              </div>
+            </div>
+          </div>
+          <div style="min-width:130px">
+            <div style="font-size:11.5px;color:#8b90a0;margin-bottom:6px">Tín hiệu phụ</div>
+            <span class="pill" style="background:rgba(255,255,255,.05);color:#5c6170;border:1px dashed rgba(255,255,255,.15)">— không có</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Câu hỏi ═══ -->
+<div class="section" style="margin-top:28px">
+  <h3>Q1 · Sparkline 60 phiên trong card chỉ số?</h3>
+  <p class="subtitle">Đường mini thể hiện diễn biến chỉ số 60 phiên gần nhất (data đã có sẵn trong phase_daily, không tốn thêm API call).</p>
+  <div class="options">
+    <div class="option" data-choice="spark-yes" onclick="toggleSelect(this)"><div class="letter">A</div><div class="content"><h3>Có sparkline (như mockup)</h3><p>Nhìn được xu hướng chỉ số, "pro" hơn — card cao hơn một chút.</p></div></div>
+    <div class="option" data-choice="spark-no" onclick="toggleSelect(this)"><div class="letter">B</div><div class="content"><h3>Không — chỉ bullet/bar + comment</h3><p>Gọn hơn, card thấp, đỡ nhiễu.</p></div></div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Q2 · Hai biểu đồ lớn (FNX + hiệu suất) có bọc trong ambient card không?</h3>
+  <p class="subtitle">Hiện tại 2 chart nằm "trần" trên nền page. Mockup ở trên đang bọc card kính + ambient glow + timeframe pills bên trong.</p>
+  <div class="options">
+    <div class="option" data-choice="chart-card" onclick="toggleSelect(this)"><div class="letter">A</div><div class="content"><h3>Bọc ambient card (như mockup)</h3><p>Đồng bộ hero, page nhìn như dãy panel "instrument" liền mạch.</p></div></div>
+    <div class="option" data-choice="chart-bare" onclick="toggleSelect(this)"><div class="letter">B</div><div class="content"><h3>Giữ trần như hiện tại</h3><p>Thoáng, chart rộng hơn vài px, đỡ lớp lồng lớp.</p></div></div>
+  </div>
+</div>

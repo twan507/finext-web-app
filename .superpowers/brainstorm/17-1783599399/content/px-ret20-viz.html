@@ -1,0 +1,90 @@
+<h2>Quán tính biến động giá (px_ret20) — viz theo ngưỡng ngắt mạch −10%</h2>
+<p class="subtitle">Không dùng bullet ±35% giả. Hiển thị % thật, neo vào vạch −10%. Mỗi kiểu show 2 trạng thái: bình thường (+0,5%) và thủng ngưỡng (−12%). Click chọn.</p>
+
+<style>
+  .mx4{background:#0a0b0e;border-radius:16px;padding:22px 24px;font-family:Inter,system-ui,sans-serif;color:#e8eaf0;display:flex;gap:22px;flex-wrap:wrap}
+  .mx4 *{box-sizing:border-box}
+  .num{font-variant-numeric:tabular-nums}
+  .cell{flex:1;min-width:260px;padding:16px 18px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)}
+  .hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px}
+  .lb{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#6f7482;font-weight:600}
+  .big{font-size:20px;font-weight:800;line-height:1}
+  .pos{color:#2ee06f}.neg{color:#ff5a5a}
+  .fx-pick{border:2px solid transparent;border-radius:16px;padding:16px;cursor:pointer;transition:border-color .15s;margin-bottom:24px}
+  .fx-pick:hover{border-color:rgba(124,77,255,.45)}
+  .fx-pick.selected{border-color:#7c4dff;background:rgba(124,77,255,.06)}
+  .fx-pick>h3{margin:0 0 4px}
+  .fx-pick .desc{font-size:13px;opacity:.75;margin:0 0 14px}
+  .pill{display:inline-block;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:99px}
+
+  /* A: threshold bar */
+  .tb{position:relative;height:10px;border-radius:99px;background:rgba(255,255,255,.06);margin:14px 0 4px;overflow:visible}
+  .tb .danger{position:absolute;top:0;bottom:0;left:0;border-radius:99px 0 0 99px;background:linear-gradient(90deg,rgba(255,90,90,.35),rgba(255,90,90,.12))}
+  .tb .brk{position:absolute;top:-5px;bottom:-5px;width:2px;background:#ff5a5a;box-shadow:0 0 6px rgba(255,90,90,.7)}
+  .tb .brklbl{position:absolute;top:-20px;transform:translateX(-50%);font-size:9px;color:#ff8080;font-weight:700;white-space:nowrap}
+  .tb .mk{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;transform:translate(-50%,-50%);background:#0a0b0e}
+  .scale{display:flex;justify-content:space-between;font-size:9px;color:#4d515e;margin-top:8px}
+
+  /* B: minimal */
+  .miniscale{position:relative;height:4px;border-radius:99px;background:rgba(255,255,255,.08);margin-top:12px}
+  .miniscale .brk{position:absolute;top:-3px;bottom:-3px;width:2px;background:#ff5a5a}
+  .miniscale .mk{position:absolute;top:50%;width:9px;height:9px;border-radius:50%;transform:translate(-50%,-50%)}
+</style>
+
+<!-- PA A -->
+<div class="fx-pick" data-choice="A-threshold-bar" onclick="toggleSelect(this)">
+  <h3>A · Thanh ngưỡng ngắt mạch (đầy đủ) — khuyến nghị</h3>
+  <p class="desc">Thanh có vùng nguy hiểm đỏ + vạch −10% dán nhãn; marker ở vị trí % thật; trục −20%…+20% (neo vào −10%, không phải 0). Nhìn phát biết "còn cách ngưỡng bao xa".</p>
+  <div class="mx4">
+    <div class="cell">
+      <div class="hd"><span class="lb">Quán tính biến động giá</span><span class="big pos num">+0.5%</span></div>
+      <div style="font-size:11px;color:#8b90a0;margin-bottom:2px">Return 20 phiên · <span class="pos">chưa sập nhanh</span></div>
+      <div class="tb">
+        <div class="danger" style="width:25%"></div>
+        <div class="brk" style="left:25%"></div><div class="brklbl" style="left:25%">ngưỡng −10%</div>
+        <div class="mk" style="left:51.25%;border:3px solid #2ee06f;box-shadow:0 0 10px rgba(46,224,111,.5)"></div>
+      </div>
+      <div class="scale"><span>−20%</span><span>0</span><span>+20%</span></div>
+    </div>
+    <div class="cell">
+      <div class="hd"><span class="lb">Quán tính biến động giá</span><span class="big neg num">−12%</span></div>
+      <div style="font-size:11px;color:#8b90a0;margin-bottom:2px">Return 20 phiên · <span class="neg">đã thủng ngưỡng</span></div>
+      <div class="tb">
+        <div class="danger" style="width:25%"></div>
+        <div class="brk" style="left:25%"></div><div class="brklbl" style="left:25%">ngưỡng −10%</div>
+        <div class="mk" style="left:20%;border:3px solid #ff5a5a;box-shadow:0 0 12px rgba(255,90,90,.7)"></div>
+      </div>
+      <div class="scale"><span>−20%</span><span>0</span><span>+20%</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- PA B -->
+<div class="fx-pick" data-choice="B-minimal" onclick="toggleSelect(this)">
+  <h3>B · Số % lớn + trạng thái (tối giản)</h3>
+  <p class="desc">Nhấn mạnh con số % và pill trạng thái; chỉ kèm 1 thước mảnh có vạch −10%. Gọn, ít "đồ hoạ", hợp nếu muốn panel thoáng.</p>
+  <div class="mx4">
+    <div class="cell">
+      <div class="lb">Quán tính biến động giá</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+        <span class="big pos num" style="font-size:26px">+0.5%</span>
+        <span class="pill" style="background:rgba(46,224,111,.14);color:#6fe0a0;border:1px solid rgba(46,224,111,.35)">CHƯA SẬP NHANH</span>
+      </div>
+      <div class="miniscale"><div class="brk" style="left:25%"></div><div class="mk" style="left:51.25%;background:#2ee06f"></div></div>
+      <div class="scale"><span>−20%</span><span style="color:#ff8080">−10% ngắt</span><span>+20%</span></div>
+    </div>
+    <div class="cell">
+      <div class="lb">Quán tính biến động giá</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+        <span class="big neg num" style="font-size:26px">−12%</span>
+        <span class="pill" style="background:rgba(255,90,90,.14);color:#ff8080;border:1px solid rgba(255,90,90,.4)">ĐÃ SẬP NHANH</span>
+      </div>
+      <div class="miniscale"><div class="brk" style="left:25%"></div><div class="mk" style="left:20%;background:#ff5a5a"></div></div>
+      <div class="scale"><span>−20%</span><span style="color:#ff8080">−10% ngắt</span><span>+20%</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p class="subtitle">Ghi chú: dù chọn kiểu nào, giá trị hiển thị luôn là <b>% (px_ret20×100)</b>, và ở khối "Diễn giải" cũng đọc là "%". Trục −20%…+20% có clamp cho ngoại lệ (data thực tế ~ ±32%).</p>
+</div>

@@ -13,9 +13,9 @@ import {
   SingleValueData,
   Time,
 } from 'lightweight-charts';
-import { Box, Stack, Typography, useTheme, type Theme } from '@mui/material';
+import { Box, Stack, Typography, alpha, useTheme, type Theme } from '@mui/material';
 import TimeframeSelector from 'components/common/TimeframeSelector';
-import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
+import { getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
 import type { PhasePerfRow } from '../types';
 
 export type PerfRange = '1M' | '3M' | '1N' | 'ALL';
@@ -227,19 +227,33 @@ export default function BasketPerformanceChart({ perf, products, height = 320 }:
 
   return (
     <Box sx={{ width: '100%' }}>
-      {/* KPI strip + timeframe */}
-      <Stack direction="row" justifyContent="space-between" alignItems="flex-end" spacing={2} sx={{ mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
-        <Stack direction="row" spacing={{ xs: 2, md: 3 }} sx={{ flexWrap: 'wrap' }}>
-          {endReturns.map((s) => (
-            <Box key={s.product}>
+      {/* KPI stat tiles + timeframe */}
+      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2} sx={{ mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
+        <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
+          {endReturns.map((s) => {
+            const c = s.color(theme);
+            return (
+            <Box
+              key={s.product}
+              sx={{
+                minWidth: 108,
+                px: 1.5,
+                py: 1,
+                borderRadius: `${borderRadius.md}px`,
+                background: `linear-gradient(135deg, ${alpha(c, isDark ? 0.24 : 0.16)}, ${alpha(c, isDark ? 0.05 : 0.03)})`,
+                border: `1px solid ${alpha(c, 0.3)}`,
+                opacity: s.dashed ? 0.8 : 1,
+              }}
+            >
               <Stack direction="row" spacing={0.75} alignItems="center">
-                <Box sx={{ width: 9, height: 9, borderRadius: '2px', bgcolor: s.color(theme) }} />
+                <Box sx={{ width: 9, height: 9, borderRadius: '2px', bgcolor: c }} />
                 <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary' }}>{s.name}</Typography>
               </Stack>
               <Typography
                 sx={{
+                  mt: 0.25,
                   fontSize: getResponsiveFontSize('lg'),
-                  fontWeight: fontWeight.bold,
+                  fontWeight: fontWeight.extrabold,
                   fontVariantNumeric: 'tabular-nums',
                   color: s.dashed ? 'text.disabled' : (s.end as number) >= 0 ? theme.palette.trend.up : theme.palette.trend.down,
                 }}
@@ -247,7 +261,8 @@ export default function BasketPerformanceChart({ perf, products, height = 320 }:
                 {fmtPct(s.end as number)}
               </Typography>
             </Box>
-          ))}
+            );
+          })}
         </Stack>
         <TimeframeSelector value={range} onChange={handleRangeChange} options={['1M', '3M', '1N', 'ALL'] as PerfRange[]} getLabel={(o) => (o === 'ALL' ? 'Tất cả' : o)} />
       </Stack>

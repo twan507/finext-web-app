@@ -1,0 +1,207 @@
+<h2>Panel "Chỉ số nâng cao" — 2 phương án chống "AI blob"</h2>
+<p class="subtitle">Cả hai đều nhóm 11 chỉ số theo ngữ nghĩa thành 4 cụm: Sức khoẻ nền · Cảnh báo rủi ro · Dòng tiền &amp; xu hướng · Chẩn đoán hướng. Khác nhau ở cách trình bày trong cụm. Click chọn phương án bạn ưng.</p>
+
+<style>
+  .mx2 { background:#0a0b0e; border-radius:20px; padding:26px 28px; font-family:Inter,system-ui,sans-serif; color:#e8eaf0; }
+  .mx2 * { box-sizing:border-box; }
+  .num { font-variant-numeric:tabular-nums; }
+  .neg { color:#ff5a5a; } .pos { color:#2ee06f; } .vio { color:#a78bff; }
+  .fx-pick { border:2px solid transparent; border-radius:16px; padding:16px; cursor:pointer; transition:border-color .15s; }
+  .fx-pick:hover { border-color:rgba(124,77,255,.45); }
+  .fx-pick.selected { border-color:#7c4dff; background:rgba(124,77,255,.06); }
+  .fx-pick > h3 { margin:0 0 4px; }
+  .fx-pick .desc { font-size:13px; opacity:.75; margin:0 0 14px; }
+
+  /* group panel */
+  .gp { position:relative; overflow:hidden; border-radius:16px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); padding:18px 20px; }
+  .gp .amb { position:absolute; inset:0; pointer-events:none; }
+  .gp-hd { position:relative; display:flex; align-items:center; gap:9px; margin-bottom:14px; }
+  .gp-hd .ic { width:26px; height:26px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; }
+  .gp-hd .t { font-size:11px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; }
+
+  /* mini viz bits */
+  .dv { position:relative; height:7px; border-radius:99px; background:rgba(255,255,255,.07); margin:8px 0 3px; }
+  .dv .mid { position:absolute; left:50%; top:-3px; bottom:-3px; width:1.5px; background:rgba(255,255,255,.22); }
+  .dv .fill { position:absolute; top:0; bottom:0; border-radius:99px; }
+  .dv .mk { position:absolute; top:50%; width:12px; height:12px; border-radius:50%; transform:translate(-50%,-50%); background:#0a0b0e; }
+  .dv-lbl { display:flex; justify-content:space-between; font-size:9px; color:#4d515e; }
+  .segs { display:flex; gap:3px; margin:8px 0 3px; }
+  .segs .s { flex:1; height:7px; border-radius:3px; background:rgba(255,255,255,.07); }
+  .segs .on { background:linear-gradient(90deg,#7c4dff,#a78bff); }
+  .vb { display:flex; gap:14px; align-items:flex-end; }
+  .vb .col { display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .vb .track { position:relative; width:22px; height:48px; border-radius:5px; background:rgba(255,255,255,.05); }
+  .vb .base { position:absolute; left:0; right:0; top:50%; height:1px; background:rgba(255,255,255,.2); }
+  .vb .bar { position:absolute; left:3px; right:3px; border-radius:3px; background:#ff5a5a; }
+  .vb .vl { font-size:9.5px; color:#8b90a0; }
+  .vb .vv { font-size:10.5px; font-weight:700; }
+  .cmt { font-size:11.5px; color:#8b90a0; line-height:1.55; margin-top:8px; }
+  .ilb { font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:#6f7482; font-weight:600; }
+  .ival { font-size:17px; font-weight:800; line-height:1; }
+
+  /* B: signal board rows */
+  .row { display:grid; grid-template-columns: 150px 1fr 58px; gap:12px; align-items:center; padding:5px 0; }
+  .row .rl { font-size:12px; color:#b6bac6; }
+  .row .rl.sub { color:#6f7482; padding-left:12px; font-size:11.5px; }
+  .row .rv { font-size:13px; font-weight:700; text-align:right; }
+  .rcmt { font-size:11.5px; color:#7d8393; line-height:1.5; padding:2px 0 10px; grid-column:1/-1; border-bottom:1px dashed rgba(255,255,255,.06); margin-bottom:6px; }
+  .sec-hd { display:flex; align-items:center; gap:8px; margin:16px 0 8px; }
+  .sec-hd .t { font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; }
+  .sec-hd .ln { flex:1; height:1px; background:linear-gradient(90deg, rgba(255,255,255,.12), transparent); }
+</style>
+
+<div style="display:flex;flex-direction:column;gap:30px">
+
+<!-- ═════════ PHƯƠNG ÁN A: BENTO NHÓM NGỮ NGHĨA ═════════ -->
+<div class="fx-pick" data-choice="A-bento" onclick="toggleSelect(this)">
+  <h3>A · Bento nhóm ngữ nghĩa</h3>
+  <p class="desc">4 panel kích thước KHÁC nhau theo tầm quan trọng, mỗi cụm có icon + ambient màu riêng (nền = trung tính, rủi ro = đỏ, dòng tiền = xanh, chẩn đoán = tím). Trong cụm vẫn là mini-viz.</p>
+  <div class="mx2">
+    <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:14px">
+
+      <!-- G1: Sức khoẻ nền (span 8) -->
+      <div class="gp" style="grid-column:span 8">
+        <div class="amb" style="background:radial-gradient(ellipse 400px 200px at 8% -20%, rgba(79,195,247,.09), transparent 60%)"></div>
+        <div class="gp-hd"><span class="ic" style="background:rgba(79,195,247,.12);color:#4fc3f7;border:1px solid rgba(79,195,247,.3)">☰</span><span class="t" style="color:#4fc3f7">Sức khoẻ nền thị trường</span></div>
+        <div style="position:relative;display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:20px">
+          <div>
+            <div class="ilb">Độ rộng đa khung</div>
+            <div class="vb" style="margin-top:8px">
+              <div class="col"><div class="track"><div class="base"></div><div class="bar" style="top:50%;height:14%"></div></div><span class="vv neg num">−0.28</span><span class="vl">Tuần</span></div>
+              <div class="col"><div class="track"><div class="base"></div><div class="bar" style="top:50%;height:18%"></div></div><span class="vv neg num">−0.37</span><span class="vl">Tháng</span></div>
+              <div class="col"><div class="track"><div class="base"></div><div class="bar" style="top:50%;height:21%"></div></div><span class="vv neg num">−0.43</span><span class="vl">Quý</span></div>
+              <div class="col"><div class="track"><div class="base"></div><div class="bar" style="top:50%;height:29%;box-shadow:0 0 8px rgba(255,90,90,.5)"></div></div><span class="vv neg num">−0.58</span><span class="vl">Năm</span></div>
+            </div>
+            <div class="cmt">Cả 4 khung đều nghiêng âm, khung năm yếu nhất.</div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="ilb">Độ rộng nền</span><span class="ival neg num">−0.45</span></div>
+            <div class="dv"><span class="mid"></span><span class="fill" style="left:27.5%;width:22.5%;background:linear-gradient(90deg,#ff5a5a,rgba(255,90,90,.25))"></span><span class="mk" style="left:27.5%;border:2.5px solid #ff5a5a"></span></div>
+            <div class="dv-lbl"><span>−1</span><span>+1</span></div>
+            <div class="cmt">Nền tích luỹ trung hạn suy yếu dần.</div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="ilb">Độ ổn định</span><span class="ival vio num">0.81</span></div>
+            <div class="segs"><span class="s on"></span><span class="s on"></span><span class="s on"></span><span class="s on"></span><span class="s on"></span><span class="s on"></span><span class="s on"></span><span class="s on"></span><span class="s"></span><span class="s"></span></div>
+            <div class="dv-lbl"><span>nhiễu</span><span>ổn định</span></div>
+            <div class="cmt">Tín hiệu độ rộng có độ tin cậy cao.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- G4: Chẩn đoán hướng (span 4) -->
+      <div class="gp" style="grid-column:span 4">
+        <div class="amb" style="background:radial-gradient(ellipse 300px 200px at 90% -20%, rgba(124,77,255,.13), transparent 60%)"></div>
+        <div class="gp-hd"><span class="ic" style="background:rgba(124,77,255,.14);color:#a78bff;border:1px solid rgba(124,77,255,.35)">◈</span><span class="t" style="color:#a78bff">Chẩn đoán hướng</span></div>
+        <div style="position:relative">
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="ilb">Độ nghiêng xu hướng</span><span class="ival vio num">0.77</span></div>
+          <div class="segs"><span class="s on"></span><span class="s on"></span><span class="s on"></span><span class="s on"></span><span class="s on"></span><span class="s on"></span><span class="s on"></span><span class="s on" style="box-shadow:0 0 8px rgba(124,77,255,.5)"></span><span class="s"></span><span class="s"></span></div>
+          <div class="ilb" style="margin-top:14px">Tín hiệu phụ</div>
+          <div style="margin-top:6px"><span style="font-size:11px;padding:4px 10px;border-radius:99px;border:1px dashed rgba(255,255,255,.15);color:#5c6170">— không có</span></div>
+        </div>
+      </div>
+
+      <!-- G2: Cảnh báo rủi ro (span 6, ambient đỏ) -->
+      <div class="gp" style="grid-column:span 6">
+        <div class="amb" style="background:radial-gradient(ellipse 400px 220px at 10% -20%, rgba(255,90,90,.11), transparent 60%)"></div>
+        <div class="gp-hd"><span class="ic" style="background:rgba(255,90,90,.12);color:#ff5a5a;border:1px solid rgba(255,90,90,.3)">⚠</span><span class="t" style="color:#ff8080">Cảnh báo rủi ro</span></div>
+        <div style="position:relative;display:grid;grid-template-columns:1.2fr 1fr;gap:20px">
+          <div>
+            <div class="ilb">Cảnh báo giảm nhanh</div>
+            <div class="vb" style="margin-top:8px">
+              <div class="col"><div class="track"><div class="base"></div><div class="bar" style="top:50%;height:26%;box-shadow:0 0 8px rgba(255,90,90,.5)"></div></div><span class="vv neg num">−0.52</span><span class="vl">Tổng hợp</span></div>
+              <div class="col"><div class="track"><div class="base"></div><div class="bar" style="top:50%;height:20%"></div></div><span class="vv neg num">−0.40</span><span class="vl">Nhanh</span></div>
+              <div class="col"><div class="track"><div class="base"></div><div class="bar" style="top:50%;height:32%;box-shadow:0 0 8px rgba(255,90,90,.5)"></div></div><span class="vv neg num">−0.64</span><span class="vl">Đ.lượng</span></div>
+            </div>
+            <div class="cmt">Động lượng âm sâu — hạn chế gia tăng tỷ trọng ở nhịp hồi.</div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="ilb">Trigger độc lập</span><span class="ival neg num">−0.36</span></div>
+            <div class="dv"><span class="mid"></span><span class="fill" style="left:32%;width:18%;background:linear-gradient(90deg,#ff5a5a,rgba(255,90,90,.25))"></span><span class="mk" style="left:32%;border:2.5px solid #ff5a5a"></span></div>
+            <div class="dv-lbl"><span>−1</span><span>+1</span></div>
+            <div class="cmt">Chưa chạm vùng nguy hiểm nhưng vẫn dưới 0.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- G3: Dòng tiền & xu hướng (span 6) -->
+      <div class="gp" style="grid-column:span 6">
+        <div class="amb" style="background:radial-gradient(ellipse 400px 220px at 90% 120%, rgba(46,224,111,.08), transparent 60%)"></div>
+        <div class="gp-hd"><span class="ic" style="background:rgba(46,224,111,.1);color:#2ee06f;border:1px solid rgba(46,224,111,.28)">≈</span><span class="t" style="color:#6fe0a0">Dòng tiền &amp; xu hướng</span></div>
+        <div style="position:relative;display:grid;grid-template-columns:1fr 1fr;gap:16px 20px">
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="ilb">Xu hướng 1 năm</span><span class="ival neg num">−0.83</span></div>
+            <div class="dv"><span class="mid"></span><span class="fill" style="left:36.2%;width:13.8%;background:linear-gradient(90deg,#ff5a5a,rgba(255,90,90,.25))"></span><span class="mk" style="left:36.2%;border:2.5px solid #ff5a5a"></span></div>
+            <div class="dv-lbl"><span>−3</span><span>+3</span></div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="ilb">Thanh khoản dẫn dắt</span><span class="ival neg num">−0.28</span></div>
+            <div class="dv"><span class="mid"></span><span class="fill" style="left:36%;width:14%;background:linear-gradient(90deg,#ff5a5a,rgba(255,90,90,.25))"></span><span class="mk" style="left:36%;border:2.5px solid #ff5a5a"></span></div>
+            <div class="dv-lbl"><span>−1</span><span>+1</span></div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="ilb">Đồng pha rộng–khoản</span><span class="ival pos num">+0.29</span></div>
+            <div class="dv"><span class="mid"></span><span class="fill" style="left:50%;width:14.5%;background:linear-gradient(90deg,rgba(46,224,111,.25),#2ee06f)"></span><span class="mk" style="left:64.5%;border:2.5px solid #2ee06f"></span></div>
+            <div class="dv-lbl"><span>−1</span><span>+1</span></div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="ilb">Đồng pha giá 20p</span><span class="ival pos num">+0.5%</span></div>
+            <div class="dv"><span class="mid"></span><span class="fill" style="left:50%;width:0.7%;background:#2ee06f"></span><span class="mk" style="left:50.7%;border:2.5px solid #2ee06f"></span></div>
+            <div class="dv-lbl"><span>−35%</span><span>+35%</span></div>
+          </div>
+          <div class="cmt" style="grid-column:1/-1;margin-top:0">Dòng tiền lớn chưa quay lại; độ rộng–thanh khoản chớm đồng pha dương — tín hiệu sớm cần theo dõi.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═════════ PHƯƠNG ÁN B: SIGNAL BOARD ═════════ -->
+<div class="fx-pick" data-choice="B-signalboard" onclick="toggleSelect(this)">
+  <h3>B · Signal Board — thước đo thẳng hàng</h3>
+  <p class="desc">1 panel duy nhất kiểu "bảng tín hiệu quant desk": mọi thanh đo nằm trên CÙNG một trục thẳng hàng → mắt quét dọc 1 lần là so sánh được toàn bộ. Nhóm bằng section header mảnh. Comment nhỏ dưới từng dòng.</p>
+  <div class="mx2">
+    <div class="gp" style="padding:20px 24px">
+      <div class="amb" style="background:radial-gradient(ellipse 700px 300px at 10% -15%, rgba(124,77,255,.07), transparent 60%)"></div>
+      <div style="position:relative">
+
+        <div class="sec-hd" style="margin-top:0"><span class="t" style="color:#4fc3f7">Sức khoẻ nền thị trường</span><span class="ln"></span></div>
+        <div class="row"><span class="rl">Độ rộng · Tuần</span><div class="dv" style="margin:0"><span class="mid"></span><span class="fill" style="left:36%;width:14%;background:linear-gradient(90deg,#ff5a5a,rgba(255,90,90,.25))"></span><span class="mk" style="left:36%;border:2.5px solid #ff5a5a"></span></div><span class="rv neg num">−0.28</span></div>
+        <div class="row"><span class="rl">Độ rộng · Tháng</span><div class="dv" style="margin:0"><span class="mid"></span><span class="fill" style="left:31.5%;width:18.5%;background:linear-gradient(90deg,#ff5a5a,rgba(255,90,90,.25))"></span><span class="mk" style="left:31.5%;border:2.5px solid #ff5a5a"></span></div><span class="rv neg num">−0.37</span></div>
+        <div class="row"><span class="rl">Độ rộng · Quý</span><div class="dv" style="margin:0"><span class="mid"></span><span class="fill" style="left:28.5%;width:21.5%;background:linear-gradient(90deg,#ff5a5a,rgba(255,90,90,.25))"></span><span class="mk" style="left:28.5%;border:2.5px solid #ff5a5a"></span></div><span class="rv neg num">−0.43</span></div>
+        <div class="row"><span class="rl">Độ rộng · Năm</span><div class="dv" style="margin:0"><span class="mid"></span><span class="fill" style="left:21%;width:29%;background:linear-gradient(90deg,#ff5a5a,rgba(255,90,90,.25))"></span><span class="mk" style="left:21%;border:2.5px solid #ff5a5a;box-shadow:0 0 8px rgba(255,90,90,.5)"></span></div><span class="rv neg num">−0.58</span></div>
+        <div class="row" style="padding-bottom:0"><span class="rcmt" style="border-bottom:none;padding-bottom:2px">Cả 4 khung đều nghiêng âm, khung năm yếu nhất — nền thị trường chưa cải thiện.</span></div>
+        <div class="row"><span class="rl">Độ rộng nền</span><div class="dv" style="margin:0"><span class="mid"></span><span class="fill" style="left:27.5%;width:22.5%;background:linear-gradient(90deg,#ff5a5a,rgba(255,90,90,.25))"></span><span class="mk" style="left:27.5%;border:2.5px solid #ff5a5a"></span></div><span class="rv neg num">−0.45</span></div>
+        <div class="row" style="padding-bottom:0"><span class="rcmt" style="border-bottom:none;padding-bottom:2px">Nền tích luỹ trung hạn suy yếu dần trong 60 phiên gần nhất.</span></div>
+        <div class="row"><span class="rl">Độ ổn định độ rộng</span><div class="segs" style="margin:0"><span class="s on"></span><span class="s on"></span><span class="s on"></span><span class="s on"></span><span class="s on"></span><span class="s on"></span><span class="s on"></span><span class="s on"></span><span class="s"></span><span class="s"></span></div><span class="rv vio num">0.81</span></div>
+        <div class="row" style="padding-bottom:0"><span class="rcmt">Tín hiệu độ rộng hiện có độ tin cậy cao, ít nhiễu.</span></div>
+
+        <div class="sec-hd"><span class="t" style="color:#ff8080">Cảnh báo rủi ro</span><span class="ln"></span></div>
+        <div class="row"><span class="rl">Giảm nhanh · Tổng hợp</span><div class="dv" style="margin:0"><span class="mid"></span><span class="fill" style="left:24%;width:26%;background:linear-gradient(90deg,#ff5a5a,rgba(255,90,90,.25))"></span><span class="mk" style="left:24%;border:2.5px solid #ff5a5a"></span></div><span class="rv neg num">−0.52</span></div>
+        <div class="row"><span class="rl">Giảm nhanh · Nhanh</span><div class="dv" style="margin:0"><span class="mid"></span><span class="fill" style="left:30%;width:20%;background:linear-gradient(90deg,#ff5a5a,rgba(255,90,90,.25))"></span><span class="mk" style="left:30%;border:2.5px solid #ff5a5a"></span></div><span class="rv neg num">−0.40</span></div>
+        <div class="row"><span class="rl">Giảm nhanh · Đ.lượng</span><div class="dv" style="margin:0"><span class="mid"></span><span class="fill" style="left:18%;width:32%;background:linear-gradient(90deg,#ff5a5a,rgba(255,90,90,.25))"></span><span class="mk" style="left:18%;border:2.5px solid #ff5a5a;box-shadow:0 0 8px rgba(255,90,90,.5)"></span></div><span class="rv neg num">−0.64</span></div>
+        <div class="row" style="padding-bottom:0"><span class="rcmt">Tín hiệu giảm nhanh vẫn hiện diện, động lượng âm sâu — hạn chế gia tăng tỷ trọng ở nhịp hồi.</span></div>
+        <div class="row"><span class="rl">Trigger giảm độc lập</span><div class="dv" style="margin:0"><span class="mid"></span><span class="fill" style="left:32%;width:18%;background:linear-gradient(90deg,#ff5a5a,rgba(255,90,90,.25))"></span><span class="mk" style="left:32%;border:2.5px solid #ff5a5a"></span></div><span class="rv neg num">−0.36</span></div>
+        <div class="row" style="padding-bottom:0"><span class="rcmt">Trigger phụ chưa kích hoạt vùng nguy hiểm nhưng vẫn dưới 0.</span></div>
+
+        <div class="sec-hd"><span class="t" style="color:#6fe0a0">Dòng tiền &amp; xu hướng</span><span class="ln"></span></div>
+        <div class="row"><span class="rl">Xu hướng 1 năm <i style="font-style:normal;color:#4d515e;font-size:9.5px">±3</i></span><div class="dv" style="margin:0"><span class="mid"></span><span class="fill" style="left:36.2%;width:13.8%;background:linear-gradient(90deg,#ff5a5a,rgba(255,90,90,.25))"></span><span class="mk" style="left:36.2%;border:2.5px solid #ff5a5a"></span></div><span class="rv neg num">−0.83</span></div>
+        <div class="row" style="padding-bottom:0"><span class="rcmt">Xu hướng 1 năm vẫn âm nhẹ, chưa xác nhận chu kỳ tăng mới.</span></div>
+        <div class="row"><span class="rl">Thanh khoản dẫn dắt</span><div class="dv" style="margin:0"><span class="mid"></span><span class="fill" style="left:36%;width:14%;background:linear-gradient(90deg,#ff5a5a,rgba(255,90,90,.25))"></span><span class="mk" style="left:36%;border:2.5px solid #ff5a5a"></span></div><span class="rv neg num">−0.28</span></div>
+        <div class="row" style="padding-bottom:0"><span class="rcmt">Dòng tiền lớn chưa quay lại dẫn dắt thị trường.</span></div>
+        <div class="row"><span class="rl">Đồng pha rộng–khoản</span><div class="dv" style="margin:0"><span class="mid"></span><span class="fill" style="left:50%;width:14.5%;background:linear-gradient(90deg,rgba(46,224,111,.25),#2ee06f)"></span><span class="mk" style="left:64.5%;border:2.5px solid #2ee06f"></span></div><span class="rv pos num">+0.29</span></div>
+        <div class="row" style="padding-bottom:0"><span class="rcmt">Độ rộng và thanh khoản chớm đồng pha dương — tín hiệu sớm cần theo dõi.</span></div>
+        <div class="row"><span class="rl">Đồng pha giá 20p <i style="font-style:normal;color:#4d515e;font-size:9.5px">±35%</i></span><div class="dv" style="margin:0"><span class="mid"></span><span class="fill" style="left:50%;width:0.7%;background:#2ee06f"></span><span class="mk" style="left:50.7%;border:2.5px solid #2ee06f"></span></div><span class="rv pos num">+0.5%</span></div>
+        <div class="row" style="padding-bottom:0"><span class="rcmt">Giá 20 phiên gần như đi ngang, chưa có xung lực rõ.</span></div>
+
+        <div class="sec-hd"><span class="t" style="color:#a78bff">Chẩn đoán hướng</span><span class="ln"></span></div>
+        <div class="row"><span class="rl">Độ nghiêng xu hướng</span><div class="segs" style="margin:0"><span class="s on"></span><span class="s on"></span><span class="s on"></span><span class="s on"></span><span class="s on"></span><span class="s on"></span><span class="s on"></span><span class="s on" style="box-shadow:0 0 8px rgba(124,77,255,.5)"></span><span class="s"></span><span class="s"></span></div><span class="rv vio num">0.77</span></div>
+        <div class="row"><span class="rl">Tín hiệu phụ</span><div><span style="font-size:11px;padding:3px 10px;border-radius:99px;border:1px dashed rgba(255,255,255,.15);color:#5c6170">— không có</span></div><span></span></div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>

@@ -3,30 +3,26 @@
 
 export type PhaseLabel = 'uptrend' | 'downtrend' | 'sideway' | 'transition';
 
-/** 1 dòng phase_daily. */
+/** 1 dòng phase_daily (schema gọn 12 cột). */
 export interface PhaseDaily {
+  // OUTPUT
   date: string;
   phase_label: PhaseLabel;
   market_exposure: number; // 0..2 (>1 = margin)
-  market_intensity: number; // -1..+1
-  fnx_close: number;
-  // Chỉ số nâng cao (panel thu gọn)
-  conf_dir?: number;
+  // HƯỚNG
   breadth_slow?: number;
-  breadth_fast?: number;
-  breadth_mom?: number;
   breadth_blend?: number;
   breadth_aux?: number;
-  conf_breadth?: number;
-  breadth_w?: number;
-  breadth_m?: number;
-  breadth_q?: number;
-  breadth_y?: number;
-  vsi_long?: number;
+  // TIN CẬY
+  conf_dir?: number;
+  conf_flat?: number; // MỚI
+  // GATE
   corr60?: number;
   px_ret20?: number;
+  // DIAG
+  market_intensity: number; // -1..+1
   sub_signal?: string | null;
-  composite_score?: number;
+  fnx_close: number;
 }
 
 export interface PhaseComment {

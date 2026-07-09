@@ -8,8 +8,9 @@
 ## 1. Trạng thái hiện tại
 
 - **Đã build đầy đủ 4 tab** (1 FREE + 3 PAID) — functional. `tsc --noEmit` = 0 lỗi.
-- **CHƯA commit** (đang ở working tree). UI **user tự test** (quy ước dự án: không dựng browser/Playwright).
-- ⚠️ **Cần restart backend** (uvicorn) để nạp: 9 keyword `phase_*` mới + projection `phase_daily` mới nhất (đã bỏ `regime_active`, thêm `breadth_mom`/`conf_breadth`). Trước khi restart, keyword mới trả 400 → FE có chỗ đã cho fail an toàn (xem §6).
+- **CHƯA commit** (đang ở working tree). UI **user tự test** (quy ước dự án: không dựng browser/Playwright; **không tự chạy `next build`** — chỉ verify bằng `tsc --noEmit`).
+- **UI Tab ① đã redesign "Ambient Signal" (2026-07-09):** hero + panel dùng ngôn ngữ glass + ambient glow theo màu pha. Component tái dùng mới: `AmbientCard` (glass + glow + top accent theo `glowColor`, theme-aware) và `IndicatorViz` (các primitive trực quan hoá số liệu). Xem §5/§7.
+- ⚠️ **Schema mới (chờ pipeline chạy lại):** `phase_daily` gọn còn **12 cột** (thêm `conf_flat`, bỏ `breadth_fast`/`mom`, `conf_breadth`, `composite_score`, `breadth_w|m|q|y`, `vsi_long`, `regime_active`); `phase_comment_indicator` còn **7 chỉ số** (indicator_key mới — xem §5). Backend đã cập nhật projection `phase_daily` (thêm `conf_flat`, bỏ cột cắt). Web bỏ qua key/cột cũ an toàn (data cũ → viz `—`, không comment).
 - Dữ liệu đã verify bằng query Mongo trực tiếp: `stock_db` có đủ các collection + data thật.
 - **Sản phẩm:** app tín hiệu + danh mục freemium. Tab ① FREE = phễu (tín hiệu WHEN); Tab ②③④ PAID = 3 rổ danh mục (tín hiệu WHICH).
 
@@ -18,17 +19,15 @@
 ## 2. Kiến trúc tổng thể
 
 ```
-stock_db (Mongo, READ-ONLY, khác user_db)
-  → 9 crud finext-fastapi/app/crud/sse/phase_*.py  (get_database("stock_db") + get_collection_records)
-  → REST keyword ONE-SHOT:  GET /api/v1/sse/rest/{keyword}   (KHÔNG SSE, KHÔNG polling)
-  → FE hooks (apiClient + fetch 1 lần) → components
+stock_db (Mongo, READ-ONLY, khác user_db)  →  REST keyword ONE-SHOT GET /api/v1/sse/rest/{keyword}  →  FE hooks (apiClient) → components
+  Ngoại lệ: biểu đồ xu hướng (FnxTrendChart) dùng REST home_history_trend + SSE home_today_trend (reuse pattern markets/groups).
 ```
 
 - **Nguồn dữ liệu:** batch EOD 1 lần/ngày (không realtime). `max(phase_daily.date)` = phiên mới nhất. Backend đã kết nối `stock_db` sẵn (`database.py:35` `db_names_to_connect=["user_db","stock_db"]`).
 - **Route:** `app/(main)/market-phase/` → `page.tsx` (server, metadata) + `PageContent.tsx` (client).
 - **Nav:** thêm 1 `NavItem` (`Giai đoạn thị trường`, icon `TrafficOutlined`, href `/market-phase`) vào `navigationStructure` ở `app/(main)/LayoutContent.tsx` — nhóm "Công cụ" (cạnh Chart/Watchlist/Bộ lọc).
 - **Tabs:** `SubNavbar` **tràn viền (full-bleed)** đồng bộ `?tab=` (copy pattern markets: `mx: calc(-50vw + 50% + compactDrawerWidth/2)`). Keys: `market` (FREE) / `conservative` / `aggressive` / `core`.
-- **Shared header:** hero (chip phase + % nắm giữ + cường độ) + biểu đồ giai đoạn nằm **TRÊN slider**, hiển thị chung cho cả 4 tab.
+- **Shared header (trên slider, chung 4 tab):** **CHỈ còn hero** (`PhaseHero`). Biểu đồ giai đoạn FNX (`PhaseFnxChart`) **đã dời xuống Tab ①** (vào section Chẩn đoán phiên) → tab PAID không còn chart FNX ở đầu (nếu cần thì thêm lại riêng cho PAID).
 - **Gating:** 1 lớp `OptionalAuthWrapper requireAuth` bọc toàn bộ (header+slider+content) → chưa login = 1 overlay đăng nhập. Tab PAID lồng thêm `requiredFeatures={ADVANCED_AND_ABOVE_STRICT}`. Hằng mới trong `components/auth/features.ts` = `[ADVANCED, PARTNER, MANAGER, ADMIN]` (advanced-trở-lên, KHÔNG gồm BASIC) — **không đụng** `ADVANCED_AND_ABOVE` global (đang bị compliance-pivot gộp BASIC).
 
 ---
@@ -56,40 +55,46 @@ stock_db (Mongo, READ-ONLY, khác user_db)
 - **Entry/điều phối:** `page.tsx`, `PageContent.tsx` (title + shared header + SubNavbar + gating + chọn tab).
 - **Data hooks (one-shot):** `hooks/useMarketPhaseData.ts` (Tab ①: phase_daily/comment/perf/comment_indicator), `hooks/useBasketData.ts` (Tab rổ: basket/rank/comment_basket/trading/perf/industry). Chuyển tab rổ ②↔③↔④ **không refetch** (BasketTab giữ mount, hook chạy 1 lần).
 - **Config/types:** `types.ts`, `phaseMeta.ts` (màu+icon+nhãn phase), `basketMeta.ts` (tab→product, status meta).
-- **Shared:** `components/SharedPhaseHeader.tsx` → `PhaseHero.tsx` + `PhaseFnxChart.tsx`.
-- **Tab ① (FREE):** `components/MarketPhaseTab.tsx` → `SessionDiagnosis.tsx` + `BasketPerformanceChart.tsx` (cả 3 rổ) + `AdvancedPanel.tsx`.
+- **Design tái dùng (Ambient Signal):**
+  - `components/AmbientCard.tsx` — card kính: `getGlassCard` + ambient radial glow + top accent 1px, tất cả theo prop `glowColor` (thường = màu pha), theme-aware (glow dịu ở light). Prop `glowAnchor`, `topAccent`, `sx`.
+  - `components/IndicatorViz.tsx` — primitive trực quan hoá: `DivergingBullet` (thanh phân kỳ tâm 0), `Segments10` (10 đoạn 0..1), `StatBar` (số + thước có vạch mốc/circuit-breaker), `IndicatorBlock` (heading+value+viz), `NoteItem` (dòng diễn giải) + helper `divColor`/`fmtDiv`/`gradientColorAt` (nội suy màu trên dải qua `decomposeColor`/`recomposeColor`).
+- **Shared:** `components/SharedPhaseHeader.tsx` → **CHỈ** `PhaseHero.tsx` (Ambient Signal).
+- **Tab ① (FREE):** `components/MarketPhaseTab.tsx`, thứ tự: **Chẩn đoán phiên** (`PhaseFnxChart` → `SessionDiagnosis`) → **Chỉ số nâng cao** (`FnxTrendChart` → `AdvancedPanel`) → **Hiệu suất 3 danh mục** (`BasketPerformanceChart`, cuối trang).
+  - `FnxTrendChart.tsx` — reuse `MarketTrendChart` (markets), feed **riêng FNXINDEX** (REST `home_history_trend` + SSE `home_today_trend`).
 - **Tab ②③④ (PAID):** `components/BasketTab.tsx` → `HoldingsTable.tsx` + `RankTable.tsx` + `PortfolioComment.tsx` + `BasketPerformanceChart.tsx` (1 rổ) + `OrderBook.tsx` + (CORE) `IndustrySection.tsx`.
 
-**Charts:** cả 2 đều **lightweight-charts** (KHÔNG còn ApexCharts).
-- `PhaseFnxChart` = **AREA chia đoạn theo phase**: mỗi đoạn phase liên tiếp = 1 `AreaSeries` với line + fill mang màu của pha (nối liền tại ranh giới). Timeframe: **3M/1Y/2Y/5Y/Tất cả**.
-- `BasketPerformanceChart` = multi-line rebase 0% cumulative theo cửa sổ; benchmark FNX dashed xám; prop `products?` để lọc (Tab rổ chỉ 1 rổ + FNX).
+**Charts:** đều **lightweight-charts** (KHÔNG còn ApexCharts).
+- `PhaseFnxChart` = **AREA chia đoạn theo phase** (mỗi đoạn phase = 1 `AreaSeries` line+fill màu pha). Timeframe 3M/1Y/2Y/5Y/Tất cả. Đặt trong Tab ①, **không bọc card**.
+- `BasketPerformanceChart` = multi-line rebase 0% cumulative; benchmark FNX dashed; prop `products?`. KPI = **stat tiles nền gradient ambient theo màu line**. **Không bọc card**.
+- `FnxTrendChart`/`MarketTrendChart` = 4 line xu hướng Tuần/Tháng/Quý/Năm của FNXINDEX (timeframe 1M/3M/6M/1Y).
 
 ---
 
 ## 5. Nội dung 4 tab + mapping data
 
-- **Shared header:** chip phase (nhãn EN + VN phụ) · KPI % nắm giữ = `min(market_exposure,1)×100` (transition nay chạy 0.70–1.0) · cường độ = **bullet phân kỳ** `market_intensity` · chart FNX+màu phase.
-- **① Thị trường chung (FREE):** chẩn đoán phiên (`phase_comment.market_cmt`) + hiệu suất 3 rổ vs FNX (`phase_perf`) + **panel "Chỉ số nâng cao"**.
+- **Shared header (chỉ hero, Ambient Signal):** chip phase (glyph trong ô glow + nhãn EN to + VN phụ) · dải **lịch sử pha 10 phiên** · KPI % nắm giữ = `min(market_exposure,1)×100` (số gradient + **thanh segmented 10 đoạn**) · cường độ = **bullet phân kỳ** `market_intensity`. Cả card ambient-tint theo màu pha.
+- **① Thị trường chung (FREE)** — thứ tự section: **Chẩn đoán phiên** (biểu đồ FNX theo pha + card "Phân tích tự động" render `phase_comment.market_cmt` **trên nền, không card**) → **Chỉ số nâng cao** (biểu đồ xu hướng FNXINDEX + panel chỉ số) → **Hiệu suất 3 rổ vs FNX** (`phase_perf`, cuối trang).
 - **② Bảo Thủ / ③ Tăng Trưởng (layout giống nhau):** `HoldingsTable` (holdings + lãi/lỗ từng mã từ vị thế mở `phase_trading` + lãi/lỗ danh mục) → `RankTable` (chỉ mã **chưa giữ**, `held!==1`) → `PortfolioComment` (`stock_cmt`) → curve rổ → `OrderBook` (sổ lệnh backtest).
 - **④ Sóng Ngành (CORE):** thêm `IndustrySection` (rank ngành + heatmap `phase_industry` — chỉ render ngành từng có tín hiệu + `sector_cmt`) rồi tới tầng mã như ②③.
 - **Downtrend / 100% tiền mặt** (`phase_basket.held` rỗng): HoldingsTable đổi tiêu đề → **"Danh mục dự kiến"**, hiện `book` (không lãi/lỗ) + banner phòng thủ.
 
-**Advanced panel — 9 khối chỉ số** (mỗi khối = giá trị cột `phase_daily` + comment `phase_comment_indicator` render nguyên văn):
+**Advanced panel — 7 chỉ số** (`AdvancedPanel.tsx`; schema `phase_daily` 12 cột; mỗi chỉ số = 1 cột + comment `phase_comment_indicator` nguyên văn). **1 AmbientCard duy nhất** (glow màu pha), **2 cột**: viz (trái, `justify-space-between`) · **Diễn giải** (phải, list 1 cột) — KHÔNG accordion, KHÔNG header nhóm, KHÔNG card lồng. 7 chỉ số liền mạch theo thứ tự Hướng → Tin cậy → Gate. Mảng phẳng `INDICATORS`:
 
-| Khối (indicator_key) | Cột phase_daily |
-|---|---|
-| `do_rong_da_khung` | breadth_w/m/q/y (**4 cột · 1 comment chung**) |
-| `do_rong_nen` | breadth_slow |
-| `canh_bao_giam_nhanh` | breadth_blend/fast/mom (**3 cột · 1 comment chung**) |
-| `trigger_giam_doc_lap` | breadth_aux |
-| `do_on_dinh_do_rong` | conf_breadth |
-| `diem_xu_huong_1_nam` | composite_score |
-| `thanh_khoan_dan_dat` | vsi_long |
-| `dong_pha_rong_khoan` | corr60 |
-| `dong_pha_gia_20` | px_ret20 |
-| *(Chẩn đoán hướng — KHÔNG comment)* | conf_dir, sub_signal |
+| # | indicator_key | Cột phase_daily | viz |
+|---|---|---|---|
+| 1 | `cau_truc_xu_huong_tang` | `breadth_slow` | DivergingBullet ±1 |
+| 2 | `cau_truc_xu_huong_giam` | `breadth_blend` | DivergingBullet ±1 |
+| 3 | `tin_hieu_xu_huong_suy_yeu` | `breadth_aux` | DivergingBullet ±1 |
+| 4 | `do_tin_cay_xu_huong` | `conf_dir` | Segments10 (0..1, tím) |
+| 5 | `do_tin_cay_sideway` | `conf_flat` (**MỚI**) | Segments10 (0..1, tím) |
+| 6 | `muc_do_lan_toa_dong_tien` | `corr60` | StatBar diverging (fill tâm 0→marker) |
+| 7 | `quan_tinh_bien_dong_gia` | `px_ret20` | StatBar circuit-breaker (**%**) |
 
-`market_intensity` = output (ở hero). `regime_active`/`che_do_loc_nhieu` = **ĐÃ BỎ** (field + comment).
+**`px_ret20` (StatBar breaker):** KHÔNG chuẩn hoá — bộ ngắt mạch giá ngưỡng kinh tế thật. Thước −20%…+20%, **vùng đỏ [đầu→−10%] + vùng xanh [+10%→max]**, giữa trống; marker màu **nội suy theo dải đỏ→xanh** tại vị trí; hiển thị **% thô** (`×100`). `corr60` (StatBar diverging): thước −1..+1, fill tâm 0→marker. Cả 2 có **chip trạng thái màu theo marker, căn giữa marker** (clamp ở mép).
+
+Diễn giải mỗi dòng = chấm màu + tên + giá trị + comment nguyên văn → comment dài-ngắn không gây lệch layout.
+
+`market_intensity` = output (ở hero) · `sub_signal`, `fnx_close` = DIAG (không comment; `sub_signal` không hiển thị). **ĐÃ BỎ cột:** `breadth_fast`/`breadth_mom`/`conf_breadth`/`composite_score`/`breadth_w|m|q|y`/`vsi_long`/`regime_active`. Web đã bỏ mọi tham chiếu; với data cũ trong Mongo (chưa chạy pipeline) → viz hiện `—`, comment key lạ bị bỏ qua.
 
 ---
 
@@ -108,9 +113,12 @@ stock_db (Mongo, READ-ONLY, khác user_db)
 
 - Nhãn phase **EN** (SIDEWAY…) to + VN phụ (theo doc-06 §9.1 + owner).
 - Cường độ = **bullet phân kỳ** (đã thử marker/dial rồi bỏ).
-- Serve **REST one-shot**, không SSE/polling cho page này.
+- Serve **REST one-shot** cho dữ liệu `phase_*` (không SSE/polling). **Ngoại lệ:** `FnxTrendChart` dùng REST history + SSE `home_today_trend` (owner chốt — cần điểm hôm nay realtime, reuse pattern markets/groups).
 - Gating tab PAID = `ADVANCED_AND_ABOVE_STRICT` (không đụng global bypass).
 - Chart = **lightweight-charts** (bỏ ApexCharts).
+- **Ngôn ngữ thiết kế "Ambient Signal"** (owner chốt qua mockup): nền glass + ambient glow theo màu pha (`AmbientCard`), số liệu **trực quan hoá** (bullet/segments/StatBar) thay vì text. Số dùng tabular-nums. Theme-aware (glow dịu ở light).
+- **Layout Tab ①:** bỏ mọi card lồng card; chart để trần (không bọc `AmbientCard`); panel chỉ số gom **1 card 2 cột**. Chẩn đoán phiên = biểu đồ FNX + text trên nền. Hiệu suất 3 danh mục **xuống cuối**.
+- **`px_ret20` KHÔNG chuẩn hoá** (circuit-breaker giá, giữ ngưỡng −10% có nghĩa kinh tế) — xem §5.
 
 ---
 
@@ -125,12 +133,21 @@ stock_db (Mongo, READ-ONLY, khác user_db)
 - **Giờ VN:** thêm util `formatVnTime` (giả định UTC) → **REVERT** vì `generated_at` đã là giờ VN literal (owner xác nhận).
 - **Đã xoá:** `PaidTabPlaceholder`, `HoldingsCard`, `timeUtils.ts` (đều bị thay thế/revert).
 
+### Phiên redesign "Ambient Signal" + schema mới (2026-07-09)
+
+- **Hero** → Ambient Signal: card ambient-tint theo màu pha, ô glyph glow, dải lịch sử pha 10 phiên, số % gradient + thanh segmented, bullet cường độ glow. Tạo `AmbientCard` (tái dùng) + `IndicatorViz` (primitive).
+- **Schema:** `phase_daily` 17→**12 cột** (+`conf_flat`, bỏ 9 cột nguyên liệu); `phase_comment_indicator` 9→**7 chỉ số** (indicator_key mới). Backend cập nhật projection `phase_daily.py`. `types.ts` + `AdvancedPanel` viết lại theo schema mới.
+- **Advanced panel:** 9 khối accordion → **1 card 2 cột, 7 chỉ số liền mạch** (viz trái / diễn giải phải). Thử qua nhiều bước: bento 4 cụm → 3 cụm card riêng → gộp 1 card bỏ header. `StatBar` cho `corr60`/`px_ret20` (px_ret20 circuit-breaker, marker màu nội suy theo dải, chip căn giữa marker).
+- **Layout Tab ①:** biểu đồ FNX **dời từ shared header xuống** section Chẩn đoán phiên (trên text); `SessionDiagnosis` **bỏ card** (trên nền); thêm `FnxTrendChart` (xu hướng FNXINDEX) trên card chỉ số; **Hiệu suất 3 danh mục xuống cuối, bỏ card**; KPI hiệu suất → stat tiles nền gradient theo màu line.
+- **Sự cố:** lỡ chạy `next build` khi dev server đang chạy → hỏng `.next` (ENOENT). Đã `rm -rf .next`. **Rule mới: KHÔNG tự chạy `next build`.**
+
 ---
 
 ## 9. Việc còn lại / lưu ý cho phiên sau
 
-- **Restart backend** để keyword + projection mới có hiệu lực (điều kiện tiên quyết để thấy data mới).
+- **Restart backend** (nạp projection `phase_daily` mới có `conf_flat`) + **chạy lại pipeline** (ghi 12 cột mới + 7 indicator_key mới). Trước khi có data mới: `conf_flat` + comment 7 chỉ số hiện `—`/trống (fail-safe).
 - **Chưa commit** — quyết định commit/branch tùy owner.
-- Heatmap `phase_stock` (consensus 0–2 rổ giữ) chưa làm — doc-08 để mở vị trí (tab ① hay tab rổ).
-- Toggle đòn bẩy 2.0x + cảnh báo margin: chưa làm (increment 1 chốt 1.0x).
-- Data cũ trong Mongo có thể còn `regime_active` (phase_daily) + row `che_do_loc_nhieu` (phase_comment_indicator) tới khi pipeline chạy lại — web đã bỏ qua, không render.
+- **Tab PAID mất chart FNX ở đầu** (do dời chart vào Tab ①). Nếu owner muốn PAID vẫn có → thêm lại riêng cho `BasketTab` (chưa làm).
+- Heatmap `phase_stock` (consensus 0–2 rổ giữ) chưa làm.
+- Toggle đòn bẩy 2.0x + cảnh báo margin: chưa làm (chốt 1.0x).
+- Data cũ trong Mongo còn cột/indicator_key cũ tới khi pipeline chạy lại — web đã bỏ qua an toàn.
