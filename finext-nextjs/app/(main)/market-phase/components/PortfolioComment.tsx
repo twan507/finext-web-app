@@ -2,11 +2,17 @@
 
 import { Box, Typography, alpha, useTheme } from '@mui/material';
 import { getGlassCard, getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
-import { formatVnTime } from '../timeUtils';
 
 interface PortfolioCommentProps {
   text?: string | null;
   generatedAt?: string;
+}
+
+function formatTime(iso?: string): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 /** Diễn giải danh mục / ngành — render verbatim (dùng cho stock_cmt và sector_cmt). */
@@ -14,7 +20,7 @@ export default function PortfolioComment({ text, generatedAt }: PortfolioComment
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   if (!text) return null;
-  const time = formatVnTime(generatedAt);
+  const time = formatTime(generatedAt);
 
   return (
     <Box sx={{ borderRadius: `${borderRadius.lg}px`, ...getGlassCard(isDark), borderLeft: `3px solid ${theme.palette.primary.main}`, p: { xs: 2, md: 2.5 } }}>

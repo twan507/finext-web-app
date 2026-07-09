@@ -114,7 +114,7 @@ export default function PageContent() {
 
         <Box sx={{ mt: 3 }}>
           {activeTab === 'market' ? (
-            <MarketPhaseTab daily={mp.daily} comment={mp.comment} perf={mp.perf} error={mp.error} />
+            <MarketPhaseTab daily={mp.daily} comment={mp.comment} perf={mp.perf} indicators={mp.indicators} error={mp.error} />
           ) : (
             <OptionalAuthWrapper requireAuth requiredFeatures={ADVANCED_AND_ABOVE_STRICT}>
               <BasketTab tabKey={activeTab} />

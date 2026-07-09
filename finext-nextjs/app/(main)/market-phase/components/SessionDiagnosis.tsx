@@ -3,17 +3,23 @@
 import { Box, Typography, alpha, useTheme } from '@mui/material';
 import { getGlassCard, getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
 import type { PhaseComment } from '../types';
-import { formatVnTime } from '../timeUtils';
 
 interface SessionDiagnosisProps {
   comment: PhaseComment;
+}
+
+function formatTime(iso?: string): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 /** Card chẩn đoán phiên — render market_cmt nguyên văn + pill "Phân tích tự động" + giờ cập nhật. */
 export default function SessionDiagnosis({ comment }: SessionDiagnosisProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const time = formatVnTime(comment.generated_at);
+  const time = formatTime(comment.generated_at);
 
   return (
     <Box

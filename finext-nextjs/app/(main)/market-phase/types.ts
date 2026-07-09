@@ -25,7 +25,6 @@ export interface PhaseDaily {
   vsi_long?: number;
   corr60?: number;
   px_ret20?: number;
-  regime_active?: number;
   sub_signal?: string | null;
   composite_score?: number;
 }
@@ -35,6 +34,16 @@ export interface PhaseComment {
   market_cmt: string;
   source?: string;
   generated_at?: string;
+}
+
+/** Diễn giải RIÊNG từng chỉ số thị trường (10 dòng/phiên). Render nguyên văn. */
+export interface PhaseCommentIndicator {
+  date: string;
+  indicator_key: string;
+  indicator_label_vi?: string;
+  order?: number;
+  comment?: string;
+  source?: string;
 }
 
 export interface PhasePerfRow {

@@ -1,59 +1,62 @@
 'use client';
 
-import { Accordion, AccordionSummary, AccordionDetails, Box, Typography, useTheme } from '@mui/material';
+import { Accordion, AccordionSummary, AccordionDetails, Box, Stack, Typography, useTheme } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { getGlassCard, getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
-import type { PhaseDaily } from '../types';
+import type { PhaseDaily, PhaseCommentIndicator } from '../types';
 
 interface AdvancedPanelProps {
   daily: PhaseDaily;
+  indicators?: PhaseCommentIndicator[]; // diễn giải từng chỉ số (phiên mới nhất)
 }
 
 type Kind = 'num' | 'pct' | 'onoff' | 'signal';
-interface Item {
-  label: string;
+interface ValCol {
+  label?: string; // sub-label khi 1 khối có nhiều cột
   key: keyof PhaseDaily;
   kind?: Kind;
 }
-interface Group {
-  title: string;
-  items: Item[];
+interface Block {
+  commentKey: string; // indicator_key để tra comment
+  label: string; // nhãn dự phòng (ưu tiên indicator_label_vi từ data)
+  cols: ValCol[];
 }
 
-// Toàn bộ raw input chẩn đoán của phase_daily (BREADTH / REGIME / DIAG), gom nhóm.
-const GROUPS: Group[] = [
+// Ánh xạ cột phase_daily → khối chỉ số (mỗi khối = 1 comment).
+// 2 khối dùng CHUNG comment cho nhiều cột: đa khung (4) và cảnh báo giảm nhanh (3).
+const BLOCKS: Block[] = [
   {
-    title: 'Độ rộng thị trường',
-    items: [
-      { label: 'Độ rộng chậm (nền)', key: 'breadth_slow' },
-      { label: 'Độ rộng nhanh', key: 'breadth_fast' },
-      { label: 'Độ rộng động lượng', key: 'breadth_mom' },
-      { label: 'Độ rộng tổng hợp', key: 'breadth_blend' },
-      { label: 'Độ rộng phụ trợ', key: 'breadth_aux' },
-      { label: 'Độ rộng tuần', key: 'breadth_w' },
-      { label: 'Độ rộng tháng', key: 'breadth_m' },
-      { label: 'Độ rộng quý', key: 'breadth_q' },
-      { label: 'Độ rộng năm', key: 'breadth_y' },
-      { label: 'Độ ổn định độ rộng', key: 'conf_breadth' },
+    commentKey: 'do_rong_da_khung',
+    label: 'Độ rộng đa khung',
+    cols: [
+      { label: 'Tuần', key: 'breadth_w' },
+      { label: 'Tháng', key: 'breadth_m' },
+      { label: 'Quý', key: 'breadth_q' },
+      { label: 'Năm', key: 'breadth_y' },
     ],
   },
+  { commentKey: 'do_rong_nen', label: 'Độ rộng nền', cols: [{ key: 'breadth_slow' }] },
   {
-    title: 'Chế độ & thanh khoản',
-    items: [
-      { label: 'Điểm tổng hợp', key: 'composite_score' },
-      { label: 'Thanh khoản dẫn dắt', key: 'vsi_long' },
-      { label: 'Tương quan rộng–khoản (60)', key: 'corr60' },
-      { label: 'Đồng pha giá 20 phiên', key: 'px_ret20', kind: 'pct' },
-      { label: 'Chế độ lọc nhiễu', key: 'regime_active', kind: 'onoff' },
+    commentKey: 'canh_bao_giam_nhanh',
+    label: 'Cảnh báo giảm nhanh',
+    cols: [
+      { label: 'Tổng hợp', key: 'breadth_blend' },
+      { label: 'Nhanh', key: 'breadth_fast' },
+      { label: 'Động lượng', key: 'breadth_mom' },
     ],
   },
-  {
-    title: 'Chẩn đoán',
-    items: [
-      { label: 'Độ nghiêng xu hướng', key: 'conf_dir' },
-      { label: 'Tín hiệu phụ', key: 'sub_signal', kind: 'signal' },
-    ],
-  },
+  { commentKey: 'trigger_giam_doc_lap', label: 'Trigger giảm độc lập', cols: [{ key: 'breadth_aux' }] },
+  { commentKey: 'do_on_dinh_do_rong', label: 'Độ ổn định độ rộng', cols: [{ key: 'conf_breadth' }] },
+  { commentKey: 'diem_xu_huong_1_nam', label: 'Điểm xu hướng 1 năm', cols: [{ key: 'composite_score' }] },
+  { commentKey: 'thanh_khoan_dan_dat', label: 'Thanh khoản dẫn dắt', cols: [{ key: 'vsi_long' }] },
+  { commentKey: 'dong_pha_rong_khoan', label: 'Đồng pha rộng–khoản', cols: [{ key: 'corr60' }] },
+  { commentKey: 'dong_pha_gia_20', label: 'Đồng pha giá 20 phiên', cols: [{ key: 'px_ret20', kind: 'pct' }] },
+];
+
+// Không có comment riêng trong bảng này.
+const DIAG: ValCol[] = [
+  { label: 'Độ nghiêng xu hướng', key: 'conf_dir' },
+  { label: 'Tín hiệu phụ', key: 'sub_signal', kind: 'signal' },
 ];
 
 const SUB_SIGNAL_LABEL: Record<string, string> = {
@@ -73,22 +76,21 @@ function fmt(v: number | string | null | undefined, kind?: Kind): string {
   return v.toFixed(2);
 }
 
-/** Panel "Chỉ số nâng cao" — toàn bộ chỉ số chẩn đoán phase_daily, mặc định thu gọn, chỉ quan sát. */
-export default function AdvancedPanel({ daily }: AdvancedPanelProps) {
+/** Panel "Chỉ số nâng cao" — mỗi chỉ số kèm diễn giải riêng (phase_comment_indicator), render nguyên văn. */
+export default function AdvancedPanel({ daily, indicators }: AdvancedPanelProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+
+  const byKey = new Map<string, PhaseCommentIndicator>();
+  for (const r of indicators ?? []) byKey.set(r.indicator_key, r);
+
+  const cardSx = { p: { xs: 1.5, md: 2 }, borderRadius: `${borderRadius.md}px`, border: `1px solid ${theme.palette.divider}` };
 
   return (
     <Accordion
       disableGutters
       elevation={0}
-      sx={{
-        mt: 2,
-        borderRadius: `${borderRadius.lg}px !important`,
-        ...getGlassCard(isDark),
-        overflow: 'hidden',
-        '&:before': { display: 'none' },
-      }}
+      sx={{ mt: 2, borderRadius: `${borderRadius.lg}px !important`, ...getGlassCard(isDark), overflow: 'hidden', '&:before': { display: 'none' } }}
     >
       <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: 'text.disabled' }} />}>
         <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.semibold, color: 'text.secondary' }}>
@@ -99,23 +101,49 @@ export default function AdvancedPanel({ daily }: AdvancedPanelProps) {
         </Typography>
       </AccordionSummary>
       <AccordionDetails>
-        {GROUPS.map((g, gi) => (
-          <Box key={g.title} sx={{ mt: gi === 0 ? 0 : 2.5 }}>
-            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.disabled', fontWeight: fontWeight.semibold, mb: 1 }}>
-              {g.title}
-            </Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(3, 1fr)', lg: 'repeat(5, 1fr)' }, gap: 1.5 }}>
-              {g.items.map((it) => (
-                <Box key={String(it.key)} sx={{ p: 1.25, borderRadius: `${borderRadius.md}px`, border: `1px solid ${theme.palette.divider}` }}>
-                  <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary' }}>{it.label}</Typography>
-                  <Typography sx={{ fontSize: getResponsiveFontSize('md'), fontWeight: fontWeight.bold, fontVariantNumeric: 'tabular-nums' }}>
-                    {fmt(daily[it.key], it.kind)}
+        <Stack spacing={1.5}>
+          {BLOCKS.map((b) => {
+            const ind = byKey.get(b.commentKey);
+            const heading = ind?.indicator_label_vi || b.label;
+            return (
+              <Box key={b.commentKey} sx={cardSx}>
+                <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                  <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.semibold }}>{heading}</Typography>
+                  <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                    {b.cols.map((c) => (
+                      <Box key={String(c.key)} sx={{ textAlign: 'right', minWidth: 44 }}>
+                        {c.label && <Typography sx={{ fontSize: '0.66rem', color: 'text.disabled' }}>{c.label}</Typography>}
+                        <Typography sx={{ fontSize: getResponsiveFontSize('md'), fontWeight: fontWeight.bold, fontVariantNumeric: 'tabular-nums', lineHeight: 1.2 }}>
+                          {fmt(daily[c.key], c.kind)}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                </Stack>
+                {ind?.comment && (
+                  <Typography sx={{ mt: 1, fontSize: getResponsiveFontSize('sm'), color: 'text.secondary', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+                    {ind.comment}
                   </Typography>
+                )}
+              </Box>
+            );
+          })}
+
+          {/* DIAG — không có đoạn diễn giải riêng */}
+          <Box sx={cardSx}>
+            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.disabled', fontWeight: fontWeight.semibold, mb: 1 }}>
+              Chẩn đoán hướng
+            </Typography>
+            <Stack direction="row" spacing={4} sx={{ flexWrap: 'wrap', gap: 2 }}>
+              {DIAG.map((c) => (
+                <Box key={String(c.key)}>
+                  <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary' }}>{c.label}</Typography>
+                  <Typography sx={{ fontSize: getResponsiveFontSize('md'), fontWeight: fontWeight.bold, fontVariantNumeric: 'tabular-nums' }}>{fmt(daily[c.key], c.kind)}</Typography>
                 </Box>
               ))}
-            </Box>
+            </Stack>
           </Box>
-        ))}
+        </Stack>
       </AccordionDetails>
     </Accordion>
   );

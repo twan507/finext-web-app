@@ -6,12 +6,13 @@ import { ErrorState } from 'components/states';
 import SessionDiagnosis from './SessionDiagnosis';
 import BasketPerformanceChart from './BasketPerformanceChart';
 import AdvancedPanel from './AdvancedPanel';
-import type { PhaseDaily, PhaseComment, PhasePerfRow } from '../types';
+import type { PhaseDaily, PhaseComment, PhasePerfRow, PhaseCommentIndicator } from '../types';
 
 interface MarketPhaseTabProps {
   daily: PhaseDaily[];
   comment: PhaseComment | null;
   perf: PhasePerfRow[];
+  indicators: PhaseCommentIndicator[];
   error: string | null;
 }
 
@@ -26,7 +27,7 @@ function formatDate(iso?: string): string {
  * Nội dung riêng của Tab ① (dưới slider): chẩn đoán phiên + hiệu suất 3 rổ + chỉ số nâng cao.
  * Hero + biểu đồ giai đoạn đã tách sang SharedPhaseHeader (hiển thị chung trên slider).
  */
-export default function MarketPhaseTab({ daily, comment, perf, error }: MarketPhaseTabProps) {
+export default function MarketPhaseTab({ daily, comment, perf, indicators, error }: MarketPhaseTabProps) {
   if (error) return <ErrorState message={error} />;
   if (!daily || daily.length === 0) return null; // header đã hiện loading/empty
 
@@ -57,7 +58,7 @@ export default function MarketPhaseTab({ daily, comment, perf, error }: MarketPh
         </Box>
       )}
 
-      <AdvancedPanel daily={latest} />
+      <AdvancedPanel daily={latest} indicators={indicators} />
     </Box>
   );
 }

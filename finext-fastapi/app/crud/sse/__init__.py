@@ -34,6 +34,7 @@ from app.crud.sse.phase_rank import phase_rank
 from app.crud.sse.phase_comment_basket import phase_comment_basket
 from app.crud.sse.phase_trading import phase_trading
 from app.crud.sse.phase_industry import phase_industry
+from app.crud.sse.phase_comment_indicator import phase_comment_indicator
 from app.crud.sse.finratios_stock import finratios_stock
 from app.crud.sse.finratios_industry import finratios_industry
 from app.crud.sse.finstats_map import finstats_map
@@ -92,6 +93,7 @@ SSE_QUERY_REGISTRY: Dict[str, Any] = {
     "phase_comment_basket": phase_comment_basket,
     "phase_trading": phase_trading,
     "phase_industry": phase_industry,
+    "phase_comment_indicator": phase_comment_indicator,
     # Trend queries
     "home_history_trend": home_history_trend,
     "home_today_trend": home_today_trend,

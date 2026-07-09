@@ -27,7 +27,6 @@ _PROJECTION = {
     "vsi_long": 1,
     "corr60": 1,
     "px_ret20": 1,
-    "regime_active": 1,
     "sub_signal": 1,
     "composite_score": 1,
 }
