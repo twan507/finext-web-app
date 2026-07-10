@@ -1,11 +1,13 @@
 'use client';
 
-import { Box, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, alpha, useTheme } from '@mui/material';
-import { getGlassCard, getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
+import { Box, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, useTheme } from '@mui/material';
+import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
+import AmbientCard from './AmbientCard';
 import type { PhaseTrading } from '../types';
 
 interface OrderBookProps {
   trades: PhaseTrading[];
+  accent: string; // màu nhận diện rổ (ambient glow của card)
 }
 
 function fmtDate(iso?: string | null): string {
@@ -27,11 +29,12 @@ function Stat({ label, value, color }: { label: string; value: string; color?: s
   );
 }
 
-export default function OrderBook({ trades }: OrderBookProps) {
+export default function OrderBook({ trades, accent }: OrderBookProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const bd = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const bdHead = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
 
-  const open = trades.filter((t) => t.status === 'open');
   const closed = trades.filter((t) => t.status === 'closed');
   const wins = closed.filter((t) => (t.return_pct ?? 0) > 0).length;
   const winRate = closed.length ? (wins / closed.length) * 100 : 0;
@@ -39,27 +42,39 @@ export default function OrderBook({ trades }: OrderBookProps) {
   const recentClosed = closed.slice(0, 30);
   const colorPct = (v?: number) => ((v ?? 0) >= 0 ? theme.palette.trend.up : theme.palette.trend.down);
 
+  // Header trong suốt (đồng bộ demo), cho phép wrap để cột co lại tránh trượt ngang.
   const headSx = {
     fontSize: getResponsiveFontSize('xs'),
     color: 'text.secondary',
     fontWeight: fontWeight.semibold,
-    whiteSpace: 'nowrap',
-    borderColor: theme.palette.divider,
-    bgcolor: theme.palette.background.paper,
+    borderColor: bdHead,
   };
-  const cellSx = { fontSize: getResponsiveFontSize('sm'), borderColor: theme.palette.divider, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' };
+  const cellSx = { fontSize: getResponsiveFontSize('sm'), borderColor: bd, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' };
 
   return (
-    <Box sx={{ borderRadius: `${borderRadius.lg}px`, ...getGlassCard(isDark), overflow: 'hidden' }}>
+    <AmbientCard
+      glowColor={accent}
+      filled={false}
+      rootSx={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+      sx={{ p: 0, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
+    >
       <Stack direction="row" spacing={3} sx={{ p: { xs: 2, md: 2.5 }, flexWrap: 'wrap', gap: 1.5 }}>
         <Stat label="Số lệnh (đã đóng)" value={`${closed.length}`} />
         <Stat label="Tỷ lệ thắng" value={`${winRate.toFixed(0)}%`} color={winRate >= 50 ? theme.palette.trend.up : theme.palette.text.primary} />
         <Stat label="Lợi nhuận TB/lệnh" value={pct(avg)} color={colorPct(avg)} />
-        {open.length > 0 && <Stat label="Đang giữ" value={`${open.length}`} />}
       </Stack>
 
-      <TableContainer sx={{ maxHeight: 420 }}>
-        <Table stickyHeader size="small">
+      <TableContainer sx={{ flex: 1, minHeight: 0, maxHeight: { xs: 420, lg: 'none' } }}>
+        <Table
+          size="small"
+          stickyHeader
+          sx={{
+            '& .MuiTableHead-root, & .MuiTableRow-root': { bgcolor: 'transparent' },
+            // header cell cần nền ĐỤC để sticky che nội dung cuộn; dùng bg page (card đang trong suốt) → liền mạch, không phải paper.
+            '& .MuiTableCell-head': { bgcolor: theme.palette.background.default },
+            '& .MuiTableBody-root .MuiTableRow-root:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' },
+          }}
+        >
           <TableHead>
             <TableRow>
               <TableCell sx={headSx}>Mã</TableCell>
@@ -71,21 +86,6 @@ export default function OrderBook({ trades }: OrderBookProps) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {open.map((t, i) => (
-              <TableRow key={`o-${t.ticker}-${i}`} hover sx={{ bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
-                <TableCell sx={{ ...cellSx, fontWeight: fontWeight.semibold }}>{t.ticker}</TableCell>
-                <TableCell sx={cellSx}>{fmtDate(t.entry_date)}</TableCell>
-                <TableCell sx={cellSx}>Đang giữ</TableCell>
-                <TableCell align="right" sx={cellSx}>{t.n_days ?? '—'}</TableCell>
-                <TableCell align="right" sx={{ ...cellSx, color: colorPct(t.return_pct) }}>
-                  {pct(t.return_pct)}{' '}
-                  <Typography component="span" sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.disabled' }}>
-                    tạm tính
-                  </Typography>
-                </TableCell>
-                <TableCell sx={cellSx}>{t.exit_reason ?? 'đang giữ'}</TableCell>
-              </TableRow>
-            ))}
             {recentClosed.map((t, i) => (
               <TableRow key={`c-${t.ticker}-${i}`} hover>
                 <TableCell sx={{ ...cellSx, fontWeight: fontWeight.semibold }}>{t.ticker}</TableCell>
@@ -99,9 +99,6 @@ export default function OrderBook({ trades }: OrderBookProps) {
           </TableBody>
         </Table>
       </TableContainer>
-      <Typography sx={{ p: 1.5, fontSize: getResponsiveFontSize('xs'), color: 'text.disabled', fontStyle: 'italic' }}>
-        Sổ lệnh mô phỏng theo mô hình (backtest).
-      </Typography>
-    </Box>
+    </AmbientCard>
   );
 }

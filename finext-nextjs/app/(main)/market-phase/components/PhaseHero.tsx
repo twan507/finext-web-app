@@ -14,7 +14,7 @@ import { getPhaseMeta } from '../phaseMeta';
 interface PhaseHeroProps {
   daily: PhaseDaily;
   streak: number;
-  prevPhaseVn?: string | null;
+  prevPhaseEn?: string | null;
   history?: PhaseLabel[];
 }
 
@@ -26,7 +26,7 @@ function intensityZone(v: number): string {
   return 'Thận trọng';
 }
 
-export default function PhaseHero({ daily, streak, prevPhaseVn, history = [] }: PhaseHeroProps) {
+export default function PhaseHero({ daily, streak, prevPhaseEn, history = [] }: PhaseHeroProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const meta = getPhaseMeta(daily.phase_label);
@@ -166,11 +166,11 @@ export default function PhaseHero({ daily, streak, prevPhaseVn, history = [] }: 
             <Box component="span" sx={{ color: 'text.primary', fontWeight: fontWeight.semibold }}>
               {streak} phiên
             </Box>
-            {prevPhaseVn ? (
+            {prevPhaseEn ? (
               <>
                 {' · đổi từ '}
                 <Box component="span" sx={{ color: 'text.primary', fontWeight: fontWeight.semibold }}>
-                  {prevPhaseVn}
+                  {prevPhaseEn}
                 </Box>
               </>
             ) : null}

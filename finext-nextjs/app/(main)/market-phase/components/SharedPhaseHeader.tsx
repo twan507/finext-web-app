@@ -25,14 +25,14 @@ export default function SharedPhaseHeader({ daily, isLoading, error }: SharedPha
     if (daily[i].phase_label === latest.phase_label) streak++;
     else break;
   }
-  let prevPhaseVn: string | null = null;
+  let prevPhaseEn: string | null = null;
   for (let i = daily.length - 1 - streak; i >= 0; i--) {
     if (daily[i].phase_label !== latest.phase_label) {
-      prevPhaseVn = getPhaseMeta(daily[i].phase_label).vn;
+      prevPhaseEn = getPhaseMeta(daily[i].phase_label).en;
       break;
     }
   }
   const history = daily.slice(-10).map((d) => d.phase_label);
 
-  return <PhaseHero daily={latest} streak={streak} prevPhaseVn={prevPhaseVn} history={history} />;
+  return <PhaseHero daily={latest} streak={streak} prevPhaseEn={prevPhaseEn} history={history} />;
 }

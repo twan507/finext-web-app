@@ -1,14 +1,23 @@
 'use client';
 
 import { Box, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, alpha, useTheme } from '@mui/material';
-import { getGlassCard, getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
+import { getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
+import AmbientCard from './AmbientCard';
 import type { PhaseBasket, PhaseRank, PhaseTrading } from '../types';
 import { getStatusMeta } from '../basketMeta';
+
+export interface HoldingStat {
+  label: string;
+  value: string;
+  tone?: 'up' | 'down' | 'neutral';
+}
 
 interface HoldingsTableProps {
   basket: PhaseBasket;
   heldRanks: PhaseRank[]; // các dòng phase_rank có held=1 (để lấy tên/hạng/trạng thái)
   trades: PhaseTrading[]; // sổ lệnh của rổ (để lấy giá vào/hiện tại + lãi/lỗ vị thế mở)
+  accent: string; // màu nhận diện rổ (ambient glow của card)
+  stats: HoldingStat[]; // header tổng hợp (lãi/lỗ danh mục · số mã giữ · sắp ra · chờ vào)
 }
 
 function pct(v?: number | null): string {
@@ -22,9 +31,13 @@ function price(v?: number): string {
  * Bảng cổ phiếu đang nắm giữ (hoặc "dự kiến" khi phòng thủ tiền mặt) — kèm lãi/lỗ từng mã + lãi/lỗ danh mục.
  * Lãi/lỗ lấy từ vị thế đang mở trong phase_trading (MTM tạm tính). Downtrend (held rỗng) → hiện danh mục dự kiến từ book, không có lãi/lỗ.
  */
-export default function HoldingsTable({ basket, heldRanks, trades }: HoldingsTableProps) {
+export default function HoldingsTable({ basket, heldRanks, trades, accent, stats }: HoldingsTableProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const toneColor = (t?: HoldingStat['tone']) => (t === 'up' ? theme.palette.trend.up : t === 'down' ? theme.palette.trend.down : theme.palette.text.primary);
+  // Border mảnh (đồng bộ demo) thay cho divider (0.12) đậm của hệ cũ.
+  const bd = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const bdHead = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
 
   const held = basket.held ?? {};
   const book = basket.book ?? {};
@@ -45,39 +58,22 @@ export default function HoldingsTable({ basket, heldRanks, trades }: HoldingsTab
       return b.weight - a.weight;
     });
 
-  // Lãi/lỗ danh mục = trung bình theo tỷ trọng của các vị thế đang mở (tạm tính).
-  let wsum = 0;
-  let psum = 0;
-  for (const r of rows) {
-    if (r.trade && r.trade.return_pct != null) {
-      wsum += r.weight;
-      psum += r.weight * r.trade.return_pct;
-    }
-  }
-  const portfolioPnl = wsum > 0 ? psum / wsum : null;
-
+  // KPI tổng hợp (số mã/tỷ trọng/lãi-lỗ) đã chuyển lên hero AI (BasketAiHero); bảng chỉ giữ dữ liệu chi tiết.
   const colorPct = (v?: number | null) => ((v ?? 0) >= 0 ? theme.palette.trend.up : theme.palette.trend.down);
-  const headSx = { fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', fontWeight: fontWeight.semibold, whiteSpace: 'nowrap', borderColor: theme.palette.divider, bgcolor: theme.palette.background.paper };
-  const cellSx = { fontSize: getResponsiveFontSize('sm'), borderColor: theme.palette.divider, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' };
+  // Header trong suốt (đồng bộ demo), cho phép wrap để cột co lại tránh trượt ngang.
+  const headSx = { fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', fontWeight: fontWeight.semibold, borderColor: bdHead };
+  const cellSx = { fontSize: getResponsiveFontSize('sm'), borderColor: bd, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' };
 
   return (
-    <Box sx={{ borderRadius: `${borderRadius.lg}px`, ...getGlassCard(isDark), overflow: 'hidden' }}>
+    <AmbientCard glowColor={accent} filled={false} sx={{ p: 0 }}>
       {isHolding ? (
         <Stack direction="row" spacing={3} sx={{ p: { xs: 2, md: 2.5 }, flexWrap: 'wrap', gap: 1.5 }}>
-          <Box>
-            <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>Số mã nắm giữ</Typography>
-            <Typography sx={{ fontSize: '1.15rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{rows.length}</Typography>
-          </Box>
-          <Box>
-            <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>Tỷ trọng cổ phiếu</Typography>
-            <Typography sx={{ fontSize: '1.15rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-              {Math.round(Math.min(basket.market_exposure ?? 0, 1) * 100)}%
-            </Typography>
-          </Box>
-          <Box>
-            <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>Lãi/lỗ danh mục (tạm tính)</Typography>
-            <Typography sx={{ fontSize: '1.15rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: colorPct(portfolioPnl) }}>{pct(portfolioPnl)}</Typography>
-          </Box>
+          {stats.map((s) => (
+            <Box key={s.label}>
+              <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>{s.label}</Typography>
+              <Typography sx={{ fontSize: '1.15rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: toneColor(s.tone) }}>{s.value}</Typography>
+            </Box>
+          ))}
         </Stack>
       ) : (
         <Box sx={{ p: { xs: 2, md: 2.5 } }}>
@@ -90,8 +86,14 @@ export default function HoldingsTable({ basket, heldRanks, trades }: HoldingsTab
         </Box>
       )}
 
-      <TableContainer sx={{ maxHeight: 460 }}>
-        <Table stickyHeader size="small">
+      <TableContainer>
+        <Table
+          size="small"
+          sx={{
+            '& .MuiTableHead-root, & .MuiTableCell-head, & .MuiTableRow-root': { bgcolor: 'transparent' },
+            '& .MuiTableBody-root .MuiTableRow-root:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' },
+          }}
+        >
           <TableHead>
             <TableRow>
               <TableCell sx={headSx}>Mã</TableCell>
@@ -116,7 +118,15 @@ export default function HoldingsTable({ basket, heldRanks, trades }: HoldingsTab
                 <TableRow key={r.ticker} hover>
                   <TableCell sx={cellSx}>
                     <Typography component="span" sx={{ fontWeight: fontWeight.semibold, fontSize: 'inherit' }}>{r.ticker}</Typography>
-                    {r.rank?.ten && <Typography component="span" sx={{ color: 'text.disabled', fontSize: getResponsiveFontSize('xs'), ml: 0.75 }}>{r.rank.ten}</Typography>}
+                    {r.rank?.ten && (
+                      <Typography
+                        component="span"
+                        title={r.rank.ten}
+                        sx={{ color: 'text.disabled', fontSize: getResponsiveFontSize('xs'), ml: 0.75, display: 'inline-block', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'bottom' }}
+                      >
+                        {r.rank.ten}
+                      </Typography>
+                    )}
                   </TableCell>
                   <TableCell align="right" sx={cellSx}>{(r.weight * 100).toFixed(1)}%</TableCell>
                   {isHolding && (
@@ -146,6 +156,6 @@ export default function HoldingsTable({ basket, heldRanks, trades }: HoldingsTab
           </TableBody>
         </Table>
       </TableContainer>
-    </Box>
+    </AmbientCard>
   );
 }

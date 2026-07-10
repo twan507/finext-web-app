@@ -1,7 +1,8 @@
 'use client';
 
-import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, alpha, useTheme } from '@mui/material';
-import { getGlassCard, getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
+import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, alpha, useTheme } from '@mui/material';
+import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
+import AmbientCard from './AmbientCard';
 import type { PhaseRank } from '../types';
 import { getStatusMeta } from '../basketMeta';
 
@@ -9,29 +10,37 @@ interface RankTableProps {
   rows: PhaseRank[];
   /** CORE: hiện thêm cột Ngành (hạng trong ngành). */
   showSector?: boolean;
+  accent: string; // màu nhận diện rổ (ambient glow của card)
 }
 
-export default function RankTable({ rows, showSector = false }: RankTableProps) {
+export default function RankTable({ rows, showSector = false, accent }: RankTableProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const sorted = [...rows].sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999));
+  const bd = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const bdHead = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
 
+  // Header trong suốt (đồng bộ với demo): không nền paper, cho phép wrap để cột co lại tránh trượt ngang.
   const headSx = {
     fontSize: getResponsiveFontSize('xs'),
     color: 'text.secondary',
     fontWeight: fontWeight.semibold,
-    whiteSpace: 'nowrap',
-    borderColor: theme.palette.divider,
-    bgcolor: theme.palette.background.paper,
+    borderColor: bdHead,
   };
-  const cellSx = { fontSize: getResponsiveFontSize('sm'), borderColor: theme.palette.divider, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' };
+  const cellSx = { fontSize: getResponsiveFontSize('sm'), borderColor: bd, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' };
   const fmtMom = (v?: number) => (v == null ? '—' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(1)}%`);
   const fmtVma = (v?: number) => (v == null ? '—' : `${v.toFixed(1)} tỷ`);
 
   return (
-    <Box sx={{ borderRadius: `${borderRadius.lg}px`, ...getGlassCard(isDark), overflow: 'hidden' }}>
-      <TableContainer sx={{ maxHeight: 480 }}>
-        <Table stickyHeader size="small">
+    <AmbientCard glowColor={accent} filled={false} sx={{ p: 0 }}>
+      <TableContainer>
+        <Table
+          size="small"
+          sx={{
+            '& .MuiTableHead-root, & .MuiTableCell-head, & .MuiTableRow-root': { bgcolor: 'transparent' },
+            '& .MuiTableBody-root .MuiTableRow-root:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' },
+          }}
+        >
           <TableHead>
             <TableRow>
               <TableCell sx={headSx}>Hạng</TableCell>
@@ -49,16 +58,7 @@ export default function RankTable({ rows, showSector = false }: RankTableProps) 
               return (
                 <TableRow key={`${r.ticker}-${i}`} hover>
                   <TableCell sx={cellSx}>{r.rank ?? '—'}</TableCell>
-                  <TableCell sx={cellSx}>
-                    <Typography component="span" sx={{ fontWeight: fontWeight.semibold, fontSize: 'inherit' }}>
-                      {r.ticker}
-                    </Typography>
-                    {r.ten && (
-                      <Typography component="span" sx={{ color: 'text.disabled', fontSize: getResponsiveFontSize('xs'), ml: 0.75 }}>
-                        {r.ten}
-                      </Typography>
-                    )}
-                  </TableCell>
+                  <TableCell sx={{ ...cellSx, fontWeight: fontWeight.semibold }}>{r.ticker}</TableCell>
                   {showSector && <TableCell sx={cellSx}>{r.sector ?? '—'}</TableCell>}
                   <TableCell align="right" sx={{ ...cellSx, color: (r.mom120 ?? 0) >= 0 ? theme.palette.trend.up : theme.palette.trend.down }}>
                     {fmtMom(r.mom120)}
@@ -88,6 +88,6 @@ export default function RankTable({ rows, showSector = false }: RankTableProps) 
           </TableBody>
         </Table>
       </TableContainer>
-    </Box>
+    </AmbientCard>
   );
 }
