@@ -44,7 +44,7 @@ export default function MarketPhaseTab({ daily, comment, perf, indicators, error
           description="Diễn giải trạng thái thị trường của phiên gần nhất."
           updateTime={comment ? formatDate(comment.date) : updateStr}
         />
-        <Box sx={{ mt: 1.5 }}>
+        <Box sx={{ mt: 0 }}>
           <PhaseFnxChart daily={daily} />
         </Box>
         {comment && (
