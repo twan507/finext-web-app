@@ -18,8 +18,8 @@ import TimeframeSelector from 'components/common/TimeframeSelector';
 import { getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
 import type { PhasePerfRow } from '../types';
 
-export type PerfRange = '1M' | '3M' | '1N' | 'ALL';
-const RANGE_DAYS: Record<PerfRange, number> = { '1M': 22, '3M': 66, '1N': 252, ALL: Number.MAX_SAFE_INTEGER };
+export type PerfRange = '3M' | '6M' | '1Y' | '2Y';
+const RANGE_DAYS: Record<PerfRange, number> = { '3M': 66, '6M': 132, '1Y': 252, '2Y': 504 };
 
 interface SeriesConfig {
   product: string;
@@ -73,7 +73,7 @@ export default function BasketPerformanceChart({ perf, products, height = 320 }:
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesMapRef = useRef<Map<string, ISeriesApi<'Line'>>>(new Map());
-  const [range, setRange] = useState<PerfRange>('1N');
+  const [range, setRange] = useState<PerfRange>('1Y');
   const [tooltip, setTooltip] = useState<{ x: number; y: number; date: string; rows: { name: string; value: number; color: string }[] } | null>(null);
 
   // Gom theo product, sort tăng dần theo ngày
@@ -264,7 +264,7 @@ export default function BasketPerformanceChart({ perf, products, height = 320 }:
             );
           })}
         </Stack>
-        <TimeframeSelector value={range} onChange={handleRangeChange} options={['1M', '3M', '1N', 'ALL'] as PerfRange[]} getLabel={(o) => (o === 'ALL' ? 'Tất cả' : o)} />
+        <TimeframeSelector value={range} onChange={handleRangeChange} options={['3M', '6M', '1Y', '2Y'] as PerfRange[]} />
       </Stack>
 
       {/* Chart */}

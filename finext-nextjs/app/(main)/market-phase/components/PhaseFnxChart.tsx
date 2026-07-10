@@ -1,16 +1,22 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createChart, IChartApi, ISeriesApi, IPriceLine, LineSeries, ColorType, CrosshairMode, LineStyle, UTCTimestamp } from 'lightweight-charts';
 import { Box, Stack, Typography, useTheme } from '@mui/material';
 import TimeframeSelector from 'components/common/TimeframeSelector';
+import PanZoomToggle from 'components/common/PanZoomToggle';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import type { PhaseDaily, PhaseLabel } from '../types';
 import { getPhaseMeta } from '../phaseMeta';
 import { PhaseNeonPrimitive, type PhaseNeonStyle } from './phaseChartPrimitive';
 
-type FnxRange = '3M' | '1Y' | '2Y' | '5Y' | 'ALL';
-const RANGE_DAYS: Record<FnxRange, number> = { '3M': 66, '1Y': 252, '2Y': 504, '5Y': 1260, ALL: Number.MAX_SAFE_INTEGER };
+type FnxRange = '3M' | '6M' | '1Y' | '2Y';
+// Số phiên hiển thị theo khung — chỉ đổi GÓC NHÌN (visible range), KHÔNG cắt dữ liệu (load full).
+const RANGE_BARS: Record<FnxRange, number> = { '3M': 66, '6M': 132, '1Y': 252, '2Y': 504 };
+function getVisibleRange(r: FnxRange, len: number): { from: number; to: number } {
+  const bars = Math.min(RANGE_BARS[r], len);
+  return { from: len - bars - 0.5, to: len - 0.5 };
+}
 
 function toTs(dateStr: string): UTCTimestamp {
   const d = new Date(dateStr);
@@ -46,12 +52,22 @@ export default function PhaseFnxChart({ daily, height = 300 }: PhaseFnxChartProp
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const [lastPos, setLastPos] = useState<{ x: number; y: number } | null>(null);
   const [range, setRange] = useState<FnxRange>('1Y');
+  const [panZoom, setPanZoom] = useState(false);
 
-  const data = useMemo(() => {
-    const n = RANGE_DAYS[range];
-    return n >= daily.length ? daily : daily.slice(-n);
-  }, [daily, range]);
+  // Load FULL dữ liệu; timeframe chỉ đổi visible range (xem applyView bên dưới).
+  const data = daily;
   const latest = data.length ? data[data.length - 1] : null;
+  const rangeRef = useRef(range);
+  useEffect(() => void (rangeRef.current = range));
+
+  // Đặt góc nhìn theo timeframe hiện tại (ref → luôn đọc range mới, ổn định qua các closure).
+  const applyView = () => {
+    const chart = chartRef.current;
+    if (!chart || data.length === 0) return;
+    chart.timeScale().setVisibleLogicalRange(getVisibleRange(rangeRef.current, data.length));
+  };
+  const applyViewRef = useRef(applyView);
+  applyViewRef.current = applyView;
 
   const byTime = useMemo(() => {
     const m = new Map<number, PhaseDaily>();
@@ -67,11 +83,14 @@ export default function PhaseFnxChart({ daily, height = 300 }: PhaseFnxChartProp
   const computeLastPos = () => {
     const s = seriesRef.current,
       c = chartRef.current,
-      row = lastRef.current;
-    if (!s || !c || !row) return setLastPos(null);
+      row = lastRef.current,
+      el = containerRef.current;
+    if (!s || !c || !row || !el) return setLastPos(null);
     const x = c.timeScale().timeToCoordinate(toTs(row.date));
     const y = s.priceToCoordinate(row.fnx_close);
-    setLastPos(x != null && y != null ? { x: x as number, y: y as number } : null);
+    // Ẩn pulse dot khi điểm cuối bị kéo ra ngoài khung nhìn (lúc pan/zoom).
+    if (x == null || y == null || (x as number) < 0 || (x as number) > el.clientWidth) return setLastPos(null);
+    setLastPos({ x: x as number, y: y as number });
   };
 
   // Khởi tạo chart 1 lần: series trong suốt (giữ scale/crosshair) + primitive vẽ.
@@ -89,7 +108,7 @@ export default function PhaseFnxChart({ daily, height = 300 }: PhaseFnxChartProp
       },
       rightPriceScale: { borderColor: theme.palette.divider, scaleMargins: { top: 0.12, bottom: 0.04 } },
       localization: { locale: 'vi-VN' },
-      timeScale: { borderColor: theme.palette.divider, timeVisible: false, secondsVisible: false, fixLeftEdge: true, fixRightEdge: true },
+      timeScale: { borderColor: theme.palette.divider, timeVisible: false, secondsVisible: false },
       handleScroll: false,
       handleScale: false,
     });
@@ -124,6 +143,8 @@ export default function PhaseFnxChart({ daily, height = 300 }: PhaseFnxChartProp
       }
       setTooltip({ x: param.point.x, date: fmtDate(row.date), price: row.fnx_close, phase: row.phase_label });
     });
+    // Khi pan/zoom → điểm cuối dịch chuyển, cập nhật lại vị trí pulse dot.
+    chart.timeScale().subscribeVisibleLogicalRangeChange(() => computeLastPos());
     return () => {
       window.removeEventListener('resize', onResize);
       chart.remove();
@@ -164,11 +185,34 @@ export default function PhaseFnxChart({ daily, height = 300 }: PhaseFnxChartProp
       axisLabelTextColor: isDark ? '#0e0e12' : '#ffffff',
       title: '',
     });
-    chart.timeScale().fitContent();
+    applyView(); // đặt góc nhìn theo timeframe (không fitContent — data đã full)
     const raf = requestAnimationFrame(computeLastPos);
     return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, theme, isDark, latest]);
+
+  // Đổi timeframe → chỉ đổi góc nhìn, tắt pan/zoom (timeframe là khung chuẩn).
+  useEffect(() => {
+    setPanZoom(false);
+    chartRef.current?.applyOptions({ handleScroll: false, handleScale: false });
+    applyViewRef.current();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [range]);
+
+  const togglePanZoom = useCallback(() => {
+    setPanZoom((prev) => {
+      const next = !prev;
+      const chart = chartRef.current;
+      if (chart) {
+        chart.applyOptions({
+          handleScroll: { mouseWheel: next, pressedMouseMove: next, horzTouchDrag: next, vertTouchDrag: false },
+          handleScale: { axisPressedMouseMove: next, mouseWheel: next, pinch: next },
+        });
+        if (!next) applyViewRef.current(); // tắt → về đúng góc nhìn của timeframe
+      }
+      return next;
+    });
+  }, []);
 
   const tipMeta = tooltip ? getPhaseMeta(tooltip.phase) : null;
   const tipColor = tipMeta ? tipMeta.color(theme) : theme.palette.text.primary;
@@ -177,8 +221,9 @@ export default function PhaseFnxChart({ daily, height = 300 }: PhaseFnxChartProp
 
   return (
     <Box sx={{ width: '100%' }}>
-      <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2, mt: 0 }}>
-        <TimeframeSelector value={range} onChange={(_e, v) => v && setRange(v)} options={['3M', '1Y', '2Y', '5Y', 'ALL'] as FnxRange[]} getLabel={(o) => (o === 'ALL' ? 'Tất cả' : o)} />
+      <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center" sx={{ mb: 2, mt: 0 }}>
+        <PanZoomToggle enabled={panZoom} onClick={togglePanZoom} />
+        <TimeframeSelector value={range} onChange={(_e, v) => v && setRange(v)} options={['3M', '6M', '1Y', '2Y'] as FnxRange[]} />
       </Stack>
       <Box sx={{ position: 'relative', width: '100%', height }} onMouseLeave={() => setTooltip(null)}>
         <Box ref={containerRef} sx={{ width: '100%', height: '100%' }} />
