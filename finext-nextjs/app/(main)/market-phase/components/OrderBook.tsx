@@ -41,6 +41,9 @@ export default function OrderBook({ trades, accent, conservativeLayout = false }
   const wins = closed.filter((t) => (t.return_pct ?? 0) > 0).length;
   const winRate = closed.length ? (wins / closed.length) * 100 : 0;
   const avg = closed.length ? closed.reduce((s, t) => s + (t.return_pct ?? 0), 0) / closed.length : 0;
+  // Lỗ TB/lệnh = TB return của các lệnh THUA (return_pct < 0); không có lệnh thua → null → "—".
+  const losers = closed.filter((t) => (t.return_pct ?? 0) < 0);
+  const avgLoss = losers.length ? losers.reduce((s, t) => s + (t.return_pct ?? 0), 0) / losers.length : null;
   const recentClosed = closed.slice(0, 30);
   const colorPct = (v?: number) => ((v ?? 0) >= 0 ? theme.palette.trend.up : theme.palette.trend.down);
   // Phòng Thủ: "Lý do" → chip. downtrend = đỏ "Thị trường rủi ro" · rebalance = vàng "Tái cơ cấu" · giá trị lạ = chip trung tính giữ nguyên chữ.
@@ -73,6 +76,7 @@ export default function OrderBook({ trades, accent, conservativeLayout = false }
         <Stat label="Số lệnh (đã đóng)" value={`${closed.length}`} />
         <Stat label="Tỷ lệ thắng" value={`${winRate.toFixed(0)}%`} color={winRate >= 50 ? theme.palette.trend.up : theme.palette.text.primary} />
         <Stat label="Lợi nhuận TB/lệnh" value={pct(avg)} color={colorPct(avg)} />
+        <Stat label="Lỗ TB/lệnh" value={avgLoss == null ? '—' : pct(avgLoss)} color={avgLoss == null ? undefined : colorPct(avgLoss)} />
       </Stack>
 
       <TableContainer sx={{ flex: 1, minHeight: 0, maxHeight: { xs: 420, lg: 'none' } }}>

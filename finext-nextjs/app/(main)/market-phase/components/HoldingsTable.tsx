@@ -144,7 +144,7 @@ export default function HoldingsTable({ basket, ranks, trades, accent, stats, is
                 </>
               ) : (
                 <>
-                  <TableCell align="right" sx={{ ...headSx, width: otherW }}>{'% biến động 6 tháng'}</TableCell>
+                  <TableCell align="right" sx={{ ...headSx, width: otherW }}>{'% biến động 6T'}</TableCell>
                   <TableCell align="right" sx={{ ...headSx, width: otherW }}>Thanh khoản</TableCell>
                 </>
               )}

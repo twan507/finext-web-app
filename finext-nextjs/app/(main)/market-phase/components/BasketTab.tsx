@@ -34,7 +34,9 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
   const theme = useTheme();
   const [selectedDate, setSelectedDate] = useState<string>(''); // '' = mặc định phiên mới nhất
   const product = TAB_TO_PRODUCT[tabKey] ?? 'CONSERVATIVE';
-  const isConservative = tabKey === 'conservative';
+  // Layout "gọn" (bỏ cột Tới cơ cấu · Xếp hạng · chip Lý do · Ngày mua · dòng lịch cơ cấu) cho rổ cổ phiếu đơn lẻ:
+  // Phòng Thủ + Mạo Hiểm (chưa gồm Sóng Ngành). accent/ambient tự theo tab: Phòng Thủ=xanh, Mạo Hiểm=cam.
+  const isConservative = tabKey === 'conservative' || tabKey === 'aggressive';
   const accent = SERIES.find((s) => s.product === product)?.color(theme) ?? theme.palette.primary.main;
   const { basket, rank, commentBasket, trading, perf, industry, daily, isLoading, error } = useBasketData();
 

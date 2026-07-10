@@ -50,7 +50,7 @@ export default function RankTable({ rows, showSector = false, accent, conservati
               <TableCell sx={headSx}>{conservativeLayout ? 'Xếp hạng' : 'Hạng'}</TableCell>
               <TableCell sx={headSx}>Mã</TableCell>
               {showSector && <TableCell sx={headSx}>Ngành</TableCell>}
-              <TableCell align="right" sx={headSx}>{'% giá 6 tháng'}</TableCell>
+              <TableCell align="right" sx={headSx}>{'% biến động 6T'}</TableCell>
               <TableCell align="right" sx={headSx}>Thanh khoản</TableCell>
               <TableCell align={conservativeLayout ? 'right' : undefined} sx={headSx}>Trạng thái</TableCell>
               {!conservativeLayout && (
