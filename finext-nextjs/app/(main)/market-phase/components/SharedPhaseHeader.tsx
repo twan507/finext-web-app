@@ -1,7 +1,8 @@
 'use client';
 
-import { LoadingState, EmptyState, ErrorState } from 'components/states';
+import { EmptyState, ErrorState } from 'components/states';
 import PhaseHero from './PhaseHero';
+import { PhaseHeroSkeleton } from './MarketPhaseSkeleton';
 import { getPhaseMeta } from '../phaseMeta';
 import type { PhaseDaily } from '../types';
 
@@ -13,7 +14,7 @@ interface SharedPhaseHeaderProps {
 
 /** Phần dùng chung cho cả 4 tab (đặt TRÊN slider): hero + biểu đồ giai đoạn. */
 export default function SharedPhaseHeader({ daily, isLoading, error }: SharedPhaseHeaderProps) {
-  if (isLoading) return <LoadingState variant="spinner" message="Đang tải dữ liệu giai đoạn thị trường..." />;
+  if (isLoading) return <PhaseHeroSkeleton />;
   if (error) return <ErrorState message={error} />;
   if (!daily || daily.length === 0) return <EmptyState title="Chưa có dữ liệu" description="Dữ liệu giai đoạn thị trường sẽ cập nhật cuối phiên." />;
 

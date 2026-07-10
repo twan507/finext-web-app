@@ -11,6 +11,7 @@ import type { MarketPhaseTabKey } from './types';
 import { useMarketPhaseData } from './hooks/useMarketPhaseData';
 import SharedPhaseHeader from './components/SharedPhaseHeader';
 import MarketPhaseTab from './components/MarketPhaseTab';
+import { MarketPhaseTabSkeleton, PhaseHeroSkeleton } from './components/MarketPhaseSkeleton';
 import BasketTab from './components/BasketTab';
 
 const TABS: { key: MarketPhaseTabKey; label: string; free?: boolean }[] = [
@@ -103,8 +104,22 @@ export default function PageContent() {
         Hệ thống phân tích định vị dòng tiền và phát hiện các giai đoạn thị trường, giúp nhà đầu tư nắm bắt xu hướng và cơ hội.
       </Typography>
 
-      {/* FREE: cần đăng nhập. Gate 1 lớp cho header + slider + nội dung. */}
-      <OptionalAuthWrapper requireAuth>
+      {/* FREE: cần đăng nhập. Gate 1 lớp cho header + slider + nội dung.
+          loadingFallback = khung skeleton của page cho GIAI ĐOẠN auth-loading (tránh flash skeleton generic). */}
+      <OptionalAuthWrapper
+        requireAuth
+        loadingFallback={
+          <>
+            <PhaseHeroSkeleton />
+            <Box sx={{ mt: 4 }}>
+              <TabSlider activeTab={activeTab} onTabChange={handleTab} />
+            </Box>
+            <Box sx={{ mt: 3 }}>
+              <MarketPhaseTabSkeleton />
+            </Box>
+          </>
+        }
+      >
         {/* Dùng chung cho cả 4 tab, đặt trên slider */}
         <SharedPhaseHeader daily={mp.daily} isLoading={mp.isLoading} error={mp.error} />
 
@@ -114,7 +129,11 @@ export default function PageContent() {
 
         <Box sx={{ mt: 3 }}>
           {activeTab === 'market' ? (
-            <MarketPhaseTab daily={mp.daily} comment={mp.comment} perf={mp.perf} indicators={mp.indicators} trading={mp.trading} error={mp.error} />
+            mp.isLoading ? (
+              <MarketPhaseTabSkeleton />
+            ) : (
+              <MarketPhaseTab daily={mp.daily} comment={mp.comment} perf={mp.perf} indicators={mp.indicators} trading={mp.trading} error={mp.error} />
+            )
           ) : (
             <OptionalAuthWrapper requireAuth requiredFeatures={ADVANCED_AND_ABOVE_STRICT}>
               <BasketTab tabKey={activeTab} />

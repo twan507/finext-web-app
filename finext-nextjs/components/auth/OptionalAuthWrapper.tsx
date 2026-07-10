@@ -26,6 +26,11 @@ interface OptionalAuthWrapperProps {
      * Dùng simple flex-center thay vì scroll-tracking.
      */
     compact?: boolean;
+    /**
+     * Skeleton tuỳ biến hiển thị trong lúc auth đang loading (thay cho DefaultAuthSkeleton generic).
+     * Cho phép page hiện đúng khung của mình ngay từ lần paint đầu.
+     */
+    loadingFallback?: ReactNode;
 }
 
 /**
@@ -41,6 +46,7 @@ export function OptionalAuthWrapper({
     requireAuth = false,
     requiredFeatures,
     compact = false,
+    loadingFallback,
 }: OptionalAuthWrapperProps) {
     const { loading, session, features } = useAuth();
 
@@ -49,9 +55,9 @@ export function OptionalAuthWrapper({
         return <>{children}</>;
     }
 
-    // Đang loading auth: skeleton
+    // Đang loading auth: skeleton tuỳ biến nếu có, ngược lại dùng mặc định
     if (loading) {
-        return <DefaultAuthSkeleton compact={compact} />;
+        return loadingFallback ? <>{loadingFallback}</> : <DefaultAuthSkeleton compact={compact} />;
     }
 
     // Check quyền: chưa login → gate
