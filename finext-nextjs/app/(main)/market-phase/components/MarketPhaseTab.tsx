@@ -1,20 +1,23 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import { Box } from '@mui/material';
 import ChartSectionTitle from 'components/common/ChartSectionTitle';
 import { ErrorState } from 'components/states';
 import SessionDiagnosis from './SessionDiagnosis';
 import PhaseFnxChart from './PhaseFnxChart';
 import FnxTrendChart from './FnxTrendChart';
-import BasketPerformanceChart from './BasketPerformanceChart';
+import BasketPerformanceChart, { RANGE_DAYS, type PerfRange } from './BasketPerformanceChart';
+import TopTradesSection from './TopTradesSection';
 import AdvancedPanel from './AdvancedPanel';
-import type { PhaseDaily, PhaseComment, PhasePerfRow, PhaseCommentIndicator } from '../types';
+import type { PhaseDaily, PhaseComment, PhasePerfRow, PhaseCommentIndicator, PhaseTrading } from '../types';
 
 interface MarketPhaseTabProps {
   daily: PhaseDaily[];
   comment: PhaseComment | null;
   perf: PhasePerfRow[];
   indicators: PhaseCommentIndicator[];
+  trading: PhaseTrading[];
   error: string | null;
 }
 
@@ -26,10 +29,18 @@ function formatDate(iso?: string): string {
 }
 
 /**
- * Nội dung riêng của Tab ① (dưới slider): chẩn đoán phiên + chỉ số nâng cao + hiệu suất 3 rổ (cuối).
+ * Nội dung riêng của Tab ① (dưới slider): chẩn đoán phiên + chỉ số nâng cao + hiệu suất 3 rổ + top lệnh (cuối).
  * Hero + biểu đồ giai đoạn đã tách sang SharedPhaseHeader (hiển thị chung trên slider).
  */
-export default function MarketPhaseTab({ daily, comment, perf, indicators, error }: MarketPhaseTabProps) {
+export default function MarketPhaseTab({ daily, comment, perf, indicators, trading, error }: MarketPhaseTabProps) {
+  // Timeframe DÙNG CHUNG cho biểu đồ hiệu suất + section top lệnh (lift lên đây).
+  const [range, setRange] = useState<PerfRange>('1Y');
+  // Ngày sớm nhất của cửa sổ timeframe (lọc trade theo exit_date, khớp biểu đồ).
+  const windowStart = useMemo(() => {
+    const dates = [...new Set(perf.map((p) => p.date))].sort();
+    return dates[Math.max(0, dates.length - RANGE_DAYS[range])] ?? '';
+  }, [perf, range]);
+
   if (error) return <ErrorState message={error} />;
   if (!daily || daily.length === 0) return null; // header đã hiện loading/empty
 
@@ -67,12 +78,21 @@ export default function MarketPhaseTab({ daily, comment, perf, indicators, error
       {perf.length > 0 && (
         <Box sx={{ mt: 4 }}>
           <ChartSectionTitle
-            title="Hiệu suất các danh mục đầu tư vs thị trường"
+            title="Hiệu suất các danh mục đầu tư"
             description="Hiệu suất đầu tư tích lũy của các danh mục hệ thông của FINEXT so với chỉ số chung thị trường ướng ơngS"
             updateTime={updateStr}
           />
           <Box sx={{ mt: 1.5 }}>
-            <BasketPerformanceChart perf={perf} />
+            <BasketPerformanceChart perf={perf} range={range} onRangeChange={setRange} />
+          </Box>
+        </Box>
+      )}
+
+      {trading.length > 0 && (
+        <Box sx={{ mt: 4 }}>
+
+          <Box sx={{ mt: 1.5 }}>
+            <TopTradesSection trades={trading} windowStart={windowStart} />
           </Box>
         </Box>
       )}

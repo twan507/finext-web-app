@@ -2,7 +2,7 @@
 // Fetch dữ liệu page Giai đoạn thị trường — MỘT LẦN (không polling, không SSE).
 import { useEffect, useState } from 'react';
 import { apiClient } from 'services/apiClient';
-import type { PhaseDaily, PhaseComment, PhasePerfRow, PhaseCommentIndicator } from '../types';
+import type { PhaseDaily, PhaseComment, PhasePerfRow, PhaseCommentIndicator, PhaseTrading } from '../types';
 
 const REST = '/api/v1/sse/rest';
 
@@ -11,6 +11,7 @@ interface MarketPhaseData {
   comment: PhaseComment | null;
   perf: PhasePerfRow[];
   indicators: PhaseCommentIndicator[];
+  trading: PhaseTrading[];
   isLoading: boolean;
   error: string | null;
 }
@@ -21,6 +22,7 @@ export function useMarketPhaseData(): MarketPhaseData {
     comment: null,
     perf: [],
     indicators: [],
+    trading: [],
     isLoading: true,
     error: null,
   });
@@ -30,7 +32,7 @@ export function useMarketPhaseData(): MarketPhaseData {
 
     (async () => {
       try {
-        const [d, c, p, ind] = await Promise.all([
+        const [d, c, p, ind, tr] = await Promise.all([
           apiClient<PhaseDaily[]>({ url: `${REST}/phase_daily`, method: 'GET', requireAuth: false, useCache: true }),
           apiClient<PhaseComment[]>({ url: `${REST}/phase_comment`, method: 'GET', requireAuth: false, useCache: true }),
           apiClient<PhasePerfRow[]>({ url: `${REST}/phase_perf`, method: 'GET', requireAuth: false, useCache: true }),
@@ -38,6 +40,7 @@ export function useMarketPhaseData(): MarketPhaseData {
           apiClient<PhaseCommentIndicator[]>({ url: `${REST}/phase_comment_indicator`, method: 'GET', requireAuth: false, useCache: true }).catch(
             () => ({ data: [] as PhaseCommentIndicator[] }),
           ),
+          apiClient<PhaseTrading[]>({ url: `${REST}/phase_trading`, method: 'GET', requireAuth: false, useCache: true }),
         ]);
         if (!mounted) return;
         // Chỉ giữ diễn giải chỉ số của phiên mới nhất.
@@ -48,6 +51,7 @@ export function useMarketPhaseData(): MarketPhaseData {
           comment: c.data && c.data.length > 0 ? c.data[0] : null,
           perf: p.data ?? [],
           indicators: indRows.filter((r) => r.date === maxD),
+          trading: tr.data ?? [],
           isLoading: false,
           error: null,
         });

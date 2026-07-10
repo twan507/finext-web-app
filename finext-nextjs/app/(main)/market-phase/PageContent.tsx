@@ -15,9 +15,9 @@ import BasketTab from './components/BasketTab';
 
 const TABS: { key: MarketPhaseTabKey; label: string; free?: boolean }[] = [
   { key: 'market', label: 'Phân tích thị trường', free: true },
-  { key: 'conservative', label: 'Danh mục cẩn trọng' },
-  { key: 'aggressive', label: 'Danh mục mạo hiểm' },
-  { key: 'core', label: 'Danh mục luân chuyển ngành' },
+  { key: 'conservative', label: 'Danh mục Phòng Thủ' },
+  { key: 'aggressive', label: 'Danh mục Mạo Hiểm' },
+  { key: 'core', label: 'Danh mục Sóng Ngành' },
 ];
 
 // Slider chọn tab — full-bleed (tràn viền), tham khảo markets SubNavbar.
@@ -114,7 +114,7 @@ export default function PageContent() {
 
         <Box sx={{ mt: 3 }}>
           {activeTab === 'market' ? (
-            <MarketPhaseTab daily={mp.daily} comment={mp.comment} perf={mp.perf} indicators={mp.indicators} error={mp.error} />
+            <MarketPhaseTab daily={mp.daily} comment={mp.comment} perf={mp.perf} indicators={mp.indicators} trading={mp.trading} error={mp.error} />
           ) : (
             <OptionalAuthWrapper requireAuth requiredFeatures={ADVANCED_AND_ABOVE_STRICT}>
               <BasketTab tabKey={activeTab} />

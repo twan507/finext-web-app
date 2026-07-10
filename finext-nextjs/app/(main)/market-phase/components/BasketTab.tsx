@@ -20,7 +20,7 @@ function fmtDate(iso?: string): string {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 }
 
-/** Tab rổ trả phí (Bảo Thủ / Tăng Trưởng / Sóng Ngành). */
+/** Tab rổ trả phí (Phòng Thủ / Mạo Hiểm / Sóng Ngành). */
 export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
   const product = TAB_TO_PRODUCT[tabKey] ?? 'CONSERVATIVE';
   const { basket, rank, commentBasket, trading, perf, industry, isLoading, error } = useBasketData();
@@ -91,7 +91,7 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
 
       {perf.length > 0 && (
         <Box sx={{ mt: 4 }}>
-          <ChartSectionTitle title={`Hiệu suất ${name}`} description="Hiệu suất tích luỹ của rổ so với FNX-Index." updateTime={updateStr} />
+          <ChartSectionTitle title={`Hiệu suất ${name}`} description="Hiệu suất tích luỹ của rổ so với FNXINDEX." updateTime={updateStr} />
           <Box sx={{ mt: 1.5 }}>
             <BasketPerformanceChart perf={perf} products={[product]} />
           </Box>

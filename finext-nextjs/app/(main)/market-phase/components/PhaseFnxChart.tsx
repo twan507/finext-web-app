@@ -40,7 +40,7 @@ interface TooltipState {
   phase: PhaseLabel;
 }
 
-/** Biểu đồ FNX-Index "Neon Regime": đường giá neon đổi màu theo pha + huy hiệu đổi pha (vẽ qua primitive). */
+/** Biểu đồ FNXINDEX "Neon Regime": đường giá neon đổi màu theo pha + huy hiệu đổi pha (vẽ qua primitive). */
 export default function PhaseFnxChart({ daily, height = 300 }: PhaseFnxChartProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -288,7 +288,7 @@ export default function PhaseFnxChart({ daily, height = 300 }: PhaseFnxChartProp
             }}
           >
             <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', mb: 0.5, fontWeight: fontWeight.medium }}>{tooltip.date}</Typography>
-            <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontVariantNumeric: 'tabular-nums', fontWeight: fontWeight.semibold }}>FNX-Index: {tooltip.price.toFixed(2)}</Typography>
+            <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontVariantNumeric: 'tabular-nums', fontWeight: fontWeight.semibold }}>FNXINDEX: {tooltip.price.toFixed(2)}</Typography>
             <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mt: 0.25 }}>
               <Box sx={{ width: 8, height: 8, borderRadius: '2px', bgcolor: tipColor }} />
               <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: tipColor, fontWeight: fontWeight.semibold }}>

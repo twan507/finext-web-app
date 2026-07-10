@@ -11,8 +11,8 @@ export const TAB_TO_PRODUCT: Record<string, string> = {
 
 /** Tên hiển thị dự phòng khi data chưa có display_name_vi. */
 export const PRODUCT_FALLBACK_NAME: Record<string, string> = {
-  CONSERVATIVE: 'Bảo Thủ',
-  AGGRESSIVE: 'Tăng Trưởng',
+  CONSERVATIVE: 'Phòng Thủ',
+  AGGRESSIVE: 'Mạo Hiểm',
   CORE: 'Sóng Ngành',
 };
 

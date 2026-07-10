@@ -19,7 +19,7 @@ import { getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
 import type { PhasePerfRow } from '../types';
 
 export type PerfRange = '3M' | '6M' | '1Y' | '2Y';
-const RANGE_DAYS: Record<PerfRange, number> = { '3M': 66, '6M': 132, '1Y': 252, '2Y': 504 };
+export const RANGE_DAYS: Record<PerfRange, number> = { '3M': 66, '6M': 132, '1Y': 252, '2Y': 504 };
 
 interface SeriesConfig {
   product: string;
@@ -29,11 +29,12 @@ interface SeriesConfig {
 }
 
 // Màu định danh (categorical), KHÔNG dùng đỏ/xanh trend cho series.
-const SERIES: SeriesConfig[] = [
+export const SERIES: SeriesConfig[] = [
   { product: 'CORE', name: 'Sóng Ngành', color: (t) => t.palette.primary.main, dashed: false },
-  { product: 'CONSERVATIVE', name: 'Bảo Thủ', color: (t) => t.palette.trend.floor, dashed: false },
-  { product: 'AGGRESSIVE', name: 'Tăng Trưởng', color: (t) => t.palette.warning.main, dashed: false },
-  { product: 'FNX', name: 'FNX-Index', color: (t) => t.palette.text.disabled, dashed: true },
+  // Xanh biển đậm (KHÔNG dùng trend.floor = màu xanh sàn TTCK VN), theme-aware.
+  { product: 'CONSERVATIVE', name: 'Phòng Thủ', color: (t) => (t.palette.mode === 'dark' ? '#3b82f6' : '#2563eb'), dashed: false },
+  { product: 'AGGRESSIVE', name: 'Mạo Hiểm', color: (t) => t.palette.warning.main, dashed: false },
+  { product: 'FNX', name: 'FNXINDEX', color: (t) => t.palette.text.disabled, dashed: true },
 ];
 
 function toTimestamp(dateStr: string): UTCTimestamp {
@@ -61,9 +62,12 @@ interface BasketPerformanceChartProps {
   /** Lọc chỉ hiện các product này (luôn kèm benchmark FNX). Mặc định: cả 3 rổ. */
   products?: string[];
   height?: number;
+  /** Controlled timeframe (dùng chung selector với section khác). Bỏ trống = tự quản state. */
+  range?: PerfRange;
+  onRangeChange?: (r: PerfRange) => void;
 }
 
-export default function BasketPerformanceChart({ perf, products, height = 320 }: BasketPerformanceChartProps) {
+export default function BasketPerformanceChart({ perf, products, height = 320, range: controlledRange, onRangeChange }: BasketPerformanceChartProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const activeSeries = useMemo(
@@ -73,7 +77,9 @@ export default function BasketPerformanceChart({ perf, products, height = 320 }:
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesMapRef = useRef<Map<string, ISeriesApi<'Line'>>>(new Map());
-  const [range, setRange] = useState<PerfRange>('1Y');
+  const [internalRange, setInternalRange] = useState<PerfRange>('1Y');
+  const range = controlledRange ?? internalRange; // controlled nếu có prop, ngược lại tự quản
+  const setRange = onRangeChange ?? setInternalRange;
   const [tooltip, setTooltip] = useState<{ x: number; y: number; date: string; rows: { name: string; value: number; color: string }[] } | null>(null);
 
   // Gom theo product, sort tăng dần theo ngày
