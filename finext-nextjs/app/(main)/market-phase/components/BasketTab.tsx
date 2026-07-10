@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Box } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { useTheme } from '@mui/material';
+import { getResponsiveFontSize } from 'theme/tokens';
 import ChartSectionTitle from 'components/common/ChartSectionTitle';
 import { LoadingState, EmptyState, ErrorState } from 'components/states';
 import { useBasketData } from '../hooks/useBasketData';
@@ -33,6 +34,7 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
   const theme = useTheme();
   const [selectedDate, setSelectedDate] = useState<string>(''); // '' = mặc định phiên mới nhất
   const product = TAB_TO_PRODUCT[tabKey] ?? 'CONSERVATIVE';
+  const isConservative = tabKey === 'conservative';
   const accent = SERIES.find((s) => s.product === product)?.color(theme) ?? theme.palette.primary.main;
   const { basket, rank, commentBasket, trading, perf, industry, daily, isLoading, error } = useBasketData();
 
@@ -56,6 +58,8 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
   const stockRanks = rankSel.filter((r) => r.level === 'stock');
   const heldRanks = stockRanks.filter((r) => r.held === 1);
   const otherRanks = stockRanks.filter((r) => r.held !== 1);
+  // Lịch cơ cấu (portfolio-level) — lấy từ dòng rank bất kỳ có next_rebalance_in (cho dòng dưới tiêu đề, Phòng Thủ).
+  const nextRebalance = stockRanks.find((r) => r.next_rebalance_in != null)?.next_rebalance_in ?? null;
   // Ngành (CORE) KHÔNG theo phiên chọn → lấy phiên rank mới nhất.
   const latestRankDate = rank.reduce((m, r) => (r.date > m ? r.date : m), '');
   const sectorRanks = rank.filter((r) => r.date === latestRankDate && r.product === product && r.level === 'sector');
@@ -121,7 +125,15 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
       {/* 4. Tiêu đề "Vận hành danh mục" + thanh chọn phiên (cùng hàng; wrap trên mobile) */}
       {basketRow && (
         <Box sx={{ mt: 4, display: 'flex', alignItems: { xs: 'flex-start', md: 'center' }, justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
-          <ChartSectionTitle title="Vận hành danh mục" description="Chi tiết nắm giữ, cổ phiếu chờ vào và sổ lệnh theo từng phiên." updateTime={selUpdateStr} />
+          <Box>
+            <ChartSectionTitle title="Vận hành danh mục" description="Chi tiết nắm giữ, cổ phiếu chờ vào và sổ lệnh theo từng phiên." updateTime={selUpdateStr} />
+            {/* Phòng Thủ: dòng lịch cơ cấu (thay cột "Tới cơ cấu" đã bỏ) — cân chiều cao 2 dòng với SessionStrip bên phải. */}
+            {isConservative && nextRebalance != null && (
+              <Typography sx={{ mt: 0.75, fontSize: getResponsiveFontSize('xs'), color: 'text.secondary' }}>
+                Kì tái cơ cấu tiếp theo còn {nextRebalance} phiên
+              </Typography>
+            )}
+          </Box>
           {stripDates.length > 0 && <SessionStrip dates={stripDates} phaseByDate={phaseByDate} selected={selected} onSelect={setSelectedDate} />}
         </Box>
       )}
@@ -129,7 +141,7 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
       {/* 5. Danh mục nắm giữ / dự kiến — theo phiên chọn (tiêu đề gộp vào "Vận hành danh mục" ở trên) */}
       {basketRow && (
         <Box sx={{ mt: 2.5 }}>
-          <HoldingsTable basket={basketRow} ranks={stockRanks} trades={tradesAll} accent={accent} stats={holdStats} isLatest={isLatest} selectedDate={selected} />
+          <HoldingsTable basket={basketRow} ranks={stockRanks} trades={tradesAll} accent={accent} stats={holdStats} isLatest={isLatest} selectedDate={selected} conservativeLayout={isConservative} />
         </Box>
       )}
 
@@ -138,7 +150,7 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
         <Box sx={{ mt: 4, display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: { xs: 4, lg: 3 } }}>
           {otherRanks.length > 0 && (
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-              <RankTable rows={otherRanks} showSector={isCore} accent={accent} />
+              <RankTable rows={otherRanks} showSector={isCore} accent={accent} conservativeLayout={isConservative} />
             </Box>
           )}
           {tradesForBook.length > 0 && (
@@ -147,7 +159,7 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
                   Sổ lệnh bị ép đúng bằng và cuộn bên trong. xs: static, natural height (TableContainer tự cap). */}
               <Box sx={{ flex: 1, minHeight: { xs: 'auto', lg: 0 }, position: 'relative' }}>
                 <Box sx={{ position: { xs: 'static', lg: 'absolute' }, inset: { lg: 0 }, display: 'flex', flexDirection: 'column' }}>
-                  <OrderBook trades={tradesForBook} accent={accent} />
+                  <OrderBook trades={tradesForBook} accent={accent} conservativeLayout={isConservative} />
                 </Box>
               </Box>
             </Box>

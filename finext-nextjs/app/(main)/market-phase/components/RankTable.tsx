@@ -11,9 +11,11 @@ interface RankTableProps {
   /** CORE: hiện thêm cột Ngành (hạng trong ngành). */
   showSector?: boolean;
   accent: string; // màu nhận diện rổ (ambient glow của card)
+  /** Phòng Thủ: bỏ cột "Tới cơ cấu", đổi "Hạng"→"Xếp hạng", căn đều cột (fixed) + Trạng thái dồn phải. */
+  conservativeLayout?: boolean;
 }
 
-export default function RankTable({ rows, showSector = false, accent }: RankTableProps) {
+export default function RankTable({ rows, showSector = false, accent, conservativeLayout = false }: RankTableProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const sorted = [...rows].sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999));
@@ -27,7 +29,8 @@ export default function RankTable({ rows, showSector = false, accent }: RankTabl
     fontWeight: fontWeight.semibold,
     borderColor: bdHead,
   };
-  const cellSx = { fontSize: getResponsiveFontSize('sm'), borderColor: bd, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' };
+  // height cố định: row có/không chip cao bằng nhau → không flick khi đổi phiên.
+  const cellSx = { fontSize: getResponsiveFontSize('sm'), borderColor: bd, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', height: 40 };
   const fmtMom = (v?: number) => (v == null ? '—' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(1)}%`);
   const fmtVma = (v?: number) => (v == null ? '—' : `${v.toFixed(1)} tỷ`);
 
@@ -37,19 +40,22 @@ export default function RankTable({ rows, showSector = false, accent }: RankTabl
         <Table
           size="small"
           sx={{
+            ...(conservativeLayout ? { tableLayout: 'fixed' as const } : {}), // căn đều cột còn lại
             '& .MuiTableHead-root, & .MuiTableCell-head, & .MuiTableRow-root': { bgcolor: 'transparent' },
             '& .MuiTableBody-root .MuiTableRow-root:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' },
           }}
         >
           <TableHead>
             <TableRow>
-              <TableCell sx={headSx}>Hạng</TableCell>
+              <TableCell sx={headSx}>{conservativeLayout ? 'Xếp hạng' : 'Hạng'}</TableCell>
               <TableCell sx={headSx}>Mã</TableCell>
               {showSector && <TableCell sx={headSx}>Ngành</TableCell>}
-              <TableCell align="right" sx={headSx}>Đà giá 6T</TableCell>
+              <TableCell align="right" sx={headSx}>{'% giá 6 tháng'}</TableCell>
               <TableCell align="right" sx={headSx}>Thanh khoản</TableCell>
-              <TableCell sx={headSx}>Trạng thái</TableCell>
-              <TableCell align="right" sx={headSx}>Tới cơ cấu</TableCell>
+              <TableCell align={conservativeLayout ? 'right' : undefined} sx={headSx}>Trạng thái</TableCell>
+              {!conservativeLayout && (
+                <TableCell align="right" sx={headSx}>Tới cơ cấu</TableCell>
+              )}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -64,7 +70,7 @@ export default function RankTable({ rows, showSector = false, accent }: RankTabl
                     {fmtMom(r.mom120)}
                   </TableCell>
                   <TableCell align="right" sx={cellSx}>{fmtVma(r.vma60)}</TableCell>
-                  <TableCell sx={cellSx}>
+                  <TableCell align={conservativeLayout ? 'right' : undefined} sx={cellSx}>
                     <Box
                       component="span"
                       sx={{
@@ -81,7 +87,9 @@ export default function RankTable({ rows, showSector = false, accent }: RankTabl
                       {st.label}
                     </Box>
                   </TableCell>
-                  <TableCell align="right" sx={cellSx}>{r.next_rebalance_in != null ? `${r.next_rebalance_in} phiên` : '—'}</TableCell>
+                  {!conservativeLayout && (
+                    <TableCell align="right" sx={cellSx}>{r.next_rebalance_in != null ? `${r.next_rebalance_in} phiên` : '—'}</TableCell>
+                  )}
                 </TableRow>
               );
             })}

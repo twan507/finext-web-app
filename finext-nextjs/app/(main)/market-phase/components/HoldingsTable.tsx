@@ -21,6 +21,7 @@ interface HoldingsTableProps {
   stats: HoldingStat[]; // header tổng hợp (lãi/lỗ danh mục · số mã giữ · sắp ra · chờ vào)
   isLatest: boolean; // phiên mới nhất? false → ẩn cột Giá hiện tại + Lãi/lỗ (quá khứ không có MTM)
   selectedDate: string; // phiên đang xem — chọn trade mở tại phiên để lấy Giá mua
+  conservativeLayout?: boolean; // Phòng Thủ: đổi nhãn cột "Biến động giá 6T" → "+/- giá 6 tháng"
 }
 
 function pct(v?: number | null): string {
@@ -33,12 +34,19 @@ function price(v?: number): string {
 function vma(v?: number | null): string {
   return v == null ? '—' : `${v.toFixed(1)} tỷ`;
 }
+// Ngày (giả định UTC literal, đồng bộ OrderBook/SessionStrip).
+function fmtDate(iso?: string | null): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
+}
 
 /**
  * Bảng cổ phiếu đang nắm giữ (hoặc "dự kiến" khi phòng thủ tiền mặt) — kèm lãi/lỗ từng mã + lãi/lỗ danh mục.
  * Lãi/lỗ lấy từ vị thế đang mở trong phase_trading (MTM tạm tính). Downtrend (held rỗng) → hiện danh mục dự kiến từ book, không có lãi/lỗ.
  */
-export default function HoldingsTable({ basket, ranks, trades, accent, stats, isLatest, selectedDate }: HoldingsTableProps) {
+export default function HoldingsTable({ basket, ranks, trades, accent, stats, isLatest, selectedDate, conservativeLayout = false }: HoldingsTableProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const toneColor = (t?: HoldingStat['tone']) => (t === 'up' ? theme.palette.trend.up : t === 'down' ? theme.palette.trend.down : theme.palette.text.primary);
@@ -80,9 +88,10 @@ export default function HoldingsTable({ basket, ranks, trades, accent, stats, is
   const colorPct = (v?: number | null) => ((v ?? 0) >= 0 ? theme.palette.trend.up : theme.palette.trend.down);
   // Header trong suốt (đồng bộ demo), cho phép wrap để cột co lại tránh trượt ngang.
   const headSx = { fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', fontWeight: fontWeight.semibold, borderColor: bdHead };
-  const cellSx = { fontSize: getResponsiveFontSize('sm'), borderColor: bd, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' };
+  // height cố định: row có/không chip cao bằng nhau → không flick khi đổi phiên.
+  const cellSx = { fontSize: getResponsiveFontSize('sm'), borderColor: bd, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', height: 40 };
   // Đơn giản: Mã cố định 36%, các cột còn lại chia đều 64% (table-layout fixed đọc width từ hàng header).
-  const nOther = isHolding ? (showLive ? 5 : 3) : 2; // số cột khác Mã theo 3 trạng thái (A/B/C)
+  const nOther = (isHolding ? (showLive ? 5 : 3) : 2) + (conservativeLayout && isHolding ? 1 : 0); // +1 = cột "Ngày mua" (Phòng Thủ, đang giữ)
   const otherW = `${(64 / nOther).toFixed(2)}%`;
 
   return (
@@ -126,6 +135,7 @@ export default function HoldingsTable({ basket, ranks, trades, accent, stats, is
               <TableCell sx={{ ...headSx, width: '36%' }}>Mã</TableCell>
               {isHolding ? (
                 <>
+                  {conservativeLayout && <TableCell align="right" sx={{ ...headSx, width: otherW }}>Ngày mua</TableCell>}
                   <TableCell align="right" sx={{ ...headSx, width: otherW }}>Giá mua</TableCell>
                   {showLive && <TableCell align="right" sx={{ ...headSx, width: otherW }}>Giá hiện tại</TableCell>}
                   <TableCell align="right" sx={{ ...headSx, width: otherW }}>Số phiên</TableCell>
@@ -134,7 +144,7 @@ export default function HoldingsTable({ basket, ranks, trades, accent, stats, is
                 </>
               ) : (
                 <>
-                  <TableCell align="right" sx={{ ...headSx, width: otherW }}>Biến động giá 6T</TableCell>
+                  <TableCell align="right" sx={{ ...headSx, width: otherW }}>{'% biến động 6 tháng'}</TableCell>
                   <TableCell align="right" sx={{ ...headSx, width: otherW }}>Thanh khoản</TableCell>
                 </>
               )}
@@ -162,6 +172,7 @@ export default function HoldingsTable({ basket, ranks, trades, accent, stats, is
                   </TableCell>
                   {isHolding ? (
                     <>
+                      {conservativeLayout && <TableCell align="right" sx={cellSx}>{fmtDate(r.trade?.entry_date)}</TableCell>}
                       <TableCell align="right" sx={cellSx}>{price(r.trade?.entry_price)}</TableCell>
                       {showLive && <TableCell align="right" sx={cellSx}>{price(r.trade?.exit_price)}</TableCell>}
                       <TableCell align="right" sx={cellSx}>{r.trade?.n_days ?? '—'}</TableCell>
