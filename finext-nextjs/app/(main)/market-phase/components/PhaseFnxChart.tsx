@@ -34,6 +34,7 @@ interface PhaseFnxChartProps {
 }
 interface TooltipState {
   x: number;
+  y: number;
   date: string;
   price: number;
   phase: PhaseLabel;
@@ -49,8 +50,8 @@ export default function PhaseFnxChart({ daily, height = 300 }: PhaseFnxChartProp
   const primRef = useRef<PhaseNeonPrimitive | null>(null);
   const priceLineRef = useRef<IPriceLine | null>(null);
   const markerColorRef = useRef<string>(''); // guard: applyOptions chỉ khi màu marker đổi (tránh đệ quy crosshair)
+  const dotRef = useRef<HTMLDivElement>(null); // pulse dot — định vị bằng DOM/rAF để dán khít chart khi zoom
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
-  const [lastPos, setLastPos] = useState<{ x: number; y: number } | null>(null);
   const [range, setRange] = useState<FnxRange>('1Y');
   const [panZoom, setPanZoom] = useState(false);
 
@@ -77,20 +78,26 @@ export default function PhaseFnxChart({ daily, height = 300 }: PhaseFnxChartProp
   const byTimeRef = useRef(byTime);
   useEffect(() => void (byTimeRef.current = byTime), [byTime]);
 
-  // Vị trí điểm cuối (px) cho overlay chip + pulse dot; tính lại sau khi fit/resize.
+  // Đặt vị trí pulse dot bằng transform trên chính DOM node (không setState) → dán khít line
+  // qua mọi tương tác (zoom ngang, pan, scale dọc, resize). Gọi mỗi frame trong vòng rAF.
   const lastRef = useRef<PhaseDaily | null>(latest);
   useEffect(() => void (lastRef.current = latest));
-  const computeLastPos = () => {
-    const s = seriesRef.current,
+  const positionDot = () => {
+    const el = dotRef.current,
+      s = seriesRef.current,
       c = chartRef.current,
       row = lastRef.current,
-      el = containerRef.current;
-    if (!s || !c || !row || !el) return setLastPos(null);
+      cont = containerRef.current;
+    if (!el || !s || !c || !row || !cont) return;
     const x = c.timeScale().timeToCoordinate(toTs(row.date));
     const y = s.priceToCoordinate(row.fnx_close);
-    // Ẩn pulse dot khi điểm cuối bị kéo ra ngoài khung nhìn (lúc pan/zoom).
-    if (x == null || y == null || (x as number) < 0 || (x as number) > el.clientWidth) return setLastPos(null);
-    setLastPos({ x: x as number, y: y as number });
+    // Ẩn khi điểm cuối bị kéo ra ngoài khung nhìn.
+    if (x == null || y == null || (x as number) < 0 || (x as number) > cont.clientWidth) {
+      if (el.style.display !== 'none') el.style.display = 'none';
+      return;
+    }
+    if (el.style.display === 'none') el.style.display = 'block';
+    el.style.transform = `translate(${(x as number) - 4}px, ${(y as number) - 4}px)`; // dot 8px → lệch -4px để tâm khớp
   };
 
   // Khởi tạo chart 1 lần: series trong suốt (giữ scale/crosshair) + primitive vẽ.
@@ -129,7 +136,6 @@ export default function PhaseFnxChart({ daily, height = 300 }: PhaseFnxChartProp
 
     const onResize = () => {
       if (containerRef.current && chartRef.current) chartRef.current.applyOptions({ width: containerRef.current.clientWidth });
-      computeLastPos();
     };
     window.addEventListener('resize', onResize);
     chart.subscribeCrosshairMove((param) => {
@@ -141,11 +147,17 @@ export default function PhaseFnxChart({ daily, height = 300 }: PhaseFnxChartProp
         markerColorRef.current = mcol;
         seriesRef.current?.applyOptions({ crosshairMarkerBorderColor: mcol });
       }
-      setTooltip({ x: param.point.x, date: fmtDate(row.date), price: row.fnx_close, phase: row.phase_label });
+      setTooltip({ x: param.point.x, y: param.point.y, date: fmtDate(row.date), price: row.fnx_close, phase: row.phase_label });
     });
-    // Khi pan/zoom → điểm cuối dịch chuyển, cập nhật lại vị trí pulse dot.
-    chart.timeScale().subscribeVisibleLogicalRangeChange(() => computeLastPos());
+    // rAF nhẹ: mỗi frame chỉ đọc toạ độ + set transform cho dot (rAF tự dừng khi tab ẩn).
+    let raf = 0;
+    const tick = () => {
+      positionDot();
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
     return () => {
+      cancelAnimationFrame(raf);
       window.removeEventListener('resize', onResize);
       chart.remove();
       chartRef.current = null;
@@ -186,8 +198,6 @@ export default function PhaseFnxChart({ daily, height = 300 }: PhaseFnxChartProp
       title: '',
     });
     applyView(); // đặt góc nhìn theo timeframe (không fitContent — data đã full)
-    const raf = requestAnimationFrame(computeLastPos);
-    return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, theme, isDark, latest]);
 
@@ -228,19 +238,21 @@ export default function PhaseFnxChart({ daily, height = 300 }: PhaseFnxChartProp
       <Box sx={{ position: 'relative', width: '100%', height }} onMouseLeave={() => setTooltip(null)}>
         <Box ref={containerRef} sx={{ width: '100%', height: '100%' }} />
 
-        {/* Pulse dot — overlay neo tại điểm cuối (phiên mới nhất) */}
-        {lastPos && (
+        {/* Pulse dot — neo tại điểm cuối; định vị bằng transform qua rAF (dán khít khi zoom) */}
+        {latest && (
           <Box
+            ref={dotRef}
             aria-hidden
+            style={{ display: 'none' }}
             sx={{
               position: 'absolute',
-              left: lastPos.x,
-              top: lastPos.y,
+              left: 0,
+              top: 0,
               width: 8,
               height: 8,
               borderRadius: '50%',
               bgcolor: phaseCol,
-              transform: 'translate(-50%, -50%)',
+              willChange: 'transform',
               pointerEvents: 'none',
               zIndex: 4,
               '&::after': {
@@ -261,7 +273,8 @@ export default function PhaseFnxChart({ daily, height = 300 }: PhaseFnxChartProp
           <Box
             sx={{
               position: 'absolute',
-              top: 8,
+              // Bám theo con trỏ nhưng kẹp trong vùng chart để không tụt xuống dưới che nội dung.
+              top: Math.max(4, Math.min(tooltip.y - 30, height - 80)),
               left: tooltip.x + 15,
               transform: tooltip.x > cw - 170 ? 'translateX(-100%) translateX(-30px)' : 'none',
               bgcolor: isDark ? 'rgba(20,20,26,0.72)' : 'rgba(255,255,255,0.72)',

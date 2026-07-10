@@ -14,10 +14,10 @@ import MarketPhaseTab from './components/MarketPhaseTab';
 import BasketTab from './components/BasketTab';
 
 const TABS: { key: MarketPhaseTabKey; label: string; free?: boolean }[] = [
-  { key: 'market', label: 'Thị trường chung', free: true },
-  { key: 'conservative', label: 'Bảo Thủ' },
-  { key: 'aggressive', label: 'Tăng Trưởng' },
-  { key: 'core', label: 'Sóng Ngành' },
+  { key: 'market', label: 'Phân tích thị trường', free: true },
+  { key: 'conservative', label: 'Danh mục cẩn trọng' },
+  { key: 'aggressive', label: 'Danh mục mạo hiểm' },
+  { key: 'core', label: 'Danh mục luân chuyển ngành' },
 ];
 
 // Slider chọn tab — full-bleed (tràn viền), tham khảo markets SubNavbar.
@@ -100,7 +100,7 @@ export default function PageContent() {
         Giai đoạn thị trường
       </Typography>
       <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary', mb: 3 }}>
-        Đèn tín hiệu pha thị trường, tỷ trọng nắm giữ gợi ý và hiệu suất danh mục — cập nhật cuối phiên.
+        Hệ thống phân tích định vị dòng tiền và phát hiện các giai đoạn thị trường, giúp nhà đầu tư nắm bắt xu hướng và cơ hội.
       </Typography>
 
       {/* FREE: cần đăng nhập. Gate 1 lớp cho header + slider + nội dung. */}

@@ -40,8 +40,8 @@ export default function MarketPhaseTab({ daily, comment, perf, indicators, error
     <Box>
       <Box>
         <ChartSectionTitle
-          title="Chẩn đoán phiên"
-          description="Diễn giải trạng thái thị trường của phiên gần nhất."
+          title="DIỄN BIẾN VÀ PHÂN TÍCH PHIÊN"
+          description="Diễn biến giai lịch sử các giai đoạn thị trường và phân tích phiên hiện tại"
           updateTime={comment ? formatDate(comment.date) : updateStr}
         />
         <Box sx={{ mt: 0 }}>
@@ -55,7 +55,7 @@ export default function MarketPhaseTab({ daily, comment, perf, indicators, error
       </Box>
 
       <Box sx={{ mt: 4 }}>
-        <ChartSectionTitle title="Chỉ số nâng cao" description="Quan sát nội bộ · không phải khuyến nghị." updateTime={updateStr} />
+        <ChartSectionTitle title="Chi tiết các chỉ số" description="Phân tích và diễn giải chi tiết các chỉ số sử dụng để định vị pha thị trường" updateTime={updateStr} />
         <Box sx={{ mt: 1.5 }}>
           <FnxTrendChart />
         </Box>
@@ -67,8 +67,8 @@ export default function MarketPhaseTab({ daily, comment, perf, indicators, error
       {perf.length > 0 && (
         <Box sx={{ mt: 4 }}>
           <ChartSectionTitle
-            title="Hiệu suất 3 danh mục so với thị trường"
-            description="Hiệu suất tích luỹ của 3 danh mục so với FNX-Index, tính lại theo cửa sổ thời gian đã chọn."
+            title="Hiệu suất các danh mục đầu tư vs thị trường"
+            description="Hiệu suất đầu tư tích lũy của các danh mục hệ thông của FINEXT so với chỉ số chung thị trường ướng ơngS"
             updateTime={updateStr}
           />
           <Box sx={{ mt: 1.5 }}>

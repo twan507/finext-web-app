@@ -59,7 +59,7 @@ export default function SessionDiagnosis({ comment }: SessionDiagnosisProps) {
               py: 0.25,
             }}
           >
-            Phân tích tự động
+            FINEXT AI
           </Box>
           {time && <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.disabled' }}>Cập nhật lúc {time}</Typography>}
         </Box>

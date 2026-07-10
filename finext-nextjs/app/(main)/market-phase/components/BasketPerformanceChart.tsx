@@ -275,22 +275,22 @@ export default function BasketPerformanceChart({ perf, products, height = 320 }:
             sx={{
               position: 'absolute',
               left: tooltip.x + 15,
-              top: 8,
+              top: tooltip.y - 30,
               transform: tooltip.x > (containerRef.current?.clientWidth || 0) - 170 ? 'translateX(-100%) translateX(-30px)' : 'none',
               bgcolor: isDark ? 'rgba(30,30,30,0.92)' : 'rgba(255,255,255,0.92)',
               borderRadius: 1.5,
               p: '8px 10px',
               pointerEvents: 'none',
               zIndex: 5,
-              minWidth: 150,
+              width: 160, // cố định để nội dung không bị co/xuống dòng khi sát viền
             }}
           >
             <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', mb: 0.5, fontWeight: fontWeight.medium }}>{tooltip.date}</Typography>
             {tooltip.rows.map((r) => (
               <Stack key={r.name} direction="row" spacing={1} alignItems="center" justifyContent="space-between">
                 <Stack direction="row" spacing={0.75} alignItems="center">
-                  <Box sx={{ width: 8, height: 8, borderRadius: '2px', bgcolor: r.color }} />
-                  <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary' }}>{r.name}</Typography>
+                  <Box sx={{ width: 8, height: 8, borderRadius: '2px', bgcolor: r.color, flexShrink: 0 }} />
+                  <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', whiteSpace: 'nowrap' }}>{r.name}</Typography>
                 </Stack>
                 <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, fontVariantNumeric: 'tabular-nums', color: r.value >= 0 ? theme.palette.trend.up : theme.palette.trend.down }}>
                   {fmtPct(r.value)}
