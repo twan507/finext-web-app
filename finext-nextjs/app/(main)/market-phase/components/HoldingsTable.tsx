@@ -1,10 +1,11 @@
 'use client';
 
 import { Box, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, alpha, useTheme } from '@mui/material';
-import { getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
+import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import AmbientCard from './AmbientCard';
 import type { PhaseBasket, PhaseRank, PhaseTrading } from '../types';
 import { getStatusMeta } from '../basketMeta';
+import { getPhaseMeta } from '../phaseMeta';
 
 export interface HoldingStat {
   label: string;
@@ -14,10 +15,12 @@ export interface HoldingStat {
 
 interface HoldingsTableProps {
   basket: PhaseBasket;
-  heldRanks: PhaseRank[]; // các dòng phase_rank có held=1 (để lấy tên/hạng/trạng thái)
-  trades: PhaseTrading[]; // sổ lệnh của rổ (để lấy giá vào/hiện tại + lãi/lỗ vị thế mở)
+  ranks: PhaseRank[]; // toàn bộ phase_rank level='stock' của phiên (mã giữ → tên/trạng thái; mã book → thanh khoản/đà giá)
+  trades: PhaseTrading[]; // sổ lệnh của rổ (để lấy giá mua/hiện tại + lãi/lỗ vị thế mở)
   accent: string; // màu nhận diện rổ (ambient glow của card)
   stats: HoldingStat[]; // header tổng hợp (lãi/lỗ danh mục · số mã giữ · sắp ra · chờ vào)
+  isLatest: boolean; // phiên mới nhất? false → ẩn cột Giá hiện tại + Lãi/lỗ (quá khứ không có MTM)
+  selectedDate: string; // phiên đang xem — chọn trade mở tại phiên để lấy Giá mua
 }
 
 function pct(v?: number | null): string {
@@ -26,12 +29,16 @@ function pct(v?: number | null): string {
 function price(v?: number): string {
   return v == null ? '—' : v.toFixed(2);
 }
+// Thanh khoản (vma60) — tỷ đồng, đồng bộ RankTable.
+function vma(v?: number | null): string {
+  return v == null ? '—' : `${v.toFixed(1)} tỷ`;
+}
 
 /**
  * Bảng cổ phiếu đang nắm giữ (hoặc "dự kiến" khi phòng thủ tiền mặt) — kèm lãi/lỗ từng mã + lãi/lỗ danh mục.
  * Lãi/lỗ lấy từ vị thế đang mở trong phase_trading (MTM tạm tính). Downtrend (held rỗng) → hiện danh mục dự kiến từ book, không có lãi/lỗ.
  */
-export default function HoldingsTable({ basket, heldRanks, trades, accent, stats }: HoldingsTableProps) {
+export default function HoldingsTable({ basket, ranks, trades, accent, stats, isLatest, selectedDate }: HoldingsTableProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const toneColor = (t?: HoldingStat['tone']) => (t === 'up' ? theme.palette.trend.up : t === 'down' ? theme.palette.trend.down : theme.palette.text.primary);
@@ -43,11 +50,22 @@ export default function HoldingsTable({ basket, heldRanks, trades, accent, stats
   const book = basket.book ?? {};
   const isHolding = Object.keys(held).length > 0;
   const weights = isHolding ? held : book;
+  const showLive = isHolding && isLatest; // cột MTM (Hiện tại/Số phiên/Lãi-lỗ) chỉ có ở phiên mới nhất
+  // Trạng thái thị trường (banner "danh mục dự kiến" khi 100% tiền mặt) — màu theo pha (downtrend = đỏ).
+  const marketPhase = getPhaseMeta((basket.market_phase ?? '').toLowerCase());
+  const marketPhaseColor = marketPhase.color(theme);
 
+  // Vị thế "đang mở tại phiên đang xem": entry_date <= S và (chưa thoát hoặc thoát sau S).
+  // (slice(0,10) để so sánh theo ngày, không phụ thuộc date/datetime.)
+  const sKey = selectedDate.slice(0, 10);
   const openByTicker = new Map<string, PhaseTrading>();
-  for (const t of trades) if (t.status === 'open') openByTicker.set(t.ticker, t);
+  for (const t of trades) {
+    const entry = (t.entry_date ?? '').slice(0, 10);
+    const exit = t.exit_date ? t.exit_date.slice(0, 10) : null;
+    if (entry <= sKey && (exit === null || exit > sKey)) openByTicker.set(t.ticker, t);
+  }
   const rankByTicker = new Map<string, PhaseRank>();
-  for (const r of heldRanks) rankByTicker.set(r.ticker, r);
+  for (const r of ranks) rankByTicker.set(r.ticker, r);
 
   const rows = Object.keys(weights)
     .map((tk) => ({ ticker: tk, weight: weights[tk], rank: rankByTicker.get(tk), trade: openByTicker.get(tk) }))
@@ -63,6 +81,9 @@ export default function HoldingsTable({ basket, heldRanks, trades, accent, stats
   // Header trong suốt (đồng bộ demo), cho phép wrap để cột co lại tránh trượt ngang.
   const headSx = { fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', fontWeight: fontWeight.semibold, borderColor: bdHead };
   const cellSx = { fontSize: getResponsiveFontSize('sm'), borderColor: bd, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' };
+  // Đơn giản: Mã cố định 36%, các cột còn lại chia đều 64% (table-layout fixed đọc width từ hàng header).
+  const nOther = isHolding ? (showLive ? 5 : 3) : 2; // số cột khác Mã theo 3 trạng thái (A/B/C)
+  const otherW = `${(64 / nOther).toFixed(2)}%`;
 
   return (
     <AmbientCard glowColor={accent} filled={false} sx={{ p: 0 }}>
@@ -76,79 +97,94 @@ export default function HoldingsTable({ basket, heldRanks, trades, accent, stats
           ))}
         </Stack>
       ) : (
-        <Box sx={{ p: { xs: 2, md: 2.5 } }}>
-          <Box sx={{ p: 1.5, borderRadius: `${borderRadius.md}px`, bgcolor: alpha(theme.palette.trend.ref, 0.12), border: `1px solid ${alpha(theme.palette.trend.ref, 0.4)}` }}>
-            <Typography sx={{ fontWeight: fontWeight.bold, color: theme.palette.trend.ref }}>100% TIỀN MẶT — đang phòng thủ</Typography>
-            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', mt: 0.5 }}>
-              Danh mục dự kiến dưới đây sẽ được mua khi thị trường bật lại.
+        // Compact + cùng cấu trúc 2 dòng như stats header → chiều cao khớp, tránh flick khi đổi phiên.
+        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ p: { xs: 2, md: 2.5 } }}>
+          <Box sx={{ width: 4, alignSelf: 'stretch', minHeight: 34, borderRadius: 2, bgcolor: marketPhaseColor, flexShrink: 0 }} />
+          <Box>
+            <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.primary', fontWeight: fontWeight.semibold }}>
+              Thị trường đang ở trạng thái{' '}
+              <Box component="span" sx={{ color: marketPhaseColor, fontWeight: fontWeight.bold }}>
+                {marketPhase.en}
+              </Box>
             </Typography>
+            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', mt: 0.25 }}>Đây chỉ là danh mục tham khảo.</Typography>
           </Box>
-        </Box>
+        </Stack>
       )}
 
       <TableContainer>
         <Table
           size="small"
           sx={{
+            tableLayout: 'fixed',
             '& .MuiTableHead-root, & .MuiTableCell-head, & .MuiTableRow-root': { bgcolor: 'transparent' },
             '& .MuiTableBody-root .MuiTableRow-root:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' },
           }}
         >
           <TableHead>
             <TableRow>
-              <TableCell sx={headSx}>Mã</TableCell>
-              <TableCell align="right" sx={headSx}>{isHolding ? 'Tỷ trọng' : 'Tỷ trọng dự kiến'}</TableCell>
-              {isHolding && (
+              <TableCell sx={{ ...headSx, width: '36%' }}>Mã</TableCell>
+              {isHolding ? (
                 <>
-                  <TableCell align="right" sx={headSx}>Giá vào</TableCell>
-                  <TableCell align="right" sx={headSx}>Hiện tại</TableCell>
-                  <TableCell align="right" sx={headSx}>Số phiên</TableCell>
+                  <TableCell align="right" sx={{ ...headSx, width: otherW }}>Giá mua</TableCell>
+                  {showLive && <TableCell align="right" sx={{ ...headSx, width: otherW }}>Giá hiện tại</TableCell>}
+                  <TableCell align="right" sx={{ ...headSx, width: otherW }}>Số phiên</TableCell>
+                  <TableCell align="right" sx={{ ...headSx, width: otherW }}>Trạng thái</TableCell>
+                  {showLive && <TableCell align="right" sx={{ ...headSx, width: otherW }}>Lãi/lỗ</TableCell>}
                 </>
-              )}
-              <TableCell sx={headSx}>Trạng thái</TableCell>
-              {isHolding && (
-                <TableCell align="right" sx={headSx}>Lãi/lỗ</TableCell>
+              ) : (
+                <>
+                  <TableCell align="right" sx={{ ...headSx, width: otherW }}>Biến động giá 6T</TableCell>
+                  <TableCell align="right" sx={{ ...headSx, width: otherW }}>Thanh khoản</TableCell>
+                </>
               )}
             </TableRow>
           </TableHead>
           <TableBody>
             {rows.map((r) => {
-              const st = r.rank ? getStatusMeta(r.rank.status) : null;
+              const st = r.rank ? getStatusMeta(r.rank.status) : null; // badge Trạng thái (chỉ dùng khi đang giữ)
               return (
                 <TableRow key={r.ticker} hover>
                   <TableCell sx={cellSx}>
-                    <Typography component="span" sx={{ fontWeight: fontWeight.semibold, fontSize: 'inherit' }}>{r.ticker}</Typography>
-                    {r.rank?.ten && (
-                      <Typography
-                        component="span"
-                        title={r.rank.ten}
-                        sx={{ color: 'text.disabled', fontSize: getResponsiveFontSize('xs'), ml: 0.75, display: 'inline-block', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'bottom' }}
-                      >
-                        {r.rank.ten}
-                      </Typography>
-                    )}
+                    {/* Ticker (đậm, không co) + tên công ty (cắt "..." chỉ khi hết chỗ của cột Mã) */}
+                    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
+                      <Typography component="span" sx={{ fontWeight: fontWeight.semibold, fontSize: 'inherit', whiteSpace: 'nowrap', flexShrink: 0 }}>{r.ticker}</Typography>
+                      {r.rank?.ten && (
+                        <Typography
+                          component="span"
+                          title={r.rank.ten}
+                          sx={{ color: 'text.disabled', fontSize: getResponsiveFontSize('xs'), flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                        >
+                          {r.rank.ten}
+                        </Typography>
+                      )}
+                    </Box>
                   </TableCell>
-                  <TableCell align="right" sx={cellSx}>{(r.weight * 100).toFixed(1)}%</TableCell>
-                  {isHolding && (
+                  {isHolding ? (
                     <>
                       <TableCell align="right" sx={cellSx}>{price(r.trade?.entry_price)}</TableCell>
-                      <TableCell align="right" sx={cellSx}>{price(r.trade?.exit_price)}</TableCell>
+                      {showLive && <TableCell align="right" sx={cellSx}>{price(r.trade?.exit_price)}</TableCell>}
                       <TableCell align="right" sx={cellSx}>{r.trade?.n_days ?? '—'}</TableCell>
+                      <TableCell align="right" sx={cellSx}>
+                        {st ? (
+                          <Box component="span" sx={{ display: 'inline-block', px: 1, py: 0.25, borderRadius: 999, fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: st.color(theme), bgcolor: alpha(st.color(theme), 0.12) }}>
+                            {st.label}
+                          </Box>
+                        ) : (
+                          '—'
+                        )}
+                      </TableCell>
+                      {showLive && (
+                        <TableCell align="right" sx={{ ...cellSx, color: colorPct(r.trade?.return_pct), fontWeight: fontWeight.semibold }}>
+                          {pct(r.trade?.return_pct)}
+                        </TableCell>
+                      )}
                     </>
-                  )}
-                  <TableCell sx={cellSx}>
-                    {st ? (
-                      <Box component="span" sx={{ display: 'inline-block', px: 1, py: 0.25, borderRadius: 999, fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: st.color(theme), bgcolor: alpha(st.color(theme), 0.12) }}>
-                        {st.label}
-                      </Box>
-                    ) : (
-                      '—'
-                    )}
-                  </TableCell>
-                  {isHolding && (
-                    <TableCell align="right" sx={{ ...cellSx, color: colorPct(r.trade?.return_pct), fontWeight: fontWeight.semibold }}>
-                      {pct(r.trade?.return_pct)}
-                    </TableCell>
+                  ) : (
+                    <>
+                      <TableCell align="right" sx={{ ...cellSx, color: colorPct(r.rank?.mom120) }}>{pct(r.rank?.mom120)}</TableCell>
+                      <TableCell align="right" sx={cellSx}>{vma(r.rank?.vma60)}</TableCell>
+                    </>
                   )}
                 </TableRow>
               );

@@ -23,10 +23,10 @@ export interface StatusMeta {
 
 // status: khoảng cách tới ngưỡng + lịch cơ cấu (KHÔNG phải dự báo từng mã).
 export const RANK_STATUS_META: Record<RankStatus, StatusMeta> = {
-  trong_ro: { label: 'Đang giữ', color: (t) => t.palette.text.secondary },
-  vung_buffer: { label: 'Sắp ra', color: (t) => t.palette.warning.main },
-  ung_vien: { label: 'Chờ vào', color: (t) => t.palette.trend.up },
-  ngoai: { label: 'Ngoài rổ', color: (t) => t.palette.text.disabled },
+  trong_ro: { label: 'Nắm giữ', color: (t) => (t.palette.mode === 'dark' ? '#3b82f6' : '#2563eb') }, // xanh biển (KHÔNG dùng trend.floor = xanh sàn)
+  vung_buffer: { label: 'Cân nhắc', color: (t) => t.palette.warning.main },
+  ung_vien: { label: 'Tiềm năng', color: (t) => t.palette.trend.up },
+  ngoai: { label: 'Quan sát', color: (t) => t.palette.text.disabled },
 };
 
 export function getStatusMeta(s?: string): StatusMeta {

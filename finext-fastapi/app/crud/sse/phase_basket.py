@@ -22,11 +22,12 @@ _PROJECTION = {
 
 async def phase_basket(**kwargs) -> List[Dict[str, Any]]:
     """
-    Holdings 3 rổ ở phiên mới nhất. Database: stock_db. Collection: phase_basket.
-    Mỗi phiên có 3 dòng (1 rổ/dòng) → limit 3 + sort date desc = phiên mới nhất.
+    Holdings 3 rổ, 20 phiên gần nhất. Database: stock_db. Collection: phase_basket.
+    Mỗi phiên có 3 dòng (1 rổ/dòng) → limit 60 (20 phiên × 3 rổ) + sort date desc.
+    Client lọc phiên đang chọn theo product/date (thanh chọn phiên SessionStrip).
     held/book đã là trọng số (held × exposure); held={} nghĩa là 100% tiền mặt.
     """
     stock_db = get_database(STOCK_DB)
     return await get_collection_records(
-        stock_db, "phase_basket", projection=_PROJECTION, sort=[("date", -1)], limit=3
+        stock_db, "phase_basket", projection=_PROJECTION, sort=[("date", -1)], limit=60
     )

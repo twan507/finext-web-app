@@ -29,10 +29,20 @@ _PROJECTION = {
 
 async def phase_rank(**kwargs) -> List[Dict[str, Any]]:
     """
-    Bảng xếp hạng "sắp vào/ra" (60 phiên gần nhất). Database: stock_db. Collection: phase_rank.
-    Trả các phiên gần nhất (sort date desc, limit rộng); client lọc phiên mới nhất theo product/level.
+    Bảng xếp hạng "sắp vào/ra" (20 phiên gần nhất). Database: stock_db. Collection: phase_rank.
+    Mỗi phiên có RẤT nhiều dòng (mọi mã × product) nên limit cứng không đủ 20 phiên → lấy
+    distinct 20 date gần nhất rồi filter date >= min. Client lọc phiên đang chọn theo product/level.
     """
     stock_db = get_database(STOCK_DB)
+    # distinct dates desc → lấy tối đa 20 phiên gần nhất (date lưu dạng chuỗi ISO nên sort chuỗi đúng).
+    all_dates: List[str] = await stock_db.get_collection("phase_rank").distinct("date")
+    if not all_dates:
+        return []
+    min_date = sorted(all_dates, reverse=True)[:20][-1]
     return await get_collection_records(
-        stock_db, "phase_rank", projection=_PROJECTION, sort=[("date", -1)], limit=500
+        stock_db,
+        "phase_rank",
+        find_query={"date": {"$gte": min_date}},
+        projection=_PROJECTION,
+        sort=[("date", -1)],
     )

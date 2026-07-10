@@ -2,7 +2,7 @@
 // Fetch dữ liệu các tab rổ (PAID) — MỘT LẦN. Tải cả 6 nguồn để chuyển tab không refetch.
 import { useEffect, useState } from 'react';
 import { apiClient } from 'services/apiClient';
-import type { PhaseBasket, PhaseRank, PhaseCommentBasket, PhaseTrading, PhasePerfRow, PhaseIndustryRow } from '../types';
+import type { PhaseBasket, PhaseRank, PhaseCommentBasket, PhaseTrading, PhasePerfRow, PhaseIndustryRow, PhaseDaily } from '../types';
 
 const REST = '/api/v1/sse/rest';
 
@@ -13,11 +13,12 @@ interface BasketData {
   trading: PhaseTrading[];
   perf: PhasePerfRow[];
   industry: PhaseIndustryRow[];
+  daily: PhaseDaily[]; // để tô màu pha cho thanh chọn phiên (SessionStrip)
   isLoading: boolean;
   error: string | null;
 }
 
-const INIT: BasketData = { basket: [], rank: [], commentBasket: [], trading: [], perf: [], industry: [], isLoading: true, error: null };
+const INIT: BasketData = { basket: [], rank: [], commentBasket: [], trading: [], perf: [], industry: [], daily: [], isLoading: true, error: null };
 
 export function useBasketData(): BasketData {
   const [state, setState] = useState<BasketData>(INIT);
@@ -27,13 +28,15 @@ export function useBasketData(): BasketData {
 
     (async () => {
       try {
-        const [b, r, cb, tr, pf, ind] = await Promise.all([
+        const [b, r, cb, tr, pf, ind, dl] = await Promise.all([
           apiClient<PhaseBasket[]>({ url: `${REST}/phase_basket`, method: 'GET', requireAuth: false, useCache: true }),
           apiClient<PhaseRank[]>({ url: `${REST}/phase_rank`, method: 'GET', requireAuth: false, useCache: true }),
           apiClient<PhaseCommentBasket[]>({ url: `${REST}/phase_comment_basket`, method: 'GET', requireAuth: false, useCache: true }),
           apiClient<PhaseTrading[]>({ url: `${REST}/phase_trading`, method: 'GET', requireAuth: false, useCache: true }),
           apiClient<PhasePerfRow[]>({ url: `${REST}/phase_perf`, method: 'GET', requireAuth: false, useCache: true }),
           apiClient<PhaseIndustryRow[]>({ url: `${REST}/phase_industry`, method: 'GET', requireAuth: false, useCache: true }),
+          // useCache dedupe với Tab ① (useMarketPhaseData) — chỉ để tô màu pha cho thanh chọn phiên.
+          apiClient<PhaseDaily[]>({ url: `${REST}/phase_daily`, method: 'GET', requireAuth: false, useCache: true }),
         ]);
         if (!mounted) return;
         setState({
@@ -43,6 +46,7 @@ export function useBasketData(): BasketData {
           trading: tr.data ?? [],
           perf: pf.data ?? [],
           industry: ind.data ?? [],
+          daily: dl.data ?? [],
           isLoading: false,
           error: null,
         });
