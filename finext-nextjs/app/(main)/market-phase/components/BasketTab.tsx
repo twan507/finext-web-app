@@ -5,7 +5,8 @@ import { Box, Typography } from '@mui/material';
 import { useTheme } from '@mui/material';
 import { getResponsiveFontSize } from 'theme/tokens';
 import ChartSectionTitle from 'components/common/ChartSectionTitle';
-import { LoadingState, EmptyState, ErrorState } from 'components/states';
+import { EmptyState, ErrorState } from 'components/states';
+import { BasketTabSkeleton } from './MarketPhaseSkeleton';
 import { useBasketData } from '../hooks/useBasketData';
 import { TAB_TO_PRODUCT, PRODUCT_FALLBACK_NAME } from '../basketMeta';
 import type { MarketPhaseTabKey } from '../types';
@@ -40,7 +41,7 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
   const accent = SERIES.find((s) => s.product === product)?.color(theme) ?? theme.palette.primary.main;
   const { basket, rank, commentBasket, trading, perf, industry, daily, indexMap, isLoading, error } = useBasketData();
 
-  if (isLoading) return <LoadingState variant="spinner" message="Đang tải dữ liệu danh mục..." />;
+  if (isLoading) return <BasketTabSkeleton isCore={tabKey === 'core'} />;
   if (error) return <ErrorState message={error} />;
 
   // ── Danh sách phiên (distinct date của rổ này, mới → cũ), mặc định = phiên mới nhất ──

@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, Skeleton, Stack, useTheme } from '@mui/material';
+import { Box, Skeleton, Stack, alpha, useTheme } from '@mui/material';
 import { getGlassCard, borderRadius } from 'theme/tokens';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -181,6 +181,137 @@ export function MarketPhaseTabSkeleton() {
       <Box sx={{ mt: 4 }}>
         <SectionTitleSkeleton />
         <TopTradesSkeleton />
+      </Box>
+    </Box>
+  );
+}
+
+// ── Tab danh mục (Phòng Thủ / Mạo Hiểm / Sóng Ngành) ─────────────────────────
+
+/** Card kính AI (BasketAiHero): badge FINEXT AI + vài dòng nhận định. */
+function AiHeroSkeleton() {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  return (
+    <Box sx={{ borderRadius: `${borderRadius.lg}px`, ...getGlassCard(isDark), borderLeft: `3px solid ${theme.palette.divider}`, p: { xs: 2.5, md: 3 } }}>
+      <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 1.5 }}>
+        <Skeleton variant="rounded" width={92} height={22} sx={{ borderRadius: 999 }} />
+        <Skeleton variant="text" width={140} />
+      </Stack>
+      <TextLines n={4} />
+    </Box>
+  );
+}
+
+/** Card bảng (AmbientCard filled=false → viền mảnh): tùy chọn hàng thống kê + N dòng (khớp chiều cao row 40). */
+function TableCardSkeleton({ rows = 6, cols = 5, stats = 0 }: { rows?: number; cols?: number; stats?: number }) {
+  const theme = useTheme();
+  const line = alpha(theme.palette.divider, 0.6);
+  return (
+    <Box sx={{ borderRadius: `${borderRadius.lg}px`, border: `1px solid ${theme.palette.divider}`, overflow: 'hidden' }}>
+      {stats > 0 && (
+        <Stack direction="row" spacing={3} sx={{ p: { xs: 2, md: 2.5 }, gap: 2, flexWrap: 'wrap' }}>
+          {Array.from({ length: stats }).map((_, i) => (
+            <Box key={i}>
+              <Skeleton variant="text" width={64} />
+              <Skeleton variant="text" width={50} sx={{ fontSize: '1.15rem' }} />
+            </Box>
+          ))}
+        </Stack>
+      )}
+      <Box sx={{ px: { xs: 2, md: 2.5 }, pb: 1 }}>
+        {Array.from({ length: rows + 1 }).map((_, r) => (
+          <Stack key={r} direction="row" alignItems="center" spacing={2} sx={{ height: 40, borderBottom: r < rows ? `1px solid ${line}` : 'none' }}>
+            <Skeleton variant="text" width={r === 0 ? 36 : 52} />
+            <Box sx={{ flex: 1 }} />
+            {Array.from({ length: Math.max(0, cols - 1) }).map((_, c) => (
+              <Skeleton key={c} variant="text" width={54} />
+            ))}
+          </Stack>
+        ))}
+      </Box>
+    </Box>
+  );
+}
+
+/** Cụm Sóng ngành (CORE): heatmap streaks + line chart sức mạnh + nhận định ngành AI. */
+function IndustrySkeleton() {
+  const theme = useTheme();
+  return (
+    <Box>
+      <SectionTitleSkeleton />
+      <Box sx={{ mt: 1.5, borderRadius: `${borderRadius.lg}px`, border: `1px solid ${theme.palette.divider}`, p: { xs: 2, md: 2.5 } }}>
+        <Stack spacing={1}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Stack key={i} direction="row" spacing={1.5} alignItems="center">
+              <Skeleton variant="text" width={150} sx={{ flexShrink: 0 }} />
+              <Skeleton variant="rounded" height={12} sx={{ flex: 1 }} />
+            </Stack>
+          ))}
+        </Stack>
+        <Box sx={{ height: '1px', bgcolor: 'divider', my: 2.5, opacity: 0.5 }} />
+        <Skeleton variant="rounded" width="100%" height={240} />
+        <Box sx={{ height: '1px', bgcolor: 'divider', my: 2.5, opacity: 0.5 }} />
+        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 1 }}>
+          <Skeleton variant="rounded" width={92} height={22} sx={{ borderRadius: 999 }} />
+          <Skeleton variant="text" width={120} />
+        </Stack>
+        <TextLines n={3} />
+      </Box>
+    </Box>
+  );
+}
+
+/** Skeleton tab danh mục — bám sát BasketTab: Hiệu suất → AI → [Sóng ngành nếu CORE] → Vận hành → Nắm giữ → Chờ vào/Sổ lệnh. */
+export function BasketTabSkeleton({ isCore = false }: { isCore?: boolean }) {
+  return (
+    <Box>
+      {/* 1. Hiệu suất danh mục: KPI tiles + timeframe + chart */}
+      <Box>
+        <SectionTitleSkeleton />
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mt: 1.5, mb: 1.5, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            {Array.from({ length: 2 }).map((_, i) => (
+              <Skeleton key={i} variant="rounded" width={112} height={52} />
+            ))}
+          </Box>
+          <Box sx={{ ml: 'auto' }}>
+            <Skeleton variant="rounded" width={150} height={34} />
+          </Box>
+        </Box>
+        <Skeleton variant="rounded" width="100%" height={320} />
+      </Box>
+
+      {/* 2. Nhận định FINEXT AI */}
+      <Box sx={{ mt: 4 }}>
+        <AiHeroSkeleton />
+      </Box>
+
+      {/* 3. Sóng ngành (chỉ CORE) */}
+      {isCore && (
+        <Box sx={{ mt: 4 }}>
+          <IndustrySkeleton />
+        </Box>
+      )}
+
+      {/* 4. Vận hành danh mục: tiêu đề + thanh chọn phiên */}
+      <Box sx={{ mt: 4, display: 'flex', alignItems: { xs: 'flex-start', md: 'center' }, justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
+        <Box>
+          <SectionTitleSkeleton />
+          {!isCore && <Skeleton variant="text" width={220} sx={{ mt: 0.75 }} />}
+        </Box>
+        <Skeleton variant="rounded" width={300} height={40} />
+      </Box>
+
+      {/* 5. Danh mục nắm giữ (stats + bảng) */}
+      <Box sx={{ mt: 2.5 }}>
+        <TableCardSkeleton rows={6} cols={isCore ? 6 : 5} stats={4} />
+      </Box>
+
+      {/* 6. Chờ vào + Sổ lệnh (2 cột) */}
+      <Box sx={{ mt: 4, display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: { xs: 4, lg: 3 } }}>
+        <TableCardSkeleton rows={5} cols={5} />
+        <TableCardSkeleton rows={6} cols={5} stats={4} />
       </Box>
     </Box>
   );

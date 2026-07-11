@@ -32,7 +32,7 @@ export default function SharedPhaseHeader({ daily, isLoading, error }: SharedPha
       break;
     }
   }
-  const history = daily.slice(-10).map((d) => d.phase_label);
+  const history = daily.slice(-10).map((d) => ({ date: d.date, phase: d.phase_label }));
 
   return <PhaseHero daily={latest} streak={streak} prevPhaseEn={prevPhaseEn} history={history} />;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, useTheme } from '@mui/material';
+import { Box, alpha, useTheme } from '@mui/material';
 
 /** Đồng hồ định pha: dải đỏ→vàng→xanh (giảm→trung gian→tăng) + kim. */
 function Gauge({ size = 22, needle, mb = 0, ml = 0 }: { size?: number; needle: string; mb?: number; ml?: number }) {
@@ -25,6 +25,9 @@ const CONIC = 'conic-gradient(from 0deg, #6d28d9, #a78bfa, #ede9fe, #a78bfa, #6d
 export default function MarketPhaseNavIcon({ aura = false }: MarketPhaseNavIconProps) {
   const theme = useTheme();
   const needle = theme.palette.text.primary;
+  const bg = theme.palette.background.default;
+  // Nền nút: opacity giảm đều từ tâm (50%) ra rìa (10%) → tan mượt vào vành conic (bỏ vòng đen cứng).
+  const coreBg = `radial-gradient(circle, ${alpha(bg, 1)}, ${alpha(bg, 0.5)})`;
 
   if (!aura) return <Gauge size={24} needle={needle} />;
 
@@ -36,39 +39,49 @@ export default function MarketPhaseNavIcon({ aura = false }: MarketPhaseNavIconP
         width: 34,
         height: 34,
         borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         '@keyframes mpSpin': { to: { transform: 'rotate(360deg)' } },
-        '@keyframes mpBreathe': { '0%, 100%': { opacity: 0.35 }, '50%': { opacity: 0.8 } },
-        // hào quang mờ breathing (phía sau) — hover nới rộng (transition inset)
+        '@keyframes mpBreathe': { '0%, 100%': { opacity: 0.4 }, '50%': { opacity: 0.85 } },
+        // Hào quang: KHÔNG xoay (chỉ breathing) + box đúng bằng khung → chỉ có blur toả ra (ink-overflow, không sinh cuộn ngang).
         '&::before': {
-          content: '""',
-          position: 'absolute',
-          inset: '-3px',
-          borderRadius: '50%',
-          background: CONIC,
-          filter: 'blur(8px)',
-          zIndex: 0,
-          transition: 'inset .25s ease',
-          animation: 'mpSpin 4.5s linear infinite, mpBreathe 3.4s ease-in-out infinite',
-        },
-        // viền conic tròn sắc nét — hover nới rộng
-        '&::after': {
           content: '""',
           position: 'absolute',
           inset: 0,
           borderRadius: '50%',
           background: CONIC,
-          zIndex: 1,
-          transition: 'inset .25s ease',
-          animation: 'mpSpin 4.5s linear infinite',
+          filter: 'blur(7px)',
+          zIndex: 0,
+          transition: 'filter .25s ease',
+          animation: 'mpBreathe 3.4s ease-in-out infinite',
         },
       }}
     >
+      {/* Viền conic XOAY — clip trong hình tròn nên góc vuông khi xoay không tràn ra (không tạo scrollbar). */}
+      <Box
+        className="mp-nav-ring"
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          borderRadius: '50%',
+          overflow: 'hidden',
+          zIndex: 1,
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            inset: 0,
+            background: CONIC,
+            animation: 'mpSpin 4.5s linear infinite',
+          },
+        }}
+      />
       <Box
         sx={{
           position: 'absolute',
-          inset: '3px',
+          inset: '2px',
           borderRadius: '50%',
-          bgcolor: 'background.default',
+          background: coreBg,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

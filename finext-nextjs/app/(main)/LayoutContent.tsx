@@ -239,9 +239,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                           transition: transitions.colors,
                           ...(item.special
                             ? {
-                                // Hover: KHÔNG scale nút — chỉ phóng to viền (inset rộng ra) + xoay nhanh hơn.
-                                '&:hover .mp-nav-frame::before': { inset: '-6px', animationDuration: '1.8s' },
-                                '&:hover .mp-nav-frame::after': { inset: '-2px', animationDuration: '1.8s' },
+                                // Hover: KHÔNG đổi kích thước (tránh cuộn ngang) — chỉ xoay nhanh + hào quang sáng/toả rộng hơn (blur = ink, không sinh scroll).
+                                '&:hover .mp-nav-ring::before': { animationDuration: '1.8s' },
+                                '&:hover .mp-nav-frame::before': { animationDuration: '2.2s', filter: 'blur(10px)' },
                               }
                             : {}),
                         }}

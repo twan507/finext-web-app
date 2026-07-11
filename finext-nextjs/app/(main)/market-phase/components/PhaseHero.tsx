@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, Typography, alpha, useTheme } from '@mui/material';
+import { Box, Tooltip, Typography, alpha, useTheme } from '@mui/material';
 import {
   getGlassCard,
   getGlassEdgeLight,
@@ -15,7 +15,15 @@ interface PhaseHeroProps {
   daily: PhaseDaily;
   streak: number;
   prevPhaseEn?: string | null;
-  history?: PhaseLabel[];
+  history?: { date: string; phase: PhaseLabel }[];
+}
+
+/** Ngày dd/mm/yyyy (UTC literal, đồng bộ các bảng khác). */
+function fmtDate(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
 }
 
 function intensityZone(v: number): string {
@@ -32,6 +40,8 @@ export default function PhaseHero({ daily, streak, prevPhaseEn, history = [] }: 
   const meta = getPhaseMeta(daily.phase_label);
   const phaseColor = meta.color(theme);
   const primary = theme.palette.primary.main;
+  // Tooltip nền glass (đồng bộ ngôn ngữ card), thay nền đục mặc định của MUI.
+  const glassTooltipSx = { ...getGlassCard(isDark), color: theme.palette.text.primary, px: 1.25, py: 0.75, borderRadius: `${borderRadius.md}px` };
 
   const pct = Math.round(Math.min(daily.market_exposure ?? 0, 1) * 100);
   const onSeg = Math.round(pct / 10);
@@ -141,19 +151,34 @@ export default function PhaseHero({ daily, streak, prevPhaseEn, history = [] }: 
             <Box>
               <Box sx={{ display: 'flex', gap: 0.5 }}>
                 {history.map((h, i) => {
-                  const c = getPhaseMeta(h).color(theme);
+                  const m = getPhaseMeta(h.phase);
+                  const c = m.color(theme);
                   const isLast = i === history.length - 1;
                   return (
-                    <Box
+                    <Tooltip
                       key={i}
-                      sx={{
-                        width: 14,
-                        height: 20,
-                        borderRadius: '4px',
-                        bgcolor: alpha(c, isLast ? 0.95 : 0.7),
-                        boxShadow: isLast && isDark ? `0 0 10px ${alpha(c, 0.8)}` : 'none',
-                      }}
-                    />
+                      placement="top"
+                      slotProps={{ tooltip: { sx: glassTooltipSx } }}
+                      title={
+                        <Box sx={{ textAlign: 'left' }}>
+                          <Typography sx={{ fontSize: '0.68rem', color: 'text.secondary', fontWeight: fontWeight.medium }}>{fmtDate(h.date)}</Typography>
+                          <Typography sx={{ fontSize: '0.8rem', color: c, fontWeight: fontWeight.bold }}>{m.en}</Typography>
+                        </Box>
+                      }
+                    >
+                      <Box
+                        sx={{
+                          width: 14,
+                          height: 20,
+                          borderRadius: '4px',
+                          bgcolor: alpha(c, isLast ? 0.95 : 0.7),
+                          boxShadow: isLast && isDark ? `0 0 10px ${alpha(c, 0.8)}` : 'none',
+                          cursor: 'default',
+                          transition: 'transform .12s ease',
+                          '&:hover': { transform: 'translateY(-2px)' },
+                        }}
+                      />
+                    </Tooltip>
                   );
                 })}
               </Box>
@@ -169,7 +194,8 @@ export default function PhaseHero({ daily, streak, prevPhaseEn, history = [] }: 
             {prevPhaseEn ? (
               <>
                 {' · đổi từ '}
-                <Box component="span" sx={{ color: 'text.primary', fontWeight: fontWeight.semibold }}>
+                {/* Tô màu theo pha cũ (DOWNTREND=đỏ, UPTREND=xanh…). prevPhaseEn = EN in-hoa của label → toLowerCase khớp key getPhaseMeta. */}
+                <Box component="span" sx={{ color: getPhaseMeta(prevPhaseEn.toLowerCase()).color(theme), fontWeight: fontWeight.bold }}>
                   {prevPhaseEn}
                 </Box>
               </>

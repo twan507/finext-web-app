@@ -141,10 +141,18 @@ export default function BasketPerformanceChart({ perf, products, height = 320, r
     });
     chartRef.current = chart;
 
-    const handleResize = () => {
-      if (containerRef.current && chartRef.current) chartRef.current.applyOptions({ width: containerRef.current.clientWidth });
-    };
-    window.addEventListener('resize', handleResize);
+    // Resize theo CONTAINER (bắt cả khi layout/sidebar/grid đổi bề rộng, không chỉ window) + fitContent để cả
+    // cửa sổ dữ liệu CO KÉO khớp bề rộng mới → giữ nguyên góc nhìn (start↔end), không nhảy/flick. rAF gộp nhiều tick resize.
+    let raf = 0;
+    const ro = new ResizeObserver(() => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        if (!containerRef.current || !chartRef.current) return;
+        chartRef.current.applyOptions({ width: containerRef.current.clientWidth });
+        chartRef.current.timeScale().fitContent();
+      });
+    });
+    ro.observe(containerRef.current);
 
     chart.subscribeCrosshairMove((param) => {
       if (!param.time || !param.point || !containerRef.current) {
@@ -171,7 +179,8 @@ export default function BasketPerformanceChart({ perf, products, height = 320, r
     });
 
     return () => {
-      window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(raf);
+      ro.disconnect();
       chart.remove();
       chartRef.current = null;
       seriesMapRef.current.clear();
