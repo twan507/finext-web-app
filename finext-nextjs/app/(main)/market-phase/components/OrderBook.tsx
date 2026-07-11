@@ -24,8 +24,8 @@ function pct(v?: number): string {
 
 function Stat({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <Box>
-      <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>{label}</Typography>
+    <Box sx={{ flexShrink: 0 }}>
+      <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary', whiteSpace: 'nowrap' }}>{label}</Typography>
       <Typography sx={{ fontSize: '1.15rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color }}>{value}</Typography>
     </Box>
   );
@@ -55,15 +55,18 @@ export default function OrderBook({ trades, accent, conservativeLayout = false }
     return { label: reason, color: theme.palette.text.secondary };
   };
 
+  // Phòng Thủ: co padding ngang trên mobile (xs/sm) + tiêu đề không wrap (để minWidth max-content tự khít 1 dòng).
+  const compactPx = conservativeLayout ? { px: { xs: 1, sm: 1.25, md: 2 }, whiteSpace: 'nowrap' } : {};
   // Header trong suốt (đồng bộ demo), cho phép wrap để cột co lại tránh trượt ngang.
   const headSx = {
     fontSize: getResponsiveFontSize('xs'),
     color: 'text.secondary',
     fontWeight: fontWeight.semibold,
     borderColor: bdHead,
+    ...compactPx,
   };
   // height cố định: row có/không chip cao bằng nhau → không flick khi đổi phiên.
-  const cellSx = { fontSize: getResponsiveFontSize('sm'), borderColor: bd, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', height: 40 };
+  const cellSx = { fontSize: getResponsiveFontSize('sm'), borderColor: bd, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', height: 40, ...compactPx };
 
   return (
     <AmbientCard
@@ -72,7 +75,17 @@ export default function OrderBook({ trades, accent, conservativeLayout = false }
       rootSx={{ height: '100%', display: 'flex', flexDirection: 'column' }}
       sx={{ p: 0, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
     >
-      <Stack direction="row" spacing={3} sx={{ p: { xs: 2, md: 2.5 }, flexWrap: 'wrap', gap: 1.5 }}>
+      {/* Phòng Thủ: hàng thống kê tràn ra + cuộn ngang (không wrap), đồng bộ với bảng bên dưới. */}
+      <Stack
+        direction="row"
+        spacing={3}
+        sx={{
+          p: { xs: 2, md: 2.5 },
+          gap: 1.5,
+          flexWrap: conservativeLayout ? 'nowrap' : 'wrap',
+          ...(conservativeLayout ? { overflowX: 'auto', scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } } : {}),
+        }}
+      >
         <Stat label="Số lệnh (đã đóng)" value={`${closed.length}`} />
         <Stat label="Tỷ lệ thắng" value={`${winRate.toFixed(0)}%`} color={winRate >= 50 ? theme.palette.trend.up : theme.palette.text.primary} />
         <Stat label="Lãi TB/lệnh" value={avgWin == null ? '—' : pct(avgWin)} color={avgWin == null ? undefined : colorPct(avgWin)} />
@@ -84,6 +97,8 @@ export default function OrderBook({ trades, accent, conservativeLayout = false }
           size="small"
           stickyHeader
           sx={{
+            // Phòng Thủ: minWidth max-content → sàn tự khít bề rộng tiêu đề (1 dòng); rộng hơn thì fill, hẹp hơn thì cuộn.
+            ...(conservativeLayout ? { minWidth: 'max-content', width: '100%' } : {}),
             '& .MuiTableHead-root, & .MuiTableRow-root': { bgcolor: 'transparent' },
             // header cell cần nền ĐỤC để sticky che nội dung cuộn; dùng bg page (card đang trong suốt) → liền mạch, không phải paper.
             '& .MuiTableCell-head': { bgcolor: theme.palette.background.default },

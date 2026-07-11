@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, alpha, useTheme } from '@mui/material';
+import { Box, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, alpha, useMediaQuery, useTheme } from '@mui/material';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import AmbientCard from './AmbientCard';
 import type { PhaseBasket, PhaseRank, PhaseTrading } from '../types';
@@ -86,21 +86,42 @@ export default function HoldingsTable({ basket, ranks, trades, accent, stats, is
 
   // KPI tổng hợp (số mã/tỷ trọng/lãi-lỗ) đã chuyển lên hero AI (BasketAiHero); bảng chỉ giữ dữ liệu chi tiết.
   const colorPct = (v?: number | null) => ((v ?? 0) >= 0 ? theme.palette.trend.up : theme.palette.trend.down);
-  // Header trong suốt (đồng bộ demo), cho phép wrap để cột co lại tránh trượt ngang.
-  const headSx = { fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', fontWeight: fontWeight.semibold, borderColor: bdHead };
+  // Phòng Thủ: co padding ngang trên mobile (xs/sm) + tiêu đề không wrap (để minWidth max-content tự khít 1 dòng).
+  const compactPx = conservativeLayout ? { px: { xs: 1, sm: 1.25, md: 2 }, whiteSpace: 'nowrap' } : {};
+  // Header trong suốt (đồng bộ demo).
+  const headSx = { fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', fontWeight: fontWeight.semibold, borderColor: bdHead, ...compactPx };
   // height cố định: row có/không chip cao bằng nhau → không flick khi đổi phiên.
-  const cellSx = { fontSize: getResponsiveFontSize('sm'), borderColor: bd, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', height: 40 };
-  // Đơn giản: Mã cố định 36%, các cột còn lại chia đều 64% (table-layout fixed đọc width từ hàng header).
-  const nOther = (isHolding ? (showLive ? 5 : 3) : 2) + (conservativeLayout && isHolding ? 1 : 0); // +1 = cột "Ngày mua" (Phòng Thủ, đang giữ)
+  const cellSx = { fontSize: getResponsiveFontSize('sm'), borderColor: bd, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', height: 40, ...compactPx };
+  // Phòng Thủ trên mobile (<600px): bỏ cột Ngày mua + Giá mua + tên doanh nghiệp (chỉ giữ mã) để tiết kiệm chiều ngang.
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const mobileHide = isMobile && conservativeLayout;
+  const showEntryDate = conservativeLayout && isHolding && !isMobile; // "Ngày mua" (vốn chỉ có ở Phòng Thủ)
+  const showEntryPrice = isHolding && !mobileHide; // "Giá mua"
+  const showName = !mobileHide; // tên công ty cạnh mã
+
+  // nOther/otherW chỉ dùng cho tab non-conservative (fixed layout: Mã 36% + chia đều 64%). Phòng Thủ auto-layout nên bỏ % cột.
+  const nOther = isHolding ? (showEntryDate ? 1 : 0) + (showEntryPrice ? 1 : 0) + (showLive ? 2 : 0) + 2 : 2;
   const otherW = `${(64 / nOther).toFixed(2)}%`;
+  const wMa = conservativeLayout ? {} : { width: '36%' };
+  const wOther = conservativeLayout ? {} : { width: otherW };
 
   return (
     <AmbientCard glowColor={accent} filled={false} sx={{ p: 0 }}>
       {isHolding ? (
-        <Stack direction="row" spacing={3} sx={{ p: { xs: 2, md: 2.5 }, flexWrap: 'wrap', gap: 1.5 }}>
+        // Phòng Thủ: hàng thống kê tràn ra + cuộn ngang (không wrap), đồng bộ với bảng bên dưới.
+        <Stack
+          direction="row"
+          spacing={3}
+          sx={{
+            p: { xs: 2, md: 2.5 },
+            gap: 1.5,
+            flexWrap: conservativeLayout ? 'nowrap' : 'wrap',
+            ...(conservativeLayout ? { overflowX: 'auto', scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } } : {}),
+          }}
+        >
           {stats.map((s) => (
-            <Box key={s.label}>
-              <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>{s.label}</Typography>
+            <Box key={s.label} sx={{ flexShrink: 0 }}>
+              <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary', whiteSpace: 'nowrap' }}>{s.label}</Typography>
               <Typography sx={{ fontSize: '1.15rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: toneColor(s.tone) }}>{s.value}</Typography>
             </Box>
           ))}
@@ -125,27 +146,29 @@ export default function HoldingsTable({ basket, ranks, trades, accent, stats, is
         <Table
           size="small"
           sx={{
-            tableLayout: 'fixed',
+            // Phòng Thủ: auto-layout + minWidth max-content → sàn TỰ khít bề rộng tiêu đề (1 dòng); rộng hơn thì fill card, hẹp hơn thì cuộn.
+            // CORE: giữ tableLayout fixed (Mã 36% + chia đều) như cũ.
+            ...(conservativeLayout ? { minWidth: 'max-content', width: '100%' } : { tableLayout: 'fixed' }),
             '& .MuiTableHead-root, & .MuiTableCell-head, & .MuiTableRow-root': { bgcolor: 'transparent' },
             '& .MuiTableBody-root .MuiTableRow-root:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' },
           }}
         >
           <TableHead>
             <TableRow>
-              <TableCell sx={{ ...headSx, width: '36%' }}>Mã</TableCell>
+              <TableCell sx={{ ...headSx, ...wMa }}>Mã</TableCell>
               {isHolding ? (
                 <>
-                  {conservativeLayout && <TableCell align="right" sx={{ ...headSx, width: otherW }}>Ngày mua</TableCell>}
-                  <TableCell align="right" sx={{ ...headSx, width: otherW }}>Giá mua</TableCell>
-                  {showLive && <TableCell align="right" sx={{ ...headSx, width: otherW }}>Giá hiện tại</TableCell>}
-                  <TableCell align="right" sx={{ ...headSx, width: otherW }}>Số phiên</TableCell>
-                  <TableCell align="right" sx={{ ...headSx, width: otherW }}>Trạng thái</TableCell>
-                  {showLive && <TableCell align="right" sx={{ ...headSx, width: otherW }}>Lãi/lỗ</TableCell>}
+                  {showEntryDate && <TableCell align="right" sx={{ ...headSx, ...wOther }}>Ngày mua</TableCell>}
+                  {showEntryPrice && <TableCell align="right" sx={{ ...headSx, ...wOther }}>Giá mua</TableCell>}
+                  {showLive && <TableCell align="right" sx={{ ...headSx, ...wOther }}>Giá hiện tại</TableCell>}
+                  <TableCell align="right" sx={{ ...headSx, ...wOther }}>Số phiên</TableCell>
+                  <TableCell align="right" sx={{ ...headSx, ...wOther }}>Trạng thái</TableCell>
+                  {showLive && <TableCell align="right" sx={{ ...headSx, ...wOther }}>Lãi/lỗ</TableCell>}
                 </>
               ) : (
                 <>
-                  <TableCell align="right" sx={{ ...headSx, width: otherW }}>{'% biến động 6T'}</TableCell>
-                  <TableCell align="right" sx={{ ...headSx, width: otherW }}>Thanh khoản</TableCell>
+                  <TableCell align="right" sx={{ ...headSx, ...wOther }}>{'% biến động 6T'}</TableCell>
+                  <TableCell align="right" sx={{ ...headSx, ...wOther }}>Thanh khoản</TableCell>
                 </>
               )}
             </TableRow>
@@ -159,11 +182,12 @@ export default function HoldingsTable({ basket, ranks, trades, accent, stats, is
                     {/* Ticker (đậm, không co) + tên công ty (cắt "..." chỉ khi hết chỗ của cột Mã) */}
                     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
                       <Typography component="span" sx={{ fontWeight: fontWeight.semibold, fontSize: 'inherit', whiteSpace: 'nowrap', flexShrink: 0 }}>{r.ticker}</Typography>
-                      {r.rank?.ten && (
+                      {showName && r.rank?.ten && (
                         <Typography
                           component="span"
                           title={r.rank.ten}
-                          sx={{ color: 'text.disabled', fontSize: getResponsiveFontSize('xs'), flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                          // Phòng Thủ (auto-layout): maxWidth chặn cột Mã khỏi phình theo tên dài. CORE (fixed): flex:1 lấp đầy 36%.
+                          sx={{ color: 'text.disabled', fontSize: getResponsiveFontSize('xs'), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', ...(conservativeLayout ? { maxWidth: 220 } : { flex: 1, minWidth: 0 }) }}
                         >
                           {r.rank.ten}
                         </Typography>
@@ -172,8 +196,8 @@ export default function HoldingsTable({ basket, ranks, trades, accent, stats, is
                   </TableCell>
                   {isHolding ? (
                     <>
-                      {conservativeLayout && <TableCell align="right" sx={cellSx}>{fmtDate(r.trade?.entry_date)}</TableCell>}
-                      <TableCell align="right" sx={cellSx}>{price(r.trade?.entry_price)}</TableCell>
+                      {showEntryDate && <TableCell align="right" sx={cellSx}>{fmtDate(r.trade?.entry_date)}</TableCell>}
+                      {showEntryPrice && <TableCell align="right" sx={cellSx}>{price(r.trade?.entry_price)}</TableCell>}
                       {showLive && <TableCell align="right" sx={cellSx}>{price(r.trade?.exit_price)}</TableCell>}
                       <TableCell align="right" sx={cellSx}>{r.trade?.n_days ?? '—'}</TableCell>
                       <TableCell align="right" sx={cellSx}>

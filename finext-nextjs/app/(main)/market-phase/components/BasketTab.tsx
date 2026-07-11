@@ -158,16 +158,17 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
       {(otherRanks.length > 0 || tradesForBook.length > 0) && (
         <Box sx={{ mt: 4, display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: { xs: 4, lg: 3 } }}>
           {otherRanks.length > 0 && (
-            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            // minWidth:0 → grid/flex item được phép co nhỏ hơn nội dung để TableContainer cuộn ngang (mặc định min-width:auto chặn cuộn).
+            <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
               <RankTable rows={otherRanks} showSector={isCore} accent={accent} conservativeLayout={isConservative} />
             </Box>
           )}
           {tradesForBook.length > 0 && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0 }}>
               {/* lg: absolute-fill để cột này KHÔNG đóng góp chiều cao vào hàng grid → hàng cao theo bảng Chờ vào,
                   Sổ lệnh bị ép đúng bằng và cuộn bên trong. xs: static, natural height (TableContainer tự cap). */}
-              <Box sx={{ flex: 1, minHeight: { xs: 'auto', lg: 0 }, position: 'relative' }}>
-                <Box sx={{ position: { xs: 'static', lg: 'absolute' }, inset: { lg: 0 }, display: 'flex', flexDirection: 'column' }}>
+              <Box sx={{ flex: 1, minHeight: { xs: 'auto', lg: 0 }, position: 'relative', minWidth: 0 }}>
+                <Box sx={{ position: { xs: 'static', lg: 'absolute' }, inset: { lg: 0 }, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                   <OrderBook trades={tradesForBook} accent={accent} conservativeLayout={isConservative} />
                 </Box>
               </Box>

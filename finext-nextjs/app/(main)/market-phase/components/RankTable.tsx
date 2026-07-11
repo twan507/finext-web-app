@@ -22,15 +22,18 @@ export default function RankTable({ rows, showSector = false, accent, conservati
   const bd = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
   const bdHead = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
 
+  // Phòng Thủ: co padding ngang trên mobile (xs/sm) + tiêu đề không wrap (để minWidth max-content tự khít 1 dòng).
+  const compactPx = conservativeLayout ? { px: { xs: 1, sm: 1.25, md: 2 }, whiteSpace: 'nowrap' } : {};
   // Header trong suốt (đồng bộ với demo): không nền paper, cho phép wrap để cột co lại tránh trượt ngang.
   const headSx = {
     fontSize: getResponsiveFontSize('xs'),
     color: 'text.secondary',
     fontWeight: fontWeight.semibold,
     borderColor: bdHead,
+    ...compactPx,
   };
   // height cố định: row có/không chip cao bằng nhau → không flick khi đổi phiên.
-  const cellSx = { fontSize: getResponsiveFontSize('sm'), borderColor: bd, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', height: 40 };
+  const cellSx = { fontSize: getResponsiveFontSize('sm'), borderColor: bd, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', height: 40, ...compactPx };
   const fmtMom = (v?: number) => (v == null ? '—' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(1)}%`);
   const fmtVma = (v?: number) => (v == null ? '—' : `${v.toFixed(1)} tỷ`);
 
@@ -40,7 +43,8 @@ export default function RankTable({ rows, showSector = false, accent, conservati
         <Table
           size="small"
           sx={{
-            ...(conservativeLayout ? { tableLayout: 'fixed' as const } : {}), // căn đều cột còn lại
+            // Phòng Thủ: auto-layout + minWidth max-content → sàn TỰ khít đúng bề rộng tiêu đề (1 dòng); rộng hơn thì fill card, hẹp hơn thì cuộn.
+            ...(conservativeLayout ? { minWidth: 'max-content', width: '100%' } : {}),
             '& .MuiTableHead-root, & .MuiTableCell-head, & .MuiTableRow-root': { bgcolor: 'transparent' },
             '& .MuiTableBody-root .MuiTableRow-root:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' },
           }}

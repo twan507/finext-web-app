@@ -33,8 +33,8 @@ export default function MarketPhaseNavIcon({ aura = false }: MarketPhaseNavIconP
       className="mp-nav-frame"
       sx={{
         position: 'relative',
-        width: 42,
-        height: 42,
+        width: 34,
+        height: 34,
         borderRadius: '50%',
         '@keyframes mpSpin': { to: { transform: 'rotate(360deg)' } },
         '@keyframes mpBreathe': { '0%, 100%': { opacity: 0.35 }, '50%': { opacity: 0.8 } },
