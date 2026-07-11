@@ -2,10 +2,11 @@
 
 import { Box, Typography, alpha, useTheme } from '@mui/material';
 import { getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
-import type { PhaseComment } from '../types';
 
 interface SessionDiagnosisProps {
-  comment: PhaseComment;
+  /** Các đoạn diễn giải cần render (đoạn rỗng/thiếu bị bỏ qua). */
+  paragraphs: (string | null | undefined)[];
+  generatedAt?: string;
 }
 
 function formatTime(iso?: string): string | null {
@@ -15,12 +16,14 @@ function formatTime(iso?: string): string | null {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-/** Chẩn đoán phiên (trên nền, không card) — market_cmt nguyên văn + pill "Phân tích tự động" + giờ. */
-export default function SessionDiagnosis({ comment }: SessionDiagnosisProps) {
+/** Khối "FINEXT AI" (trên nền, không card): render các đoạn diễn giải được truyền vào + giờ. */
+export default function SessionDiagnosis({ paragraphs, generatedAt }: SessionDiagnosisProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const primary = theme.palette.primary.main;
-  const time = formatTime(comment.generated_at);
+  const time = formatTime(generatedAt);
+  const texts = paragraphs.filter((t): t is string => !!t && t.trim().length > 0);
+  if (texts.length === 0) return null;
 
   return (
     <Box sx={{ display: 'flex', gap: 2 }}>
@@ -63,7 +66,11 @@ export default function SessionDiagnosis({ comment }: SessionDiagnosisProps) {
           </Box>
           {time && <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.disabled' }}>Cập nhật lúc {time}</Typography>}
         </Box>
-        <Typography sx={{ fontSize: getResponsiveFontSize('md'), lineHeight: 1.6, color: 'text.secondary', whiteSpace: 'pre-line' }}>{comment.market_cmt}</Typography>
+        {texts.map((t, i) => (
+          <Typography key={i} sx={{ fontSize: getResponsiveFontSize('md'), lineHeight: 1.6, color: 'text.secondary', whiteSpace: 'pre-line', mt: i === 0 ? 0 : 1.5 }}>
+            {t}
+          </Typography>
+        ))}
       </Box>
     </Box>
   );

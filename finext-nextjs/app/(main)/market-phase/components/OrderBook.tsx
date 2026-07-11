@@ -44,7 +44,7 @@ export default function OrderBook({ trades, accent, conservativeLayout = false }
   // Lỗ TB/lệnh = TB return của các lệnh THUA (return_pct < 0); không có lệnh thua → null → "—".
   const losers = closed.filter((t) => (t.return_pct ?? 0) < 0);
   const avgLoss = losers.length ? losers.reduce((s, t) => s + (t.return_pct ?? 0), 0) / losers.length : null;
-  const recentClosed = closed.slice(0, 30);
+  const recentClosed = closed.slice(0, 100);
   const colorPct = (v?: number) => ((v ?? 0) >= 0 ? theme.palette.trend.up : theme.palette.trend.down);
   // Phòng Thủ: "Lý do" → chip. downtrend = đỏ "Thị trường rủi ro" · rebalance = vàng "Tái cơ cấu" · giá trị lạ = chip trung tính giữ nguyên chữ.
   const reasonChip = (reason?: string | null): { label: string; color: string } | null => {

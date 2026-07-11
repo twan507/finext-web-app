@@ -38,7 +38,7 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
   // Phòng Thủ + Mạo Hiểm (chưa gồm Sóng Ngành). accent/ambient tự theo tab: Phòng Thủ=xanh, Mạo Hiểm=cam.
   const isConservative = tabKey === 'conservative' || tabKey === 'aggressive';
   const accent = SERIES.find((s) => s.product === product)?.color(theme) ?? theme.palette.primary.main;
-  const { basket, rank, commentBasket, trading, perf, industry, daily, isLoading, error } = useBasketData();
+  const { basket, rank, commentBasket, trading, perf, industry, daily, indexMap, isLoading, error } = useBasketData();
 
   if (isLoading) return <LoadingState variant="spinner" message="Đang tải dữ liệu danh mục..." />;
   if (error) return <ErrorState message={error} />;
@@ -62,9 +62,9 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
   const otherRanks = stockRanks.filter((r) => r.held !== 1);
   // Lịch cơ cấu (portfolio-level) — lấy từ dòng rank bất kỳ có next_rebalance_in (cho dòng dưới tiêu đề, Phòng Thủ).
   const nextRebalance = stockRanks.find((r) => r.next_rebalance_in != null)?.next_rebalance_in ?? null;
-  // Ngành (CORE) KHÔNG theo phiên chọn → lấy phiên rank mới nhất.
+  // Ngành (CORE) KHÔNG theo phiên chọn. Line chart sức mạnh cần FULL lịch sử → lấy toàn bộ sector rows.
   const latestRankDate = rank.reduce((m, r) => (r.date > m ? r.date : m), '');
-  const sectorRanks = rank.filter((r) => r.date === latestRankDate && r.product === product && r.level === 'sector');
+  const sectorRanks = rank.filter((r) => r.product === product && r.level === 'sector');
 
   const comment = commentBasket.find((c) => c.product === product) ?? null;
   const tradesAll = trading.filter((t) => t.product === product);
@@ -124,6 +124,13 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
         </Box>
       )}
 
+      {/* 3b. Sóng Ngành (CORE): cụm ngành dời LÊN GIỮA (Hiệu suất ↔ Vận hành), kèm nhận định ngành sector_cmt trong card. */}
+      {isCore && (industry.length > 0 || sectorRanks.length > 0) && (
+        <Box sx={{ mt: 4 }}>
+          <IndustrySection sectorRanks={sectorRanks} industry={industry} indexMap={indexMap} accent={accent} sectorCmt={comment?.sector_cmt} generatedAt={comment?.generated_at} updateTime={fmtDate(latestRankDate)} />
+        </Box>
+      )}
+
       {/* 4. Tiêu đề "Vận hành danh mục" + thanh chọn phiên (cùng hàng; wrap trên mobile) */}
       {basketRow && (
         <Box sx={{ mt: 4, display: 'flex', alignItems: { xs: 'flex-start', md: 'center' }, justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
@@ -169,12 +176,6 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
         </Box>
       )}
 
-      {/* 6. Sóng Ngành (CORE): tầng ngành ở cuối — KHÔNG ảnh hưởng bởi phiên chọn */}
-      {isCore && (industry.length > 0 || sectorRanks.length > 0) && (
-        <Box sx={{ mt: 4 }}>
-          <IndustrySection sectorRanks={sectorRanks} industry={industry} sectorCmt={comment?.sector_cmt} generatedAt={comment?.generated_at} updateTime={fmtDate(latestRankDate)} />
-        </Box>
-      )}
     </Box>
   );
 }

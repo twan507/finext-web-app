@@ -28,6 +28,9 @@ export interface PhaseDaily {
 export interface PhaseComment {
   date: string;
   market_cmt: string;
+  condition_cmt?: string;
+  structure_cmt?: string;
+  risk_cmt?: string;
   source?: string;
   generated_at?: string;
 }
@@ -116,4 +119,11 @@ export interface PhaseTrading {
 export interface PhaseIndustryRow {
   date: string;
   [sector: string]: number | string;
+}
+
+/** ref_db.index_map — map mã ngành/chỉ số → tên đầy đủ. */
+export interface IndexMapRow {
+  ticker: string;
+  ticker_name?: string;
+  type?: string;
 }

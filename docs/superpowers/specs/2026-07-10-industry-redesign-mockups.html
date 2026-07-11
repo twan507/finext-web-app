@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Redesign cụm ngành (tab Sóng Ngành)</title>
+<style>
+  :root{
+    --bg:#0d1117; --card:rgba(255,255,255,0.028); --bd:rgba(255,255,255,0.08);
+    --txt:#e6e9ef; --sub:#9aa1ab; --dis:#5d6570;
+    --accent:#a78bfa; --accent2:#8b5cf6;
+    --up:#2ee06f; --down:#ff5a5a; --warn:#f5c518; --hold:#3b82f6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,sans-serif;padding:40px 20px 120px;line-height:1.5}
+  .wrap{max-width:1180px;margin:0 auto}
+  h1{font-size:1.5rem;font-weight:700;margin-bottom:6px}
+  .lead{color:var(--sub);font-size:.9rem;max-width:860px}
+  .constraint{margin:18px 0 40px;padding:14px 18px;border:1px solid rgba(245,197,24,.25);border-left:3px solid var(--warn);border-radius:10px;background:rgba(245,197,24,.05);font-size:.85rem;color:var(--sub)}
+  .constraint b{color:var(--warn)}
+  .sec{margin:56px 0 18px;display:flex;align-items:baseline;gap:12px}
+  .sec h2{font-size:1.05rem;text-transform:uppercase;letter-spacing:.06em;color:var(--txt)}
+  .sec span{font-size:.8rem;color:var(--dis)}
+  .opt{position:relative;border:1px solid var(--bd);border-radius:16px;background:var(--card);padding:24px;margin-bottom:26px;overflow:hidden}
+  .opt::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(167,139,250,.5),transparent)}
+  .opt .glow{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 560px 240px at 4% -10%,rgba(167,139,250,.10),transparent 62%)}
+  .tag{display:inline-flex;align-items:center;gap:8px;margin-bottom:6px}
+  .tag .badge{font-size:.72rem;font-weight:800;letter-spacing:.08em;color:var(--accent);background:rgba(167,139,250,.14);border-radius:999px;padding:3px 12px}
+  .tag h3{font-size:1rem;font-weight:600}
+  .desc{color:var(--sub);font-size:.83rem;margin-bottom:18px;max-width:900px}
+  .procon{display:flex;gap:24px;margin-top:16px;font-size:.78rem;color:var(--sub);flex-wrap:wrap}
+  .procon b{font-weight:700}
+  .procon .p b{color:var(--up)} .procon .c b{color:var(--down)}
+  svg{display:block}
+  svg text{font-family:'Segoe UI',system-ui,sans-serif}
+  .chipbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .chip{font-size:.72rem;font-weight:600;padding:3px 11px;border-radius:999px;border:1px solid transparent;color:var(--dis);background:rgba(255,255,255,.04);cursor:default}
+  .chip.on{color:#0d1117;font-weight:700}
+  .bento{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media(max-width:900px){.bento{grid-template-columns:repeat(2,1fr)}}
+  .mini{border:1px solid var(--bd);border-radius:12px;padding:12px 14px 8px;background:rgba(255,255,255,.02);position:relative;overflow:hidden}
+  .mini.held{border-color:rgba(167,139,250,.35);background:linear-gradient(180deg,rgba(167,139,250,.07),rgba(255,255,255,.01))}
+  .mini .nm{font-size:.72rem;font-weight:700;letter-spacing:.03em;color:var(--sub)}
+  .mini .val{font-size:1.15rem;font-weight:700;font-variant-numeric:tabular-nums;margin:2px 0 0}
+  .mini .st{position:absolute;top:10px;right:12px;font-size:.62rem;font-weight:700;border-radius:999px;padding:2px 8px}
+  .st.in{color:var(--hold);background:rgba(59,130,246,.14)} .st.out{color:var(--dis);background:rgba(255,255,255,.05)}
+  .note{font-size:.75rem;color:var(--dis);margin-top:10px}
+  .pick{margin-top:70px;padding:22px 26px;border:1px solid rgba(46,224,111,.3);border-left:3px solid var(--up);border-radius:12px;background:rgba(46,224,111,.05)}
+  .pick h2{font-size:.95rem;margin-bottom:8px;color:var(--up)}
+  .pick p{font-size:.85rem;color:var(--sub)}
+  .axis{font-size:10px;fill:var(--dis)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Redesign cụm ngành — tab Sóng Ngành</h1>
+  <p class="lead">Thứ tự mới: <b>Heatmap luân chuyển lên trên</b> · <b>bảng "Sức mạnh ngành" → line chart lịch sử</b>.
+  Mọi mockup dưới đây render bằng <b>dữ liệu thật</b> (60 phiên heatmap · 20 phiên điểm mạnh, tới 10/07/2026). Chọn 1 biến thể heatmap (H1/H2) + 1 hướng chart (A/B/C).</p>
+
+  <div class="constraint">⚠ <b>Ràng buộc dữ liệu:</b> điểm mạnh ngành (<code>composite</code>) hiện backend chỉ trả <b>20 phiên</b> (limit phase_rank). Muốn line chart dài hơn (60 phiên như heatmap) cần nâng limit backend (1 dòng + restart). Heatmap (<code>phase_industry</code>) có sẵn từ 2020 — không giới hạn.</div>
+
+  <!-- ═══════════════ HEATMAP ═══════════════ -->
+  <div class="sec"><h2>Phần 1 — Heatmap luân chuyển (đưa lên trên)</h2><span>chọn H1 hoặc H2</span></div>
+
+  <div class="opt"><div class="glow"></div>
+    <div class="tag"><span class="badge">H1</span><h3>Dot Matrix tinh chỉnh</h3></div>
+    <p class="desc">Giữ dạng ô rời nhưng nâng cấp: hàng <b>sort theo mức độ hoạt động</b>, ô bo tròn to hơn, phiên đang ON mới nhất có <b>glow</b>, thêm cột <b>tỷ lệ phiên trong sóng</b> + trục mốc tháng. Ngành đang trong rổ có tên sáng + chấm tím.</p>
+    <div id="h1"></div>
+    <div class="procon"><span class="p"><b>＋</b> quen mắt, đọc từng phiên chính xác, ít rủi ro</span><span class="c"><b>—</b> vẫn là "lưới chấm", fancy vừa phải</span></div>
+  </div>
+
+  <div class="opt"><div class="glow"></div>
+    <div class="tag"><span class="badge">H2</span><h3>Wave Streaks — dải sóng liền</h3></div>
+    <p class="desc">Gộp các phiên ON liên tiếp thành <b>thanh sóng liền</b> (bo tròn 2 đầu, gradient tím). Nhìn phát biết ngay "con sóng" của mỗi ngành bắt đầu – kết thúc khi nào, sóng nào đang chạy (đầu thanh phải có glow + pulse). Nền kẻ mốc tháng mờ.</p>
+    <div id="h2"></div>
+    <div class="procon"><span class="p"><b>＋</b> đúng ẩn dụ "Sóng Ngành", pro + fancy, nhìn ra chu kỳ ngay</span><span class="c"><b>—</b> không đếm được từng phiên lẻ (hover mới biết ngày)</span></div>
+  </div>
+
+  <!-- ═══════════════ LINE CHART ═══════════════ -->
+  <div class="sec"><h2>Phần 2 — Sức mạnh ngành: bảng → biểu đồ</h2><span>chọn A, B hoặc C</span></div>
+
+  <div class="opt"><div class="glow"></div>
+    <div class="tag"><span class="badge">A</span><h3>Focus + Context — 12 đường, nổi bật Top 3</h3></div>
+    <p class="desc">Tất cả 12 ngành trên <b>một trục chung</b> (thấy tương quan thật): 3 ngành dẫn đầu tô màu + <b>neon glow</b> + nhãn ở mép phải, 9 ngành còn lại là "bóng mờ" làm nền so sánh. Bản thật: click chip legend để bật/tắt highlight bất kỳ ngành nào.</p>
+    <div class="chipbar" id="chipsA"></div>
+    <div id="optA"></div>
+    <div class="procon"><span class="p"><b>＋</b> tương quan trực tiếp cùng trục, hợp ngôn ngữ Neon Regime của page</span><span class="c"><b>—</b> vùng đáy (ngành yếu) hơi chồng chéo</span></div>
+  </div>
+
+  <div class="opt"><div class="glow"></div>
+    <div class="tag"><span class="badge">B</span><h3>Bento Sparklines — 12 thẻ mini</h3></div>
+    <p class="desc">Mỗi ngành một thẻ: điểm mạnh hiện tại (số lớn) + sparkline 20 phiên + chip trạng thái. Sort theo hạng. Ngành trong rổ có viền tím sáng. Nhìn dạng "bảng điều khiển" — đọc từng ngành rất nhanh.</p>
+    <div class="bento" id="optB"></div>
+    <div class="procon"><span class="p"><b>＋</b> gọn, mobile đẹp, đọc từng ngành nhanh</span><span class="c"><b>—</b> mỗi thẻ tự co trục ⇒ khó so tương quan trực tiếp giữa các ngành</span></div>
+  </div>
+
+  <div class="opt"><div class="glow"></div>
+    <div class="tag"><span class="badge">C</span><h3>Bump Chart — cuộc đua thứ hạng</h3></div>
+    <p class="desc">Trục dọc là <b>thứ hạng 1→12</b>, mỗi ngành một đường qua 20 phiên — ai vượt ai, ngành nào đang trồi lên/chìm xuống thấy ngay. Đây là cách kể chuyện "<b>luân chuyển</b>" đúng nghĩa đen. Top 3 hiện tại tô màu, còn lại mờ.</p>
+    <div id="optC"></div>
+    <div class="procon"><span class="p"><b>＋</b> kể chuyện luân chuyển mạnh nhất, rất fancy, khác biệt</span><span class="c"><b>—</b> mất thông tin độ lớn điểm (chỉ còn thứ hạng); đường dày đặc nếu nhìn cả 12</span></div>
+  </div>
+
+  <div class="pick">
+    <h2>✔ Cách chọn</h2>
+    <p>Trả lời dạng: <b>"H2 + A"</b> (hoặc H1+C…). Có thể kèm chỉnh: "A nhưng chỉ 6 ngành từng có sóng", "H2 nhưng ô mảnh hơn", "line chart 60 phiên (nâng backend)"…</p>
+  </div>
+</div>
+
+<script>
+const DATA = {"dates":["2026-06-15","2026-06-16","2026-06-17","2026-06-18","2026-06-19","2026-06-22","2026-06-23","2026-06-24","2026-06-25","2026-06-26","2026-06-29","2026-06-30","2026-07-01","2026-07-02","2026-07-03","2026-07-06","2026-07-07","2026-07-08","2026-07-09","2026-07-10"],"series":[{"name":"CHUNGKHOAN","status":"trong_ro","composite":[0.662,1.2272,1.3366,1.0024,0.6496,0.5765,0.2168,0.0989,0.0437,0.2793,0.2624,0.5062,1.1573,1.36,1.4946,1.026,1.4761,1.3354,1.0756,0.2429],"rank":[1,1,1,1,1,1,1,1,1,1,2,2,1,1,1,1,1,1,1,1]},{"name":"THUCPHAM","status":"trong_ro","composite":[-0.3867,-0.2228,-0.287,-0.8395,-1.0283,-1.1812,-0.8797,-1.1642,-0.7658,-1.0203,-0.7528,-0.6178,1.1394,0.6646,0.149,-0.0661,-0.152,0.0216,-1.0163,-0.4043],"rank":[5,5,5,8,8,9,3,8,3,4,5,5,2,3,3,3,3,3,7,2]},{"name":"NGANHANG","status":"trong_ro","composite":[0.4793,0.533,0.7774,0.4687,-0.2476,-0.201,0.051,-0.2129,-0.1086,0.1925,0.5738,0.5708,1.1123,0.9964,0.647,0.0514,0.1918,0.4407,0.112,-0.7515],"rank":[2,2,2,2,2,2,2,2,2,2,1,1,3,2,2,2,2,2,2,3]},{"name":"DAUKHI","status":"ngoai","composite":[-1.4226,-1.3781,-1.3075,-1.156,-0.7025,-0.6286,-1.0153,-0.882,-1.1951,-1.2112,-0.812,-0.8624,-0.4492,-0.7659,-0.8217,-1.2692,-1.1362,-0.9454,-0.4535,-0.8771],"rank":[12,12,12,12,4,4,5,3,7,7,7,7,5,7,5,7,7,6,3,4]},{"name":"KCN","status":"ngoai","composite":[-0.5934,-0.5902,-0.5522,-0.6191,-1.1375,-1.7256,-1.6483,-1.7244,-1.7803,-1.7187,-1.4797,-1.1823,-0.8738,-0.9507,-1.2326,-1.3841,-1.1232,-1.1131,-0.7329,-0.9348],"rank":[6,7,7,5,10,12,12,12,12,12,11,11,11,11,11,11,6,9,5,5]},{"name":"HOACHAT","status":"ngoai","composite":[-1.3472,-1.2875,-0.8687,-0.9532,-0.946,-0.871,-1.2938,-1.0781,-1.4494,-1.6085,-1.5421,-1.3904,-1.1601,-1.0761,-1.1158,-1.2034,-1.1432,-0.5456,-0.5182,-1.0329],"rank":[11,11,11,10,5,6,8,5,10,11,12,12,12,12,9,6,8,4,4,6]},{"name":"KIMLOAI","status":"ngoai","composite":[-0.235,-0.0679,-0.012,-0.5974,-1.0108,-1.0027,-1.1604,-1.1496,-0.9187,-1.0225,-0.9038,-0.7865,-0.5985,-0.7866,-0.9723,-0.9648,-0.7666,-0.8256,-0.9477,-1.0679],"rank":[3,3,4,4,6,7,7,7,5,5,8,6,8,8,6,4,4,5,6,7]},{"name":"TIENICH","status":"ngoai","composite":[-1.0795,-0.9855,-0.6367,-0.8898,-1.071,-0.5148,-0.9244,-1.0202,-0.7894,-0.75,-0.6764,-0.3607,-0.5653,-0.4031,-1.1768,-1.2836,-1.2312,-1.1406,-1.0714,-1.1798],"rank":[9,10,9,9,9,3,4,4,4,3,4,3,7,4,10,8,10,10,8,8]},{"name":"BDS","status":"ngoai","composite":[-0.7848,-0.6063,-0.5729,-0.6844,-1.011,-1.248,-1.3715,-1.2025,-1.2264,-1.1198,-0.9913,-1.0842,-0.7187,-0.9231,-1.041,-1.1863,-1.2046,-1.01,-1.2731,-1.2014],"rank":[7,8,8,6,7,10,10,9,8,6,9,10,10,10,7,5,9,7,11,9]},{"name":"VANTAI","status":"ngoai","composite":[-0.2913,-0.112,0.246,0.3572,-0.3648,-0.7456,-1.0326,-1.1135,-1.1037,-1.3381,-1.1467,-1.0476,-0.6136,-0.6103,-1.0465,-1.3451,-1.2793,-1.0623,-1.2063,-1.3213],"rank":[4,4,3,3,3,5,6,6,6,10,10,9,9,6,8,10,11,8,9,10]},{"name":"BANLE","status":"ngoai","composite":[-0.8861,-0.357,-0.5448,-0.8153,-1.2486,-1.1114,-1.3503,-1.3353,-1.4026,-1.2637,-0.55,-0.5055,-0.5496,-0.8841,-1.3082,-1.5303,-1.393,-1.447,-1.3363,-1.4146],"rank":[8,6,6,7,12,8,9,10,9,9,3,4,6,9,12,12,12,12,12,11]},{"name":"XAYDUNG","status":"ngoai","composite":[-1.1281,-0.8848,-0.8591,-0.9897,-1.1665,-1.3201,-1.4305,-1.5275,-1.4697,-1.2622,-0.8114,-0.9308,-0.3888,-0.523,-0.8153,-1.3276,-1.1008,-1.1919,-1.2252,-1.4237],"rank":[10,9,10,11,11,11,11,11,11,8,6,8,4,5,4,9,5,11,10,12]}],"heatDates":["2026-04-15","2026-04-16","2026-04-17","2026-04-20","2026-04-21","2026-04-22","2026-04-23","2026-04-24","2026-04-28","2026-04-29","2026-05-04","2026-05-05","2026-05-06","2026-05-07","2026-05-08","2026-05-11","2026-05-12","2026-05-13","2026-05-14","2026-05-15","2026-05-18","2026-05-19","2026-05-20","2026-05-21","2026-05-22","2026-05-25","2026-05-26","2026-05-27","2026-05-28","2026-05-29","2026-06-01","2026-06-02","2026-06-03","2026-06-04","2026-06-05","2026-06-08","2026-06-09","2026-06-10","2026-06-11","2026-06-12","2026-06-15","2026-06-16","2026-06-17","2026-06-18","2026-06-19","2026-06-22","2026-06-23","2026-06-24","2026-06-25","2026-06-26","2026-06-29","2026-06-30","2026-07-01","2026-07-02","2026-07-03","2026-07-06","2026-07-07","2026-07-08","2026-07-09","2026-07-10"],"heat":{"BANLE":[1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0],"BDS":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],"CHUNGKHOAN":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,1],"DAUKHI":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0],"HOACHAT":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,1,1,1],"KCN":[1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"KIMLOAI":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],"NGANHANG":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,1],"THUCPHAM":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1],"TIENICH":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,1,0,0,0,0,0],"VANTAI":[0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0],"XAYDUNG":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0]}};
+
+const ACCENT='#a78bfa', TOP3=['#a78bfa','#2ee06f','#f5c518'], GHOST='rgba(230,233,239,0.10)';
+const lastIdx=DATA.dates.length-1;
+const top3=[...DATA.series].sort((a,b)=>a.rank[lastIdx]-b.rank[lastIdx]).slice(0,3).map(s=>s.name);
+const colorOf=n=>{const i=top3.indexOf(n);return i>=0?TOP3[i]:GHOST};
+const heldSet=new Set(DATA.series.filter(s=>s.status==='trong_ro').map(s=>s.name));
+
+// ── helpers ──
+function smoothPath(pts){ if(pts.length<2)return''; let d=`M${pts[0][0]},${pts[0][1]}`;
+  for(let i=1;i<pts.length;i++){const [x0,y0]=pts[i-1],[x1,y1]=pts[i],mx=(x0+x1)/2; d+=` C${mx},${y0} ${mx},${y1} ${x1},${y1}`;} return d;}
+function monthTicks(dates){const t=[];let prev='';dates.forEach((d,i)=>{const m=d.slice(0,7);if(m!==prev){t.push([i,'T'+ +d.slice(5,7)]);prev=m;}});return t.slice(1);}
+
+// sort heat rows: active-most first
+const heatNames=Object.keys(DATA.heat).sort((a,b)=>DATA.heat[b].reduce((s,v)=>s+v,0)-DATA.heat[a].reduce((s,v)=>s+v,0));
+const HD=DATA.heatDates, HN=HD.length;
+
+// ═══ H1: dot matrix ═══
+(function(){
+  const cell=15,gap=3,lh=26,lw=118,badge=64,W=lw+HN*(cell+gap)+badge,H=heatNames.length*lh+26;
+  let s=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px">`;
+  monthTicks(HD).forEach(([i,l])=>{const x=lw+i*(cell+gap);s+=`<line x1="${x-2}" y1="0" x2="${x-2}" y2="${H-22}" stroke="rgba(255,255,255,.05)"/><text class="axis" x="${x}" y="${H-8}">${l}</text>`});
+  heatNames.forEach((n,r)=>{
+    const y=r*lh, held=heldSet.has(n), tot=DATA.heat[n].reduce((a,v)=>a+v,0);
+    s+=`<text x="0" y="${y+15}" font-size="11" font-weight="${held?700:400}" fill="${held?'#e6e9ef':'#9aa1ab'}">${held?'●':'○'} ${n}</text>`;
+    DATA.heat[n].forEach((v,i)=>{
+      const x=lw+i*(cell+gap), on=v===1, last=on&&i===HN-1;
+      s+=`<rect x="${x}" y="${y+3}" width="${cell}" height="${lh-9}" rx="4" fill="${on?ACCENT:'rgba(255,255,255,.045)'}" opacity="${on?(last?1:.75):1}" ${last?`stroke="${ACCENT}" stroke-width="1.5" filter="url(#gl)"`:''}/>`;});
+    s+=`<text x="${lw+HN*(cell+gap)+10}" y="${y+15}" font-size="10.5" fill="#5d6570" font-variant-numeric="tabular-nums">${tot}/${HN} phiên</text>`;});
+  s+=`<defs><filter id="gl" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs></svg>`;
+  document.getElementById('h1').innerHTML=s;
+})();
+
+// ═══ H2: wave streaks ═══
+(function(){
+  const uw=19,lh=30,lw=118,W=lw+HN*uw+10,H=heatNames.length*lh+26,bh=13;
+  let s=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px">`;
+  s+=`<defs><linearGradient id="wv" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6d4fd1"/><stop offset="1" stop-color="#b79bff"/></linearGradient>
+  <filter id="gw" x="-40%" y="-140%" width="180%" height="380%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+  monthTicks(HD).forEach(([i,l])=>{const x=lw+i*uw;s+=`<line x1="${x}" y1="0" x2="${x}" y2="${H-22}" stroke="rgba(255,255,255,.05)"/><text class="axis" x="${x+3}" y="${H-8}">${l}</text>`});
+  heatNames.forEach((n,r)=>{
+    const y=r*lh+ (lh-bh)/2, held=heldSet.has(n), arr=DATA.heat[n];
+    s+=`<text x="0" y="${r*lh+lh/2+4}" font-size="11" font-weight="${held?700:400}" fill="${held?'#e6e9ef':'#9aa1ab'}">${held?'●':'○'} ${n}</text>`;
+    s+=`<rect x="${lw}" y="${r*lh+lh/2-.5}" width="${HN*uw}" height="1" fill="rgba(255,255,255,.04)"/>`;
+    let i=0; while(i<HN){ if(arr[i]===1){let j=i;while(j<HN&&arr[j]===1)j++;
+      const x=lw+i*uw,w=(j-i)*uw-3,live=j===HN;
+      s+=`<rect x="${x}" y="${y}" width="${Math.max(w,uw*0.6)}" height="${bh}" rx="${bh/2}" fill="url(#wv)" opacity="${live?1:.62}" ${live?'filter="url(#gw)"':''}/>`;
+      if(live)s+=`<circle cx="${x+Math.max(w,uw*0.6)-3}" cy="${y+bh/2}" r="3.2" fill="#e9ddff" filter="url(#gw)"/>`;
+      i=j;} else i++;}});
+  s+=`</svg>`;
+  document.getElementById('h2').innerHTML=s;
+})();
+
+// ═══ A: focus + context lines ═══
+(function(){
+  const W=1080,H=340,pl=44,pr=118,pt=14,pb=26,iw=W-pl-pr,ih=H-pt-pb;
+  const vals=DATA.series.flatMap(s=>s.composite).filter(v=>v!=null);
+  const mn=Math.floor(Math.min(...vals)*2)/2-0.1, mx=Math.ceil(Math.max(...vals)*2)/2+0.1;
+  const X=i=>pl+i/(lastIdx)*iw, Y=v=>pt+(mx-v)/(mx-mn)*ih;
+  let s=`<svg viewBox="0 0 ${W} ${H}" style="width:100%"><defs>
+    <filter id="ng" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+  for(let g=Math.ceil(mn*2)/2;g<=mx;g+=0.5){s+=`<line x1="${pl}" y1="${Y(g)}" x2="${W-pr}" y2="${Y(g)}" stroke="rgba(255,255,255,${g===0?'.14':'.05'})" ${g===0?'':'stroke-dasharray="2 4"'}/><text class="axis" x="4" y="${Y(g)+3}" font-variant-numeric="tabular-nums">${g>0?'+':''}${g.toFixed(1)}</text>`;}
+  [0,4,9,14,19].forEach(i=>{s+=`<text class="axis" x="${X(i)-14}" y="${H-6}">${DATA.dates[i].slice(8)}/${DATA.dates[i].slice(5,7)}</text>`});
+  const ghosts=DATA.series.filter(x=>!top3.includes(x.name)), focus=DATA.series.filter(x=>top3.includes(x.name));
+  ghosts.forEach(sr=>{s+=`<path d="${smoothPath(sr.composite.map((v,i)=>[X(i),Y(v)]))}" fill="none" stroke="${GHOST}" stroke-width="1.3"/>`;});
+  focus.forEach(sr=>{const c=colorOf(sr.name),pts=sr.composite.map((v,i)=>[X(i),Y(v)]),d=smoothPath(pts);
+    s+=`<path d="${d}" fill="none" stroke="${c}" stroke-width="5" opacity=".16" filter="url(#ng)"/>`;
+    s+=`<path d="${d}" fill="none" stroke="${c}" stroke-width="1.9"/>`;
+    const [ex,ey]=pts[pts.length-1];
+    s+=`<circle cx="${ex}" cy="${ey}" r="3.4" fill="${c}" filter="url(#ng)"/><text x="${ex+9}" y="${ey+4}" font-size="11" font-weight="700" fill="${c}">${sr.name}</text>`;});
+  s+=`</svg>`;
+  document.getElementById('optA').innerHTML=s;
+  document.getElementById('chipsA').innerHTML=DATA.series.map(sr=>{const on=top3.includes(sr.name),c=colorOf(sr.name);
+    return `<span class="chip ${on?'on':''}" style="${on?`background:${c};border-color:${c}`:''}">${sr.name}</span>`;}).join('');
+})();
+
+// ═══ B: bento sparklines ═══
+(function(){
+  const sorted=[...DATA.series].sort((a,b)=>a.rank[lastIdx]-b.rank[lastIdx]);
+  document.getElementById('optB').innerHTML=sorted.map(sr=>{
+    const held=sr.status==='trong_ro', last=sr.composite[lastIdx], first=sr.composite[0];
+    const mn=Math.min(...sr.composite),mx=Math.max(...sr.composite),rg=mx-mn||1;
+    const w=210,h=44, pts=sr.composite.map((v,i)=>[i/lastIdx*w, 4+(mx-v)/rg*(h-8)]);
+    const up=last>=first, lc=held?ACCENT:(up?'rgba(46,224,111,.7)':'rgba(255,90,90,.55)');
+    const area=smoothPath(pts)+`L${w},${h} L0,${h} Z`;
+    return `<div class="mini ${held?'held':''}">
+      <div class="nm">#${sr.rank[lastIdx]} · ${sr.name}</div>
+      <div class="val" style="color:${last>=0?'var(--up)':'var(--down)'}">${last>=0?'+':''}${last.toFixed(2)}</div>
+      <span class="st ${held?'in':'out'}">${held?'Nắm giữ':'Quan sát'}</span>
+      <svg viewBox="0 0 ${w} ${h}" style="width:100%;margin-top:6px">
+        <path d="${area}" fill="${held?'rgba(167,139,250,.13)':'rgba(255,255,255,.04)'}"/>
+        <path d="${smoothPath(pts)}" fill="none" stroke="${lc}" stroke-width="1.6"/>
+        <circle cx="${pts[pts.length-1][0]}" cy="${pts[pts.length-1][1]}" r="2.6" fill="${lc}"/>
+      </svg></div>`;}).join('');
+})();
+
+// ═══ C: bump chart ═══
+(function(){
+  const W=1080,H=380,pl=118,pr=118,pt=16,pb=26,iw=W-pl-pr,ih=H-pt-pb;
+  const X=i=>pl+i/lastIdx*iw, Y=r=>pt+(r-1)/11*ih;
+  let s=`<svg viewBox="0 0 ${W} ${H}" style="width:100%"><defs>
+    <filter id="bg2" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+  for(let r=1;r<=12;r++)s+=`<line x1="${pl}" y1="${Y(r)}" x2="${W-pr}" y2="${Y(r)}" stroke="rgba(255,255,255,.04)"/><text class="axis" x="${pl-24}" y="${Y(r)+3}" font-variant-numeric="tabular-nums">#${r}</text>`;
+  [0,4,9,14,19].forEach(i=>{s+=`<text class="axis" x="${X(i)-14}" y="${H-6}">${DATA.dates[i].slice(8)}/${DATA.dates[i].slice(5,7)}</text>`});
+  const ghosts=DATA.series.filter(x=>!top3.includes(x.name)), focus=DATA.series.filter(x=>top3.includes(x.name));
+  ghosts.forEach(sr=>{s+=`<path d="${smoothPath(sr.rank.map((r,i)=>[X(i),Y(r)]))}" fill="none" stroke="${GHOST}" stroke-width="1.4"/>`;
+    s+=`<text x="${W-pr+9}" y="${Y(sr.rank[lastIdx])+4}" font-size="10" fill="#5d6570">${sr.name}</text>`;});
+  focus.forEach(sr=>{const c=colorOf(sr.name),pts=sr.rank.map((r,i)=>[X(i),Y(r)]),d=smoothPath(pts);
+    s+=`<path d="${d}" fill="none" stroke="${c}" stroke-width="5.5" opacity=".16" filter="url(#bg2)"/>`;
+    s+=`<path d="${d}" fill="none" stroke="${c}" stroke-width="2.2"/>`;
+    pts.forEach(([x,y],i)=>{if(i%1===0)s+=`<circle cx="${x}" cy="${y}" r="2" fill="#0d1117" stroke="${c}" stroke-width="1.4"/>`});
+    const [ex,ey]=pts[pts.length-1];
+    s+=`<circle cx="${ex}" cy="${ey}" r="3.6" fill="${c}" filter="url(#bg2)"/><text x="${W-pr+9}" y="${ey+4}" font-size="11" font-weight="700" fill="${c}">${sr.name}</text>`;
+    s+=`<text x="${pl-108}" y="${Y(sr.rank[0])+4}" font-size="10" fill="${c}" opacity=".7">${sr.name}</text>`;});
+  s+=`</svg>`;
+  document.getElementById('optC').innerHTML=s;
+})();
+</script>
+</body>
+</html>

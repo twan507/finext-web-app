@@ -60,7 +60,7 @@ export default function MarketPhaseTab({ daily, comment, perf, indicators, tradi
         </Box>
         {comment && (
           <Box sx={{ mt: 3 }}>
-            <SessionDiagnosis comment={comment} />
+            <SessionDiagnosis paragraphs={[comment.market_cmt]} generatedAt={comment.generated_at} />
           </Box>
         )}
       </Box>
@@ -73,6 +73,12 @@ export default function MarketPhaseTab({ daily, comment, perf, indicators, tradi
         <Box sx={{ mt: 2.5 }}>
           <AdvancedPanel daily={latest} indicators={indicators} />
         </Box>
+        {/* Ô FINEXT AI mới: 3 đoạn điều kiện/cấu trúc/rủi ro (market_cmt ở khối trên) — dưới bảng chỉ số chi tiết. */}
+        {comment && (
+          <Box sx={{ mt: 3 }}>
+            <SessionDiagnosis paragraphs={[comment.condition_cmt, comment.structure_cmt, comment.risk_cmt]} generatedAt={comment.generated_at} />
+          </Box>
+        )}
       </Box>
 
       {perf.length > 0 && (

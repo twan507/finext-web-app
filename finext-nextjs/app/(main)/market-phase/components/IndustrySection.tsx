@@ -1,126 +1,89 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, alpha, useTheme } from '@mui/material';
+import { Box, Stack, Typography, alpha } from '@mui/material';
 import ChartSectionTitle from 'components/common/ChartSectionTitle';
-import { getGlassCard, getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
-import type { PhaseRank, PhaseIndustryRow } from '../types';
-import { getStatusMeta } from '../basketMeta';
-import PortfolioComment from './PortfolioComment';
-
-const HEATMAP_SESSIONS = 40;
+import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
+import AmbientCard from './AmbientCard';
+import type { PhaseRank, PhaseIndustryRow, IndexMapRow } from '../types';
+import SectorWaveStrip from './SectorWaveStrip';
+import SectorStrengthChart from './SectorStrengthChart';
 
 interface IndustrySectionProps {
-  sectorRanks: PhaseRank[];
-  industry: PhaseIndustryRow[];
-  sectorCmt?: string | null;
+  sectorRanks: PhaseRank[]; // FULL lịch sử (level='sector', product=CORE) — cho line chart sức mạnh
+  industry: PhaseIndustryRow[]; // phase_industry WIDE — cho heatmap wave streaks
+  indexMap: IndexMapRow[]; // map mã ngành → tên đầy đủ (ref_db.index_map)
+  accent: string; // màu nhận diện rổ CORE (ambient glow)
+  sectorCmt?: string | null; // nhận định ngành FINEXT AI (phase_comment_basket.sector_cmt)
   generatedAt?: string;
   updateTime?: string;
 }
 
-function sectorName(r: PhaseRank): string {
-  return r.ten || (r.sector ?? '') || r.ticker || '—';
+function formatTime(iso?: string): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-/** Tầng NGÀNH cho tab Sóng Ngành (CORE): rank ngành + heatmap + diễn giải ngành. */
-export default function IndustrySection({ sectorRanks, industry, sectorCmt, generatedAt, updateTime }: IndustrySectionProps) {
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
-
-  const sortedSectors = useMemo(() => [...sectorRanks].sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999)), [sectorRanks]);
-
-  // CHỈ ngành từng có value 1 (không render cột always-0 để không lộ universe).
-  const activeSectors = useMemo(() => {
-    const set = new Set<string>();
-    for (const row of industry) {
-      for (const k of Object.keys(row)) {
-        if (k !== 'date' && Number(row[k]) === 1) set.add(k);
-      }
-    }
-    return Array.from(set).sort();
+/** Tầng NGÀNH tab Sóng Ngành (CORE): heatmap luân chuyển + line chart sức mạnh + nhận định ngành AI, 1 card kính. */
+export default function IndustrySection({ sectorRanks, industry, indexMap, accent, sectorCmt, generatedAt, updateTime }: IndustrySectionProps) {
+  const { activeSectors, liveSectors } = useMemo(() => {
+    const active = new Set<string>();
+    for (const r of industry) for (const k of Object.keys(r)) if (k !== 'date' && Number(r[k]) === 1) active.add(k);
+    const last = industry[industry.length - 1];
+    const live = new Set<string>();
+    if (last) for (const k of Object.keys(last)) if (k !== 'date' && Number(last[k]) === 1) live.add(k);
+    return { activeSectors: active, liveSectors: live };
   }, [industry]);
 
-  const recent = useMemo(() => industry.slice(-HEATMAP_SESSIONS), [industry]);
+  // Map mã ngành → tên đầy đủ; thiếu (BE chưa restart) → fallback về mã.
+  const nameByCode = useMemo(
+    () => new Map(indexMap.filter((m) => m.ticker_name).map((m) => [m.ticker, m.ticker_name as string] as const)),
+    [indexMap],
+  );
 
-  const headSx = {
-    fontSize: getResponsiveFontSize('xs'),
-    color: 'text.secondary',
-    fontWeight: fontWeight.semibold,
-    whiteSpace: 'nowrap',
-    borderColor: theme.palette.divider,
-    bgcolor: theme.palette.background.paper,
-  };
-  const cellSx = { fontSize: getResponsiveFontSize('sm'), borderColor: theme.palette.divider, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' };
+  const cap = { fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', fontWeight: fontWeight.semibold, mb: 1 } as const;
 
   return (
     <Box>
-      <ChartSectionTitle title="Sức mạnh ngành" description="Xếp hạng ngành và trạng thái luân chuyển của danh mục Sóng Ngành." updateTime={updateTime} />
+      <ChartSectionTitle title="Luân chuyển sóng ngành" description="Nhịp luân chuyển các ngành và tương quan sức mạnh theo thời gian." updateTime={updateTime} />
+      <Box sx={{ mt: 1.5 }}>
+        <AmbientCard glowColor={accent} filled={false} sx={{ p: { xs: 2, md: 2.5 } }}>
+          <SectorWaveStrip industry={industry} liveSectors={liveSectors} nameByCode={nameByCode} />
 
-      {sortedSectors.length > 0 && (
-        <Box sx={{ mt: 1.5, borderRadius: `${borderRadius.lg}px`, ...getGlassCard(isDark), overflow: 'hidden' }}>
-          <TableContainer sx={{ maxHeight: 360 }}>
-            <Table stickyHeader size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={headSx}>Hạng</TableCell>
-                  <TableCell sx={headSx}>Ngành</TableCell>
-                  <TableCell align="right" sx={headSx}>Điểm mạnh</TableCell>
-                  <TableCell sx={headSx}>Trạng thái</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {sortedSectors.map((r, i) => {
-                  const st = getStatusMeta(r.status);
-                  return (
-                    <TableRow key={`${sectorName(r)}-${i}`} hover>
-                      <TableCell sx={cellSx}>{r.rank ?? '—'}</TableCell>
-                      <TableCell sx={{ ...cellSx, fontWeight: fontWeight.semibold }}>{sectorName(r)}</TableCell>
-                      <TableCell align="right" sx={cellSx}>{r.composite != null ? r.composite.toFixed(2) : '—'}</TableCell>
-                      <TableCell sx={cellSx}>
-                        <Box
-                          component="span"
-                          sx={{ display: 'inline-block', px: 1, py: 0.25, borderRadius: 999, fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: st.color(theme), bgcolor: alpha(st.color(theme), 0.12) }}
-                        >
-                          {st.label}
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-      )}
+          <Box sx={{ height: '1px', bgcolor: 'divider', my: 2.5, opacity: 0.5 }} />
 
-      {activeSectors.length > 0 && recent.length > 0 && (
-        <Box sx={{ mt: 2, borderRadius: `${borderRadius.lg}px`, ...getGlassCard(isDark), p: { xs: 1.5, md: 2 }, overflowX: 'auto' }}>
-          <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', mb: 1 }}>
-            Các ngành hệ thống đang theo dõi ({HEATMAP_SESSIONS} phiên gần nhất) — ô đậm = đang trong luân chuyển.
-          </Typography>
-          <Box sx={{ display: 'inline-flex', flexDirection: 'column', gap: '3px', minWidth: 'min-content' }}>
-            {activeSectors.map((sec) => (
-              <Box key={sec} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Box sx={{ width: 110, flexShrink: 0, fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {sec}
+          <SectorStrengthChart sectorRanks={sectorRanks} activeSectors={activeSectors} nameByCode={nameByCode} />
+
+          {sectorCmt && sectorCmt.trim() && (
+            <>
+              <Box sx={{ height: '1px', bgcolor: 'divider', my: 2.5, opacity: 0.5 }} />
+              <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1, flexWrap: 'wrap' }}>
+                <Box
+                  component="span"
+                  sx={{
+                    fontSize: getResponsiveFontSize('xs'),
+                    fontWeight: fontWeight.bold,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    color: accent,
+                    bgcolor: alpha(accent, 0.14),
+                    borderRadius: 999,
+                    px: 1.25,
+                    py: 0.4,
+                  }}
+                >
+                  ✦ FINEXT AI
                 </Box>
-                <Box sx={{ display: 'flex', gap: '2px' }}>
-                  {recent.map((row, idx) => {
-                    const on = Number(row[sec]) === 1;
-                    return <Box key={idx} sx={{ width: 12, height: 12, borderRadius: '2px', bgcolor: on ? theme.palette.primary.main : alpha(theme.palette.text.disabled, 0.12) }} />;
-                  })}
-                </Box>
-              </Box>
-            ))}
-          </Box>
-        </Box>
-      )}
-
-      {sectorCmt && (
-        <Box sx={{ mt: 2 }}>
-          <PortfolioComment text={sectorCmt} generatedAt={generatedAt} />
-        </Box>
-      )}
+                <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary', fontWeight: fontWeight.medium }}>Nhận định ngành</Typography>
+                {formatTime(generatedAt) && <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.disabled' }}>· Cập nhật lúc {formatTime(generatedAt)}</Typography>}
+              </Stack>
+              <Typography sx={{ fontSize: getResponsiveFontSize('md'), lineHeight: 1.6, color: 'text.secondary', whiteSpace: 'pre-line' }}>{sectorCmt}</Typography>
+            </>
+          )}
+        </AmbientCard>
+      </Box>
     </Box>
   );
 }
