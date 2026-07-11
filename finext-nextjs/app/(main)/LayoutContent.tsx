@@ -13,7 +13,6 @@ import {
   alpha, Tooltip, Collapse
 } from '@mui/material';
 import MuiLink from '@mui/material/Link';
-import { SvgIconProps } from '@mui/material/SvgIcon';
 import {
   Dashboard as DashboardIcon,
   Menu as MenuIcon,
@@ -21,7 +20,6 @@ import {
   CandlestickChartOutlined,
   StarBorderPurple500Outlined,
   FilterAltOutlined,
-  TrafficOutlined,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   ArrowBack as ArrowBackIcon,
@@ -38,19 +36,22 @@ import AuthButtons from '@/components/auth/AuthButtons';
 import ConsultationSection from './home/components/ConsultationSection';
 import PwaTitleBar from '@/components/layout/PwaTitleBar';
 import MobileBottomBar from '@/components/layout/MobileBottomBar';
+import MarketPhaseNavIcon from './MarketPhaseNavIcon';
 
 interface NavItem {
   text: string;
   href: string;
-  icon: React.ReactElement<SvgIconProps>;
+  icon: React.ReactElement<{ sx?: object }>;
   exactMatch?: boolean;
+  /** Nút đặc biệt (Giai đoạn thị trường): khung Aurora + gauge ở rail. */
+  special?: boolean;
 }
 
 const navigationStructure: NavItem[] = [
+  { text: 'Giai đoạn thị trường', href: '/market-phase', icon: <MarketPhaseNavIcon />, special: true },
   { text: 'Biểu đồ kĩ thuật', href: '/charts', icon: <CandlestickChartOutlined /> },
   { text: 'Danh sách theo dõi', href: '/watchlist', icon: <StarBorderPurple500Outlined /> },
   { text: 'Bộ lọc thông minh', href: '/stocks', icon: <FilterAltOutlined />, exactMatch: true },
-  { text: 'Giai đoạn thị trường', href: '/market-phase', icon: <TrafficOutlined /> },
 ];
 
 // Top navigation tabs (like in Simplize)
@@ -236,6 +237,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                             },
                           },
                           transition: transitions.colors,
+                          ...(item.special
+                            ? {
+                                // Hover: KHÔNG scale nút — chỉ phóng to viền (inset rộng ra) + xoay nhanh hơn.
+                                '&:hover .mp-nav-frame::before': { inset: '-6px', animationDuration: '1.8s' },
+                                '&:hover .mp-nav-frame::after': { inset: '-2px', animationDuration: '1.8s' },
+                              }
+                            : {}),
                         }}
                       >
                         <ListItemIcon sx={{
@@ -243,7 +251,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                           color: 'inherit',
                           justifyContent: 'center'
                         }}>
-                          {React.cloneElement(item.icon, { sx: { fontSize: iconSize.nav.desktop } })}
+                          {item.special ? <MarketPhaseNavIcon aura /> : React.cloneElement(item.icon, { sx: { fontSize: iconSize.nav.desktop } })}
                         </ListItemIcon>
                       </ListItemButton>
                     </Link>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mockup — nút Giai đoạn thị trường (sidebar)</title>
+<style>
+  :root{--bg:#0a0d12;--panel:#0f141b;--bd:rgba(255,255,255,.08);--txt:#e6e9ef;--sub:#9aa1ab;--dis:#5d6570;--acc:#a78bfa;--acc2:#7c3aed;--up:#2ee06f;--yel:#f5c518;--dn:#ff5a5a}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,sans-serif;padding:36px 24px 120px;line-height:1.6}
+  .wrap{max-width:1160px;margin:0 auto}
+  h1{font-size:1.5rem;margin-bottom:6px}
+  .lead{color:var(--sub);font-size:.9rem;max-width:820px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px;margin-top:34px}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+  .card{position:relative;border:1px solid var(--bd);border-radius:16px;background:var(--panel);padding:22px 24px 26px;overflow:hidden}
+  .card::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(167,139,250,.5),transparent)}
+  .tag{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}
+  .badge{font-size:.72rem;font-weight:800;letter-spacing:.06em;color:var(--acc);background:rgba(167,139,250,.14);border-radius:999px;padding:3px 12px}
+  .tag h3{font-size:1rem;font-weight:600}
+  .desc{color:var(--sub);font-size:.82rem;margin:8px 0 22px;min-height:56px}
+  .stage{display:flex;align-items:center;gap:40px}
+  .rail{width:64px;background:#070a0e;border:1px solid var(--bd);border-radius:14px;padding:14px 0;display:flex;flex-direction:column;align-items:center;gap:16px}
+  .rail .other{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:#4a5563}
+  .rail .other svg{width:20px;height:20px}
+  .hoverhint{font-size:.72rem;color:var(--dis);margin-top:16px}
+  .hoverhint b{color:var(--sub)}
+  /* traffic light icon */
+  .tl{width:24px;height:24px;display:block}
+  /* base icon button */
+  .btn{position:relative;width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#cdb8ff;transition:transform .28s cubic-bezier(.34,1.56,.64,1)}
+  .btn .core{position:relative;z-index:2;display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:12px}
+
+  /* ============ A — AURA BREATHING ============ */
+  .a .core{background:linear-gradient(145deg,rgba(167,139,250,.22),rgba(124,58,237,.06));border:1px solid rgba(167,139,250,.34)}
+  .a::after{content:"";position:absolute;inset:-6px;border-radius:16px;background:radial-gradient(circle,rgba(167,139,250,.55),transparent 68%);filter:blur(5px);z-index:1;animation:auraBreath 3.6s ease-in-out infinite}
+  @keyframes auraBreath{0%,100%{transform:scale(.9);opacity:.35}50%{transform:scale(1.18);opacity:.85}}
+  .a:hover{transform:translateY(-2px) scale(1.06)}
+  .a:hover::after{animation-duration:1.4s;opacity:1}
+
+  /* ============ B — PULSE RING (sonar) ============ */
+  .b .core{background:linear-gradient(145deg,#7c3aed,#5b21b6);border:1px solid rgba(167,139,250,.5);color:#fff;box-shadow:0 4px 16px rgba(124,58,237,.4)}
+  .b::before,.b::after{content:"";position:absolute;inset:0;border-radius:12px;border:2px solid rgba(167,139,250,.7);z-index:0;animation:ping 2.8s cubic-bezier(0,0,.2,1) infinite}
+  .b::after{animation-delay:1.4s}
+  @keyframes ping{0%{transform:scale(1);opacity:.7}80%,100%{transform:scale(1.9);opacity:0}}
+  .b:hover .core{box-shadow:0 6px 22px rgba(124,58,237,.7)}
+  .b:hover::before,.b:hover::after{animation-duration:1.5s}
+
+  /* ============ C — AURORA BORDER (spinning conic) ============ */
+  .c{padding:2px}
+  .c::before{content:"";position:absolute;inset:0;border-radius:12px;background:conic-gradient(from 0deg,var(--acc),#22d3ee,var(--up),var(--yel),var(--dn),var(--acc));animation:spin 4s linear infinite;z-index:0}
+  .c::after{content:"";position:absolute;inset:0;border-radius:12px;background:conic-gradient(from 0deg,var(--acc),#22d3ee,var(--up),var(--yel),var(--dn),var(--acc));filter:blur(9px);opacity:.55;animation:spin 4s linear infinite,breatheOp 3.4s ease-in-out infinite;z-index:0}
+  .c .core{background:#0c1017;margin:2px;width:calc(100% - 4px);height:calc(100% - 4px)}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes breatheOp{0%,100%{opacity:.3}50%{opacity:.7}}
+  .c:hover{transform:scale(1.06)}
+  .c:hover::before,.c:hover::after{animation-duration:1.6s,1.6s}
+
+  /* ============ D — GLASS BREATHING + TOP ACCENT + LIFT ============ */
+  .d .core{background:rgba(255,255,255,.04);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.1);overflow:hidden}
+  .d .core::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 40px 30px at 50% -30%,rgba(167,139,250,.5),transparent 70%);animation:glassBreath 3.8s ease-in-out infinite}
+  .d .core::after{content:"";position:absolute;top:0;left:6px;right:6px;height:1px;background:linear-gradient(90deg,transparent,rgba(167,139,250,.9),transparent)}
+  @keyframes glassBreath{0%,100%{opacity:.35}50%{opacity:.9}}
+  .d{transition:transform .3s cubic-bezier(.34,1.56,.64,1),box-shadow .3s}
+  .d:hover{transform:translateY(-3px);box-shadow:0 10px 26px rgba(124,58,237,.4)}
+  .d:hover .core::before{opacity:1}
+
+  .pick{margin-top:54px;padding:20px 24px;border:1px solid rgba(46,224,111,.3);border-left:3px solid var(--up);border-radius:12px;background:rgba(46,224,111,.05)}
+  .pick h2{font-size:.95rem;color:var(--up);margin-bottom:8px}
+  .pick p{font-size:.85rem;color:var(--sub)}
+  .note{margin:18px 0 0;padding:12px 16px;border:1px solid rgba(245,197,24,.25);border-left:3px solid var(--yel);border-radius:10px;background:rgba(245,197,24,.05);font-size:.82rem;color:var(--sub)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Nút "Giai đoạn thị trường" — sidebar</h1>
+  <p class="lead">Đưa lên <b>trên cùng</b> rail trái + icon <b>fancy có ambient breathing</b> để hút mắt + <b>hover đẹp</b>. 4 kiểu dưới đây chạy animation thật — rê chuột vào từng icon để xem hover. Icon dùng đèn giao thông với 3 chấm <span style="color:var(--dn)">đỏ</span>/<span style="color:var(--yel)">vàng</span>/<span style="color:var(--up)">xanh</span> (gợi pha thị trường).</p>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="note">⚙️ Mỗi option đặt ở <b>đỉnh rail</b> (trên các nút khác). Breathing = ambient glow phồng/xẹp nhẹ 3–4s; hover = tăng tốc glow + nhấc/scale nhẹ. Mọi thứ theme-aware, dịu hơn ở light mode khi implement.</p>
+
+  <div class="pick">
+    <h2>✔ Cách chọn</h2>
+    <p>Trả lời kiểu <b>"A"</b> hoặc phối <b>"C icon nhưng hover kiểu D"</b>. Có thể chỉnh: "đổi màu aurora", "breathing chậm hơn", "giữ icon 1 màu tím thay vì 3 chấm màu"…</p>
+  </div>
+</div>
+
+<script>
+const TL = `<svg class="tl" viewBox="0 0 24 24" fill="none"><rect x="7.5" y="2.5" width="9" height="19" rx="3.2" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="7" r="1.7" fill="#ff5a5a"/><circle cx="12" cy="12" r="1.7" fill="#f5c518"/><circle cx="12" cy="17" r="1.7" fill="#2ee06f"/></svg>`;
+const OTHER = [
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20V10M9 20V4M14 20v-7M19 20V7"/></svg>',
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z"/></svg>',
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>'
+];
+const opts=[
+  {c:'a',badge:'A',name:'Aura Breathing',desc:'Quầng sáng tím radial sau icon phồng/xẹp (breathing). Icon trong ô glass viền tím. Hover: nhấc nhẹ + scale + glow sáng & nhanh hơn. Tinh tế, sang, ít rối.'},
+  {c:'b',badge:'B',name:'Pulse Ring (sonar)',desc:'Icon nền gradient tím đậm nổi bật + 2 vòng ring lan ra ngoài như radar (ping). Rất hút mắt, "đang sống". Hover: ping nhanh + shadow đậm hơn.'},
+  {c:'c',badge:'C',name:'Aurora Border',desc:'Viền conic-gradient (tím→cyan→xanh→vàng→đỏ) xoay quanh icon + hào quang mờ breathing. Nổi bật nhất, rực rỡ. Hợp chủ đề "pha" nhiều màu. Hover: xoay nhanh hơn.'},
+  {c:'d',badge:'D',name:'Glass Breathing + Lift',desc:'Ô kính mờ + vạch accent 1px trên đỉnh + ambient glow bên trong breathing (đồng ngôn ngữ AmbientCard của page). Hover: nhấc lên + đổ bóng tím. Đồng bộ design page nhất.'}
+];
+document.getElementById('grid').innerHTML=opts.map(o=>`
+  <div class="card">
+    <div class="tag"><span class="badge">${o.badge}</span><h3>${o.name}</h3></div>
+    <div class="desc">${o.desc}</div>
+    <div class="stage">
+      <div class="rail">
+        <div class="btn ${o.c}"><div class="core">${TL}</div></div>
+        <div class="other">${OTHER[0]}</div>
+        <div class="other">${OTHER[1]}</div>
+        <div class="other">${OTHER[2]}</div>
+      </div>
+      <div>
+        <div class="btn ${o.c}" style="transform:scale(1.7);transform-origin:left center"><div class="core">${TL}</div></div>
+        <div class="hoverhint" style="margin-top:44px">Rê chuột vào icon để xem <b>hover</b></div>
+      </div>
+    </div>
+  </div>`).join('');
+</script>
+</body>
+</html>
