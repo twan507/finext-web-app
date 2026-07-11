@@ -46,6 +46,11 @@ export default function OrderBook({ trades, accent, conservativeLayout = false }
   const avgLoss = losers.length ? losers.reduce((s, t) => s + (t.return_pct ?? 0), 0) / losers.length : null;
   const recentClosed = closed.slice(0, 100);
   const colorPct = (v?: number) => ((v ?? 0) >= 0 ? theme.palette.trend.up : theme.palette.trend.down);
+  // Lãi/lỗ làm tròn về 0.0 → hiện '0.0%' (không dấu +/-) + tô vàng (hoà vốn). isFlat bám đúng chuỗi toFixed của pct.
+  const flatYellow = getPhaseMeta('transition').color(theme);
+  const isFlat = (v?: number | null) => v != null && ['0.0', '-0.0'].includes((v * 100).toFixed(1));
+  const pnlText = (v?: number | null) => (isFlat(v) ? '0.0%' : pct(v ?? undefined));
+  const pnlColor = (v?: number | null) => (isFlat(v) ? flatYellow : colorPct(v ?? undefined));
   // Phòng Thủ: "Lý do" → chip. downtrend = đỏ "Thị trường rủi ro" · rebalance = vàng "Tái cơ cấu" · giá trị lạ = chip trung tính giữ nguyên chữ.
   const reasonChip = (reason?: string | null): { label: string; color: string } | null => {
     if (!reason) return null;
@@ -112,33 +117,30 @@ export default function OrderBook({ trades, accent, conservativeLayout = false }
               <TableCell sx={headSx}>{conservativeLayout ? 'Ngày bán' : 'Ra'}</TableCell>
               <TableCell align="right" sx={headSx}>Số phiên</TableCell>
               <TableCell align="right" sx={headSx}>Lãi/lỗ</TableCell>
-              <TableCell align={conservativeLayout ? 'right' : undefined} sx={headSx}>Lý do</TableCell>
+              <TableCell align="right" sx={headSx}>Lý do</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {recentClosed.map((t, i) => {
-              const chip = conservativeLayout ? reasonChip(t.exit_reason) : null;
+              // Chip "Lý do" cho MỌI tab (Sóng Ngành cũng chuẩn hoá): downtrend/rebalance → chip màu, căn phải.
+              const chip = reasonChip(t.exit_reason);
               return (
                 <TableRow key={`c-${t.ticker}-${i}`} hover>
                   <TableCell sx={{ ...cellSx, fontWeight: fontWeight.semibold }}>{t.ticker}</TableCell>
                   <TableCell sx={cellSx}>{fmtDate(t.entry_date)}</TableCell>
                   <TableCell sx={cellSx}>{fmtDate(t.exit_date)}</TableCell>
                   <TableCell align="right" sx={cellSx}>{t.n_days ?? '—'}</TableCell>
-                  <TableCell align="right" sx={{ ...cellSx, color: colorPct(t.return_pct) }}>{pct(t.return_pct)}</TableCell>
-                  <TableCell align={conservativeLayout ? 'right' : undefined} sx={cellSx}>
-                    {conservativeLayout ? (
-                      chip ? (
-                        <Box
-                          component="span"
-                          sx={{ display: 'inline-block', px: 1, py: 0.25, borderRadius: 999, fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: chip.color, bgcolor: alpha(chip.color, 0.12) }}
-                        >
-                          {chip.label}
-                        </Box>
-                      ) : (
-                        '—'
-                      )
+                  <TableCell align="right" sx={{ ...cellSx, color: pnlColor(t.return_pct), fontWeight: fontWeight.semibold }}>{pnlText(t.return_pct)}</TableCell>
+                  <TableCell align="right" sx={cellSx}>
+                    {chip ? (
+                      <Box
+                        component="span"
+                        sx={{ display: 'inline-block', px: 1, py: 0.25, borderRadius: 999, fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: chip.color, bgcolor: alpha(chip.color, 0.12) }}
+                      >
+                        {chip.label}
+                      </Box>
                     ) : (
-                      t.exit_reason ?? '—'
+                      '—'
                     )}
                   </TableCell>
                 </TableRow>

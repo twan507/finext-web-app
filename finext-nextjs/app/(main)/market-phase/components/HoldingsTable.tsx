@@ -41,6 +41,8 @@ function fmtDate(iso?: string | null): string {
   if (isNaN(d.getTime())) return '—';
   return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
 }
+// Thứ tự nhóm trạng thái khi xếp bảng nắm giữ (Nắm giữ → Cân nhắc → Tiềm năng → Quan sát).
+const STATUS_ORDER: Record<string, number> = { trong_ro: 0, vung_buffer: 1, ung_vien: 2, ngoai: 3 };
 
 /**
  * Bảng cổ phiếu đang nắm giữ (hoặc "dự kiến" khi phòng thủ tiền mặt) — kèm lãi/lỗ từng mã + lãi/lỗ danh mục.
@@ -77,15 +79,24 @@ export default function HoldingsTable({ basket, ranks, trades, accent, stats, is
 
   const rows = Object.keys(weights)
     .map((tk) => ({ ticker: tk, weight: weights[tk], rank: rankByTicker.get(tk), trade: openByTicker.get(tk) }))
+    // Xếp: trạng thái → ngày mua (mới→cũ) → lãi→lỗ. (State tiền mặt không có trade → 2 khoá sau trung tính, giữ ổn định.)
     .sort((a, b) => {
-      const ra = a.rank?.rank ?? 999;
-      const rb = b.rank?.rank ?? 999;
-      if (ra !== rb) return ra - rb;
-      return b.weight - a.weight;
+      const sa = STATUS_ORDER[a.rank?.status ?? ''] ?? 99;
+      const sb = STATUS_ORDER[b.rank?.status ?? ''] ?? 99;
+      if (sa !== sb) return sa - sb;
+      const da = a.trade?.entry_date ?? '';
+      const db = b.trade?.entry_date ?? '';
+      if (da !== db) return da < db ? 1 : -1; // ngày mua mới nhất lên trên
+      return (b.trade?.return_pct ?? 0) - (a.trade?.return_pct ?? 0); // lãi cao → lỗ
     });
 
   // KPI tổng hợp (số mã/tỷ trọng/lãi-lỗ) đã chuyển lên hero AI (BasketAiHero); bảng chỉ giữ dữ liệu chi tiết.
   const colorPct = (v?: number | null) => ((v ?? 0) >= 0 ? theme.palette.trend.up : theme.palette.trend.down);
+  // Lãi/lỗ làm tròn về 0.0 → hiện '0.0%' (không dấu +/-) + tô vàng (hoà vốn). isFlat bám đúng chuỗi toFixed của pct.
+  const flatYellow = getPhaseMeta('transition').color(theme);
+  const isFlat = (v?: number | null) => v != null && ['0.0', '-0.0'].includes((v * 100).toFixed(1));
+  const pnlText = (v?: number | null) => (isFlat(v) ? '0.0%' : pct(v));
+  const pnlColor = (v?: number | null) => (isFlat(v) ? flatYellow : colorPct(v));
   // Phòng Thủ: co padding ngang trên mobile (xs/sm) + tiêu đề không wrap (để minWidth max-content tự khít 1 dòng).
   const compactPx = conservativeLayout ? { px: { xs: 1, sm: 1.25, md: 2 }, whiteSpace: 'nowrap' } : {};
   // Header trong suốt (đồng bộ demo).
@@ -186,8 +197,8 @@ export default function HoldingsTable({ basket, ranks, trades, accent, stats, is
                         <Typography
                           component="span"
                           title={r.rank.ten}
-                          // Phòng Thủ (auto-layout): maxWidth chặn cột Mã khỏi phình theo tên dài. CORE (fixed): flex:1 lấp đầy 36%.
-                          sx={{ color: 'text.disabled', fontSize: getResponsiveFontSize('xs'), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', ...(conservativeLayout ? { maxWidth: 220 } : { flex: 1, minWidth: 0 }) }}
+                          // Phòng Thủ (auto-layout): hiện FULL tên, cột Mã tự nới. CORE (fixed 36%): flex:1 + cắt "…" cho vừa cột.
+                          sx={{ color: 'text.disabled', fontSize: getResponsiveFontSize('xs'), whiteSpace: 'nowrap', ...(conservativeLayout ? {} : { flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }) }}
                         >
                           {r.rank.ten}
                         </Typography>
@@ -210,8 +221,8 @@ export default function HoldingsTable({ basket, ranks, trades, accent, stats, is
                         )}
                       </TableCell>
                       {showLive && (
-                        <TableCell align="right" sx={{ ...cellSx, color: colorPct(r.trade?.return_pct), fontWeight: fontWeight.semibold }}>
-                          {pct(r.trade?.return_pct)}
+                        <TableCell align="right" sx={{ ...cellSx, color: pnlColor(r.trade?.return_pct), fontWeight: fontWeight.semibold }}>
+                          {pnlText(r.trade?.return_pct)}
                         </TableCell>
                       )}
                     </>

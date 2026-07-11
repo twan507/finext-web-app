@@ -84,8 +84,8 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
   const numChoVao = otherRanks.filter((r) => r.status === 'ung_vien').length; // ứng viên chờ vào rổ
   const baseStats: HoldingStat[] = [
     { label: 'Số mã nắm giữ', value: `${Object.keys(held).length}` },
-    { label: 'Số mã sắp ra', value: `${numSapRa}` },
-    { label: 'Số mã chờ vào', value: `${numChoVao}` },
+    { label: 'Số mã cân nhắc', value: `${numSapRa}` },
+    { label: 'Số mã tiềm năng', value: `${numChoVao}` },
   ];
   // Lãi/lỗ danh mục = TB theo tỷ trọng của vị thế đang mở — chỉ có ở phiên mới nhất (quá khứ không có MTM).
   let portfolioPnl: number | null = null;
@@ -136,7 +136,7 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
       {basketRow && (
         <Box sx={{ mt: 4, display: 'flex', alignItems: { xs: 'flex-start', md: 'center' }, justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
           <Box>
-            <ChartSectionTitle title="Vận hành danh mục" description="Chi tiết nắm giữ, cổ phiếu chờ vào và sổ lệnh theo từng phiên." updateTime={selUpdateStr} />
+            <ChartSectionTitle title="Vận hành danh mục" description="Chi tiết nắm giữ, cổ phiếu tiềm năng và sổ lệnh theo từng phiên." updateTime={selUpdateStr} />
             {/* Phòng Thủ: dòng lịch cơ cấu (thay cột "Tới cơ cấu" đã bỏ) — cân chiều cao 2 dòng với SessionStrip bên phải. */}
             {isConservative && nextRebalance != null && (
               <Typography sx={{ mt: 0.75, fontSize: getResponsiveFontSize('xs'), color: 'text.secondary' }}>
