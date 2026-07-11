@@ -234,15 +234,16 @@ export default function BasketPerformanceChart({ perf, products, height = 320, r
   return (
     <Box sx={{ width: '100%' }}>
       {/* KPI stat tiles + timeframe */}
-      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2} sx={{ mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
-        <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 1, mb: 1.5 }}>
+        {/* KPI tiles: mobile 2 cột (2×2) tránh dangling 3+1; desktop 1 hàng */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(4, auto)' }, gap: 1, flex: { xs: '1 1 100%', sm: '0 1 auto' }, minWidth: 0 }}>
           {endReturns.map((s) => {
             const c = s.color(theme);
             return (
             <Box
               key={s.product}
               sx={{
-                minWidth: 108,
+                minWidth: { xs: 0, sm: 108 },
                 px: 1.5,
                 py: 1,
                 borderRadius: `${borderRadius.md}px`,
@@ -269,9 +270,12 @@ export default function BasketPerformanceChart({ perf, products, height = 320, r
             </Box>
             );
           })}
-        </Stack>
-        <TimeframeSelector value={range} onChange={handleRangeChange} options={['3M', '6M', '1Y', '2Y'] as PerfRange[]} />
-      </Stack>
+        </Box>
+        {/* Timeframe: đẩy phải + căn sát cạnh DƯỚI của hàng cards (không căn top) */}
+        <Box sx={{ ml: 'auto', alignSelf: 'flex-end' }}>
+          <TimeframeSelector value={range} onChange={handleRangeChange} options={['3M', '6M', '1Y', '2Y'] as PerfRange[]} />
+        </Box>
+      </Box>
 
       {/* Chart */}
       <Box sx={{ position: 'relative', width: '100%', height }} onMouseLeave={() => setTooltip(null)}>

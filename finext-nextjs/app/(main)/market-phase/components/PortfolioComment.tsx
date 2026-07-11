@@ -21,10 +21,11 @@ export default function PortfolioComment({ text, generatedAt }: PortfolioComment
   const isDark = theme.palette.mode === 'dark';
   if (!text) return null;
   const time = formatTime(generatedAt);
+  const metaDot = <Box component="span" sx={{ color: 'text.secondary', fontWeight: fontWeight.medium, fontSize: getResponsiveFontSize('sm'), lineHeight: 1 }}>·</Box>;
 
   return (
     <Box sx={{ borderRadius: `${borderRadius.lg}px`, ...getGlassCard(isDark), borderLeft: `3px solid ${theme.palette.primary.main}`, p: { xs: 2, md: 2.5 } }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1, flexWrap: 'wrap' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1, flexWrap: 'wrap' }}>
         <Box
           component="span"
           sx={{
@@ -41,9 +42,14 @@ export default function PortfolioComment({ text, generatedAt }: PortfolioComment
         >
           ✦ FINEXT AI
         </Box>
-        {time && <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.disabled' }}>Cập nhật lúc {time}</Typography>}
+        {time && (
+          <>
+            {metaDot}
+            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.disabled' }}>Cập nhật lúc {time}</Typography>
+          </>
+        )}
       </Box>
-      <Typography sx={{ fontSize: getResponsiveFontSize('md'), lineHeight: 1.6, color: 'text.secondary', whiteSpace: 'pre-line' }}>{text}</Typography>
+      <Typography sx={{ fontSize: getResponsiveFontSize('md'), lineHeight: 1.6, color: 'text.secondary', whiteSpace: 'pre-line', textAlign: 'justify' }}>{text}</Typography>
     </Box>
   );
 }

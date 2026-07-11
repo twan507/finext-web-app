@@ -44,6 +44,7 @@ export default function IndustrySection({ sectorRanks, industry, indexMap, accen
   );
 
   const cap = { fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', fontWeight: fontWeight.semibold, mb: 1 } as const;
+  const metaDot = <Box component="span" sx={{ color: 'text.secondary', fontWeight: fontWeight.medium, fontSize: getResponsiveFontSize('sm'), lineHeight: 1 }}>·</Box>;
 
   return (
     <Box>
@@ -59,7 +60,7 @@ export default function IndustrySection({ sectorRanks, industry, indexMap, accen
           {sectorCmt && sectorCmt.trim() && (
             <>
               <Box sx={{ height: '1px', bgcolor: 'divider', my: 2.5, opacity: 0.5 }} />
-              <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1, flexWrap: 'wrap' }}>
+              <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 1, flexWrap: 'wrap' }}>
                 <Box
                   component="span"
                   sx={{
@@ -76,10 +77,16 @@ export default function IndustrySection({ sectorRanks, industry, indexMap, accen
                 >
                   ✦ FINEXT AI
                 </Box>
+                {metaDot}
                 <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary', fontWeight: fontWeight.medium }}>Nhận định ngành</Typography>
-                {formatTime(generatedAt) && <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.disabled' }}>· Cập nhật lúc {formatTime(generatedAt)}</Typography>}
+                {formatTime(generatedAt) && (
+                  <>
+                    {metaDot}
+                    <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.disabled' }}>Cập nhật lúc {formatTime(generatedAt)}</Typography>
+                  </>
+                )}
               </Stack>
-              <Typography sx={{ fontSize: getResponsiveFontSize('md'), lineHeight: 1.6, color: 'text.secondary', whiteSpace: 'pre-line' }}>{sectorCmt}</Typography>
+              <Typography sx={{ fontSize: getResponsiveFontSize('md'), lineHeight: 1.6, color: 'text.secondary', whiteSpace: 'pre-line', textAlign: 'justify' }}>{sectorCmt}</Typography>
             </>
           )}
         </AmbientCard>

@@ -25,6 +25,7 @@ export default function BasketAiHero({ text, generatedAt, accent }: BasketAiHero
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const time = formatTime(generatedAt);
+  const metaDot = <Box component="span" sx={{ color: 'text.secondary', fontWeight: fontWeight.medium, fontSize: getResponsiveFontSize('sm'), lineHeight: 1 }}>·</Box>;
 
   return (
     <Box
@@ -61,7 +62,7 @@ export default function BasketAiHero({ text, generatedAt, accent }: BasketAiHero
       />
 
       <Box sx={{ position: 'relative', zIndex: 1, p: { xs: 2.5, md: 3 } }}>
-        <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.25, flexWrap: 'wrap' }}>
+        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 1.25, flexWrap: 'wrap' }}>
           <Box
             component="span"
             sx={{
@@ -78,11 +79,17 @@ export default function BasketAiHero({ text, generatedAt, accent }: BasketAiHero
           >
             ✦ FINEXT AI
           </Box>
+          {metaDot}
           <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary', fontWeight: fontWeight.medium }}>Nhận định danh mục</Typography>
-          {time && <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.disabled' }}>· Cập nhật lúc {time}</Typography>}
+          {time && (
+            <>
+              {metaDot}
+              <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.disabled' }}>Cập nhật lúc {time}</Typography>
+            </>
+          )}
         </Stack>
 
-        <Typography sx={{ fontSize: getResponsiveFontSize('md'), lineHeight: 1.65, color: 'text.secondary', whiteSpace: 'pre-line' }}>
+        <Typography sx={{ fontSize: getResponsiveFontSize('md'), lineHeight: 1.65, color: 'text.secondary', whiteSpace: 'pre-line', textAlign: 'justify' }}>
           {text || 'Đang cập nhật nhận định cho phiên gần nhất.'}
         </Typography>
       </Box>
