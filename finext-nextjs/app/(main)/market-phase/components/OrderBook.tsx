@@ -38,11 +38,11 @@ export default function OrderBook({ trades, accent, conservativeLayout = false }
   const bdHead = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
 
   const closed = trades.filter((t) => t.status === 'closed');
-  const wins = closed.filter((t) => (t.return_pct ?? 0) > 0).length;
-  const winRate = closed.length ? (wins / closed.length) * 100 : 0;
-  const avg = closed.length ? closed.reduce((s, t) => s + (t.return_pct ?? 0), 0) / closed.length : 0;
-  // Lỗ TB/lệnh = TB return của các lệnh THUA (return_pct < 0); không có lệnh thua → null → "—".
+  // Lãi TB = TB return lệnh THẮNG (>0); Lỗ TB = TB return lệnh THUA (<0). Tách riêng để lãi không bị "hòa" vào lỗ.
+  const winners = closed.filter((t) => (t.return_pct ?? 0) > 0);
   const losers = closed.filter((t) => (t.return_pct ?? 0) < 0);
+  const winRate = closed.length ? (winners.length / closed.length) * 100 : 0;
+  const avgWin = winners.length ? winners.reduce((s, t) => s + (t.return_pct ?? 0), 0) / winners.length : null;
   const avgLoss = losers.length ? losers.reduce((s, t) => s + (t.return_pct ?? 0), 0) / losers.length : null;
   const recentClosed = closed.slice(0, 100);
   const colorPct = (v?: number) => ((v ?? 0) >= 0 ? theme.palette.trend.up : theme.palette.trend.down);
@@ -75,7 +75,7 @@ export default function OrderBook({ trades, accent, conservativeLayout = false }
       <Stack direction="row" spacing={3} sx={{ p: { xs: 2, md: 2.5 }, flexWrap: 'wrap', gap: 1.5 }}>
         <Stat label="Số lệnh (đã đóng)" value={`${closed.length}`} />
         <Stat label="Tỷ lệ thắng" value={`${winRate.toFixed(0)}%`} color={winRate >= 50 ? theme.palette.trend.up : theme.palette.text.primary} />
-        <Stat label="Lợi nhuận TB/lệnh" value={pct(avg)} color={colorPct(avg)} />
+        <Stat label="Lãi TB/lệnh" value={avgWin == null ? '—' : pct(avgWin)} color={avgWin == null ? undefined : colorPct(avgWin)} />
         <Stat label="Lỗ TB/lệnh" value={avgLoss == null ? '—' : pct(avgLoss)} color={avgLoss == null ? undefined : colorPct(avgLoss)} />
       </Stack>
 

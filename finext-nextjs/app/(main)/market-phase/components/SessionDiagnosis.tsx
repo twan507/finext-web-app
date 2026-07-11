@@ -2,6 +2,7 @@
 
 import { Box, Typography, alpha, useTheme } from '@mui/material';
 import { getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
+import AiCommentBody from './AiCommentBody';
 
 interface SessionDiagnosisProps {
   /** Các đoạn diễn giải cần render (đoạn rỗng/thiếu bị bỏ qua). */
@@ -11,6 +12,8 @@ interface SessionDiagnosisProps {
   showGlyph?: boolean;
   /** Nhãn nhận định cạnh badge (vd "Nhận định thị trường" / "Nhận định chỉ số"). */
   label?: string;
+  /** true (C) = drop cap chữ đầu; false (A+B) = không. */
+  dropCap?: boolean;
 }
 
 function formatTime(iso?: string): string | null {
@@ -21,7 +24,7 @@ function formatTime(iso?: string): string | null {
 }
 
 /** Khối "FINEXT AI" (trên nền, không card): các đoạn diễn giải căn đều 2 bên + giờ. showGlyph=false bỏ ô ✦ trái. */
-export default function SessionDiagnosis({ paragraphs, generatedAt, showGlyph = true, label }: SessionDiagnosisProps) {
+export default function SessionDiagnosis({ paragraphs, generatedAt, showGlyph = true, label, dropCap = false }: SessionDiagnosisProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const primary = theme.palette.primary.main;
@@ -65,11 +68,8 @@ export default function SessionDiagnosis({ paragraphs, generatedAt, showGlyph = 
           </>
         )}
       </Box>
-      {texts.map((t, i) => (
-        <Typography key={i} sx={{ fontSize: getResponsiveFontSize('md'), lineHeight: 1.6, color: 'text.secondary', whiteSpace: 'pre-line', textAlign: 'justify', mt: i === 0 ? 0 : 1.5 }}>
-          {t}
-        </Typography>
-      ))}
+      <AiCommentBody paragraphs={texts} dropCap={dropCap} />
+
     </Box>
   );
 

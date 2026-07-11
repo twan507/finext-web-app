@@ -60,7 +60,7 @@ export default function MarketPhaseTab({ daily, comment, perf, indicators, tradi
         </Box>
         {comment && (
           <Box sx={{ mt: 3 }}>
-            <SessionDiagnosis paragraphs={[comment.market_cmt]} generatedAt={comment.generated_at} label="Nhận định thị trường" />
+            <SessionDiagnosis paragraphs={[comment.market_cmt]} generatedAt={comment.generated_at} label="Nhận định thị trường" dropCap />
           </Box>
         )}
       </Box>

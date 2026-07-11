@@ -2,6 +2,7 @@
 
 import { Box, Stack, Typography, alpha, useTheme } from '@mui/material';
 import { getGlassCard, getGlassEdgeLight, getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
+import AiCommentBody from './AiCommentBody';
 
 interface BasketAiHeroProps {
   text?: string | null;
@@ -89,9 +90,11 @@ export default function BasketAiHero({ text, generatedAt, accent }: BasketAiHero
           )}
         </Stack>
 
-        <Typography sx={{ fontSize: getResponsiveFontSize('md'), lineHeight: 1.65, color: 'text.secondary', whiteSpace: 'pre-line', textAlign: 'justify' }}>
-          {text || 'Đang cập nhật nhận định cho phiên gần nhất.'}
-        </Typography>
+        {text && text.trim() ? (
+          <AiCommentBody paragraphs={[text]} dropCap accentColor={accent} />
+        ) : (
+          <Typography sx={{ fontSize: getResponsiveFontSize('md'), lineHeight: 1.65, color: 'text.secondary' }}>Đang cập nhật nhận định cho phiên gần nhất.</Typography>
+        )}
       </Box>
     </Box>
   );

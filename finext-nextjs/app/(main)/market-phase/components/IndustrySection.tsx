@@ -8,6 +8,7 @@ import AmbientCard from './AmbientCard';
 import type { PhaseRank, PhaseIndustryRow, IndexMapRow } from '../types';
 import SectorWaveStrip from './SectorWaveStrip';
 import SectorStrengthChart from './SectorStrengthChart';
+import AiCommentBody from './AiCommentBody';
 
 interface IndustrySectionProps {
   sectorRanks: PhaseRank[]; // FULL lịch sử (level='sector', product=CORE) — cho line chart sức mạnh
@@ -86,7 +87,7 @@ export default function IndustrySection({ sectorRanks, industry, indexMap, accen
                   </>
                 )}
               </Stack>
-              <Typography sx={{ fontSize: getResponsiveFontSize('md'), lineHeight: 1.6, color: 'text.secondary', whiteSpace: 'pre-line', textAlign: 'justify' }}>{sectorCmt}</Typography>
+              <AiCommentBody paragraphs={[sectorCmt]} />
             </>
           )}
         </AmbientCard>

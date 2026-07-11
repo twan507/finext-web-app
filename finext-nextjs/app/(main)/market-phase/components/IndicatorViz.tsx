@@ -295,7 +295,7 @@ export function NoteItem({
   return (
     <Box sx={{ display: 'flex', gap: 1.25 }}>
       <Box sx={{ width: 7, height: 7, borderRadius: '2px', mt: '7px', flexShrink: 0, bgcolor: color }} />
-      <Typography component="div" sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+      <Typography component="div" sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', lineHeight: 1.6, whiteSpace: 'pre-line', textAlign: 'justify' }}>
         <Box component="span" sx={{ color: 'text.primary', fontWeight: fontWeight.semibold }}>
           {label}
         </Box>
@@ -339,7 +339,7 @@ export function IndicatorBlock({
       </Box>
       <Box sx={{ mt: 1 }}>{children}</Box>
       {comment && (
-        <Typography sx={{ mt: 1, fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', lineHeight: 1.55, whiteSpace: 'pre-line' }}>{comment}</Typography>
+        <Typography sx={{ mt: 1, fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', lineHeight: 1.55, whiteSpace: 'pre-line', textAlign: 'justify' }}>{comment}</Typography>
       )}
     </Box>
   );
