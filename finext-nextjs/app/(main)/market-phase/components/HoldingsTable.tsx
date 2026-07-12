@@ -41,8 +41,8 @@ function fmtDate(iso?: string | null): string {
   if (isNaN(d.getTime())) return '—';
   return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
 }
-// Thứ tự nhóm trạng thái khi xếp bảng nắm giữ (Nắm giữ → Cân nhắc → Tiềm năng → Quan sát).
-const STATUS_ORDER: Record<string, number> = { trong_ro: 0, vung_buffer: 1, ung_vien: 2, ngoai: 3 };
+// Thứ tự nhóm trạng thái khi xếp bảng nắm giữ (Nắm giữ → Cân nhắc → Tiềm năng → Chờ tín hiệu → Quan sát).
+const STATUS_ORDER: Record<string, number> = { trong_ro: 0, vung_buffer: 1, ung_vien: 2, cho_tin_hieu: 3, ngoai: 4 };
 
 /**
  * Bảng cổ phiếu đang nắm giữ (hoặc "dự kiến" khi phòng thủ tiền mặt) — kèm lãi/lỗ từng mã + lãi/lỗ danh mục.

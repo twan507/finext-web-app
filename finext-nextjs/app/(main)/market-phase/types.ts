@@ -71,7 +71,7 @@ export interface PhaseBasket {
   sectors?: string[] | null; // CORE only
 }
 
-export type RankStatus = 'trong_ro' | 'vung_buffer' | 'ung_vien' | 'ngoai';
+export type RankStatus = 'trong_ro' | 'vung_buffer' | 'cho_tin_hieu' | 'ung_vien' | 'ngoai';
 
 export interface PhaseRank {
   date: string;

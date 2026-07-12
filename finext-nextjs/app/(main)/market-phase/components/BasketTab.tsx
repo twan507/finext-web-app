@@ -82,10 +82,13 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
   // ── Header stats cho bảng Danh mục nắm giữ ────────────────────────────────
   const numSapRa = heldRanks.filter((r) => r.status === 'vung_buffer').length; // đang giữ, sắp bị loại
   const numChoVao = otherRanks.filter((r) => r.status === 'ung_vien').length; // ứng viên chờ vào rổ
+  // Trạng thái mới: đếm trên TOÀN BỘ mã của phiên (không phụ thuộc held hay chưa) → đúng cho mọi ca.
+  const numChoTinHieu = stockRanks.filter((r) => r.status === 'cho_tin_hieu').length;
   const baseStats: HoldingStat[] = [
-    { label: 'Số mã nắm giữ', value: `${Object.keys(held).length}` },
-    { label: 'Số mã cân nhắc', value: `${numSapRa}` },
-    { label: 'Số mã tiềm năng', value: `${numChoVao}` },
+    { label: 'Mã nắm giữ', value: `${Object.keys(held).length}` },
+    { label: 'Mã cân nhắc', value: `${numSapRa}` },
+    { label: 'Mã tiềm năng', value: `${numChoVao}` },
+    { label: 'Mã chờ tín hiệu', value: `${numChoTinHieu}` },
   ];
   // Lãi/lỗ danh mục = TB theo tỷ trọng của vị thế đang mở — chỉ có ở phiên mới nhất (quá khứ không có MTM).
   let portfolioPnl: number | null = null;
@@ -161,7 +164,7 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
           {otherRanks.length > 0 && (
             // minWidth:0 → grid/flex item được phép co nhỏ hơn nội dung để TableContainer cuộn ngang (mặc định min-width:auto chặn cuộn).
             <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-              <RankTable rows={otherRanks} showSector={isCore} accent={accent} conservativeLayout={isConservative} />
+              <RankTable rows={otherRanks} showSector={isCore} indexMap={indexMap} accent={accent} conservativeLayout={isConservative} />
             </Box>
           )}
           {tradesForBook.length > 0 && (

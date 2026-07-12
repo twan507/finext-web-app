@@ -1,6 +1,7 @@
 // finext-nextjs/app/(main)/market-phase/basketMeta.ts
 import type { Theme } from '@mui/material';
 import type { RankStatus } from './types';
+import { getPhaseMeta } from './phaseMeta';
 
 /** tab key (PAID) → product key (FROZEN). */
 export const TAB_TO_PRODUCT: Record<string, string> = {
@@ -25,6 +26,8 @@ export interface StatusMeta {
 export const RANK_STATUS_META: Record<RankStatus, StatusMeta> = {
   trong_ro: { label: 'Nắm giữ', color: (t) => (t.palette.mode === 'dark' ? '#3b82f6' : '#2563eb') }, // xanh biển (KHÔNG dùng trend.floor = xanh sàn)
   vung_buffer: { label: 'Cân nhắc', color: (t) => t.palette.warning.main },
+  // Vàng dùng chung của page (= màu pha TRANSITION, đồng bộ chip "Tái cơ cấu" + lãi/lỗ hoà vốn) — khác cam warning của "Cân nhắc".
+  cho_tin_hieu: { label: 'Chờ tín hiệu', color: (t) => getPhaseMeta('transition').color(t) },
   ung_vien: { label: 'Tiềm năng', color: (t) => t.palette.trend.up },
   ngoai: { label: 'Quan sát', color: (t) => t.palette.text.disabled },
 };

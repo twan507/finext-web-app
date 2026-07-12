@@ -1,24 +1,32 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, alpha, useTheme } from '@mui/material';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import AmbientCard from './AmbientCard';
-import type { PhaseRank } from '../types';
+import type { PhaseRank, IndexMapRow } from '../types';
 import { getStatusMeta } from '../basketMeta';
 
 interface RankTableProps {
   rows: PhaseRank[];
-  /** CORE: hiện thêm cột Ngành (hạng trong ngành). */
+  /** CORE: hiện cột Ngành (tên đầy đủ) và BỎ cột Hạng — vì rank ở CORE là hạng TRONG NGÀNH nên trùng số nhiều mã. */
   showSector?: boolean;
+  /** Map mã ngành → tên đầy đủ (ref_db.index_map) — chỉ dùng khi showSector. */
+  indexMap?: IndexMapRow[];
   accent: string; // màu nhận diện rổ (ambient glow của card)
-  /** Phòng Thủ: bỏ cột "Tới cơ cấu", đổi "Hạng"→"Xếp hạng", căn đều cột (fixed) + Trạng thái dồn phải. */
+  /** Phòng Thủ: đổi "Hạng"→"Xếp hạng", layout snug (max-content) + padding co ở mobile. */
   conservativeLayout?: boolean;
 }
 
-export default function RankTable({ rows, showSector = false, accent, conservativeLayout = false }: RankTableProps) {
+export default function RankTable({ rows, showSector = false, indexMap = [], accent, conservativeLayout = false }: RankTableProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const sorted = [...rows].sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999));
+  const sorted = [...rows].sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999)); // dòng vẫn xếp theo rank kể cả khi ẩn cột Hạng
+  // Mã ngành → tên đầy đủ; thiếu (BE chưa restart) → fallback về mã.
+  const sectorName = useMemo(
+    () => new Map(indexMap.filter((m) => m.ticker_name).map((m) => [m.ticker, m.ticker_name as string] as const)),
+    [indexMap],
+  );
   const bd = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
   const bdHead = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
 
@@ -51,7 +59,7 @@ export default function RankTable({ rows, showSector = false, accent, conservati
         >
           <TableHead>
             <TableRow>
-              <TableCell sx={headSx}>{conservativeLayout ? 'Xếp hạng' : 'Hạng'}</TableCell>
+              {!showSector && <TableCell sx={headSx}>{conservativeLayout ? 'Xếp hạng' : 'Hạng'}</TableCell>}
               <TableCell sx={headSx}>Mã</TableCell>
               {showSector && <TableCell sx={headSx}>Ngành</TableCell>}
               <TableCell align="right" sx={headSx}>{'% biến động 6T'}</TableCell>
@@ -64,9 +72,9 @@ export default function RankTable({ rows, showSector = false, accent, conservati
               const st = getStatusMeta(r.status);
               return (
                 <TableRow key={`${r.ticker}-${i}`} hover>
-                  <TableCell sx={cellSx}>{r.rank ?? '—'}</TableCell>
+                  {!showSector && <TableCell sx={cellSx}>{r.rank ?? '—'}</TableCell>}
                   <TableCell sx={{ ...cellSx, fontWeight: fontWeight.semibold }}>{r.ticker}</TableCell>
-                  {showSector && <TableCell sx={cellSx}>{r.sector ?? '—'}</TableCell>}
+                  {showSector && <TableCell sx={cellSx}>{r.sector ? (sectorName.get(r.sector) ?? r.sector) : '—'}</TableCell>}
                   <TableCell align="right" sx={{ ...cellSx, color: (r.mom120 ?? 0) >= 0 ? theme.palette.trend.up : theme.palette.trend.down }}>
                     {fmtMom(r.mom120)}
                   </TableCell>
