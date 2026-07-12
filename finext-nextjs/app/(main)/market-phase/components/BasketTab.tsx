@@ -113,11 +113,21 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
     ? [{ label: 'Lãi/lỗ danh mục', value: pct(portfolioPnl), tone: portfolioPnl == null ? 'neutral' : portfolioPnl >= 0 ? 'up' : 'down' }, ...baseStats]
     : baseStats;
 
+  // Sóng Ngành (CORE): cụm ngành lên ĐẦU TRANG → section đầu không có mt, các section sau mới cách 4.
+  const showIndustry = isCore && (industry.length > 0 || sectorRanks.length > 0);
+
   return (
     <Box>
-      {/* 1–2. Lịch sử hiệu suất (KHÔNG phụ thuộc phiên chọn) */}
-      {perf.length > 0 && (
+      {/* 1. Sóng Ngành (CORE): cụm luân chuyển ngành — dời LÊN TRÊN cả Hiệu suất danh mục. */}
+      {showIndustry && (
         <Box>
+          <IndustrySection sectorRanks={sectorRanks} industry={industry} indexMap={indexMap} accent={accent} sectorCmt={comment?.sector_cmt} generatedAt={comment?.generated_at} updateTime={fmtDate(latestRankDate)} isCash={isCashNow} cashDates={cashDates} />
+        </Box>
+      )}
+
+      {/* 2. Lịch sử hiệu suất (KHÔNG phụ thuộc phiên chọn) */}
+      {perf.length > 0 && (
+        <Box sx={{ mt: showIndustry ? 4 : 0 }}>
           <ChartSectionTitle title="Hiệu suất danh mục" description="Hiệu suất tích luỹ của rổ so với FNXINDEX." updateTime={fmtDate(latestDate)} />
           <Box sx={{ mt: 1.5 }}>
             <BasketPerformanceChart perf={perf} products={[product]} />
@@ -128,14 +138,9 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
       {/* 3. Nhận định FINEXT AI — dưới biểu đồ */}
       {basketRow && (
         <Box sx={{ mt: 4 }}>
-          <BasketAiHero text={comment?.stock_cmt} generatedAt={comment?.generated_at} accent={accent} />
-        </Box>
-      )}
-
-      {/* 3b. Sóng Ngành (CORE): cụm ngành dời LÊN GIỮA (Hiệu suất ↔ Vận hành), kèm nhận định ngành sector_cmt trong card. */}
-      {isCore && (industry.length > 0 || sectorRanks.length > 0) && (
-        <Box sx={{ mt: 4 }}>
-          <IndustrySection sectorRanks={sectorRanks} industry={industry} indexMap={indexMap} accent={accent} sectorCmt={comment?.sector_cmt} generatedAt={comment?.generated_at} updateTime={fmtDate(latestRankDate)} isCash={isCashNow} cashDates={cashDates} />
+          {/* CORE: nhận định NGÀNH ở trên đã là card có khung + drop cap → khối này là comment thứ 2:
+              trần (không khung) + không drop cap. Tab khác chỉ có 1 comment nên vẫn card + drop cap. */}
+          <BasketAiHero text={comment?.stock_cmt} generatedAt={comment?.generated_at} accent={accent} dropCap={!showIndustry} framed={!showIndustry} />
         </Box>
       )}
 

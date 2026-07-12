@@ -9,6 +9,13 @@ interface BasketAiHeroProps {
   generatedAt?: string;
   /** Màu nhận diện danh mục (accent glow). */
   accent: string;
+  /** Chữ cái đầu lớn (kiểu C). Chỉ dành cho comment ĐẦU TIÊN của tab — ở Sóng Ngành comment đầu là
+   *  nhận định ngành nên khối này tắt drop cap. Mặc định bật (Phòng Thủ / Mạo Hiểm chỉ có 1 comment). */
+  dropCap?: boolean;
+  /** true = card kính có khung (comment đầu tiên) · false = trần trên nền, không khung (comment thứ 2). */
+  framed?: boolean;
+  /** Nhãn cạnh badge FINEXT AI ("Nhận định danh mục" / "Nhận định ngành"). */
+  label?: string;
 }
 
 function formatTime(iso?: string): string | null {
@@ -22,11 +29,52 @@ function formatTime(iso?: string): string | null {
  * Hero "AI Briefing" cho tab danh mục (layout B): thẻ FINEXT AI full-width — nhận định thuần.
  * Các chỉ số chính đã chuyển xuống header bảng Danh mục nắm giữ.
  */
-export default function BasketAiHero({ text, generatedAt, accent }: BasketAiHeroProps) {
+export default function BasketAiHero({ text, generatedAt, accent, dropCap = true, framed = true, label = 'Nhận định danh mục' }: BasketAiHeroProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const time = formatTime(generatedAt);
   const metaDot = <Box component="span" sx={{ color: 'text.secondary', fontWeight: fontWeight.medium, fontSize: getResponsiveFontSize('sm'), lineHeight: 1 }}>·</Box>;
+
+  // Nội dung dùng chung cho cả 2 biến thể (card có khung / trần trên nền).
+  const body = (
+    <>
+      <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 1.25, flexWrap: 'wrap' }}>
+        <Box
+          component="span"
+          sx={{
+            fontSize: getResponsiveFontSize('xs'),
+            fontWeight: fontWeight.bold,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            color: accent,
+            bgcolor: alpha(accent, 0.14),
+            borderRadius: 999,
+            px: 1.25,
+            py: 0.4,
+          }}
+        >
+          ✦ FINEXT AI
+        </Box>
+        {metaDot}
+        <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary', fontWeight: fontWeight.medium }}>{label}</Typography>
+        {time && (
+          <>
+            {metaDot}
+            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.disabled' }}>Cập nhật lúc {time}</Typography>
+          </>
+        )}
+      </Stack>
+
+      {text && text.trim() ? (
+        <AiCommentBody paragraphs={[text]} dropCap={dropCap} accentColor={accent} />
+      ) : (
+        <Typography sx={{ fontSize: getResponsiveFontSize('md'), lineHeight: 1.65, color: 'text.secondary' }}>Đang cập nhật nhận định cho phiên gần nhất.</Typography>
+      )}
+    </>
+  );
+
+  // Biến thể TRẦN: không khung/glow/nền — chữ nằm thẳng trên nền trang.
+  if (!framed) return <Box>{body}</Box>;
 
   return (
     <Box
@@ -62,40 +110,7 @@ export default function BasketAiHero({ text, generatedAt, accent }: BasketAiHero
         }}
       />
 
-      <Box sx={{ position: 'relative', zIndex: 1, p: { xs: 2.5, md: 3 } }}>
-        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 1.25, flexWrap: 'wrap' }}>
-          <Box
-            component="span"
-            sx={{
-              fontSize: getResponsiveFontSize('xs'),
-              fontWeight: fontWeight.bold,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              color: accent,
-              bgcolor: alpha(accent, 0.14),
-              borderRadius: 999,
-              px: 1.25,
-              py: 0.4,
-            }}
-          >
-            ✦ FINEXT AI
-          </Box>
-          {metaDot}
-          <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary', fontWeight: fontWeight.medium }}>Nhận định danh mục</Typography>
-          {time && (
-            <>
-              {metaDot}
-              <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.disabled' }}>Cập nhật lúc {time}</Typography>
-            </>
-          )}
-        </Stack>
-
-        {text && text.trim() ? (
-          <AiCommentBody paragraphs={[text]} dropCap accentColor={accent} />
-        ) : (
-          <Typography sx={{ fontSize: getResponsiveFontSize('md'), lineHeight: 1.65, color: 'text.secondary' }}>Đang cập nhật nhận định cho phiên gần nhất.</Typography>
-        )}
-      </Box>
+      <Box sx={{ position: 'relative', zIndex: 1, p: { xs: 2.5, md: 3 } }}>{body}</Box>
     </Box>
   );
 }

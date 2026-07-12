@@ -262,12 +262,19 @@ function IndustrySkeleton() {
   );
 }
 
-/** Skeleton tab danh mục — bám sát BasketTab: Hiệu suất → AI → [Sóng ngành nếu CORE] → Vận hành → Nắm giữ → Chờ vào/Sổ lệnh. */
+/** Skeleton tab danh mục — bám sát BasketTab: [Sóng ngành nếu CORE] → Hiệu suất → AI → Vận hành → Nắm giữ → Chờ vào/Sổ lệnh. */
 export function BasketTabSkeleton({ isCore = false }: { isCore?: boolean }) {
   return (
     <Box>
-      {/* 1. Hiệu suất danh mục: KPI tiles + timeframe + chart */}
-      <Box>
+      {/* 1. Sóng ngành (chỉ CORE) — nằm TRÊN Hiệu suất danh mục */}
+      {isCore && (
+        <Box>
+          <IndustrySkeleton />
+        </Box>
+      )}
+
+      {/* 2. Hiệu suất danh mục: KPI tiles + timeframe + chart */}
+      <Box sx={{ mt: isCore ? 4 : 0 }}>
         <SectionTitleSkeleton />
         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mt: 1.5, mb: 1.5, flexWrap: 'wrap' }}>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -282,17 +289,10 @@ export function BasketTabSkeleton({ isCore = false }: { isCore?: boolean }) {
         <Skeleton variant="rounded" width="100%" height={320} />
       </Box>
 
-      {/* 2. Nhận định FINEXT AI */}
+      {/* 3. Nhận định FINEXT AI */}
       <Box sx={{ mt: 4 }}>
         <AiHeroSkeleton />
       </Box>
-
-      {/* 3. Sóng ngành (chỉ CORE) */}
-      {isCore && (
-        <Box sx={{ mt: 4 }}>
-          <IndustrySkeleton />
-        </Box>
-      )}
 
       {/* 4. Vận hành danh mục: tiêu đề + thanh chọn phiên */}
       <Box sx={{ mt: 4, display: 'flex', alignItems: { xs: 'flex-start', md: 'center' }, justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>

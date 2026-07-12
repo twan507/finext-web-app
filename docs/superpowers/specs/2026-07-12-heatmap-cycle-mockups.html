@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mockup — phân kỳ tái cơ cấu trên heatmap ngành</title>
+<style>
+  :root{--bg:#0a0d12;--panel:#0f141b;--bd:rgba(255,255,255,.08);--txt:#e6e9ef;--sub:#9aa1ab;--dis:#5d6570;--acc:#a78bfa;--acc2:#7c3aed;--up:#2ee06f;--warn:#ffb020}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,sans-serif;padding:36px 24px 120px;line-height:1.6}
+  .wrap{max-width:1280px;margin:0 auto}
+  h1{font-size:1.5rem;margin-bottom:6px}
+  .lead{color:var(--sub);font-size:.9rem;max-width:900px}
+  .lead b{color:var(--txt)}
+  .card{position:relative;border:1px solid var(--bd);border-radius:16px;background:var(--panel);padding:22px 24px 26px;overflow:hidden;margin-top:26px}
+  .card::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(167,139,250,.5),transparent)}
+  .tag{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}
+  .badge{font-size:.72rem;font-weight:800;letter-spacing:.06em;color:var(--acc);background:rgba(167,139,250,.14);border-radius:999px;padding:3px 12px}
+  .tag h3{font-size:1rem;font-weight:600}
+  .desc{color:var(--sub);font-size:.82rem;margin:6px 0 14px;max-width:980px}
+  .desc b{color:var(--txt)}
+  .pros{font-size:.78rem;color:var(--sub);margin-top:12px;display:flex;gap:26px;flex-wrap:wrap}
+  .pros span{white-space:nowrap}
+  .ok{color:var(--up)} .no{color:#ff5a5a}
+  svg{display:block;max-width:100%}
+  .meta{font-size:.75rem;color:var(--sub);margin-bottom:10px}
+  .meta b{color:var(--txt)}
+  .pick{margin-top:40px;padding:20px 24px;border:1px solid rgba(46,224,111,.3);border-left:3px solid var(--up);border-radius:12px;background:rgba(46,224,111,.05)}
+  .pick h2{font-size:.95rem;color:var(--up);margin-bottom:8px}
+  .pick p{font-size:.85rem;color:var(--sub)}
+  .pick b{color:var(--txt)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Phân kỳ tái cơ cấu trên heatmap ngành</h1>
+  <p class="lead">Bỏ vạch đứt xuyên lưới (rối, cắt ngang ô). 4 hướng dưới đây theo pattern chuẩn của data-viz:
+  <b>A</b> tách kỳ bằng khoảng cách (như GitHub tách tháng), <b>B</b> dải nền xen kẽ (như session shading của TradingView),
+  <b>C</b> mốc chỉ nằm ở trục dưới (lưới sạch tuyệt đối), <b>D</b> = A + nhãn kỳ. Dữ liệu giả lập giống bản thật: 12 ngành × 60 phiên, kỳ = 5 phiên.</p>
+
+  <div id="mocks"></div>
+
+  <div class="pick">
+    <h2>✔ Đề xuất</h2>
+    <p><b>A (Cycle Gap)</b> — sạch nhất, người xem tự "đếm nhóm" bằng mắt không cần học ký hiệu; chuẩn công nghiệp cho grid theo thời gian (GitHub, Cal-Heatmap đều tách tháng kiểu này).
+    Nếu muốn kỳ hiện rõ hơn nữa mà vẫn pro thì chọn <b>D</b> (gap + nhãn K1·K2… mờ ở trục). <b>B</b> hợp nếu bạn thích chất "terminal tài chính". Trả lời <b>A / B / C / D</b> (có thể kèm chỉnh, vd "A nhưng gap nhỏ hơn").</p>
+  </div>
+</div>
+
+<script>
+// ── Dữ liệu giả lập giống screenshot thật ──────────────────────────────────
+const SECTORS = [
+  ['Bất động sản Dân dụng', 'hold'], ['Công ty Chứng khoán', 'hold'], ['Kim loại công nghiệp', 'hold'],
+  ['Tài chính ngân hàng', 'late'], ['Vận tải Kho bãi', 'mid'], ['BĐS Khu công nghiệp', 'early'],
+  ['Thực phẩm Đồ uống', 'late'], ['Thi công Xây dựng', 'early'], ['Hạ tầng Tiện ích', 'tail'],
+  ['Bán lẻ Tiêu dùng', 'dots'], ['Dịch vụ Dầu khí', 'dots2'], ['Hóa chất Phân bón', 'none'],
+];
+const N = 60, CYCLE = 5;
+function genRow(kind){
+  const a = new Array(N).fill(0);
+  const seg = (s,e,v)=>{for(let i=Math.max(0,s);i<Math.min(N,e);i++)a[i]=v};
+  if(kind==='hold'){seg(0,18,3);seg(18,25,2);seg(25,48,3);seg(48,60,3);seg(30,33,2)}
+  if(kind==='late'){seg(3,5,1);seg(12,30,0);seg(20,45,3);seg(45,52,2);seg(52,60,3)}
+  if(kind==='mid'){seg(6,16,3);seg(16,20,2);seg(28,40,3);seg(40,44,2)}
+  if(kind==='early'){seg(0,10,3);seg(10,14,2);seg(22,26,1);seg(34,38,2)}
+  if(kind==='tail'){seg(44,47,1);seg(50,56,3);seg(56,60,2)}
+  if(kind==='dots'){a[2]=1;a[3]=1;a[9]=1;a[27]=1;a[41]=1}
+  if(kind==='dots2'){a[13]=1;a[31]=1;a[48]=1}
+  return a;
+}
+const DATA = SECTORS.map(([name,kind])=>({name,cells:genRow(kind)}));
+
+// ── Vẽ heatmap: mode = 'gap' | 'band' | 'axis' | 'gaplabel' ────────────────
+const CELL=13, GAP=3, UNIT=CELL+GAP, LABEL=170, AXIS=24;
+const ACC='#a78bfa', GREEN='#2ee06f';
+function fill(v){
+  if(v===3) return ACC;
+  if(v===2) return 'rgba(151,124,214,.5)';   // cân nhắc: trộn xám + op .5
+  if(v===1) return 'rgba(46,224,111,.85)';
+  return 'rgba(230,233,239,.07)';
+}
+function draw(mode){
+  const cycles = N/CYCLE;
+  const xgap = (mode==='gap'||mode==='gaplabel') ? 7 : 0;    // giãn THÊM giữa 2 kỳ
+  const X = i => LABEL + i*UNIT + Math.floor(i/CYCLE)*xgap;
+  const W = X(N-1)+CELL+8, H = DATA.length*UNIT + AXIS;
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" font-family="Segoe UI">`;
+
+  // B: dải nền xen kẽ theo kỳ (đặt DƯỚI ô)
+  if(mode==='band'){
+    for(let c=0;c<cycles;c+=2){
+      const x0 = X(c*CYCLE)-GAP/2, x1 = X((c+1)*CYCLE-1)+CELL+GAP/2;
+      s += `<rect x="${x0}" y="-2" width="${x1-x0}" height="${DATA.length*UNIT+2}" rx="6" fill="rgba(255,255,255,.035)"/>`;
+    }
+  }
+  // ô
+  DATA.forEach((row,r)=>{
+    const y = r*UNIT + GAP/2;
+    const live = row.cells[N-1]>=2;
+    const lastV = row.cells[N-1];
+    const lbl = live ? (lastV===3?ACC:'rgba(151,124,214,.7)') : '#9aa1ab';
+    s += `<text x="0" y="${y+CELL/2+4}" font-size="11" font-weight="${live?700:400}" fill="${lbl}">${(live?'● ':'')+row.name}</text>`;
+    row.cells.forEach((v,i)=>{ s += `<rect x="${X(i)}" y="${y}" width="${CELL}" height="${CELL}" rx="3" fill="${fill(v)}"/>`; });
+  });
+  const yAxis = DATA.length*UNIT + 15;
+
+  // trục: mốc tháng (giữ nguyên như bản thật)
+  [[8,'T5'],[30,'T6'],[52,'T7']].forEach(([i,t])=>{ s += `<text x="${X(i)}" y="${yAxis}" font-size="10" fill="#5d6570">${t}</text>`; });
+
+  // C: mốc kỳ ở trục — caret nhỏ + tick mảnh, lưới không bị đụng
+  if(mode==='axis'){
+    for(let c=1;c<cycles;c++){
+      const x = X(c*CYCLE)-(GAP+0)/2 - 0.5;
+      s += `<line x1="${x}" y1="${DATA.length*UNIT-2}" x2="${x}" y2="${DATA.length*UNIT+3}" stroke="rgba(230,233,239,.4)" stroke-width="1"/>`;
+      s += `<path d="M${x-3.2},${DATA.length*UNIT+9} L${x+3.2},${DATA.length*UNIT+9} L${x},${DATA.length*UNIT+4} Z" fill="rgba(167,139,250,.75)"/>`;
+    }
+  }
+  // D: nhãn kỳ mờ giữa mỗi nhóm
+  if(mode==='gaplabel'){
+    for(let c=0;c<cycles;c++){
+      const xm = (X(c*CYCLE) + X((c+1)*CYCLE-1)+CELL)/2;
+      s += `<text x="${xm}" y="${yAxis}" font-size="9" fill="rgba(154,161,171,.55)" text-anchor="middle">K${c+1}</text>`;
+    }
+    // mốc tháng dời lên trên cùng cho khỏi đè nhãn kỳ? đơn giản: bỏ trong mock D
+  }
+  s += '</svg>';
+  return s;
+}
+
+const OPTS = [
+  {m:'gap', b:'A', name:'Cycle Gap — tách kỳ bằng khoảng cách', desc:'Giữa 2 kỳ chỉ <b>giãn thêm ~7px</b>, không vẽ thêm bất kỳ nét nào. Mắt tự gom 5 cột thành 1 khối (Gestalt proximity) — đúng cách GitHub tách các tháng. Lưới sạch tuyệt đối.', pros:['<span class="ok">✓ Sạch nhất, không thêm "mực"</span>','<span class="ok">✓ Chuẩn công nghiệp (GitHub/Cal-Heatmap)</span>','<span class="no">✗ Kỳ không có nhãn định danh</span>']},
+  {m:'band', b:'B', name:'Session Banding — dải nền xen kẽ', desc:'Kỳ chẵn/lẻ thay phiên nhau có <b>dải nền mờ 3.5%</b> phía sau ô (bo tròn). Giống cách TradingView tô session giao dịch — chất "terminal tài chính". Không đổi vị trí ô nào.', pros:['<span class="ok">✓ Thấy kỳ rất rõ, kể cả kỳ dài ngắn khác nhau</span>','<span class="ok">✓ Không tốn thêm bề ngang</span>','<span class="no">✗ Thêm 1 lớp nền — bảng hơi "đầy" hơn</span>']},
+  {m:'axis', b:'C', name:'Axis Marker — mốc ▲ ở trục dưới', desc:'Lưới giữ nguyên 100%. Ranh giới kỳ đánh dấu bằng <b>tick mảnh + caret tím nhỏ</b> nằm ở làn trục dưới (cạnh nhãn tháng). Ai cần soi kỳ thì nhìn xuống trục — như vạch chia trên thước.', pros:['<span class="ok">✓ Lưới không bị đụng, tối giản</span>','<span class="ok">✓ Mốc rõ vị trí từng ranh giới</span>','<span class="no">✗ Tín hiệu nhỏ, dễ bị bỏ qua khi liếc nhanh</span>']},
+  {m:'gaplabel', b:'D', name:'Cycle Gap + nhãn kỳ (A nâng cấp)', desc:'Như A nhưng thêm <b>nhãn K1·K2·K3… mờ 55%</b> căn giữa mỗi nhóm ở làn trục. Người mới nhìn hiểu ngay "mỗi cụm = 1 kỳ tái cơ cấu", người quen thì nhãn đủ mờ để không vướng mắt.', pros:['<span class="ok">✓ Vừa sạch vừa tự giải thích</span>','<span class="ok">✓ Nhãn kỳ khớp câu "còn N phiên" phía trên</span>','<span class="no">✗ Làn trục dày hơn chút (thay nhãn tháng)</span>']},
+];
+document.getElementById('mocks').innerHTML = OPTS.map(o=>`
+  <div class="card">
+    <div class="tag"><span class="badge">${o.b}</span><h3>${o.name}</h3></div>
+    <div class="desc">${o.desc}</div>
+    <div class="meta">Kì tái cơ cấu ngành tiếp theo còn <b>5 phiên</b></div>
+    ${draw(o.m)}
+    <div class="pros">${o.pros.join('')}</div>
+  </div>`).join('');
+</script>
+</body>
+</html>

@@ -1,14 +1,14 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Box, Stack, Typography, alpha } from '@mui/material';
+import { Box, Stack, Typography } from '@mui/material';
 import ChartSectionTitle from 'components/common/ChartSectionTitle';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import AmbientCard from './AmbientCard';
 import type { PhaseRank, PhaseIndustryRow, IndexMapRow } from '../types';
 import SectorWaveStrip from './SectorWaveStrip';
 import SectorStrengthChart from './SectorStrengthChart';
-import AiCommentBody from './AiCommentBody';
+import BasketAiHero from './BasketAiHero';
 
 interface IndustrySectionProps {
   sectorRanks: PhaseRank[]; // FULL lịch sử (level='sector', product=CORE) — cho line chart sức mạnh
@@ -25,14 +25,7 @@ interface IndustrySectionProps {
   cashDates?: Set<string>;
 }
 
-function formatTime(iso?: string): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return null;
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
-/** Tầng NGÀNH tab Sóng Ngành (CORE): heatmap luân chuyển + line chart sức mạnh + nhận định ngành AI, 1 card kính. */
+/** Tầng NGÀNH tab Sóng Ngành (CORE): card biểu đồ (line sức mạnh + heatmap) + card nhận định ngành AI tách riêng. */
 export default function IndustrySection({ sectorRanks, industry, indexMap, accent, sectorCmt, generatedAt, updateTime, isCash = false, cashDates }: IndustrySectionProps) {
   // phase_industry 2026-07-12: 0=ngoài rổ · 1=tiềm năng · 2=vùng buffer · 3=trong rổ → ĐANG NẮM ⟺ >= 2.
   const { activeSectors, liveSectors, holdSectors } = useMemo(() => {
@@ -70,9 +63,6 @@ export default function IndustrySection({ sectorRanks, industry, indexMap, accen
     return { nextRebalance: dates.length ? (byDate.get(dates[dates.length - 1]) ?? null) : null, rebalanceDates: marks };
   }, [sectorRanks]);
 
-  const cap = { fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', fontWeight: fontWeight.semibold, mb: 1 } as const;
-  const metaDot = <Box component="span" sx={{ color: 'text.secondary', fontWeight: fontWeight.medium, fontSize: getResponsiveFontSize('sm'), lineHeight: 1 }}>·</Box>;
-
   return (
     <Box>
       <ChartSectionTitle title="Luân chuyển sóng ngành" description="Nhịp luân chuyển các ngành và tương quan sức mạnh theo thời gian." updateTime={updateTime} />
@@ -108,40 +98,16 @@ export default function IndustrySection({ sectorRanks, industry, indexMap, accen
             rebalanceDates={rebalanceDates}
           />
 
-          {sectorCmt && sectorCmt.trim() && (
-            <>
-              <Box sx={{ height: '1px', bgcolor: 'divider', my: 2.5, opacity: 0.5 }} />
-              <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 1, flexWrap: 'wrap' }}>
-                <Box
-                  component="span"
-                  sx={{
-                    fontSize: getResponsiveFontSize('xs'),
-                    fontWeight: fontWeight.bold,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    color: accent,
-                    bgcolor: alpha(accent, 0.14),
-                    borderRadius: 999,
-                    px: 1.25,
-                    py: 0.4,
-                  }}
-                >
-                  ✦ FINEXT AI
-                </Box>
-                {metaDot}
-                <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary', fontWeight: fontWeight.medium }}>Nhận định ngành</Typography>
-                {formatTime(generatedAt) && (
-                  <>
-                    {metaDot}
-                    <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.disabled' }}>Cập nhật lúc {formatTime(generatedAt)}</Typography>
-                  </>
-                )}
-              </Stack>
-              <AiCommentBody paragraphs={[sectorCmt]} />
-            </>
-          )}
         </AmbientCard>
       </Box>
+
+      {/* Nhận định ngành = comment ĐẦU TIÊN của tab → tách hẳn ra CARD RIÊNG có khung + drop cap
+          (trước đây nằm lọt trong card biểu đồ, không có khung). */}
+      {sectorCmt && sectorCmt.trim() && (
+        <Box sx={{ mt: 2.5 }}>
+          <BasketAiHero text={sectorCmt} generatedAt={generatedAt} accent={accent} label="Nhận định ngành" dropCap framed />
+        </Box>
+      )}
     </Box>
   );
 }

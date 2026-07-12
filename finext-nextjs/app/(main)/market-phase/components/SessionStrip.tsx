@@ -1,7 +1,7 @@
 'use client';
 
-import { Box, Typography, alpha, useTheme } from '@mui/material';
-import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
+import { Box, Tooltip, Typography, alpha, useTheme } from '@mui/material';
+import { getGlassCard, getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
 import { getPhaseMeta } from '../phaseMeta';
 
 interface SessionStripProps {
@@ -28,39 +28,53 @@ export default function SessionStrip({ dates, phaseByDate, selected, onSelect }:
   const isDark = theme.palette.mode === 'dark';
   const latest = dates.length ? dates[dates.length - 1] : '';
   const isLatest = selected === latest;
+  // Tooltip nền glass — dùng chung style với dải "10 phiên gần nhất" ở PhaseHero.
+  const glassTooltipSx = { ...getGlassCard(isDark), color: theme.palette.text.primary, px: 1.25, py: 0.75, borderRadius: `${borderRadius.md}px` };
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, alignItems: { xs: 'flex-start', md: 'flex-end' } }}>
       <Box sx={{ display: 'flex', gap: 0.5 }}>
         {dates.map((d) => {
           const label = phaseByDate.get(d);
-          const c = label ? getPhaseMeta(label).color(theme) : theme.palette.text.disabled;
+          const meta = label ? getPhaseMeta(label) : null;
+          const c = meta ? meta.color(theme) : theme.palette.text.disabled;
           const isSel = d === selected;
           return (
-            <Box
+            <Tooltip
               key={d}
-              role="button"
-              tabIndex={0}
-              aria-label={`Xem phiên ${fmtDate(d)}`}
-              onClick={() => onSelect(d)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  onSelect(d);
-                }
-              }}
-              sx={{
-                width: 14,
-                height: 20,
-                borderRadius: '4px',
-                cursor: 'pointer',
-                bgcolor: alpha(c, isSel ? 0.95 : 0.4),
-                border: `1px solid ${isSel ? alpha(c, 0.9) : 'transparent'}`,
-                boxShadow: isSel ? `0 0 10px ${alpha(c, isDark ? 0.85 : 0.5)}` : 'none',
-                transition: 'background-color 120ms, box-shadow 120ms',
-                '&:hover': { bgcolor: alpha(c, isSel ? 0.95 : 0.7) },
-              }}
-            />
+              placement="top"
+              slotProps={{ tooltip: { sx: glassTooltipSx } }}
+              title={
+                <Box sx={{ textAlign: 'left' }}>
+                  <Typography sx={{ fontSize: '0.68rem', color: 'text.secondary', fontWeight: fontWeight.medium }}>{fmtDate(d)}</Typography>
+                  {meta && <Typography sx={{ fontSize: '0.8rem', color: c, fontWeight: fontWeight.bold }}>{meta.en}</Typography>}
+                </Box>
+              }
+            >
+              <Box
+                role="button"
+                tabIndex={0}
+                aria-label={`Xem phiên ${fmtDate(d)}`}
+                onClick={() => onSelect(d)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onSelect(d);
+                  }
+                }}
+                sx={{
+                  width: 14,
+                  height: 20,
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  bgcolor: alpha(c, isSel ? 0.95 : 0.4),
+                  border: `1px solid ${isSel ? alpha(c, 0.9) : 'transparent'}`,
+                  boxShadow: isSel ? `0 0 10px ${alpha(c, isDark ? 0.85 : 0.5)}` : 'none',
+                  transition: 'background-color 120ms, box-shadow 120ms, transform .12s ease',
+                  '&:hover': { bgcolor: alpha(c, isSel ? 0.95 : 0.7), transform: 'translateY(-2px)' },
+                }}
+              />
+            </Tooltip>
           );
         })}
       </Box>

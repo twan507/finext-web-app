@@ -18,6 +18,8 @@ const GAP = 3;
 const UNIT = CELL + GAP; // bước ngang = bước dọc → lưới vuông đều
 const ROW_H = UNIT;
 const AXIS_H = 22;
+/** Khoảng GIÃN THÊM giữa 2 kỳ tái cơ cấu — tách nhóm bằng khoảng cách thay vì vẽ vạch. */
+const CYCLE_GAP = 7;
 
 // Giá trị phase_industry → trạng thái. Nắm giữ + Cân nhắc CÙNG TÔNG (accent của rổ = tím cho Sóng Ngành),
 // Cân nhắc đã TRỘN XÁM sẵn (trầm hơn) trong basketMeta → ở đây chỉ hạ nhẹ còn 0.8, KHÔNG hạ sâu (hạ sâu nhìn mờ xấu).
@@ -69,7 +71,7 @@ export default function SectorWaveStrip({ industry, liveSectors, nameByCode, cas
   const svgRef = useRef<SVGSVGElement>(null);
   const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
 
-  const { rows, ticks, W, H, n, dates, stateBySession, riskBySession, rebalanceIdx } = useMemo(() => {
+  const { rows, ticks, W, H, n, dates, stateBySession, riskBySession, xs } = useMemo(() => {
     const recent = industry.slice(-SESSIONS);
     const n = recent.length;
     const val = (r: PhaseIndustryRow, k: string) => Number(r[k]) || 0;
@@ -85,16 +87,6 @@ export default function SectorWaveStrip({ industry, liveSectors, nameByCode, cas
 
     const rows: Row[] = names.map((name) => ({ name, cells: recent.map((r) => val(r, name)) }));
 
-    const ticks: { x: number; label: string }[] = [];
-    let prev = '';
-    recent.forEach((r, i) => {
-      const m = String(r.date).slice(0, 7);
-      if (m !== prev) {
-        if (prev) ticks.push({ x: LABEL_W + i * UNIT, label: 'T' + Number(String(r.date).slice(5, 7)) });
-        prev = m;
-      }
-    });
-
     const dates = recent.map((r) => String(r.date));
     // Tooltip: chỉ ngành CÓ tín hiệu (bỏ Quan sát cho gọn), mức cao → thấp (Nắm giữ → Cân nhắc → Tiềm năng).
     const stateBySession = recent.map((r) =>
@@ -105,19 +97,40 @@ export default function SectorWaveStrip({ industry, liveSectors, nameByCode, cas
     );
     // Phiên 100% tiền mặt → cả CỘT mờ hẳn (danh mục thực tế không nắm gì ở phiên đó).
     const riskBySession = recent.map((r) => cashDates?.has(String(r.date).slice(0, 10)) ?? false);
-    // Phiên vừa cơ cấu → vạch đứt ở MÉP TRÁI cột đó (bỏ i=0 vì vạch sát rìa vô nghĩa).
-    // LƯU Ý: backend phase_rank chỉ trả ~20 phiên gần nhất, còn heatmap vẽ 60 phiên → nếu chỉ dùng
-    // mốc "đã biết" thì chỉ thấy ~3 vạch ở cuối chart. Lịch cơ cấu có nhịp CỐ ĐỊNH nên suy ngược
-    // chu kỳ (khoảng cách 2 mốc liên tiếp) về đầu chart để vẽ đủ.
+
+    // ── Phân kỳ tái cơ cấu: KHÔNG vẽ vạch, chỉ GIÃN KHOẢNG CÁCH giữa 2 kỳ (Cycle Gap) ──
+    // Mắt tự gom các cột cùng kỳ thành 1 khối (Gestalt proximity) — cách GitHub tách tháng trên
+    // contribution graph. Lưới giữ sạch tuyệt đối, không thêm "mực".
+    // LƯU Ý: backend phase_rank chỉ trả 60 phiên dòng sector; nếu vì lý do gì đó ngắn hơn cửa sổ
+    // heatmap thì chỉ suy được vài mốc ở cuối → lịch cơ cấu có nhịp CỐ ĐỊNH nên suy ngược chu kỳ
+    // (khoảng cách 2 mốc liên tiếp) về đầu chart cho đủ.
     const known = recent.map((_, i) => i).filter((i) => i > 0 && (rebalanceDates?.has(String(recent[i].date).slice(0, 10)) ?? false));
-    const rebalanceIdx = [...known];
+    const boundaries = new Set(known);
     if (known.length >= 2) {
       const cycle = known[known.length - 1] - known[known.length - 2];
-      if (cycle > 0) for (let i = known[0] - cycle; i > 0; i -= cycle) rebalanceIdx.push(i);
+      if (cycle > 0) for (let i = known[0] - cycle; i > 0; i -= cycle) boundaries.add(i);
     }
-    rebalanceIdx.sort((a, b) => a - b);
+    // xs[i] = x THẬT của cột i (đã cộng dồn gap của mọi ranh giới kỳ trước nó) → mọi thứ đọc từ đây,
+    // không còn công thức LABEL_W + i*UNIT vì bước cột không còn đều.
+    const xs: number[] = [];
+    let extra = 0;
+    for (let i = 0; i < n; i++) {
+      if (boundaries.has(i)) extra += CYCLE_GAP;
+      xs.push(LABEL_W + i * UNIT + extra);
+    }
 
-    return { rows, ticks, W: LABEL_W + n * UNIT, H: names.length * ROW_H + AXIS_H, n, dates, stateBySession, riskBySession, rebalanceIdx };
+    const ticks: { x: number; label: string }[] = [];
+    let prev = '';
+    recent.forEach((r, i) => {
+      const m = String(r.date).slice(0, 7);
+      if (m !== prev) {
+        if (prev) ticks.push({ x: xs[i], label: 'T' + Number(String(r.date).slice(5, 7)) });
+        prev = m;
+      }
+    });
+
+    const W = (xs[n - 1] ?? LABEL_W) + CELL + GAP;
+    return { rows, ticks, W, H: names.length * ROW_H + AXIS_H, n, dates, stateBySession, riskBySession, xs };
   }, [industry, cashDates, rebalanceDates]);
 
   if (rows.length === 0 || n === 0) return null;
@@ -131,7 +144,16 @@ export default function SectorWaveStrip({ industry, liveSectors, nameByCode, cas
       setHover(null);
       return;
     }
-    const i = Math.max(0, Math.min(n - 1, Math.floor((vbX - LABEL_W) / UNIT)));
+    // Bước cột KHÔNG đều (đã chèn CYCLE_GAP giữa các kỳ) → không chia UNIT được, phải tìm cột gần nhất.
+    let i = 0;
+    let best = Infinity;
+    for (let k = 0; k < n; k++) {
+      const d = Math.abs(vbX - (xs[k] + CELL / 2));
+      if (d < best) {
+        best = d;
+        i = k;
+      }
+    }
     setHover({ i, x: e.clientX, y: e.clientY });
   };
 
@@ -183,20 +205,7 @@ export default function SectorWaveStrip({ industry, liveSectors, nameByCode, cas
 
       <Box sx={{ overflowX: 'auto' }}>
         <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} width="100%" style={{ minWidth: 560, display: 'block' }} onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
-          {/* Vạch đứt phân tách các KỲ CƠ CẤU — nằm gọn trong khe 3px giữa 2 cột nên không đè lên ô. */}
-          {rebalanceIdx.map((i) => (
-            <line
-              key={`rb${i}`}
-              x1={LABEL_W + i * UNIT - GAP / 2}
-              y1={0}
-              x2={LABEL_W + i * UNIT - GAP / 2}
-              y2={rows.length * ROW_H}
-              stroke={alpha(theme.palette.text.primary, isDark ? 0.32 : 0.26)}
-              strokeWidth={1}
-              strokeDasharray="2 3"
-            />
-          ))}
-
+          {/* Kỳ tái cơ cấu KHÔNG vẽ vạch — đã tách bằng khoảng cách (xs đã cộng dồn CYCLE_GAP). */}
           {ticks.map((t, i) => (
             <text key={i} x={t.x} y={H - 6} fontSize={10} fill={theme.palette.text.disabled}>
               {t.label}
@@ -215,7 +224,7 @@ export default function SectorWaveStrip({ industry, liveSectors, nameByCode, cas
                   {(live ? '● ' : '') + (nameByCode.get(row.name) ?? row.name)}
                 </text>
                 {row.cells.map((v, i) => (
-                  <rect key={i} x={LABEL_W + i * UNIT} y={y} width={CELL} height={CELL} rx={3} fill={cellFill(v, riskBySession[i])} />
+                  <rect key={i} x={xs[i]} y={y} width={CELL} height={CELL} rx={3} fill={cellFill(v, riskBySession[i])} />
                 ))}
               </g>
             );
@@ -224,7 +233,7 @@ export default function SectorWaveStrip({ industry, liveSectors, nameByCode, cas
           {/* Crosshair kiểu lưới: khung bao quanh CỘT phiên đang hover. */}
           {hi >= 0 && (
             <rect
-              x={LABEL_W + hi * UNIT - 2}
+              x={xs[hi] - 2}
               y={-1}
               width={CELL + 4}
               height={rows.length * ROW_H + 2}

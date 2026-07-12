@@ -9,7 +9,7 @@ import type { PhaseRank } from '../types';
 // còn lại là đường "bóng mờ". Chip legend (ngành từng có sóng) → bật/tắt. Hover: crosshair dọc + tooltip (chỉ ngành bật).
 const SESSIONS = 20; // line chỉ vẽ 20 phiên gần nhất (heatmap bên dưới mới dùng 60 phiên)
 const W = 1040;
-const H = 320;
+const H = 270; // chiều cao viewBox (svg width=100% nên co giãn theo tỉ lệ) — hạ bớt cho gọn
 const PL = 40;
 const PT = 14;
 const PB = 24;
