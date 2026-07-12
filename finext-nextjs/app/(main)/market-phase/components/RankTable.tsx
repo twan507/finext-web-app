@@ -5,7 +5,7 @@ import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import AmbientCard from './AmbientCard';
 import type { PhaseRank, IndexMapRow } from '../types';
-import { getStatusMeta } from '../basketMeta';
+import { getStatusMeta, STATUS_ORDER } from '../basketMeta';
 
 interface RankTableProps {
   rows: PhaseRank[];
@@ -21,7 +21,13 @@ interface RankTableProps {
 export default function RankTable({ rows, showSector = false, indexMap = [], accent, conservativeLayout = false }: RankTableProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const sorted = [...rows].sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999)); // dòng vẫn xếp theo rank kể cả khi ẩn cột Hạng
+  // Trạng thái ƯU TIÊN TRƯỚC hạng: Tiềm năng → Chờ tín hiệu → Quan sát; cùng nhóm mới xét hạng.
+  const sorted = [...rows].sort((a, b) => {
+    const sa = STATUS_ORDER[a.status] ?? 99;
+    const sb = STATUS_ORDER[b.status] ?? 99;
+    if (sa !== sb) return sa - sb;
+    return (a.rank ?? 999) - (b.rank ?? 999);
+  });
   // Mã ngành → tên đầy đủ; thiếu (BE chưa restart) → fallback về mã.
   const sectorName = useMemo(
     () => new Map(indexMap.filter((m) => m.ticker_name).map((m) => [m.ticker, m.ticker_name as string] as const)),
@@ -70,6 +76,8 @@ export default function RankTable({ rows, showSector = false, indexMap = [], acc
           <TableBody>
             {sorted.map((r, i) => {
               const st = getStatusMeta(r.status);
+              // Nắm giữ/Cân nhắc = accent của rổ (Cân nhắc đã trộn xám sẵn trong basketMeta).
+              const sc = st.color(theme, accent);
               return (
                 <TableRow key={`${r.ticker}-${i}`} hover>
                   {!showSector && <TableCell sx={cellSx}>{r.rank ?? '—'}</TableCell>}
@@ -89,8 +97,9 @@ export default function RankTable({ rows, showSector = false, indexMap = [], acc
                         borderRadius: 999,
                         fontSize: getResponsiveFontSize('xs'),
                         fontWeight: fontWeight.semibold,
-                        color: st.color(theme),
-                        bgcolor: alpha(st.color(theme), 0.12),
+                        color: sc,
+                        bgcolor: alpha(sc, 0.12),
+                        opacity: st.op ?? 1, // Cân nhắc = 0.5, đồng bộ với nhãn + ô heatmap
                       }}
                     >
                       {st.label}

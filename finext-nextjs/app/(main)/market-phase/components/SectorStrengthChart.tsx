@@ -7,6 +7,7 @@ import type { PhaseRank } from '../types';
 
 // A "Focus + Context": 12 ngành cùng 1 trục composite (tương quan thật); ngành bật tô màu + neon glow + nhãn mép phải,
 // còn lại là đường "bóng mờ". Chip legend (ngành từng có sóng) → bật/tắt. Hover: crosshair dọc + tooltip (chỉ ngành bật).
+const SESSIONS = 20; // line chỉ vẽ 20 phiên gần nhất (heatmap bên dưới mới dùng 60 phiên)
 const W = 1040;
 const H = 320;
 const PL = 40;
@@ -46,12 +47,15 @@ interface Series {
 }
 
 interface SectorStrengthChartProps {
-  sectorRanks: PhaseRank[]; // FULL lịch sử (level='sector')
+  sectorRanks: PhaseRank[]; // lịch sử level='sector' (backend trả 60 phiên) — chart chỉ vẽ 20 phiên cuối
   activeSectors: Set<string>; // ngành từng có sóng → hiện chip legend
   nameByCode: Map<string, string>; // mã ngành → tên đầy đủ (thiếu → fallback về mã)
+  /** Ngành đang ở trạng thái "Nắm giữ" (phase_industry = 3) → tô màu mặc định.
+   *  Rỗng (vd chưa có phase_industry) → fallback top-3 theo hạng để chart không xám toàn bộ. */
+  holdSectors?: Set<string>;
 }
 
-export default function SectorStrengthChart({ sectorRanks, activeSectors, nameByCode }: SectorStrengthChartProps) {
+export default function SectorStrengthChart({ sectorRanks, activeSectors, nameByCode, holdSectors }: SectorStrengthChartProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -60,9 +64,12 @@ export default function SectorStrengthChart({ sectorRanks, activeSectors, nameBy
   const [pr, setPr] = useState(120); // lề phải động — đo bằng getBBox nhãn thật
 
   const { dates, series, top3, min, max } = useMemo(() => {
-    const dates = Array.from(new Set(sectorRanks.map((r) => r.date))).sort();
+    // Backend trả 60 phiên dòng sector (cho heatmap) → line chỉ lấy 20 phiên cuối.
+    const dates = Array.from(new Set(sectorRanks.map((r) => r.date))).sort().slice(-SESSIONS);
+    const inWindow = new Set(dates);
     const byName = new Map<string, Map<string, PhaseRank>>();
     for (const r of sectorRanks) {
+      if (!inWindow.has(r.date)) continue; // bỏ phiên ngoài cửa sổ → min/max trục y bám đúng 20 phiên
       const nm = sectorName(r);
       if (!byName.has(nm)) byName.set(nm, new Map());
       byName.get(nm)!.set(r.date, r);
@@ -82,11 +89,13 @@ export default function SectorStrengthChart({ sectorRanks, activeSectors, nameBy
     if (!isFinite(min)) { min = -1; max = 1; }
     min = Math.floor(min * 2) / 2 - 0.1;
     max = Math.ceil(max * 2) / 2 + 0.1;
+    // Chỉ là FALLBACK khi không có holdSectors (vd phase_industry rỗng) — mặc định tô theo "Nắm giữ".
     const top3 = [...series].sort((a, b) => a.rankLast - b.rankLast).slice(0, 3).map((s) => s.name);
     return { dates, series, top3, min, max };
   }, [sectorRanks]);
 
-  const [focused, setFocused] = useState<Set<string>>(() => new Set(top3));
+  // Tô màu ngành đang "Nắm giữ" (state = 3), KHÔNG phải top-3 theo hạng. s.name = mã ngành → khớp thẳng key phase_industry.
+  const [focused, setFocused] = useState<Set<string>>(() => new Set(holdSectors?.size ? holdSectors : top3));
 
   // Đo bề rộng THẬT của nhãn mép phải (getBBox = đơn vị viewBox) → PR sát khít, không dư.
   const measurePr = useCallback(() => {

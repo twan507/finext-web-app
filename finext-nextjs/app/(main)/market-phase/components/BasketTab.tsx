@@ -66,6 +66,10 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
   // Ngành (CORE) KHÔNG theo phiên chọn. Line chart sức mạnh cần FULL lịch sử → lấy toàn bộ sector rows.
   const latestRankDate = rank.reduce((m, r) => (r.date > m ? r.date : m), '');
   const sectorRanks = rank.filter((r) => r.product === product && r.level === 'sector');
+  // phase_industry (schema mới) KHÔNG còn tự về 0 khi downtrend → web tự làm mờ THEO TỪNG PHIÊN
+  // có market_exposure == 0 (không phải làm mờ cả bảng theo phiên mới nhất).
+  const cashDates = new Set(daily.filter((d) => (d.market_exposure ?? 1) === 0).map((d) => dkey(d.date)));
+  const isCashNow = cashDates.has(dkey(daily[daily.length - 1]?.date)); // daily sort date asc → banner "đang 100% tiền mặt"
 
   const comment = commentBasket.find((c) => c.product === product) ?? null;
   const tradesAll = trading.filter((t) => t.product === product);
@@ -131,7 +135,7 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
       {/* 3b. Sóng Ngành (CORE): cụm ngành dời LÊN GIỮA (Hiệu suất ↔ Vận hành), kèm nhận định ngành sector_cmt trong card. */}
       {isCore && (industry.length > 0 || sectorRanks.length > 0) && (
         <Box sx={{ mt: 4 }}>
-          <IndustrySection sectorRanks={sectorRanks} industry={industry} indexMap={indexMap} accent={accent} sectorCmt={comment?.sector_cmt} generatedAt={comment?.generated_at} updateTime={fmtDate(latestRankDate)} />
+          <IndustrySection sectorRanks={sectorRanks} industry={industry} indexMap={indexMap} accent={accent} sectorCmt={comment?.sector_cmt} generatedAt={comment?.generated_at} updateTime={fmtDate(latestRankDate)} isCash={isCashNow} cashDates={cashDates} />
         </Box>
       )}
 
@@ -154,7 +158,7 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
       {/* 5. Danh mục nắm giữ / dự kiến — theo phiên chọn (tiêu đề gộp vào "Vận hành danh mục" ở trên) */}
       {basketRow && (
         <Box sx={{ mt: 2.5 }}>
-          <HoldingsTable basket={basketRow} ranks={stockRanks} trades={tradesAll} accent={accent} stats={holdStats} isLatest={isLatest} selectedDate={selected} conservativeLayout={isConservative} />
+          <HoldingsTable basket={basketRow} ranks={stockRanks} trades={tradesAll} accent={accent} stats={holdStats} isLatest={isLatest} selectedDate={selected} conservativeLayout={isConservative} showSector={isCore} indexMap={indexMap} />
         </Box>
       )}
 

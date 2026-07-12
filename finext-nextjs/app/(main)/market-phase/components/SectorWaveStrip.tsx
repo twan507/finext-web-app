@@ -1,35 +1,60 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { Box, Typography, useTheme, alpha } from '@mui/material';
-import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
+import { Box, Stack, Tooltip, Typography, useTheme, alpha } from '@mui/material';
+import { getGlassCard, getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
 import type { PhaseIndustryRow } from '../types';
+import { getStatusMeta } from '../basketMeta';
 
-// H2 "Wave Streaks": gộp các phiên ON liên tiếp của mỗi ngành thành dải sóng liền (bo tròn),
-// sóng đang chạy (chạm phiên cuối) có glow + chấm pulse. Chỉ render ngành TỪNG có sóng (giấu universe).
-// Hover: crosshair dọc + tooltip liệt kê ngành đang có sóng ở phiên đó.
+// Heatmap ngành kiểu GitHub-contribution — tầng NGÀNH của rổ Sóng Ngành.
+// phase_industry (schema 2026-07-12): mỗi ô = 1 ngành × 1 phiên, màu theo trạng thái.
+// Ô dùng CHUNG bảng trạng thái với chip cổ phiếu (RANK_STATUS_META) → tên + màu luôn khớp nhau.
+// Tầng ngành KHÔNG có cho_tin_hieu (không có cổng vào giá) nên chỉ 4 mức. ĐANG NẮM ⟺ >= 2.
+// Chỉ render ngành từng có tín hiệu (>=1) trong cửa sổ → không lộ universe.
 const SESSIONS = 60;
 const LABEL_W = 180;
-const UNIT_W = 16;
-const ROW_H = 26;
-const BAR_H = 12;
+const CELL = 13; // ô vuông
+const GAP = 3;
+const UNIT = CELL + GAP; // bước ngang = bước dọc → lưới vuông đều
+const ROW_H = UNIT;
+const AXIS_H = 22;
+
+// Giá trị phase_industry → trạng thái. Nắm giữ + Cân nhắc CÙNG TÔNG (accent của rổ = tím cho Sóng Ngành),
+// Cân nhắc đã TRỘN XÁM sẵn (trầm hơn) trong basketMeta → ở đây chỉ hạ nhẹ còn 0.8, KHÔNG hạ sâu (hạ sâu nhìn mờ xấu).
+// Tiềm năng (xanh lá) / Quan sát (xám) = ngoài rổ.
+// `op` = sắc độ của Ô LƯỚI (ô không phải chữ nên mờ sâu được: Cân nhắc 0.5, ô trống 0.16).
+// Phần CHỮ (nhãn ngành, chip bên bảng) dùng StatusMeta.op = 0.7 — 0.5 sẽ khó đọc.
+const LV: { key: string; op: number; desc: string }[] = [
+  { key: 'ngoai', op: 0.16, desc: 'Chưa được khuyến nghị — ngành đang trong diện theo dõi.' },
+  { key: 'ung_vien', op: 0.85, desc: 'Ngành đang mạnh lên — dự kiến được mua vào ở kỳ tái cơ cấu tới.' },
+  { key: 'vung_buffer', op: 0.5, desc: 'Vẫn đang nắm giữ nhưng sức mạnh đã yếu đi — có thể bị thay thế ở kỳ tái cơ cấu tới.' },
+  { key: 'trong_ro', op: 1, desc: 'Ngành đang được khuyến nghị nắm giữ — danh mục đang phân bổ vốn vào cổ phiếu của ngành này.' },
+];
+/** Thứ tự hiển thị (legend + tooltip): Nắm giữ → Cân nhắc → Tiềm năng → Quan sát. */
+const LV_ORDER = [3, 2, 1, 0];
+/** Pha rủi ro (100% tiền mặt): mọi ô mờ hẳn về 0.1 — danh mục thực tế KHÔNG nắm ngành nào. */
+const RISK_OP = 0.1;
 
 interface SectorWaveStripProps {
   industry: PhaseIndustryRow[];
-  /** Ngành đang trong sóng ở phiên mới nhất → in đậm + chấm. */
+  /** Ngành ĐANG NẮM (>=2) ở phiên mới nhất → nhãn in đậm + chấm. */
   liveSectors: Set<string>;
   /** Mã ngành → tên đầy đủ (thiếu → fallback về mã). */
   nameByCode: Map<string, string>;
+  /** Các phiên 100% tiền mặt (phase_daily.market_exposure == 0) → làm mờ ĐÚNG những CỘT đó.
+   *  phase_industry không còn tự về 0 khi downtrend nên phải ghép ở tầng web. Key = date slice(0,10). */
+  cashDates?: Set<string>;
+  /** Màu chủ đề của rổ (Sóng Ngành = tím) → dùng cho Nắm giữ + Cân nhắc, khớp chip bảng vận hành. */
+  accent?: string;
+  /** Số phiên còn lại tới kỳ cơ cấu NGÀNH tiếp theo (null = data chưa có → ẩn dòng). */
+  nextRebalance?: number | null;
+  /** Các phiên vừa cơ cấu (bắt đầu chu kỳ mới) → vẽ vạch đứt dọc phân tách các kỳ. Key = date slice(0,10). */
+  rebalanceDates?: Set<string>;
 }
 
-interface Bar {
-  x: number;
-  w: number;
-  live: boolean;
-}
 interface Row {
   name: string;
-  bars: Bar[];
+  cells: number[]; // giá trị 0..3 theo từng phiên
 }
 
 function fmtD(s: string): string {
@@ -38,52 +63,62 @@ function fmtD(s: string): string {
   return dd && m && y ? `${dd}/${m}/${y}` : d;
 }
 
-export default function SectorWaveStrip({ industry, liveSectors, nameByCode }: SectorWaveStripProps) {
+export default function SectorWaveStrip({ industry, liveSectors, nameByCode, cashDates, accent, nextRebalance, rebalanceDates }: SectorWaveStripProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const primary = theme.palette.primary.main;
   const svgRef = useRef<SVGSVGElement>(null);
   const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
 
-  const { rows, ticks, W, H, n, dates, onBySession } = useMemo(() => {
+  const { rows, ticks, W, H, n, dates, stateBySession, riskBySession, rebalanceIdx } = useMemo(() => {
     const recent = industry.slice(-SESSIONS);
     const n = recent.length;
-    const set = new Set<string>();
-    for (const r of recent) for (const k of Object.keys(r)) if (k !== 'date' && Number(r[k]) === 1) set.add(k);
-    const totalOf = (name: string) => recent.reduce((s, r) => s + (Number(r[name]) === 1 ? 1 : 0), 0);
-    // Sort: ngành có sóng NHIỀU nhất trong 60 phiên ở trên → ít nhất ở dưới.
-    const names = Array.from(set).sort((a, b) => totalOf(b) - totalOf(a));
+    const val = (r: PhaseIndustryRow, k: string) => Number(r[k]) || 0;
 
-    const rows: Row[] = names.map((name) => {
-      const arr = recent.map((r) => (Number(r[name]) === 1 ? 1 : 0));
-      const bars: Bar[] = [];
-      let i = 0;
-      while (i < n) {
-        if (arr[i] === 1) {
-          let j = i;
-          while (j < n && arr[j] === 1) j++;
-          bars.push({ x: LABEL_W + i * UNIT_W, w: Math.max((j - i) * UNIT_W - 3, UNIT_W * 0.6), live: j === n });
-          i = j;
-        } else i++;
-      }
-      return { name, bars };
-    });
+    // Ngành từng có tín hiệu (>=1) trong cửa sổ.
+    const set = new Set<string>();
+    for (const r of recent) for (const k of Object.keys(r)) if (k !== 'date' && val(r, k) >= 1) set.add(k);
+
+    const heldOf = (name: string) => recent.reduce((s, r) => s + (val(r, name) >= 2 ? 1 : 0), 0);
+    const anyOf = (name: string) => recent.reduce((s, r) => s + (val(r, name) >= 1 ? 1 : 0), 0);
+    // Nắm nhiều phiên nhất lên trên; hoà → xét tổng phiên có tín hiệu.
+    const names = Array.from(set).sort((a, b) => heldOf(b) - heldOf(a) || anyOf(b) - anyOf(a));
+
+    const rows: Row[] = names.map((name) => ({ name, cells: recent.map((r) => val(r, name)) }));
 
     const ticks: { x: number; label: string }[] = [];
     let prev = '';
     recent.forEach((r, i) => {
       const m = String(r.date).slice(0, 7);
       if (m !== prev) {
-        if (prev) ticks.push({ x: LABEL_W + i * UNIT_W, label: 'T' + Number(String(r.date).slice(5, 7)) });
+        if (prev) ticks.push({ x: LABEL_W + i * UNIT, label: 'T' + Number(String(r.date).slice(5, 7)) });
         prev = m;
       }
     });
 
     const dates = recent.map((r) => String(r.date));
-    const onBySession = recent.map((r) => names.filter((nm) => Number(r[nm]) === 1));
+    // Tooltip: chỉ ngành CÓ tín hiệu (bỏ Quan sát cho gọn), mức cao → thấp (Nắm giữ → Cân nhắc → Tiềm năng).
+    const stateBySession = recent.map((r) =>
+      names
+        .map((nm) => ({ code: nm, v: val(r, nm) }))
+        .filter((x) => x.v >= 1)
+        .sort((a, b) => b.v - a.v),
+    );
+    // Phiên 100% tiền mặt → cả CỘT mờ hẳn (danh mục thực tế không nắm gì ở phiên đó).
+    const riskBySession = recent.map((r) => cashDates?.has(String(r.date).slice(0, 10)) ?? false);
+    // Phiên vừa cơ cấu → vạch đứt ở MÉP TRÁI cột đó (bỏ i=0 vì vạch sát rìa vô nghĩa).
+    // LƯU Ý: backend phase_rank chỉ trả ~20 phiên gần nhất, còn heatmap vẽ 60 phiên → nếu chỉ dùng
+    // mốc "đã biết" thì chỉ thấy ~3 vạch ở cuối chart. Lịch cơ cấu có nhịp CỐ ĐỊNH nên suy ngược
+    // chu kỳ (khoảng cách 2 mốc liên tiếp) về đầu chart để vẽ đủ.
+    const known = recent.map((_, i) => i).filter((i) => i > 0 && (rebalanceDates?.has(String(recent[i].date).slice(0, 10)) ?? false));
+    const rebalanceIdx = [...known];
+    if (known.length >= 2) {
+      const cycle = known[known.length - 1] - known[known.length - 2];
+      if (cycle > 0) for (let i = known[0] - cycle; i > 0; i -= cycle) rebalanceIdx.push(i);
+    }
+    rebalanceIdx.sort((a, b) => a - b);
 
-    return { rows, ticks, W: LABEL_W + n * UNIT_W, H: names.length * ROW_H + 22, n, dates, onBySession };
-  }, [industry]);
+    return { rows, ticks, W: LABEL_W + n * UNIT, H: names.length * ROW_H + AXIS_H, n, dates, stateBySession, riskBySession, rebalanceIdx };
+  }, [industry, cashDates, rebalanceDates]);
 
   if (rows.length === 0 || n === 0) return null;
 
@@ -96,81 +131,112 @@ export default function SectorWaveStrip({ industry, liveSectors, nameByCode }: S
       setHover(null);
       return;
     }
-    const i = Math.max(0, Math.min(n - 1, Math.floor((vbX - LABEL_W) / UNIT_W)));
+    const i = Math.max(0, Math.min(n - 1, Math.floor((vbX - LABEL_W) / UNIT)));
     setHover({ i, x: e.clientX, y: e.clientY });
   };
 
   const hi = hover?.i ?? -1;
-  const crossX = LABEL_W + hi * UNIT_W + UNIT_W / 2;
+  const lvOf = (v: number) => LV[v] ?? LV[0];
+  const lvMeta = (v: number) => getStatusMeta(lvOf(v).key);
+  const lvColor = (v: number) => lvMeta(v).color(theme, accent);
+  const lvLabel = (v: number) => lvMeta(v).label;
+  /** Màu "ô" — dùng cho ô lưới + swatch legend + chấm tooltip (đều là ô, mờ sâu được). */
+  const cellTone = (v: number) => alpha(lvColor(v), lvOf(v).op);
+  /** Màu ô trên lưới — phiên 100% tiền mặt thì mọi mức mờ hẳn về 0.1. */
+  const cellFill = (v: number, risk: boolean) => alpha(lvColor(v), risk ? RISK_OP : lvOf(v).op);
+  /** Màu CHỮ (nhãn ngành) — dùng op của trạng thái (Cân nhắc 0.7), khớp chip bên bảng. */
+  const labelTone = (v: number) => alpha(lvColor(v), lvMeta(v).op ?? 1);
+  const latestIsRisk = riskBySession[n - 1] ?? false;
+  const glassTooltipSx = { ...getGlassCard(isDark), color: theme.palette.text.primary, px: 1.25, py: 1, borderRadius: `${borderRadius.md}px`, maxWidth: 260 };
 
   return (
-    <Box
-      sx={{
-        overflowX: 'auto',
-        position: 'relative',
-        '@keyframes wavePulse': { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.35 } },
-        '& .wave-live-dot': { animation: 'wavePulse 1.8s ease-in-out infinite' },
-      }}
-    >
-      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} width="100%" style={{ minWidth: 560, display: 'block' }} onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
-        <defs>
-          <linearGradient id="waveGrad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor={alpha(primary, isDark ? 0.55 : 0.5)} />
-            <stop offset="1" stopColor={primary} />
-          </linearGradient>
-          <filter id="waveGlow" x="-40%" y="-150%" width="180%" height="400%">
-            <feGaussianBlur stdDeviation="3" result="b" />
-            <feMerge>
-              <feMergeNode in="b" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
+    <Box sx={{ position: 'relative' }}>
+      {/* Legend (Nắm giữ → Quan sát) — hover từng mục để xem giải thích. */}
+      <Stack direction="row" alignItems="center" sx={{ mb: 0.75, flexWrap: 'wrap', gap: { xs: 1.25, md: 2 } }}>
+        {LV_ORDER.map((v) => (
+          <Tooltip
+            key={v}
+            placement="top"
+            slotProps={{ tooltip: { sx: glassTooltipSx } }}
+            title={
+              <Box>
+                <Typography sx={{ fontSize: '0.78rem', fontWeight: fontWeight.bold, color: labelTone(v) }}>{lvLabel(v)}</Typography>
+                <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary', mt: 0.25, lineHeight: 1.5 }}>{lvOf(v).desc}</Typography>
+              </Box>
+            }
+          >
+            <Stack direction="row" spacing={0.75} alignItems="center">
+              <Box sx={{ width: 11, height: 11, borderRadius: '3px', bgcolor: cellTone(v), flexShrink: 0 }} />
+              <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', whiteSpace: 'nowrap' }}>{lvLabel(v)}</Typography>
+            </Stack>
+          </Tooltip>
+        ))}
+      </Stack>
 
-        {ticks.map((t, i) => (
-          <g key={i}>
-            <line x1={t.x} y1={0} x2={t.x} y2={H - 20} stroke={alpha(theme.palette.text.primary, 0.06)} />
-            <text x={t.x + 3} y={H - 6} fontSize={10} fill={theme.palette.text.disabled}>
+      {/* Lịch cơ cấu NGÀNH (nhịp riêng, khác tầng cổ phiếu) — ẩn nếu data chưa có next_rebalance_in ở dòng sector. */}
+      {nextRebalance != null && (
+        <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', mb: 1.25 }}>
+          Kì tái cơ cấu ngành tiếp theo còn{' '}
+            {nextRebalance} phiên
+        </Typography>
+      )}
+
+      <Box sx={{ overflowX: 'auto' }}>
+        <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} width="100%" style={{ minWidth: 560, display: 'block' }} onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
+          {/* Vạch đứt phân tách các KỲ CƠ CẤU — nằm gọn trong khe 3px giữa 2 cột nên không đè lên ô. */}
+          {rebalanceIdx.map((i) => (
+            <line
+              key={`rb${i}`}
+              x1={LABEL_W + i * UNIT - GAP / 2}
+              y1={0}
+              x2={LABEL_W + i * UNIT - GAP / 2}
+              y2={rows.length * ROW_H}
+              stroke={alpha(theme.palette.text.primary, isDark ? 0.32 : 0.26)}
+              strokeWidth={1}
+              strokeDasharray="2 3"
+            />
+          ))}
+
+          {ticks.map((t, i) => (
+            <text key={i} x={t.x} y={H - 6} fontSize={10} fill={theme.palette.text.disabled}>
               {t.label}
             </text>
-          </g>
-        ))}
+          ))}
 
-        {rows.map((row, r) => {
-          const cy = r * ROW_H + ROW_H / 2;
-          const live = liveSectors.has(row.name);
-          return (
-            <g key={row.name}>
-              <text x={0} y={cy + 4} fontSize={11} fontWeight={live ? 700 : 400} fill={live ? theme.palette.text.primary : theme.palette.text.secondary}>
-                {(live ? '● ' : '') + (nameByCode.get(row.name) ?? row.name)}
-              </text>
-              <rect x={LABEL_W} y={cy - 0.5} width={W - LABEL_W} height={1} fill={alpha(theme.palette.text.primary, 0.05)} />
-              {row.bars.map((b, bi) => (
-                <rect
-                  key={bi}
-                  x={b.x}
-                  y={cy - BAR_H / 2}
-                  width={b.w}
-                  height={BAR_H}
-                  rx={BAR_H / 2}
-                  fill="url(#waveGrad)"
-                  opacity={b.live ? 1 : isDark ? 0.6 : 0.72}
-                  filter={b.live ? 'url(#waveGlow)' : undefined}
-                />
-              ))}
-              {row.bars
-                .filter((b) => b.live)
-                .map((b, bi) => (
-                  <circle key={`d${bi}`} className="wave-live-dot" cx={b.x + b.w - 3} cy={cy} r={3.2} fill={isDark ? '#e9ddff' : primary} filter="url(#waveGlow)" />
+          {rows.map((row, r) => {
+            const y = r * ROW_H + GAP / 2;
+            // Phiên mới nhất là tiền mặt → KHÔNG đánh dấu "đang nắm" (thực tế danh mục đã bán sạch).
+            const live = !latestIsRisk && liveSectors.has(row.name);
+            const lastV = row.cells[n - 1] ?? 0; // ngành đang nắm → 3 (Nắm giữ) hoặc 2 (Cân nhắc)
+            return (
+              <g key={row.name}>
+                {/* Nhãn ngành đang nắm tô ĐÚNG màu + độ mờ chữ của trạng thái (Cân nhắc 0.7) — không tô trắng. */}
+                <text x={0} y={y + CELL / 2 + 4} fontSize={11} fontWeight={live ? 700 : 400} fill={live ? labelTone(lastV) : theme.palette.text.secondary}>
+                  {(live ? '● ' : '') + (nameByCode.get(row.name) ?? row.name)}
+                </text>
+                {row.cells.map((v, i) => (
+                  <rect key={i} x={LABEL_W + i * UNIT} y={y} width={CELL} height={CELL} rx={3} fill={cellFill(v, riskBySession[i])} />
                 ))}
-            </g>
-          );
-        })}
+              </g>
+            );
+          })}
 
-        {hi >= 0 && (
-          <line x1={crossX} y1={0} x2={crossX} y2={H - 20} stroke={alpha(theme.palette.text.primary, isDark ? 0.45 : 0.4)} strokeWidth={1} strokeDasharray="3 3" pointerEvents="none" />
-        )}
-      </svg>
+          {/* Crosshair kiểu lưới: khung bao quanh CỘT phiên đang hover. */}
+          {hi >= 0 && (
+            <rect
+              x={LABEL_W + hi * UNIT - 2}
+              y={-1}
+              width={CELL + 4}
+              height={rows.length * ROW_H + 2}
+              rx={4}
+              fill="none"
+              stroke={alpha(theme.palette.text.primary, isDark ? 0.5 : 0.42)}
+              strokeWidth={1}
+              pointerEvents="none"
+            />
+          )}
+        </svg>
+      </Box>
 
       {hover && (
         <Box
@@ -178,12 +244,12 @@ export default function SectorWaveStrip({ industry, liveSectors, nameByCode }: S
             position: 'fixed',
             zIndex: 1500,
             pointerEvents: 'none',
-            left: Math.min(hover.x + 14, (typeof window !== 'undefined' ? window.innerWidth : 2000) - 250),
+            left: Math.min(hover.x + 14, (typeof window !== 'undefined' ? window.innerWidth : 2000) - 400),
             top: hover.y + 14,
-            minWidth: 160,
-            maxWidth: 240,
-            maxHeight: 280,
-            overflowY: 'auto',
+            minWidth: 300,
+            maxWidth: 380,
+            maxHeight: 360,
+            overflow: 'hidden',
             bgcolor: isDark ? 'rgba(18,20,26,0.94)' : 'rgba(255,255,255,0.97)',
             border: `1px solid ${theme.palette.divider}`,
             borderRadius: 2,
@@ -192,18 +258,26 @@ export default function SectorWaveStrip({ industry, liveSectors, nameByCode }: S
             backdropFilter: 'blur(6px)',
           }}
         >
-          <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.semibold, color: 'text.primary', mb: 0.75 }}>{fmtD(dates[hover.i])}</Typography>
-          {onBySession[hover.i].length > 0 ? (
-            onBySession[hover.i].map((code) => (
-              <Box key={code} sx={{ display: 'flex', alignItems: 'center', gap: 0.75, py: 0.15 }}>
-                <Box sx={{ width: 7, height: 7, borderRadius: '2px', bgcolor: primary, flexShrink: 0 }} />
-                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.semibold, color: 'text.primary', mb: riskBySession[hover.i] ? 0.25 : 0.75 }}>
+            {fmtD(dates[hover.i])}
+          </Typography>
+          {riskBySession[hover.i] && (
+            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.disabled', mb: 0.75, fontStyle: 'italic' }}>
+              Phiên rủi ro — danh mục 100% tiền mặt
+            </Typography>
+          )}
+          {stateBySession[hover.i].length > 0 ? (
+            stateBySession[hover.i].map(({ code, v }) => (
+              <Box key={code} sx={{ display: 'flex', alignItems: 'center', gap: 1.25, py: 0.2 }}>
+                <Box sx={{ width: 9, height: 9, borderRadius: '2px', bgcolor: cellTone(v), flexShrink: 0 }} />
+                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {nameByCode.get(code) ?? code}
                 </Typography>
+                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: labelTone(v), fontWeight: fontWeight.bold, flexShrink: 0 }}>{lvLabel(v)}</Typography>
               </Box>
             ))
           ) : (
-            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.disabled' }}>Không có ngành trong sóng</Typography>
+            <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.disabled' }}>Chưa có ngành nào được khuyến nghị.</Typography>
           )}
         </Box>
       )}

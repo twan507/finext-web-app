@@ -1,10 +1,11 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Box, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, alpha, useMediaQuery, useTheme } from '@mui/material';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import AmbientCard from './AmbientCard';
-import type { PhaseBasket, PhaseRank, PhaseTrading } from '../types';
-import { getStatusMeta } from '../basketMeta';
+import type { PhaseBasket, PhaseRank, PhaseTrading, IndexMapRow } from '../types';
+import { getStatusMeta, STATUS_ORDER } from '../basketMeta';
 import { getPhaseMeta } from '../phaseMeta';
 
 export interface HoldingStat {
@@ -22,6 +23,10 @@ interface HoldingsTableProps {
   isLatest: boolean; // phiên mới nhất? false → ẩn cột Giá hiện tại + Lãi/lỗ (quá khứ không có MTM)
   selectedDate: string; // phiên đang xem — chọn trade mở tại phiên để lấy Giá mua
   conservativeLayout?: boolean; // Phòng Thủ: đổi nhãn cột "Biến động giá 6T" → "+/- giá 6 tháng"
+  /** Sóng Ngành (CORE): hiện thêm cột Ngành (tên đầy đủ) ở MỌI biến thể cột. */
+  showSector?: boolean;
+  /** Map mã ngành → tên đầy đủ (ref_db.index_map) — chỉ dùng khi showSector. */
+  indexMap?: IndexMapRow[];
 }
 
 function pct(v?: number | null): string {
@@ -41,16 +46,19 @@ function fmtDate(iso?: string | null): string {
   if (isNaN(d.getTime())) return '—';
   return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
 }
-// Thứ tự nhóm trạng thái khi xếp bảng nắm giữ (Nắm giữ → Cân nhắc → Tiềm năng → Chờ tín hiệu → Quan sát).
-const STATUS_ORDER: Record<string, number> = { trong_ro: 0, vung_buffer: 1, ung_vien: 2, cho_tin_hieu: 3, ngoai: 4 };
 
 /**
  * Bảng cổ phiếu đang nắm giữ (hoặc "dự kiến" khi phòng thủ tiền mặt) — kèm lãi/lỗ từng mã + lãi/lỗ danh mục.
  * Lãi/lỗ lấy từ vị thế đang mở trong phase_trading (MTM tạm tính). Downtrend (held rỗng) → hiện danh mục dự kiến từ book, không có lãi/lỗ.
  */
-export default function HoldingsTable({ basket, ranks, trades, accent, stats, isLatest, selectedDate, conservativeLayout = false }: HoldingsTableProps) {
+export default function HoldingsTable({ basket, ranks, trades, accent, stats, isLatest, selectedDate, conservativeLayout = false, showSector = false, indexMap = [] }: HoldingsTableProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  // Mã ngành → tên đầy đủ; thiếu (BE chưa restart) → fallback về mã.
+  const sectorName = useMemo(
+    () => new Map(indexMap.filter((m) => m.ticker_name).map((m) => [m.ticker, m.ticker_name as string] as const)),
+    [indexMap],
+  );
   const toneColor = (t?: HoldingStat['tone']) => (t === 'up' ? theme.palette.trend.up : t === 'down' ? theme.palette.trend.down : theme.palette.text.primary);
   // Border mảnh (đồng bộ demo) thay cho divider (0.12) đậm của hệ cũ.
   const bd = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
@@ -110,11 +118,17 @@ export default function HoldingsTable({ basket, ranks, trades, accent, stats, is
   const showEntryPrice = isHolding && !mobileHide; // "Giá mua"
   const showName = !mobileHide; // tên công ty cạnh mã
 
-  // nOther/otherW chỉ dùng cho tab non-conservative (fixed layout: Mã 36% + chia đều 64%). Phòng Thủ auto-layout nên bỏ % cột.
+  // % cột chỉ dùng cho tab non-conservative (fixed layout). Phòng Thủ auto-layout nên bỏ % cột.
+  // Sóng Ngành có thêm cột Ngành → thu hẹp cột Mã để nhường chỗ, phần còn lại chia đều cho các cột số.
   const nOther = isHolding ? (showEntryDate ? 1 : 0) + (showEntryPrice ? 1 : 0) + (showLive ? 2 : 0) + 2 : 2;
-  const otherW = `${(64 / nOther).toFixed(2)}%`;
-  const wMa = conservativeLayout ? {} : { width: '36%' };
+  const maPct = showSector ? 28 : 36;
+  const sectorPct = showSector ? 20 : 0;
+  const otherW = `${((100 - maPct - sectorPct) / nOther).toFixed(2)}%`;
+  const wMa = conservativeLayout ? {} : { width: `${maPct}%` };
+  const wSector = conservativeLayout ? {} : { width: `${sectorPct}%` };
   const wOther = conservativeLayout ? {} : { width: otherW };
+  // Tên ngành dài → cắt "…" theo bề rộng cột (fixed layout mới có bề rộng để cắt).
+  const sectorCellSx = { ...cellSx, overflow: 'hidden', textOverflow: 'ellipsis' };
 
   return (
     <AmbientCard glowColor={accent} filled={false} sx={{ p: 0 }}>
@@ -167,6 +181,8 @@ export default function HoldingsTable({ basket, ranks, trades, accent, stats, is
           <TableHead>
             <TableRow>
               <TableCell sx={{ ...headSx, ...wMa }}>Mã</TableCell>
+              {/* Sóng Ngành: cột Ngành đặt NGOÀI nhánh isHolding → có ở cả 3 biến thể cột. */}
+              {showSector && <TableCell sx={{ ...headSx, ...wSector }}>Ngành</TableCell>}
               {isHolding ? (
                 <>
                   {showEntryDate && <TableCell align="right" sx={{ ...headSx, ...wOther }}>Ngày mua</TableCell>}
@@ -187,6 +203,8 @@ export default function HoldingsTable({ basket, ranks, trades, accent, stats, is
           <TableBody>
             {rows.map((r) => {
               const st = r.rank ? getStatusMeta(r.rank.status) : null; // badge Trạng thái (chỉ dùng khi đang giữ)
+              // Nắm giữ/Cân nhắc = accent của rổ (Cân nhắc đã trộn xám sẵn trong basketMeta).
+              const sc = st ? st.color(theme, accent) : '';
               return (
                 <TableRow key={r.ticker} hover>
                   <TableCell sx={cellSx}>
@@ -205,6 +223,16 @@ export default function HoldingsTable({ basket, ranks, trades, accent, stats, is
                       )}
                     </Box>
                   </TableCell>
+                  {showSector &&
+                    (() => {
+                      const code = r.rank?.sector;
+                      const full = code ? (sectorName.get(code) ?? code) : '—';
+                      return (
+                        <TableCell sx={sectorCellSx} title={full}>
+                          {full}
+                        </TableCell>
+                      );
+                    })()}
                   {isHolding ? (
                     <>
                       {showEntryDate && <TableCell align="right" sx={cellSx}>{fmtDate(r.trade?.entry_date)}</TableCell>}
@@ -213,7 +241,7 @@ export default function HoldingsTable({ basket, ranks, trades, accent, stats, is
                       <TableCell align="right" sx={cellSx}>{r.trade?.n_days ?? '—'}</TableCell>
                       <TableCell align="right" sx={cellSx}>
                         {st ? (
-                          <Box component="span" sx={{ display: 'inline-block', px: 1, py: 0.25, borderRadius: 999, fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: st.color(theme), bgcolor: alpha(st.color(theme), 0.12) }}>
+                          <Box component="span" sx={{ display: 'inline-block', px: 1, py: 0.25, borderRadius: 999, fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: sc, bgcolor: alpha(sc, 0.12), opacity: st.op ?? 1 }}>
                             {st.label}
                           </Box>
                         ) : (

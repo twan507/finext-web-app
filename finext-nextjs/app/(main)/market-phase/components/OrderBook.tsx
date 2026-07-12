@@ -51,13 +51,16 @@ export default function OrderBook({ trades, accent, conservativeLayout = false }
   const isFlat = (v?: number | null) => v != null && ['0.0', '-0.0'].includes((v * 100).toFixed(1));
   const pnlText = (v?: number | null) => (isFlat(v) ? '0.0%' : pct(v ?? undefined));
   const pnlColor = (v?: number | null) => (isFlat(v) ? flatYellow : colorPct(v ?? undefined));
-  // Phòng Thủ: "Lý do" → chip. downtrend = đỏ "Thị trường rủi ro" · rebalance = vàng "Tái cơ cấu" · giá trị lạ = chip trung tính giữ nguyên chữ.
+  // "Lý do" → chip. Enum 2026-07-12: DOWNTREND · ROTATION (chỉ Sóng Ngành) · REBALANCE · HOLDING.
+  // rotation phải check TRƯỚC rebalance là không cần (2 chuỗi rời nhau), nhưng tách nhãn rõ: đảo NGÀNH vs mã tụt hạng.
   const reasonChip = (reason?: string | null): { label: string; color: string } | null => {
     if (!reason) return null;
     const r = reason.toLowerCase();
     if (r.includes('downtrend')) return { label: 'Thị trường rủi ro', color: getPhaseMeta('downtrend').color(theme) };
-    if (r.includes('rebalance')) return { label: 'Tái cơ cấu', color: getPhaseMeta('transition').color(theme) };
-    return { label: reason, color: theme.palette.text.secondary };
+    if (r.includes('rotation')) return { label: 'Tái cơ cấu ngành', color: getPhaseMeta('transition').color(theme) }; // vàng — CHỈ có ở Sóng Ngành
+    if (r.includes('rebalance')) return { label: 'Tái cơ cấu mã', color: theme.palette.warning.main }; // cam — cả 3 rổ
+    if (r.includes('holding')) return { label: 'Đang nắm giữ', color: theme.palette.text.secondary };
+    return { label: reason, color: theme.palette.text.secondary }; // giá trị lạ → chip trung tính giữ nguyên chữ
   };
 
   // Phòng Thủ: co padding ngang trên mobile (xs/sm) + tiêu đề không wrap (để minWidth max-content tự khít 1 dòng).
