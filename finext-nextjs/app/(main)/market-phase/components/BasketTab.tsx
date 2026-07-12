@@ -137,8 +137,8 @@ export default function BasketTab({ tabKey }: { tabKey: MarketPhaseTabKey }) {
         <Box sx={{ mt: 4, display: 'flex', alignItems: { xs: 'flex-start', md: 'center' }, justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
           <Box>
             <ChartSectionTitle title="Vận hành danh mục" description="Chi tiết nắm giữ, cổ phiếu tiềm năng và sổ lệnh theo từng phiên." updateTime={selUpdateStr} />
-            {/* Phòng Thủ: dòng lịch cơ cấu (thay cột "Tới cơ cấu" đã bỏ) — cân chiều cao 2 dòng với SessionStrip bên phải. */}
-            {isConservative && nextRebalance != null && (
+            {/* Dòng lịch cơ cấu (thay cột "Tới cơ cấu" đã bỏ khỏi RankTable) — mọi tab; cân chiều cao 2 dòng với SessionStrip bên phải. */}
+            {nextRebalance != null && (
               <Typography sx={{ mt: 0.75, fontSize: getResponsiveFontSize('xs'), color: 'text.secondary' }}>
                 Kì tái cơ cấu tiếp theo còn {nextRebalance} phiên
               </Typography>

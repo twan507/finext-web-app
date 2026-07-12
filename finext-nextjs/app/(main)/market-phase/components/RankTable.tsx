@@ -56,10 +56,7 @@ export default function RankTable({ rows, showSector = false, accent, conservati
               {showSector && <TableCell sx={headSx}>Ngành</TableCell>}
               <TableCell align="right" sx={headSx}>{'% biến động 6T'}</TableCell>
               <TableCell align="right" sx={headSx}>Thanh khoản</TableCell>
-              <TableCell align={conservativeLayout ? 'right' : undefined} sx={headSx}>Trạng thái</TableCell>
-              {!conservativeLayout && (
-                <TableCell align="right" sx={headSx}>Tới cơ cấu</TableCell>
-              )}
+              <TableCell align="right" sx={headSx}>Trạng thái</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -74,7 +71,7 @@ export default function RankTable({ rows, showSector = false, accent, conservati
                     {fmtMom(r.mom120)}
                   </TableCell>
                   <TableCell align="right" sx={cellSx}>{fmtVma(r.vma60)}</TableCell>
-                  <TableCell align={conservativeLayout ? 'right' : undefined} sx={cellSx}>
+                  <TableCell align="right" sx={cellSx}>
                     <Box
                       component="span"
                       sx={{
@@ -91,9 +88,6 @@ export default function RankTable({ rows, showSector = false, accent, conservati
                       {st.label}
                     </Box>
                   </TableCell>
-                  {!conservativeLayout && (
-                    <TableCell align="right" sx={cellSx}>{r.next_rebalance_in != null ? `${r.next_rebalance_in} phiên` : '—'}</TableCell>
-                  )}
                 </TableRow>
               );
             })}

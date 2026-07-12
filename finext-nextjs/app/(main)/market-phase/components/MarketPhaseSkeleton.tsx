@@ -298,7 +298,7 @@ export function BasketTabSkeleton({ isCore = false }: { isCore?: boolean }) {
       <Box sx={{ mt: 4, display: 'flex', alignItems: { xs: 'flex-start', md: 'center' }, justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
         <Box>
           <SectionTitleSkeleton />
-          {!isCore && <Skeleton variant="text" width={220} sx={{ mt: 0.75 }} />}
+          <Skeleton variant="text" width={220} sx={{ mt: 0.75 }} />
         </Box>
         <Skeleton variant="rounded" width={300} height={40} />
       </Box>
