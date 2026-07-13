@@ -7,14 +7,21 @@ import type { PhaseRank } from '../types';
 
 // A "Focus + Context": 12 ngành cùng 1 trục composite (tương quan thật); ngành bật tô màu + neon glow + nhãn mép phải,
 // còn lại là đường "bóng mờ". Chip legend (ngành từng có sóng) → bật/tắt. Hover: crosshair dọc + tooltip (chỉ ngành bật).
-const SESSIONS = 20; // line chỉ vẽ 20 phiên gần nhất (heatmap bên dưới mới dùng 60 phiên)
-const W = 1040;
-const H = 270; // chiều cao viewBox (svg width=100% nên co giãn theo tỉ lệ) — hạ bớt cho gọn
-const PL = 40;
+// Số phiên + KHUNG viewBox theo bề rộng màn. svg width=100% nên chữ/nét co theo tỉ lệ (rendered px / W):
+// giữ W=1040 trên mobile ~360px → 0.35× → chữ 10px thành 3.5px, không đọc nổi. Thu W cho gần bề rộng thật
+// (tỉ lệ ≈ 1×) rồi cắt bớt phiên để các điểm không bị dồn.
+// fs = chữ trục (mốc y + ngày), fsEdge = nhãn mép phải. ĐƠN VỊ VIEWBOX, không phải px:
+// cỡ thật ≈ fs × (bề rộng render / w) → màn hẹp có w nhỏ nên tỉ lệ ≈ 1, phải khai báo fs to hơn desktop.
+const VIEW = {
+  mobile: { sessions: 10, w: 360, h: 250, fs: 13, fsEdge: 14 },
+  tablet: { sessions: 14, w: 720, h: 260, fs: 12, fsEdge: 13 },
+  desktop: { sessions: 20, w: 1040, h: 270, fs: 10, fsEdge: 11 },
+};
+const PL = 40; // lề trái cho nhãn mốc y ("-2.0") — đủ cho cả fs=13 của mobile
 const PT = 14;
-const PB = 24;
+const PB = 24; // lề dưới cho hàng ngày
 const LABEL_LEAD = 8; // khoảng cách điểm cuối đường → nhãn (cách xa line)
-const LABEL_PAD = 0; // đệm mép phải sau nhãn (nhỏ để nhãn sát mép)
+const LABEL_PAD = 4; // đệm mép phải sau nhãn (chừa để chữ không chạm mép viewBox)
 
 function sectorName(r: PhaseRank): string {
   return r.ten || (r.sector ?? '') || r.ticker || '—';
@@ -59,12 +66,14 @@ export default function SectorStrengthChart({ sectorRanks, activeSectors, nameBy
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
+  const { sessions: SESSIONS, w: W, h: H, fs, fsEdge } = isMobile ? VIEW.mobile : isTablet ? VIEW.tablet : VIEW.desktop;
   const svgRef = useRef<SVGSVGElement>(null);
   const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
   const [pr, setPr] = useState(120); // lề phải động — đo bằng getBBox nhãn thật
 
   const { dates, series, top3, min, max } = useMemo(() => {
-    // Backend trả 60 phiên dòng sector (cho heatmap) → line chỉ lấy 20 phiên cuối.
+    // Backend trả 60 phiên dòng sector (cho heatmap) → line chỉ lấy SESSIONS phiên cuối (ít hơn ở màn hẹp).
     const dates = Array.from(new Set(sectorRanks.map((r) => r.date))).sort().slice(-SESSIONS);
     const inWindow = new Set(dates);
     const byName = new Map<string, Map<string, PhaseRank>>();
@@ -92,7 +101,7 @@ export default function SectorStrengthChart({ sectorRanks, activeSectors, nameBy
     // Chỉ là FALLBACK khi không có holdSectors (vd phase_industry rỗng) — mặc định tô theo "Nắm giữ".
     const top3 = [...series].sort((a, b) => a.rankLast - b.rankLast).slice(0, 3).map((s) => s.name);
     return { dates, series, top3, min, max };
-  }, [sectorRanks]);
+  }, [sectorRanks, SESSIONS]);
 
   // Tô màu ngành đang "Nắm giữ" (state = 3), KHÔNG phải top-3 theo hạng. s.name = mã ngành → khớp thẳng key phase_industry.
   const [focused, setFocused] = useState<Set<string>>(() => new Set(holdSectors?.size ? holdSectors : top3));
@@ -110,9 +119,11 @@ export default function SectorStrengthChart({ sectorRanks, activeSectors, nameBy
       }
     });
     if (maxW <= 0) return;
-    const next = Math.min(Math.max(Math.ceil(maxW) + LABEL_LEAD + LABEL_PAD, 40), W - PL - 300);
+    // Trần lề phải: luôn chừa >= 55% W cho vùng vẽ (theo TỈ LỆ, vì W đổi theo khổ màn — hằng số 300
+    // của viewBox 1040 sẽ ép pr xuống gần 0 ở viewBox mobile).
+    const next = Math.min(Math.max(Math.ceil(maxW) + LABEL_LEAD + LABEL_PAD, 40), W - PL - Math.round(W * 0.55));
     setPr((cur) => (Math.abs(cur - next) > 0.5 ? next : cur));
-  }, []);
+  }, [W]);
 
   useLayoutEffect(() => {
     measurePr();
@@ -212,15 +223,16 @@ export default function SectorStrengthChart({ sectorRanks, activeSectors, nameBy
         {grid.map((g, i) => (
           <g key={i}>
             <line x1={PL} y1={Y(g)} x2={W - pr} y2={Y(g)} stroke={alpha(theme.palette.text.primary, g === 0 ? 0.16 : 0.05)} strokeDasharray={g === 0 ? undefined : '2 4'} />
-            <text x={2} y={Y(g) + 3} fontSize={10} fill={theme.palette.text.disabled} style={{ fontVariantNumeric: 'tabular-nums' }}>
+            <text x={2} y={Y(g) + 3} fontSize={fs} fill={theme.palette.text.disabled} style={{ fontVariantNumeric: 'tabular-nums' }}>
               {g > 0 ? '+' : ''}
               {g.toFixed(1)}
             </text>
           </g>
         ))}
 
+        {/* Nhãn ngày căn giữa quanh điểm mốc → lệch trái ~1/2 bề rộng "dd/MM" (≈ 2.5 ký tự × 0.5 × fs). */}
         {[0, Math.floor(n / 2), n].map((i) => (
-          <text key={i} x={X(i) - 12} y={H - 6} fontSize={10} fill={theme.palette.text.disabled}>
+          <text key={i} x={X(i) - fs * 1.25} y={H - 6} fontSize={fs} fill={theme.palette.text.disabled}>
             {String(dates[i]).slice(8, 10)}/{String(dates[i]).slice(5, 7)}
           </text>
         ))}
@@ -241,7 +253,7 @@ export default function SectorStrengthChart({ sectorRanks, activeSectors, nameBy
               <path d={d} fill="none" stroke={c} strokeWidth={5} opacity={0.16} filter="url(#strGlow)" />
               <path d={d} fill="none" stroke={c} strokeWidth={1.9} />
               <circle cx={ex} cy={ey} r={3.4} fill={c} filter="url(#strGlow)" />
-              <text className="str-edge-label" x={ex + LABEL_LEAD} y={ey + 4} fontSize={11} fontWeight={700} fill={c} style={{ fontVariantNumeric: 'tabular-nums' }}>
+              <text className="str-edge-label" x={ex + LABEL_LEAD} y={ey + 4} fontSize={fsEdge} fontWeight={700} fill={c} style={{ fontVariantNumeric: 'tabular-nums' }}>
                 {labelText(s)}
               </text>
             </g>

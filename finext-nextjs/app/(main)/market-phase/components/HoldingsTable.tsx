@@ -105,10 +105,10 @@ export default function HoldingsTable({ basket, ranks, trades, accent, stats, is
   const isFlat = (v?: number | null) => v != null && ['0.0', '-0.0'].includes((v * 100).toFixed(1));
   const pnlText = (v?: number | null) => (isFlat(v) ? '0.0%' : pct(v));
   const pnlColor = (v?: number | null) => (isFlat(v) ? flatYellow : colorPct(v));
-  // Phòng Thủ: co padding ngang trên mobile (xs/sm) + tiêu đề không wrap (để minWidth max-content tự khít 1 dòng).
-  const compactPx = conservativeLayout ? { px: { xs: 1, sm: 1.25, md: 2 }, whiteSpace: 'nowrap' } : {};
-  // Header trong suốt (đồng bộ demo).
-  const headSx = { fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', fontWeight: fontWeight.semibold, borderColor: bdHead, ...compactPx };
+  // Co padding ngang trên mobile (xs/sm) — cùng bảng nào cũng vậy.
+  const compactPx = { px: { xs: 1, sm: 1.25, md: 2 } };
+  // Header trong suốt (đồng bộ demo); tiêu đề không wrap để minWidth max-content khít đúng 1 dòng.
+  const headSx = { fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', fontWeight: fontWeight.semibold, borderColor: bdHead, whiteSpace: 'nowrap', ...compactPx };
   // height cố định: row có/không chip cao bằng nhau → không flick khi đổi phiên.
   const cellSx = { fontSize: getResponsiveFontSize('sm'), borderColor: bd, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', height: 40, ...compactPx };
   // Phòng Thủ trên mobile (<600px): bỏ cột Ngày mua + Giá mua + tên doanh nghiệp (chỉ giữ mã) để tiết kiệm chiều ngang.
@@ -117,31 +117,23 @@ export default function HoldingsTable({ basket, ranks, trades, accent, stats, is
   const showEntryDate = conservativeLayout && isHolding && !isMobile; // "Ngày mua" (vốn chỉ có ở Phòng Thủ)
   const showEntryPrice = isHolding && !mobileHide; // "Giá mua"
   const showName = !mobileHide; // tên công ty cạnh mã
-
-  // % cột chỉ dùng cho tab non-conservative (fixed layout). Phòng Thủ auto-layout nên bỏ % cột.
-  // Sóng Ngành có thêm cột Ngành → thu hẹp cột Mã để nhường chỗ, phần còn lại chia đều cho các cột số.
-  const nOther = isHolding ? (showEntryDate ? 1 : 0) + (showEntryPrice ? 1 : 0) + (showLive ? 2 : 0) + 2 : 2;
-  const maPct = showSector ? 28 : 36;
-  const sectorPct = showSector ? 20 : 0;
-  const otherW = `${((100 - maPct - sectorPct) / nOther).toFixed(2)}%`;
-  const wMa = conservativeLayout ? {} : { width: `${maPct}%` };
-  const wSector = conservativeLayout ? {} : { width: `${sectorPct}%` };
-  const wOther = conservativeLayout ? {} : { width: otherW };
-  // Tên ngành dài → cắt "…" theo bề rộng cột (fixed layout mới có bề rộng để cắt).
-  const sectorCellSx = { ...cellSx, overflow: 'hidden', textOverflow: 'ellipsis' };
+  // Tên dài (doanh nghiệp / ngành) — cắt "…" theo trần px, giữ cột Mã + Ngành không kéo bảng dài vô hạn.
+  const ellipsisSx = { maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
 
   return (
     <AmbientCard glowColor={accent} filled={false} sx={{ p: 0 }}>
       {isHolding ? (
-        // Phòng Thủ: hàng thống kê tràn ra + cuộn ngang (không wrap), đồng bộ với bảng bên dưới.
+        // Hàng thống kê tràn ra + cuộn ngang (không wrap xuống dòng), đồng bộ với bảng bên dưới.
         <Stack
           direction="row"
           spacing={3}
           sx={{
             p: { xs: 2, md: 2.5 },
             gap: 1.5,
-            flexWrap: conservativeLayout ? 'nowrap' : 'wrap',
-            ...(conservativeLayout ? { overflowX: 'auto', scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } } : {}),
+            flexWrap: 'nowrap',
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
+            '&::-webkit-scrollbar': { display: 'none' },
           }}
         >
           {stats.map((s) => (
@@ -171,31 +163,32 @@ export default function HoldingsTable({ basket, ranks, trades, accent, stats, is
         <Table
           size="small"
           sx={{
-            // Phòng Thủ: auto-layout + minWidth max-content → sàn TỰ khít bề rộng tiêu đề (1 dòng); rộng hơn thì fill card, hẹp hơn thì cuộn.
-            // CORE: giữ tableLayout fixed (Mã 36% + chia đều) như cũ.
-            ...(conservativeLayout ? { minWidth: 'max-content', width: '100%' } : { tableLayout: 'fixed' }),
+            // Auto-layout + minWidth max-content → mỗi cột giữ đúng bề rộng tối thiểu của nội dung (1 dòng);
+            // card rộng hơn thì bảng fill, hẹp hơn (mobile) thì TableContainer cuộn ngang.
+            minWidth: 'max-content',
+            width: '100%',
             '& .MuiTableHead-root, & .MuiTableCell-head, & .MuiTableRow-root': { bgcolor: 'transparent' },
             '& .MuiTableBody-root .MuiTableRow-root:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' },
           }}
         >
           <TableHead>
             <TableRow>
-              <TableCell sx={{ ...headSx, ...wMa }}>Mã</TableCell>
+              <TableCell sx={headSx}>Mã</TableCell>
               {/* Sóng Ngành: cột Ngành đặt NGOÀI nhánh isHolding → có ở cả 3 biến thể cột. */}
-              {showSector && <TableCell sx={{ ...headSx, ...wSector }}>Ngành</TableCell>}
+              {showSector && <TableCell sx={headSx}>Ngành</TableCell>}
               {isHolding ? (
                 <>
-                  {showEntryDate && <TableCell align="right" sx={{ ...headSx, ...wOther }}>Ngày mua</TableCell>}
-                  {showEntryPrice && <TableCell align="right" sx={{ ...headSx, ...wOther }}>Giá mua</TableCell>}
-                  {showLive && <TableCell align="right" sx={{ ...headSx, ...wOther }}>Giá hiện tại</TableCell>}
-                  <TableCell align="right" sx={{ ...headSx, ...wOther }}>Số phiên</TableCell>
-                  <TableCell align="right" sx={{ ...headSx, ...wOther }}>Trạng thái</TableCell>
-                  {showLive && <TableCell align="right" sx={{ ...headSx, ...wOther }}>Lãi/lỗ</TableCell>}
+                  {showEntryDate && <TableCell align="right" sx={headSx}>Ngày mua</TableCell>}
+                  {showEntryPrice && <TableCell align="right" sx={headSx}>Giá mua</TableCell>}
+                  {showLive && <TableCell align="right" sx={headSx}>Giá hiện tại</TableCell>}
+                  <TableCell align="right" sx={headSx}>Số phiên</TableCell>
+                  <TableCell align="right" sx={headSx}>Trạng thái</TableCell>
+                  {showLive && <TableCell align="right" sx={headSx}>Lãi/lỗ</TableCell>}
                 </>
               ) : (
                 <>
-                  <TableCell align="right" sx={{ ...headSx, ...wOther }}>{'% biến động 6T'}</TableCell>
-                  <TableCell align="right" sx={{ ...headSx, ...wOther }}>Thanh khoản</TableCell>
+                  <TableCell align="right" sx={headSx}>{'% biến động 6T'}</TableCell>
+                  <TableCell align="right" sx={headSx}>Thanh khoản</TableCell>
                 </>
               )}
             </TableRow>
@@ -215,8 +208,8 @@ export default function HoldingsTable({ basket, ranks, trades, accent, stats, is
                         <Typography
                           component="span"
                           title={r.rank.ten}
-                          // Phòng Thủ (auto-layout): hiện FULL tên, cột Mã tự nới. CORE (fixed 36%): flex:1 + cắt "…" cho vừa cột.
-                          sx={{ color: 'text.disabled', fontSize: getResponsiveFontSize('xs'), whiteSpace: 'nowrap', ...(conservativeLayout ? {} : { flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }) }}
+                          // Phòng Thủ: hiện FULL tên, cột Mã tự nới. Sóng Ngành (đã có thêm cột Ngành): cắt "…" ở 160px.
+                          sx={{ color: 'text.disabled', fontSize: getResponsiveFontSize('xs'), whiteSpace: 'nowrap', ...(conservativeLayout ? {} : ellipsisSx) }}
                         >
                           {r.rank.ten}
                         </Typography>
@@ -228,8 +221,9 @@ export default function HoldingsTable({ basket, ranks, trades, accent, stats, is
                       const code = r.rank?.sector;
                       const full = code ? (sectorName.get(code) ?? code) : '—';
                       return (
-                        <TableCell sx={sectorCellSx} title={full}>
-                          {full}
+                        <TableCell sx={cellSx} title={full}>
+                          {/* Box (không phải td) mới cắt "…" được ở auto-layout — max-width trên td chỉ là gợi ý. */}
+                          <Box sx={ellipsisSx}>{full}</Box>
                         </TableCell>
                       );
                     })()}

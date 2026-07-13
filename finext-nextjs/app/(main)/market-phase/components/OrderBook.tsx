@@ -63,14 +63,15 @@ export default function OrderBook({ trades, accent, conservativeLayout = false }
     return { label: reason, color: theme.palette.text.secondary }; // giá trị lạ → chip trung tính giữ nguyên chữ
   };
 
-  // Phòng Thủ: co padding ngang trên mobile (xs/sm) + tiêu đề không wrap (để minWidth max-content tự khít 1 dòng).
-  const compactPx = conservativeLayout ? { px: { xs: 1, sm: 1.25, md: 2 }, whiteSpace: 'nowrap' } : {};
-  // Header trong suốt (đồng bộ demo), cho phép wrap để cột co lại tránh trượt ngang.
+  // Co padding ngang trên mobile (xs/sm) — mọi rổ.
+  const compactPx = { px: { xs: 1, sm: 1.25, md: 2 } };
+  // Header trong suốt (đồng bộ demo); tiêu đề KHÔNG wrap → minWidth max-content khít đúng 1 dòng.
   const headSx = {
     fontSize: getResponsiveFontSize('xs'),
     color: 'text.secondary',
     fontWeight: fontWeight.semibold,
     borderColor: bdHead,
+    whiteSpace: 'nowrap',
     ...compactPx,
   };
   // height cố định: row có/không chip cao bằng nhau → không flick khi đổi phiên.
@@ -83,15 +84,17 @@ export default function OrderBook({ trades, accent, conservativeLayout = false }
       rootSx={{ height: '100%', display: 'flex', flexDirection: 'column' }}
       sx={{ p: 0, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
     >
-      {/* Phòng Thủ: hàng thống kê tràn ra + cuộn ngang (không wrap), đồng bộ với bảng bên dưới. */}
+      {/* Hàng thống kê tràn ra + cuộn ngang (không wrap xuống dòng), đồng bộ với bảng bên dưới. */}
       <Stack
         direction="row"
         spacing={3}
         sx={{
           p: { xs: 2, md: 2.5 },
           gap: 1.5,
-          flexWrap: conservativeLayout ? 'nowrap' : 'wrap',
-          ...(conservativeLayout ? { overflowX: 'auto', scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } } : {}),
+          flexWrap: 'nowrap',
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+          '&::-webkit-scrollbar': { display: 'none' },
         }}
       >
         <Stat label="Số lệnh (đã đóng)" value={`${closed.length}`} />
@@ -105,8 +108,10 @@ export default function OrderBook({ trades, accent, conservativeLayout = false }
           size="small"
           stickyHeader
           sx={{
-            // Phòng Thủ: minWidth max-content → sàn tự khít bề rộng tiêu đề (1 dòng); rộng hơn thì fill, hẹp hơn thì cuộn.
-            ...(conservativeLayout ? { minWidth: 'max-content', width: '100%' } : {}),
+            // minWidth max-content → mỗi cột khít bề rộng tối thiểu của tiêu đề/nội dung (1 dòng);
+            // card rộng hơn thì bảng fill, hẹp hơn (mobile) thì TableContainer cuộn ngang.
+            minWidth: 'max-content',
+            width: '100%',
             '& .MuiTableHead-root, & .MuiTableRow-root': { bgcolor: 'transparent' },
             // header cell cần nền ĐỤC để sticky che nội dung cuộn; dùng bg page (card đang trong suốt) → liền mạch, không phải paper.
             '& .MuiTableCell-head': { bgcolor: theme.palette.background.default },

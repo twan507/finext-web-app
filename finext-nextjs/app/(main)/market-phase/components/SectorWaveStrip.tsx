@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { Box, Stack, Tooltip, Typography, useTheme, alpha } from '@mui/material';
+import { Box, Stack, Tooltip, Typography, useMediaQuery, useTheme, alpha } from '@mui/material';
 import { getGlassCard, getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
 import type { PhaseIndustryRow } from '../types';
 import { getStatusMeta } from '../basketMeta';
@@ -11,7 +11,9 @@ import { getStatusMeta } from '../basketMeta';
 // Ô dùng CHUNG bảng trạng thái với chip cổ phiếu (RANK_STATUS_META) → tên + màu luôn khớp nhau.
 // Tầng ngành KHÔNG có cho_tin_hieu (không có cổng vào giá) nên chỉ 4 mức. ĐANG NẮM ⟺ >= 2.
 // Chỉ render ngành từng có tín hiệu (>=1) trong cửa sổ → không lộ universe.
-const SESSIONS = 60;
+// Bề rộng viewBox = LABEL_W + số phiên × UNIT, mà svg width=100% → càng nhiều phiên, tỉ lệ thu nhỏ
+// càng mạnh và chữ (nhãn ngành, mốc tháng) càng bé. Màn hẹp → cắt bớt phiên để giữ chữ đọc được.
+const SESSIONS_BY_VIEW = { mobile: 20, tablet: 40, desktop: 60 };
 const LABEL_W = 180;
 const CELL = 13; // ô vuông
 const GAP = 3;
@@ -68,6 +70,9 @@ function fmtD(s: string): string {
 export default function SectorWaveStrip({ industry, liveSectors, nameByCode, cashDates, accent, nextRebalance, rebalanceDates }: SectorWaveStripProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
+  const SESSIONS = isMobile ? SESSIONS_BY_VIEW.mobile : isTablet ? SESSIONS_BY_VIEW.tablet : SESSIONS_BY_VIEW.desktop;
   const svgRef = useRef<SVGSVGElement>(null);
   const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
 
@@ -131,7 +136,7 @@ export default function SectorWaveStrip({ industry, liveSectors, nameByCode, cas
 
     const W = (xs[n - 1] ?? LABEL_W) + CELL + GAP;
     return { rows, ticks, W, H: names.length * ROW_H + AXIS_H, n, dates, stateBySession, riskBySession, xs };
-  }, [industry, cashDates, rebalanceDates]);
+  }, [industry, cashDates, rebalanceDates, SESSIONS]);
 
   if (rows.length === 0 || n === 0) return null;
 

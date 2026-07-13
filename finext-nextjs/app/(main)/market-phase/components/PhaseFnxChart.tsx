@@ -8,6 +8,7 @@ import PanZoomToggle from 'components/common/PanZoomToggle';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import type { PhaseDaily, PhaseLabel } from '../types';
 import { getPhaseMeta } from '../phaseMeta';
+import { useResponsiveRange } from '../hooks/useResponsiveRange';
 import { PhaseNeonPrimitive, type PhaseNeonStyle } from './phaseChartPrimitive';
 
 type FnxRange = '3M' | '6M' | '1Y' | '2Y';
@@ -52,7 +53,7 @@ export default function PhaseFnxChart({ daily, height = 300 }: PhaseFnxChartProp
   const markerColorRef = useRef<string>(''); // guard: applyOptions chỉ khi màu marker đổi (tránh đệ quy crosshair)
   const dotRef = useRef<HTMLDivElement>(null); // pulse dot — định vị bằng DOM/rAF để dán khít chart khi zoom
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
-  const [range, setRange] = useState<FnxRange>('1Y');
+  const [range, setRange] = useResponsiveRange<FnxRange>('1Y', '6M');
   const [panZoom, setPanZoom] = useState(false);
 
   // Load FULL dữ liệu; timeframe chỉ đổi visible range (xem applyView bên dưới).

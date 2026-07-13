@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Box } from '@mui/material';
 import ChartSectionTitle from 'components/common/ChartSectionTitle';
 import { ErrorState } from 'components/states';
@@ -10,6 +10,7 @@ import FnxTrendChart from './FnxTrendChart';
 import BasketPerformanceChart, { RANGE_DAYS, type PerfRange } from './BasketPerformanceChart';
 import TopTradesSection from './TopTradesSection';
 import AdvancedPanel from './AdvancedPanel';
+import { useResponsiveRange } from '../hooks/useResponsiveRange';
 import type { PhaseDaily, PhaseComment, PhasePerfRow, PhaseCommentIndicator, PhaseTrading } from '../types';
 
 interface MarketPhaseTabProps {
@@ -34,7 +35,7 @@ function formatDate(iso?: string): string {
  */
 export default function MarketPhaseTab({ daily, comment, perf, indicators, trading, error }: MarketPhaseTabProps) {
   // Timeframe DÙNG CHUNG cho biểu đồ hiệu suất + section top lệnh (lift lên đây).
-  const [range, setRange] = useState<PerfRange>('1Y');
+  const [range, setRange] = useResponsiveRange<PerfRange>('1Y', '6M');
   // Ngày sớm nhất của cửa sổ timeframe (lọc trade theo exit_date, khớp biểu đồ).
   const windowStart = useMemo(() => {
     const dates = [...new Set(perf.map((p) => p.date))].sort();

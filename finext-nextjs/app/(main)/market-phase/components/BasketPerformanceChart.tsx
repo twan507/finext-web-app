@@ -16,6 +16,7 @@ import {
 import { Box, Stack, Typography, alpha, useTheme, type Theme } from '@mui/material';
 import TimeframeSelector from 'components/common/TimeframeSelector';
 import { getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
+import { useResponsiveRange } from '../hooks/useResponsiveRange';
 import type { PhasePerfRow } from '../types';
 
 export type PerfRange = '3M' | '6M' | '1Y' | '2Y';
@@ -77,7 +78,7 @@ export default function BasketPerformanceChart({ perf, products, height = 320, r
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesMapRef = useRef<Map<string, ISeriesApi<'Line'>>>(new Map());
-  const [internalRange, setInternalRange] = useState<PerfRange>('1Y');
+  const [internalRange, setInternalRange] = useResponsiveRange<PerfRange>('1Y', '6M');
   const range = controlledRange ?? internalRange; // controlled nếu có prop, ngược lại tự quản
   const setRange = onRangeChange ?? setInternalRange;
   const [tooltip, setTooltip] = useState<{ x: number; y: number; date: string; rows: { name: string; value: number; color: string }[] } | null>(null);

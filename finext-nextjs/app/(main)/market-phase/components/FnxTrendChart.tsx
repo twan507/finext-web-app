@@ -8,6 +8,7 @@ import { sseClient } from 'services/sseClient';
 import { ISseRequest } from 'services/core/types';
 import { transformTrendData } from '../../markets/components/TinHieuSecion/MarketTrendChart';
 import type { RawTrendData, TrendChartData, TrendTimeRange } from '../../markets/components/TinHieuSecion/MarketTrendChart';
+import { useResponsiveRange } from '../hooks/useResponsiveRange';
 
 // Biểu đồ xu hướng (reuse từ markets), chỉ feed nhóm FNXINDEX = REST history + SSE today (như page groups).
 const MarketTrendChart = dynamic(() => import('../../markets/components/TinHieuSecion/MarketTrendChart'), { ssr: false });
@@ -16,7 +17,7 @@ const TICKER = 'FNXINDEX';
 const EMPTY: TrendChartData = { wTrend: [], mTrend: [], qTrend: [], yTrend: [] };
 
 export default function FnxTrendChart() {
-  const [timeRange, setTimeRange] = useState<TrendTimeRange>('3M');
+  const [timeRange, setTimeRange] = useResponsiveRange<TrendTimeRange>('3M', '1M'); // mobile: 4 đường xu hướng đọc được ở 1M
   const [chartData, setChartData] = useState<TrendChartData>(EMPTY);
   const [isTrendLoading, setIsTrendLoading] = useState(true);
 
