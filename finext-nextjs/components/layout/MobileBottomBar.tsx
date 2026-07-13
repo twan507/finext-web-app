@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { Box, alpha, useTheme, IconButton as MuiIconButton } from '@mui/material';
 import {
     ArrowBack as ArrowBackIcon,
@@ -10,20 +9,16 @@ import {
     StarBorderPurple500Outlined,
     FilterAltOutlined,
 } from '@mui/icons-material';
-import { useAuth } from '@/components/auth/AuthProvider';
-import { useSignInModal } from '@/hooks/useSignInModal';
-import SignInModal from '@/app/(auth)/components/LoginModal';
+import MarketPhaseNavIcon from '@/app/(main)/MarketPhaseNavIcon';
 
 const BAR_HEIGHT = 56;
-const FAB_SIZE = 60;
-const CURVE_DEPTH = 26; // Độ sâu lõm notch
+const FAB_SIZE = 54;
+const FAB_BOTTOM = 12; // khoảng hở từ đáy bar lên FAB — càng nhỏ thì FAB càng tụt sát viền dưới
 const SCROLL_THRESHOLD = 10;
 
 export default function MobileBottomBar() {
     const theme = useTheme();
     const router = useRouter();
-    const { session } = useAuth();
-    const { isOpen: isSignInOpen, openModal: openSignInModal, closeModal: closeSignInModal } = useSignInModal();
     const [visible, setVisible] = useState(true);
     const lastScrollY = useRef(0);
     const ticking = useRef(false);
@@ -68,14 +63,6 @@ export default function MobileBottomBar() {
         },
     };
 
-    const handleLogoClick = useCallback(() => {
-        if (session) {
-            router.push('/profile');
-        } else {
-            openSignInModal();
-        }
-    }, [session, router, openSignInModal]);
-
     return (
         <Box
             component="nav"
@@ -94,11 +81,11 @@ export default function MobileBottomBar() {
                 willChange: 'transform',
             }}
         >
-            {/* Nút logo ở giữa - nằm trong vùng lõm */}
+            {/* Nút giai đoạn thị trường ở giữa - nằm trong vùng lõm. Dùng CHUNG MarketPhaseNavIcon với rail desktop. */}
             <Box
                 sx={{
                     position: 'absolute',
-                    bottom: BAR_HEIGHT - CURVE_DEPTH - FAB_SIZE / 2 + 16,
+                    bottom: FAB_BOTTOM,
                     left: '50%',
                     transform: visible ? 'translateX(-50%)' : 'translateX(-50%) translateY(20px)',
                     zIndex: 3,
@@ -107,35 +94,27 @@ export default function MobileBottomBar() {
                 }}
             >
                 <MuiIconButton
-                    onClick={handleLogoClick}
-                    aria-label="Trang cá nhân"
+                    onClick={() => router.push('/market-phase')}
+                    aria-label="Giai đoạn thị trường"
                     sx={{
                         width: FAB_SIZE,
                         height: FAB_SIZE,
                         borderRadius: '50%',
                         bgcolor: 'transparent',
-                        boxShadow: `0 0 12px ${alpha(theme.palette.primary.main, 0.35)}, 0 0 24px ${alpha(theme.palette.primary.main, 0.15)}`,
-                        overflow: 'hidden',
+                        // KHÔNG overflow:hidden — hào quang blur của vòng conic phải toả được ra ngoài khung.
                         p: 0,
-                        transition: 'box-shadow 0.25s ease, transform 0.2s ease',
-                        '&:hover': {
-                            bgcolor: 'transparent',
-                            boxShadow: `0 0 16px ${alpha(theme.palette.primary.main, 0.5)}, 0 0 32px ${alpha(theme.palette.primary.main, 0.25)}`,
-                            transform: 'scale(1.05)',
-                        },
+                        transition: 'transform 0.2s ease',
+                        '&:hover': { bgcolor: 'transparent', transform: 'scale(1.05)' },
+                        // Chạm vào → vòng xoay + hào quang tăng tốc, giống hover ở rail desktop.
                         '&:active': {
                             bgcolor: 'transparent',
                             transform: 'scale(0.95)',
+                            '& .mp-nav-ring::before': { animationDuration: '1.8s' },
+                            '& .mp-nav-frame::before': { animationDuration: '2.2s' },
                         },
                     }}
                 >
-                    <Image
-                        src="/finext-icon-color.png"
-                        alt="Finext"
-                        width={FAB_SIZE}
-                        height={FAB_SIZE}
-                        style={{ borderRadius: '50%', objectFit: 'cover' }}
-                    />
+                    <MarketPhaseNavIcon aura size={FAB_SIZE} />
                 </MuiIconButton>
             </Box>
 
@@ -216,11 +195,6 @@ export default function MobileBottomBar() {
                     </Box>
                 </Box>
             </Box>
-
-            <SignInModal
-                open={isSignInOpen}
-                onClose={closeSignInModal}
-            />
         </Box>
     );
 }

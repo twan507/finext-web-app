@@ -18,16 +18,23 @@ function Gauge({ size = 22, needle, mb = 0, ml = 0 }: { size?: number; needle: s
 interface MarketPhaseNavIconProps {
   /** true = khung "Aurora" (viền tím Finext xoay + hào quang breathing) cho rail; false = chỉ icon gauge (drawer). */
   aura?: boolean;
+  /** Đường kính khung aura. Mặc định 34 (rail desktop); FAB bottom bar mobile dùng 60. */
+  size?: number;
 }
 
 const CONIC = 'conic-gradient(from 0deg, #6d28d9, #a78bfa, #ede9fe, #a78bfa, #6d28d9)';
 
-export default function MarketPhaseNavIcon({ aura = false }: MarketPhaseNavIconProps) {
+export default function MarketPhaseNavIcon({ aura = false, size = 34 }: MarketPhaseNavIconProps) {
   const theme = useTheme();
   const needle = theme.palette.text.primary;
   const bg = theme.palette.background.default;
   // Nền nút: opacity giảm đều từ tâm (50%) ra rìa (10%) → tan mượt vào vành conic (bỏ vòng đen cứng).
   const coreBg = `radial-gradient(circle, ${alpha(bg, 1)}, ${alpha(bg, 0.5)})`;
+  // Mọi kích thước con TỈ LỆ theo size → khung 60 vẫn cùng dáng khung 34 (ở size=34 ra đúng số cũ: 7 / 2 / 24 / 2).
+  const blur = Math.round(size * 0.2);
+  const ringW = Math.max(2, Math.round(size / 17));
+  const gaugeSize = Math.round(size * 0.7);
+  const gaugeMb = Math.round(size * 0.06);
 
   if (!aura) return <Gauge size={24} needle={needle} />;
 
@@ -36,8 +43,8 @@ export default function MarketPhaseNavIcon({ aura = false }: MarketPhaseNavIconP
       className="mp-nav-frame"
       sx={{
         position: 'relative',
-        width: 34,
-        height: 34,
+        width: size,
+        height: size,
         borderRadius: '50%',
         display: 'flex',
         alignItems: 'center',
@@ -51,7 +58,7 @@ export default function MarketPhaseNavIcon({ aura = false }: MarketPhaseNavIconP
           inset: 0,
           borderRadius: '50%',
           background: CONIC,
-          filter: 'blur(7px)',
+          filter: `blur(${blur}px)`,
           zIndex: 0,
           transition: 'filter .25s ease',
           animation: 'mpBreathe 3.4s ease-in-out infinite',
@@ -79,7 +86,7 @@ export default function MarketPhaseNavIcon({ aura = false }: MarketPhaseNavIconP
       <Box
         sx={{
           position: 'absolute',
-          inset: '2px',
+          inset: `${ringW}px`,
           borderRadius: '50%',
           background: coreBg,
           display: 'flex',
@@ -88,7 +95,7 @@ export default function MarketPhaseNavIcon({ aura = false }: MarketPhaseNavIconP
           zIndex: 2,
         }}
       >
-        <Gauge size={24} needle={needle} mb={2}/>
+        <Gauge size={gaugeSize} needle={needle} mb={gaugeMb} />
       </Box>
     </Box>
   );
