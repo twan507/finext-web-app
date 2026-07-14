@@ -38,12 +38,12 @@ def _put_sentinel_nowait(queue: asyncio.Queue) -> None:
 
 async def _produce(queue: asyncio.Queue, body: ChatStreamRequest, ctx: GatewayContext) -> None:
     """Chạy agent, đẩy frame vào queue. None = kết thúc stream."""
-    gateway = build_gateway()
 
     async def emit(event_type: str, payload: dict[str, Any]) -> None:
         await queue.put(sse_frame(event_type, payload))
 
     try:
+        gateway = build_gateway()  # M1: trong try → lỗi khởi tạo vẫn ra error frame + sentinel
         system, _as_of = await build_system_blocks(gateway, ctx)
         await run_agent(
             adapter=build_adapter(),

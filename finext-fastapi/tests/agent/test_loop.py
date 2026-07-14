@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -7,6 +8,8 @@ from app.agent.gateway.fixture import FixtureGateway
 from app.agent.gateway.policy import Policy
 from app.agent.gateway.types import GatewayContext
 from app.agent.loop import MAX_ITERS, run_agent
+from app.routers.chat import STREAM_END, _produce
+from app.schemas.chat import ChatStreamRequest
 
 CTX = GatewayContext(request_id="r1", user_id="u1")
 SYSTEM = [SystemBlock(text="stub", cache_hint=True)]
@@ -76,6 +79,17 @@ async def test_tool_call_round_trip_feeds_result_back_to_model():
     assert tool_message["tool_call_id"] == "c1"
     assert "118.5" in tool_message["content"]
 
+    # M2 lock-in: message assistant-with-tool_calls đứng NGAY TRƯỚC message tool — đây chính là
+    # shape DeepSeek trả 400 nếu sai (arguments phải là STRING json, không phải dict).
+    assistant_message = second_call_messages[-2]
+    assert assistant_message["role"] == "assistant"
+    assert isinstance(assistant_message["tool_calls"], list)
+    emitted_call = assistant_message["tool_calls"][0]
+    assert emitted_call["id"] == "c1"
+    assert emitted_call["type"] == "function"
+    assert emitted_call["function"]["name"] == "db_find"
+    assert isinstance(emitted_call["function"]["arguments"], str)
+
 
 async def test_failed_tool_still_emits_tool_end_and_feeds_error_text():
     bad_call = ToolCall(id="c9", name="db_find", arguments={"collection": "stock_snapshot"})
@@ -97,3 +111,23 @@ async def test_max_iters_guard_emits_error():
     assert emitted[-1][0] == "error"
     assert "giới hạn" in emitted[-1][1]["message"]
     assert len(adapter.calls) == MAX_ITERS
+
+
+async def test_produce_emits_error_and_sentinel_when_gateway_init_fails(monkeypatch):
+    """M1: build_gateway() raise trong _produce → phải có error frame + STREAM_END (không treo)."""
+
+    def _boom():
+        raise RuntimeError("mongo init failed")
+
+    monkeypatch.setattr("app.routers.chat.build_gateway", _boom)
+
+    queue: asyncio.Queue = asyncio.Queue(maxsize=64)
+    body = ChatStreamRequest(message="FPT giá bao nhiêu?")
+    await _produce(queue, body, CTX)  # không được raise, không được treo
+
+    frames = []
+    while not queue.empty():
+        frames.append(queue.get_nowait())
+
+    assert frames[-1] is STREAM_END
+    assert any(f is not STREAM_END and '"type": "error"' in f for f in frames)
