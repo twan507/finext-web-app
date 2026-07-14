@@ -1,6 +1,7 @@
 from typing import Any
 
 import pytest
+from pymongo.errors import PyMongoError
 
 from app.agent.gateway.executor import MongoGateway
 from app.agent.gateway.policy import Policy
@@ -112,6 +113,94 @@ async def test_explain_mode_off_skips_explain(monkeypatch: pytest.MonkeyPatch):
         CTX, "stock_snapshot", filter={"ticker": "FPT"}, projection={"ticker": 1}, limit=1
     )
     assert result.ok is True  # heuristic: tin require_filter, không explain
+
+
+async def test_aggregate_strips_id_from_docs():
+    # V1: aggregate không ép được _id:0 qua projection → phải strip post-hoc để không lộ ObjectId.
+    collection = FakeCollection([{"_id": "abc123", "ticker": "FPT", "price": 100}])
+    gateway = MongoGateway(FakeDB(collection), Policy.load())
+    result = await gateway.aggregate(
+        CTX, "stock_snapshot", pipeline=[{"$sort": {"ticker": 1}}, {"$limit": 5}]
+    )
+    assert result.ok is True
+    assert result.data == [{"ticker": "FPT", "price": 100}]
+    assert all("_id" not in doc for doc in result.data)
+
+
+class RaisingCursor:
+    def limit(self, n: int) -> "RaisingCursor":
+        return self
+
+    def sort(self, spec: Any) -> "RaisingCursor":
+        return self
+
+    def max_time_ms(self, ms: int) -> "RaisingCursor":
+        return self
+
+    async def to_list(self, length: int | None = None) -> list[dict[str, Any]]:
+        raise PyMongoError("boom")
+
+
+class RaisingCollection:
+    def find(self, filter: dict[str, Any], projection: dict[str, Any] | None = None) -> RaisingCursor:
+        return RaisingCursor()
+
+    def aggregate(self, pipeline: list[dict[str, Any]], **kwargs: Any) -> RaisingCursor:
+        return RaisingCursor()
+
+
+class RaisingDB:
+    def __getitem__(self, name: str) -> RaisingCollection:
+        return RaisingCollection()
+
+    async def command(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        return {"queryPlanner": {"winningPlan": {}}}
+
+
+async def test_find_mongo_error_returns_gateway_result():
+    # V2: lỗi Motor/pymongo phải thành GatewayResult(ok=False), không bay ra 500 trần.
+    gateway = MongoGateway(RaisingDB(), Policy.load())
+    result = await gateway.find(
+        CTX, "stock_snapshot", filter={"ticker": "FPT"}, projection={"ticker": 1}, limit=1
+    )
+    assert result.ok is False
+    assert result.error is not None and "thu hẹp" in result.error
+
+
+async def test_aggregate_mongo_error_returns_gateway_result():
+    gateway = MongoGateway(RaisingDB(), Policy.load())
+    result = await gateway.aggregate(
+        CTX, "stock_snapshot", pipeline=[{"$sort": {"ticker": 1}}, {"$limit": 5}]
+    )
+    assert result.ok is False
+    assert result.error is not None and "thu hẹp" in result.error
+
+
+class RejectedPlanDB:
+    def __init__(self, collection: FakeCollection) -> None:
+        self._collection = collection
+
+    def __getitem__(self, name: str) -> FakeCollection:
+        return self._collection
+
+    async def command(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        # winningPlan dùng index; chỉ rejectedPlans mới chứa COLLSCAN.
+        return {
+            "queryPlanner": {
+                "winningPlan": {"stage": "IXSCAN"},
+                "rejectedPlans": [{"stage": "COLLSCAN"}],
+            }
+        }
+
+
+async def test_explain_mode_on_ignores_collscan_in_rejected_plans():
+    # V3: chỉ soi winningPlan — rejectedPlan chứa COLLSCAN không được reject oan.
+    collection = FakeCollection([{"ticker": "FPT"}])
+    gateway = MongoGateway(RejectedPlanDB(collection), Policy.load(), explain_mode="on")
+    result = await gateway.find(
+        CTX, "stock_snapshot", filter={"ticker": "FPT"}, projection={"ticker": 1}, limit=1
+    )
+    assert result.ok is True
 
 
 async def test_aggregate_response_over_cap_is_truncated():

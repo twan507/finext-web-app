@@ -5,11 +5,16 @@ import logging
 import time
 from typing import Any
 
+from pymongo.errors import PyMongoError
+
 from .policy import Policy
 from .types import GatewayContext, GatewayResult
 from .validator import ValidationError, validate_aggregate, validate_find
 
 logger = logging.getLogger(__name__)
+
+# Lỗi trả cho model khi Motor/pymongo gặp sự cố (timeout maxTimeMS, mất kết nối...) — lỗi "dạy model" sửa.
+_MONGO_ERROR_MSG = "Truy vấn dữ liệu quá thời gian hoặc gặp sự cố, hãy thử thu hẹp phạm vi truy vấn."
 
 
 def _cap_bytes(docs: list[dict[str, Any]], max_kb: int) -> tuple[list[dict[str, Any]], int, bool]:
@@ -26,6 +31,15 @@ def _cap_bytes(docs: list[dict[str, Any]], max_kb: int) -> tuple[list[dict[str, 
     return kept, total, False
 
 
+def _strip_id(docs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Bỏ khoá _id khỏi mỗi doc — không lộ ObjectId cho model.
+
+    Với find, projection đã ép _id:0 nên đây là no-op vô hại; với aggregate (pipeline model tự
+    viết, không ép _id:0 qua projection được) đây là lớp bảo đảm cuối.
+    """
+    return [{k: v for k, v in doc.items() if k != "_id"} for doc in docs]
+
+
 class MongoGateway:
     def __init__(self, db: Any, policy: Policy, explain_mode: str = "off") -> None:
         self._db = db
@@ -33,11 +47,50 @@ class MongoGateway:
         self._explain_mode = explain_mode
 
     async def _is_collscan(self, collection: str, filter: dict[str, Any], projection: dict[str, Any]) -> bool:
+        """Chỉ soi winningPlan — rejectedPlans có thể chứa COLLSCAN mà kế hoạch thắng vẫn dùng index."""
         explain = await self._db.command(
             {"explain": {"find": collection, "filter": filter, "projection": projection}, "verbosity": "queryPlanner"}
         )
-        plan = json.dumps(explain.get("queryPlanner", {}))
-        return "COLLSCAN" in plan
+        winning = explain.get("queryPlanner", {}).get("winningPlan", {})
+        return "COLLSCAN" in json.dumps(winning)
+
+    def _mongo_error(self, ctx: GatewayContext, collection: str) -> GatewayResult:
+        """V2: quy mọi lỗi Motor/pymongo về GatewayResult — không log filter, không 500 trần."""
+        logger.warning("gateway mongo error request_id=%s collection=%s", ctx.request_id, collection)
+        return GatewayResult(ok=False, error=_MONGO_ERROR_MSG, meta={"collection": collection, "error": True})
+
+    def _ok_result(
+        self, ctx: GatewayContext, collection: str, docs: list[dict[str, Any]], started: float, suffix: str = ""
+    ) -> GatewayResult:
+        """Chốt kết quả dùng chung cho find/aggregate: strip _id → cap bytes → log → GatewayResult."""
+        data, size, truncated = _cap_bytes(_strip_id(docs), self._policy.defaults.max_response_kb)
+        ms = int((time.perf_counter() - started) * 1000)
+        logger.info(
+            "gateway ok request_id=%s collection=%s ms=%d bytes=%d n=%d truncated=%s%s",
+            ctx.request_id, collection, ms, size, len(data), truncated, suffix,
+        )
+        return GatewayResult(
+            ok=True, data=data, meta={"collection": collection, "ms": ms, "bytes": size, "truncated": truncated}
+        )
+
+    async def _reject_collscan(
+        self, ctx: GatewayContext, collection: str, query_filter: dict[str, Any], query_projection: dict[str, Any]
+    ) -> GatewayResult | None:
+        """explain_mode=on trên collection large: nếu winningPlan là COLLSCAN thì từ chối kèm gợi ý."""
+        rule = self._policy.rule_for(collection)
+        if not (self._explain_mode == "on" and rule is not None and rule.size == "large"):
+            return None
+        if not await self._is_collscan(collection, query_filter, query_projection):
+            return None
+        logger.warning("gateway collscan request_id=%s collection=%s", ctx.request_id, collection)
+        return GatewayResult(
+            ok=False,
+            error=(
+                f"Query trên '{collection}' phải quét toàn bộ collection. "
+                "Hãy thêm filter theo khoá chính (ví dụ ticker) để dùng được index."
+            ),
+            meta={"collection": collection, "rejected": True, "plan": "COLLSCAN"},
+        )
 
     async def find(
         self,
@@ -54,40 +107,21 @@ class MongoGateway:
             logger.info("gateway rejected request_id=%s collection=%s", ctx.request_id, collection)
             return GatewayResult(ok=False, error=exc.message, meta={"collection": collection, "rejected": True})
 
-        rule = self._policy.rule_for(collection)
         query_filter = filter or {}
         query_projection = {**(projection or {}), "_id": 0}
         started = time.perf_counter()
-
-        if self._explain_mode == "on" and rule is not None and rule.size == "large":
-            if await self._is_collscan(collection, query_filter, query_projection):
-                logger.warning("gateway collscan request_id=%s collection=%s", ctx.request_id, collection)
-                return GatewayResult(
-                    ok=False,
-                    error=(
-                        f"Query trên '{collection}' phải quét toàn bộ collection. "
-                        "Hãy thêm filter theo khoá chính (ví dụ ticker) để dùng được index."
-                    ),
-                    meta={"collection": collection, "rejected": True, "plan": "COLLSCAN"},
-                )
-
-        cursor = self._db[collection].find(query_filter, query_projection)
-        if sort:
-            cursor = cursor.sort(sort)
-        cursor = cursor.limit(effective_limit).max_time_ms(self._policy.defaults.max_time_ms)
-        docs = await cursor.to_list(length=effective_limit)
-
-        data, size, truncated = _cap_bytes(docs, self._policy.defaults.max_response_kb)
-        ms = int((time.perf_counter() - started) * 1000)
-        logger.info(
-            "gateway ok request_id=%s collection=%s ms=%d bytes=%d n=%d truncated=%s",
-            ctx.request_id, collection, ms, size, len(data), truncated,
-        )
-        return GatewayResult(
-            ok=True,
-            data=data,
-            meta={"collection": collection, "ms": ms, "bytes": size, "truncated": truncated},
-        )
+        try:
+            rejection = await self._reject_collscan(ctx, collection, query_filter, query_projection)
+            if rejection is not None:
+                return rejection
+            cursor = self._db[collection].find(query_filter, query_projection)
+            if sort:
+                cursor = cursor.sort(sort)
+            cursor = cursor.limit(effective_limit).max_time_ms(self._policy.defaults.max_time_ms)
+            docs = await cursor.to_list(length=effective_limit)
+        except PyMongoError:
+            return self._mongo_error(ctx, collection)
+        return self._ok_result(ctx, collection, docs, started)
 
     async def aggregate(
         self, ctx: GatewayContext, collection: str, pipeline: list[dict[str, Any]]
@@ -99,14 +133,9 @@ class MongoGateway:
             return GatewayResult(ok=False, error=exc.message, meta={"collection": collection, "rejected": True})
 
         started = time.perf_counter()
-        cursor = self._db[collection].aggregate(pipeline, maxTimeMS=self._policy.defaults.max_time_ms)
-        docs = await cursor.to_list(length=self._policy.defaults.max_limit)
-        data, size, truncated = _cap_bytes(docs, self._policy.defaults.max_response_kb)
-        ms = int((time.perf_counter() - started) * 1000)
-        logger.info(
-            "gateway ok request_id=%s collection=%s ms=%d bytes=%d n=%d (aggregate)",
-            ctx.request_id, collection, ms, size, len(data),
-        )
-        return GatewayResult(
-            ok=True, data=data, meta={"collection": collection, "ms": ms, "bytes": size, "truncated": truncated}
-        )
+        try:
+            cursor = self._db[collection].aggregate(pipeline, maxTimeMS=self._policy.defaults.max_time_ms)
+            docs = await cursor.to_list(length=self._policy.defaults.max_limit)
+        except PyMongoError:
+            return self._mongo_error(ctx, collection)
+        return self._ok_result(ctx, collection, docs, started, suffix=" (aggregate)")
