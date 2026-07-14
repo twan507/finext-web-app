@@ -50,14 +50,23 @@ Vòng đời + phòng thủ:
 
 Tool chip: FE **chỉ render `label` server gửi** trong `tool_start` (server sinh generic — 02 §4.3). FE không có bảng map tool nào → thêm/bớt collection trong DB không đụng FE. Nhiều tool call song song → xếp chồng chip, `tool_end` đổi ✓/✗ + ms. Khi xem lại hội thoại cũ: render chip từ `tool_calls` metadata đã lưu.
 
-## 5. Render Text Assistant — Options
+## 5. Render Assistant — ✅ ĐÃ CHỐT 2026-07-14: markdown + bảng + widget
 
-| | Option A (khuyến nghị) | Option B (fallback) |
-|---|---|---|
-| Cách | Tái dùng pattern `AiCommentBody` (regex highlight số/%, pill tên pha, lede) | `react-markdown` |
-| Dependency mới | 0 | 1 (owner phải duyệt) |
-| Điều kiện | System prompt yêu cầu model trả plain text + bullet đơn giản (đã nằm trong pack luật format) | Khi thấy cần bảng markdown phức tạp thật sự trong câu trả lời |
-| Rủi ro riêng | model lỡ trả markdown → hiện ký tự `**` thô — phòng bằng strip nhẹ `**`/`##` trước render | bundle size + phải style lại cho khớp theme |
+> Nguồn sự thật: [spec 2026-07-14](../superpowers/specs/2026-07-14-agent-v1-slice-and-chat-render-design.md) §D4.
+> Nguyên tắc: **model tả Ý (JSON spec), FE vẽ HÌNH (component whitelist). Không bao giờ mount HTML do model viết.**
+
+2 tầng render trong `MessageBubble`:
+
+1. **Markdown:** `react-markdown` + `remark-gfm` (dep mới — owner đã duyệt 2026-07-14). Bảng GFM style theo theme.
+   Thư viện mặc định KHÔNG render raw HTML → luật cấm-HTML được enforce miễn phí, không cần sanitizer.
+2. **Widget:** custom renderer cho code fence lang=`finext-widget`, body là JSON `{v:1, type, ...}`.
+   Types v1: `stat_tiles` (≤6 ô) · `bar_list` (≤20 bar ±, dương xanh/âm đỏ) · `grouped_bars` (≤20 nhóm × ≤3 series)
+   — cả 3 là MUI/CSS thuần, 0 dep · `line` (≤60 điểm/series) — `apexcharts` sẵn có, dynamic import. `candle` → v1.1.
+
+Luật render: JSON hỏng / `type` lạ / `v`≠1 → fallback code block xám, không crash · vượt cap điểm → cắt + ghi chú ·
+màu tăng/giảm + format số VN theo convention app · fence chưa đóng khi đang stream → skeleton "Đang dựng biểu đồ…",
+widget chỉ mount khi fence đóng · contract SSE 02 §3 không đổi (widget đi in-band trong `token` text), backend
+không biết widget tồn tại — widget spec là hợp đồng **PACK ↔ FE**.
 
 UX chi tiết: optimistic user bubble · auto-scroll pin-to-bottom (ngừng pin khi user cuộn lên) · `AsOfChip` **"Dữ liệu {as_of}"** từ event `meta` (ẩn khi null) + tooltip: *"Trong phiên: giá cập nhật ~2 phút/lần · Phase chốt cuối ngày"* — ⚠ KHÔNG ghi "EOD" (agent_db chạy continuous, ghi EOD là sai độ tươi — audit G1) · disclaimer 1 dòng dưới composer: *"Thông tin tham khảo, không phải khuyến nghị đầu tư. AI có thể nhầm lẫn — kiểm tra số liệu quan trọng."* · skeleton bám cấu trúc, KHÔNG spinner (quy ước page mới từ market-phase).
 
@@ -71,16 +80,18 @@ Bổ sung từ audit hệ thống thực tế (file 09):
 
 | # | Rủi ro | Xử lý |
 |---|--------|-------|
-| R1 | Text streaming + regex highlight của `AiCommentBody` chạy lại mỗi token → giật khung khi message dài | Trong lúc streaming render text THÔ (chỉ append); áp `AiCommentBody` MỘT LẦN khi `done`. Nếu vẫn muốn highlight live → memo theo đoạn đã hoàn chỉnh (câu kết thúc bằng `.`) |
+| R1 | `react-markdown` re-parse toàn message mỗi token → giật khung khi message dài | Throttle re-render ~100ms + memo các block đã hoàn chỉnh; widget chỉ mount khi fence đóng (skeleton trước đó) — spec 07-14 §D4 |
 | R2 | Frame SSE bị cắt giữa multibyte UTF-8 (tiếng Việt!) → ký tự lỗi | `TextDecoder(..., {stream: true})` đã xử lý đúng — nhưng phải có test case chuỗi tiếng Việt cắt giữa byte |
 | R3 | User refresh trang giữa stream → mất phần đang nhả | chấp nhận ở v1 (message partial đã lưu server-side, load lại thấy `interrupted` + nút thử lại). Resume stream = phức tạp không đáng |
 | R4 | Mobile: bàn phím che composer, viewport nhảy | dùng `100dvh` + scroll container riêng cho MessageList; test sớm trên điện thoại thật vì nhóm NĐT dùng mobile nhiều |
 | R5 | Hai tab cùng mở chat | semaphore server chặn stream thứ 2 → FE hiện "Đang có phiên chat khác" thay vì lỗi câm |
+| R6 | Model xuất widget sai schema thường xuyên → user thấy nhiều code block xám | đếm tỷ lệ fallback trong store; nếu cao → sửa PACK (thêm ví dụ spec mẫu), không sửa code FE — đúng tinh thần R1 file 02 |
 
 ## 7. Điều Kiện Hoàn Thành Bước 4
 
 - [ ] `tsc --noEmit` = 0 lỗi (quy ước: KHÔNG tự chạy `next build`; UI owner tự test).
 - [ ] Chat end-to-end với backend echo/fixture: gõ → chip tool → chữ nhả dần → done; bấm dừng giữa chừng giữ text.
+- [ ] Render giàu: bảng GFM đúng theme dark/light; 4 widget type render từ fixture message; JSON hỏng → fallback xám; fence chưa đóng → skeleton.
 - [ ] Kịch bản lỗi: server trả `error` giữa stream → text giữ + nút thử lại; idle 45s → tự báo đứt.
 - [ ] Xem lại hội thoại cũ render đúng (kể cả message `interrupted`).
 - [ ] Consent modal chặn đúng lần đầu; feedback 👍👎 ghi vào message; empty state hiện suggested prompts.

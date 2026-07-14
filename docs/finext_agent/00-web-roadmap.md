@@ -103,7 +103,7 @@ Thứ tự code thực tế có thể xen kẽ (FE làm song song backend từ k
 | `apiClient` với refresh-token flow tự động | [`apiClient.ts`](../../finext-nextjs/services/apiClient.ts) | Bước 4 — thêm `responseType: 'stream'` |
 | Layering convention `routers/ → crud/ → schemas/` | `finext-fastapi/app/` | Bước 2/3 |
 | Pattern lưu dữ liệu per-user (`watchlists`) trong `user_db` | `crud/watchlists` | Bước 3 — `chat_conversations`/`chat_messages` theo cùng pattern |
-| Ngôn ngữ thiết kế "Ambient Signal" + `AiCommentBody` (render text AI có highlight) | `app/(main)/market-phase/components/` | Bước 4 — chat cùng ngôn ngữ FINEXT AI, zero dependency mới |
+| Ngôn ngữ thiết kế "Ambient Signal" + `AiCommentBody` (render text AI có highlight) | `app/(main)/market-phase/components/` | Bước 4 — chat cùng ngôn ngữ FINEXT AI (style/token màu; render chat đã chốt markdown+widget — spec 07-14) |
 | `OptionalAuthWrapper requireAuth` + store pattern (Zustand-like) | `components/auth/`, `hooks/` | Bước 4 |
 | Motor async + `httpx` async đã trong deps backend | `pyproject.toml` | Bước 1/2 — adapter tự parse không cần dep mới |
 | Spec kiến trúc runtime cũ (SSE contract 6 event, quota, persistence…) | [`2026-07-12-ai-chat-agent-architecture.md`](../superpowers/specs/2026-07-12-ai-chat-agent-architecture.md) | Nguyên liệu — phần còn dùng được đã hấp thụ vào bộ doc này |
@@ -134,7 +134,7 @@ Thứ tự code thực tế có thể xen kẽ (FE làm song song backend từ k
 | 1 | Gateway: library in-process hay MCP process riêng? | **Library-first** (0 RAM mới, 0 hop) + MCP wrapper cho Claude app | MCP server riêng qua Streamable HTTP nếu owner muốn 1 service duy nhất cho cả 2 runtime | 01 |
 | 2 | Provider/model | ✅ ĐÃ CHỐT (owner): **không khoá vendor** — 1 adapter chuẩn OpenAI-compat phủ hầu hết provider (OpenAI/OpenRouter/DeepSeek/Groq/vLLM/Gemini-compat…); model cụ thể chọn bằng eval + giá, đổi bằng env | thêm adapter native riêng CHỈ khi cần tính năng độc quyền của 1 nhà (explicit cache control…) | 02 §6, 03 §3 |
 | 3 | SDK hay tự code | ✅ ĐÃ CHỐT (owner): **tự code adapter bằng `httpx` sẵn có, không dùng SDK nhà cung cấp** — 0 dependency mới, 0 vendor lock | dùng SDK open-source nếu tự parse phát sinh bug dai dẳng (tiêu chí: >2 bug parse/tháng sau go-live) | 02 §6 |
-| 4 | Render text chat: `AiCommentBody` pattern hay `react-markdown` | AiCommentBody-style, zero dep | react-markdown khi cần bảng phức tạp (dep mới, owner duyệt) | 04 §5 |
+| 4 | Render chat | ✅ ĐÃ CHỐT (owner 2026-07-14): markdown+bảng (`react-markdown`+`remark-gfm` — dep đã duyệt) + widget `finext-widget` JSON → whitelist component (stat_tiles/bar_list/grouped_bars CSS thuần · line = apexcharts sẵn có); KHÔNG BAO GIỜ mount HTML từ model | — | 04 §5 + [spec 07-14](../superpowers/specs/2026-07-14-agent-v1-slice-and-chat-render-design.md) |
 | 5 | Tên route + nav label | `/assistant` · "Finext AI" | — | 04 §2 |
 | 6 | Số quota cụ thể | 60 msg/user/ngày, budget token global theo giá model | điều chỉnh sau 2 tuần chạy nhóm nhỏ | 03 §4 |
 | 7 | Bộ nhớ cá nhân hoá | **Tầng 1** (profile user tự khai) ngay v1; **Tầng 2** (trích xuất sau lượt) v1.5 sau go-live | không bao giờ làm tool `memory_write` trong hội thoại (phá read-only) | 08 §4 |
@@ -165,20 +165,21 @@ Thứ tự code thực tế có thể xen kẽ (FE làm song song backend từ k
 | 1 | 00 + 01 + agent_db_v2 §4-5 | Gateway core: policy file + validator + executor + FixtureGateway | checklist 01 §8 (unit test validator không cần Mongo) |
 | 2 | 00 + 02 | Skeleton stream: `routers/chat.py` echo giả + nginx block + `curl -N` | token nhả từng dòng qua nginx dev, heartbeat khi im lặng |
 | 3 | 00 + 02 | Adapter openai_compat + loop + 3 tools (chạy với FixtureGateway + pack stub) | checklist 02 §8 |
+| **3.5** | 00 + spec 07-14 | **MỐC LÁT CẮT: cắm thật** — Mongo thật + policy rút gọn + DeepSeek thật | "FPT giá bao nhiêu" ra số khớp UI Finext (spec 07-14 §3) |
 | 4 | 00 + 03 + 08 | Persistence + quota + profile | checklist 03 §7 + 08 §7 (phần v1) |
-| 5-6 | 00 + 04 | FE: chatClient → store → components → page | checklist 04 §7, `tsc --noEmit` = 0 |
+| 5-6 | 00 + 04 | FE: chatClient → store → components → page + render markdown/bảng/widget (spec 07-14 §D4) | checklist 04 §7, `tsc --noEmit` = 0 |
 | 7 | 00 + 05 + 06 | Env, pack sync, log hygiene, alert budget | checklist 05 §8 + 06 §4 |
 | 8 | 00 + 07 | Eval + go-live vòng 1 | file 07 |
 
 **Quyết định treo duy nhất phải chốt trước session 1:** Gateway **Option A (library in-process — khuyến nghị)** hay B (process riêng) — file 01 §3. Nếu owner không nói gì, AI mặc định làm A (B nâng cấp được sau, interface không đổi).
 
-**Mặc định được phép tự quyết không cần hỏi:** route `/assistant` + label "Finext AI" · pack sync = copy vào image (05 §4-A) · quota 60/ngày · mọi con số env ở 05 §3. **Phải hỏi owner:** bất kỳ dependency mới nào (kể cả lib MCP) — quy ước dự án.
+**Mặc định được phép tự quyết không cần hỏi:** route `/assistant` + label "Finext AI" · pack sync = copy vào image (05 §4-A) · quota 60/ngày · mọi con số env ở 05 §3. **Phải hỏi owner:** bất kỳ dependency mới nào (kể cả lib MCP) — quy ước dự án. *Đã duyệt 2026-07-14:* `react-markdown` + `remark-gfm` (spec 07-14 §D5).
 
-**Cần từ owner trước session 3 (không chặn session 1-2):** `LLM_BASE_URL` + `LLM_API_KEY` + `LLM_MODEL` của provider đã chọn (dev/test vẫn chạy được bằng echo adapter + fixture khi chưa có).
+**Cần từ owner trước session 3 (không chặn session 1-2):** ✅ ĐÃ CÓ 2026-07-14 — provider v1 = DeepSeek, owner tự điền vào `.env.production`: `LLM_BASE_URL=https://api.deepseek.com/v1` · `LLM_MODEL=deepseek-chat` · `LLM_API_KEY` (spec 07-14 §D2; dev/test vẫn chạy bằng echo adapter + fixture).
 
 ## 6b. NGOÀI Phạm Vi V1 (chốt để khỏi trôi scope — mỗi mục đều có lý do/đường nâng cấp trong file tương ứng)
 
-❌ Tool GHI bất kỳ (kể cả `memory_write` trong hội thoại — 08 §4.0) · ❌ vẽ chart trong chat · ❌ multi-agent · ❌ semantic search/embedding (Mongo standalone không vector — 08 §4.3) · ❌ resumable stream (09 §8) · ❌ tier gating theo license (điểm cắm để sẵn — 03 §4) · ❌ answer-cache câu phổ biến (09 §7) · ❌ observability chuyên dụng Langfuse (09 §8) · ❌ auto-summarize history dài (09 §8) · ❌ thêm giá vốn vào watchlists (08 §4.1 known-gap).
+❌ Tool GHI bất kỳ (kể cả `memory_write` trong hội thoại — 08 §4.0) · ❌ widget `candle` + chart series dài kiểu spec-chứa-query (chart CƠ BẢN đã VÀO v1 — spec 07-14 §D4/§D8) · ❌ macro tool `compute_stats` (chỉ sau khi có log usage — spec 07-14 §D6) · ❌ sandbox chạy code model viết (spec 07-14 §D6) · ❌ multi-agent · ❌ semantic search/embedding (Mongo standalone không vector — 08 §4.3) · ❌ resumable stream (09 §8) · ❌ tier gating theo license (điểm cắm để sẵn — 03 §4) · ❌ answer-cache câu phổ biến (09 §7) · ❌ observability chuyên dụng Langfuse (09 §8) · ❌ auto-summarize history dài (09 §8) · ❌ thêm giá vốn vào watchlists (08 §4.1 known-gap).
 
 ## 7. Điều Kiện Go-Live Tổng (chi tiết ở file 07)
 
