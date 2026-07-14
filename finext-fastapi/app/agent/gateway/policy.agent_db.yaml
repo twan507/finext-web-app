@@ -10,6 +10,7 @@ defaults:
   banned_operators:
     - $lookup
     - $graphLookup
+    - $unionWith
     - $out
     - $merge
     - $where

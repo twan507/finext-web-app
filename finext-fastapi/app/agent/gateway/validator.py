@@ -8,6 +8,10 @@ from .policy import CollectionRule, Policy
 SLICE_STAGES = ("$project", "$addFields", "$set")
 SCALAR_TYPES = (str, int, float, bool)
 
+# Nợ kỹ thuật đã duyệt: tên field mảng dài hard-code, không tham số hoá qua policy.
+SERIES_FIELD = "series"
+SERIES_REF = "$series"
+
 
 class ValidationError(Exception):
     """Lỗi từ chối query. `message` viết bằng ngôn ngữ model hiểu + gợi ý sửa (doc 01 §1)."""
@@ -76,15 +80,42 @@ def _check_max_slice(rule: CollectionRule, count: int) -> None:
         )
 
 
+def _has_unsliced_series_ref(node: Any, inside_slice: bool = False) -> bool:
+    """True nếu có tham chiếu "$series" (hoặc "$series.x") KHÔNG nằm trong một $slice.
+
+    Chặn alias kiểu {"series_full": "$series"} — bê nguyên mảng dài qua một tên field khác.
+    """
+    if isinstance(node, str):
+        return not inside_slice and (node == SERIES_REF or node.startswith(SERIES_REF + "."))
+    if isinstance(node, dict):
+        return any(
+            _has_unsliced_series_ref(value, inside_slice or key == "$slice")
+            for key, value in node.items()
+        )
+    if isinstance(node, list):
+        return any(_has_unsliced_series_ref(item, inside_slice) for item in node)
+    return False
+
+
+def _check_no_series_alias(rule: CollectionRule, node: Any) -> None:
+    if _has_unsliced_series_ref(node):
+        raise ValidationError(
+            f"Collection '{rule.name}' có mảng series rất dài — mọi tham chiếu tới '{SERIES_REF}' "
+            "phải nằm trong $slice. Không được gán nguyên mảng series sang field khác. "
+            'Ví dụ: {"$project": {"series": {"$slice": ["$series", -20]}}}'
+        )
+
+
 def _check_series_slice(rule: CollectionRule, projection: dict[str, Any] | None) -> None:
     if not rule.require_series_slice:
         return
-    series = (projection or {}).get("series")
+    series = (projection or {}).get(SERIES_FIELD)
     if not isinstance(series, dict) or "$slice" not in series:
         raise ValidationError(
             f"Collection '{rule.name}' có mảng series rất dài. "
             'Bắt buộc dùng projection dạng {"series": {"$slice": -20}} để lấy N phần tử mới nhất.'
         )
+    _check_no_series_alias(rule, projection)
     _check_max_slice(rule, _slice_count(rule, series["$slice"]))
 
 
@@ -155,18 +186,25 @@ def validate_find(
 
 
 def _require_pipeline(pipeline: Any) -> list[dict[str, Any]]:
-    """LLM có thể hallucinate cấu trúc — chuẩn hoá lỗi thành ValidationError dạy được model."""
+    """G1: pipeline là mảng, mỗi stage là dict có ĐÚNG 1 key bắt đầu bằng '$'."""
+    example = 'Ví dụ: pipeline=[{"$match": {"ticker": "FPT"}}, {"$limit": 5}]'
     if not isinstance(pipeline, list):
-        raise ValidationError(
-            "pipeline phải là một mảng các stage. "
-            'Ví dụ: pipeline=[{"$match": {"ticker": "FPT"}}, {"$limit": 5}]'
-        )
+        raise ValidationError(f"pipeline phải là một mảng các stage. {example}")
     for stage in pipeline:
         if not isinstance(stage, dict):
             raise ValidationError(
-                f"Mỗi stage trong pipeline phải là object dạng {{\"$match\": ...}} — "
-                f"nhận được {type(stage).__name__}. "
-                'Ví dụ: pipeline=[{"$match": {"ticker": "FPT"}}, {"$limit": 5}]'
+                f'Mỗi stage trong pipeline phải là object dạng {{"$match": ...}} — '
+                f"nhận được {type(stage).__name__}. {example}"
+            )
+        if len(stage) != 1:
+            raise ValidationError(
+                f"Mỗi stage trong pipeline phải có đúng 1 toán tử — nhận được {len(stage)} key: "
+                f"{sorted(stage)}. Hãy tách thành nhiều stage riêng. {example}"
+            )
+        name = next(iter(stage))
+        if not (isinstance(name, str) and name.startswith("$")):
+            raise ValidationError(
+                f"Tên stage '{name}' không hợp lệ — stage phải bắt đầu bằng '$'. {example}"
             )
     return pipeline
 
@@ -185,45 +223,83 @@ def _is_specific_value(value: Any) -> bool:
     return False
 
 
-def _check_aggregate_key(rule: CollectionRule, pipeline: list[dict[str, Any]]) -> None:
-    """Large collection: bắt buộc $match theo khoá VỚI giá trị cụ thể (không phủ định/dải rộng)."""
-    keys = rule.require_filter or ([rule.key] if rule.key else [])
-    if rule.size != "large" or not keys:
+def _check_aggregate_anchor_match(rule: CollectionRule, pipeline: list[dict[str, Any]]) -> None:
+    """G3: có require_filter -> stage ĐẦU TIÊN phải là $match theo khoá với giá trị cụ thể.
+
+    Neo ở pipeline[0]: $match đặt sau $group/$sort chỉ là decoy — collection đã bị quét hết rồi.
+    """
+    keys = rule.require_filter
+    if not keys:
         return
-    matches = [stage["$match"] for stage in pipeline if isinstance(stage.get("$match"), dict)]
-    values = [match[key] for match in matches for key in keys if key in match]
     hint = " hoặc ".join(str(k) for k in keys)
+    example = f'{{"$match": {{"{keys[0]}": "FPT"}}}}'
+    first = pipeline[0] if pipeline else {}
+    match = first.get("$match")
+    values = [match[key] for key in keys if key in match] if isinstance(match, dict) else []
     if not values:
         raise ValidationError(
-            f"Collection '{rule.name}' lớn — pipeline bắt buộc bắt đầu bằng $match theo khoá: {hint}. "
-            f'Ví dụ: {{"$match": {{"{keys[0]}": "FPT"}}}}'
+            f"Collection '{rule.name}' lớn — stage ĐẦU TIÊN của pipeline bắt buộc là $match theo khoá: {hint} "
+            f"($match ở vị trí khác không được tính vì các stage trước nó đã quét toàn bộ collection). "
+            f"Ví dụ: pipeline=[{example}, ...]"
         )
     if not any(_is_specific_value(value) for value in values):
         raise ValidationError(
             f"Collection '{rule.name}' lớn — $match phải lọc theo giá trị cụ thể của khoá {hint}, "
-            f'ví dụ {{"$match": {{"{keys[0]}": "FPT"}}}} hoặc {{"$match": {{"{keys[0]}": {{"$in": ["FPT", "VNM"]}}}}}}. '
+            f'ví dụ {example} hoặc {{"$match": {{"{keys[0]}": {{"$in": ["FPT", "VNM"]}}}}}}. '
             "Không dùng $ne/$nin/$gt/$regex/$exists trên khoá này vì chúng quét toàn bộ collection."
         )
 
 
-def _check_aggregate_series_slice(rule: CollectionRule, pipeline: list[dict[str, Any]]) -> None:
-    """Aggregate cũng phải cắt mảng series như find, nếu không sẽ trả nguyên mảng dài."""
+def _check_aggregate_limit(policy: Policy, rule: CollectionRule, pipeline: list[dict[str, Any]]) -> None:
+    """G4: large mà không có require_filter -> bắt buộc $limit, nếu không sẽ kéo cả collection."""
+    if rule.size != "large" or rule.require_filter:
+        return
+    max_limit = policy.defaults.max_limit
+    values = [stage["$limit"] for stage in pipeline if "$limit" in stage]
+    if any(_is_int(value) and 1 <= value <= max_limit for value in values):
+        return
+    if values:
+        raise ValidationError(
+            f"$limit={values[0]!r} không hợp lệ — phải là số nguyên trong khoảng 1..{max_limit}. "
+            'Ví dụ: {"$limit": 20}'
+        )
+    raise ValidationError(
+        f"Collection '{rule.name}' lớn — pipeline bắt buộc có stage $limit (1..{max_limit}) để giới hạn "
+        'kết quả. Ví dụ: pipeline=[{"$sort": {"change_pct": -1}}, {"$limit": 20}]'
+    )
+
+
+def _check_aggregate_slice_size(rule: CollectionRule, raw: Any) -> None:
+    """$slice trong aggregate: {"$slice": ["$series", -20]} hoặc ["$series", skip, n] -> lấy phần tử cuối."""
+    tail = raw[-1] if isinstance(raw, list) and raw else raw
+    if _is_int(tail):
+        _check_max_slice(rule, abs(tail))
+
+
+def _check_aggregate_series(rule: CollectionRule, pipeline: list[dict[str, Any]]) -> None:
+    """G5: mọi tham chiếu series phải nằm trong $slice, và phải có ít nhất một stage cắt series."""
     if not rule.require_series_slice:
         return
+    _check_no_series_alias(rule, pipeline)
+    sliced = False
     for stage in pipeline:
         for name in SLICE_STAGES:
             spec = stage.get(name)
-            series = spec.get("series") if isinstance(spec, dict) else None
-            if isinstance(series, dict) and "$slice" in series:
-                raw = series["$slice"]
-                tail = raw[-1] if isinstance(raw, list) and raw else raw
-                if _is_int(tail):
-                    _check_max_slice(rule, abs(tail))
-                return
-    raise ValidationError(
-        f"Collection '{rule.name}' có mảng series rất dài — pipeline bắt buộc cắt series bằng $slice. "
-        'Ví dụ: {"$project": {"series": {"$slice": ["$series", -20]}}}'
-    )
+            if not isinstance(spec, dict) or SERIES_FIELD not in spec:
+                continue
+            series = spec[SERIES_FIELD]
+            if not isinstance(series, dict) or "$slice" not in series:
+                raise ValidationError(
+                    f"Collection '{rule.name}' có mảng series rất dài — trong {name}, field 'series' "
+                    'bắt buộc phải được cắt bằng $slice. Ví dụ: {"$project": {"series": {"$slice": ["$series", -20]}}}'
+                )
+            _check_aggregate_slice_size(rule, series["$slice"])
+            sliced = True
+    if not sliced:
+        raise ValidationError(
+            f"Collection '{rule.name}' có mảng series rất dài — pipeline bắt buộc cắt series bằng $slice. "
+            'Ví dụ: {"$project": {"series": {"$slice": ["$series", -20]}}}'
+        )
 
 
 def validate_aggregate(policy: Policy, collection: str, pipeline: Any) -> None:
@@ -238,5 +314,6 @@ def validate_aggregate(policy: Policy, collection: str, pipeline: Any) -> None:
             "Hãy viết lại query không dùng toán tử này."
         )
 
-    _check_aggregate_key(rule, stages)
-    _check_aggregate_series_slice(rule, stages)
+    _check_aggregate_anchor_match(rule, stages)
+    _check_aggregate_limit(policy, rule, stages)
+    _check_aggregate_series(rule, stages)

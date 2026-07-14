@@ -281,3 +281,189 @@ def test_non_positive_limit_rejected(bad_limit):
             limit=bad_limit,
         )
     assert "limit" in exc.value.message
+
+
+# --- Fix round 2: 3 lỗ bypass mới (L1 alias series, L2 decoy $match, L3 $unionWith) ---
+
+
+def test_aggregate_series_alias_bypass_rejected():
+    """L1: field khác trong cùng $project bê nguyên mảng series (không qua $slice)."""
+    with pytest.raises(ValidationError) as exc:
+        validate_aggregate(
+            POLICY,
+            "history_stock",
+            [
+                {"$match": {"ticker": "FPT"}},
+                {"$project": {"series": {"$slice": ["$series", -20]}, "series_full": "$series"}},
+            ],
+        )
+    assert "series" in exc.value.message
+    assert "$slice" in exc.value.message
+
+
+def test_aggregate_series_alias_via_addfields_rejected():
+    """L1: $addFields cũng có thể alias nguyên mảng series."""
+    with pytest.raises(ValidationError) as exc:
+        validate_aggregate(
+            POLICY,
+            "history_stock",
+            [
+                {"$match": {"ticker": "FPT"}},
+                {"$addFields": {"series": {"$slice": ["$series", -5]}, "backup": "$series"}},
+            ],
+        )
+    assert "$slice" in exc.value.message
+
+
+def test_aggregate_series_ref_in_group_rejected():
+    """L1: $group $push nguyên mảng series TRƯỚC stage $slice — stage $slice sau chỉ là bù nhìn."""
+    with pytest.raises(ValidationError) as exc:
+        validate_aggregate(
+            POLICY,
+            "history_stock",
+            [
+                {"$match": {"ticker": "FPT"}},
+                {"$group": {"_id": "$ticker", "raw": {"$push": "$series"}}},
+                {"$project": {"series": {"$slice": ["$series", -20]}}},
+            ],
+        )
+    assert "$slice" in exc.value.message
+
+
+def test_aggregate_series_subfield_ref_rejected():
+    """L1: tham chiếu '$series.close' cũng kéo nguyên mảng."""
+    with pytest.raises(ValidationError) as exc:
+        validate_aggregate(
+            POLICY,
+            "history_stock",
+            [
+                {"$match": {"ticker": "FPT"}},
+                {"$project": {"series": {"$slice": ["$series", -20]}, "closes": "$series.close"}},
+            ],
+        )
+    assert "$slice" in exc.value.message
+
+
+def test_find_projection_series_alias_bypass_rejected():
+    """L1 (bản find): projection alias '$series' qua field khác."""
+    with pytest.raises(ValidationError) as exc:
+        validate_find(
+            POLICY,
+            "history_stock",
+            filter={"ticker": "FPT"},
+            projection={"ticker": 1, "series": {"$slice": -20}, "series_full": "$series"},
+            sort=None,
+            limit=1,
+        )
+    assert "series" in exc.value.message
+    assert "$slice" in exc.value.message
+
+
+def test_find_projection_without_alias_still_passes():
+    """G6 không chặn oan: projection chuẩn nhiều field + $slice vẫn qua."""
+    limit = validate_find(
+        POLICY,
+        "history_stock",
+        filter={"ticker": "FPT"},
+        projection={"ticker": 1, "exchange": 1, "series": {"$slice": [-20, 20]}},
+        sort=None,
+        limit=1,
+    )
+    assert limit == 1
+
+
+def test_aggregate_decoy_match_after_group_rejected():
+    """L2: $match trên field GIẢ do $group tạo ra, đặt sau $group — chỉ để qua mặt validator."""
+    with pytest.raises(ValidationError) as exc:
+        validate_aggregate(
+            POLICY,
+            "stock_snapshot",
+            [
+                {
+                    "$group": {
+                        "_id": "$industry",
+                        "avg_price": {"$avg": "$price"},
+                        "ticker": {"$first": {"$literal": "FPT"}},
+                    }
+                },
+                {"$match": {"ticker": "FPT"}},
+            ],
+        )
+    assert "$limit" in exc.value.message
+
+
+def test_aggregate_match_must_be_first_stage():
+    """L2 (bản require_filter): $match không ở đầu pipeline thì $group đã quét cả collection."""
+    with pytest.raises(ValidationError) as exc:
+        validate_aggregate(
+            POLICY,
+            "history_stock",
+            [
+                {"$group": {"_id": "$ticker", "n": {"$sum": 1}}},
+                {"$match": {"ticker": "FPT"}},
+            ],
+        )
+    assert "$match" in exc.value.message
+
+
+def test_aggregate_union_with_rejected():
+    """L3: $unionWith truy vấn xuyên collection — phá whitelist."""
+    with pytest.raises(ValidationError) as exc:
+        validate_aggregate(POLICY, "market_phase", [{"$unionWith": {"coll": "users", "pipeline": []}}])
+    assert "$unionWith" in exc.value.message
+
+
+def test_aggregate_large_without_require_filter_needs_limit():
+    """G4: large + không require_filter -> bắt buộc có $limit, nếu không sẽ quét cả collection."""
+    with pytest.raises(ValidationError) as exc:
+        validate_aggregate(
+            POLICY,
+            "stock_snapshot",
+            [{"$sort": {"change_pct": -1}}, {"$project": {"ticker": 1, "change_pct": 1}}],
+        )
+    assert "$limit" in exc.value.message
+
+
+def test_aggregate_large_without_require_filter_passes_with_limit():
+    """G4: 'top N mã tăng mạnh' vẫn hợp lệ khi có $limit trong ngưỡng."""
+    validate_aggregate(
+        POLICY,
+        "stock_snapshot",
+        [
+            {"$sort": {"change_pct": -1}},
+            {"$limit": 20},
+            {"$project": {"ticker": 1, "change_pct": 1}},
+        ],
+    )
+
+
+@pytest.mark.parametrize("bad_limit", [0, -5, 500, "20", True, None])
+def test_aggregate_limit_stage_value_must_be_int_in_range(bad_limit):
+    """G4: $limit dị dạng / vượt max_limit không được tính là hợp lệ."""
+    with pytest.raises(ValidationError) as exc:
+        validate_aggregate(POLICY, "stock_snapshot", [{"$sort": {"price": -1}}, {"$limit": bad_limit}])
+    assert "$limit" in exc.value.message
+
+
+@pytest.mark.parametrize(
+    "stage",
+    [
+        {},  # 0 key
+        {"$match": {"ticker": "FPT"}, "$limit": 5},  # 2 key trong 1 stage
+        {"match": {"ticker": "FPT"}},  # key không bắt đầu bằng $
+    ],
+)
+def test_aggregate_stage_must_have_exactly_one_dollar_key(stage):
+    """G1: hình dạng stage phải chuẩn — 1 key duy nhất, bắt đầu bằng $."""
+    with pytest.raises(ValidationError) as exc:
+        validate_aggregate(POLICY, "stock_snapshot", [stage, {"$limit": 5}])
+    assert "stage" in exc.value.message
+
+
+def test_aggregate_history_stock_valid_pipeline_still_passes():
+    """Regression: pipeline hợp lệ chuẩn trên history_stock không bị grammar mới chặn oan."""
+    validate_aggregate(
+        POLICY,
+        "history_stock",
+        [{"$match": {"ticker": "FPT"}}, {"$project": {"series": {"$slice": ["$series", -20]}}}],
+    )
