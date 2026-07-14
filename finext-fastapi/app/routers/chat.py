@@ -49,7 +49,12 @@ async def _run_agent(queue: asyncio.Queue, body: ChatStreamRequest) -> None:
         logger.exception("Lỗi khi chạy agent")
         await queue.put(sse_frame("error", {"message": "Hệ thống AI gặp sự cố, vui lòng thử lại."}))
     finally:
-        await queue.put(None)
+        # Non-blocking sentinel: sau khi bị cancel không ai drain queue nữa,
+        # await put(None) sẽ deadlock nếu queue đầy. Consumer đã thoát → bỏ qua an toàn.
+        try:
+            queue.put_nowait(None)
+        except asyncio.QueueFull:
+            pass
 
 
 async def _event_stream(request: Request, body: ChatStreamRequest, user_id: str) -> AsyncIterator[str]:
