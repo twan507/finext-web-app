@@ -213,26 +213,66 @@ def _effective_limit(policy: Policy, limit: int | None) -> int:
     return effective
 
 
+def _check_find_types(filter: Any, projection: Any, sort: Any) -> None:
+    """V1: input đến từ LLM chưa chắc đúng kiểu — chặn sớm để tránh AttributeError/TypeError (500)."""
+    if filter is not None and not isinstance(filter, dict):
+        raise ValidationError(
+            f"filter phải là object (dict) hoặc bỏ trống — nhận được {type(filter).__name__}. "
+            'Ví dụ: filter={"ticker": "FPT"}'
+        )
+    if projection is not None and not isinstance(projection, dict):
+        raise ValidationError(
+            f"projection phải là object (dict) hoặc bỏ trống — nhận được {type(projection).__name__}. "
+            'Ví dụ: projection={"ticker": 1, "price": 1}'
+        )
+    if sort is not None and not isinstance(sort, list):
+        raise ValidationError(
+            f"sort phải là mảng (list) dạng [[field, 1]] hoặc bỏ trống — nhận được {type(sort).__name__}. "
+            'Ví dụ: sort=[["change_pct", -1]]'
+        )
+
+
+def _check_find_require_filter(policy: Policy, rule: CollectionRule, filter: dict[str, Any]) -> None:
+    """V3: khoá require_filter phải CÓ MẶT và mang giá trị cụ thể (đồng bộ anchor $match của aggregate)."""
+    keys = rule.require_filter
+    if not keys:
+        return
+    hint = " hoặc ".join(keys)
+    present = [filter[key] for key in keys if key in filter]
+    if not present:
+        raise ValidationError(
+            f"Collection '{rule.name}' bắt buộc lọc theo khoá: {hint}. "
+            f'Ví dụ: filter={{"{keys[0]}": "FPT"}}'
+        )
+    max_items = policy.defaults.max_limit
+    if not any(_is_specific_value(value, max_items) for value in present):
+        raise ValidationError(
+            f"Collection '{rule.name}' phải lọc khoá {hint} theo giá trị cụ thể "
+            f'(ví dụ filter={{"{keys[0]}": "FPT"}} hoặc filter={{"{keys[0]}": {{"$in": ["FPT", "HPG"]}}}}). '
+            "Không dùng $ne/$nin/$gt/$regex/$exists trên khoá này vì chúng quét toàn bộ collection. "
+            f"Danh sách $in tối đa {max_items} phần tử — hãy thu hẹp lại."
+        )
+
+
 def validate_find(
     policy: Policy,
     collection: str,
-    filter: dict[str, Any] | None,
-    projection: dict[str, Any] | None,
-    sort: list[list[Any]] | None,
+    filter: Any,
+    projection: Any,
+    sort: Any,
     limit: int | None,
 ) -> int:
-    """Trả limit hiệu lực. Raise ValidationError nếu vi phạm."""
+    """Trả limit hiệu lực. Raise ValidationError nếu vi phạm.
+
+    filter/projection/sort để kiểu Any vì đến từ LLM, chưa đảm bảo đúng cấu trúc (xem _check_find_types).
+    """
+    _check_find_types(filter, projection, sort)
     rule = _require_rule(policy, collection)
 
     _check_find_banned(policy.defaults.banned_operators, filter, projection, sort)
     _check_no_system_var(projection, "projection")
 
-    if rule.require_filter and not any(key in (filter or {}) for key in rule.require_filter):
-        keys = " hoặc ".join(rule.require_filter)
-        raise ValidationError(
-            f"Collection '{collection}' bắt buộc lọc theo khoá: {keys}. "
-            f'Ví dụ: filter={{"{rule.require_filter[0]}": "FPT"}}'
-        )
+    _check_find_require_filter(policy, rule, filter or {})
 
     if rule.size == "large" and not projection:
         example = f'{{"{rule.key}": 1}}' if rule.key else '{"<field_1>": 1, "<field_2>": 1}'

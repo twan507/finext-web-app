@@ -665,3 +665,111 @@ def test_aggregate_in_list_at_max_limit_passes():
             {"$project": {"series": {"$slice": ["$series", -20]}}},
         ],
     )
+
+
+# --- Fix round 4: V1 (guard input non-dict cho find) + V3 (specificity require_filter) ---
+
+
+def test_find_non_dict_projection_rejected():
+    """V1: projection không phải dict -> ValidationError, không phải AttributeError (500)."""
+    with pytest.raises(ValidationError) as exc:
+        validate_find(
+            POLICY,
+            "history_stock",
+            filter={"ticker": "FPT"},
+            projection="x",
+            sort=None,
+            limit=1,
+        )
+    assert "projection" in exc.value.message
+
+
+def test_find_non_dict_filter_rejected():
+    """V1: filter không phải dict -> ValidationError, không phải TypeError (500)."""
+    with pytest.raises(ValidationError) as exc:
+        validate_find(
+            POLICY,
+            "history_stock",
+            filter=1,
+            projection={"series": {"$slice": -20}},
+            sort=None,
+            limit=1,
+        )
+    assert "filter" in exc.value.message
+
+
+def test_find_non_list_sort_rejected():
+    """V1: sort không phải list -> ValidationError, không phải TypeError (500)."""
+    with pytest.raises(ValidationError) as exc:
+        validate_find(
+            POLICY,
+            "stock_snapshot",
+            filter={"ticker": "FPT"},
+            projection={"price": 1},
+            sort={"ticker": 1},
+            limit=1,
+        )
+    assert "sort" in exc.value.message
+
+
+def test_find_require_filter_ne_operator_rejected():
+    """V3: require_filter ở find phải là giá trị cụ thể — $ne quét toàn bộ collection."""
+    with pytest.raises(ValidationError) as exc:
+        validate_find(
+            POLICY,
+            "history_stock",
+            filter={"ticker": {"$ne": "X"}},
+            projection={"ticker": 1, "series": {"$slice": -20}},
+            sort=None,
+            limit=1,
+        )
+    assert "giá trị cụ thể" in exc.value.message
+
+
+@pytest.mark.parametrize(
+    "bad_value",
+    [
+        {"$regex": ".*"},
+        {"$exists": True},
+        {"$gt": ""},
+        {"$nin": ["X"]},
+    ],
+)
+def test_find_require_filter_non_specific_value_rejected(bad_value):
+    """V3: mọi toán tử quét-rộng trên khoá require_filter đều bị chặn."""
+    with pytest.raises(ValidationError) as exc:
+        validate_find(
+            POLICY,
+            "history_stock",
+            filter={"ticker": bad_value},
+            projection={"ticker": 1, "series": {"$slice": -20}},
+            sort=None,
+            limit=1,
+        )
+    assert "giá trị cụ thể" in exc.value.message
+
+
+def test_find_require_filter_scalar_still_passes():
+    """V3 không chặn oan: giá trị scalar vẫn hợp lệ."""
+    limit = validate_find(
+        POLICY,
+        "history_stock",
+        filter={"ticker": "FPT"},
+        projection={"ticker": 1, "series": {"$slice": -20}},
+        sort=None,
+        limit=1,
+    )
+    assert limit == 1
+
+
+def test_find_require_filter_in_list_still_passes():
+    """V3 không chặn oan: {"$in": [scalar,...]} trong ngưỡng max_limit vẫn hợp lệ."""
+    limit = validate_find(
+        POLICY,
+        "history_stock",
+        filter={"ticker": {"$in": ["FPT", "HPG"]}},
+        projection={"ticker": 1, "series": {"$slice": -20}},
+        sort=None,
+        limit=1,
+    )
+    assert limit == 1

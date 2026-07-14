@@ -43,12 +43,25 @@ class Policy:
         raw: dict[str, Any] = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
         defaults = PolicyDefaults(**raw["defaults"])
         collections = {
-            name: CollectionRule(name=name, **(cfg or {}))
+            name: cls._build_rule(name, cfg or {})
             for name, cfg in raw["collections"].items()
         }
         policy = cls(version=raw["version"], defaults=defaults, collections=collections)
         logger.info("Đã nạp policy agent_db version=%s (%d collection)", policy.version, len(collections))
         return policy
+
+    @staticmethod
+    def _build_rule(name: str, cfg: dict[str, Any]) -> CollectionRule:
+        """V2: ép bất biến — collection cần cắt series (mảng lớn) KHÔNG bao giờ được mở aggregate."""
+        rule = CollectionRule(name=name, **cfg)
+        if rule.require_series_slice and rule.allow_aggregate:
+            logger.warning(
+                "Collection '%s' đặt require_series_slice=true (mảng lớn) nên bắt buộc cấm aggregate — "
+                "tự động ép allow_aggregate=false để quy ước không thể bị quên.",
+                name,
+            )
+            rule.allow_aggregate = False
+        return rule
 
     def rule_for(self, collection: str) -> CollectionRule | None:
         return self.collections.get(collection)
