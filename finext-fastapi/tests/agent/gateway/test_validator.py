@@ -108,3 +108,176 @@ def test_aggregate_valid_pipeline_passes():
         "history_stock",
         [{"$match": {"ticker": "FPT"}}, {"$project": {"series": {"$slice": ["$series", -20]}}}],
     )
+
+
+# --- Fix round 1: các lỗ bypass phát hiện qua code review ---
+
+
+def test_banned_operator_in_projection_rejected():
+    """Bug 1: Mongo >= 4.4 cho phép aggregation expression trong projection."""
+    with pytest.raises(ValidationError) as exc:
+        validate_find(
+            POLICY,
+            "stock_snapshot",
+            filter={"ticker": "FPT"},
+            projection={"x": {"$function": {"body": "function() { return 1; }", "args": [], "lang": "js"}}},
+            sort=None,
+            limit=1,
+        )
+    assert "$function" in exc.value.message
+
+
+def test_banned_operator_in_sort_rejected():
+    """Bug 1: sort cũng phải bị quét."""
+    with pytest.raises(ValidationError) as exc:
+        validate_find(
+            POLICY,
+            "stock_snapshot",
+            filter={"ticker": "FPT"},
+            projection={"price": 1},
+            sort=[["$where", -1]],
+            limit=1,
+        )
+    assert "$where" in exc.value.message
+
+
+@pytest.mark.parametrize(
+    "match_value",
+    [
+        {"$ne": "___"},
+        {"$gt": ""},
+        {"$regex": ".*"},
+        {"$nin": ["___"]},
+        {"$exists": True},
+        {"$in": "FPT"},  # $in không phải list
+        {"$in": [{"a": 1}]},  # $in chứa phần tử không phải scalar
+        {"$in": []},  # $in rỗng
+        {"$ne": None, "$in": ["FPT"]},  # trộn thêm toán tử khác
+    ],
+)
+def test_aggregate_match_key_must_be_specific_value(match_value):
+    """Bug 2: $match theo khoá bằng toán tử phủ định vẫn quét toàn bộ collection."""
+    with pytest.raises(ValidationError) as exc:
+        validate_aggregate(
+            POLICY,
+            "history_stock",
+            [
+                {"$match": {"ticker": match_value}},
+                {"$project": {"series": {"$slice": ["$series", -20]}}},
+            ],
+        )
+    assert "giá trị cụ thể" in exc.value.message
+
+
+def test_aggregate_match_key_accepts_in_list_of_scalars():
+    """Bug 2: dạng $in với danh sách scalar vẫn hợp lệ."""
+    validate_aggregate(
+        POLICY,
+        "history_stock",
+        [
+            {"$match": {"ticker": {"$in": ["FPT", "VNM"]}}},
+            {"$project": {"series": {"$slice": ["$series", -20]}}},
+        ],
+    )
+
+
+def test_aggregate_requires_series_slice():
+    """Bug 3: aggregate không áp luật require_series_slice -> trả nguyên mảng series."""
+    with pytest.raises(ValidationError) as exc:
+        validate_aggregate(POLICY, "history_stock", [{"$match": {"ticker": "FPT"}}])
+    assert "$slice" in exc.value.message
+    assert "series" in exc.value.message
+
+
+def test_aggregate_series_slice_via_addfields_passes():
+    """Bug 3: $addFields/$set cũng là cách cắt series hợp lệ."""
+    validate_aggregate(
+        POLICY,
+        "history_stock",
+        [
+            {"$match": {"ticker": "FPT"}},
+            {"$addFields": {"series": {"$slice": ["$series", -5]}}},
+        ],
+    )
+
+
+def test_aggregate_series_slice_without_slice_operator_rejected():
+    """Bug 3: $project giữ nguyên series (không $slice) phải bị chặn."""
+    with pytest.raises(ValidationError) as exc:
+        validate_aggregate(
+            POLICY,
+            "history_stock",
+            [{"$match": {"ticker": "FPT"}}, {"$project": {"series": 1}}],
+        )
+    assert "$slice" in exc.value.message
+
+
+def test_aggregate_banned_operator_message_has_fix_hint():
+    """Bug 4: message banned-operator trong pipeline phải kèm gợi ý sửa."""
+    with pytest.raises(ValidationError) as exc:
+        validate_aggregate(
+            POLICY,
+            "stock_snapshot",
+            [{"$match": {"ticker": "FPT"}}, {"$out": "leaked"}],
+        )
+    assert "$out" in exc.value.message
+    assert "viết lại" in exc.value.message
+
+
+@pytest.mark.parametrize("pipeline", [None, {"$match": {"ticker": "FPT"}}, "[]", 42])
+def test_aggregate_non_list_pipeline_rejected(pipeline):
+    """Bug 5: pipeline dị dạng phải ra ValidationError, không phải TypeError."""
+    with pytest.raises(ValidationError) as exc:
+        validate_aggregate(POLICY, "stock_snapshot", pipeline)
+    assert "pipeline" in exc.value.message
+
+
+@pytest.mark.parametrize("stage", ["$limit", 5, None, ["$match", {"ticker": "FPT"}]])
+def test_aggregate_non_dict_stage_rejected(stage):
+    """Bug 5: stage không phải dict phải ra ValidationError, không phải TypeError."""
+    with pytest.raises(ValidationError) as exc:
+        validate_aggregate(POLICY, "stock_snapshot", [{"$match": {"ticker": "FPT"}}, stage])
+    assert "stage" in exc.value.message
+
+
+@pytest.mark.parametrize("bad_slice", ["x", [], {"n": 1}, [1, 2, 3], ["a"], [-20, "x"], None])
+def test_malformed_slice_in_projection_rejected(bad_slice):
+    """Bug 6: $slice dị dạng phải ra ValidationError, không phải TypeError/IndexError."""
+    with pytest.raises(ValidationError) as exc:
+        validate_find(
+            POLICY,
+            "history_stock",
+            filter={"ticker": "FPT"},
+            projection={"ticker": 1, "series": {"$slice": bad_slice}},
+            sort=None,
+            limit=1,
+        )
+    assert "$slice" in exc.value.message
+
+
+def test_slice_as_two_element_list_passes():
+    """Bug 6: dạng [skip, limit] hợp lệ vẫn phải qua."""
+    limit = validate_find(
+        POLICY,
+        "history_stock",
+        filter={"ticker": "FPT"},
+        projection={"ticker": 1, "series": {"$slice": [-20, 20]}},
+        sort=None,
+        limit=1,
+    )
+    assert limit == 1
+
+
+@pytest.mark.parametrize("bad_limit", [0, -1, -50])
+def test_non_positive_limit_rejected(bad_limit):
+    """Lỗi nhỏ: limit <= 0 không bị chặn."""
+    with pytest.raises(ValidationError) as exc:
+        validate_find(
+            POLICY,
+            "stock_snapshot",
+            filter={"ticker": "FPT"},
+            projection={"price": 1},
+            sort=None,
+            limit=bad_limit,
+        )
+    assert "limit" in exc.value.message
