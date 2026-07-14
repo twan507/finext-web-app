@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import AsyncIterator
+from pathlib import Path
 
 import httpx
 import pytest
@@ -184,3 +185,20 @@ async def test_null_choices_chunk_does_not_crash() -> None:
     done = events[-1]
     assert isinstance(done, DoneEvent)
     assert done.usage == {"in": 5, "out": 3}
+
+
+# --- Regression trên bytes THẬT của DeepSeek (bắt ở mốc lát cắt Task 9) ---
+REAL_FIXTURE = Path(__file__).parent / "fixtures" / "deepseek_tool_stream.txt"
+
+
+@pytest.mark.skipif(not REAL_FIXTURE.exists(), reason="Chưa bắt được bytes thật của DeepSeek")
+async def test_parses_real_deepseek_tool_call_stream() -> None:
+    events = await _collect(_adapter_with(REAL_FIXTURE.read_text(encoding="utf-8")))
+    tool_events = [e for e in events if isinstance(e, ToolCallsEvent)]
+    assert len(tool_events) == 1  # DeepSeek thật gọi đúng 1 tool
+    call = tool_events[0].calls[0]
+    assert call.name == "db_find"
+    # Điểm cần chốt là PARSER: arguments stream về theo mảnh JSON được ghép thành dict hợp lệ (không phải {}).
+    # KHÔNG assert giá trị collection cụ thể — đó là hành vi model+pack, không phải của adapter.
+    assert isinstance(call.arguments, dict) and call.arguments
+    assert "collection" in call.arguments
