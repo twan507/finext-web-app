@@ -6,12 +6,14 @@ from typing import Any
 
 from app.agent.events import ToolCall
 from app.agent.gateway.types import GatewayContext, GatewayProtocol
+from app.core.database import get_database
 
 from .db import DB_AGGREGATE_SCHEMA, DB_FIND_SCHEMA, run_db_aggregate, run_db_find
+from .user import GET_WATCHLIST_SCHEMA, run_get_my_watchlist
 
 logger = logging.getLogger(__name__)
 
-TOOL_SCHEMAS: list[dict[str, Any]] = [DB_FIND_SCHEMA, DB_AGGREGATE_SCHEMA]
+TOOL_SCHEMAS: list[dict[str, Any]] = [DB_FIND_SCHEMA, DB_AGGREGATE_SCHEMA, GET_WATCHLIST_SCHEMA]
 
 MAX_TOOL_RESULT_CHARS = 12_000
 
@@ -22,6 +24,15 @@ async def execute_tool(
     gateway: GatewayProtocol, ctx: GatewayContext, call: ToolCall
 ) -> tuple[str, dict[str, Any]]:
     """Trả (content cho model, meta cho event tool_end)."""
+    if call.name == "get_my_watchlist":
+        try:
+            result = await run_get_my_watchlist(get_database("user_db"), gateway, ctx, call.arguments)
+        except Exception:
+            logger.exception("Tool get_my_watchlist lỗi")
+            return "Không đọc được danh sách theo dõi.", {"ok": False, "ms": 0}
+        content = json.dumps(result.data, ensure_ascii=False, default=str)
+        return content, {"ok": result.ok, "ms": result.meta.get("ms", 0)}
+
     handler = _HANDLERS.get(call.name)
     if handler is None:
         return f"Tool '{call.name}' không tồn tại.", {"ok": False, "ms": 0}

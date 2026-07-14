@@ -15,8 +15,14 @@ DEFAULT_FIXTURES = Path(__file__).parent / "fixtures" / "agent_db.json"
 
 
 def _matches(doc: dict[str, Any], filter: dict[str, Any]) -> bool:
-    """So khớp filter phẳng (đủ cho fixture — không mô phỏng toàn bộ Mongo)."""
-    return all(doc.get(key) == value for key, value in filter.items())
+    """So khớp filter phẳng + toán tử $in (đủ cho fixture — không mô phỏng toàn bộ Mongo)."""
+    for key, cond in filter.items():
+        if isinstance(cond, dict) and "$in" in cond:
+            if doc.get(key) not in cond["$in"]:
+                return False
+        elif doc.get(key) != cond:
+            return False
+    return True
 
 
 def _project(doc: dict[str, Any], projection: dict[str, Any] | None) -> dict[str, Any]:

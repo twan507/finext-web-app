@@ -19,6 +19,8 @@ FALLBACK = "Đang tra cứu dữ liệu…"
 
 
 def label_for(call: ToolCall) -> str:
+    if call.name == "get_my_watchlist":
+        return "Đang đọc danh sách theo dõi của bạn…"
     # arguments đến từ json.loads của model -> có thể không phải dict; label không được raise.
     args: dict[str, Any] = call.arguments if isinstance(call.arguments, dict) else {}
     collection = args.get("collection")
