@@ -34,7 +34,7 @@ async def connect_to_mongo():
             connectTimeoutMS=10000,
         )
         await mongodb.client.admin.command("ping")
-        db_names_to_connect = ["user_db", "stock_db"]
+        db_names_to_connect = ["user_db", "stock_db", "agent_db"]
         mongodb.dbs = {}
 
         for db_name in db_names_to_connect:

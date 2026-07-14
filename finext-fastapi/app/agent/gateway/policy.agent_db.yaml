@@ -1,0 +1,27 @@
+# policy.agent_db.yaml — luật truy cập agent_db. Đổi schema DB = sửa file này, KHÔNG sửa code.
+# Bản rút gọn (lát cắt dọc). Danh sách đủ 33 collection: agent_db_v2 §4.
+version: 1
+
+defaults:
+  max_response_kb: 50
+  max_time_ms: 5000
+  default_limit: 20
+  max_limit: 50
+  banned_operators:
+    - $lookup
+    - $graphLookup
+    - $out
+    - $merge
+    - $where
+    - $function
+    - $accumulator
+
+collections:
+  stock_snapshot:  { size: large, key: ticker }
+  stock_info:      { size: large, key: ticker }
+  stock_recent:    { size: large, key: ticker }
+  industry_snapshot: { size: large, key: industry_name }
+  market_snapshot: { size: small }
+  market_phase:    { size: small }
+  data_briefing:   { size: small }
+  history_stock:   { size: large, key: ticker, require_filter: [ticker], require_series_slice: true }

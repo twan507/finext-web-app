@@ -132,3 +132,13 @@ R2_PUBLIC_URL_BASE = os.getenv("R2_PUBLIC_URL_BASE")
 # Validation đã được thực hiện ở trên thông qua validate_critical_env_vars()
 # Chỉ log thông tin khởi động
 logger.info("Cấu hình môi trường đã được tải hoàn tất")
+
+# --- Agent / LLM Configuration ---
+LLM_BASE_URL = os.getenv("LLM_BASE_URL")
+LLM_API_KEY = os.getenv("LLM_API_KEY")
+LLM_MODEL = os.getenv("LLM_MODEL")
+
+AGENT_GATEWAY = os.getenv("AGENT_GATEWAY", "mongo")  # mongo | fixture
+GATEWAY_EXPLAIN_MODE = os.getenv("GATEWAY_EXPLAIN_MODE", "off")  # on | off (heuristic — doc 01 §6 R1c)
+AGENT_PACK_DIR = os.getenv("AGENT_PACK_DIR")  # None → dùng pack stub trong repo
+# ---------------------------------
