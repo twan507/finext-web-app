@@ -29,6 +29,7 @@ class CollectionRule:
     require_filter: list[str] = field(default_factory=list)
     require_series_slice: bool = False
     max_slice: int | None = None
+    allow_aggregate: bool = True  # False cho collection có mảng lớn: aggregate là đường exfil không chặn nổi
 
 
 @dataclass

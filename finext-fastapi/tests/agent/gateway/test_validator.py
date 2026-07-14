@@ -1,9 +1,27 @@
+from dataclasses import replace
+
 import pytest
 
 from app.agent.gateway.policy import Policy
 from app.agent.gateway.validator import ValidationError, validate_aggregate, validate_find
 
 POLICY = Policy.load()
+
+
+def _policy_allowing_aggregate(collection: str) -> Policy:
+    """Bản sao POLICY nhưng mở lại aggregate cho `collection`.
+
+    Fix round 3 cấm aggregate trên history_stock (F2) nên các luật G3/G5 (neo $match, cắt series
+    trong pipeline) không còn đường chạm tới qua policy thật. Code G5 vẫn giữ làm defense in depth
+    cho collection tương lai có mảng lớn mà vẫn mở aggregate — policy này giữ nguyên độ phủ test đó.
+    """
+    rule = POLICY.collections[collection]
+    collections = {**POLICY.collections, collection: replace(rule, allow_aggregate=True)}
+    return Policy(version=POLICY.version, defaults=POLICY.defaults, collections=collections)
+
+
+# history_stock nhưng aggregate được mở lại — chỉ dùng để test G3/G5.
+AGG_POLICY = _policy_allowing_aggregate("history_stock")
 
 
 def test_unknown_collection_rejected_without_leaking_whitelist():
@@ -98,13 +116,13 @@ def test_banned_stage_in_pipeline_rejected():
 
 def test_aggregate_on_large_collection_requires_match_with_key():
     with pytest.raises(ValidationError) as exc:
-        validate_aggregate(POLICY, "history_stock", [{"$group": {"_id": "$ticker"}}])
+        validate_aggregate(AGG_POLICY, "history_stock", [{"$group": {"_id": "$ticker"}}])
     assert "$match" in exc.value.message
 
 
 def test_aggregate_valid_pipeline_passes():
     validate_aggregate(
-        POLICY,
+        AGG_POLICY,
         "history_stock",
         [{"$match": {"ticker": "FPT"}}, {"$project": {"series": {"$slice": ["$series", -20]}}}],
     )
@@ -159,7 +177,7 @@ def test_aggregate_match_key_must_be_specific_value(match_value):
     """Bug 2: $match theo khoá bằng toán tử phủ định vẫn quét toàn bộ collection."""
     with pytest.raises(ValidationError) as exc:
         validate_aggregate(
-            POLICY,
+            AGG_POLICY,
             "history_stock",
             [
                 {"$match": {"ticker": match_value}},
@@ -172,7 +190,7 @@ def test_aggregate_match_key_must_be_specific_value(match_value):
 def test_aggregate_match_key_accepts_in_list_of_scalars():
     """Bug 2: dạng $in với danh sách scalar vẫn hợp lệ."""
     validate_aggregate(
-        POLICY,
+        AGG_POLICY,
         "history_stock",
         [
             {"$match": {"ticker": {"$in": ["FPT", "VNM"]}}},
@@ -184,7 +202,7 @@ def test_aggregate_match_key_accepts_in_list_of_scalars():
 def test_aggregate_requires_series_slice():
     """Bug 3: aggregate không áp luật require_series_slice -> trả nguyên mảng series."""
     with pytest.raises(ValidationError) as exc:
-        validate_aggregate(POLICY, "history_stock", [{"$match": {"ticker": "FPT"}}])
+        validate_aggregate(AGG_POLICY, "history_stock", [{"$match": {"ticker": "FPT"}}])
     assert "$slice" in exc.value.message
     assert "series" in exc.value.message
 
@@ -192,7 +210,7 @@ def test_aggregate_requires_series_slice():
 def test_aggregate_series_slice_via_addfields_passes():
     """Bug 3: $addFields/$set cũng là cách cắt series hợp lệ."""
     validate_aggregate(
-        POLICY,
+        AGG_POLICY,
         "history_stock",
         [
             {"$match": {"ticker": "FPT"}},
@@ -205,7 +223,7 @@ def test_aggregate_series_slice_without_slice_operator_rejected():
     """Bug 3: $project giữ nguyên series (không $slice) phải bị chặn."""
     with pytest.raises(ValidationError) as exc:
         validate_aggregate(
-            POLICY,
+            AGG_POLICY,
             "history_stock",
             [{"$match": {"ticker": "FPT"}}, {"$project": {"series": 1}}],
         )
@@ -290,7 +308,7 @@ def test_aggregate_series_alias_bypass_rejected():
     """L1: field khác trong cùng $project bê nguyên mảng series (không qua $slice)."""
     with pytest.raises(ValidationError) as exc:
         validate_aggregate(
-            POLICY,
+            AGG_POLICY,
             "history_stock",
             [
                 {"$match": {"ticker": "FPT"}},
@@ -305,7 +323,7 @@ def test_aggregate_series_alias_via_addfields_rejected():
     """L1: $addFields cũng có thể alias nguyên mảng series."""
     with pytest.raises(ValidationError) as exc:
         validate_aggregate(
-            POLICY,
+            AGG_POLICY,
             "history_stock",
             [
                 {"$match": {"ticker": "FPT"}},
@@ -319,7 +337,7 @@ def test_aggregate_series_ref_in_group_rejected():
     """L1: $group $push nguyên mảng series TRƯỚC stage $slice — stage $slice sau chỉ là bù nhìn."""
     with pytest.raises(ValidationError) as exc:
         validate_aggregate(
-            POLICY,
+            AGG_POLICY,
             "history_stock",
             [
                 {"$match": {"ticker": "FPT"}},
@@ -334,7 +352,7 @@ def test_aggregate_series_subfield_ref_rejected():
     """L1: tham chiếu '$series.close' cũng kéo nguyên mảng."""
     with pytest.raises(ValidationError) as exc:
         validate_aggregate(
-            POLICY,
+            AGG_POLICY,
             "history_stock",
             [
                 {"$match": {"ticker": "FPT"}},
@@ -396,7 +414,7 @@ def test_aggregate_match_must_be_first_stage():
     """L2 (bản require_filter): $match không ở đầu pipeline thì $group đã quét cả collection."""
     with pytest.raises(ValidationError) as exc:
         validate_aggregate(
-            POLICY,
+            AGG_POLICY,
             "history_stock",
             [
                 {"$group": {"_id": "$ticker", "n": {"$sum": 1}}},
@@ -463,7 +481,187 @@ def test_aggregate_stage_must_have_exactly_one_dollar_key(stage):
 def test_aggregate_history_stock_valid_pipeline_still_passes():
     """Regression: pipeline hợp lệ chuẩn trên history_stock không bị grammar mới chặn oan."""
     validate_aggregate(
-        POLICY,
+        AGG_POLICY,
         "history_stock",
         [{"$match": {"ticker": "FPT"}}, {"$project": {"series": {"$slice": ["$series", -20]}}}],
+    )
+
+
+# --- Fix round 3: L4 ($slice khổng lồ ở field phụ) + L5 ($$ROOT) ---
+# Ranh giới mới: collection có mảng lớn (history_stock) CẤM aggregate; collection phẳng vẫn cho.
+
+
+def test_find_series_alias_inside_slice_rejected():
+    """L4 (find): field phụ 'nằm trong $slice' nhưng $slice ["$series", 100000] = lấy nguyên mảng."""
+    with pytest.raises(ValidationError) as exc:
+        validate_find(
+            POLICY,
+            "history_stock",
+            filter={"ticker": "FPT"},
+            projection={
+                "ticker": 1,
+                "series": {"$slice": -20},
+                "series_all": {"$slice": ["$series", 100000]},
+            },
+            sort=None,
+            limit=1,
+        )
+    assert "series_all" in exc.value.message
+    assert "series" in exc.value.message
+
+
+def test_aggregate_on_collection_with_big_array_rejected():
+    """F2: history_stock không hỗ trợ aggregate — chặn ngay, kèm gợi ý dùng db_find."""
+    with pytest.raises(ValidationError) as exc:
+        validate_aggregate(
+            POLICY,
+            "history_stock",
+            [
+                {"$match": {"ticker": "FPT"}},
+                {"$project": {"series": {"$slice": ["$series", -20]}, "raw": "$$ROOT"}},
+            ],
+        )
+    msg = exc.value.message
+    assert "aggregate" in msg
+    assert "db_find" in msg
+    assert "$slice" in msg
+    assert "stock_snapshot" not in msg  # không tiết lộ collection khác
+
+
+def test_aggregate_l4_slice_alias_on_big_array_collection_rejected():
+    """L4 (aggregate): field phụ 'nằm trong $slice' nhưng slice 100000 = nguyên mảng — chặn bởi F2.
+
+    Đây là lý do phải cấm aggregate: G5 chỉ soi $slice của key 'series', không soi field phụ.
+    """
+    with pytest.raises(ValidationError) as exc:
+        validate_aggregate(
+            POLICY,
+            "history_stock",
+            [
+                {"$match": {"ticker": "FPT"}},
+                {
+                    "$project": {
+                        "series": {"$slice": ["$series", -20]},
+                        "series_all": {"$slice": ["$series", 100000]},
+                    }
+                },
+            ],
+        )
+    assert "không hỗ trợ aggregate" in exc.value.message
+
+
+@pytest.mark.parametrize("system_var", ["$$ROOT", "$$CURRENT", "$$ROOT.series", "$$CURRENT.series"])
+def test_aggregate_system_var_on_flat_collection_rejected(system_var):
+    """F3/L5: $$ROOT bê nguyên document — cấm ở MỌI collection, kể cả pipeline hợp lệ có $limit."""
+    with pytest.raises(ValidationError) as exc:
+        validate_aggregate(
+            POLICY,
+            "stock_snapshot",
+            [
+                {"$sort": {"change_pct": -1}},
+                {"$limit": 20},
+                {"$project": {"ticker": 1, "raw": system_var}},
+            ],
+        )
+    msg = exc.value.message
+    assert system_var.split(".")[0] in msg
+    assert "liệt kê tường minh" in msg
+
+
+def test_aggregate_system_var_nested_in_group_rejected():
+    """F3: $$ROOT lồng sâu trong $push cũng phải bị bắt (quét đệ quy)."""
+    with pytest.raises(ValidationError) as exc:
+        validate_aggregate(
+            POLICY,
+            "stock_snapshot",
+            [
+                {"$limit": 20},
+                {"$group": {"_id": "$industry", "docs": {"$push": "$$ROOT"}}},
+            ],
+        )
+    assert "$$ROOT" in exc.value.message
+
+
+def test_find_projection_system_var_rejected():
+    """F3 (bản find): projection cũng không được dùng $$ROOT."""
+    with pytest.raises(ValidationError) as exc:
+        validate_find(
+            POLICY,
+            "stock_snapshot",
+            filter={"ticker": "FPT"},
+            projection={"ticker": 1, "raw": "$$ROOT"},
+            sort=None,
+            limit=1,
+        )
+    assert "$$ROOT" in exc.value.message
+
+
+def test_history_stock_find_still_passes_after_aggregate_ban():
+    """Không chặn oan: đường dùng đúng của history_stock là db_find + $slice."""
+    limit = validate_find(
+        POLICY,
+        "history_stock",
+        filter={"ticker": "FPT"},
+        projection={"ticker": 1, "series": {"$slice": -20}},
+        sort=None,
+        limit=1,
+    )
+    assert limit == 1
+
+
+@pytest.mark.parametrize("big_slice", [-1000, 1000, [0, 100000], [-100000, 100000]])
+def test_history_stock_find_slice_over_max_rejected(big_slice):
+    """F1: max_slice=250 chặn $slice lấy nguyên mảng series qua đường find."""
+    with pytest.raises(ValidationError) as exc:
+        validate_find(
+            POLICY,
+            "history_stock",
+            filter={"ticker": "FPT"},
+            projection={"ticker": 1, "series": {"$slice": big_slice}},
+            sort=None,
+            limit=1,
+        )
+    assert "250" in exc.value.message
+
+
+def test_flat_collection_aggregate_with_limit_still_passes():
+    """F2 không chặn oan: thống kê trên collection phẳng vẫn chạy."""
+    validate_aggregate(
+        POLICY,
+        "stock_snapshot",
+        [
+            {"$match": {"industry": "Ngân hàng"}},
+            {"$group": {"_id": "$industry", "avg_price": {"$avg": "$price"}}},
+            {"$limit": 20},
+        ],
+    )
+
+
+def test_aggregate_in_list_longer_than_max_limit_rejected():
+    """F4: $in dài vô hạn = quét cả collection dù vẫn là 'giá trị cụ thể'."""
+    tickers = [f"T{n:03d}" for n in range(POLICY.defaults.max_limit + 1)]
+    with pytest.raises(ValidationError) as exc:
+        validate_aggregate(
+            AGG_POLICY,
+            "history_stock",
+            [
+                {"$match": {"ticker": {"$in": tickers}}},
+                {"$project": {"series": {"$slice": ["$series", -20]}}},
+            ],
+        )
+    msg = exc.value.message
+    assert "$in" in msg
+    assert str(POLICY.defaults.max_limit) in msg
+
+
+def test_aggregate_in_list_at_max_limit_passes():
+    """F4 không chặn oan: đúng ngưỡng max_limit vẫn hợp lệ."""
+    tickers = [f"T{n:03d}" for n in range(POLICY.defaults.max_limit)]
+    validate_aggregate(
+        AGG_POLICY,
+        "history_stock",
+        [
+            {"$match": {"ticker": {"$in": tickers}}},
+            {"$project": {"series": {"$slice": ["$series", -20]}}},
+        ],
     )

@@ -12,6 +12,9 @@ SCALAR_TYPES = (str, int, float, bool)
 SERIES_FIELD = "series"
 SERIES_REF = "$series"
 
+# Biến hệ thống trả về NGUYÊN document — không chứa tên field nào nên mọi checker từ vựng đều mù.
+SYSTEM_VARS = ("$$ROOT", "$$CURRENT")
+
 
 class ValidationError(Exception):
     """Lỗi từ chối query. `message` viết bằng ngôn ngữ model hiểu + gợi ý sửa (doc 01 §1)."""
@@ -45,6 +48,36 @@ def _find_banned_in_sort(sort: Any, banned: list[str]) -> str | None:
             if isinstance(entry, (list, tuple)) and entry and entry[0] in banned:
                 return str(entry[0])
     return _find_banned(sort, banned)
+
+
+def _find_system_var(node: Any) -> str | None:
+    """Quét đệ quy tìm tham chiếu "$$ROOT"/"$$CURRENT" (hoặc "$$ROOT.x") ở bất kỳ độ sâu nào."""
+    if isinstance(node, str):
+        for var in SYSTEM_VARS:
+            if node == var or node.startswith(var + "."):
+                return var
+        return None
+    if isinstance(node, dict):
+        for key, value in node.items():
+            found = _find_system_var(key) or _find_system_var(value)
+            if found:
+                return found
+    elif isinstance(node, list):
+        for item in node:
+            found = _find_system_var(item)
+            if found:
+                return found
+    return None
+
+
+def _check_no_system_var(node: Any, where: str) -> None:
+    """F3: $$ROOT/$$CURRENT trả về nguyên document -> bê được cả mảng dài mà không nhắc tên field."""
+    found = _find_system_var(node)
+    if found:
+        raise ValidationError(
+            f"Biến hệ thống '{found}' không được phép trong {where} vì nó trả về nguyên document. "
+            'Hãy liệt kê tường minh các field cần lấy. Ví dụ: {"ticker": 1, "price": 1}'
+        )
 
 
 def _require_rule(policy: Policy, collection: str) -> CollectionRule:
@@ -106,6 +139,32 @@ def _check_no_series_alias(rule: CollectionRule, node: Any) -> None:
         )
 
 
+def _has_series_ref(node: Any) -> bool:
+    """True nếu có BẤT KỲ tham chiếu nào tới "$series" — kể cả khi nó nằm trong một $slice."""
+    if isinstance(node, str):
+        return node == SERIES_REF or node.startswith(SERIES_REF + ".")
+    if isinstance(node, dict):
+        return any(_has_series_ref(value) for value in node.values())
+    if isinstance(node, list):
+        return any(_has_series_ref(item) for item in node)
+    return False
+
+
+def _check_series_ref_only_in_series_key(rule: CollectionRule, projection: dict[str, Any]) -> None:
+    """G6/F5: trong projection, CHỈ key 'series' được tham chiếu $series.
+
+    Chặn {"series_all": {"$slice": ["$series", 100000]}} — "nằm trong $slice" nhưng lấy nguyên mảng.
+    """
+    for key, value in projection.items():
+        if key == SERIES_FIELD or not _has_series_ref(value):
+            continue
+        raise ValidationError(
+            f"Trong projection của '{rule.name}', chỉ field 'series' được phép tham chiếu tới "
+            f"'{SERIES_REF}' — field '{key}' cũng đang lấy dữ liệu từ mảng series. Hãy bỏ field này và "
+            'chỉ dùng {"series": {"$slice": -20}} để lấy N phần tử mới nhất.'
+        )
+
+
 def _check_series_slice(rule: CollectionRule, projection: dict[str, Any] | None) -> None:
     if not rule.require_series_slice:
         return
@@ -116,6 +175,7 @@ def _check_series_slice(rule: CollectionRule, projection: dict[str, Any] | None)
             'Bắt buộc dùng projection dạng {"series": {"$slice": -20}} để lấy N phần tử mới nhất.'
         )
     _check_no_series_alias(rule, projection)
+    _check_series_ref_only_in_series_key(rule, projection or {})
     _check_max_slice(rule, _slice_count(rule, series["$slice"]))
 
 
@@ -165,6 +225,7 @@ def validate_find(
     rule = _require_rule(policy, collection)
 
     _check_find_banned(policy.defaults.banned_operators, filter, projection, sort)
+    _check_no_system_var(projection, "projection")
 
     if rule.require_filter and not any(key in (filter or {}) for key in rule.require_filter):
         keys = " hoặc ".join(rule.require_filter)
@@ -209,21 +270,26 @@ def _require_pipeline(pipeline: Any) -> list[dict[str, Any]]:
     return pipeline
 
 
-def _is_specific_value(value: Any) -> bool:
-    """Giá trị khoá đủ hẹp: scalar, hoặc {"$in": [scalar,...]}. Loại $ne/$gt/$regex/$nin..."""
+def _is_specific_value(value: Any, max_items: int) -> bool:
+    """Giá trị khoá đủ hẹp: scalar, hoặc {"$in": [scalar,...]}. Loại $ne/$gt/$regex/$nin...
+
+    F4: $in dài hơn max_items không còn là "cụ thể" — nó quét gần như cả collection.
+    """
     if isinstance(value, SCALAR_TYPES):
         return True
     if isinstance(value, dict) and list(value.keys()) == ["$in"]:
         candidates = value["$in"]
         return (
             isinstance(candidates, list)
-            and len(candidates) > 0
+            and 0 < len(candidates) <= max_items
             and all(isinstance(item, SCALAR_TYPES) for item in candidates)
         )
     return False
 
 
-def _check_aggregate_anchor_match(rule: CollectionRule, pipeline: list[dict[str, Any]]) -> None:
+def _check_aggregate_anchor_match(
+    policy: Policy, rule: CollectionRule, pipeline: list[dict[str, Any]]
+) -> None:
     """G3: có require_filter -> stage ĐẦU TIÊN phải là $match theo khoá với giá trị cụ thể.
 
     Neo ở pipeline[0]: $match đặt sau $group/$sort chỉ là decoy — collection đã bị quét hết rồi.
@@ -231,6 +297,7 @@ def _check_aggregate_anchor_match(rule: CollectionRule, pipeline: list[dict[str,
     keys = rule.require_filter
     if not keys:
         return
+    max_items = policy.defaults.max_limit
     hint = " hoặc ".join(str(k) for k in keys)
     example = f'{{"$match": {{"{keys[0]}": "FPT"}}}}'
     first = pipeline[0] if pipeline else {}
@@ -242,11 +309,12 @@ def _check_aggregate_anchor_match(rule: CollectionRule, pipeline: list[dict[str,
             f"($match ở vị trí khác không được tính vì các stage trước nó đã quét toàn bộ collection). "
             f"Ví dụ: pipeline=[{example}, ...]"
         )
-    if not any(_is_specific_value(value) for value in values):
+    if not any(_is_specific_value(value, max_items) for value in values):
         raise ValidationError(
             f"Collection '{rule.name}' lớn — $match phải lọc theo giá trị cụ thể của khoá {hint}, "
             f'ví dụ {example} hoặc {{"$match": {{"{keys[0]}": {{"$in": ["FPT", "VNM"]}}}}}}. '
-            "Không dùng $ne/$nin/$gt/$regex/$exists trên khoá này vì chúng quét toàn bộ collection."
+            "Không dùng $ne/$nin/$gt/$regex/$exists trên khoá này vì chúng quét toàn bộ collection. "
+            f"Danh sách $in tối đa {max_items} phần tử — hãy thu hẹp lại."
         )
 
 
@@ -302,9 +370,24 @@ def _check_aggregate_series(rule: CollectionRule, pipeline: list[dict[str, Any]]
         )
 
 
+def _check_allow_aggregate(rule: CollectionRule) -> None:
+    """F2: collection có mảng lớn -> aggregate là đường exfil không chặn nổi bằng quét từ vựng.
+
+    ($$ROOT, alias, $slice khổng lồ... đều lấy được nguyên mảng). find + $slice đủ dùng.
+    """
+    if rule.allow_aggregate:
+        return
+    raise ValidationError(
+        f"Collection '{rule.name}' chứa chuỗi lịch sử rất dài nên không hỗ trợ aggregate. "
+        'Hãy dùng db_find với projection={"series": {"$slice": -20}} để lấy N điểm dữ liệu gần nhất '
+        "rồi tự tính toán trên đó."
+    )
+
+
 def validate_aggregate(policy: Policy, collection: str, pipeline: Any) -> None:
     """`pipeline` để kiểu Any vì dữ liệu đến từ LLM, chưa được đảm bảo đúng cấu trúc."""
     rule = _require_rule(policy, collection)
+    _check_allow_aggregate(rule)
     stages = _require_pipeline(pipeline)
 
     banned = _find_banned(stages, policy.defaults.banned_operators)
@@ -314,6 +397,7 @@ def validate_aggregate(policy: Policy, collection: str, pipeline: Any) -> None:
             "Hãy viết lại query không dùng toán tử này."
         )
 
-    _check_aggregate_anchor_match(rule, stages)
+    _check_no_system_var(stages, "pipeline")
+    _check_aggregate_anchor_match(policy, rule, stages)
     _check_aggregate_limit(policy, rule, stages)
     _check_aggregate_series(rule, stages)

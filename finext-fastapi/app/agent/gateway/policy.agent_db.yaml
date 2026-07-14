@@ -17,6 +17,10 @@ defaults:
     - $function
     - $accumulator
 
+# Quy ước: collection có mảng series lớn (mỗi doc chứa hàng trăm phần tử) => aggregate là đường
+# exfil không chặn nổi bằng cách quét từ vựng ($$ROOT, alias, $slice khổng lồ...).
+# Với các collection đó BẮT BUỘC đặt: allow_aggregate: false + max_slice: <N>.
+# Collection doc phẳng giữ mặc định allow_aggregate: true (thống kê/xếp hạng vẫn cần aggregate).
 collections:
   stock_snapshot:  { size: large, key: ticker }
   stock_info:      { size: large, key: ticker }
@@ -25,4 +29,4 @@ collections:
   market_snapshot: { size: small }
   market_phase:    { size: small }
   data_briefing:   { size: small }
-  history_stock:   { size: large, key: ticker, require_filter: [ticker], require_series_slice: true }
+  history_stock:   { size: large, key: ticker, require_filter: [ticker], require_series_slice: true, allow_aggregate: false, max_slice: 250 }
