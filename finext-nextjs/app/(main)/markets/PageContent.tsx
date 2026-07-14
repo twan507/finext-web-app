@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { Box, Typography, useTheme, Skeleton, alpha } from '@mui/material';
@@ -135,7 +135,6 @@ function SubNavbar({ activeTab, onTabChange }: {
 export default function MarketsContent() {
 
   const searchParams = useSearchParams();
-  const router = useRouter();
   const tabParam = searchParams.get('tab') as MarketTabId | null;
 
   const [ticker, setTicker] = useState<string>('VNINDEX');
@@ -144,6 +143,13 @@ export default function MarketsContent() {
     if (tabParam && validTabs.includes(tabParam as MarketTabId)) return tabParam as MarketTabId;
     return 'volatility';
   });
+
+  // Keep-alive: track các tab đã mở. Section đã visit được giữ trong DOM (display:none
+  // khi không active) để không unmount/re-init ApexCharts mỗi lần đổi tab.
+  const [visitedTabs, setVisitedTabs] = useState<Set<MarketTabId>>(() => new Set([activeTab]));
+  useEffect(() => {
+    setVisitedTabs((prev) => (prev.has(activeTab) ? prev : new Set(prev).add(activeTab)));
+  }, [activeTab]);
 
   // Lifted timeRange state for chart
   const [timeRange, setTimeRange] = useState<TimeRange>('3M');
@@ -158,7 +164,8 @@ export default function MarketsContent() {
 
   const handleTabChange = (newTab: MarketTabId) => {
     setActiveTab(newTab);
-    router.push(`?tab=${newTab}`, { scroll: false });
+    // Giữ URL sync để share link nhưng KHÔNG kích RSC navigation (tránh long-task/treo).
+    window.history.replaceState(null, '', `?tab=${newTab}`);
   };
 
   const isMountedRef = useRef<boolean>(true);
@@ -395,9 +402,11 @@ export default function MarketsContent() {
     return firstRecord?.ticker_name || ticker;
   }, [historyData, todayAllData, itdAllData, ticker]);
 
-  // Render active section based on tab
-  const renderActiveSection = () => {
-    switch (activeTab) {
+  // Render 1 section theo tab. Section có polling định kỳ nhận prop `active` để
+  // dừng polling khi tab bị ẩn (giữ nguyên SSE share-connection, chi phí thấp).
+  const renderSection = (tab: MarketTabId) => {
+    const active = tab === activeTab;
+    switch (tab) {
       case 'volatility':
         return <BienDongSection todayAllData={todayAllData} />;
       case 'cashflow':
@@ -415,9 +424,9 @@ export default function MarketsContent() {
           </OptionalAuthWrapper>
         );
       case 'foreign':
-        return <NuocNgoaiSection />;
+        return <NuocNgoaiSection active={active} />;
       case 'proprietary':
-        return <TuDoanhSection />;
+        return <TuDoanhSection active={active} />;
       default:
         return null;
     }
@@ -472,8 +481,14 @@ export default function MarketsContent() {
         <SubNavbar activeTab={activeTab} onTabChange={handleTabChange} />
       </Box>
 
-      {/* ========== TAB CONTENT ========== */}
-      {renderActiveSection()}
+      {/* ========== TAB CONTENT (keep-alive: chỉ render tab đã visit) ========== */}
+      {MARKET_TABS.map((tab) =>
+        visitedTabs.has(tab.id) ? (
+          <Box key={tab.id} sx={{ display: tab.id === activeTab ? 'block' : 'none' }}>
+            {renderSection(tab.id)}
+          </Box>
+        ) : null
+      )}
     </Box>
   );
 }

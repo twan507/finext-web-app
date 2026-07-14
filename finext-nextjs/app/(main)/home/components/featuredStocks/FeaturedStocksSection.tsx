@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { Box, Typography, useTheme, Card, useMediaQuery } from '@mui/material';
 import Carousel, { Slide } from 'components/common/Carousel';
 import {
@@ -40,7 +40,7 @@ function toRowData(s: StockData): GroupStockRowData {
     };
 }
 
-export default function FeaturedStocksSection({
+function FeaturedStocksSection({
     stockData = [],
     isLoading = false,
 }: FeaturedStocksSectionProps) {
@@ -147,3 +147,5 @@ export default function FeaturedStocksSection({
         </Card>
     );
 }
+
+export default memo(FeaturedStocksSection);

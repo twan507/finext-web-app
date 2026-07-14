@@ -119,7 +119,7 @@ export const metadata: Metadata = {
 };
 
 // Loading fallback component - supports light/dark via data-theme & prefers-color-scheme
-function RootLoading() {
+export function RootLoading() {
   return (
     <div className="root-loading">
       <div className="root-loading-content">

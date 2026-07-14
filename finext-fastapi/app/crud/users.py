@@ -1,4 +1,5 @@
 # finext-fastapi/app/crud/users.py
+import asyncio
 import logging
 from typing import Optional, List, Tuple # Thêm Tuple
 from bson import ObjectId
@@ -78,7 +79,7 @@ async def create_user_db(
 
     if user_create_data.password is None: # Mật khẩu có thể None nếu tạo qua Google, nhưng hàm này dùng cho tạo truyền thống
         raise ValueError("Mật khẩu là bắt buộc khi tạo người dùng theo cách này.")
-    hashed_password = get_password_hash(user_create_data.password)
+    hashed_password = await asyncio.to_thread(get_password_hash, user_create_data.password)
 
     user_document_to_insert = user_create_data.model_dump(exclude={"password"})
     user_document_to_insert["hashed_password"] = hashed_password
@@ -185,7 +186,7 @@ async def get_or_create_user_from_google_sub_email(db: AsyncIOMotorDatabase, goo
 
         logger.info(f"Tạo tài khoản Finext mới cho người dùng Google: {google_user_data.email} với Google ID: {google_user_data.id}")
         random_password = generate_random_strong_password() # User sẽ không biết mật khẩu này
-        hashed_password = get_password_hash(random_password)
+        hashed_password = await asyncio.to_thread(get_password_hash, random_password)
 
         new_user_data = {
             "full_name": google_user_data.name or google_user_data.email.split('@')[0],
@@ -317,7 +318,7 @@ async def update_user_password(db: AsyncIOMotorDatabase, user_id: PyObjectId, ne
         logger.warning(f"Tài khoản {user_doc.email} không hoạt động, không cho phép đổi mật khẩu.")
         return False # Hoặc raise ValueError
 
-    new_hashed_password = get_password_hash(new_password)
+    new_hashed_password = await asyncio.to_thread(get_password_hash, new_password)
     update_result = await db[USERS_COLLECTION].update_one(
         {"_id": ObjectId(user_id)},
         {"$set": {"hashed_password": new_hashed_password, "updated_at": datetime.now(timezone.utc)}}

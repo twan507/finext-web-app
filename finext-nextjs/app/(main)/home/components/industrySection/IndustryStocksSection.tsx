@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { Box, Typography, useTheme, Card, useMediaQuery, Skeleton } from '@mui/material';
 import Carousel, { Slide } from 'components/common/Carousel';
 import { getResponsiveFontSize, fontWeight, getGlassCard, getGlassHighlight, getGlassEdgeLight } from 'theme/tokens';
@@ -32,7 +32,7 @@ interface IndustryGroup {
     stocks: StockData[];
 }
 
-export default function IndustryStocksSection({ stockData = [], isLoading = false, industryTickers = {} }: IndustryStocksSectionProps) {
+function IndustryStocksSection({ stockData = [], isLoading = false, industryTickers = {} }: IndustryStocksSectionProps) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isXsWidth = useMediaQuery(theme.breakpoints.only('xs'));
@@ -330,3 +330,5 @@ export default function IndustryStocksSection({ stockData = [], isLoading = fals
         </Box>
     );
 }
+
+export default memo(IndustryStocksSection);

@@ -30,6 +30,8 @@ async def connect_to_mongo():
             serverSelectionTimeoutMS=5000,
             maxPoolSize=50,
             minPoolSize=5,
+            maxIdleTimeMS=30000,
+            connectTimeoutMS=10000,
         )
         await mongodb.client.admin.command("ping")
         db_names_to_connect = ["user_db", "stock_db"]

@@ -36,4 +36,4 @@ EXPOSE 8000
 #   → Đảm bảo FastAPI tạo redirect URL với https:// thay vì http://
 #   → Ngăn chặn lỗi HTTPS→HTTP downgrade bị Safari/WebKit block hoàn toàn
 # --forwarded-allow-ips '*': Cho phép mọi IP gửi proxy headers (cần thiết trong Docker network)
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--proxy-headers", "--forwarded-allow-ips", "*"]
+CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--proxy-headers", "--forwarded-allow-ips", "*", "--timeout-keep-alive", "65"]

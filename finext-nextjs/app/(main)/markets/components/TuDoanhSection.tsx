@@ -11,7 +11,7 @@ import type { NNTDRecord } from './NNTD/NNTDSummaryPanel';
 import ChartSectionTitle from 'components/common/ChartSectionTitle';
 import { useMarketUpdateTime } from '../../../../hooks/useMarketUpdateTime';
 
-export default function TuDoanhSection() {
+export default function TuDoanhSection({ active = true }: { active?: boolean }) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const updateTime = useMarketUpdateTime();
@@ -29,7 +29,7 @@ export default function TuDoanhSection() {
             });
             return response.data || [];
         },
-        refetchInterval: 10_000,
+        refetchInterval: active ? 10_000 : false,
         staleTime: 5_000,
         refetchOnWindowFocus: false,
     });
@@ -48,7 +48,7 @@ export default function TuDoanhSection() {
             });
             return (response.data || []).filter((r) => INDEX_TICKERS.includes(r.ticker));
         },
-        refetchInterval: 10_000,
+        refetchInterval: active ? 10_000 : false,
         staleTime: 5_000,
         refetchOnWindowFocus: false,
     });

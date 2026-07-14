@@ -44,6 +44,12 @@ const MAX_RECONNECT_DELAY = 30000; // 30 seconds
 // ========== Connection Storage ==========
 const connections = new Map<string, ConnectionEntry>();
 
+// ========== Snapshot Cache ==========
+// Lưu snapshot cuối cùng của mỗi connectionKey. KHÔNG xóa khi connection close.
+// Mục đích: khi component remount (đổi route rồi quay lại), UI có data tức thì
+// thay vì phải chờ server đẩy lại full snapshot (~1600 mã) rồi parse lại.
+const snapshotCache = new Map<string, unknown>();
+
 // ========== Visibility Management ==========
 // Ngắt tất cả SSE khi tab ẩn, kết nối lại khi tab hiện.
 // Tránh vượt giới hạn 6 connections/domain của browser khi mở nhiều tab.
@@ -168,6 +174,13 @@ export function sseClient<DataType = any>(
     onError
   });
 
+  // Nếu đã có snapshot trong cache, đẩy ngay cho subscriber MỚI để UI có data tức thì.
+  // Stream về sau sẽ ghi đè. Dùng microtask để không gọi onData đồng bộ trong lúc subscribe.
+  if (snapshotCache.has(connectionKey)) {
+    const cached = snapshotCache.get(connectionKey);
+    queueMicrotask(() => onData(cached as DataType));
+  }
+
   // Nếu đã có connection active, không cần tạo mới
   if (connectionEntry.connection || connectionEntry.isConnecting) {
     // Notify subscriber đã được thêm
@@ -229,6 +242,9 @@ export function sseClient<DataType = any>(
             entry.subscribers.forEach(sub => sub.onError?.(error));
             return;
           }
+
+          // ===== Lưu snapshot vào cache (giữ lại kể cả khi connection close) =====
+          snapshotCache.set(connectionKey, parsedData);
 
           // ===== Broadcast to all subscribers =====
           entry.subscribers.forEach(sub => {
@@ -498,8 +514,14 @@ export function useSseCache<T = any>(
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
   const isMountedRef = useRef(true);
 
-  const [data, setData] = useState<T | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  // Khởi tạo từ snapshot cache nếu có -> UI có data ngay khi remount, tránh flash loading.
+  const initialConnectionKey = getConnectionKey(keyword, { ...queryParams, keyword });
+  const hasCachedSnapshot = snapshotCache.has(initialConnectionKey);
+
+  const [data, setData] = useState<T | null>(() => {
+    return hasCachedSnapshot ? (snapshotCache.get(initialConnectionKey) as T) : null;
+  });
+  const [isLoading, setIsLoading] = useState<boolean>(() => !hasCachedSnapshot);
   const [error, setError] = useState<SseError | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 

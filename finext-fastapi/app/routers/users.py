@@ -1,4 +1,5 @@
 # finext-fastapi/app/routers/users.py
+import asyncio
 import logging
 
 from bson import ObjectId
@@ -151,7 +152,7 @@ async def update_user_info_endpoint(
     )
     if is_activation_transition:
         try:
-            validate_email(target_user.email, check_deliverability=True)
+            await asyncio.to_thread(validate_email, target_user.email, check_deliverability=True)
         except EmailNotValidError as e:
             logger.warning(f"Cannot activate user {target_user.email}: email validation failed: {e}")
             raise HTTPException(

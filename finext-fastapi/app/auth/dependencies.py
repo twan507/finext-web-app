@@ -1,5 +1,6 @@
 # finext-fastapi/app/auth/dependencies.py
 import logging
+from datetime import datetime, timezone
 
 from app.auth.jwt_handler import verify_token_and_get_payload
 from app.core.database import get_database
@@ -38,8 +39,17 @@ async def verify_active_session(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Cập nhật thời gian hoạt động cuối cùng của session
-    await update_last_active_by_access_jti(db, payload.jti)
+    # Cập nhật thời gian hoạt động cuối cùng của session.
+    # Throttle: chỉ ghi nếu last_active_at cũ hơn 60s → giảm 1 write Mongo mỗi request.
+    last_active = getattr(session, "last_active_at", None)
+    if last_active is None:
+        # Fallback an toàn: không xác định được thời điểm → ghi như cũ.
+        await update_last_active_by_access_jti(db, payload.jti)
+    else:
+        if last_active.tzinfo is None:
+            last_active = last_active.replace(tzinfo=timezone.utc)
+        if (datetime.now(timezone.utc) - last_active).total_seconds() >= 60:
+            await update_last_active_by_access_jti(db, payload.jti)
 
     # Trả về payload nếu session hợp lệ
     return payload

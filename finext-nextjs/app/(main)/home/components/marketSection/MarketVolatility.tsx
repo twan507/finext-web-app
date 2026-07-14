@@ -1,5 +1,6 @@
 'use client';
 
+import { memo, useMemo } from 'react';
 import { Box, Typography, useTheme, Card, Skeleton, useMediaQuery } from '@mui/material';
 import Carousel, { Slide } from 'components/common/Carousel';
 import { getResponsiveFontSize, fontWeight, transitions, getGlassCard, getGlassHighlight, getGlassEdgeLight } from 'theme/tokens';
@@ -38,7 +39,7 @@ interface MarketVolatilityProps {
     isLoading?: boolean;
 }
 
-export default function MarketVolatility({ stockData = [], foreignData = [], isLoading = false }: MarketVolatilityProps) {
+function MarketVolatility({ stockData = [], foreignData = [], isLoading = false }: MarketVolatilityProps) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isXsWidth = useMediaQuery(theme.breakpoints.only('xs'));
@@ -300,33 +301,56 @@ export default function MarketVolatility({ stockData = [], foreignData = [], isL
 
     // ===== DATA PROCESSING =====
 
-    // 1. Stock Data (Gainers / Losers)
+    // 1. Stock Data (Gainers / Losers) + 3. Market Breadth
     // Filter: vsi < 5 (thanh khoản tương đối < 500%) và vsma5 > 500,000
     // Score: pct_change * min(vsi, 2) — cap vsi tối đa 200% để tránh cổ phiếu thanh khoản đột biến chi phối
+    // Memo hóa: chỉ tính lại khi stockData đổi (không chạy mỗi render khi index tick).
+    const {
+        topGainers,
+        topLosers,
+        priceIncrease,
+        priceDecrease,
+        priceUnchanged,
+        flowIn,
+        flowOut,
+        flowNeutral,
+    } = useMemo(() => {
+        const getScore = (s: StockData) => {
+            const vsi = Math.min(s.vsi || 0, 2);
+            return s.pct_change * vsi;
+        };
 
-    const getScore = (s: StockData) => {
-        const vsi = Math.min(s.vsi || 0, 2);
-        return s.pct_change * vsi;
-    };
+        // Dedupe by ticker (SSE can send duplicate records), keep last occurrence (most recent data)
+        const deduped = stockData.reduce<Record<string, StockData>>((acc, s) => {
+            acc[s.ticker] = s;
+            return acc;
+        }, {});
+        const filteredStockData = Object.values(deduped).filter(s => (s.vsi || 0) < 5 && (s.vsma5 || 0) > 500000);
 
-    // Dedupe by ticker (SSE can send duplicate records), keep last occurrence (most recent data)
-    const deduped = stockData.reduce<Record<string, StockData>>((acc, s) => {
-        acc[s.ticker] = s;
-        return acc;
-    }, {});
-    const filteredStockData = Object.values(deduped).filter(s => (s.vsi || 0) < 5 && (s.vsma5 || 0) > 500000);
+        // For gainers: positive pct_change, sorted by score descending
+        const topGainers = [...filteredStockData]
+            .filter(s => s.pct_change > 0)
+            .sort((a, b) => getScore(b) - getScore(a))
+            .slice(0, 5);
 
-    // For gainers: positive pct_change, sorted by score descending
-    const topGainers = [...filteredStockData]
-        .filter(s => s.pct_change > 0)
-        .sort((a, b) => getScore(b) - getScore(a))
-        .slice(0, 5);
+        // For losers: negative pct_change, sorted by score ascending (most negative first)
+        const topLosers = [...filteredStockData]
+            .filter(s => s.pct_change < 0)
+            .sort((a, b) => getScore(a) - getScore(b))
+            .slice(0, 5);
 
-    // For losers: negative pct_change, sorted by score ascending (most negative first)
-    const topLosers = [...filteredStockData]
-        .filter(s => s.pct_change < 0)
-        .sort((a, b) => getScore(a) - getScore(b))
-        .slice(0, 5);
+        // 3a. Price Change (pct_change)
+        const priceIncrease = stockData.filter(s => s.pct_change > 0).length;
+        const priceDecrease = stockData.filter(s => s.pct_change < 0).length;
+        const priceUnchanged = stockData.filter(s => s.pct_change === 0).length;
+
+        // 3b. Flow Distribution (trading_value grouped by t0_score)
+        const flowIn = stockData.filter(s => s.t0_score > 0).reduce((sum, s) => sum + (s.trading_value || 0), 0);
+        const flowOut = stockData.filter(s => s.t0_score < 0).reduce((sum, s) => sum + (s.trading_value || 0), 0);
+        const flowNeutral = stockData.filter(s => s.t0_score === 0).reduce((sum, s) => sum + (s.trading_value || 0), 0);
+
+        return { topGainers, topLosers, priceIncrease, priceDecrease, priceUnchanged, flowIn, flowOut, flowNeutral };
+    }, [stockData]);
 
     const stockSlides: Slide[] = [
         {
@@ -339,14 +363,17 @@ export default function MarketVolatility({ stockData = [], foreignData = [], isL
         },
     ];
 
-    // 2. Foreign Data (Buy / Sell) - dedupe by ticker
-    const dedupedForeign = foreignData.reduce<Record<string, NNStockData>>((acc, s) => {
-        acc[s.ticker] = s;
-        return acc;
-    }, {});
-    const uniqueForeignData = Object.values(dedupedForeign);
-    const topNetBuy = [...uniqueForeignData].filter(x => x.net_value > 0).sort((a, b) => b.net_value - a.net_value).slice(0, 5);
-    const topNetSell = [...uniqueForeignData].filter(x => x.net_value < 0).sort((a, b) => a.net_value - b.net_value).slice(0, 5);
+    // 2. Foreign Data (Buy / Sell) - dedupe by ticker. Memo hóa theo foreignData.
+    const { topNetBuy, topNetSell } = useMemo(() => {
+        const dedupedForeign = foreignData.reduce<Record<string, NNStockData>>((acc, s) => {
+            acc[s.ticker] = s;
+            return acc;
+        }, {});
+        const uniqueForeignData = Object.values(dedupedForeign);
+        const topNetBuy = [...uniqueForeignData].filter(x => x.net_value > 0).sort((a, b) => b.net_value - a.net_value).slice(0, 5);
+        const topNetSell = [...uniqueForeignData].filter(x => x.net_value < 0).sort((a, b) => a.net_value - b.net_value).slice(0, 5);
+        return { topNetBuy, topNetSell };
+    }, [foreignData]);
 
     const foreignSlides: Slide[] = [
         {
@@ -359,17 +386,8 @@ export default function MarketVolatility({ stockData = [], foreignData = [], isL
         }
     ];
 
-    // 3. Market Breadth Data
-    // 3a. Price Change (pct_change)
-    const priceIncrease = stockData.filter(s => s.pct_change > 0).length;
-    const priceDecrease = stockData.filter(s => s.pct_change < 0).length;
-    const priceUnchanged = stockData.filter(s => s.pct_change === 0).length;
-
-    // 3b. Flow Distribution (trading_value grouped by t0_score)
-    const flowIn = stockData.filter(s => s.t0_score > 0).reduce((sum, s) => sum + (s.trading_value || 0), 0);
-    const flowOut = stockData.filter(s => s.t0_score < 0).reduce((sum, s) => sum + (s.trading_value || 0), 0);
-    const flowNeutral = stockData.filter(s => s.t0_score === 0).reduce((sum, s) => sum + (s.trading_value || 0), 0);
-
+    // 3. Market Breadth Data (priceIncrease/Decrease/Unchanged, flowIn/Out/Neutral)
+    //    được tính trong useMemo phía trên theo stockData.
     const breadthSlides: Slide[] = [
         {
             id: 'breadth-price',
@@ -486,3 +504,5 @@ export default function MarketVolatility({ stockData = [], foreignData = [], isL
         </Box>
     );
 }
+
+export default memo(MarketVolatility);

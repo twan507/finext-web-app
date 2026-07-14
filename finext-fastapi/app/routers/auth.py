@@ -1,4 +1,5 @@
 # finext-fastapi/app/routers/auth.py
+import asyncio
 import logging
 from typing import Annotated, Tuple, Any, Optional, List, Dict, Literal, cast  # Thêm List, Dict nếu bạn dùng ở đâu đó
 from datetime import datetime, timezone, timedelta  # noqa: F401  # timedelta giữ lại nếu cần (OTP register flow đã disabled)
@@ -164,7 +165,7 @@ async def register_user(
     # Compliance pivot 2026-05-07: verify DNS MX record của domain trước khi tạo user.
     # Catch domain không tồn tại (vd: "abc@mfgsdf.cocm") trước khi SMTP submission accept-then-bounce.
     try:
-        validate_email(user_data.email, check_deliverability=True)
+        await asyncio.to_thread(validate_email, user_data.email, check_deliverability=True)
     except EmailNotValidError as e:
         logger.warning(f"Email validation failed for {user_data.email}: {e}")
         raise HTTPException(
@@ -415,7 +416,7 @@ async def login_for_access_token(
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ) -> JSONResponse:  # Trả về JSONResponse để set cookie
     user = await get_user_by_email_db(db, email=form_data.username)
-    if not user or not user.hashed_password or not verify_password(form_data.password, user.hashed_password):
+    if not user or not user.hashed_password or not await asyncio.to_thread(verify_password, form_data.password, user.hashed_password):
         # Kiểm tra user.hashed_password để tránh lỗi nếu user tạo qua Google chưa set mật khẩu
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -663,12 +664,12 @@ async def user_change_own_password(
             detail="Tài khoản của bạn được tạo qua Google và chưa có mật khẩu Finext. Vui lòng sử dụng chức năng 'Quên mật khẩu' để tạo mật khẩu mới nếu cần.",
         )
 
-    if not verify_password(change_password_data.current_password, current_user.hashed_password):
+    if not await asyncio.to_thread(verify_password, change_password_data.current_password, current_user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Mật khẩu hiện tại không chính xác.",
         )
-    if verify_password(change_password_data.new_password, current_user.hashed_password):
+    if await asyncio.to_thread(verify_password, change_password_data.new_password, current_user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Mật khẩu mới không được trùng với mật khẩu cũ.",
