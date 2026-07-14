@@ -51,7 +51,7 @@ Thiếu `LLM_API_KEY` lúc startup → router chat tự disable (trả 503 "chư
 ## 5. Tải & RAM — vì sao yên tâm, và ngưỡng phải để mắt
 
 - Agent sống trong container fastapi: mỗi stream ~vài chục KB state + 1 HTTPS outbound; LLM là I/O — không chiếm worker (async bắt buộc, file 02).
-- Mongo: mọi query gateway là indexed point-read trên `agent_db` ~285MB dataSize (31 collections — agent_db_v2 §1); phần NÓNG thực tế (snapshot/briefing/phase/news gần đây) nhỏ hơn nhiều và nằm gọn WiredTiger cache — khối `history_*` chiếm phần lớn dung lượng nhưng chỉ bị chạm theo point-read có `$slice`. Ca nặng nhất (doc history 488KB + `$slice`) vẫn 1-doc read.
+- Mongo: mọi query gateway là indexed point-read trên `agent_db` ~285MB+ dataSize (33 collections — agent_db_v2 §1); phần NÓNG thực tế (snapshot/briefing/phase/news gần đây) nhỏ hơn nhiều và nằm gọn WiredTiger cache — khối `history_*` (gồm cả `history_finratios_*`) chiếm phần lớn dung lượng nhưng chỉ bị chạm theo point-read có `$slice`. Ca nặng nhất (doc history 488KB + `$slice`) vẫn 1-doc read.
 - **Ngưỡng cảnh giác:** nếu container fastapi vượt ~1.2G RSS (limit 1.5G) sau khi bật agent → nghi leak ở SDK/httpx connection pool; xử lý: giới hạn pool size + restart định kỳ là băng cứu thương, tìm leak là việc thật. Nếu VPS tổng thể căng → phương án cuối: tách gateway thành service trên VPS phụ (chính là nâng lên Option B của file 01 — kiến trúc đã chừa đường).
 
 ## 6. Observability — tối thiểu nhưng đủ điều tra

@@ -64,10 +64,11 @@ Gateway core là **thư viện Python dùng chung**: web import in-process; Clau
 ## 3. Bản Đồ Bước & Phụ Thuộc
 
 ```
-[P0 — NGOÀI repo web] ✅ HOÀN THÀNH 2026-07-12
-  fnx05 v2 + agent_db 31 collections + Knowledge Pack v2 — as-built: agent_db_v2.md
+[P0 — NGOÀI repo web] ✅ HOÀN THÀNH 2026-07-12 · +2 collection 2026-07-14
+  fnx05 v2 + agent_db 33 collections + Knowledge Pack v2 — as-built: agent_db_v2.md
   (verify 45 tiêu chí + probe 61/61 PASS × 5 vòng trên agent_db_test;
-   CÒN LẠI: cutover production theo runbook v2 §7.1 — điều kiện của bước 6)
+   CÒN LẠI: cutover production theo runbook v2 §7.1 — điều kiện của bước 6;
+   history_finratios_* (2026-07-14) CHƯA vào pack/policy/probe — v2 §7.2)
         ▼
 [Bước 1] Gateway — tầng truy cập dữ liệu            → 01-gateway-data-access.md
         ▼
@@ -106,7 +107,7 @@ Thứ tự code thực tế có thể xen kẽ (FE làm song song backend từ k
 | `OptionalAuthWrapper requireAuth` + store pattern (Zustand-like) | `components/auth/`, `hooks/` | Bước 4 |
 | Motor async + `httpx` async đã trong deps backend | `pyproject.toml` | Bước 1/2 — adapter tự parse không cần dep mới |
 | Spec kiến trúc runtime cũ (SSE contract 6 event, quota, persistence…) | [`2026-07-12-ai-chat-agent-architecture.md`](../superpowers/specs/2026-07-12-ai-chat-agent-architecture.md) | Nguyên liệu — phần còn dùng được đã hấp thụ vào bộ doc này |
-| **`agent_db` v2 as-built HOÀN CHỈNH**: 31 collections ~285MB, index sống qua mọi vòng ghi, %-points, briefing core ~320 tok, phase mirror ×6, verify 45 + probe 61/61 PASS | [`agent_db_v2.md`](agent_db_v2.md) | Nguồn sự thật tầng dữ liệu |
+| **`agent_db` v2 as-built HOÀN CHỈNH**: 33 collections (31 + `history_finratios_*` 2026-07-14), index sống qua mọi vòng ghi, %-points, briefing core ~320 tok, phase mirror ×6, verify 45 + probe 61/61 PASS (chưa phủ 2 collection mới) | [`agent_db_v2.md`](agent_db_v2.md) | Nguồn sự thật tầng dữ liệu |
 | **Knowledge Pack v2 HOÀN CHỈNH** (`system_prompt.md` + `agent_db_01→06`, đồng bộ cùng thế hệ với DB v2) | ngoài repo (git riêng của owner) | Bước 2 §5 — server ghép vào system prompt. ⚠ pack và DB phải CÙNG THẾ HỆ (v2 §7.1.3: lệch = agent đọc sai đơn vị ×100) |
 
 ### 4.2 Chưa có (phải làm — mỗi mục trỏ tới file có phương án)

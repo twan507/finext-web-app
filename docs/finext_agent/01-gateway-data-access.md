@@ -69,7 +69,7 @@ finext-fastapi/app/agent/gateway/
 Toàn bộ hiểu biết về `agent_db` dồn vào MỘT file declarative. Đổi schema DB = sửa file này (+ pack), **không sửa code**.
 
 ```yaml
-# policy.agent_db.yaml — ví dụ rút gọn (danh sách đầy đủ = inventory 31 collection agent_db_v2 §4 + AGENT_DB_INDEXES v2 §5)
+# policy.agent_db.yaml — ví dụ rút gọn (danh sách đầy đủ = inventory 33 collection agent_db_v2 §4 + AGENT_DB_INDEXES v2 §5)
 version: 1                      # bump khi đổi luật; log kèm version
 defaults:
   max_response_kb: 50
@@ -154,7 +154,7 @@ Env: `AGENT_GATEWAY=mongo|fixture`. Fixture KHÔNG bao giờ bật ở productio
 
 ## 8. Điều Kiện Hoàn Thành Bước 1
 
-- [ ] Policy file phủ đủ 31 collection theo inventory agent_db_v2 §4 (khoá đúng theo AGENT_DB_INDEXES v2 §5), có version.
+- [ ] Policy file phủ đủ 33 collection theo inventory agent_db_v2 §4 (khoá đúng theo AGENT_DB_INDEXES v2 §5), có version — gồm 2 collection `history_finratios_*` (`size: large`, ép khoá + `$slice`; agent_db_v2 §4.1).
 - [ ] Unit test validator: từng luật (whitelist, projection, banned ops, require_filter, slice, cap) có test pass/fail riêng — không cần Mongo.
 - [ ] Integration test trên Mongo dev: point-read hợp lệ đi qua; `find({})` trên `history_stock` bị từ chối kèm error message có gợi ý.
 - [ ] Log mỗi query: `{request_id, collection, ms, bytes, plan, rejected?}` — không log nội dung filter chứa text người dùng.

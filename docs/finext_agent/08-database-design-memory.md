@@ -13,7 +13,7 @@
 │ GHI: backend web         │   │ GHI: CHỈ fnx05 pipeline  │   │ GHI: pipeline fnx01-11  │
 │ ĐỌC: backend web         │   │ ĐỌC: CHỈ qua gateway     │   │ ĐỌC: web (crud sse      │
 │                          │   │                          │   │  phase_*, index_map)    │
-│ users, sessions,         │   │ 31 collections (kể cả    │   │                         │
+│ users, sessions,         │   │ 33 collections (kể cả    │   │                         │
 │ watchlists, ...          │   │ phase ×6 — agent_db_v2)  │   │ AGENT KHÔNG BAO GIỜ     │
 │ + MỚI cho agent:         │   │                          │   │ ĐỌC TRỰC TIẾP           │
 │   chat_conversations     │   │ AGENT/GATEWAY KHÔNG      │   └─────────────────────────┘

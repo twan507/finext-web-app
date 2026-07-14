@@ -4,11 +4,19 @@
 > pipeline, quy ước dữ liệu, inventory collection/index, công cụ validate, runbook cutover, và roadmap còn lại.
 > **Phía AGENT đọc bộ khác:** `system_prompt.md` (luật resident) + `agent_db_01→06` (KB) — file này KHÔNG up cho agent.
 > Thay thế `00_optimization_plan.md` (work-order v2 — đã hoàn thành nhiệm vụ và xoá 2026-07-12; xem git history).
+>
+> **Changelog 2026-07-14:** +2 collection lịch sử định giá (31 → **33**) — `history_finratios_stock`,
+> `history_finratios_industry`. Chi tiết §4.1; đơn vị §3; việc-còn-lại (pack + policy + probe) §7.2.
 
 ## 1. Tổng quan
 
 `agent_db` là database Mongo **chỉ-đọc đối với agent chat**, được `fnx05_agent.ipynb` build liên tục từ
-`stock_db`/`ref_db` (và mirror từ các bảng `phase_*` do fnx10/fnx11 serve). **31 collection, ~285MB dataSize.**
+`stock_db`/`ref_db` (và mirror từ các bảng `phase_*` do fnx10/fnx11 serve). **33 collection, ~285MB+ dataSize**
+(khối `history_*` chiếm phần lớn dung lượng).
+
+Trước 2026-07-14, DB chỉ có định giá của **phiên hiện tại** (`stock_finstats.valuation_ratios` /
+`industry_finstats.valuation_ratios`) — không có chuỗi theo thời gian. Hai collection `history_finratios_*` lấp
+khoảng trống đó (§4.1).
 
 Nguyên tắc thiết kế (chốt qua phỏng vấn owner 2026-07-12):
 1. **Sự kiện làm ở write-time, phán đoán làm ở read-time** — đơn vị/làm tròn/hình dạng do pipeline chuẩn hoá MỘT lần;
@@ -28,7 +36,7 @@ Nguyên tắc thiết kế (chốt qua phỏng vấn owner 2026-07-12):
   - `ndigits` theo collection: mặc định 2 · `*_finstats` + `other_data` + `phase_basket` = 4 · `phase_perf` = 6.
   - Pattern ghi: insert vào `temp_<name>` → **tạo index trên temp** (bảng `AGENT_DB_INDEXES`) → rename atomic
     (dropTarget) → drop `old_`. Index vì thế sống qua MỌI vòng ghi (fnx05 chạy `continuous`).
-- **Thứ tự ghi:** lá (stock → industry → group → market → history → news → other) → **phase mirror** → drop
+- **Thứ tự ghi:** lá (stock → industry → group → market → history *(gồm `history_finratios_*`)* → news → other) → **phase mirror** → drop
   `stock_highlight` (mồ côi) → **`data_briefing` ghi CUỐI** ⇒ `core.as_of` = commit marker ("mọi collection đã
   xong vòng này"). Agent đọc `core` đầu phiên là biết mốc dữ liệu.
 - **Phase mirror:** đọc `stock_db.phase_daily/phase_comment*/phase_basket/phase_rank/phase_trading/phase_industry/phase_perf`
@@ -47,12 +55,14 @@ Nguyên tắc thiết kế (chốt qua phỏng vấn owner 2026-07-12):
 | `held`/`book`/`avg_weight` | tỷ trọng 0..1 | — |
 | `ret_1d_1x` | thập phân | để compound; ghi 6 lẻ |
 | ratio finstats (bộ cũ) | thập phân, 4 lẻ | đổi khi làm curated (§7.2) |
+| ratio `history_finratios_*` (`pe pb ps pcf ev_ebitda peg`) | **số lần** — đọc thẳng, KHÔNG ×100 | `pe: 8.9` = 8,9 lần · `eps`/`bvps` = đồng/cp |
+| tiền trong `history_finratios_*` (`marketcap` `revenue_ttm` `profit_ttm`) | **tỷ đồng** | ⚠ KHÔNG chia 10⁹ — khác BCTC trong `stock_finstats` (đơn vị đồng) |
 | `other_data.value` | theo `unit` | 4 lẻ (lãi suất 0.045 = 4.5%) |
 | tiền | tỷ đồng (GTGD/NNTD/vốn hoá) · BCTC = đồng | — |
 | ngày | `YYYY-MM-DD` · intraday string `YYYY-MM-DDTHH:MM` | — |
 | thiếu dữ liệu | field **omit** (không null, không 0) | NNTD thiếu → omit block; `latest.date` = ngày dữ liệu THẬT |
 
-## 4. Inventory 31 collection
+## 4. Inventory 33 collection
 
 | Khối | Collection (khoá) | Nguồn | Ghi chú |
 |---|---|---|---|
@@ -61,6 +71,7 @@ Nguyên tắc thiết kế (chốt qua phỏng vấn owner 2026-07-12):
 | Group ×2 | `group_snapshot/recent` (`group_name`) | today/history_index + trend | 6 nhóm |
 | Market ×4 | `market_snapshot/recent/nntd/itd` (`index`) | today_index (VNINDEX) + FNXINDEX (breadth/trend), nntd_index, itd_index | breadth/trend = rổ FNXINDEX; `market_recent` = `{index, series[{date,price,trend}]}` |
 | History ×3 | `history_stock/industry/index` (khoá tương ứng) | history_* full | series ASC (cũ→mới), `$slice:-N` = N phiên mới |
+| **Finratios history ×2 (mới 2026-07-14)** | `history_finratios_stock` (`ticker`, ~680 doc) · `history_finratios_industry` (`industry_name`, 25 doc) | stock_db | Lịch sử định giá, series ASC. **Điểm theo TUẦN, không phải phiên** (~340 điểm/doc) ⇒ `$slice:-N` = **N tuần**. Bẫy đơn vị + look-ahead: **§4.1** |
 | News ×4 | `news_today_feed/content`, `news_history_feed/content` (`article_slug`/`report_slug`) | news_daily (rolling 1000) + news_report (100) | feed có **`link` bài gốc** (v2); report không có bài gốc; unique index PARTIAL |
 | Other | `other_data` (`name`, `group+category`) | latest_other_ticker | 74 chỉ số, value+unit giữ gốc |
 | Briefing | `data_briefing` (`type`) | tổng hợp trong fnx05 | 2 doc: `core` (~320 tok, phase headline, top_moves tự aggregate) + `news_report` |
@@ -68,9 +79,69 @@ Nguyên tắc thiết kế (chốt qua phỏng vấn owner 2026-07-12):
 
 Đã bỏ so với v1: `stock_highlight` (mồ côi, drop mỗi vòng) · 4 block clone trong `data_briefing` (~22.4k tok duplication).
 
+### 4.1 `history_finratios_*` — lịch sử định giá (mới 2026-07-14)
+
+**`history_finratios_stock`** — 1 doc/mã (~680 doc), khoá `ticker`:
+
+```json
+{ "ticker": "HPG", "ticker_name": "CTCP Tập đoàn Hòa Phát",
+  "industry": "Kim loại công nghiệp", "type": "SXKD",
+  "series": [
+    { "date": "2026-07-14", "period": "2026_1",
+      "marketcap": 187856, "pe": 8.9, "pb": 1.34, "ps": 1.08, "pcf": 47.3, "ev_ebitda": 8.3,
+      "eps": 2499, "bvps": 16556, "peg": 5.27,
+      "revenue_ttm": 173695, "profit_ttm": 21103,
+      "outstandingShare": 8442964520, "free_float_pct": 55, "state_pct": 0,
+      "foreign_pct": 21.6, "foreignerRoom": 2102139896,
+      "max_foreign_pct": 49, "major_holdings_pct": 32.7 } ] }
+```
+
+`period` = kỳ BCTC làm **mẫu số** cho mọi ratio tại điểm đó.
+
+**`history_finratios_industry`** — 25 doc, khoá `industry_name`: 24 ngành + 1 doc `"Toàn bộ thị trường"` (tổng hợp
+toàn bộ 24 ngành — **không phải một ngành**; đừng đưa vào bảng so sánh/xếp hạng ngành).
+
+```json
+{ "industry_name": "Tài chính ngân hàng", "type": "NGANHANG",
+  "series": [ { "date": "2026-07-14", "n_stocks": 29, "marketcap": 2712055,
+                "pe": 9.33, "pb": 1.45, "ps": 2.1, "eps": 3200, "bvps": 21000,
+                "peg": 0.9, "revenue_ttm": 180000, "profit_ttm": 95000 } ] }
+```
+
+Khác bản mã: **không có `period`**, **có `n_stocks`**. Ratio ngành là **cap-weighted** (∑vốn hoá ÷ ∑lợi nhuận),
+KHÔNG phải trung bình cộng P/E các mã.
+
+**Field omit theo `type` — có chủ đích, không phải thiếu dữ liệu:** NGANHANG/BAOHIEM không có `pcf`, `ev_ebitda` ·
+CHUNGKHOAN không có `ev_ebitda` (khái niệm nợ vay/dòng tiền của các nhóm này khác).
+
+**Truy vấn:** `series` sort **TĂNG dần** theo ngày (như `history_*` cũ). Doc lớn (~340 điểm/mã) → **luôn** filter
+khoá + projection/`$slice`.
+> ⚠ **Điểm dữ liệu theo TUẦN, không phải phiên** (phiên đầu mỗi tuần + phiên hôm nay):
+> `$slice: -52` = **1 năm** · `-156` = **3 năm** · `-260` = **5 năm**.
+> (Nhầm sang thang phiên: `-60` tưởng ~3 tháng, thực ra hơn 1 năm.)
+
+**Đơn vị** (bảng §3): `pe pb ps pcf ev_ebitda peg` = **số lần**, đọc thẳng, KHÔNG nhân 100 · `marketcap`
+`revenue_ttm` `profit_ttm` = **tỷ đồng** (⚠ KHÔNG chia 10⁹ — khác BCTC trong `stock_finstats` vốn là đồng) ·
+`eps` `bvps` = đồng/cổ phiếu · `*_pct` (sở hữu) = điểm %, đọc thẳng.
+
+**Phủ dữ liệu & đặc tính bắt buộc biết (pack phải dạy agent — §7.2):**
+- Phủ **2021 → nay** (~340 điểm tuần). Năm 2020 chỉ có `marketcap`, mọi ratio bị omit (thiếu BCTC 2019 làm mẫu số)
+  ⇒ **field vắng mặt = chưa có dữ liệu, không phải 0**.
+- Ratio tại mỗi điểm = **giá của tuần đó ÷ BCTC gần nhất đã có** (`period`). Giá đổi mỗi tuần, mẫu số chỉ đổi khi có
+  BCTC mới ⇒ P/E chạy theo giá trong khi EPS nhảy bậc thang — **đúng thiết kế**, không phải lỗi dữ liệu.
+- **2021–2023 chỉ có BCTC NĂM** → `eps`/`bvps` đứng yên suốt cả năm. Từ **2024** mới có BCTC quý (TTM).
+- ⚠ **Look-ahead 1–2 tháng:** BCTC được gán vào **ngày kết thúc kỳ** (31/12, 31/03…) chứ không phải ngày công bố →
+  tại tuần đó thị trường chưa biết số ấy. **KHÔNG dùng trực tiếp làm tín hiệu backtest.**
+- ⚠ **`n_stocks` có survivorship bias:** đếm theo phân loại ngành *hiện tại*, gần như đứng im suốt lịch sử → không
+  phản ánh cỡ mẫu tại thời điểm quá khứ.
+- Mỗi điểm có sẵn **cả `marketcap` lẫn `eps`** ⇒ tách được biến động P/E thành phần *giá* và phần *lợi nhuận*
+  ("P/E tăng vì giá lên hay vì lãi giảm?").
+
 ## 5. Index (tạo trên temp mỗi vòng — danh sách đầy đủ = `AGENT_DB_INDEXES` cell 1)
 
-Unique theo khoá: mọi collection stock/industry/group/history + `data_briefing.type` + `market_phase_history.date`
+Unique theo khoá: mọi collection stock/industry/group/history — gồm `history_finratios_stock.ticker` và
+`history_finratios_industry.industry_name` (doc lớn ⇒ bắt buộc unique index, nguyên tắc §1.4)
++ `data_briefing.type` + `market_phase_history.date`
 + `phase_basket.product` + `phase_perf.(product,date)`. News: `(tickers, created_at desc)` + `created_at desc` +
 partial-unique `article_slug`/`report_slug` (feed trộn 2 loại doc). `phase_trading`: `ticker` · `(product,ticker)` ·
 `status`. `other_data`: `(group,category)` + `name`. Collection 1-vài-doc không cần index.
@@ -85,6 +156,9 @@ partial-unique `article_slug`/`report_slug` (feed trộn 2 loại doc). `phase_t
 Trạng thái: **5 vòng chạy thật vào `agent_db_test` — verify 45 PASS mỗi vòng, probe 61/61 PASS, 20 cross-check
 số học nguồn↔mirror khớp tuyệt đối.** `agent_db_test` còn trên Mongo dev để đối chiếu (drop khi không cần).
 
+Con số trên là trạng thái của 31 collection (2026-07-12); 2 collection `history_finratios_*` thêm sau, assertion
+tương ứng bổ sung khi cần (§7.2).
+
 ## 7. Runbook
 
 **7.1 Cutover production (một lần):**
@@ -96,6 +170,15 @@ số học nguồn↔mirror khớp tuyệt đối.** `agent_db_test` còn trên 
    (số phải khớp UI Finext).
 
 **7.2 Việc còn lại (không chặn dùng nội bộ):**
+- **Đưa `history_finratios_*` vào pack + policy + probe (CHẶN việc agent dùng 2 collection này):**
+  - *Pack* (`agent_db_01/02`, `system_prompt` mục 4): đơn vị **tỷ đồng** cho `marketcap/revenue_ttm/profit_ttm`
+    (khác BCTC = đồng), ratio = **số lần**, cadence **TUẦN** (`$slice:-52` = 1 năm), `"Toàn bộ thị trường"` không
+    phải một ngành, ratio ngành cap-weighted, field omit theo `type`, look-ahead 1–2 tháng, 2020 không có ratio.
+    Chưa dạy ⇒ agent sẽ chia vốn hoá cho 10⁹ và đọc `$slice:-60` như 60 phiên.
+  - *Policy gateway*: 2 dòng `size: large` + ép filter khoá + `$slice` + bắt buộc projection (`history_*` đã có
+    luật này theo prefix — xác nhận whitelist có tên mới, vì deny-by-default).
+  - *Probe/verify*: thêm assertion — series ASC + cadence tuần, `pe ≈ marketcap/profit_ttm` (spot-check 5 mã),
+    ratio ngành khớp cap-weighted từ mã thành phần, điểm 2020 chỉ có `marketcap`, unique index sống qua vòng ghi.
 - **Gateway MCP** (trước khi mở cho nhóm NĐT) — contract: whitelist collection · bắt buộc projection · explain→từ chối
   COLLSCAN trên collection lớn · `history_*`/`*_itd` ép khoá+`$slice` · cap ~50KB/response · cấm `$lookup/$out/$merge/$where/$function` ·
   `maxTimeMS` 5s · log toàn bộ · điểm cắm tier (v1 allow-all). Dùng chung Claude app (MCP) + web Finext (service).
@@ -110,6 +193,9 @@ số học nguồn↔mirror khớp tuyệt đối.** `agent_db_test` còn trên 
 
 **7.3 Sự cố thường gặp:**
 - Agent nói số % lệch 100 lần → pack và DB đang lệch version (xem 7.1.3).
+- Agent báo vốn hoá "0,0002 tỷ" hoặc coi `$slice:-60` là 60 phiên (~3 tháng) khi đọc `history_finratios_*`
+  → pack chưa dạy §4.1 (tiền = **tỷ đồng**, điểm = **TUẦN**).
+- Agent nói mã ngân hàng "thiếu `ev_ebitda`/`pcf`" → field omit **có chủ đích** theo `type`, không phải lỗi pipeline.
 - Query phase trả rỗng → fnx10/fnx11 chưa chạy phiên đó; mirror giữ bản cũ, so `market_phase.as_of` với `core.as_of`.
 - `temp_*`/`old_*` xuất hiện → fnx05 crash giữa vòng; vòng kế tự đè; agent không đọc (whitelist).
 - Index biến mất → chỉ xảy ra nếu ai đó sửa writer bỏ bước create-on-temp; chạy verify để bắt.
