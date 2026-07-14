@@ -30,8 +30,10 @@ async def execute_tool(
         except Exception:
             logger.exception("Tool get_my_watchlist lỗi")
             return "Không đọc được danh sách theo dõi.", {"ok": False, "ms": 0}
-        content = json.dumps(result.data, ensure_ascii=False, default=str)
-        return content, {"ok": result.ok, "ms": result.meta.get("ms", 0)}
+        meta = {"ok": result.ok, "ms": result.meta.get("ms", 0)}
+        if not result.ok:
+            return result.error or "Không đọc được danh sách theo dõi.", meta
+        return json.dumps(result.data, ensure_ascii=False, default=str), meta
 
     handler = _HANDLERS.get(call.name)
     if handler is None:

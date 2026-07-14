@@ -33,7 +33,7 @@ async def run_get_my_watchlist(
         ctx,
         collection="stock_snapshot",
         filter={"ticker": {"$in": tickers}},
-        projection={"ticker": 1, "price": 1, "change": 1},
+        projection={"ticker": 1, "price": 1},  # price là object lồng: có close + pct_change (% phiên)
         limit=MAX_WATCHLIST_TICKERS,
     )
     if not quotes.ok:
