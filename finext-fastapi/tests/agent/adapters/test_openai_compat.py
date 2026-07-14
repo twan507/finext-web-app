@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncIterator
 
 import httpx
@@ -80,3 +81,106 @@ async def test_malformed_tool_arguments_do_not_crash():
     tool_events = [e for e in events if isinstance(e, ToolCallsEvent)]
     assert len(tool_events) == 1
     assert tool_events[0].calls[0].arguments == {}  # parse hỏng → dict rỗng, loop sẽ trả error cho model
+
+
+class _StreamThenError(httpx.AsyncByteStream):
+    """Phát vài chunk rồi raise — giả lập rớt kết nối GIỮA lượt tool-call."""
+
+    def __init__(self, chunks: list[bytes], exc: BaseException) -> None:
+        self._chunks = chunks
+        self._exc = exc
+
+    async def __aiter__(self) -> AsyncIterator[bytes]:
+        for chunk in self._chunks:
+            yield chunk
+        raise self._exc
+
+
+# 2 tool call song song — index 0 và 1 mở cùng chunk rồi arguments về xen kẽ
+PARALLEL_TOOL_STREAM = (
+    'data: {"choices":[{"delta":{"tool_calls":['
+    '{"index":0,"id":"call_a","type":"function","function":{"name":"db_find","arguments":""}},'
+    '{"index":1,"id":"call_b","type":"function","function":{"name":"db_agg","arguments":""}}'
+    ']},"index":0}]}\n\n'
+    'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\\"a\\":1}"}}]},"index":0}]}\n\n'
+    'data: {"choices":[{"delta":{"tool_calls":[{"index":1,"function":{"arguments":"{\\"b\\":2}"}}]},"index":0}]}\n\n'
+    'data: {"choices":[{"delta":{},"finish_reason":"tool_calls","index":0}]}\n\n'
+    "data: [DONE]\n\n"
+)
+
+# tool không tham số — arguments là "" xuyên suốt (json.loads("") phải bị guard)
+NOARG_TOOL_STREAM = (
+    'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","type":"function",'
+    '"function":{"name":"get_market_status","arguments":""}}]},"index":0}]}\n\n'
+    'data: {"choices":[{"delta":{},"finish_reason":"tool_calls","index":0}]}\n\n'
+    "data: [DONE]\n\n"
+)
+
+# provider gửi "choices": null (kèm usage) — không được crash TypeError
+NULL_CHOICES_STREAM = (
+    'data: {"choices":[{"delta":{"content":"Xin chào"},"index":0}]}\n\n'
+    'data: {"choices":null,"usage":{"prompt_tokens":5,"completion_tokens":3}}\n\n'
+    'data: {"choices":[{"delta":{},"finish_reason":"stop","index":0}]}\n\n'
+    "data: [DONE]\n\n"
+)
+
+
+async def test_tool_buffer_resets_between_retries(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def _no_sleep(_seconds: float) -> None:  # bỏ backoff thật để test nhanh
+        return None
+
+    monkeypatch.setattr(asyncio, "sleep", _no_sleep)
+    partial = (
+        'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","type":"function",'
+        '"function":{"name":"db_find","arguments":""}}]},"index":0}]}\n\n'
+        'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\\"collec"}}]},"index":0}]}\n\n'
+    ).encode()
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        headers = {"content-type": "text/event-stream"}
+        if calls["n"] == 1:  # attempt đầu: nhả 1 mảnh dở rồi rớt GIỮA lượt tool-call
+            return httpx.Response(
+                200, stream=_StreamThenError([partial], httpx.ReadError("drop")), headers=headers
+            )
+        return httpx.Response(200, text=TOOL_STREAM, headers=headers)
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    adapter = OpenAICompatAdapter(
+        base_url="https://api.test/v1", api_key="sk-test", model="test-model", client=client
+    )
+    events = await _collect(adapter)
+    tool_events = [e for e in events if isinstance(e, ToolCallsEvent)]
+    assert calls["n"] == 2  # đã retry sau khi rớt (chưa nhả token)
+    assert len(tool_events) == 1
+    # buffer PHẢI reset mỗi attempt: không dính mảnh '{"collec' của attempt đầu
+    assert tool_events[0].calls[0].arguments == {"collection": "stock_snapshot"}
+
+
+async def test_parallel_tool_calls_accumulate_per_index() -> None:
+    events = await _collect(_adapter_with(PARALLEL_TOOL_STREAM))
+    tool_events = [e for e in events if isinstance(e, ToolCallsEvent)]
+    assert len(tool_events) == 1
+    calls = tool_events[0].calls
+    assert len(calls) == 2
+    assert (calls[0].id, calls[0].name, calls[0].arguments) == ("call_a", "db_find", {"a": 1})
+    assert (calls[1].id, calls[1].name, calls[1].arguments) == ("call_b", "db_agg", {"b": 2})
+
+
+async def test_tool_call_without_arguments_yields_empty_dict() -> None:
+    events = await _collect(_adapter_with(NOARG_TOOL_STREAM))
+    tool_events = [e for e in events if isinstance(e, ToolCallsEvent)]
+    assert len(tool_events) == 1
+    call = tool_events[0].calls[0]
+    assert call.name == "get_market_status"
+    assert call.arguments == {}  # rỗng suốt → {} , không json.loads("")
+
+
+async def test_null_choices_chunk_does_not_crash() -> None:
+    events = await _collect(_adapter_with(NULL_CHOICES_STREAM))
+    tokens = [e for e in events if isinstance(e, TokenEvent)]
+    assert "".join(t.text for t in tokens) == "Xin chào"
+    done = events[-1]
+    assert isinstance(done, DoneEvent)
+    assert done.usage == {"in": 5, "out": 3}

@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 from collections.abc import AsyncIterator
+from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
@@ -14,7 +15,7 @@ from .base import SystemBlock
 
 logger = logging.getLogger(__name__)
 
-RETRY_STATUS = {429, 500, 502, 503, 529}
+RETRY_STATUS = {408, 429, 500, 502, 503, 504, 529}
 MAX_RETRIES = 2
 REQUEST_TIMEOUT = httpx.Timeout(connect=10.0, read=120.0, write=10.0, pool=10.0)
 
@@ -64,6 +65,15 @@ class _ToolCallBuffer:
         return calls
 
 
+@dataclass
+class _TurnState:
+    """State tích luỹ trong 1 lượt stream — reset mỗi attempt để retry không dính mảnh cũ."""
+
+    buffer: _ToolCallBuffer = field(default_factory=_ToolCallBuffer)
+    usage: dict[str, int] = field(default_factory=dict)
+    finish_reason: str | None = None
+
+
 class OpenAICompatAdapter:
     def __init__(
         self,
@@ -96,6 +106,29 @@ class OpenAICompatAdapter:
             payload["tools"] = tools
         return payload
 
+    async def _read_stream(
+        self, response: httpx.Response, state: _TurnState
+    ) -> AsyncIterator[TokenEvent]:
+        """Đọc SSE của 1 lượt, yield token content, tích luỹ tool-call/usage/finish vào state."""
+        async for line in response.aiter_lines():
+            chunk = parse_sse_chunk(line)
+            if chunk is None:
+                continue
+            usage = chunk.get("usage")
+            if usage:
+                state.usage = {
+                    "in": usage.get("prompt_tokens", 0),
+                    "out": usage.get("completion_tokens", 0),
+                }
+            for choice in chunk.get("choices") or []:
+                delta = choice.get("delta") or {}
+                if delta.get("content"):
+                    yield TokenEvent(text=delta["content"])
+                if delta.get("tool_calls"):
+                    state.buffer.add(delta["tool_calls"])
+                if choice.get("finish_reason"):
+                    state.finish_reason = choice["finish_reason"]
+
     async def stream_chat(
         self,
         system: list[SystemBlock],
@@ -106,11 +139,10 @@ class OpenAICompatAdapter:
         payload = self._payload(system, messages, tools, max_tokens)
         headers = {"Authorization": f"Bearer {self._api_key}", "Content-Type": "application/json"}
         emitted_token = False
-        buffer = _ToolCallBuffer()
-        usage: dict[str, int] = {}
-        finish_reason: str | None = None
+        state = _TurnState()
 
         for attempt in range(MAX_RETRIES + 1):
+            state = _TurnState()  # reset mỗi attempt: retry không kế thừa mảnh tool-call dở
             try:
                 async with self._client.stream("POST", self._url, json=payload, headers=headers) as response:
                     if response.status_code in RETRY_STATUS and not emitted_token and attempt < MAX_RETRIES:
@@ -121,25 +153,9 @@ class OpenAICompatAdapter:
                         logger.error("Provider trả lỗi status=%s", response.status_code)
                         yield ErrorEvent(message="Hệ thống AI đang quá tải, thử lại sau ít phút.")
                         return
-
-                    async for line in response.aiter_lines():
-                        chunk = parse_sse_chunk(line)
-                        if chunk is None:
-                            continue
-                        if chunk.get("usage"):
-                            usage = {
-                                "in": chunk["usage"].get("prompt_tokens", 0),
-                                "out": chunk["usage"].get("completion_tokens", 0),
-                            }
-                        for choice in chunk.get("choices", []):
-                            delta = choice.get("delta") or {}
-                            if delta.get("content"):
-                                emitted_token = True
-                                yield TokenEvent(text=delta["content"])
-                            if delta.get("tool_calls"):
-                                buffer.add(delta["tool_calls"])
-                            if choice.get("finish_reason"):
-                                finish_reason = choice["finish_reason"]
+                    async for event in self._read_stream(response, state):
+                        emitted_token = True
+                        yield event
                 break
             except (httpx.TimeoutException, httpx.TransportError):
                 if emitted_token or attempt >= MAX_RETRIES:
@@ -148,7 +164,7 @@ class OpenAICompatAdapter:
                     return
                 await asyncio.sleep(2**attempt)
 
-        if finish_reason == "tool_calls":
-            yield ToolCallsEvent(calls=buffer.flush())
+        if state.finish_reason == "tool_calls":
+            yield ToolCallsEvent(calls=state.buffer.flush())
             return
-        yield DoneEvent(usage=usage)
+        yield DoneEvent(usage=state.usage)
