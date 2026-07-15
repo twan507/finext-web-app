@@ -87,6 +87,15 @@ Sau khi plumbing xong + test pass: chạy verify 3 câu (giá FPT · pha thị t
 
 Hai bậc này là backlog có điều kiện, KHÔNG implement trong plan Phần 2 trừ khi §4 chứng minh cần.
 
+### 5.x KẾT QUẢ ĐO A/B (2026-07-15 — ĐÃ CHẠY thật) → Bậc 1 KÍCH HOẠT
+- **Pass-back đúng live:** thinking + multi-round tool (2–11 vòng) KHÔNG 400. Feature chứng minh tích hợp thật.
+- **Thinking làm hygiene TỆ HƠN non-thinking:** non-thinking Q1 sạch, thinking lộ `VSI`; Q2 thinking in nguyên tên
+  field DB (`breadth_blend`/`conf_dir`/`corr60`/`px_ret20_pct`) + ngưỡng. Thinking suy luận bằng ký hiệu thô nên tràn
+  ra output → KHÔNG cứu hygiene, còn khuếch đại.
+- **Cả 2 mode đều lộ ở Q2** (`exposure`/`DOWNTREND`) → **Bậc 1 (output contract) là bắt buộc, bất kể thinking on/off.**
+- **Quyết định treo (owner):** default `LLM_THINKING` = `disabled` (sạch + rẻ/nhanh) hay `enabled` (cậy Bậc 1 dập leak).
+- **Bug ngoài scope:** Q3 history_finratios_stock rỗng/lỗi → loop MAX_ITERS. Task data/tool riêng.
+
 ## 6. Test (TDD)
 
 - **Adapter payload:** thinking `enabled` → `payload["thinking"]=={"type":"enabled"}` + có `reasoning_effort`;
