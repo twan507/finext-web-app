@@ -37,6 +37,7 @@ methodology, bảng dịch chi tiết nằm trong bộ đó — file này là lu
 - Không emoji, không unicode icons, không divider `---` trừ khi tách phụ lục
 - Không parenthetical English cạnh từ Việt, trừ thuật ngữ widely adopted (ROE, P/E, EPS, margin, ROI)
 - Xưng hô trung tính "anh/chị"; quotation marks chỉ cho trích dẫn cụ thể
+- Hoạch định độ dài trước khi viết: trả lời **đủ ý nhưng gọn**, cấu trúc rõ; chủ đề dài thì ưu tiên phần cốt lõi và kết luận trọn vẹn thay vì liệt kê dàn trải rồi đứt giữa chừng — luôn kết câu gọn gàng, không bỏ lửng.
 
 ## 3. Nguồn dữ liệu & bản đồ `agent_db`
 

@@ -87,8 +87,8 @@ async def _run_tools(
     return messages
 
 
-def _assistant_tool_message(calls: list[ToolCall]) -> dict[str, Any]:
-    return {
+def _assistant_tool_message(calls: list[ToolCall], reasoning_content: str | None = None) -> dict[str, Any]:
+    message: dict[str, Any] = {
         "role": "assistant",
         "content": None,
         "tool_calls": [
@@ -100,6 +100,9 @@ def _assistant_tool_message(calls: list[ToolCall]) -> dict[str, Any]:
             for call in calls
         ],
     }
+    if reasoning_content is not None:
+        message["reasoning_content"] = reasoning_content
+    return message
 
 
 async def _drive_turn(
@@ -108,9 +111,10 @@ async def _drive_turn(
     working: list[dict[str, Any]],
     emit: Emit,
     usage_total: dict[str, int],
-) -> tuple[list[ToolCall], bool]:
-    """Chạy 1 lượt stream. Trả (tool call đang chờ, stop) — stop=True nghĩa loop đã emit done/error."""
+) -> tuple[list[ToolCall], str | None, bool]:
+    """Chạy 1 lượt stream. Trả (tool call chờ, reasoning của lượt đó, stop)."""
     pending: list[ToolCall] = []
+    pending_reasoning: str | None = None
     async for event in adapter.stream_chat(
         system=system, messages=working, tools=TOOL_SCHEMAS, max_tokens=MAX_OUTPUT_TOKENS
     ):
@@ -118,14 +122,15 @@ async def _drive_turn(
             await emit("token", {"text": event.text})
         elif isinstance(event, ToolCallsEvent):
             pending = event.calls
+            pending_reasoning = event.reasoning_content
         elif isinstance(event, DoneEvent):
             _merge_usage(usage_total, event.usage)
-            await emit("done", {"usage": usage_total})
-            return pending, True
+            await emit("done", {"usage": usage_total, "truncated": event.truncated})
+            return pending, pending_reasoning, True
         elif isinstance(event, ErrorEvent):
             await emit("error", {"message": event.message})
-            return pending, True
-    return pending, False
+            return pending, pending_reasoning, True
+    return pending, pending_reasoning, False
 
 
 async def run_agent(
@@ -140,13 +145,13 @@ async def run_agent(
     usage_total: dict[str, int] = {}
 
     for _ in range(MAX_ITERS):
-        pending, stop = await _drive_turn(adapter, system, working, emit, usage_total)
+        pending, pending_reasoning, stop = await _drive_turn(adapter, system, working, emit, usage_total)
         if stop:
             return
         if not pending:
-            await emit("done", {"usage": usage_total})
+            await emit("done", {"usage": usage_total, "truncated": False})
             return
-        working.append(_assistant_tool_message(pending))
+        working.append(_assistant_tool_message(pending, pending_reasoning))
         working.extend(await _run_tools(gateway, ctx, pending, emit))
 
     logger.warning("Agent chạm MAX_ITERS request_id=%s", ctx.request_id)

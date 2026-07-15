@@ -113,6 +113,44 @@ async def test_max_iters_guard_emits_error():
     assert len(adapter.calls) == MAX_ITERS
 
 
+def test_assistant_tool_message_includes_reasoning_when_present():
+    from app.agent.loop import _assistant_tool_message
+    call = ToolCall(id="c1", name="db_find", arguments={"collection": "stock_snapshot"})
+    msg = _assistant_tool_message([call], reasoning_content="suy nghĩ nội bộ")
+    assert msg["reasoning_content"] == "suy nghĩ nội bộ"
+
+
+def test_assistant_tool_message_omits_reasoning_when_none():
+    from app.agent.loop import _assistant_tool_message
+    call = ToolCall(id="c1", name="db_find", arguments={"collection": "stock_snapshot"})
+    msg = _assistant_tool_message([call])
+    assert "reasoning_content" not in msg
+
+
+async def test_reasoning_content_passed_back_in_tool_round_trip():
+    tool_call = ToolCall(
+        id="c1", name="db_find",
+        arguments={"collection": "stock_snapshot", "filter": {"ticker": "FPT"}, "projection": {"price": 1}},
+    )
+    adapter = ScriptedAdapter(
+        [
+            [ToolCallsEvent(calls=[tool_call], reasoning_content="Cần tra giá FPT")],
+            [TokenEvent(text="Giá FPT là 118,5"), DoneEvent(usage={"in": 50, "out": 6})],
+        ]
+    )
+    await _collect(adapter)
+    assistant_message = adapter.calls[1][-2]
+    assert assistant_message["role"] == "assistant"
+    assert assistant_message["reasoning_content"] == "Cần tra giá FPT"
+
+
+async def test_truncated_flag_flows_to_done_payload():
+    adapter = ScriptedAdapter([[TokenEvent(text="dài"), DoneEvent(usage={"in": 1, "out": 1}, truncated=True)]])
+    emitted = await _collect(adapter)
+    assert emitted[-1][0] == "done"
+    assert emitted[-1][1]["truncated"] is True
+
+
 async def test_produce_emits_error_and_sentinel_when_gateway_init_fails(monkeypatch):
     """M1: build_gateway() raise trong _produce → phải có error frame + STREAM_END (không treo)."""
 
