@@ -41,7 +41,11 @@ def read_kb_doc(name: Any) -> tuple[str, bool]:
     if not isinstance(name, str) or not _SAFE_NAME.match(name) or name not in docs:
         available = ", ".join(docs) or "(trống)"
         return f"Không có tài liệu '{name}'. Tài liệu khả dụng: {available}.", False
-    text = (KB_DIR / f"{name}.md").read_text(encoding="utf-8")
+    try:
+        text = (KB_DIR / f"{name}.md").read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        logger.warning("read_kb không đọc được doc=%s", name)
+        return f"Không đọc được tài liệu '{name}'. Hãy thử tài liệu khác.", False
     if len(text) > MAX_KB_CHARS:
         text = text[:MAX_KB_CHARS] + "\n\n…[tài liệu dài, đã cắt — hỏi cụ thể hơn nếu cần phần sau]"
     logger.info("read_kb doc=%s chars=%d", name, len(text))

@@ -43,3 +43,14 @@ def test_dynamic_extension_new_file_readable(tmp_path: Path, monkeypatch: pytest
     monkeypatch.setattr(kb, "KB_DIR", tmp_path)
     content, ok = kb.read_kb_doc("nganh_moi")
     assert ok is True and "ngành mới" in content  # thêm file .md là đọc được, không sửa code
+
+
+def test_read_invalid_utf8_returns_error_not_raise(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    import app.agent.tools.kb as kb
+
+    # File .md tương lai có bytes UTF-8 lỗi -> đọc phải trả text (False), KHÔNG raise ra execute_tool.
+    (tmp_path / "bad.md").write_bytes(b"\xff\xfe invalid")
+    monkeypatch.setattr(kb, "KB_DIR", tmp_path)
+    content, ok = kb.read_kb_doc("bad")
+    assert ok is False
+    assert isinstance(content, str)
