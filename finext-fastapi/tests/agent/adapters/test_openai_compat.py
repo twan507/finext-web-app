@@ -202,6 +202,35 @@ def test_payload_omits_temperature_when_none():
     assert "temperature" not in payload
 
 
+def test_payload_thinking_enabled_includes_effort():
+    from app.agent.adapters.base import SystemBlock
+    adapter = OpenAICompatAdapter(
+        base_url="https://api.test/v1", api_key="k", model="deepseek-v4-flash",
+        thinking="enabled", reasoning_effort="high",
+    )
+    payload = adapter._payload([SystemBlock(text="s")], [{"role": "user", "content": "hi"}], [], 100)
+    assert payload["thinking"] == {"type": "enabled"}
+    assert payload["reasoning_effort"] == "high"
+
+
+def test_payload_thinking_disabled_omits_effort():
+    from app.agent.adapters.base import SystemBlock
+    adapter = OpenAICompatAdapter(
+        base_url="https://api.test/v1", api_key="k", model="m",
+        thinking="disabled", reasoning_effort="high",
+    )
+    payload = adapter._payload([SystemBlock(text="s")], [{"role": "user", "content": "hi"}], [], 100)
+    assert payload["thinking"] == {"type": "disabled"}
+    assert "reasoning_effort" not in payload
+
+
+def test_payload_omits_thinking_when_none():
+    from app.agent.adapters.base import SystemBlock
+    adapter = OpenAICompatAdapter(base_url="https://api.test/v1", api_key="k", model="m", thinking=None)
+    payload = adapter._payload([SystemBlock(text="s")], [{"role": "user", "content": "hi"}], [], 100)
+    assert "thinking" not in payload
+
+
 # --- Regression trên bytes THẬT của DeepSeek (bắt ở mốc lát cắt Task 9) ---
 REAL_FIXTURE = Path(__file__).parent / "fixtures" / "deepseek_tool_stream.txt"
 

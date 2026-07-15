@@ -82,12 +82,16 @@ class OpenAICompatAdapter:
         model: str,
         client: httpx.AsyncClient | None = None,
         temperature: float | None = None,
+        thinking: str | None = None,
+        reasoning_effort: str | None = None,
     ) -> None:
         self._url = f"{base_url.rstrip('/')}/chat/completions"
         self._api_key = api_key
         self._model = model
         self._client = client or httpx.AsyncClient(timeout=REQUEST_TIMEOUT)
         self._temperature = temperature
+        self._thinking = thinking
+        self._reasoning_effort = reasoning_effort
 
     def _payload(
         self,
@@ -108,6 +112,10 @@ class OpenAICompatAdapter:
             payload["tools"] = tools
         if self._temperature is not None:
             payload["temperature"] = self._temperature
+        if self._thinking is not None:
+            payload["thinking"] = {"type": self._thinking}
+            if self._thinking == "enabled" and self._reasoning_effort is not None:
+                payload["reasoning_effort"] = self._reasoning_effort
         return payload
 
     async def _read_stream(

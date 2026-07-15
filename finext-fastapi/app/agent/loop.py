@@ -14,7 +14,15 @@ from app.agent.events import DoneEvent, ErrorEvent, ToolCall, ToolCallsEvent, To
 from app.agent.gateway.types import GatewayContext, GatewayProtocol
 from app.agent.labels import label_for
 from app.agent.tools.registry import TOOL_SCHEMAS, execute_tool
-from app.core.config import LLM_API_KEY, LLM_BASE_URL, LLM_MAX_OUTPUT_TOKENS, LLM_MODEL, LLM_TEMPERATURE
+from app.core.config import (
+    LLM_API_KEY,
+    LLM_BASE_URL,
+    LLM_MAX_OUTPUT_TOKENS,
+    LLM_MODEL,
+    LLM_REASONING_EFFORT,
+    LLM_TEMPERATURE,
+    LLM_THINKING,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +50,13 @@ def build_adapter() -> ModelAdapter:
         raise RuntimeError("Thiếu cấu hình LLM_BASE_URL / LLM_API_KEY / LLM_MODEL")
     temp = float(LLM_TEMPERATURE) if LLM_TEMPERATURE else None
     return OpenAICompatAdapter(
-        base_url=LLM_BASE_URL, api_key=LLM_API_KEY, model=LLM_MODEL, client=_get_client(), temperature=temp
+        base_url=LLM_BASE_URL,
+        api_key=LLM_API_KEY,
+        model=LLM_MODEL,
+        client=_get_client(),
+        temperature=temp,
+        thinking=LLM_THINKING,
+        reasoning_effort=LLM_REASONING_EFFORT,
     )
 
 
