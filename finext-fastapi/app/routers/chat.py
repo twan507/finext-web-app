@@ -23,6 +23,11 @@ HEARTBEAT_SECONDS = 10.0
 STREAM_END = None
 
 
+def _messages_from(body: ChatStreamRequest) -> list[dict[str, str]]:
+    """Ghép history (client giữ) + message hiện tại thành messages cho run_agent."""
+    return [*(t.model_dump() for t in body.history), {"role": "user", "content": body.message}]
+
+
 def sse_frame(event_type: str, payload: dict[str, Any]) -> str:
     """Wire format doc 02 §3 — ĐÓNG BĂNG."""
     return f"data: {json.dumps({'type': event_type, **payload}, ensure_ascii=False)}\n\n"
@@ -50,7 +55,7 @@ async def _produce(queue: asyncio.Queue, body: ChatStreamRequest, ctx: GatewayCo
             gateway=gateway,
             ctx=ctx,
             system=system,
-            messages=[{"role": "user", "content": body.message}],
+            messages=_messages_from(body),
             emit=emit,
         )
     except asyncio.CancelledError:
