@@ -122,7 +122,7 @@ class OpenAICompatAdapter:
     async def _read_stream(
         self, response: httpx.Response, state: _TurnState
     ) -> AsyncIterator[TokenEvent]:
-        """Đọc SSE của 1 lượt, yield token content, tích luỹ tool-call/usage/finish vào state."""
+        """Đọc SSE của 1 lượt, yield token content, tích luỹ tool-call/usage/finish/reasoning vào state."""
         async for line in response.aiter_lines():
             chunk = parse_sse_chunk(line)
             if chunk is None:

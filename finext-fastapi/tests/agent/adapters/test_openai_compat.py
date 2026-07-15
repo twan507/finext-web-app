@@ -281,3 +281,10 @@ async def test_finish_reason_length_marks_done_truncated():
     done = events[-1]
     assert isinstance(done, DoneEvent)
     assert done.truncated is True
+
+
+async def test_normal_stop_marks_done_not_truncated():
+    events = await _collect(_adapter_with(TEXT_STREAM))
+    done = events[-1]
+    assert isinstance(done, DoneEvent)
+    assert done.truncated is False
