@@ -19,11 +19,13 @@ class TokenEvent:
 @dataclass
 class ToolCallsEvent:
     calls: list[ToolCall]
+    reasoning_content: str | None = None
 
 
 @dataclass
 class DoneEvent:
     usage: dict[str, int] = field(default_factory=dict)  # {"in": N, "out": M}
+    truncated: bool = False
 
 
 @dataclass

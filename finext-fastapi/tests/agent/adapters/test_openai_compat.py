@@ -29,6 +29,21 @@ TOOL_STREAM = (
     "data: [DONE]\n\n"
 )
 
+REASONING_TOOL_STREAM = (
+    'data: {"choices":[{"delta":{"reasoning_content":"Cần tra "},"index":0}]}\n\n'
+    'data: {"choices":[{"delta":{"reasoning_content":"giá FPT."},"index":0}]}\n\n'
+    'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","type":"function",'
+    '"function":{"name":"db_find","arguments":"{}"}}]},"index":0}]}\n\n'
+    'data: {"choices":[{"delta":{},"finish_reason":"tool_calls","index":0}]}\n\n'
+    "data: [DONE]\n\n"
+)
+
+LENGTH_STREAM = (
+    'data: {"choices":[{"delta":{"content":"Phân tích rất dài"},"index":0}]}\n\n'
+    'data: {"choices":[{"delta":{},"finish_reason":"length","index":0}]}\n\n'
+    "data: [DONE]\n\n"
+)
+
 
 def _adapter_with(body: str, status: int = 200) -> OpenAICompatAdapter:
     def handler(request: httpx.Request) -> httpx.Response:
@@ -246,3 +261,23 @@ async def test_parses_real_deepseek_tool_call_stream() -> None:
     # KHÔNG assert giá trị collection cụ thể — đó là hành vi model+pack, không phải của adapter.
     assert isinstance(call.arguments, dict) and call.arguments
     assert "collection" in call.arguments
+
+
+async def test_reasoning_content_accumulated_on_tool_calls_event():
+    events = await _collect(_adapter_with(REASONING_TOOL_STREAM))
+    tool_events = [e for e in events if isinstance(e, ToolCallsEvent)]
+    assert len(tool_events) == 1
+    assert tool_events[0].reasoning_content == "Cần tra giá FPT."
+
+
+async def test_tool_calls_event_reasoning_none_when_absent():
+    events = await _collect(_adapter_with(TOOL_STREAM))
+    tool_events = [e for e in events if isinstance(e, ToolCallsEvent)]
+    assert tool_events[0].reasoning_content is None
+
+
+async def test_finish_reason_length_marks_done_truncated():
+    events = await _collect(_adapter_with(LENGTH_STREAM))
+    done = events[-1]
+    assert isinstance(done, DoneEvent)
+    assert done.truncated is True

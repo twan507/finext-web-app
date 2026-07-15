@@ -72,6 +72,7 @@ class _TurnState:
     buffer: _ToolCallBuffer = field(default_factory=_ToolCallBuffer)
     usage: dict[str, int] = field(default_factory=dict)
     finish_reason: str | None = None
+    reasoning: str = ""
 
 
 class OpenAICompatAdapter:
@@ -136,6 +137,8 @@ class OpenAICompatAdapter:
                 delta = choice.get("delta") or {}
                 if delta.get("content"):
                     yield TokenEvent(text=delta["content"])
+                if delta.get("reasoning_content"):
+                    state.reasoning += delta["reasoning_content"]
                 if delta.get("tool_calls"):
                     state.buffer.add(delta["tool_calls"])
                 if choice.get("finish_reason"):
@@ -177,6 +180,6 @@ class OpenAICompatAdapter:
                 await asyncio.sleep(2**attempt)
 
         if state.finish_reason == "tool_calls":
-            yield ToolCallsEvent(calls=state.buffer.flush())
+            yield ToolCallsEvent(calls=state.buffer.flush(), reasoning_content=state.reasoning or None)
             return
-        yield DoneEvent(usage=state.usage)
+        yield DoneEvent(usage=state.usage, truncated=state.finish_reason == "length")
