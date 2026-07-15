@@ -3,9 +3,32 @@
 import { memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, alpha, useTheme } from '@mui/material';
+import { Box, Skeleton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, alpha, useTheme } from '@mui/material';
 import { getResponsiveFontSize } from 'theme/tokens';
 import type { ChatMessage } from '../../../../hooks/useChatStore';
+import WidgetRenderer from './WidgetRenderer';
+
+// Tách fence ```finext-widget → xen kẽ markdown + widget; fence chưa đóng (đang stream) → pending.
+function splitWidgets(text: string): { kind: 'md' | 'widget' | 'pending'; body: string }[] {
+  const out: { kind: 'md' | 'widget' | 'pending'; body: string }[] = [];
+  const re = /```finext-widget\s*\n([\s\S]*?)```/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) out.push({ kind: 'md', body: text.slice(last, m.index) });
+    out.push({ kind: 'widget', body: m[1] });
+    last = re.lastIndex;
+  }
+  const rest = text.slice(last);
+  const openIdx = rest.indexOf('```finext-widget');
+  if (openIdx !== -1) {
+    if (openIdx > 0) out.push({ kind: 'md', body: rest.slice(0, openIdx) });
+    out.push({ kind: 'pending', body: '' }); // fence chưa đóng → skeleton
+  } else if (rest) {
+    out.push({ kind: 'md', body: rest });
+  }
+  return out;
+}
 
 function MarkdownBody({ text }: { text: string }) {
   const theme = useTheme();
@@ -59,7 +82,19 @@ function MessageBubbleBase({ message }: { message: ChatMessage }) {
         {isUser ? (
           <Typography sx={{ fontSize: getResponsiveFontSize('md'), whiteSpace: 'pre-wrap' }}>{message.content}</Typography>
         ) : (
-          <MarkdownBody text={message.content} />
+          splitWidgets(message.content).map((seg, i) => {
+            if (seg.kind === 'md') return <MarkdownBody key={i} text={seg.body} />;
+            if (seg.kind === 'widget') return <WidgetRenderer key={i} json={seg.body} />;
+            // pending: chỉ dựng skeleton khi đang stream — fence chưa đóng, CHƯA mount widget.
+            return message.status === 'streaming' ? (
+              <Box key={i} sx={{ my: 1.5 }}>
+                <Skeleton variant="rounded" height={200} />
+                <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: 'text.secondary' }}>
+                  Đang dựng biểu đồ…
+                </Typography>
+              </Box>
+            ) : null;
+          })
         )}
       </Box>
     </Box>
