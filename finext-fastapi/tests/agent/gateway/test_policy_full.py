@@ -59,3 +59,31 @@ def test_industry_rank_aggregate_ok():
         POLICY, "industry_snapshot",
         [{"$match": {"industry_name": "Tài chính ngân hàng"}}, {"$project": {"ws": "$money_flow_score.week_score"}}],
     )
+
+
+# --- Fix round 1: chặn exfil mảng series intraday (market_itd) + pagination ($skip) ---
+
+
+@pytest.mark.parametrize("collection", ["stock_itd", "market_itd"])
+def test_itd_find_requires_series_slice(collection):
+    """V1: itd chứa mảng series intraday — find không $slice bị chặn, có $slice thì qua."""
+    filter_ = {"ticker": "FPT"} if collection == "stock_itd" else {}
+    with pytest.raises(ValidationError):
+        validate_find(POLICY, collection, filter_, {"series": 1}, None, 1)
+    validate_find(POLICY, collection, filter_, {"series": {"$slice": 20}}, None, 1)
+
+
+@pytest.mark.parametrize("collection", ["stock_itd", "market_itd"])
+def test_itd_aggregate_blocked(collection):
+    """V1: itd có mảng lớn -> allow_aggregate:false, aggregate bị chặn."""
+    with pytest.raises(ValidationError):
+        validate_aggregate(POLICY, collection, [{"$project": {"s": "$series"}}])
+
+
+def test_skip_operator_banned():
+    """V3: $skip cấm để đóng lỗ pagination (duyệt hết collection large qua nhiều lần $skip)."""
+    with pytest.raises(ValidationError):
+        validate_aggregate(
+            POLICY, "stock_snapshot",
+            [{"$match": {"ticker": "FPT"}}, {"$skip": 100}, {"$limit": 20}],
+        )

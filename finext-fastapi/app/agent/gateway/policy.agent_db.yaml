@@ -16,6 +16,7 @@ defaults:
     - $where
     - $function
     - $accumulator
+    - $skip
 
 # Quy ước: collection có mảng series lớn (mỗi doc chứa hàng trăm phần tử) => aggregate là đường
 # exfil không chặn nổi bằng cách quét từ vựng ($$ROOT, alias, $slice khổng lồ...).
@@ -41,7 +42,7 @@ collections:
   market_snapshot:   { size: small }
   market_recent:     { size: small }
   market_nntd:       { size: small }
-  market_itd:        { size: small }
+  market_itd:        { size: small, require_series_slice: true, allow_aggregate: false, max_slice: 30 }
   # History giá (mảng nghìn phiên — luật chặt)
   history_stock:     { size: large, key: ticker, require_filter: [ticker], require_series_slice: true, allow_aggregate: false, max_slice: 500 }
   history_industry:  { size: large, key: industry_name, require_filter: [industry_name], require_series_slice: true, allow_aggregate: false, max_slice: 500 }
@@ -52,7 +53,7 @@ collections:
   # Phase & danh mục
   market_phase:         { size: small }
   market_phase_history: { size: large, key: date, require_filter: [date] }
-  phase_basket:         { size: small }
+  phase_basket:         { size: small, key: product }
   phase_trading:        { size: large, key: ticker }
   phase_industry:       { size: small }
   phase_perf:           { size: large, require_filter: [product] }
@@ -60,7 +61,7 @@ collections:
   other_data:        { size: small }
   data_briefing:     { size: small }
   # News
-  news_today_feed:      { size: large }
+  news_today_feed:      { size: large, key: article_slug }
   news_today_content:   { size: large, key: article_slug }
-  news_history_feed:    { size: large }
+  news_history_feed:    { size: large, key: article_slug }
   news_history_content: { size: large, key: article_slug }
