@@ -14,12 +14,13 @@ from app.agent.events import DoneEvent, ErrorEvent, ToolCall, ToolCallsEvent, To
 from app.agent.gateway.types import GatewayContext, GatewayProtocol
 from app.agent.labels import label_for
 from app.agent.tools.registry import TOOL_SCHEMAS, execute_tool
-from app.core.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, LLM_TEMPERATURE
+from app.core.config import LLM_API_KEY, LLM_BASE_URL, LLM_MAX_OUTPUT_TOKENS, LLM_MODEL, LLM_TEMPERATURE
 
 logger = logging.getLogger(__name__)
 
 MAX_ITERS = 8
-MAX_OUTPUT_TOKENS = 1200
+# Trần token/lượt trả lời. Trần cứng v4-flash/pro = 384K; default 16K đủ cho câu phân tích dài, dư đầu cho thinking sau.
+MAX_OUTPUT_TOKENS = int(LLM_MAX_OUTPUT_TOKENS) if LLM_MAX_OUTPUT_TOKENS else 16000
 MAX_TOTAL_TOOL_CHARS = 30_000
 
 Emit = Callable[[str, dict[str, Any]], Awaitable[None]]
