@@ -52,7 +52,7 @@ export default function MarketPhaseTab({ daily, comment, perf, indicators, tradi
     <Box>
       <Box>
         <ChartSectionTitle
-          title="DIỄN BIẾN VÀ PHÂN TÍCH PHIÊN"
+          title="DIỄN BIẾN FINEXT INDEX VÀ PHÂN TÍCH PHIÊN"
           description="Diễn biến giai lịch sử các giai đoạn thị trường và phân tích phiên hiện tại"
           updateTime={comment ? formatDate(comment.date) : updateStr}
         />

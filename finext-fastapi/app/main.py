@@ -18,6 +18,7 @@ from .core.seeding import seed_initial_data
 from .routers import (
     auth,
     brokers,
+    chat,
     licenses,
     permissions,
     promotions,
@@ -135,6 +136,7 @@ app.include_router(permissions.router, prefix="/api/v1/permissions", tags=["perm
 app.include_router(sessions.router, prefix="/api/v1/sessions", tags=["sessions"])
 app.include_router(subscriptions.router, prefix="/api/v1/subscriptions", tags=["subscriptions"])
 app.include_router(sse.router, prefix="/api/v1/sse", tags=["sse"])
+app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
 app.include_router(transactions.router, prefix="/api/v1/transactions", tags=["transactions"])
 app.include_router(brokers.router, prefix="/api/v1/brokers", tags=["brokers"])
 app.include_router(licenses.router, prefix="/api/v1/licenses", tags=["licenses"])

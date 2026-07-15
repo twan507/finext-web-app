@@ -1,0 +1,67 @@
+# policy.agent_db.yaml — luật truy cập agent_db. Đổi schema DB = sửa file này, KHÔNG sửa code.
+# Danh sách đủ 33 collection (đối chiếu schema agent_db_v2 §4).
+version: 2
+
+defaults:
+  max_response_kb: 50
+  max_time_ms: 5000
+  default_limit: 20
+  max_limit: 50
+  banned_operators:
+    - $lookup
+    - $graphLookup
+    - $unionWith
+    - $out
+    - $merge
+    - $where
+    - $function
+    - $accumulator
+    - $skip
+
+# Quy ước: collection có mảng series lớn (mỗi doc chứa hàng trăm phần tử) => aggregate là đường
+# exfil không chặn nổi bằng cách quét từ vựng ($$ROOT, alias, $slice khổng lồ...).
+# Với các collection đó BẮT BUỘC đặt: allow_aggregate: false + max_slice: <N>.
+# Collection doc phẳng giữ mặc định allow_aggregate: true (thống kê/xếp hạng vẫn cần aggregate).
+collections:
+  # Stock (khoá ticker)
+  stock_info:        { size: large, key: ticker }
+  stock_snapshot:    { size: large, key: ticker }
+  stock_recent:      { size: large, key: ticker }
+  stock_finstats:    { size: large, key: ticker }
+  stock_nntd:        { size: large, key: ticker }
+  stock_itd:         { size: large, key: ticker, require_filter: [ticker], require_series_slice: true, allow_aggregate: false, max_slice: 30 }
+  # Industry (khoá industry_name)
+  industry_info:     { size: large, key: industry_name }
+  industry_snapshot: { size: large, key: industry_name }
+  industry_recent:   { size: large, key: industry_name }
+  industry_finstats: { size: large, key: industry_name }
+  # Group (6 doc)
+  group_snapshot:    { size: small }
+  group_recent:      { size: small }
+  # Market (1 doc mỗi)
+  market_snapshot:   { size: small }
+  market_recent:     { size: small }
+  market_nntd:       { size: small }
+  market_itd:        { size: small, require_series_slice: true, allow_aggregate: false, max_slice: 30 }
+  # History giá (mảng nghìn phiên — luật chặt)
+  history_stock:     { size: large, key: ticker, require_filter: [ticker], require_series_slice: true, allow_aggregate: false, max_slice: 500 }
+  history_industry:  { size: large, key: industry_name, require_filter: [industry_name], require_series_slice: true, allow_aggregate: false, max_slice: 500 }
+  history_index:     { size: large, require_series_slice: true, allow_aggregate: false, max_slice: 500 }
+  # History định giá (điểm TUẦN, ~340 điểm)
+  history_finratios_stock:    { size: large, key: ticker, require_filter: [ticker], require_series_slice: true, allow_aggregate: false, max_slice: 260 }
+  history_finratios_industry: { size: large, key: industry_name, require_filter: [industry_name], require_series_slice: true, allow_aggregate: false, max_slice: 260 }
+  # Phase & danh mục
+  market_phase:         { size: small }
+  market_phase_history: { size: large, key: date, require_filter: [date] }
+  phase_basket:         { size: small, key: product }
+  phase_trading:        { size: large, key: ticker }
+  phase_industry:       { size: small }
+  phase_perf:           { size: large, require_filter: [product] }
+  # Vĩ mô + briefing
+  other_data:        { size: small }
+  data_briefing:     { size: small }
+  # News
+  news_today_feed:      { size: large, key: article_slug }
+  news_today_content:   { size: large, key: article_slug }
+  news_history_feed:    { size: large, key: article_slug }
+  news_history_content: { size: large, key: article_slug }

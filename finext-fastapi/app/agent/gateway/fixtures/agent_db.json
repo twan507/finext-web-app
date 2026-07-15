@@ -1,0 +1,16 @@
+{
+  "stock_snapshot": [
+    { "ticker": "FPT", "price": 118.5, "pct_change": 1.28, "volume": 3120400, "value": 368.2 },
+    { "ticker": "HPG", "price": 22.25, "pct_change": -0.45, "volume": 18220100, "value": 405.6 }
+  ],
+  "stock_info": [
+    { "ticker": "FPT", "ticker_name": "CTCP FPT", "industry": "Công nghệ thông tin", "type": "SXKD" },
+    { "ticker": "HPG", "ticker_name": "CTCP Tập đoàn Hòa Phát", "industry": "Kim loại công nghiệp", "type": "SXKD" }
+  ],
+  "market_phase": [
+    { "phase": "Tích lũy", "as_of": "2026-07-13", "exposure": 0.6 }
+  ],
+  "data_briefing": [
+    { "type": "core", "as_of": "2026-07-14T15:02", "headline": "VNINDEX +0,42% — thanh khoản trung bình" }
+  ]
+}
