@@ -2,7 +2,7 @@ from dataclasses import replace
 
 import pytest
 
-from app.agent.gateway.policy import Policy
+from app.agent.gateway.policy import CollectionRule, Policy
 from app.agent.gateway.validator import ValidationError, validate_aggregate, validate_find
 
 POLICY = Policy.load()
@@ -775,15 +775,15 @@ def test_find_require_filter_in_list_still_passes():
     assert limit == 1
 
 
-# --- Task 3: nới validator (require_filter chấp nhận date-range đóng + aggregate anchor khỏi bắt limit) ---
+# --- Task 3: nới validator (require_filter chấp nhận date-range + aggregate anchor khỏi bắt limit) ---
 
 
-def _rule_require(policy, name, keys):
+def _rule_require(policy: Policy, name: str, keys: list[str]) -> CollectionRule:
     base = policy.rule_for("history_stock")
     return replace(base, name=name, key=keys[0], require_filter=keys, require_series_slice=False, allow_aggregate=True)
 
 
-def test_require_filter_accepts_date_range(monkeypatch):
+def test_require_filter_accepts_date_range():
     # range $gte/$lte thu hẹp phạm vi -> hợp lệ cho require_filter
     from app.agent.gateway import validator as v
 
@@ -791,7 +791,24 @@ def test_require_filter_accepts_date_range(monkeypatch):
     v._check_find_require_filter(POLICY, rule, {"date": {"$gte": "2022-01-01", "$lte": "2022-12-31"}})  # không raise
 
 
-def test_require_filter_still_rejects_ne(monkeypatch):
+def test_require_filter_accepts_one_sided_range():
+    # V2: one-sided "$gte" ("từ 2022 tới giờ") hợp lệ — find đã bị _effective_limit cap ≤ max_limit.
+    from app.agent.gateway import validator as v
+
+    rule = _rule_require(POLICY, "market_phase_history", ["date"])
+    v._check_find_require_filter(POLICY, rule, {"date": {"$gte": "2022-01-01"}})  # không raise
+
+
+def test_require_filter_rejects_empty_sentinel_range():
+    # V2: sentinel quét-toàn-bộ {"$gt": ""} vẫn REJECT (cận rỗng).
+    from app.agent.gateway import validator as v
+
+    rule = _rule_require(POLICY, "market_phase_history", ["date"])
+    with pytest.raises(ValidationError):
+        v._check_find_require_filter(POLICY, rule, {"date": {"$gt": ""}})
+
+
+def test_require_filter_still_rejects_ne():
     from app.agent.gateway import validator as v
 
     rule = _rule_require(POLICY, "market_phase_history", ["date"])
@@ -801,7 +818,7 @@ def test_require_filter_still_rejects_ne(monkeypatch):
 
 def test_aggregate_large_with_anchor_match_no_limit_ok():
     # industry_snapshot ĐÃ có trong policy stub hiện tại (size large, key industry_name).
-    # Có $match hẹp theo key ở stage đầu -> KHÔNG cần $limit nữa (Task 3 nới).
+    # Có $match SCALAR theo key ở stage đầu -> KHÔNG cần $limit nữa (Task 3 nới).
     validate_aggregate(
         POLICY,
         "industry_snapshot",
@@ -813,3 +830,24 @@ def test_aggregate_large_no_anchor_still_needs_limit():
     # không $match hẹp, không $limit -> vẫn reject (giữ chặn quét vô hạn)
     with pytest.raises(ValidationError):
         validate_aggregate(POLICY, "industry_snapshot", [{"$group": {"_id": "$industry_name"}}])
+
+
+def test_aggregate_range_anchor_still_needs_limit():
+    # V1 [CRITICAL]: range trên anchor key KHÔNG neo cardinality -> vẫn phải có $limit.
+    # {"$gte": "", "$lte": "z"} match gần như mọi industry_name -> nếu waive $limit sẽ kéo cả collection.
+    with pytest.raises(ValidationError):
+        validate_aggregate(
+            POLICY,
+            "industry_snapshot",
+            [{"$match": {"industry_name": {"$gte": "", "$lte": "z"}}}],
+        )
+
+
+def test_aggregate_range_anchor_full_scan_exploit_rejected():
+    # V1 [CRITICAL] exploit gốc: range chặn cả hai đầu match TẤT CẢ ticker, không $limit -> phải REJECT.
+    with pytest.raises(ValidationError):
+        validate_aggregate(
+            POLICY,
+            "stock_snapshot",
+            [{"$match": {"ticker": {"$gte": "", "$lte": "￿"}}}, {"$project": {"ticker": 1, "price": 1}}],
+        )

@@ -8,10 +8,9 @@ from .policy import CollectionRule, Policy
 SLICE_STAGES = ("$project", "$addFields", "$set")
 SCALAR_TYPES = (str, int, float, bool)
 
-# Toán tử khoảng: chỉ coi là THU HẸP khi khoảng ĐÓNG (có cả cận dưới lẫn cận trên). Xem _is_narrowing_value.
-_RANGE_LOWER = ("$gte", "$gt")
-_RANGE_UPPER = ("$lte", "$lt")
-_RANGE_OPS = frozenset(_RANGE_LOWER + _RANGE_UPPER)
+# Toán tử khoảng hợp lệ cho require_filter của find (đã bị _effective_limit cap ≤ max_limit).
+# KHÔNG dùng cho anchor $match của aggregate — range không neo cardinality (xem _has_anchor_match).
+_RANGE_OPS = frozenset(("$gte", "$gt", "$lte", "$lt"))
 
 # Nợ kỹ thuật đã duyệt: tên field mảng dài hard-code, không tham số hoá qua policy.
 SERIES_FIELD = "series"
@@ -254,8 +253,8 @@ def _check_find_require_filter(policy: Policy, rule: CollectionRule, filter: dic
         raise ValidationError(
             f"Collection '{rule.name}' phải lọc khoá {hint} theo giá trị cụ thể "
             f'(ví dụ filter={{"{keys[0]}": "FPT"}} hoặc filter={{"{keys[0]}": {{"$in": ["FPT", "HPG"]}}}}), '
-            'hoặc khoảng ngày ĐÓNG cả hai đầu ví dụ filter={"date": {"$gte": "2022-01-01", "$lte": "2022-12-31"}}. '
-            "Không dùng $ne/$nin/$regex/$exists hay khoảng hở một đầu vì chúng quét toàn bộ collection. "
+            'hoặc khoảng ngày với cận cụ thể ví dụ filter={"date": {"$gte": "2022-01-01"}}. '
+            "Không dùng $ne/$nin/$regex/$exists hay cận rỗng vì chúng quét toàn bộ collection. "
             f"Danh sách $in tối đa {max_items} phần tử — hãy thu hẹp lại."
         )
 
@@ -334,21 +333,18 @@ def _is_specific_value(value: Any, max_items: int) -> bool:
 
 
 def _is_narrowing_value(value: Any, max_items: int) -> bool:
-    """Giá trị THU HẸP phạm vi hợp lệ cho require_filter / anchor $match: scalar, {"$in": [scalar...]},
-    hoặc khoảng ngày ĐÓNG chặn cả hai đầu bằng $gte/$gt VÀ $lte/$lt (giá trị scalar).
+    """Giá trị THU HẸP hợp lệ cho require_filter của find (KHÔNG dùng cho anchor $match của aggregate):
+    scalar, {"$in": [scalar...]}, hoặc khoảng $gte/$gt/$lte/$lt (một hoặc hai đầu) với MỌI cận là scalar
+    khác rỗng/None.
 
-    KHÔNG chấp nhận $ne/$nin/$regex/$exists (phủ định/quét). Cũng KHÔNG chấp nhận khoảng HỞ một
-    đầu như {"$gt": ""}: nửa đường thẳng vẫn quét gần cả collection — giữ nguyên chốt an ninh cũ.
+    An toàn cho find vì _effective_limit đã cap số dòng ≤ max_limit. Chặn sentinel quét-toàn-bộ {"$gt": ""}.
+    KHÔNG chấp nhận $ne/$nin/$regex/$exists (phủ định/quét), cũng KHÔNG chấp nhận bool (date/số thật không phải bool).
     """
     if _is_specific_value(value, max_items):
         return True
     if not (isinstance(value, dict) and value and set(value).issubset(_RANGE_OPS)):
         return False
-    has_lower = any(op in value for op in _RANGE_LOWER)
-    has_upper = any(op in value for op in _RANGE_UPPER)
-    if not (has_lower and has_upper):
-        return False
-    return all(not isinstance(v, (dict, list)) for v in value.values())
+    return all(type(v) in (str, int, float) and v not in ("", None) for v in value.values())
 
 
 def _check_aggregate_anchor_match(
@@ -383,14 +379,16 @@ def _check_aggregate_anchor_match(
 
 
 def _has_anchor_match(rule: CollectionRule, stages: list[dict[str, Any]], max_items: int) -> bool:
-    """Pipeline[0] là $match neo theo rule.key với giá trị thu hẹp -> phạm vi đã bị chốt, khỏi cần $limit.
+    """Pipeline[0] là $match neo rule.key với giá trị CỤ THỂ (scalar/$in) -> key-set bị chốt, khỏi cần $limit.
 
-    Chỉ tính $match ở stage ĐẦU TIÊN: $match sau $group/$sort là decoy (collection đã bị quét trước đó).
+    CHỈ scalar/$in mới neo cardinality. Range ($gte/$lte) có thể match cả collection nên KHÔNG được waive
+    $limit ở đây (aggregate không có _effective_limit cap số dòng như find). Chỉ tính $match ở stage ĐẦU TIÊN
+    ($match sau $group/$sort là decoy — collection đã bị quét trước đó).
     """
     if not stages or "$match" not in stages[0] or not rule.key:
         return False
     match = stages[0]["$match"]
-    return isinstance(match, dict) and rule.key in match and _is_narrowing_value(match[rule.key], max_items)
+    return isinstance(match, dict) and rule.key in match and _is_specific_value(match[rule.key], max_items)
 
 
 def _check_aggregate_limit(policy: Policy, rule: CollectionRule, pipeline: list[dict[str, Any]]) -> None:
