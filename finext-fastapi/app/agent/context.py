@@ -7,11 +7,12 @@ from typing import Any
 
 from app.agent.adapters.base import SystemBlock
 from app.agent.gateway.types import GatewayContext, GatewayProtocol
-from app.core.config import AGENT_PACK_DIR
+from app.agent.tools.kb import KB_DIR
 
 logger = logging.getLogger(__name__)
 
 PACK_STUB_DIR = Path(__file__).parent / "pack_stub"
+RESIDENT_DOCS = ["system_prompt", "agent_db_01", "agent_db_02"]
 BRIEFING_TTL_SECONDS = 600
 MAX_BRIEFING_BYTES = 6_000
 
@@ -24,14 +25,18 @@ FRESHNESS_NOTE = (
 NO_BRIEFING_NOTE = "Hiện chưa có bản tin tổng hợp — hãy chủ động query dữ liệu khi cần."
 
 
-def _read_pack() -> str:
-    pack_dir = Path(AGENT_PACK_DIR) if AGENT_PACK_DIR else PACK_STUB_DIR
-    if not pack_dir.is_dir():
-        logger.error("Không tìm thấy AGENT_PACK_DIR=%s — dùng pack stub", pack_dir)
-        pack_dir = PACK_STUB_DIR
-    files = sorted(pack_dir.glob("*.md"))
-    logger.info("Nạp pack từ %s (%d file)", pack_dir, len(files))
-    return "\n\n".join(f.read_text(encoding="utf-8") for f in files)
+def _read_resident() -> str:
+    """Nối 3 tài liệu thường trực. Thiếu file thật → fallback pack stub (CI/dev)."""
+    parts: list[str] = []
+    for name in RESIDENT_DOCS:
+        path = KB_DIR / f"{name}.md"
+        if path.is_file():
+            parts.append(path.read_text(encoding="utf-8"))
+    if not parts:
+        logger.warning("KB resident trống tại %s — fallback pack stub", KB_DIR)
+        return "\n\n".join(f.read_text(encoding="utf-8") for f in sorted(PACK_STUB_DIR.glob("*.md")))
+    logger.info("Nạp resident %d/%d tài liệu từ %s", len(parts), len(RESIDENT_DOCS), KB_DIR)
+    return "\n\n".join(parts)
 
 
 async def _read_briefing(gateway: GatewayProtocol, ctx: GatewayContext) -> tuple[str | None, str | None]:
@@ -54,7 +59,7 @@ async def _read_briefing(gateway: GatewayProtocol, ctx: GatewayContext) -> tuple
 async def build_system_blocks(
     gateway: GatewayProtocol, ctx: GatewayContext
 ) -> tuple[list[SystemBlock], str | None]:
-    blocks = [SystemBlock(text=_read_pack(), cache_hint=True)]
+    blocks = [SystemBlock(text=_read_resident(), cache_hint=True)]
     briefing, as_of = await _read_briefing(gateway, ctx)
     if briefing is None:
         blocks.append(SystemBlock(text=NO_BRIEFING_NOTE, cache_hint=True))
