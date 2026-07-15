@@ -24,18 +24,19 @@ gateway policy), không vỡ ngân sách token, giữ nguyên lớp an ninh vali
 - **Cái giá (chấp nhận):** câu cần diễn giải chuyên sâu (news/methodology/phase) tốn thêm 1 vòng `read_kb`. Câu query
   cơ bản (giá, dòng tiền, BCTC, screening) KHÔNG tốn vòng nào — schema+query đã resident.
 
-### D2 — 28 collection whitelist; bỏ 5 history mảng-lớn; ghi chú rõ
-- **BỎ khỏi whitelist (5, doc chứa mảng vài trăm–nghìn phiên → nặng):** `history_stock`, `history_industry`,
-  `history_index`, `history_finratios_stock`, `history_finratios_industry`.
-- **GIỮ `market_phase_history`** (khoá `date`, 1 doc/phiên nhỏ, `require_filter: [date]` — không phải mảng lớn như
-  `history_*`; thuộc khối phase owner muốn giữ).
-- **28 collection còn lại mở đủ**, gồm 6 collection phase (`market_phase`, `market_phase_history`, `phase_basket`,
-  `phase_trading`, `phase_perf`, `phase_industry`) để agent tư vấn được phase + danh mục.
-- **Ghi chú history KHÔNG khả dụng v1** một cách chính xác tại: bản đồ collection `system_prompt` mục 3 (dòng
-  `history_*` / `history_finratios_*`), `agent_db_01` khối E + mục `history_finratios_*`, `agent_db_02` mục 1.6/1.7
-  (định giá lịch sử) + Workflow G (xu hướng dài hạn), `agent_db_04` mục D6 (định giá tương đối lịch sử). Cách ghi:
-  đánh dấu "⚠ v1 web: chưa mở — dùng `*_recent` (20 phiên) / `*_finstats` (BCTC hiện tại) thay thế", KHÔNG xoá hẳn
-  (giữ để nối lại khi mở history sau).
+### D2 — Mở FULL 33 collection; kiểm soát "nặng" bằng validator + query khéo (không bỏ collection nào)
+- **Mở đủ 33 collection**, gồm cả 5 collection history (`history_stock`, `history_industry`, `history_index`,
+  `history_finratios_stock`, `history_finratios_industry`) và 6 collection phase (`market_phase`,
+  `market_phase_history`, `phase_basket`, `phase_trading`, `phase_perf`, `phase_industry`). Tra cứu lịch sử
+  (định giá dài hạn, chart, chu kỳ) là nhu cầu tư vấn thật.
+- **Vấn đề "doc history nặng" giải bằng 2 lớp — KHÔNG bỏ collection:**
+  1. **Validator ép query khéo (D5):** `history_*` + `*_recent`/`*_itd` khai `require_filter` khoá +
+     `require_series_slice` (bắt buộc `$slice` trên `series`) + `size: large` (bắt buộc projection); `history_finratios_*`
+     thêm `allow_aggregate: false` + `max_slice`. Doc dù chứa mảng nghìn phiên, mỗi query chỉ lấy N điểm qua `$slice`
+     → response nhỏ; cap 50KB của executor là lưới cuối.
+  2. **Pack dạy query khéo:** `agent_db_02` mục 1.6/1.7 (định giá lịch sử) + Workflow G + `system_prompt` mục 3
+     ("`history_*`/`*_itd` bắt buộc filter khoá + `$slice`/date-range") — GIỮ NGUYÊN nội dung, chỉ chuyển cú pháp sang
+     tool (D4). File 04 D6 (định giá tương đối lịch sử) giữ nguyên làm methodology qua `read_kb`.
 
 ### D3 — Tool `read_kb`
 - Schema: `read_kb(doc: enum["agent_db_03","agent_db_04","agent_db_05","agent_db_06"])` → trả nguyên nội dung file.
@@ -50,13 +51,17 @@ gateway policy), không vỡ ngân sách token, giữ nguyên lớp an ninh vali
   "dùng MongoDB tool với `database: "agent_db"`". Viết lại TOÀN BỘ sang đúng 2 tool dự án:
   - `db_find({collection, filter, projection, sort?, limit?})` · `db_aggregate({collection, pipeline})`.
   - Bỏ `database` (gateway bind cứng `agent_db`). Bỏ cú pháp mongosh, thống nhất một dạng JSON tham số tool.
-- Đối chiếu từng pipeline mẫu với validator, sửa cái vi phạm (theo D7). Bỏ/đánh dấu các mục dùng history (D2).
+- Đối chiếu từng pipeline mẫu với validator, sửa cái vi phạm (theo D7). Mục history (1.6/1.7, Workflow G) giữ đầy
+  đủ — chỉ chuyển cú pháp sang tool + đảm bảo mọi ví dụ history đều có `$slice` (khớp validator D5).
 
-### D5 — Policy `policy.agent_db.yaml`: 8 → 28 collection
+### D5 — Policy `policy.agent_db.yaml`: 8 → 33 collection
 - Đối chiếu schema `agent_db_01` khai đúng mỗi collection: `size` (large nếu doc lớn/nhiều/mảng), `key`,
-  `require_filter`, `require_series_slice` (các `*_recent`/`*_itd` có mảng series), `max_slice` (`*_itd` ≤ 30),
-  `allow_aggregate` (mặc định true cho doc phẳng; false + `require_series_slice` cho collection mảng series lớn —
-  cơ chế fail-closed ở `Policy.load` tự ép).
+  `require_filter`, `require_series_slice` (các `*_recent`/`*_itd`/`history_*` có mảng `series`), `max_slice`
+  (`*_itd` ≤ 30), `allow_aggregate` (mặc định true cho doc phẳng; false + `require_series_slice` tự ép ở `Policy.load`
+  cho `history_finratios_*` và các collection mảng series lớn).
+- **history khai chặt:** `history_stock`/`history_industry` (`require_filter` khoá + `require_series_slice`),
+  `history_index` (1 doc, `require_series_slice`), `history_finratios_stock`/`_industry` (`require_filter` +
+  `require_series_slice` + `allow_aggregate:false` + `max_slice`), `market_phase_history` (`require_filter:[date]`).
 - `banned_operators` giữ nguyên (đã gồm `$unionWith`, `$$ROOT` chặn ở validator).
 
 ### D6 — Sửa `system_prompt.md` cho khớp runtime
@@ -64,7 +69,7 @@ gateway policy), không vỡ ngân sách token, giữ nguyên lớp an ninh vali
 - Mục 7 web search: v1 CHƯA có web search tool → ghi rõ agent luôn ở "chế độ KHÔNG web search" (pack đã có sẵn nhánh
   này: trả lời từ DB + ghi "chưa đối chiếu tin ngoài hệ thống"). KHÔNG hứa web search.
 - Mục 13 manifest: cập nhật — 01/02 "đã có sẵn trong ngữ cảnh", 03–06 "gọi `read_kb` khi cần".
-- Bản đồ collection mục 3: đánh dấu history (D2).
+- Bản đồ collection mục 3: giữ đủ 33 (gồm history) — chỉ chuyển diễn đạt luật query sang tool.
 - `get_my_watchlist` hiện đã gỡ khỏi tool surface (chưa tích hợp watchlist thật) — system_prompt KHÔNG quảng cáo tool này.
 
 ### D7 — Reconcile validator ↔ pipeline pack (ưu tiên validator)
@@ -87,14 +92,14 @@ gateway policy), không vỡ ngân sách token, giữ nguyên lớp an ninh vali
 
 ### D9 — Testing
 - `read_kb`: trả đúng nội dung file whitelist; tên ngoài whitelist → lỗi text không raise; không path traversal.
-- Policy 28 collection: mỗi collection point-read hợp lệ pass; history_* bị từ chối "ngoài phạm vi".
+- Policy 33 collection: mỗi collection point-read hợp lệ pass; `history_*` với `$slice`+filter khoá pass, nhưng
+  `find({})` trần / thiếu `$slice` bị từ chối kèm gợi ý; `history_finratios_*` aggregate bị từ chối (allow_aggregate:false).
 - Validator sau khi nới G4: test anchor-match-không-limit pass; **các test exfil cũ vẫn pass** (không regression).
 - Context assembly: resident nạp đủ 3 file; câu "FPT giá" không gọi read_kb; đổi pack stub↔thật không đổi interface.
 - Không chạy DeepSeek thật trong CI (dùng ScriptedAdapter); verify pack thật end-to-end là bước thủ công của owner
   (như mốc lát cắt Task 9).
 
 ## 3. Ngoài phạm vi v1
-- History collections (5 cái) — mở sau khi có cơ chế nén/slice an toàn.
 - **Web search tool — task riêng có spec/plan sau** (owner chốt 2026-07-15). Cần: chọn provider + API key +
   dependency + lớp an ninh cho web content (prompt-injection từ web nguy hiểm hơn Mongo). V1 pack chạy nhánh "không
   web search" (system_prompt mục 7): trả lời từ DB + ghi "chưa đối chiếu tin ngoài hệ thống".
@@ -106,4 +111,4 @@ gateway policy), không vỡ ngân sách token, giữ nguyên lớp an ninh vali
 - Tạo: `finext-fastapi/app/agent/kb/agent_db_01..06.md` (copy), `app/agent/tools/kb.py` (read_kb), script sync.
 - Sửa: `app/agent/pack_stub/` (thay bằng system_prompt thật hoặc giữ stub + thêm real dir), `app/agent/context.py`
   (resident 3 file), `app/agent/tools/registry.py` (+read_kb), `app/agent/labels.py`, `policy.agent_db.yaml`
-  (28 collection), `app/agent/gateway/validator.py` (nới G4 + test), `agent_db_02.md` + `system_prompt.md` (rewrite).
+  (33 collection), `app/agent/gateway/validator.py` (nới G4 + test), `agent_db_02.md` + `system_prompt.md` (rewrite).
