@@ -9,12 +9,13 @@ from app.agent.gateway.types import GatewayContext, GatewayProtocol
 from app.core.database import get_database
 
 from .db import DB_AGGREGATE_SCHEMA, DB_FIND_SCHEMA, run_db_aggregate, run_db_find
+from .kb import READ_KB_SCHEMA, read_kb_doc
 from .user import GET_WATCHLIST_SCHEMA, run_get_my_watchlist
 
 logger = logging.getLogger(__name__)
 
 # get_my_watchlist tạm gỡ khỏi tool surface tới khi tích hợp watchlist thật (schema stock_symbols/multi-doc) — code giữ nguyên để nối lại
-TOOL_SCHEMAS: list[dict[str, Any]] = [DB_FIND_SCHEMA, DB_AGGREGATE_SCHEMA]
+TOOL_SCHEMAS: list[dict[str, Any]] = [DB_FIND_SCHEMA, DB_AGGREGATE_SCHEMA, READ_KB_SCHEMA]
 
 MAX_TOOL_RESULT_CHARS = 12_000
 
@@ -35,6 +36,11 @@ async def execute_tool(
         if not result.ok:
             return result.error or "Không đọc được danh sách theo dõi.", meta
         return json.dumps(result.data, ensure_ascii=False, default=str), meta
+
+    if call.name == "read_kb":
+        args = call.arguments if isinstance(call.arguments, dict) else {}
+        content, ok = read_kb_doc(args.get("doc"))
+        return content, {"ok": ok, "ms": 0}
 
     handler = _HANDLERS.get(call.name)
     if handler is None:
