@@ -28,13 +28,18 @@ NO_BRIEFING_NOTE = "Hiện chưa có bản tin tổng hợp — hãy chủ độ
 def _read_resident() -> str:
     """Nối 3 tài liệu thường trực. Thiếu file thật → fallback pack stub (CI/dev)."""
     parts: list[str] = []
+    missing: list[str] = []
     for name in RESIDENT_DOCS:
         path = KB_DIR / f"{name}.md"
         if path.is_file():
             parts.append(path.read_text(encoding="utf-8"))
+        else:
+            missing.append(name)
     if not parts:
         logger.warning("KB resident trống tại %s — fallback pack stub", KB_DIR)
         return "\n\n".join(f.read_text(encoding="utf-8") for f in sorted(PACK_STUB_DIR.glob("*.md")))
+    if missing:
+        logger.warning("KB resident THIẾU tài liệu %s tại %s — system prompt nạp thiếu", missing, KB_DIR)
     logger.info("Nạp resident %d/%d tài liệu từ %s", len(parts), len(RESIDENT_DOCS), KB_DIR)
     return "\n\n".join(parts)
 
