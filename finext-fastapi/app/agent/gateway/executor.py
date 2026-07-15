@@ -65,6 +65,21 @@ class MongoGateway:
         """Chốt kết quả dùng chung cho find/aggregate: strip _id → cap bytes → log → GatewayResult."""
         data, size, truncated = _cap_bytes(_strip_id(docs), self._policy.defaults.max_response_kb)
         ms = int((time.perf_counter() - started) * 1000)
+        if docs and not data:
+            # Có doc khớp nhưng doc đầu tiên đã vượt ngân sách → không trả nổi doc nào. Báo lỗi "dạy model"
+            # thay vì rỗng CÂM (rỗng câm khiến model tưởng không có dữ liệu và lặp query vô ích tới MAX_ITERS).
+            logger.warning(
+                "gateway oversize request_id=%s collection=%s max_kb=%d",
+                ctx.request_id, collection, self._policy.defaults.max_response_kb,
+            )
+            return GatewayResult(
+                ok=False,
+                error=(
+                    f"Kết quả quá lớn (vượt {self._policy.defaults.max_response_kb} KB) nên không trả được. "
+                    "Hãy giảm số phần tử $slice (ví dụ -104) hoặc projection ít field hơn (chỉ date, pe, pb…)."
+                ),
+                meta={"collection": collection, "oversize": True},
+            )
         logger.info(
             "gateway ok request_id=%s collection=%s ms=%d bytes=%d n=%d truncated=%s%s",
             ctx.request_id, collection, ms, size, len(data), truncated, suffix,

@@ -95,6 +95,35 @@ async def test_response_over_cap_is_truncated():
     assert result.meta["bytes"] <= 50 * 1024
 
 
+async def test_single_oversize_doc_returns_teaching_error_not_silent_empty():
+    # ROOT CAUSE bug HPG: 1 doc > max_response_kb → _cap_bytes drop sạch → xưa trả ok=True rows=0 (rỗng CÂM),
+    # model tưởng không có data → loop tới MAX_ITERS. Giờ phải trả ok=False kèm gợi ý giảm $slice/projection.
+    huge = {"ticker": "HPG", "type": "SXKD", "series": [{"i": i, "blob": "x" * 200} for i in range(400)]}
+    collection = FakeCollection([huge])  # ~86 KB > 50 KB
+    gateway = MongoGateway(FakeDB(collection), Policy.load())
+    result = await gateway.find(
+        CTX, "history_finratios_stock",
+        filter={"ticker": "HPG"}, projection={"ticker": 1, "type": 1, "series": {"$slice": -260}},
+    )
+    assert result.ok is False
+    assert not result.data  # None hoặc [] — KHÔNG phải rỗng câm ok=True
+    assert result.error is not None and "quá lớn" in result.error
+    assert result.meta.get("oversize") is True
+
+
+async def test_genuine_empty_match_stays_ok_not_oversize():
+    # Phân biệt: Mongo match 0 doc (filter không trúng) → vẫn ok=True data=[] (không nhầm thành oversize).
+    collection = FakeCollection([])
+    gateway = MongoGateway(FakeDB(collection), Policy.load())
+    result = await gateway.find(
+        CTX, "history_finratios_stock",
+        filter={"ticker": "ZZZ"}, projection={"ticker": 1, "series": {"$slice": -10}},
+    )
+    assert result.ok is True
+    assert result.data == []
+    assert result.meta.get("oversize") is None
+
+
 async def test_explain_mode_on_rejects_collscan():
     collection = FakeCollection([{"ticker": "FPT"}], plan="COLLSCAN")
     gateway = MongoGateway(FakeDB(collection), Policy.load(), explain_mode="on")
