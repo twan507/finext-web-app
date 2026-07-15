@@ -13,7 +13,8 @@ from .user import GET_WATCHLIST_SCHEMA, run_get_my_watchlist
 
 logger = logging.getLogger(__name__)
 
-TOOL_SCHEMAS: list[dict[str, Any]] = [DB_FIND_SCHEMA, DB_AGGREGATE_SCHEMA, GET_WATCHLIST_SCHEMA]
+# get_my_watchlist tạm gỡ khỏi tool surface tới khi tích hợp watchlist thật (schema stock_symbols/multi-doc) — code giữ nguyên để nối lại
+TOOL_SCHEMAS: list[dict[str, Any]] = [DB_FIND_SCHEMA, DB_AGGREGATE_SCHEMA]
 
 MAX_TOOL_RESULT_CHARS = 12_000
 
