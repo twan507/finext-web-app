@@ -24,6 +24,7 @@ import {
   ExpandLess as ExpandLessIcon,
   ArrowBack as ArrowBackIcon,
   Refresh as RefreshIcon,
+  AutoAwesomeOutlined,
 } from '@mui/icons-material';
 
 import UserAvatar from '../../components/layout/UserAvatar';
@@ -49,6 +50,7 @@ interface NavItem {
 
 const navigationStructure: NavItem[] = [
   { text: 'Giai đoạn thị trường', href: '/market-phase', icon: <MarketPhaseNavIcon />, special: true },
+  { text: 'Finext AI', href: '/chat', icon: <AutoAwesomeOutlined /> },
   { text: 'Biểu đồ kĩ thuật', href: '/charts', icon: <CandlestickChartOutlined /> },
   { text: 'Danh sách theo dõi', href: '/watchlist', icon: <StarBorderPurple500Outlined /> },
   { text: 'Bộ lọc thông minh', href: '/stocks', icon: <FilterAltOutlined />, exactMatch: true },
