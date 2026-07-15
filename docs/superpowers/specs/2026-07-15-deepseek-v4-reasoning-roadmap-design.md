@@ -24,9 +24,17 @@
   Đây là **dữ liệu quyết định** có cần Phần 2 (thinking) hay không. GHI kết quả vào ledger.
 - **Rủi ro:** thấp (chỉ đổi model name + 1 param). Nếu tool-call format V4 khác → sửa adapter parse (đã có test fixture pattern).
 
-## 2. Phần 2 — THINKING mode (làm NẾU Phần 1 đo thấy K-hygiene chưa đủ)
+### 1.x KẾT QUẢ ĐO (2026-07-15 — ĐÃ CHẠY, owner flip env + verify thật)
+- **Tool-calling v4-flash: OK ✅.** 3/3 câu gọi tool thành công, adapter KHÔNG cần sửa parse. read_kb đúng. → **App sống sau 24/07, migrate thành công.**
+- **K-hygiene: CHƯA ĐỦ ❌.** non-thinking v4-flash vẫn lộ ký hiệu thô (`VSI 3.0`, `zone C`, `pha TRANSITION`, `DOWNTREND`, `exposure 0.7`) và — nặng nhất — lộ **ngưỡng/tiêu chí hệ thống** (`ngưỡng +0.30/−0.30`, `−10%`, `độ tin cậy 0.90`) = bí mật SP bị cấm. → **Phần 2 (thinking) WARRANTED.**
+- **Phát hiện phụ:** `MAX_OUTPUT_TOKENS=1200` (loop.py:22) quá thấp — câu phân tích bị cụt giữa chừng. Cần nâng (ngoài scope migrate).
 
-**Quyết định dựa trên dữ liệu Phần 1, KHÔNG làm mù.** Nếu V4-flash non-thinking đã tuân tốt → BỎ QUA phần này.
+## 2. Phần 2 — THINKING mode (ĐÃ XÁC NHẬN CẦN theo đo Phần 1)
+
+**Quyết định dựa trên dữ liệu Phần 1 — đã đo: non-thinking v4-flash KHÔNG đủ K-hygiene → làm Phần 2.**
+⚠ Lưu ý critical thinking khi vào Phần 2: thinking mode cho thêm ngân sách suy luận nhưng KHÔNG bảo đảm sửa được lỗi
+tuân-chỉ-thị (K-hygiene là bài toán instruction-adherence, không phải reasoning). Cần đo lại sau khi bật thinking; nếu
+vẫn lộ → siết vị trí/độ mạnh luật K-hygiene trong prompt HOẶC thêm bước hậu xử lý. Đừng coi thinking là viên đạn bạc.
 
 Nếu cần thinking (`v4-flash` hoặc `v4-pro`):
 - **Adapter:** thêm `"thinking": {"type": "enabled"}` + `"reasoning_effort": "high"` (configurable env `LLM_THINKING`,
