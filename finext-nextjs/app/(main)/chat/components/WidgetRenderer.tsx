@@ -1,5 +1,6 @@
 'use client';
 
+import { Component, type ReactNode } from 'react';
 import { Box, Typography, alpha, useTheme } from '@mui/material';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import StatTiles from './widgets/StatTiles';
@@ -36,25 +37,65 @@ export type Widget =
 
 const WHITELIST = new Set(['stat_tiles', 'bar_list', 'grouped_bars', 'line']);
 
-function parseWidget(json: string): Widget | null {
+// Coerce phòng thủ: model có thể nhả JSON đúng type nhưng field lồng thiếu/sai kiểu.
+const toArr = (x: unknown): unknown[] => (Array.isArray(x) ? x : []);
+const toNum = (x: unknown): number => {
+  const n = Number(x);
+  return Number.isFinite(n) ? n : 0;
+};
+const toStr = (x: unknown): string => (typeof x === 'string' ? x : x == null ? '' : String(x));
+const isObj = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null;
+
+// Chỉ validate JSON + {v:1, type ∈ whitelist}. Field lồng để normalize xử lý.
+function parseRaw(json: string): Record<string, unknown> | null {
   let data: unknown;
   try {
     data = JSON.parse(json);
   } catch {
     return null;
   }
-  if (typeof data !== 'object' || data === null) return null;
-  const obj = data as Record<string, unknown>; // narrow đã validate ngay dưới, không dùng any
-  if (obj.v !== 1 || typeof obj.type !== 'string' || !WHITELIST.has(obj.type)) return null;
+  if (!isObj(data)) return null;
+  if (data.v !== 1 || typeof data.type !== 'string' || !WHITELIST.has(data.type)) return null;
+  return data;
+}
+
+// Chuẩn hoá về shape an toàn: drop entry null/non-object, coerce số/chuỗi/mảng.
+// Trả null (→ gray fallback) khi sau normalize không còn dữ liệu vẽ được.
+function normalize(obj: Record<string, unknown>): Widget | null {
+  const title = typeof obj.title === 'string' ? obj.title : undefined;
   switch (obj.type) {
-    case 'stat_tiles':
-      return Array.isArray(obj.tiles) ? (obj as Widget) : null;
-    case 'bar_list':
-      return Array.isArray(obj.items) ? (obj as Widget) : null;
-    case 'grouped_bars':
-      return Array.isArray(obj.series) && Array.isArray(obj.groups) ? (obj as Widget) : null;
-    case 'line':
-      return Array.isArray(obj.series) ? (obj as Widget) : null;
+    case 'stat_tiles': {
+      const tiles: StatTile[] = toArr(obj.tiles)
+        .filter(isObj)
+        .map((t) => {
+          const tone = t.tone === 'up' || t.tone === 'down' || t.tone === 'flat' ? t.tone : undefined;
+          return { label: toStr(t.label), value: toStr(t.value), sub: typeof t.sub === 'string' ? t.sub : undefined, tone };
+        });
+      return tiles.length ? { v: 1, type: 'stat_tiles', title, tiles } : null;
+    }
+    case 'bar_list': {
+      const items: BarItem[] = toArr(obj.items)
+        .filter(isObj)
+        .map((it) => ({ label: toStr(it.label), value: toNum(it.value), note: typeof it.note === 'string' ? it.note : undefined }));
+      return items.length ? { v: 1, type: 'bar_list', title, items } : null;
+    }
+    case 'grouped_bars': {
+      const series: string[] = toArr(obj.series)
+        .map(toStr)
+        .filter((s) => s !== '');
+      const groups: BarGroup[] = toArr(obj.groups)
+        .filter(isObj)
+        .map((g) => ({ label: toStr(g.label), values: toArr(g.values).map(toNum) }));
+      const usable = series.length > 0 && groups.some((g) => g.values.length > 0);
+      return usable ? { v: 1, type: 'grouped_bars', title, series, groups } : null;
+    }
+    case 'line': {
+      const series: LineSeries[] = toArr(obj.series)
+        .filter(isObj)
+        .map((s) => ({ name: toStr(s.name), points: toArr(s.points).map(toNum) }));
+      const categories = Array.isArray(obj.categories) ? obj.categories.map(toStr) : undefined;
+      return series.some((s) => s.points.length > 0) ? { v: 1, type: 'line', title, categories, series } : null;
+    }
     default:
       return null;
   }
@@ -83,17 +124,32 @@ function Fallback({ json }: { json: string }) {
   );
 }
 
-export default function WidgetRenderer({ json }: { json: string }) {
-  const widget = parseWidget(json);
-  if (!widget) return <Fallback json={json} />;
+// Lưới an toàn cuối cùng: mọi throw khi render widget → cùng gray fallback, không sập /chat.
+interface BoundaryProps {
+  fallback: ReactNode;
+  children: ReactNode;
+}
+interface BoundaryState {
+  hasError: boolean;
+}
+class WidgetErrorBoundary extends Component<BoundaryProps, BoundaryState> {
+  state: BoundaryState = { hasError: false };
+  static getDerivedStateFromError(): BoundaryState {
+    return { hasError: true };
+  }
+  render(): ReactNode {
+    return this.state.hasError ? this.props.fallback : this.props.children;
+  }
+}
 
+function WidgetBody({ widget }: { widget: Widget }) {
   let truncated = false;
   const cap = <T,>(arr: T[], n: number): T[] => {
     if (arr.length > n) truncated = true;
     return arr.slice(0, n);
   };
 
-  let body: React.ReactNode = null;
+  let body: ReactNode = null;
   switch (widget.type) {
     case 'stat_tiles':
       body = <StatTiles tiles={cap(widget.tiles, 6)} />;
@@ -129,5 +185,16 @@ export default function WidgetRenderer({ json }: { json: string }) {
         </Typography>
       )}
     </Box>
+  );
+}
+
+export default function WidgetRenderer({ json }: { json: string }) {
+  const raw = parseRaw(json);
+  const widget = raw ? normalize(raw) : null;
+  if (!widget) return <Fallback json={json} />;
+  return (
+    <WidgetErrorBoundary fallback={<Fallback json={json} />}>
+      <WidgetBody widget={widget} />
+    </WidgetErrorBoundary>
   );
 }

@@ -65,9 +65,35 @@ function MarkdownBody({ text }: { text: string }) {
   );
 }
 
+// Chờ token/tool đầu tiên: bong bóng rỗng trông như treo → hiện "đang soạn" + chấm nhảy.
+function TypingIndicator() {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, py: 0.5 }}>
+      <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary' }}>Finext AI đang soạn</Typography>
+      <Box sx={{ display: 'flex', gap: 0.4 }}>
+        {[0, 1, 2].map((i) => (
+          <Box
+            key={i}
+            sx={{
+              width: 5,
+              height: 5,
+              borderRadius: '50%',
+              bgcolor: 'text.disabled',
+              animation: 'finextTyping 1.2s ease-in-out infinite',
+              animationDelay: `${i * 0.2}s`,
+              '@keyframes finextTyping': { '0%, 60%, 100%': { opacity: 0.25 }, '30%': { opacity: 1 } }
+            }}
+          />
+        ))}
+      </Box>
+    </Box>
+  );
+}
+
 function MessageBubbleBase({ message }: { message: ChatMessage }) {
   const theme = useTheme();
   const isUser = message.role === 'user';
+  const waiting = !isUser && message.status === 'streaming' && message.content.trim() === '' && message.tools.length === 0;
   return (
     <Box sx={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', mb: 2 }}>
       <Box
@@ -81,6 +107,8 @@ function MessageBubbleBase({ message }: { message: ChatMessage }) {
       >
         {isUser ? (
           <Typography sx={{ fontSize: getResponsiveFontSize('md'), whiteSpace: 'pre-wrap' }}>{message.content}</Typography>
+        ) : waiting ? (
+          <TypingIndicator />
         ) : (
           splitWidgets(message.content).map((seg, i) => {
             if (seg.kind === 'md') return <MarkdownBody key={i} text={seg.body} />;

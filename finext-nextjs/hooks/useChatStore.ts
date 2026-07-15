@@ -33,6 +33,12 @@ export interface UseChatStoreReturn {
 const IDLE_MS = 45000;
 const FLUSH_MS = 80; // throttle re-render khi token nhả nhanh (04 §6 R1)
 
+type HistoryTurn = { role: 'user' | 'assistant'; content: string };
+
+// Backend cap: history ≤20 item, content ≤8000 ký tự/turn (schemas/chat.py). Ép client-side
+// để tránh 422 phá hội thoại sau nhiều lượt.
+const capHistory = (h: HistoryTurn[]): HistoryTurn[] => h.slice(-20).map((t) => ({ role: t.role, content: t.content.slice(0, 8000) }));
+
 function uid(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
@@ -139,12 +145,12 @@ export default function useChatStore(): UseChatStoreReturn {
           reduce(ev);
         }
       } catch {
-        // abort (dừng tay / idle 45s) hoặc network — giữ text đã nhả, đánh dấu interrupted.
+        // abort (dừng tay / idle 45s) hoặc network/HTTP 500/422 — giữ text đã nhả, đánh dấu interrupted.
+        // LUÔN set error để bong bóng rỗng tự giải thích, không im lặng.
         flushContent(true);
         patchAssistant((m) => (m.status === 'streaming' ? { ...m, status: 'interrupted' } : m));
-        if (controllerRef.current?.signal.aborted) {
-          setError((e) => e ?? 'Kết nối bị gián đoạn. Bạn thử lại nhé.');
-        }
+        const aborted = controller.signal.aborted;
+        setError((e) => e ?? (aborted ? 'Kết nối bị gián đoạn. Bạn thử lại nhé.' : 'Không lấy được phản hồi. Bạn thử lại nhé.'));
       } finally {
         clearIdle();
         controllerRef.current = null;
@@ -158,9 +164,9 @@ export default function useChatStore(): UseChatStoreReturn {
     (text: string) => {
       const trimmed = text.trim();
       if (!trimmed || phase !== 'idle') return;
-      const history = messagesRef.current
-        .filter((m) => m.status !== 'error' && m.content.trim() !== '')
-        .map((m) => ({ role: m.role, content: m.content }));
+      const history = capHistory(
+        messagesRef.current.filter((m) => m.status !== 'error' && m.content.trim() !== '').map((m) => ({ role: m.role, content: m.content }))
+      );
       setMessages((prev) => [...prev, { id: uid(), role: 'user', content: trimmed, tools: [], status: 'done' }]);
       void runStream(history, trimmed);
     },
@@ -182,10 +188,12 @@ export default function useChatStore(): UseChatStoreReturn {
       while (out.length && out[out.length - 1].role === 'assistant') out.pop();
       return out;
     });
-    const history = messagesRef.current
-      .filter((m) => m.role === 'user' || (m.status === 'done' && m.content.trim() !== ''))
-      .filter((m) => m.id !== lastUser.id)
-      .map((m) => ({ role: m.role, content: m.content }));
+    const history = capHistory(
+      messagesRef.current
+        .filter((m) => m.role === 'user' || (m.status === 'done' && m.content.trim() !== ''))
+        .filter((m) => m.id !== lastUser.id)
+        .map((m) => ({ role: m.role, content: m.content }))
+    );
     void runStream(history, lastUser.content);
   }, [phase, runStream]);
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Box, Button, IconButton, Stack, Tooltip } from '@mui/material';
+import { Box, Button, IconButton, Stack, Tooltip, Typography } from '@mui/material';
 import { CheckOutlined, ContentCopyOutlined, RefreshOutlined } from '@mui/icons-material';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import type { ChatMessage } from '../../../../hooks/useChatStore';
@@ -9,7 +9,7 @@ import MessageBubble from './MessageBubble';
 import ToolChip from './ToolChip';
 
 // Khối assistant: chip tool xếp trên → bong bóng → hàng action (Sao chép, và Thử lại khi lỗi).
-function AssistantBlock({ message, onRetry }: { message: ChatMessage; onRetry: () => void }) {
+function AssistantBlock({ message, onRetry, errorText }: { message: ChatMessage; onRetry: () => void; errorText?: string | null }) {
   const [copied, setCopied] = useState(false);
   const canRetry = message.status === 'error' || message.status === 'interrupted';
 
@@ -40,23 +40,29 @@ function AssistantBlock({ message, onRetry }: { message: ChatMessage; onRetry: (
           </IconButton>
         </Tooltip>
         {canRetry && (
-          <Button
-            size="small"
-            startIcon={<RefreshOutlined sx={{ fontSize: 16 }} />}
-            onClick={onRetry}
-            sx={{ color: 'text.secondary', fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, textTransform: 'none' }}
-          >
-            Thử lại
-          </Button>
+          <>
+            {errorText && (
+              <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'error.main', mr: 0.5 }}>{errorText}</Typography>
+            )}
+            <Button
+              size="small"
+              startIcon={<RefreshOutlined sx={{ fontSize: 16 }} />}
+              onClick={onRetry}
+              sx={{ color: 'text.secondary', fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, textTransform: 'none' }}
+            >
+              Thử lại
+            </Button>
+          </>
         )}
       </Stack>
     </Box>
   );
 }
 
-export default function MessageList({ messages, onRetry }: { messages: ChatMessage[]; onRetry: () => void }) {
+export default function MessageList({ messages, onRetry, error }: { messages: ChatMessage[]; onRetry: () => void; error: string | null }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const pinnedRef = useRef(true);
+  const lastIdx = messages.length - 1;
 
   const onScroll = () => {
     const el = scrollRef.current;
@@ -73,9 +79,13 @@ export default function MessageList({ messages, onRetry }: { messages: ChatMessa
 
   return (
     <Box ref={scrollRef} onScroll={onScroll} sx={{ height: 1, overflowY: 'auto', px: { xs: 0.5, md: 1 }, py: 1 }}>
-      {messages.map((m) =>
-        m.role === 'user' ? <MessageBubble key={m.id} message={m} /> : <AssistantBlock key={m.id} message={m} onRetry={onRetry} />
-      )}
+      {messages.map((m, idx) => {
+        if (m.role === 'user') return <MessageBubble key={m.id} message={m} />;
+        // Chỉ assistant lỗi/gián đoạn cuối cùng mới hiện dòng lý do cạnh nút "Thử lại".
+        const showErr = idx === lastIdx && (m.status === 'error' || m.status === 'interrupted');
+        const errorText = showErr ? (error ?? 'Không lấy được phản hồi. Bạn thử lại nhé.') : null;
+        return <AssistantBlock key={m.id} message={m} onRetry={onRetry} errorText={errorText} />;
+      })}
     </Box>
   );
 }
