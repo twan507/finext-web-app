@@ -9,7 +9,7 @@ POLICY_PATH = Path(__file__).parents[3] / "app" / "agent" / "gateway" / "policy.
 
 def test_load_policy_exposes_version_and_defaults():
     policy = Policy.load(POLICY_PATH)
-    assert policy.version == 1
+    assert policy.version == 2
     assert policy.defaults.max_response_kb == 50
     assert policy.defaults.default_limit == 20
     assert "$where" in policy.defaults.banned_operators
@@ -47,7 +47,7 @@ def test_collection_with_big_array_disallows_aggregate_and_caps_slice():
     rule = Policy.load(POLICY_PATH).rule_for("history_stock")
     assert rule is not None
     assert rule.allow_aggregate is False
-    assert rule.max_slice == 250
+    assert rule.max_slice == 500
 
 
 def test_flat_collections_allow_aggregate_by_default():

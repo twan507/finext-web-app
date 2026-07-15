@@ -611,7 +611,7 @@ def test_history_stock_find_still_passes_after_aggregate_ban():
 
 @pytest.mark.parametrize("big_slice", [-1000, 1000, [0, 100000], [-100000, 100000]])
 def test_history_stock_find_slice_over_max_rejected(big_slice):
-    """F1: max_slice=250 chặn $slice lấy nguyên mảng series qua đường find."""
+    """F1: max_slice=500 chặn $slice lấy nguyên mảng series qua đường find."""
     with pytest.raises(ValidationError) as exc:
         validate_find(
             POLICY,
@@ -621,7 +621,7 @@ def test_history_stock_find_slice_over_max_rejected(big_slice):
             sort=None,
             limit=1,
         )
-    assert "250" in exc.value.message
+    assert "500" in exc.value.message
 
 
 def test_flat_collection_aggregate_with_limit_still_passes():
