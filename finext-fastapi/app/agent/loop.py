@@ -19,8 +19,8 @@ from app.core.config import LLM_API_KEY, LLM_BASE_URL, LLM_MAX_OUTPUT_TOKENS, LL
 logger = logging.getLogger(__name__)
 
 MAX_ITERS = 8
-# Trần token/lượt trả lời. Trần cứng v4-flash/pro = 384K; default 16K đủ cho câu phân tích dài, dư đầu cho thinking sau.
-MAX_OUTPUT_TOKENS = int(LLM_MAX_OUTPUT_TOKENS) if LLM_MAX_OUTPUT_TOKENS else 16000
+# Trần token/lượt trả lời. Trần cứng v4-flash/pro = 384K; default 64K cho câu phân tích dài, dư đầu cho thinking sau.
+MAX_OUTPUT_TOKENS = int(LLM_MAX_OUTPUT_TOKENS) if LLM_MAX_OUTPUT_TOKENS else 64000
 MAX_TOTAL_TOOL_CHARS = 30_000
 
 Emit = Callable[[str, dict[str, Any]], Awaitable[None]]
