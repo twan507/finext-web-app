@@ -139,7 +139,7 @@ LLM_API_KEY = os.getenv("LLM_API_KEY")
 LLM_MODEL = os.getenv("LLM_MODEL")
 LLM_TEMPERATURE = os.getenv("LLM_TEMPERATURE")  # str|None; None = không gửi (dùng default provider)
 LLM_MAX_OUTPUT_TOKENS = os.getenv("LLM_MAX_OUTPUT_TOKENS")  # str|None; None = dùng default trong loop
-LLM_THINKING = os.getenv("LLM_THINKING") or "enabled"  # enabled | disabled — rỗng cũng về default (như LLM_TEMPERATURE)
+LLM_THINKING = os.getenv("LLM_THINKING") or "disabled"  # enabled | disabled — default disabled (đo A/B: non-thinking sạch hygiene hơn)
 LLM_REASONING_EFFORT = os.getenv("LLM_REASONING_EFFORT") or "high"  # high | max — chỉ gửi khi thinking enabled
 
 AGENT_GATEWAY = os.getenv("AGENT_GATEWAY", "mongo")  # mongo | fixture
