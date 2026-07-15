@@ -81,11 +81,13 @@ class OpenAICompatAdapter:
         api_key: str,
         model: str,
         client: httpx.AsyncClient | None = None,
+        temperature: float | None = None,
     ) -> None:
         self._url = f"{base_url.rstrip('/')}/chat/completions"
         self._api_key = api_key
         self._model = model
         self._client = client or httpx.AsyncClient(timeout=REQUEST_TIMEOUT)
+        self._temperature = temperature
 
     def _payload(
         self,
@@ -104,6 +106,8 @@ class OpenAICompatAdapter:
         }
         if tools:
             payload["tools"] = tools
+        if self._temperature is not None:
+            payload["temperature"] = self._temperature
         return payload
 
     async def _read_stream(

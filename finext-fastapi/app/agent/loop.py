@@ -14,7 +14,7 @@ from app.agent.events import DoneEvent, ErrorEvent, ToolCall, ToolCallsEvent, To
 from app.agent.gateway.types import GatewayContext, GatewayProtocol
 from app.agent.labels import label_for
 from app.agent.tools.registry import TOOL_SCHEMAS, execute_tool
-from app.core.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+from app.core.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, LLM_TEMPERATURE
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +39,9 @@ def _get_client() -> httpx.AsyncClient:
 def build_adapter() -> ModelAdapter:
     if not (LLM_BASE_URL and LLM_API_KEY and LLM_MODEL):
         raise RuntimeError("Thiếu cấu hình LLM_BASE_URL / LLM_API_KEY / LLM_MODEL")
+    temp = float(LLM_TEMPERATURE) if LLM_TEMPERATURE else None
     return OpenAICompatAdapter(
-        base_url=LLM_BASE_URL, api_key=LLM_API_KEY, model=LLM_MODEL, client=_get_client()
+        base_url=LLM_BASE_URL, api_key=LLM_API_KEY, model=LLM_MODEL, client=_get_client(), temperature=temp
     )
 
 

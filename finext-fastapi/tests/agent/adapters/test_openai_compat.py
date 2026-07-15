@@ -187,6 +187,21 @@ async def test_null_choices_chunk_does_not_crash() -> None:
     assert done.usage == {"in": 5, "out": 3}
 
 
+def test_payload_includes_temperature_when_set():
+    from app.agent.adapters.base import SystemBlock
+    adapter = OpenAICompatAdapter(base_url="https://api.test/v1", api_key="k", model="deepseek-v4-flash", temperature=0.2)
+    payload = adapter._payload([SystemBlock(text="s")], [{"role": "user", "content": "hi"}], [], 100)
+    assert payload["temperature"] == 0.2
+    assert payload["model"] == "deepseek-v4-flash"
+
+
+def test_payload_omits_temperature_when_none():
+    from app.agent.adapters.base import SystemBlock
+    adapter = OpenAICompatAdapter(base_url="https://api.test/v1", api_key="k", model="m", temperature=None)
+    payload = adapter._payload([SystemBlock(text="s")], [{"role": "user", "content": "hi"}], [], 100)
+    assert "temperature" not in payload
+
+
 # --- Regression trên bytes THẬT của DeepSeek (bắt ở mốc lát cắt Task 9) ---
 REAL_FIXTURE = Path(__file__).parent / "fixtures" / "deepseek_tool_stream.txt"
 
