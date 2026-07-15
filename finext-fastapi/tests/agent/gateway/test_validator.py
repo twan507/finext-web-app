@@ -773,3 +773,43 @@ def test_find_require_filter_in_list_still_passes():
         limit=1,
     )
     assert limit == 1
+
+
+# --- Task 3: nới validator (require_filter chấp nhận date-range đóng + aggregate anchor khỏi bắt limit) ---
+
+
+def _rule_require(policy, name, keys):
+    base = policy.rule_for("history_stock")
+    return replace(base, name=name, key=keys[0], require_filter=keys, require_series_slice=False, allow_aggregate=True)
+
+
+def test_require_filter_accepts_date_range(monkeypatch):
+    # range $gte/$lte thu hẹp phạm vi -> hợp lệ cho require_filter
+    from app.agent.gateway import validator as v
+
+    rule = _rule_require(POLICY, "market_phase_history", ["date"])
+    v._check_find_require_filter(POLICY, rule, {"date": {"$gte": "2022-01-01", "$lte": "2022-12-31"}})  # không raise
+
+
+def test_require_filter_still_rejects_ne(monkeypatch):
+    from app.agent.gateway import validator as v
+
+    rule = _rule_require(POLICY, "market_phase_history", ["date"])
+    with pytest.raises(ValidationError):
+        v._check_find_require_filter(POLICY, rule, {"date": {"$ne": "2022-01-01"}})
+
+
+def test_aggregate_large_with_anchor_match_no_limit_ok():
+    # industry_snapshot ĐÃ có trong policy stub hiện tại (size large, key industry_name).
+    # Có $match hẹp theo key ở stage đầu -> KHÔNG cần $limit nữa (Task 3 nới).
+    validate_aggregate(
+        POLICY,
+        "industry_snapshot",
+        [{"$match": {"industry_name": "Tài chính ngân hàng"}}, {"$project": {"week_score": "$money_flow_score.week_score"}}],
+    )
+
+
+def test_aggregate_large_no_anchor_still_needs_limit():
+    # không $match hẹp, không $limit -> vẫn reject (giữ chặn quét vô hạn)
+    with pytest.raises(ValidationError):
+        validate_aggregate(POLICY, "industry_snapshot", [{"$group": {"_id": "$industry_name"}}])

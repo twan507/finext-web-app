@@ -8,6 +8,11 @@ from .policy import CollectionRule, Policy
 SLICE_STAGES = ("$project", "$addFields", "$set")
 SCALAR_TYPES = (str, int, float, bool)
 
+# Toán tử khoảng: chỉ coi là THU HẸP khi khoảng ĐÓNG (có cả cận dưới lẫn cận trên). Xem _is_narrowing_value.
+_RANGE_LOWER = ("$gte", "$gt")
+_RANGE_UPPER = ("$lte", "$lt")
+_RANGE_OPS = frozenset(_RANGE_LOWER + _RANGE_UPPER)
+
 # Nợ kỹ thuật đã duyệt: tên field mảng dài hard-code, không tham số hoá qua policy.
 SERIES_FIELD = "series"
 SERIES_REF = "$series"
@@ -245,11 +250,12 @@ def _check_find_require_filter(policy: Policy, rule: CollectionRule, filter: dic
             f'Ví dụ: filter={{"{keys[0]}": "FPT"}}'
         )
     max_items = policy.defaults.max_limit
-    if not any(_is_specific_value(value, max_items) for value in present):
+    if not any(_is_narrowing_value(value, max_items) for value in present):
         raise ValidationError(
             f"Collection '{rule.name}' phải lọc khoá {hint} theo giá trị cụ thể "
-            f'(ví dụ filter={{"{keys[0]}": "FPT"}} hoặc filter={{"{keys[0]}": {{"$in": ["FPT", "HPG"]}}}}). '
-            "Không dùng $ne/$nin/$gt/$regex/$exists trên khoá này vì chúng quét toàn bộ collection. "
+            f'(ví dụ filter={{"{keys[0]}": "FPT"}} hoặc filter={{"{keys[0]}": {{"$in": ["FPT", "HPG"]}}}}), '
+            'hoặc khoảng ngày ĐÓNG cả hai đầu ví dụ filter={"date": {"$gte": "2022-01-01", "$lte": "2022-12-31"}}. '
+            "Không dùng $ne/$nin/$regex/$exists hay khoảng hở một đầu vì chúng quét toàn bộ collection. "
             f"Danh sách $in tối đa {max_items} phần tử — hãy thu hẹp lại."
         )
 
@@ -327,6 +333,24 @@ def _is_specific_value(value: Any, max_items: int) -> bool:
     return False
 
 
+def _is_narrowing_value(value: Any, max_items: int) -> bool:
+    """Giá trị THU HẸP phạm vi hợp lệ cho require_filter / anchor $match: scalar, {"$in": [scalar...]},
+    hoặc khoảng ngày ĐÓNG chặn cả hai đầu bằng $gte/$gt VÀ $lte/$lt (giá trị scalar).
+
+    KHÔNG chấp nhận $ne/$nin/$regex/$exists (phủ định/quét). Cũng KHÔNG chấp nhận khoảng HỞ một
+    đầu như {"$gt": ""}: nửa đường thẳng vẫn quét gần cả collection — giữ nguyên chốt an ninh cũ.
+    """
+    if _is_specific_value(value, max_items):
+        return True
+    if not (isinstance(value, dict) and value and set(value).issubset(_RANGE_OPS)):
+        return False
+    has_lower = any(op in value for op in _RANGE_LOWER)
+    has_upper = any(op in value for op in _RANGE_UPPER)
+    if not (has_lower and has_upper):
+        return False
+    return all(not isinstance(v, (dict, list)) for v in value.values())
+
+
 def _check_aggregate_anchor_match(
     policy: Policy, rule: CollectionRule, pipeline: list[dict[str, Any]]
 ) -> None:
@@ -358,9 +382,22 @@ def _check_aggregate_anchor_match(
         )
 
 
+def _has_anchor_match(rule: CollectionRule, stages: list[dict[str, Any]], max_items: int) -> bool:
+    """Pipeline[0] là $match neo theo rule.key với giá trị thu hẹp -> phạm vi đã bị chốt, khỏi cần $limit.
+
+    Chỉ tính $match ở stage ĐẦU TIÊN: $match sau $group/$sort là decoy (collection đã bị quét trước đó).
+    """
+    if not stages or "$match" not in stages[0] or not rule.key:
+        return False
+    match = stages[0]["$match"]
+    return isinstance(match, dict) and rule.key in match and _is_narrowing_value(match[rule.key], max_items)
+
+
 def _check_aggregate_limit(policy: Policy, rule: CollectionRule, pipeline: list[dict[str, Any]]) -> None:
     """G4: large mà không có require_filter -> bắt buộc $limit, nếu không sẽ kéo cả collection."""
     if rule.size != "large" or rule.require_filter:
+        return
+    if _has_anchor_match(rule, pipeline, policy.defaults.max_limit):
         return
     max_limit = policy.defaults.max_limit
     values = [stage["$limit"] for stage in pipeline if "$limit" in stage]
