@@ -38,13 +38,21 @@ gateway policy), không vỡ ngân sách token, giữ nguyên lớp an ninh vali
      ("`history_*`/`*_itd` bắt buộc filter khoá + `$slice`/date-range") — GIỮ NGUYÊN nội dung, chỉ chuyển cú pháp sang
      tool (D4). File 04 D6 (định giá tương đối lịch sử) giữ nguyên làm methodology qua `read_kb`.
 
-### D3 — Tool `read_kb`
-- Schema: `read_kb(doc: enum["agent_db_03","agent_db_04","agent_db_05","agent_db_06"])` → trả nguyên nội dung file.
-  Whitelist cứng 4 tên (01/02 đã resident, không cho đọc lại; không cho path tùy ý — chặn path traversal).
+### D3 — Tool `read_kb` (whitelist ĐỘNG — mở rộng KB sau này không sửa code)
+- Schema: `read_kb(doc: str)` — mô tả "tên tài liệu KB, xem danh sách + khi nào đọc ở manifest system_prompt".
+  **KHÔNG enum cứng.** Tool phân giải `doc` **động**: chỉ chấp nhận tên khớp một file `.md` thật đang có trong
+  thư mục `kb/` (so khớp qua `Path(KB_DIR).glob("*.md")`, so tên stem). Chặn path traversal: từ chối mọi tên chứa
+  `/`, `\`, `..`, hoặc không khớp `^[a-zA-Z0-9_-]+$`. An toàn tương đương enum (chỉ đọc được file nằm trong `kb/`),
+  nhưng mở rộng không cần đổi schema/code.
+- **Mở rộng kiến thức về sau = 2 bước, cả 2 chỉ sửa `.md` (không đụng code, không rebuild):** (1) thả file
+  `<tên>.md` mới vào `kb/`; (2) thêm 1 dòng vào manifest `system_prompt.md` mục 13 ("`<tên>` — đọc khi gặp Y").
+  Model đọc manifest resident → biết file mới tồn tại + khi nào gọi `read_kb("<tên>")`.
 - KHÔNG đi qua cap 12k chars của `execute_tool` (cap đó chặn exfil dữ liệu Mongo; KB là tài liệu tĩnh của dự án).
   Trả nguyên file (file lớn nhất `05` ~33k token — 256k context chứa thoải mái).
 - Nằm trong `TOOL_SCHEMAS` cạnh `db_find`/`db_aggregate`. Label chip: "Đang tra cứu tài liệu phương pháp…".
-- Đọc từ `app/agent/kb/` (D8). File không tồn tại → trả text lỗi dạy model (không raise), như tool khác.
+- Đọc từ `app/agent/kb/` (D8). `doc` không khớp file nào → trả text lỗi liệt kê tài liệu khả dụng (không raise).
+- Lưu ý: 01/02 hiện resident nên manifest ghi "đã có sẵn"; nếu sau này chuyển 01/02 sang `read_kb` (khi resident quá
+  lớn) thì chỉ cần đổi danh sách resident trong `context.py` + sửa manifest — schema tool không đổi.
 
 ### D4 — Sửa `agent_db_02` cho khớp 2 tool thật
 - File 02 hiện viết cú pháp mongosh (`db.collection.find(...)`) + khối `collection:/filter:/pipeline:` + note
@@ -91,7 +99,9 @@ gateway policy), không vỡ ngân sách token, giữ nguyên lớp an ninh vali
 - **CI/test vẫn dùng pack stub tối giản** — không phụ thuộc pack thật (giữ như spec lát cắt §D7).
 
 ### D9 — Testing
-- `read_kb`: trả đúng nội dung file whitelist; tên ngoài whitelist → lỗi text không raise; không path traversal.
+- `read_kb`: trả đúng nội dung file có trong `kb/`; tên không khớp file → lỗi text liệt kê tài liệu (không raise);
+  path traversal (`../`, `/`, tên lạ) bị từ chối; **test tính mở rộng động: thả file `.md` tạm vào `kb/` (tmp) →
+  `read_kb` đọc được ngay mà không sửa schema/code.**
 - Policy 33 collection: mỗi collection point-read hợp lệ pass; `history_*` với `$slice`+filter khoá pass, nhưng
   `find({})` trần / thiếu `$slice` bị từ chối kèm gợi ý; `history_finratios_*` aggregate bị từ chối (allow_aggregate:false).
 - Validator sau khi nới G4: test anchor-match-không-limit pass; **các test exfil cũ vẫn pass** (không regression).
