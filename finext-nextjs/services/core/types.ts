@@ -7,7 +7,7 @@ export interface IRequest {
   queryParams?: Record<string, any>;
   headers?: Record<string, string>;
   nextOption?: RequestInit;
-  responseType?: 'json' | 'blob' | 'text';
+  responseType?: 'json' | 'blob' | 'text' | 'stream';
   isFormData?: boolean;
   isUrlEncoded?: boolean;
   requireAuth?: boolean;

@@ -168,6 +168,11 @@ const _sendRequest = async <TResponseData = any>(
     try {
         const res = await fetch(finalUrl, options);
         if (res.ok) {
+            if (responseType === 'stream') {
+                // Trả Response thô, CHƯA đọc body — chatClient sẽ getReader(). 401 đã throw trước
+                // khi tới đây nên _sendRequestWithRefresh vẫn refresh + retry được.
+                return { status: res.status, data: res as any, message: 'Stream response' } as StandardApiResponse<TResponseData>;
+            }
             if (responseType === 'json') {
                 const jsonData = await res.json();
                 if (url.includes('/api/v1/auth/login') || url.includes('/api/v1/auth/refresh-token') || url.includes('/api/v1/auth/google/callback')) {
@@ -359,5 +364,15 @@ const _sendRequestWithRefresh = async <TResponseData = any>(
         }
         throw error;
     }
+};
+
+// ========== Streaming Request (SSE-over-POST) ==========
+// Đi qua _sendRequestWithRefresh để hưởng refresh-token flow; trả Response thô cho caller tự đọc stream.
+export const sendStreamRequest = async (props: Omit<IRequest, 'responseType'>): Promise<Response> => {
+    const res = await _sendRequestWithRefresh<Response>({ ...props, responseType: 'stream' });
+    if (!res.data) {
+        throw { statusCode: 503, message: 'Không mở được luồng dữ liệu.' } as ApiErrorResponse;
+    }
+    return res.data;
 };
 
