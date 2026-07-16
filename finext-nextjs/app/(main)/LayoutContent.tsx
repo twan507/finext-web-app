@@ -1016,8 +1016,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         </AppBar>
 
         {/* MAIN CONTENT - không có scrollbar riêng */}
-        {currentPathname.startsWith('/charts') || currentPathname.startsWith('/chat') ? (
-          /* Fullscreen mode (charts + chat) - no padding, no maxWidth, no footer */
+        {currentPathname.startsWith('/charts') ? (
+          /* Fullscreen chart mode - no padding, no maxWidth, no footer, overflow hidden */
           <Box
             component="main"
             sx={{
@@ -1026,6 +1026,20 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               flexDirection: 'column',
               height: `calc(100dvh - ${layoutTokens.appBarHeight}px - env(titlebar-area-height, 0px))`,
               overflow: 'hidden',
+              pb: { xs: '56px', md: 0 },
+            }}
+          >
+            {children}
+          </Box>
+        ) : currentPathname.startsWith('/chat') ? (
+          /* Chat mode - full-width, no footer, NORMAL flow → CUỘN TRÌNH DUYỆT (appbar sticky sẵn) */
+          <Box
+            component="main"
+            sx={{
+              bgcolor: theme.palette.background.default,
+              display: 'flex',
+              flexDirection: 'column',
+              minHeight: `calc(100dvh - ${layoutTokens.appBarHeight}px - env(titlebar-area-height, 0px))`,
               pb: { xs: '56px', md: 0 },
             }}
           >

@@ -35,7 +35,7 @@ export default function Composer({ disabled, streaming, onSend, onStop }: Compos
   };
 
   return (
-    <Box sx={{ borderTop: `1px solid ${theme.palette.divider}`, px: { xs: 2, md: 3 }, py: 1.5 }}>
+    <Box sx={{ position: 'sticky', bottom: 0, zIndex: 2, bgcolor: 'background.default', borderTop: `1px solid ${theme.palette.divider}`, px: { xs: 2, md: 3 }, py: 1.5 }}>
       <Box sx={{ maxWidth: 760, mx: 'auto', width: '100%' }}>
         <Box
           sx={{

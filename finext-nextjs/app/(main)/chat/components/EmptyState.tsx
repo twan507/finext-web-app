@@ -9,7 +9,7 @@ const PROMPTS = ['VN-Index hôm nay thế nào?', 'FPT giá bao nhiêu?', 'So s�
 export default function EmptyState({ onPick }: { onPick: (t: string) => void }) {
   const theme = useTheme();
   return (
-    <Box sx={{ height: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', px: 2, gap: 3 }}>
+    <Box sx={{ height: 1, width: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', px: 2, gap: 3 }}>
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
         <AutoAwesomeRounded sx={{ fontSize: 40, color: 'primary.main' }} />
         <Typography sx={{ fontSize: getResponsiveFontSize('xxl'), fontWeight: fontWeight.bold }}>Finext AI</Typography>

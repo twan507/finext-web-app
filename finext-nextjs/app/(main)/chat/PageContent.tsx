@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { Box } from '@mui/material';
+import { layoutTokens } from 'theme/tokens';
 import OptionalAuthWrapper from 'components/auth/OptionalAuthWrapper';
 import { useAuth } from 'components/auth/AuthProvider';
 import useChatStore from '../../../hooks/useChatStore';
@@ -13,6 +14,8 @@ import AsOfChip from './components/AsOfChip';
 import ChatSkeleton from './components/ChatSkeleton';
 
 const CONSENT_KEY = 'finext-chat-consent';
+// Chiều cao khả kiến dưới appbar (appbar là sticky top). Dùng cho panel lịch sử sticky + empty state.
+const VIEWPORT = `calc(100dvh - ${layoutTokens.appBarHeight}px - env(titlebar-area-height, 0px))`;
 
 function ChatApp() {
   const store = useChatStore();
@@ -31,9 +34,9 @@ function ChatApp() {
   const hasMessages = store.messages.length > 0;
 
   return (
-    <Box sx={{ display: 'flex', height: '100%', minHeight: 0 }}>
-      {/* Panel lịch sử ẩn trên mobile (<900px) → khu chat full width; desktop mới hiện (spec R4). */}
-      <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
+    <Box sx={{ display: 'flex', flex: 1 }}>
+      {/* Panel lịch sử: DÍNH (sticky) dưới appbar, cuộn RIÊNG; ẩn <900px */}
+      <Box sx={{ display: { xs: 'none', md: 'flex' }, position: 'sticky', top: layoutTokens.appBarHeight, alignSelf: 'flex-start', height: VIEWPORT }}>
         <ConversationSidebar
           conversations={store.conversations}
           activeId={store.activeId}
@@ -43,9 +46,11 @@ function ChatApp() {
           onToggle={() => setCollapsed((v) => !v)}
         />
       </Box>
-      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+
+      {/* Khu chat: TRÔI theo trang → cuộn bằng thanh cuộn TRÌNH DUYỆT; composer tự dính đáy viewport */}
+      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         {store.asOf && (
-          <Box sx={{ px: 3, pt: 1.5 }}>
+          <Box sx={{ px: { xs: 2, md: 3 }, pt: 1.5 }}>
             <Box sx={{ maxWidth: 760, mx: 'auto' }}>
               <AsOfChip asOf={store.asOf} />
             </Box>
@@ -54,12 +59,13 @@ function ChatApp() {
         {hasMessages ? (
           <MessageList key={store.activeId} messages={store.messages} onRetry={store.retry} error={store.error} />
         ) : (
-          <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex' }}>
+          <Box sx={{ flex: 1, display: 'flex', minHeight: VIEWPORT }}>
             <EmptyState onPick={store.send} />
           </Box>
         )}
         <Composer disabled={consented !== true || streaming} streaming={streaming} onSend={store.send} onStop={store.stop} />
       </Box>
+
       {session && <ConsentModal open={consented === false} onAccept={accept} />}
     </Box>
   );
@@ -67,7 +73,7 @@ function ChatApp() {
 
 export default function PageContent() {
   return (
-    <Box sx={{ height: '100%', minHeight: 0 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
       <OptionalAuthWrapper requireAuth loadingFallback={<ChatSkeleton />}>
         <ChatApp />
       </OptionalAuthWrapper>

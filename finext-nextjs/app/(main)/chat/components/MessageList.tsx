@@ -53,26 +53,24 @@ function AssistantBlock({ message, onRetry, errorText }: { message: ChatMessage;
 }
 
 export default function MessageList({ messages, onRetry, error }: { messages: ChatMessage[]; onRetry: () => void; error: string | null }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
   const pinnedRef = useRef(true);
   const lastIdx = messages.length - 1;
 
-  const onScroll = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    // Còn cách đáy < 80px coi như đang "bám đáy" → tiếp tục auto-scroll khi token mới về.
-    // User cuộn lên xa hơn → ngừng bám, không giật màn hình khi đang đọc lại.
-    pinnedRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-  };
+  // Cuộn theo TRÌNH DUYỆT (window), không phải vùng nội bộ riêng. Bám đáy khi user đang ở gần cuối trang.
+  useEffect(() => {
+    const onScroll = () => {
+      pinnedRef.current = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 160;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
-    const el = scrollRef.current;
-    if (el && pinnedRef.current) el.scrollTop = el.scrollHeight;
+    if (pinnedRef.current) window.scrollTo({ top: document.documentElement.scrollHeight });
   }, [messages]);
 
   return (
-    <Box ref={scrollRef} onScroll={onScroll} sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-      <Box sx={{ maxWidth: 760, mx: 'auto', px: { xs: 2, md: 3 }, py: 3 }}>
+    <Box sx={{ maxWidth: 760, mx: 'auto', width: '100%', px: { xs: 2, md: 3 }, py: 3 }}>
         {messages.map((m, idx) => {
           if (m.role === 'user') return <MessageBubble key={m.id} message={m} />;
           // Chỉ assistant lỗi/gián đoạn cuối cùng mới hiện dòng lý do cạnh nút "Thử lại".
@@ -80,7 +78,6 @@ export default function MessageList({ messages, onRetry, error }: { messages: Ch
           const errorText = showErr ? (error ?? 'Không lấy được phản hồi. Bạn thử lại nhé.') : null;
           return <AssistantBlock key={m.id} message={m} onRetry={onRetry} errorText={errorText} />;
         })}
-      </Box>
     </Box>
   );
 }

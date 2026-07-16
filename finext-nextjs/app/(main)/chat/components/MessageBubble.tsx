@@ -1,10 +1,9 @@
 'use client';
 
 import { Fragment, memo } from 'react';
-import type { ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Box, Skeleton, Table, TableBody, TableCell, TableHead, TableRow, Typography, alpha, useTheme } from '@mui/material';
+import { Box, Skeleton, Typography, alpha, useTheme } from '@mui/material';
 import { getResponsiveFontSize } from 'theme/tokens';
 import type { ChatMessage } from '../../../../hooks/useChatStore';
 import WidgetRenderer from './WidgetRenderer';
@@ -32,20 +31,6 @@ function splitWidgets(text: string): { kind: 'md' | 'widget' | 'pending'; body: 
   return out;
 }
 
-// Rút text thô từ children của 1 ô để đoán cột số.
-function cellText(node: ReactNode): string {
-  if (node == null || typeof node === 'boolean') return '';
-  if (typeof node === 'string' || typeof node === 'number') return String(node);
-  if (Array.isArray(node)) return node.map(cellText).join('');
-  if (typeof node === 'object' && 'props' in node) return cellText((node as { props?: { children?: ReactNode } }).props?.children);
-  return '';
-}
-// Ô số: chỉ chứa số + dấu +/−/%/,/. /khoảng trắng và có ít nhất 1 chữ số.
-function isNumericCell(node: ReactNode): boolean {
-  const t = cellText(node).trim();
-  return t !== '' && /\d/.test(t) && /^[+\-−(]?[\d.,%\s)]+$/.test(t);
-}
-
 function MarkdownBody({ text }: { text: string }) {
   const theme = useTheme();
   return (
@@ -53,26 +38,32 @@ function MarkdownBody({ text }: { text: string }) {
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
+          // Bảng HTML thuần (không MUI Table) để KHÔNG dính theme lưới của app: viền CHỈ theo hàng,
+          // cột đầu = nhãn canh trái, các cột sau = số canh phải + tabular-nums (nhất quán, hết lệch lung tung).
           table: ({ children }) => (
-            <Box sx={{ my: 1.75, border: `1px solid ${alpha(theme.palette.divider, 0.6)}`, borderRadius: 2, overflowX: 'auto', boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.4)' : '0 1px 3px rgba(0,0,0,0.06)' }}>
-              <Table size="small" sx={{ '& td, & th': { borderColor: alpha(theme.palette.divider, 0.6) } }}>{children}</Table>
+            <Box sx={{ my: 2, overflowX: 'auto', border: `1px solid ${alpha(theme.palette.divider, 0.5)}`, borderRadius: 2 }}>
+              <Box
+                component="table"
+                sx={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: '0.875rem',
+                  '& th, & td': { px: 2, py: 1.25, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.4)}`, textAlign: 'right', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
+                  '& th:first-of-type, & td:first-of-type': { textAlign: 'left', whiteSpace: 'normal', color: 'text.secondary' },
+                  '& thead th': { bgcolor: alpha(theme.palette.text.primary, 0.035), fontWeight: 600, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em', color: 'text.secondary' },
+                  '& tbody tr:last-of-type td': { borderBottom: 0 },
+                  '& tbody tr:hover td': { bgcolor: alpha(theme.palette.text.primary, 0.02) },
+                }}
+              >
+                {children}
+              </Box>
             </Box>
           ),
-          thead: ({ children }) => <TableHead sx={{ '& th': { bgcolor: alpha(theme.palette.text.primary, 0.04) } }}>{children}</TableHead>,
-          tbody: ({ children }) => <TableBody>{children}</TableBody>,
-          tr: ({ children }) => <TableRow sx={{ '&:hover': { bgcolor: alpha(theme.palette.text.primary, 0.025) } }}>{children}</TableRow>,
-          th: ({ children, style }) => (
-            <TableCell sx={{ fontWeight: 600, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em', color: 'text.secondary', whiteSpace: 'nowrap', textAlign: (style?.textAlign as 'left' | 'right' | 'center') ?? (isNumericCell(children) ? 'right' : 'left'), py: 1.25 }}>
-              {children}
-            </TableCell>
-          ),
-          td: ({ children, style }) => {
-            const numeric = isNumericCell(children);
-            const align = (style?.textAlign as 'left' | 'right' | 'center') ?? (numeric ? 'right' : 'left');
-            return (
-              <TableCell sx={{ textAlign: align, fontVariantNumeric: 'tabular-nums', whiteSpace: numeric ? 'nowrap' : 'normal', py: 1.25 }}>{children}</TableCell>
-            );
-          },
+          thead: ({ children }) => <Box component="thead">{children}</Box>,
+          tbody: ({ children }) => <Box component="tbody">{children}</Box>,
+          tr: ({ children }) => <Box component="tr">{children}</Box>,
+          th: ({ children }) => <Box component="th">{children}</Box>,
+          td: ({ children }) => <Box component="td">{children}</Box>,
           a: ({ children, href }) => (
             <Box component="a" href={href} target="_blank" rel="noopener noreferrer" sx={{ color: 'primary.main', textDecoration: 'underline' }}>
               {children}
