@@ -31,7 +31,8 @@ MAX_ITERS = 8
 # Trần token/lượt trả lời. Trần cứng v4-flash/pro = 384K; default 64K cho câu phân tích dài, dư đầu cho thinking sau.
 MAX_OUTPUT_TOKENS = int(LLM_MAX_OUTPUT_TOKENS) if LLM_MAX_OUTPUT_TOKENS else 64000
 MAX_TOTAL_TOOL_CHARS = 30_000
-STREAM_CHUNK = 48  # ký tự/đoạn khi nhả lại câu đã sanitize — giữ hiệu ứng "nhả chữ", cắt ở khoảng trắng.
+STREAM_CHUNK = 32  # ký tự/đoạn khi nhả lại câu đã sanitize — cắt ở khoảng trắng.
+STREAM_CHUNK_DELAY_S = 0.03  # nhịp giữa các đoạn (giả "nhả chữ"); vì câu cuối buffer trọn nên phải tự tạo nhịp.
 
 
 def _stream_chunks(text: str) -> list[str]:
@@ -144,7 +145,9 @@ async def _drive_turn(
             pending_reasoning = event.reasoning_content
         elif isinstance(event, DoneEvent):
             _merge_usage(usage_total, event.usage)
-            for chunk in _stream_chunks(sanitize_answer("".join(buffer))):
+            for i, chunk in enumerate(_stream_chunks(sanitize_answer("".join(buffer)))):
+                if i:
+                    await asyncio.sleep(STREAM_CHUNK_DELAY_S)  # tạo nhịp → FE nhả chữ dần, không đổ 1 lần
                 await emit("token", {"text": chunk})
             await emit("done", {"usage": usage_total, "truncated": event.truncated})
             return pending, pending_reasoning, True
