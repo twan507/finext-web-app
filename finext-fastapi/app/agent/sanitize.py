@@ -27,6 +27,12 @@ _EXPOSURE_RE = re.compile(r"`?\bexposure\b`?")
 _BACKTICK_RE = re.compile(r"`([^`]+)`")
 _SNAKE_RE = re.compile(r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$")
 _ZONE_GRADE_RE = re.compile(r"(?<=\w)\s*\(([ABC])\)")
+# VAL/VAH/POC (value area / point of control) — §15 denylist. Dạng ghép "VAL-VAH: 1.837-1.875" bỏ nhãn giữ số.
+_VA_COMPOUND_RE = re.compile(r"\bVA[LH]\s*[-–]\s*VA[LH]\s*:?\s*")
+_VA_BARE = {"VAL": "cận dưới vùng giá", "VAH": "cận trên vùng giá", "POC": "vùng giá giao dịch nhiều nhất"}
+# Grade zone trần "mức A/B/C" → nhãn tiếng Việt (technical_zone letter grade).
+_ZONE_WORD = {"A": "tích cực", "B": "trung tính", "C": "yếu"}
+_ZONE_MUC_RE = re.compile(r"\bmức\s+([ABC])\b")
 
 
 def _vsi_num(m: "re.Match[str]") -> str:
@@ -54,6 +60,11 @@ def sanitize_answer(text: str) -> str:
     # 2) exposure → tỷ lệ nắm giữ.
     s = _EXPOSURE_RE.sub("tỷ lệ nắm giữ", s)
 
+    # 2b) VAL/VAH/POC: ghép "VAL-VAH:" → bỏ nhãn giữ số; trơ → cụm §9.
+    s = _VA_COMPOUND_RE.sub("", s)
+    for code, phrase in _VA_BARE.items():
+        s = re.sub(rf"\b{code}\b", phrase, s)
+
     # 3) Token điểm/độ rộng → map §9 (nuốt backtick 2 bên nếu có).
     for tok, phrase in _PHRASE_MAP.items():
         s = re.sub(rf"`?\b{tok}\b`?", phrase, s)
@@ -66,8 +77,9 @@ def sanitize_answer(text: str) -> str:
     # 5) Backtick còn lại: snake_case sót → xóa; còn lại (ticker/cụm) → gỡ giữ nội dung.
     s = _BACKTICK_RE.sub(_unwrap_backtick, s)
 
-    # 6) Grade zone (A)/(B)/(C) dính sau từ → xóa (giữ nhãn VN đứng trước).
+    # 6) Grade zone: "(A)/(B)/(C)" dính sau từ → xóa (giữ nhãn VN trước); "mức A/B/C" → nhãn VN.
     s = _ZONE_GRADE_RE.sub("", s)
+    s = _ZONE_MUC_RE.sub(lambda m: f"mức {_ZONE_WORD[m.group(1)]}", s)
 
     # 7) Dọn khoảng trắng/dấu câu thừa do bước xóa. KHÔNG đụng số/nội dung.
     s = re.sub(r"\(\s*\)", "", s)

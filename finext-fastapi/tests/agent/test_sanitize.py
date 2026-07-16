@@ -73,6 +73,25 @@ def test_zone_grade_list_marker_not_touched():
     assert "(A) mua dần" in out
 
 
+# --- VAL/VAH/POC (§15 denylist) ---
+def test_va_compound_drops_labels_keeps_numbers():
+    out = sanitize_answer("Vùng giá chấp nhận tháng (VAL-VAH: 1.837-1.875) đã thủng")
+    assert "VAL" not in out and "VAH" not in out
+    assert "1.837-1.875" in out
+
+
+def test_poc_and_bare_va_replaced():
+    out = sanitize_answer("giá quanh POC và trên VAH")
+    assert "POC" not in out and "VAH" not in out
+
+
+# --- grade zone trần "mức A/B/C" → nhãn VN ---
+def test_muc_grade_mapped():
+    out = sanitize_answer("cải thiện lên ít nhất mức B, tránh mức C")
+    assert "mức B" not in out and "mức C" not in out
+    assert "trung tính" in out and "yếu" in out
+
+
 # --- Negative: input sạch giữ nguyên; số/URL/nhãn pha không hỏng ---
 def test_clean_input_unchanged():
     clean = "VNINDEX đang ở 1.776,89 điểm, giảm 0,29%. Thị trường ở pha TRANSITION, xem https://finext.vn/guide."
