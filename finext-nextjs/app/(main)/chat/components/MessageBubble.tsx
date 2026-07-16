@@ -130,7 +130,8 @@ function TypingIndicator() {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, py: 0.5 }}>
       <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary' }}>Đang suy nghĩ</Typography>
-      <TypingDots />
+      {/* Nudge chấm xuống ~3px cho cân optical-center của chữ (dấu tiếng Việt đẩy trọng tâm chữ xuống). */}
+      <Box sx={{ mt: '3px' }}><TypingDots /></Box>
     </Box>
   );
 }
