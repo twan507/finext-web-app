@@ -46,6 +46,7 @@ export interface ChartPalette {
   accent: string;
   up: string;
   down: string;
+  ref: string;
   neutral: string;
   heatMid: string;
   cat: string[];
@@ -57,6 +58,7 @@ export function chartPalette(theme: Theme): ChartPalette {
   const accent = theme.palette.primary.main;
   const up = theme.palette.trend.up;
   const down = theme.palette.trend.down;
+  const ref = theme.palette.trend.ref;
   return {
     mode: isDark ? 'dark' : 'light',
     text,
@@ -68,6 +70,7 @@ export function chartPalette(theme: Theme): ChartPalette {
     accent,
     up,
     down,
+    ref,
     neutral: isDark ? '#7d8896' : '#64748b',
     heatMid: isDark ? '#232b34' : '#eef1f5',
     cat: [accent, up, '#f59e0b', '#06b6d4', '#ec4899', '#8b93a7', '#ef4444', '#3b82f6'],
@@ -75,6 +78,24 @@ export function chartPalette(theme: Theme): ChartPalette {
 }
 
 const col = (p: ChartPalette, i: number): string => p.cat[i % p.cat.length];
+
+// Màu theo Ý NGHĨA (cho pie breadth Tăng/Giảm/Đứng…): color hex override > tone (up/down/flat) > tự nhận từ tên.
+function autoTone(name: string): 'up' | 'down' | 'flat' | undefined {
+  const s = name.toLowerCase().trim();
+  if (s.startsWith('tăng') || s.startsWith('up')) return 'up';
+  if (s.startsWith('giảm') || s.startsWith('down')) return 'down';
+  if (s.startsWith('đứng') || s.startsWith('đi ngang') || s.startsWith('tham chiếu') || s.startsWith('flat') || s.startsWith('unchanged'))
+    return 'flat';
+  return undefined;
+}
+function toneColor(p: ChartPalette, tone: unknown, color: unknown, name?: string): string | undefined {
+  if (typeof color === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(color)) return color;
+  const t = tone === 'up' || tone === 'down' || tone === 'flat' ? tone : name ? autoTone(name) : undefined;
+  if (t === 'up') return p.up;
+  if (t === 'down') return p.down;
+  if (t === 'flat') return p.ref;
+  return undefined;
+}
 
 // Gradient dọc (top→bottom) — tương đương new echarts.graphic.LinearGradient(0,0,0,1,[...]).
 function vGrad(top: string, bottom: string) {
@@ -361,7 +382,7 @@ function buildGroupedBar(o: Record<string, unknown>, p: ChartPalette): EChartsOp
 function buildPie(o: Record<string, unknown>, p: ChartPalette): EChartsOption | null {
   const items = toArr(o.items)
     .filter(isObj)
-    .map((it) => ({ name: toStr(it.name), value: toNum(it.value) }))
+    .map((it) => ({ name: toStr(it.name), value: toNum(it.value), tone: it.tone, color: it.color }))
     .filter((it) => it.name !== '')
     .slice(0, 10);
   if (!items.length) return null;
@@ -379,7 +400,10 @@ function buildPie(o: Record<string, unknown>, p: ChartPalette): EChartsOption | 
       itemStyle: { borderColor: p.surface, borderWidth: 2, borderRadius: donut || rose ? 4 : 0 },
       label: donut && !rose ? { show: false } : { color: p.muted, fontSize: 10, formatter: rose ? '{b}' : '{b}\n{d}%' },
       labelLine: { length: 6, length2: 6 },
-      data: items.map((it) => ({ name: it.name, value: it.value })),
+      data: items.map((it) => {
+        const c = toneColor(p, it.tone, it.color, it.name);
+        return c ? { name: it.name, value: it.value, itemStyle: { color: c } } : { name: it.name, value: it.value };
+      }),
     },
   ];
   return opt;

@@ -1,42 +1,35 @@
 'use client';
 
-import { Box, Skeleton, Stack } from '@mui/material';
-import { borderRadius } from 'theme/tokens';
+import { Box, Skeleton } from '@mui/material';
+import { layoutTokens } from 'theme/tokens';
 
-// Skeleton bám cấu trúc khung chat (KHÔNG spinner): vài bong bóng + ô nhập dưới đáy.
-function UserRow() {
-  return (
-    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-      <Skeleton variant="rounded" width="55%" height={44} sx={{ borderRadius: `${borderRadius.lg}px` }} />
-    </Box>
-  );
-}
-
-function AssistantRow() {
-  return (
-    <Box sx={{ mb: 3 }}>
-      <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
-        <Skeleton variant="rounded" width={120} height={26} sx={{ borderRadius: `${borderRadius.pill}px` }} />
-        <Skeleton variant="rounded" width={90} height={26} sx={{ borderRadius: `${borderRadius.pill}px` }} />
-      </Stack>
-      <Skeleton variant="text" width="92%" />
-      <Skeleton variant="text" width="98%" />
-      <Skeleton variant="text" width="70%" />
-      <Skeleton variant="rounded" width="100%" height={140} sx={{ mt: 1.5, borderRadius: `${borderRadius.md}px` }} />
-    </Box>
-  );
-}
-
+// Skeleton khớp UI "chưa chat" (empty state): lời chào + ô nhập nổi ở ~40% chiều cao (spacer 2:3).
+// KHÔNG dựng bong bóng chat giả — trang chưa có tin nhắn thì skeleton cũng không có.
 export default function ChatSkeleton() {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: 'calc(100dvh - 140px)', minHeight: 0 }}>
-      <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden', px: { xs: 0.5, md: 1 }, py: 1 }}>
-        <UserRow />
-        <AssistantRow />
-        <UserRow />
-        <AssistantRow />
+    <Box
+      sx={{
+        flex: 1,
+        minHeight: `calc(100dvh - ${layoutTokens.appBarHeight}px)`,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        px: 2,
+      }}
+    >
+      <Box sx={{ flexGrow: 2 }} />
+      <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+        {/* Lời chào: icon + dòng chữ (khớp ChatGreeting) */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+          <Skeleton variant="circular" width={30} height={30} />
+          <Skeleton variant="text" width={280} height={34} />
+        </Box>
+        {/* Ô nhập nổi (khớp Composer centered) */}
+        <Box sx={{ width: '100%', maxWidth: 760, mx: 'auto' }}>
+          <Skeleton variant="rounded" height={52} sx={{ borderRadius: '26px' }} />
+        </Box>
       </Box>
-      <Skeleton variant="rounded" width="100%" height={56} sx={{ borderRadius: `${borderRadius.lg}px` }} />
+      <Box sx={{ flexGrow: 3 }} />
     </Box>
   );
 }
