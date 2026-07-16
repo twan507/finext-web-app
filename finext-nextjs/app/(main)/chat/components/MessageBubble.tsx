@@ -1,9 +1,10 @@
 'use client';
 
 import { Fragment, memo } from 'react';
+import type { ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Box, Skeleton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, alpha, useTheme } from '@mui/material';
+import { Box, Skeleton, Table, TableBody, TableCell, TableHead, TableRow, Typography, alpha, useTheme } from '@mui/material';
 import { getResponsiveFontSize } from 'theme/tokens';
 import type { ChatMessage } from '../../../../hooks/useChatStore';
 import WidgetRenderer from './WidgetRenderer';
@@ -31,23 +32,47 @@ function splitWidgets(text: string): { kind: 'md' | 'widget' | 'pending'; body: 
   return out;
 }
 
+// Rút text thô từ children của 1 ô để đoán cột số.
+function cellText(node: ReactNode): string {
+  if (node == null || typeof node === 'boolean') return '';
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(cellText).join('');
+  if (typeof node === 'object' && 'props' in node) return cellText((node as { props?: { children?: ReactNode } }).props?.children);
+  return '';
+}
+// Ô số: chỉ chứa số + dấu +/−/%/,/. /khoảng trắng và có ít nhất 1 chữ số.
+function isNumericCell(node: ReactNode): boolean {
+  const t = cellText(node).trim();
+  return t !== '' && /\d/.test(t) && /^[+\-−(]?[\d.,%\s)]+$/.test(t);
+}
+
 function MarkdownBody({ text }: { text: string }) {
   const theme = useTheme();
   return (
-    <Box sx={{ fontSize: getResponsiveFontSize('md'), lineHeight: 1.7, '& p': { my: 0.75 }, '& ul, & ol': { my: 0.75, pl: 3 } }}>
+    <Box sx={{ fontSize: getResponsiveFontSize('md'), lineHeight: 1.72, '& p': { my: 1 }, '& ul, & ol': { my: 1, pl: 3 }, '& li': { mb: 0.5 }, '& h3': { fontSize: '1.05rem', fontWeight: 700, mt: 2.5, mb: 1, letterSpacing: '-0.01em' }, '& h2': { fontSize: '1.15rem', fontWeight: 700, mt: 2.5, mb: 1 }, '& strong': { fontWeight: 650 } }}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
           table: ({ children }) => (
-            <TableContainer sx={{ my: 1.5, border: `1px solid ${alpha(theme.palette.divider, 0.2)}`, borderRadius: 1, overflowX: 'auto' }}>
-              <Table size="small">{children}</Table>
-            </TableContainer>
+            <Box sx={{ my: 1.75, border: `1px solid ${alpha(theme.palette.divider, 0.6)}`, borderRadius: 2, overflowX: 'auto', boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.4)' : '0 1px 3px rgba(0,0,0,0.06)' }}>
+              <Table size="small" sx={{ '& td, & th': { borderColor: alpha(theme.palette.divider, 0.6) } }}>{children}</Table>
+            </Box>
           ),
-          thead: ({ children }) => <TableHead>{children}</TableHead>,
+          thead: ({ children }) => <TableHead sx={{ '& th': { bgcolor: alpha(theme.palette.text.primary, 0.04) } }}>{children}</TableHead>,
           tbody: ({ children }) => <TableBody>{children}</TableBody>,
-          tr: ({ children }) => <TableRow>{children}</TableRow>,
-          th: ({ children }) => <TableCell sx={{ fontWeight: 600, bgcolor: alpha(theme.palette.primary.main, 0.06) }}>{children}</TableCell>,
-          td: ({ children }) => <TableCell>{children}</TableCell>,
+          tr: ({ children }) => <TableRow sx={{ '&:hover': { bgcolor: alpha(theme.palette.text.primary, 0.025) } }}>{children}</TableRow>,
+          th: ({ children, style }) => (
+            <TableCell sx={{ fontWeight: 600, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em', color: 'text.secondary', whiteSpace: 'nowrap', textAlign: (style?.textAlign as 'left' | 'right' | 'center') ?? (isNumericCell(children) ? 'right' : 'left'), py: 1.25 }}>
+              {children}
+            </TableCell>
+          ),
+          td: ({ children, style }) => {
+            const numeric = isNumericCell(children);
+            const align = (style?.textAlign as 'left' | 'right' | 'center') ?? (numeric ? 'right' : 'left');
+            return (
+              <TableCell sx={{ textAlign: align, fontVariantNumeric: 'tabular-nums', whiteSpace: numeric ? 'nowrap' : 'normal', py: 1.25 }}>{children}</TableCell>
+            );
+          },
           a: ({ children, href }) => (
             <Box component="a" href={href} target="_blank" rel="noopener noreferrer" sx={{ color: 'primary.main', textDecoration: 'underline' }}>
               {children}
