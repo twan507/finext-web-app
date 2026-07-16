@@ -121,6 +121,23 @@ def test_non_preamble_first_line_kept():
     assert sanitize_answer(clean) == clean  # "Tôi thấy" không match narration (chỉ 'sẽ/xin')
 
 
+# --- tháng tiếng Anh → tiếng Việt ---
+def test_english_month_abbrev_to_vietnamese():
+    assert sanitize_answer("đáy cuối Oct 2023 quanh 1.020") == "đáy cuối tháng 10/2023 quanh 1.020"
+    assert sanitize_answer("hồi phục từ Nov 2022") == "hồi phục từ tháng 11/2022"
+
+
+def test_english_month_no_year_kept_as_thang():
+    assert sanitize_answer("đỉnh đầu Aug") == "đỉnh đầu tháng 8"
+    assert "Sept" not in sanitize_answer("chạm đáy Sept 2025")
+
+
+def test_may_only_month_when_next_to_year():
+    assert sanitize_answer("rung lắc May 2023") == "rung lắc tháng 5/2023"
+    # "may" (tiếng Việt) KHÔNG bị đụng
+    assert sanitize_answer("nhà đầu tư may mắn giữ hàng") == "nhà đầu tư may mắn giữ hàng"
+
+
 # --- Negative: input sạch giữ nguyên; số/URL/nhãn pha không hỏng ---
 def test_clean_input_unchanged():
     clean = "VNINDEX đang ở 1.776,89 điểm, giảm 0,29%. Thị trường ở pha TRANSITION, xem https://finext.vn/guide."

@@ -45,6 +45,17 @@ _VA_BARE = {"VAL": "cận dưới vùng giá", "VAH": "cận trên vùng giá", 
 # Grade zone trần "mức A/B/C" → nhãn tiếng Việt (technical_zone letter grade).
 _ZONE_WORD = {"A": "tích cực", "B": "trung tính", "C": "yếu"}
 _ZONE_MUC_RE = re.compile(r"\bmức\s+([ABC])\b")
+# Tháng tiếng Anh lọt vào output Việt → "tháng N". "May" trùng từ Việt "may" nên xử riêng (chỉ khi kề năm).
+_MONTH_NUM = {
+    "january": 1, "jan": 1, "february": 2, "feb": 2, "march": 3, "mar": 3,
+    "april": 4, "apr": 4, "june": 6, "jun": 6, "july": 7, "jul": 7,
+    "august": 8, "aug": 8, "september": 9, "sept": 9, "sep": 9,
+    "october": 10, "oct": 10, "november": 11, "nov": 11, "december": 12, "dec": 12,
+}
+# Match Title-case (Oct/Nov/Aug — cách model viết); KHÔNG bắt ALL-CAPS để tránh nuốt nhầm ticker.
+_MONTH_RE = re.compile(r"\b(" + "|".join(sorted((k.title() for k in _MONTH_NUM), key=len, reverse=True)) + r")\.?\b")
+_MAY_RE = re.compile(r"\bMay\b(?=[\s/.–-]*\d{4})")  # chỉ "May" viết hoa + kề năm 4 số → tháng 5
+_MONTH_YEAR_RE = re.compile(r"\btháng (\d{1,2})\s+(\d{4})\b")  # "tháng 10 2023" → "tháng 10/2023"
 
 
 def _vsi_num(m: "re.Match[str]") -> str:
@@ -57,6 +68,10 @@ def _unwrap_backtick(m: "re.Match[str]") -> str:
     if _SNAKE_RE.match(inner):  # snake_case nội bộ còn sót → xóa
         return ""
     return inner  # ticker / cụm đã dịch → gỡ backtick, giữ nội dung
+
+
+def _month_vn(m: "re.Match[str]") -> str:
+    return f"tháng {_MONTH_NUM[m.group(1).lower()]}"
 
 
 def sanitize_answer(text: str) -> str:
@@ -83,6 +98,11 @@ def sanitize_answer(text: str) -> str:
     s = _VA_COMPOUND_RE.sub("", s)
     for code, phrase in _VA_BARE.items():
         s = re.sub(rf"\b{code}\b", phrase, s)
+
+    # 2c) Tháng tiếng Anh → "tháng N" (Oct→tháng 10, Aug→tháng 8…); gộp "tháng N YYYY" → "tháng N/YYYY".
+    s = _MAY_RE.sub("tháng 5", s)
+    s = _MONTH_RE.sub(_month_vn, s)
+    s = _MONTH_YEAR_RE.sub(r"tháng \1/\2", s)
 
     # 3) Token điểm/độ rộng → map §9 (nuốt backtick 2 bên nếu có).
     for tok, phrase in _PHRASE_MAP.items():
