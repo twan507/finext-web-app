@@ -325,7 +325,7 @@ Thị trường DOWNTREND, `market_phase.exposure = 0`, cả 3 danh mục 100% t
 
 ### Nguyên tắc rút ra
 - Lỗi ở đây là khuyến nghị mở vị thế trong khi hệ đang 100% tiền mặt mà KHÔNG hé một chữ — sản phẩm tự mâu thuẫn. Được phép khuyến nghị ngược tín hiệu hệ, nhưng phải nói rõ điểm lệch + lý do.
-- Đây là tình huống pha THẬT SỰ liên quan nên phải nêu. Ngược lại, đừng chèn "bối cảnh hệ thống" vào những câu mà pha không trả lời được gì (hỏi vị thế đang cầm, phân tích cấu trúc mã, tra số liệu) — đó là nhiễu.
+- Đây là tình huống pha THẬT SỰ liên quan nên phải nêu. Ngược lại, đừng chèn "bối cảnh giai đoạn thị trường" vào những câu mà pha không trả lời được gì (hỏi vị thế đang cầm, phân tích cấu trúc mã, tra số liệu) — đó là nhiễu.
 
 ---
 
