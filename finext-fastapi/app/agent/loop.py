@@ -8,6 +8,7 @@ from typing import Any
 
 import httpx
 
+from app.agent.adapters.anthropic_compat import AnthropicCompatAdapter
 from app.agent.adapters.base import ModelAdapter, SystemBlock
 from app.agent.adapters.openai_compat import REQUEST_TIMEOUT, OpenAICompatAdapter
 from app.agent.events import DoneEvent, ErrorEvent, ToolCall, ToolCallsEvent, TokenEvent
@@ -17,6 +18,7 @@ from app.agent.sanitize import sanitize_answer
 from app.agent.tools.registry import TOOL_SCHEMAS, execute_tool
 from app.core.config import (
     LLM_API_KEY,
+    LLM_API_STYLE,
     LLM_BASE_URL,
     LLM_MAX_OUTPUT_TOKENS,
     LLM_MODEL,
@@ -68,6 +70,16 @@ def build_adapter() -> ModelAdapter:
     if not (LLM_BASE_URL and LLM_API_KEY and LLM_MODEL):
         raise RuntimeError("Thiếu cấu hình LLM_BASE_URL / LLM_API_KEY / LLM_MODEL")
     temp = float(LLM_TEMPERATURE) if LLM_TEMPERATURE else None
+    if LLM_API_STYLE == "anthropic":
+        return AnthropicCompatAdapter(
+            base_url=LLM_BASE_URL,
+            api_key=LLM_API_KEY,
+            model=LLM_MODEL,
+            client=_get_client(),
+            temperature=temp,
+            thinking=LLM_THINKING,
+            reasoning_effort=LLM_REASONING_EFFORT,
+        )
     return OpenAICompatAdapter(
         base_url=LLM_BASE_URL,
         api_key=LLM_API_KEY,

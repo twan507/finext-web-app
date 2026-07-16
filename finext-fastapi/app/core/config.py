@@ -141,6 +141,7 @@ LLM_TEMPERATURE = os.getenv("LLM_TEMPERATURE")  # str|None; None = không gửi 
 LLM_MAX_OUTPUT_TOKENS = os.getenv("LLM_MAX_OUTPUT_TOKENS")  # str|None; None = dùng default trong loop
 LLM_THINKING = os.getenv("LLM_THINKING") or "disabled"  # enabled | disabled — default disabled (đo A/B: non-thinking sạch hygiene hơn)
 LLM_REASONING_EFFORT = os.getenv("LLM_REASONING_EFFORT") or "high"  # high | max — chỉ gửi khi thinking enabled
+LLM_API_STYLE = os.getenv("LLM_API_STYLE") or "openai"  # openai | anthropic — chọn wire adapter (doc 2026-07-16)
 
 AGENT_GATEWAY = os.getenv("AGENT_GATEWAY", "mongo")  # mongo | fixture
 GATEWAY_EXPLAIN_MODE = os.getenv("GATEWAY_EXPLAIN_MODE", "off")  # on | off (heuristic — doc 01 §6 R1c)
