@@ -151,3 +151,24 @@ def test_empty_string():
 def test_no_double_spaces_left_after_removal():
     out = sanitize_answer("Dữ liệu `stock_finstats` cho thấy yếu")
     assert "  " not in out
+
+
+# --- Khối finext-widget đi VERBATIM (không bị sanitize phá fence/JSON) ---
+def test_widget_block_preserved_verbatim():
+    # Bug cũ: _BACKTICK_RE gỡ backtick biến ```finext-widget → ``finext-widget (FE hết render).
+    widget = '```finext-widget\n{"v":1,"type":"line","title":"P/E","series":[{"name":"P/E","points":[15.2,9.5]}]}\n```'
+    out = sanitize_answer(f"Biểu đồ P/E:\n\n{widget}\n\nNhận xét: rẻ.")
+    assert widget in out  # nguyên khối: fence 3-backtick + JSON không đụng
+
+
+def test_widget_json_internal_names_not_stripped():
+    # Tên giống mã nội bộ (marketcap/core) NẰM TRONG JSON widget không bị xóa (sẽ phá JSON).
+    widget = '```finext-widget\n{"v":1,"type":"bar_list","title":"marketcap","items":[{"label":"core","value":1}]}\n```'
+    assert widget in sanitize_answer(f"Xem:\n{widget}")
+
+
+def test_text_around_widget_still_sanitized():
+    widget = '```finext-widget\n{"v":1,"type":"line","series":[{"name":"x","points":[1]}]}\n```'
+    out = sanitize_answer(f"Thanh khoản (VSI 0,92).\n{widget}\nHết.")
+    assert "VSI" not in out.split("```finext-widget")[0]  # text NGOÀI widget vẫn dọn
+    assert widget in out

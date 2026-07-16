@@ -57,6 +57,10 @@ _MONTH_RE = re.compile(r"\b(" + "|".join(sorted((k.title() for k in _MONTH_NUM),
 _MAY_RE = re.compile(r"\bMay\b(?=[\s/.–-]*\d{4})")  # chỉ "May" viết hoa + kề năm 4 số → tháng 5
 _MONTH_YEAR_RE = re.compile(r"\btháng (\d{1,2})\s+(\d{4})\b")  # "tháng 10 2023" → "tháng 10/2023"
 
+# Khối biểu đồ ```finext-widget``` — sanitize CHỪA NGUYÊN (fence + JSON tới FE verbatim; khớp splitWidgets FE).
+# Bắt buộc chừa: _BACKTICK_RE gỡ backtick sẽ phá fence ```→``, và xóa tên nội bộ sẽ phá JSON.
+_WIDGET_BLOCK_RE = re.compile(r"```finext-widget\s*\n[\s\S]*?```", re.IGNORECASE)
+
 
 def _vsi_num(m: "re.Match[str]") -> str:
     op = (m.group(1) or "").replace("=", "").replace(":", "").strip()
@@ -74,12 +78,8 @@ def _month_vn(m: "re.Match[str]") -> str:
     return f"tháng {_MONTH_NUM[m.group(1).lower()]}"
 
 
-def sanitize_answer(text: str) -> str:
-    """Trả câu đã dọn ký hiệu nội bộ. Bảo toàn số, nhãn pha, URL, ticker."""
-    if not text:
-        return text
-    s = text
-
+def _sanitize_text(s: str) -> str:
+    """Dọn ký hiệu nội bộ trên MỘT đoạn văn bản thường (KHÔNG phải khối widget). KHÔNG strip (để wrapper ghép)."""
     # 0) Cắt câu mở đầu kể tiến trình ở lượt cuối (tối đa 2 dòng narration liên tiếp).
     for _ in range(2):
         new = _PREAMBLE_RE.sub("", s, count=1)
@@ -127,4 +127,21 @@ def sanitize_answer(text: str) -> str:
     s = re.sub(r"\(\s+", "(", s)
     s = re.sub(r"\s+\)", ")", s)
     s = re.sub(r"[ \t]+\n", "\n", s)
-    return s.strip()
+    return s
+
+
+def sanitize_answer(text: str) -> str:
+    """Trả câu đã dọn ký hiệu nội bộ. Bảo toàn số, nhãn pha, URL, ticker.
+
+    Khối ```finext-widget``` (biểu đồ) đi VERBATIM tới FE — KHÔNG sanitize (tránh phá fence 3-backtick + JSON).
+    Chỉ các đoạn văn bản NGOÀI khối widget mới được dọn ký hiệu."""
+    if not text:
+        return text
+    out: list[str] = []
+    last = 0
+    for m in _WIDGET_BLOCK_RE.finditer(text):
+        out.append(_sanitize_text(text[last:m.start()]))
+        out.append(m.group(0))  # khối widget giữ nguyên
+        last = m.end()
+    out.append(_sanitize_text(text[last:]))
+    return "".join(out).strip()
