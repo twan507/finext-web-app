@@ -10,11 +10,16 @@ export interface ToolChip {
   ok?: boolean;
   ms?: number;
 }
+
+// Message assistant = chuỗi PHẦN theo THỜI GIAN: text ↔ tool ↔ text. Giữ đúng thứ tự model nhả ra
+// (câu mở đầu → tra cứu → phân tích), thay vì gom tool riêng render lên đầu.
+export type MessagePart = { kind: 'text'; text: string } | ({ kind: 'tool' } & ToolChip);
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
-  content: string;
-  tools: ToolChip[];
+  content: string; // text phẳng (mọi text-part nối lại) — dùng cho history gửi backend + nút Sao chép
+  parts: MessagePart[];
   status: 'streaming' | 'done' | 'error' | 'interrupted';
 }
 export type ChatPhase = 'idle' | 'waiting' | 'streaming' | 'tool';
@@ -43,6 +48,10 @@ function uid(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+function flattenText(parts: MessagePart[]): string {
+  return parts.reduce((acc, p) => (p.kind === 'text' ? acc + p.text : acc), '');
+}
+
 export default function useChatStore(): UseChatStoreReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [phase, setPhase] = useState<ChatPhase>('idle');
@@ -54,7 +63,8 @@ export default function useChatStore(): UseChatStoreReturn {
   const messagesRef = useRef<ChatMessage[]>([]);
   messagesRef.current = messages;
 
-  // Throttle flush cho content bubble đang stream.
+  // Xây parts cho message assistant đang stream; pendingRef = text-part cuối (từ khi có tool gần nhất).
+  const partsRef = useRef<MessagePart[]>([]);
   const pendingRef = useRef<string>('');
   const lastFlushRef = useRef<number>(0);
   const assistantIdRef = useRef<string>('');
@@ -63,13 +73,13 @@ export default function useChatStore(): UseChatStoreReturn {
     setMessages((prev) => prev.map((m) => (m.id === assistantIdRef.current ? patch(m) : m)));
   }, []);
 
-  const flushContent = useCallback(
+  const flush = useCallback(
     (force: boolean) => {
       const now = Date.now();
       if (!force && now - lastFlushRef.current < FLUSH_MS) return;
       lastFlushRef.current = now;
-      const text = pendingRef.current;
-      patchAssistant((m) => ({ ...m, content: text }));
+      const parts = partsRef.current.map((p) => ({ ...p })); // copy để React thấy đổi
+      patchAssistant((m) => ({ ...m, parts, content: flattenText(parts) }));
     },
     [patchAssistant],
   );
@@ -80,20 +90,18 @@ export default function useChatStore(): UseChatStoreReturn {
   }, []);
 
   const runStream = useCallback(
-    async (history: { role: 'user' | 'assistant'; content: string }[], message: string) => {
+    async (history: HistoryTurn[], message: string) => {
       const controller = new AbortController();
       controllerRef.current = controller;
       const assistantId = uid();
       assistantIdRef.current = assistantId;
+      partsRef.current = [];
       pendingRef.current = '';
       lastFlushRef.current = 0;
 
       setError(null);
       setPhase('waiting');
-      setMessages((prev) => [
-        ...prev,
-        { id: assistantId, role: 'assistant', content: '', tools: [], status: 'streaming' },
-      ]);
+      setMessages((prev) => [...prev, { id: assistantId, role: 'assistant', content: '', parts: [], status: 'streaming' }]);
 
       const resetIdle = () => {
         clearIdle();
@@ -105,34 +113,42 @@ export default function useChatStore(): UseChatStoreReturn {
           case 'meta':
             setAsOf(ev.as_of);
             break;
-          case 'token':
+          case 'token': {
+            if (!ev.text) break;
             pendingRef.current += ev.text;
             setPhase('streaming');
-            flushContent(false);
+            const parts = partsRef.current;
+            const last = parts[parts.length - 1];
+            if (last && last.kind === 'text') last.text = pendingRef.current;
+            else parts.push({ kind: 'text', text: pendingRef.current });
+            flush(false);
             break;
+          }
           case 'tool_start':
             setPhase('tool');
-            patchAssistant((m) => ({
-              ...m,
-              tools: [...m.tools, { name: ev.name, label: ev.label, running: true }],
-            }));
+            pendingRef.current = ''; // đóng text-part hiện tại; token sau mở text-part mới (DƯỚI tool)
+            partsRef.current.push({ kind: 'tool', name: ev.name, label: ev.label, running: true });
+            flush(true);
             break;
-          case 'tool_end':
-            patchAssistant((m) => {
-              const i = m.tools.findIndex((t) => t.running && t.name === ev.name);
-              if (i === -1) return m;
-              const tools = m.tools.slice();
-              tools[i] = { ...tools[i], running: false, ok: ev.ok, ms: ev.ms };
-              return { ...m, tools };
-            });
+          case 'tool_end': {
+            const parts = partsRef.current;
+            for (let i = parts.length - 1; i >= 0; i--) {
+              const p = parts[i];
+              if (p.kind === 'tool' && p.running && p.name === ev.name) {
+                parts[i] = { kind: 'tool', name: p.name, label: p.label, running: false, ok: ev.ok, ms: ev.ms };
+                break;
+              }
+            }
+            flush(true);
             break;
+          }
           case 'error':
-            flushContent(true);
+            flush(true);
             setError(ev.message);
             patchAssistant((m) => ({ ...m, status: 'error' }));
             break;
           case 'done':
-            flushContent(true);
+            flush(true);
             patchAssistant((m) => ({ ...m, status: 'done' }));
             break;
         }
@@ -147,7 +163,7 @@ export default function useChatStore(): UseChatStoreReturn {
       } catch {
         // abort (dừng tay / idle 45s) hoặc network/HTTP 500/422 — giữ text đã nhả, đánh dấu interrupted.
         // LUÔN set error để bong bóng rỗng tự giải thích, không im lặng.
-        flushContent(true);
+        flush(true);
         patchAssistant((m) => (m.status === 'streaming' ? { ...m, status: 'interrupted' } : m));
         const aborted = controller.signal.aborted;
         setError((e) => e ?? (aborted ? 'Kết nối bị gián đoạn. Bạn thử lại nhé.' : 'Không lấy được phản hồi. Bạn thử lại nhé.'));
@@ -157,7 +173,7 @@ export default function useChatStore(): UseChatStoreReturn {
         setPhase('idle');
       }
     },
-    [clearIdle, flushContent, patchAssistant],
+    [clearIdle, flush, patchAssistant],
   );
 
   const send = useCallback(
@@ -167,7 +183,7 @@ export default function useChatStore(): UseChatStoreReturn {
       const history = capHistory(
         messagesRef.current.filter((m) => m.status !== 'error' && m.content.trim() !== '').map((m) => ({ role: m.role, content: m.content }))
       );
-      setMessages((prev) => [...prev, { id: uid(), role: 'user', content: trimmed, tools: [], status: 'done' }]);
+      setMessages((prev) => [...prev, { id: uid(), role: 'user', content: trimmed, parts: [], status: 'done' }]);
       void runStream(history, trimmed);
     },
     [phase, runStream],

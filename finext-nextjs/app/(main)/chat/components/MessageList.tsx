@@ -6,7 +6,6 @@ import { CheckOutlined, ContentCopyOutlined, RefreshOutlined } from '@mui/icons-
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import type { ChatMessage } from '../../../../hooks/useChatStore';
 import MessageBubble from './MessageBubble';
-import ToolChip from './ToolChip';
 
 // Khối assistant: chip tool xếp trên → bong bóng → hàng action (Sao chép, và Thử lại khi lỗi).
 function AssistantBlock({ message, onRetry, errorText }: { message: ChatMessage; onRetry: () => void; errorText?: string | null }) {
@@ -25,14 +24,7 @@ function AssistantBlock({ message, onRetry, errorText }: { message: ChatMessage;
 
   return (
     <Box>
-      {/* Chip tra cứu xếp DỌC, CHỈ hiện khi đang stream — xong thì ẩn, chỉ giữ kết quả (owner 2026-07-15). */}
-      {message.status === 'streaming' && message.tools.length > 0 && (
-        <Stack direction="column" alignItems="flex-start" sx={{ gap: 0.75, mb: 1 }}>
-          {message.tools.map((t, i) => (
-            <ToolChip key={`${t.name}-${i}`} tool={t} />
-          ))}
-        </Stack>
-      )}
+      {/* Dòng tra cứu nay nằm INLINE theo thứ tự thời gian trong MessageBubble (parts), không gom lên đầu. */}
       <MessageBubble message={message} />
       <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: -1, mb: 2 }}>
         <Tooltip title={copied ? 'Đã sao chép' : 'Sao chép'} placement="top">

@@ -1,12 +1,13 @@
 'use client';
 
-import { memo } from 'react';
+import { Fragment, memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Box, Skeleton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, alpha, useTheme } from '@mui/material';
 import { getResponsiveFontSize } from 'theme/tokens';
 import type { ChatMessage } from '../../../../hooks/useChatStore';
 import WidgetRenderer from './WidgetRenderer';
+import ToolChip from './ToolChip';
 
 // Tách fence ```finext-widget → xen kẽ markdown + widget; fence chưa đóng (đang stream) → pending.
 function splitWidgets(text: string): { kind: 'md' | 'widget' | 'pending'; body: string }[] {
@@ -65,6 +66,26 @@ function MarkdownBody({ text }: { text: string }) {
   );
 }
 
+// Render 1 text-part = markdown + widget; fence chưa đóng lúc stream → skeleton "đang dựng biểu đồ".
+function AssistantText({ text, streaming }: { text: string; streaming: boolean }) {
+  return (
+    <>
+      {splitWidgets(text).map((seg, i) => {
+        if (seg.kind === 'md') return <MarkdownBody key={i} text={seg.body} />;
+        if (seg.kind === 'widget') return <WidgetRenderer key={i} json={seg.body} />;
+        return streaming ? (
+          <Box key={i} sx={{ my: 1.5 }}>
+            <Skeleton variant="rounded" height={200} />
+            <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: 'text.secondary' }}>
+              Đang dựng biểu đồ…
+            </Typography>
+          </Box>
+        ) : null;
+      })}
+    </>
+  );
+}
+
 // Chờ token/tool đầu tiên: bong bóng rỗng trông như treo → hiện "đang soạn" + chấm nhảy.
 function TypingIndicator() {
   return (
@@ -93,7 +114,7 @@ function TypingIndicator() {
 function MessageBubbleBase({ message }: { message: ChatMessage }) {
   const theme = useTheme();
   const isUser = message.role === 'user';
-  const waiting = !isUser && message.status === 'streaming' && message.content.trim() === '' && message.tools.length === 0;
+  const streaming = message.status === 'streaming';
   return (
     <Box sx={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', mb: 2 }}>
       <Box
@@ -107,27 +128,25 @@ function MessageBubbleBase({ message }: { message: ChatMessage }) {
       >
         {isUser ? (
           <Typography sx={{ fontSize: getResponsiveFontSize('md'), whiteSpace: 'pre-wrap' }}>{message.content}</Typography>
-        ) : waiting ? (
+        ) : message.parts.length === 0 && streaming ? (
           <TypingIndicator />
         ) : (
-          splitWidgets(message.content).map((seg, i) => {
-            if (seg.kind === 'md') return <MarkdownBody key={i} text={seg.body} />;
-            if (seg.kind === 'widget') return <WidgetRenderer key={i} json={seg.body} />;
-            // pending: chỉ dựng skeleton khi đang stream — fence chưa đóng, CHƯA mount widget.
-            return message.status === 'streaming' ? (
-              <Box key={i} sx={{ my: 1.5 }}>
-                <Skeleton variant="rounded" height={200} />
-                <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: 'text.secondary' }}>
-                  Đang dựng biểu đồ…
-                </Typography>
-              </Box>
-            ) : null;
-          })
+          // Render theo THỨ TỰ thời gian: text → dòng tra cứu → text. Dòng tra cứu CHỈ hiện lúc đang
+          // stream (xong thì ẩn, chỉ giữ kết quả — owner 2026-07-15).
+          message.parts.map((part, i) =>
+            part.kind === 'text' ? (
+              <AssistantText key={i} text={part.text} streaming={streaming} />
+            ) : streaming ? (
+              <ToolChip key={i} tool={part} />
+            ) : (
+              <Fragment key={i} />
+            ),
+          )
         )}
       </Box>
     </Box>
   );
 }
 
-// memo: message dài + stream token → chỉ re-render bubble có content đổi.
+// memo: message dài + stream token → chỉ re-render bubble có parts đổi.
 export default memo(MessageBubbleBase);

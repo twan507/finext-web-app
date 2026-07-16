@@ -1,31 +1,23 @@
 'use client';
 
-import { Box, Typography, alpha, useTheme } from '@mui/material';
-import { getResponsiveFontSize, fontWeight, borderRadius } from 'theme/tokens';
+import { Box, Typography, useTheme } from '@mui/material';
+import { getResponsiveFontSize } from 'theme/tokens';
 import type { ToolChip as ToolChipState } from '../../../../hooks/useChatStore';
 
-// Tag tra cứu: nền trung tính + CHẤM trạng thái + chữ (KHÔNG tô màu cả chip).
-// Chấm: đang chạy = xanh chủ đạo nhấp nháy · xong = xanh lá · lỗi = đỏ. Xếp dọc ở MessageList.
+// Dòng tra cứu: 1 CHẤM trạng thái + chữ thường (KHÔNG phải chip — không nền/viền).
+// Đang chạy: chấm xanh nhấp nháy · xong: chấm xanh · lỗi: chấm đỏ.
 export default function ToolChip({ tool }: { tool: ToolChipState }) {
   const theme = useTheme();
-  const dotColor = tool.running
-    ? theme.palette.primary.main
-    : tool.ok
-      ? theme.palette.success.main
-      : theme.palette.error.main;
+  const dotColor = tool.ok === false && !tool.running ? theme.palette.error.main : theme.palette.success.main;
 
   return (
     <Box
       sx={{
-        display: 'inline-flex',
+        display: 'flex',
         alignItems: 'center',
-        gap: 0.75,
-        px: 1.25,
-        py: 0.5,
-        borderRadius: `${borderRadius.pill}px`,
-        bgcolor: alpha(theme.palette.text.primary, 0.04),
-        border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
-        '@keyframes chatDotPulse': { '0%, 100%': { opacity: 1 }, '50%': { opacity: 0.25 } }
+        gap: 1,
+        py: 0.25,
+        '@keyframes chatDotPulse': { '0%, 100%': { opacity: 1 }, '50%': { opacity: 0.3 } }
       }}
     >
       <Box
@@ -35,13 +27,10 @@ export default function ToolChip({ tool }: { tool: ToolChipState }) {
           borderRadius: '50%',
           flexShrink: 0,
           bgcolor: dotColor,
-          animation: tool.running ? 'chatDotPulse 1s ease-in-out infinite' : 'none'
+          animation: tool.running ? 'chatDotPulse 1.1s ease-in-out infinite' : 'none'
         }}
       />
-      <Typography
-        component="span"
-        sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', fontWeight: fontWeight.medium }}
-      >
+      <Typography component="span" sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary' }}>
         {tool.label}
       </Typography>
     </Box>
