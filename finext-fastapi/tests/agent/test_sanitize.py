@@ -92,6 +92,33 @@ def test_muc_grade_mapped():
     assert "trung tính" in out and "yếu" in out
 
 
+# --- token M3 mới: y_trend, industry_rank ---
+def test_y_trend_and_industry_rank_mapped():
+    assert "độ rộng xu hướng năm" in sanitize_answer("khung năm `y_trend` 0,18")
+    assert "y_trend" not in sanitize_answer("khung năm `y_trend` 0,18")
+    out = sanitize_answer("industry_rank 57% trong ngành")
+    assert "industry_rank" not in out and "xếp hạng trong ngành" in out
+
+
+# --- preamble lượt-cuối bị cắt ---
+def test_final_turn_preamble_stripped():
+    out = sanitize_answer("Tôi sẽ tổng hợp dữ liệu một năm qua của VNM:\n\n**P/E** dao động 13–16 lần.")
+    assert not out.startswith("Tôi sẽ")
+    assert "**P/E** dao động 13–16 lần." in out
+
+
+def test_double_preamble_stripped():
+    out = sanitize_answer("Tôi sẽ phân tích VNM.\nĐầu tiên nạp dữ liệu.\n\nVNM đang ở vùng hấp dẫn.")
+    assert "Tôi sẽ" not in out and "Đầu tiên nạp" not in out
+    assert "VNM đang ở vùng hấp dẫn." in out
+
+
+def test_non_preamble_first_line_kept():
+    # câu bắt đầu bằng nội dung thật (không phải narration) → GIỮ NGUYÊN
+    clean = "Tôi thấy VNM đang hấp dẫn ở vùng giá này.\n\nP/E 11,3 lần."
+    assert sanitize_answer(clean) == clean  # "Tôi thấy" không match narration (chỉ 'sẽ/xin')
+
+
 # --- Negative: input sạch giữ nguyên; số/URL/nhãn pha không hỏng ---
 def test_clean_input_unchanged():
     clean = "VNINDEX đang ở 1.776,89 điểm, giảm 0,29%. Thị trường ở pha TRANSITION, xem https://finext.vn/guide."

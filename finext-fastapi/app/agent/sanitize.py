@@ -17,9 +17,21 @@ _INTERNAL_NAMES = (
 _PHRASE_MAP = {
     "w_trend": "độ rộng xu hướng tuần", "m_trend": "độ rộng xu hướng tháng",
     "q_trend": "độ rộng xu hướng quý", "d_trend": "độ rộng xu hướng ngày",
+    "y_trend": "độ rộng xu hướng năm",
     "day_score": "điểm dòng tiền ngày", "week_score": "điểm dòng tiền tuần",
     "month_score": "điểm dòng tiền tháng",
+    "industry_rank": "xếp hạng trong ngành", "rank_pct": "phân vị xếp hạng",
 }
+
+# Câu mở đầu kể tiến trình lọt ở LƯỢT CUỐI (loop chỉ bỏ preamble ở lượt gọi-tool; model đôi khi để ở
+# câu trả lời cuối). Cắt DÒNG đầu nếu là narration rõ ràng ("Tôi/Mình sẽ…", "Để trả lời…", "Trước tiên…").
+# Chỉ cắt khi narration là 1 dòng riêng (kết bằng \n) → an toàn, không cắt nhầm nội dung liền mạch.
+_PREAMBLE_RE = re.compile(
+    r"^\s*(?:(?:tôi|mình)\s+(?:sẽ|xin)\b"
+    r"|để\s+(?:trả lời|phân tích|tổng hợp|tra cứu)\b"
+    r"|trước\s+(?:tiên|hết)\b|đầu tiên\b|hãy để\s+(?:tôi|mình)\b)[^\n]*\n+",
+    re.IGNORECASE,
+)
 
 _VSI_NUM_RE = re.compile(r"`?\bVSI\b`?\s*(=|:|≥|>=|≤|<=|>|<)?\s*(\d+(?:[.,]\d+)?)")
 _VSI_BARE_RE = re.compile(r"`?\bVSI\b`?")
@@ -52,6 +64,13 @@ def sanitize_answer(text: str) -> str:
     if not text:
         return text
     s = text
+
+    # 0) Cắt câu mở đầu kể tiến trình ở lượt cuối (tối đa 2 dòng narration liên tiếp).
+    for _ in range(2):
+        new = _PREAMBLE_RE.sub("", s, count=1)
+        if new == s:
+            break
+        s = new
 
     # 1) VSI: có số → giữ số + toán tử; trơ → cụm tự nhiên.
     s = _VSI_NUM_RE.sub(_vsi_num, s)
