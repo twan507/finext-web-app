@@ -44,9 +44,10 @@ async def test_produce_cancel_does_not_block_on_full_queue(monkeypatch):
 
     class _SlowAdapter:
         async def stream_chat(self, system, messages, tools, max_tokens):
-            for _ in range(20):
-                await asyncio.sleep(0.02)
-                yield TokenEvent(text="x ")
+            # Bậc 2: token được buffer tới DoneEvent rồi mới flush theo chunk. Nhả 1 câu dài +
+            # Done nhanh → lúc flush, producer block trên put vào queue đầy (không ai drain).
+            yield TokenEvent(text="mot hai ba bon nam sau bay tam chin muoi " * 6)
+            await asyncio.sleep(0.02)
             yield DoneEvent(usage={})
 
     async def _blocks(gateway, ctx):

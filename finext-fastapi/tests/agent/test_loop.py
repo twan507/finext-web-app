@@ -51,7 +51,8 @@ async def _collect(adapter: Any) -> list[tuple[str, dict[str, Any]]]:
 async def test_plain_answer_emits_tokens_and_done():
     adapter = ScriptedAdapter([[TokenEvent(text="Chào "), TokenEvent(text="bạn"), DoneEvent(usage={"in": 10, "out": 2})]])
     emitted = await _collect(adapter)
-    assert [e[0] for e in emitted] == ["token", "token", "done"]
+    assert [e[0] for e in emitted] == ["token", "done"]
+    assert "".join(e[1]["text"] for e in emitted if e[0] == "token") == "Chào bạn"
     assert emitted[-1][1]["usage"] == {"in": 10, "out": 2}
 
 
@@ -170,3 +171,33 @@ async def test_produce_emits_error_and_sentinel_when_gateway_init_fails(monkeypa
 
     assert frames[-1] is STREAM_END
     assert any(f is not STREAM_END and '"type": "error"' in f for f in frames)
+
+
+async def test_interim_turn_text_is_discarded():
+    """Text model sinh ra Ở LƯỢT GỌI-TOOL (preamble) phải bị bỏ, không stream ra client."""
+    tool_call = ToolCall(
+        id="c1", name="db_find",
+        arguments={"collection": "stock_snapshot", "filter": {"ticker": "FPT"}, "projection": {"price": 1}},
+    )
+    adapter = ScriptedAdapter(
+        [
+            [TokenEvent(text="Tôi sẽ tra cứu giá FPT."), ToolCallsEvent(calls=[tool_call])],
+            [TokenEvent(text="Giá FPT là 118,5"), DoneEvent(usage={"in": 5, "out": 3})],
+        ]
+    )
+    emitted = await _collect(adapter)
+    answer = "".join(e[1]["text"] for e in emitted if e[0] == "token")
+    assert "Tôi sẽ tra cứu" not in answer
+    assert "Giá FPT là 118,5" in answer
+
+
+async def test_final_answer_is_sanitized():
+    """Câu trả lời cuối phải qua sanitize_answer (mã nội bộ bị dọn)."""
+    adapter = ScriptedAdapter(
+        [[TokenEvent(text="Thanh khoản (VSI 0,92) thấp, dữ liệu `stock_finstats`."),
+          DoneEvent(usage={})]]
+    )
+    emitted = await _collect(adapter)
+    answer = "".join(e[1]["text"] for e in emitted if e[0] == "token")
+    assert "VSI" not in answer and "stock_finstats" not in answer and "`" not in answer
+    assert "0,92× TB 5 phiên" in answer

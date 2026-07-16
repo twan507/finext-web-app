@@ -13,6 +13,7 @@ from app.agent.adapters.openai_compat import REQUEST_TIMEOUT, OpenAICompatAdapte
 from app.agent.events import DoneEvent, ErrorEvent, ToolCall, ToolCallsEvent, TokenEvent
 from app.agent.gateway.types import GatewayContext, GatewayProtocol
 from app.agent.labels import label_for
+from app.agent.sanitize import sanitize_answer
 from app.agent.tools.registry import TOOL_SCHEMAS, execute_tool
 from app.core.config import (
     LLM_API_KEY,
@@ -30,6 +31,23 @@ MAX_ITERS = 8
 # Trần token/lượt trả lời. Trần cứng v4-flash/pro = 384K; default 64K cho câu phân tích dài, dư đầu cho thinking sau.
 MAX_OUTPUT_TOKENS = int(LLM_MAX_OUTPUT_TOKENS) if LLM_MAX_OUTPUT_TOKENS else 64000
 MAX_TOTAL_TOOL_CHARS = 30_000
+STREAM_CHUNK = 48  # ký tự/đoạn khi nhả lại câu đã sanitize — giữ hiệu ứng "nhả chữ", cắt ở khoảng trắng.
+
+
+def _stream_chunks(text: str) -> list[str]:
+    """Cắt text thành đoạn ~STREAM_CHUNK ký tự ở ranh giới khoảng trắng/xuống dòng (không cắt giữa từ)."""
+    chunks: list[str] = []
+    i, n = 0, len(text)
+    while i < n:
+        j = min(i + STREAM_CHUNK, n)
+        if j < n:
+            cut = max(text.rfind(" ", i, j), text.rfind("\n", i, j))
+            if cut > i:
+                j = cut + 1
+        chunks.append(text[i:j])
+        i = j
+    return chunks
+
 
 Emit = Callable[[str, dict[str, Any]], Awaitable[None]]
 
@@ -112,25 +130,28 @@ async def _drive_turn(
     emit: Emit,
     usage_total: dict[str, int],
 ) -> tuple[list[ToolCall], str | None, bool]:
-    """Chạy 1 lượt stream. Trả (tool call chờ, reasoning của lượt đó, stop)."""
+    """Chạy 1 lượt stream. Buffer text: lượt gọi-tool (interim) BỎ text; lượt cuối sanitize rồi nhả chunk."""
     pending: list[ToolCall] = []
     pending_reasoning: str | None = None
+    buffer: list[str] = []
     async for event in adapter.stream_chat(
         system=system, messages=working, tools=TOOL_SCHEMAS, max_tokens=MAX_OUTPUT_TOKENS
     ):
         if isinstance(event, TokenEvent):
-            await emit("token", {"text": event.text})
+            buffer.append(event.text)  # KHÔNG emit ngay — chờ biết interim hay final
         elif isinstance(event, ToolCallsEvent):
             pending = event.calls
             pending_reasoning = event.reasoning_content
         elif isinstance(event, DoneEvent):
             _merge_usage(usage_total, event.usage)
+            for chunk in _stream_chunks(sanitize_answer("".join(buffer))):
+                await emit("token", {"text": chunk})
             await emit("done", {"usage": usage_total, "truncated": event.truncated})
             return pending, pending_reasoning, True
         elif isinstance(event, ErrorEvent):
             await emit("error", {"message": event.message})
             return pending, pending_reasoning, True
-    return pending, pending_reasoning, False
+    return pending, pending_reasoning, False  # interim: buffer bị bỏ (preamble không lộ)
 
 
 async def run_agent(
