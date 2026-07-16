@@ -89,7 +89,11 @@ Gateway core là **thư viện Python dùng chung**: web import in-process; Clau
 
 Thứ tự code thực tế có thể xen kẽ (FE làm song song backend từ khi contract stream chốt), nhưng **go-live bắt buộc tuần tự**: DB cutover production xong (runbook v2 §7.1) → gateway chạy log đầy đủ → eval pass → mở nhóm nhỏ.
 
-> **Trạng thái 2026-07-15:** Bước 1 + Bước 2 + lát cắt 3.5 **XONG** (merge `6ab4ace`, 205 test, config `deepseek-v4-pro`/non-thinking). Bước 4 đang làm trước Bước 3 dưới dạng **lát cắt V1 "client-held multi-turn"**, route đổi `/assistant`→**`/chat`** — chi tiết: [`specs/2026-07-15-chat-fe-v1-slice-design.md`](../superpowers/specs/2026-07-15-chat-fe-v1-slice-design.md).
+> **Trạng thái 2026-07-16:** Bước 1 (Gateway) + Bước 2 (agent runtime) + lát cắt 3.5 + **Bước 4 (FE `/chat`)** đều **XONG**, đã trên `main`. Ngoài kế hoạch gốc đã làm thêm: **Bậc 2 hygiene** (hàm `sanitize_answer` dọn câu trả lời trước khi trả khách), **chốt model = MiniMax-M3** (wire OpenAI-compat; AnthropicCompatAdapter giữ sẵn cho tương lai — xem §5 #2/#7), tool **`db_stats`** (server tính min/đỉnh/đáy/percentile/drawdown trên chuỗi lịch sử dài — chữa lỗi MAX_ITERS; merge `613c8bf`), time-awareness phiên giao dịch. Backend **288 test PASS**, FE `tsc` 0. Route đổi `/assistant`→**`/chat`** (chi tiết lát cắt FE: [`specs/2026-07-15-chat-fe-v1-slice-design.md`](../superpowers/specs/2026-07-15-chat-fe-v1-slice-design.md)).
+>
+> **CÒN LẠI để go-live:** Bước 3 (persistence hội thoại + quota + kill-switch budget) · Bước 5 (deploy/nginx/env) · Bước 6 (eval + go-live) · item 9 (privacy NĐ13 + feedback 👍👎). **Việc owner (ngoài web repo):** cutover `agent_db` production.
+>
+> **LOẠI khỏi phạm vi (owner 2026-07-16): web search** — giữ agent đóng miền trong dữ liệu Finext, KHÔNG thêm dịch vụ trả phí bên thứ 3 (MiniMax web_search chỉ chạy MCP subprocess cục bộ, không hợp backend server-side). Mọi chỉ dẫn `web_search` trong pack đã gỡ (`system_prompt` mục 7 + `agent_db_03`/`agent_db_04`).
 
 ---
 
@@ -110,7 +114,7 @@ Thứ tự code thực tế có thể xen kẽ (FE làm song song backend từ k
 | Motor async + `httpx` async đã trong deps backend | `pyproject.toml` | Bước 1/2 — adapter tự parse không cần dep mới |
 | Spec kiến trúc runtime cũ (SSE contract 6 event, quota, persistence…) | [`2026-07-12-ai-chat-agent-architecture.md`](../superpowers/specs/2026-07-12-ai-chat-agent-architecture.md) | Nguyên liệu — phần còn dùng được đã hấp thụ vào bộ doc này |
 | **`agent_db` v2 as-built HOÀN CHỈNH**: 33 collections (31 + `history_finratios_*` 2026-07-14), index sống qua mọi vòng ghi, %-points, briefing core ~320 tok, phase mirror ×6, verify 45 + probe 61/61 PASS (chưa phủ 2 collection mới) | [`agent_db_v2.md`](agent_db_v2.md) | Nguồn sự thật tầng dữ liệu |
-| **Knowledge Pack v2 HOÀN CHỈNH** (`system_prompt.md` + `agent_db_01→06`, đồng bộ cùng thế hệ với DB v2) | ngoài repo (git riêng của owner) | Bước 2 §5 — server ghép vào system prompt. ⚠ pack và DB phải CÙNG THẾ HỆ (v2 §7.1.3: lệch = agent đọc sai đơn vị ×100) |
+| **Knowledge Pack v2 HOÀN CHỈNH** (`system_prompt.md` + `agent_db_01→06`, đồng bộ cùng thế hệ với DB v2) | **TRONG repo** (`finext-fastapi/app/agent/kb/`) — nguồn sự thật DUY NHẤT, sửa trực tiếp + commit (KHÔNG còn bản canonical ngoài repo) | Bước 2 §5 — server ghép vào system prompt. ⚠ pack và DB phải CÙNG THẾ HỆ (v2 §7.1.3: lệch = agent đọc sai đơn vị ×100) |
 
 ### 4.2 Chưa có (phải làm — mỗi mục trỏ tới file có phương án)
 
@@ -120,10 +124,10 @@ Thứ tự code thực tế có thể xen kẽ (FE làm song song backend từ k
 | 1 | Gateway core (policy file + validate + execute + log) | dev | 01 |
 | 2 | `routers/chat.py` + `agent/` package (loop, adapters, tools, prompt assembly) | dev | 02 |
 | 3 | `crud/chat.py` + `schemas/chat.py` + indexes `user_db` + quota | dev | 03 |
-| 4 | FE: `chatClient.ts` + `useChatStore` + page `/chat` + components (V1 slice client-held multi-turn 2026-07-15 — spec riêng) | dev | 04 |
+| 4 | ✅ **XONG (2026-07-16)** — FE: `chatClient.ts` + `useChatStore` + page `/chat` + components + redesign ring + UI polish (V1 slice client-held multi-turn) | dev | 04 |
 | 5 | Nginx location `/api/v1/chat/` + env vars `LLM_*`/`AGENT_*` | dev | 05 |
 | 6 | Bộ eval smoke + quy trình go-live/rollback | dev + owner | 07 |
-| 7 | Chọn model cụ thể (provider-agnostic đã chốt; còn phải eval 2-3 ứng viên + chốt 1 chính + 1 dự phòng) | owner + dev eval | 02 §6, 03 §3, 07 §5 |
+| 7 | ✅ **ĐÃ CHỐT (2026-07-16): MiniMax-M3** (wire OpenAI-compat) qua eval A/B vs DeepSeek-v4-pro; đổi bằng env, `AnthropicCompatAdapter` giữ dự phòng | owner + dev eval | 02 §6, 03 §3, 07 §5 |
 | 8 | Collection `user_db` mới: chat ×3 + `agent_user_profile` (+`agent_memory_notes` v1.5) | dev | 08 |
 | 9 | Consent modal NĐ 13/2023 + cập nhật `/policies/privacy` + feedback 👍👎 | dev + owner | 09 §2-3 |
 
@@ -181,7 +185,7 @@ Thứ tự code thực tế có thể xen kẽ (FE làm song song backend từ k
 
 ## 6b. NGOÀI Phạm Vi V1 (chốt để khỏi trôi scope — mỗi mục đều có lý do/đường nâng cấp trong file tương ứng)
 
-❌ Tool GHI bất kỳ (kể cả `memory_write` trong hội thoại — 08 §4.0) · ❌ widget `candle` + chart series dài kiểu spec-chứa-query (chart CƠ BẢN đã VÀO v1 — spec 07-14 §D4/§D8) · ❌ macro tool `compute_stats` (chỉ sau khi có log usage — spec 07-14 §D6) · ❌ sandbox chạy code model viết (spec 07-14 §D6) · ❌ multi-agent · ❌ semantic search/embedding (Mongo standalone không vector — 08 §4.3) · ❌ resumable stream (09 §8) · ❌ tier gating theo license (điểm cắm để sẵn — 03 §4) · ❌ answer-cache câu phổ biến (09 §7) · ❌ observability chuyên dụng Langfuse (09 §8) · ❌ auto-summarize history dài (09 §8) · ❌ thêm giá vốn vào watchlists (08 §4.1 known-gap).
+❌ Tool GHI bất kỳ (kể cả `memory_write` trong hội thoại — 08 §4.0) · ❌ **web search** (LOẠI HẲN — owner 2026-07-16: giữ đóng miền Finext, không dịch vụ trả phí bên thứ 3) · ❌ widget `candle` + chart series dài kiểu spec-chứa-query (chart CƠ BẢN đã VÀO v1 — spec 07-14 §D4/§D8) · ✅ tool tính toán `db_stats` (min/đỉnh/đáy/percentile/drawdown trên chuỗi dài — **ĐÃ LÀM 2026-07-16** merge `613c8bf`, kéo lên sớm chữa MAX_ITERS thay vì chờ log usage) · ❌ sandbox chạy code model viết (spec 07-14 §D6) · ❌ multi-agent · ❌ semantic search/embedding (Mongo standalone không vector — 08 §4.3) · ❌ resumable stream (09 §8) · ❌ tier gating theo license (điểm cắm để sẵn — 03 §4) · ❌ answer-cache câu phổ biến (09 §7) · ❌ observability chuyên dụng Langfuse (09 §8) · ❌ auto-summarize history dài (09 §8) · ❌ thêm giá vốn vào watchlists (08 §4.1 known-gap).
 
 ## 7. Điều Kiện Go-Live Tổng (chi tiết ở file 07)
 
