@@ -89,6 +89,8 @@ Gateway core là **thư viện Python dùng chung**: web import in-process; Clau
 
 Thứ tự code thực tế có thể xen kẽ (FE làm song song backend từ khi contract stream chốt), nhưng **go-live bắt buộc tuần tự**: DB cutover production xong (runbook v2 §7.1) → gateway chạy log đầy đủ → eval pass → mở nhóm nhỏ.
 
+> **Trạng thái 2026-07-15:** Bước 1 + Bước 2 + lát cắt 3.5 **XONG** (merge `6ab4ace`, 205 test, config `deepseek-v4-pro`/non-thinking). Bước 4 đang làm trước Bước 3 dưới dạng **lát cắt V1 "client-held multi-turn"**, route đổi `/assistant`→**`/chat`** — chi tiết: [`specs/2026-07-15-chat-fe-v1-slice-design.md`](../superpowers/specs/2026-07-15-chat-fe-v1-slice-design.md).
+
 ---
 
 ## 4. Bảng Hiện Trạng Toàn Cục — Có Gì / Thiếu Gì
@@ -118,7 +120,7 @@ Thứ tự code thực tế có thể xen kẽ (FE làm song song backend từ k
 | 1 | Gateway core (policy file + validate + execute + log) | dev | 01 |
 | 2 | `routers/chat.py` + `agent/` package (loop, adapters, tools, prompt assembly) | dev | 02 |
 | 3 | `crud/chat.py` + `schemas/chat.py` + indexes `user_db` + quota | dev | 03 |
-| 4 | FE: `chatClient.ts` + `useChatStore` + page `/assistant` + components | dev | 04 |
+| 4 | FE: `chatClient.ts` + `useChatStore` + page `/chat` + components (V1 slice client-held multi-turn 2026-07-15 — spec riêng) | dev | 04 |
 | 5 | Nginx location `/api/v1/chat/` + env vars `LLM_*`/`AGENT_*` | dev | 05 |
 | 6 | Bộ eval smoke + quy trình go-live/rollback | dev + owner | 07 |
 | 7 | Chọn model cụ thể (provider-agnostic đã chốt; còn phải eval 2-3 ứng viên + chốt 1 chính + 1 dự phòng) | owner + dev eval | 02 §6, 03 §3, 07 §5 |
@@ -135,7 +137,7 @@ Thứ tự code thực tế có thể xen kẽ (FE làm song song backend từ k
 | 2 | Provider/model | ✅ ĐÃ CHỐT (owner): **không khoá vendor** — 1 adapter chuẩn OpenAI-compat phủ hầu hết provider (OpenAI/OpenRouter/DeepSeek/Groq/vLLM/Gemini-compat…); model cụ thể chọn bằng eval + giá, đổi bằng env | thêm adapter native riêng CHỈ khi cần tính năng độc quyền của 1 nhà (explicit cache control…) | 02 §6, 03 §3 |
 | 3 | SDK hay tự code | ✅ ĐÃ CHỐT (owner): **tự code adapter bằng `httpx` sẵn có, không dùng SDK nhà cung cấp** — 0 dependency mới, 0 vendor lock | dùng SDK open-source nếu tự parse phát sinh bug dai dẳng (tiêu chí: >2 bug parse/tháng sau go-live) | 02 §6 |
 | 4 | Render chat | ✅ ĐÃ CHỐT (owner 2026-07-14): markdown+bảng (`react-markdown`+`remark-gfm` — dep đã duyệt) + widget `finext-widget` JSON → whitelist component (stat_tiles/bar_list/grouped_bars CSS thuần · line = apexcharts sẵn có); KHÔNG BAO GIỜ mount HTML từ model | — | 04 §5 + [spec 07-14](../superpowers/specs/2026-07-14-agent-v1-slice-and-chat-render-design.md) |
-| 5 | Tên route + nav label | `/assistant` · "Finext AI" | — | 04 §2 |
+| 5 | Tên route + nav label | **`/chat`** · "Finext AI" (owner đổi `/assistant`→`/chat` 2026-07-15) | — | 04 §2 |
 | 6 | Số quota cụ thể | 60 msg/user/ngày, budget token global theo giá model | điều chỉnh sau 2 tuần chạy nhóm nhỏ | 03 §4 |
 | 7 | Bộ nhớ cá nhân hoá | **Tầng 1** (profile user tự khai) ngay v1; **Tầng 2** (trích xuất sau lượt) v1.5 sau go-live | không bao giờ làm tool `memory_write` trong hội thoại (phá read-only) | 08 §4 |
 

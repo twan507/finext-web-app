@@ -1,7 +1,8 @@
-# 04 — Bước 4: Frontend `/assistant`
+# 04 — Bước 4: Frontend `/chat`
 
-> **Vai trò trong lộ trình:** mặt tiền của agent. Nguyên tắc: **diff tối thiểu vào code chung** (`apiClient` chỉ thêm 1 nhánh), mọi thứ mới nằm gọn trong `services/chatClient.ts` + `app/(main)/assistant/`. Chat phải trông cùng ngôn ngữ thiết kế FINEXT AI đã có ở `/market-phase`.
+> **Vai trò trong lộ trình:** mặt tiền của agent. Nguyên tắc: **diff tối thiểu vào code chung** (`apiClient` chỉ thêm 1 nhánh), mọi thứ mới nằm gọn trong `services/chatClient.ts` + `app/(main)/chat/`. Chat phải trông cùng ngôn ngữ thiết kế FINEXT AI đã có ở `/market-phase`.
 > **Phụ thuộc:** chỉ cần contract stream (02 §3) đã chốt — làm song song với backend, test bằng endpoint echo giả của bước 2.
+> **⚠ V1 slice (2026-07-15):** doc này mô tả Bước 4 ĐẦY ĐỦ. Lát cắt đang code là **client-held multi-turn**, làm trước Bước 3 — phần persistence (sidebar/history/feedback-DB/quota) DEFERRED. Boundary IN/OUT + backend delta: [`specs/2026-07-15-chat-fe-v1-slice-design.md`](../superpowers/specs/2026-07-15-chat-fe-v1-slice-design.md). Route `/assistant`→`/chat`.
 
 ---
 
@@ -32,7 +33,7 @@ finext-nextjs/
         ConversationSidebar · AsOfChip · AssistantSkeleton
 ```
 
-- Route `/assistant`, nav "Finext AI" (❓ owner chốt label). Guard `OptionalAuthWrapper requireAuth` như market-phase.
+- Route `/chat`, nav "Finext AI" (owner chốt 2026-07-15). Guard `OptionalAuthWrapper requireAuth` như market-phase.
 - **Vì sao stream đi qua `_sendRequest` của `apiClient`:** hưởng nguyên refresh-token flow — 401 throw TRƯỚC khi stream mở → retry với token mới, chưa mất byte nào. Đây là lý do KHÔNG dùng `EventSource` (GET-only, không gửi được Authorization + body) và KHÔNG đi qua Next.js route handler (API key sang container nextjs + vòng qua RBAC FastAPI).
 
 ## 3. Parser Stream (thiết kế từ spec cũ — giữ nguyên, đã đúng)
