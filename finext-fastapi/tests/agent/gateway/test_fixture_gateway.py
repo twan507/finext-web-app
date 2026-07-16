@@ -76,3 +76,31 @@ async def test_aggregate_blocked_by_validator_shares_production_rules(gateway: F
     assert result.error is not None
     assert result.meta.get("rejected") is True  # bằng chứng đi qua validator dùng chung
     assert "Chế độ fixture" not in result.error  # là message validator, không phải stub
+
+
+async def test_fixture_gateway_stats(tmp_path):
+    import json as _json
+
+    data = {
+        "history_finratios_industry": [
+            {"industry_name": "Toàn bộ thị trường", "series": [
+                {"date": "2020-01-01", "pe": 10.0},
+                {"date": "2020-06-01", "pe": 20.0},
+                {"date": "2021-01-01", "pe": 15.0},
+            ]}
+        ]
+    }
+    path = tmp_path / "fx.json"
+    path.write_text(_json.dumps(data), encoding="utf-8")
+    policy = Policy.load()
+    policy.collections["history_finratios_industry"].stats_fields = ["series.pe"]
+    gateway = FixtureGateway(policy, fixtures_path=path)
+    result = await gateway.stats(
+        CTX, "history_finratios_industry",
+        field="series.pe", ops=["min", "max", "latest", "drawdown_from_peak"],
+        filter={"industry_name": "Toàn bộ thị trường"},
+    )
+    assert result.ok is True
+    row = result.data[0]
+    assert row["min"] == 10.0 and row["max"] == 20.0
+    assert row["latest"] == 15.0 and row["drawdown_from_peak"] == -0.25

@@ -31,6 +31,7 @@ class CollectionRule:
     max_slice: int | None = None
     allow_aggregate: bool = True  # False cho collection có mảng lớn: aggregate là đường exfil không chặn nổi
     stats_fields: list[str] = field(default_factory=list)  # field số cho phép db_stats (rỗng = cấm db_stats)
+    max_response_kb: int | None = None  # override cap bytes gửi model cho riêng collection (None = dùng default)
 
 
 @dataclass

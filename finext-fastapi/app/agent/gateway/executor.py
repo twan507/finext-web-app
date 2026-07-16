@@ -8,8 +8,14 @@ from typing import Any
 from pymongo.errors import PyMongoError
 
 from .policy import Policy
+from .stats_compute import (
+    INTERNAL_MAX_POINTS,
+    compute_stats,
+    extract_series_points,
+    filter_range,
+)
 from .types import GatewayContext, GatewayResult
-from .validator import ValidationError, validate_aggregate, validate_find
+from .validator import ValidationError, validate_aggregate, validate_find, validate_stats
 
 logger = logging.getLogger(__name__)
 
@@ -63,19 +69,21 @@ class MongoGateway:
         self, ctx: GatewayContext, collection: str, docs: list[dict[str, Any]], started: float, suffix: str = ""
     ) -> GatewayResult:
         """Chốt kết quả dùng chung cho find/aggregate: strip _id → cap bytes → log → GatewayResult."""
-        data, size, truncated = _cap_bytes(_strip_id(docs), self._policy.defaults.max_response_kb)
+        rule = self._policy.rule_for(collection)
+        cap_kb = rule.max_response_kb if (rule and rule.max_response_kb) else self._policy.defaults.max_response_kb
+        data, size, truncated = _cap_bytes(_strip_id(docs), cap_kb)
         ms = int((time.perf_counter() - started) * 1000)
         if docs and not data:
             # Có doc khớp nhưng doc đầu tiên đã vượt ngân sách → không trả nổi doc nào. Báo lỗi "dạy model"
             # thay vì rỗng CÂM (rỗng câm khiến model tưởng không có dữ liệu và lặp query vô ích tới MAX_ITERS).
             logger.warning(
                 "gateway oversize request_id=%s collection=%s max_kb=%d",
-                ctx.request_id, collection, self._policy.defaults.max_response_kb,
+                ctx.request_id, collection, cap_kb,
             )
             return GatewayResult(
                 ok=False,
                 error=(
-                    f"Kết quả quá lớn (vượt {self._policy.defaults.max_response_kb} KB) nên không trả được. "
+                    f"Kết quả quá lớn (vượt {cap_kb} KB) nên không trả được. "
                     "Hãy giảm số phần tử $slice (ví dụ -104) hoặc projection ít field hơn (chỉ date, pe, pb…)."
                 ),
                 meta={"collection": collection, "oversize": True},
@@ -154,3 +162,51 @@ class MongoGateway:
         except PyMongoError:
             return self._mongo_error(ctx, collection)
         return self._ok_result(ctx, collection, docs, started, suffix=" (aggregate)")
+
+    async def stats(
+        self,
+        ctx: GatewayContext,
+        collection: str,
+        field: str,
+        ops: list[str],
+        filter: dict[str, Any] | None = None,
+        date_range: dict[str, str] | None = None,
+    ) -> GatewayResult:
+        """Đọc TOÀN chuỗi series server-side (không áp cap-gửi-model) và tính scalar. An toàn: chỉ trả số."""
+        try:
+            validate_stats(self._policy, collection, field, ops, filter)
+        except ValidationError as exc:
+            logger.info("gateway stats rejected request_id=%s collection=%s", ctx.request_id, collection)
+            return GatewayResult(ok=False, error=exc.message, meta={"collection": collection, "rejected": True})
+
+        query_filter = filter or {}
+        sub = field.split(".", 1)[1] if "." in field else field
+        projection = {f"series.{sub}": 1, "series.date": 1, "_id": 0}
+        started = time.perf_counter()
+        try:
+            cursor = self._db[collection].find(query_filter, projection)
+            cursor = cursor.limit(self._policy.defaults.max_limit).max_time_ms(self._policy.defaults.max_time_ms)
+            docs = await cursor.to_list(length=self._policy.defaults.max_limit)
+        except PyMongoError:
+            return self._mongo_error(ctx, collection)
+
+        points = extract_series_points(docs, sub)
+        if len(points) > INTERNAL_MAX_POINTS:
+            return GatewayResult(
+                ok=False,
+                error="Chuỗi dữ liệu quá dài để tính. Hãy thu hẹp bằng range (ví dụ từ 2018-01-01).",
+                meta={"collection": collection},
+            )
+        points = filter_range(points, date_range)
+        if not points:
+            return GatewayResult(
+                ok=False,
+                error="Không có dữ liệu số cho tiêu chí này. Hãy kiểm tra lại tên (ví dụ industry_name) hoặc field.",
+                meta={"collection": collection},
+            )
+        row = compute_stats(field, points, ops)
+        ms = int((time.perf_counter() - started) * 1000)
+        logger.info(
+            "gateway stats ok request_id=%s collection=%s ms=%d n=%d", ctx.request_id, collection, ms, row["n"]
+        )
+        return GatewayResult(ok=True, data=[row], meta={"collection": collection, "ms": ms})

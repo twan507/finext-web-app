@@ -38,3 +38,13 @@ class GatewayProtocol(Protocol):
         collection: str,
         pipeline: list[dict[str, Any]],
     ) -> GatewayResult: ...
+
+    async def stats(
+        self,
+        ctx: GatewayContext,
+        collection: str,
+        field: str,
+        ops: list[str],
+        filter: dict[str, Any] | None = None,
+        date_range: dict[str, str] | None = None,
+    ) -> GatewayResult: ...

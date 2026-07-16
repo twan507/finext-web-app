@@ -6,8 +6,9 @@ from pathlib import Path
 from typing import Any
 
 from .policy import Policy
+from .stats_compute import compute_stats, extract_series_points, filter_range
 from .types import GatewayContext, GatewayResult
-from .validator import ValidationError, validate_aggregate, validate_find
+from .validator import ValidationError, validate_aggregate, validate_find, validate_stats
 
 logger = logging.getLogger(__name__)
 
@@ -68,4 +69,28 @@ class FixtureGateway:
             ok=False,
             error="Chế độ fixture không hỗ trợ aggregate. Hãy dùng db_find.",
             meta={"collection": collection},
+        )
+
+    async def stats(
+        self,
+        ctx: GatewayContext,
+        collection: str,
+        field: str,
+        ops: list[str],
+        filter: dict[str, Any] | None = None,
+        date_range: dict[str, str] | None = None,
+    ) -> GatewayResult:
+        try:
+            validate_stats(self._policy, collection, field, ops, filter)
+        except ValidationError as exc:
+            return GatewayResult(ok=False, error=exc.message, meta={"collection": collection, "rejected": True})
+        sub = field.split(".", 1)[1] if "." in field else field
+        docs = [doc for doc in self._data.get(collection, []) if _matches(doc, filter or {})]
+        points = filter_range(extract_series_points(docs, sub), date_range)
+        if not points:
+            return GatewayResult(
+                ok=False, error="Không có dữ liệu số cho tiêu chí này.", meta={"collection": collection}
+            )
+        return GatewayResult(
+            ok=True, data=[compute_stats(field, points, ops)], meta={"collection": collection, "ms": 0}
         )

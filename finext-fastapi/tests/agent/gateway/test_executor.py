@@ -248,3 +248,89 @@ async def test_aggregate_response_over_cap_is_truncated():
     assert len(result.data) < 50
     assert result.meta["truncated"] is True
     assert result.meta["bytes"] <= 50 * 1024
+
+
+# --- db_stats (Task 3) ---
+
+def _stats_policy() -> Policy:
+    policy = Policy.load()
+    policy.collections["history_finratios_industry"].stats_fields = ["series.pe", "series.pb"]
+    return policy
+
+
+async def test_stats_returns_only_scalars_from_full_series():
+    # series 28 điểm (raw sẽ > vài KB) → stats CHỈ trả scalar, không rò series.
+    series = [{"date": f"2020-01-{i:02d}", "pe": 10.0 + i, "pb": 1.0} for i in range(1, 29)]
+    collection = FakeCollection([{"industry_name": "Toàn bộ thị trường", "series": series}])
+    gateway = MongoGateway(FakeDB(collection), _stats_policy())
+    result = await gateway.stats(
+        CTX, "history_finratios_industry",
+        field="series.pe", ops=["min", "max", "latest", "drawdown_from_peak", "median"],
+        filter={"industry_name": "Toàn bộ thị trường"},
+    )
+    assert result.ok is True
+    row = result.data[0]
+    assert row["field"] == "series.pe"
+    assert row["n"] == 28
+    assert row["min"] == 11.0
+    assert row["max"] == 38.0
+    assert row["latest"] == 38.0
+    assert row["drawdown_from_peak"] == 0.0
+    assert "series" not in row and "date" not in row  # scalar-only, không rò raw
+
+
+async def test_stats_rejects_collection_without_stats_fields():
+    collection = FakeCollection([{"industry_name": "X", "series": []}])
+    gateway = MongoGateway(FakeDB(collection), Policy.load())  # stats_fields rỗng
+    result = await gateway.stats(
+        CTX, "history_finratios_industry", field="series.pe", ops=["min"], filter={"industry_name": "X"}
+    )
+    assert result.ok is False
+    assert result.error is not None and "không hỗ trợ" in result.error
+
+
+async def test_stats_empty_match_returns_teaching_error():
+    collection = FakeCollection([])  # không doc khớp
+    gateway = MongoGateway(FakeDB(collection), _stats_policy())
+    result = await gateway.stats(
+        CTX, "history_finratios_industry", field="series.pe", ops=["min"], filter={"industry_name": "ZZZ"}
+    )
+    assert result.ok is False
+    assert result.error is not None and "không có dữ liệu" in result.error.lower()
+
+
+async def test_stats_range_filter_applied():
+    series = [{"date": f"2020-0{i}-01", "pe": float(i)} for i in range(1, 6)]  # 2020-01..05
+    collection = FakeCollection([{"industry_name": "X", "series": series}])
+    gateway = MongoGateway(FakeDB(collection), _stats_policy())
+    result = await gateway.stats(
+        CTX, "history_finratios_industry", field="series.pe", ops=["min", "max", "count"],
+        filter={"industry_name": "X"}, date_range={"from": "2020-02-01", "to": "2020-04-01"},
+    )
+    assert result.ok is True
+    row = result.data[0]
+    assert row["min"] == 2.0 and row["max"] == 4.0 and row["count"] == 3
+
+
+async def test_stats_mongo_error_returns_gateway_result():
+    gateway = MongoGateway(RaisingDB(), _stats_policy())
+    result = await gateway.stats(
+        CTX, "history_finratios_industry", field="series.pe", ops=["min"], filter={"industry_name": "X"}
+    )
+    assert result.ok is False
+    assert result.error is not None and "thu hẹp" in result.error
+
+
+async def test_find_cap_uses_per_rule_override():
+    # Part B: collection có max_response_kb override → dùng cap lớn hơn default 50.
+    policy = Policy.load()
+    policy.collections["stock_snapshot"].max_response_kb = 200
+    docs = [{"ticker": f"T{i:04d}", "blob": "x" * 2000} for i in range(50)]  # ~100 KB
+    collection = FakeCollection(docs)
+    gateway = MongoGateway(FakeDB(collection), policy)
+    result = await gateway.find(
+        CTX, "stock_snapshot", filter={"ticker": "FPT"}, projection={"ticker": 1, "blob": 1}, limit=50
+    )
+    assert result.ok is True
+    assert result.data is not None and len(result.data) == 50  # 100 KB < 200 KB cap → không cắt
+    assert result.meta["truncated"] is False
