@@ -107,7 +107,7 @@ function AssistantText({ text, streaming }: { text: string; streaming: boolean }
 function TypingIndicator() {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, py: 0.5 }}>
-      <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary' }}>Finext AI đang suy nghĩ</Typography>
+      <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary' }}>Đang suy nghĩ</Typography>
       <Box sx={{ display: 'flex', gap: 0.4 }}>
         {[0, 1, 2].map((i) => (
           <Box

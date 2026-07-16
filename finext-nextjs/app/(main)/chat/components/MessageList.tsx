@@ -11,6 +11,8 @@ import MessageBubble from './MessageBubble';
 function AssistantBlock({ message, onRetry, errorText }: { message: ChatMessage; onRetry: () => void; errorText?: string | null }) {
   const [copied, setCopied] = useState(false);
   const canRetry = message.status === 'error' || message.status === 'interrupted';
+  // Nút sao chép chỉ hiện khi câu trả lời đã XONG hẳn (còn đang suy nghĩ/tra cứu/nhả chữ thì ẩn — tránh đè dòng tra cứu + copy nội dung dở).
+  const showCopy = message.status === 'done' && message.content.trim().length > 0;
 
   const copy = async () => {
     try {
@@ -26,28 +28,32 @@ function AssistantBlock({ message, onRetry, errorText }: { message: ChatMessage;
     <Box>
       {/* Dòng tra cứu nay nằm INLINE theo thứ tự thời gian trong MessageBubble (parts), không gom lên đầu. */}
       <MessageBubble message={message} />
-      <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: -1, mb: 2 }}>
-        <Tooltip title={copied ? 'Đã sao chép' : 'Sao chép'} placement="top">
-          <IconButton size="small" onClick={copy} sx={{ color: 'text.secondary' }}>
-            {copied ? <CheckOutlined sx={{ fontSize: 16 }} /> : <ContentCopyOutlined sx={{ fontSize: 16 }} />}
-          </IconButton>
-        </Tooltip>
-        {canRetry && (
-          <>
-            {errorText && (
-              <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'error.main', mr: 0.5 }}>{errorText}</Typography>
-            )}
-            <Button
-              size="small"
-              startIcon={<RefreshOutlined sx={{ fontSize: 16 }} />}
-              onClick={onRetry}
-              sx={{ color: 'text.secondary', fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, textTransform: 'none' }}
-            >
-              Thử lại
-            </Button>
-          </>
-        )}
-      </Stack>
+      {(showCopy || canRetry) && (
+        <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 0.5, mb: 2 }}>
+          {showCopy && (
+            <Tooltip title={copied ? 'Đã sao chép' : 'Sao chép'} placement="top">
+              <IconButton size="small" onClick={copy} sx={{ color: 'text.secondary' }}>
+                {copied ? <CheckOutlined sx={{ fontSize: 16 }} /> : <ContentCopyOutlined sx={{ fontSize: 16 }} />}
+              </IconButton>
+            </Tooltip>
+          )}
+          {canRetry && (
+            <>
+              {errorText && (
+                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'error.main', mr: 0.5 }}>{errorText}</Typography>
+              )}
+              <Button
+                size="small"
+                startIcon={<RefreshOutlined sx={{ fontSize: 16 }} />}
+                onClick={onRetry}
+                sx={{ color: 'text.secondary', fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.medium, textTransform: 'none' }}
+              >
+                Thử lại
+              </Button>
+            </>
+          )}
+        </Stack>
+      )}
     </Box>
   );
 }
