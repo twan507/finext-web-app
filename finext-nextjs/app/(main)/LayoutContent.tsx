@@ -1016,8 +1016,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         </AppBar>
 
         {/* MAIN CONTENT - không có scrollbar riêng */}
-        {currentPathname.startsWith('/charts') ? (
-          /* Fullscreen chart mode - no padding, no maxWidth, no footer */
+        {currentPathname.startsWith('/charts') || currentPathname.startsWith('/chat') ? (
+          /* Fullscreen mode (charts + chat) - no padding, no maxWidth, no footer */
           <Box
             component="main"
             sx={{
