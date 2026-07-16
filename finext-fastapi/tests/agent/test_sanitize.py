@@ -97,7 +97,9 @@ def test_y_trend_and_industry_rank_mapped():
     assert "độ rộng xu hướng năm" in sanitize_answer("khung năm `y_trend` 0,18")
     assert "y_trend" not in sanitize_answer("khung năm `y_trend` 0,18")
     out = sanitize_answer("industry_rank 57% trong ngành")
-    assert "industry_rank" not in out and "xếp hạng trong ngành" in out
+    assert "industry_rank" not in out and "phân vị xếp hạng trong ngành" in out
+    out2 = sanitize_answer("rank_pct 62 toàn thị trường")
+    assert "rank_pct" not in out2 and "phân vị xếp hạng thị trường" in out2
 
 
 # --- preamble lượt-cuối bị cắt ---

@@ -20,7 +20,7 @@ _PHRASE_MAP = {
     "y_trend": "độ rộng xu hướng năm",
     "day_score": "điểm dòng tiền ngày", "week_score": "điểm dòng tiền tuần",
     "month_score": "điểm dòng tiền tháng",
-    "industry_rank": "xếp hạng trong ngành", "rank_pct": "phân vị xếp hạng",
+    "industry_rank": "phân vị xếp hạng trong ngành", "rank_pct": "phân vị xếp hạng thị trường",
 }
 
 # Câu mở đầu kể tiến trình lọt ở LƯỢT CUỐI (loop chỉ bỏ preamble ở lượt gọi-tool; model đôi khi để ở
