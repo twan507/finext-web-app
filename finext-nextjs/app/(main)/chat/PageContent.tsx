@@ -56,13 +56,14 @@ function ChatApp() {
             </Box>
           </Box>
         )}
-        {hasMessages ? (
-          <MessageList key={store.activeId} messages={store.messages} onRetry={store.retry} error={store.error} />
-        ) : (
-          <Box sx={{ flex: 1, display: 'flex', minHeight: VIEWPORT }}>
+        {/* Vùng tin nhắn flex:1 → đẩy composer xuống ĐÁY khi nội dung ngắn; nội dung dài thì cuộn window. */}
+        <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          {hasMessages ? (
+            <MessageList key={store.activeId} messages={store.messages} onRetry={store.retry} error={store.error} />
+          ) : (
             <EmptyState onPick={store.send} />
-          </Box>
-        )}
+          )}
+        </Box>
         <Composer disabled={consented !== true || streaming} streaming={streaming} onSend={store.send} onStop={store.stop} />
       </Box>
 

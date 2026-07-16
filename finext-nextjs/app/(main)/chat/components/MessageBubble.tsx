@@ -38,21 +38,22 @@ function MarkdownBody({ text }: { text: string }) {
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          // Bảng HTML thuần (không MUI Table) để KHÔNG dính theme lưới của app: viền CHỈ theo hàng,
-          // cột đầu = nhãn canh trái, các cột sau = số canh phải + tabular-nums (nhất quán, hết lệch lung tung).
+          // Bảng kiểu Claude: KHÔNG khung/grid — chỉ 1 vạch dưới header, hàng thân viền rất mờ.
+          // Cột đầu = nhãn canh trái (flush-left), các cột sau = số canh phải + tabular-nums (nhất quán).
           table: ({ children }) => (
-            <Box sx={{ my: 2, overflowX: 'auto', border: `1px solid ${alpha(theme.palette.divider, 0.5)}`, borderRadius: 2 }}>
+            <Box sx={{ my: 2, overflowX: 'auto' }}>
               <Box
                 component="table"
                 sx={{
                   width: '100%',
                   borderCollapse: 'collapse',
-                  fontSize: '0.875rem',
-                  '& th, & td': { px: 2, py: 1.25, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.4)}`, textAlign: 'right', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
-                  '& th:first-of-type, & td:first-of-type': { textAlign: 'left', whiteSpace: 'normal', color: 'text.secondary' },
-                  '& thead th': { bgcolor: alpha(theme.palette.text.primary, 0.035), fontWeight: 600, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em', color: 'text.secondary' },
-                  '& tbody tr:last-of-type td': { borderBottom: 0 },
-                  '& tbody tr:hover td': { bgcolor: alpha(theme.palette.text.primary, 0.02) },
+                  fontSize: '0.9rem',
+                  lineHeight: 1.5,
+                  '& th, & td': { px: 2, py: 1.15, textAlign: 'right', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
+                  '& th:first-of-type, & td:first-of-type': { pl: 0, textAlign: 'left', whiteSpace: 'normal' },
+                  '& th:last-of-type, & td:last-of-type': { pr: 0 },
+                  '& thead th': { fontWeight: 600, color: 'text.secondary', pb: 1, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` },
+                  '& tbody td': { borderTop: `1px solid ${alpha(theme.palette.divider, 0.14)}` },
                 }}
               >
                 {children}
@@ -147,17 +148,13 @@ function MessageBubbleBase({ message }: { message: ChatMessage }) {
         ) : message.parts.length === 0 && streaming ? (
           <TypingIndicator />
         ) : (
-          // Render theo THỨ TỰ thời gian: text → dòng tra cứu → text. Dòng tra cứu CHỈ hiện lúc đang
-          // stream (xong thì ẩn, chỉ giữ kết quả — owner 2026-07-15).
-          message.parts.map((part, i) =>
-            part.kind === 'text' ? (
-              <AssistantText key={i} text={part.text} streaming={streaming} />
-            ) : streaming ? (
-              <ToolChip key={i} tool={part} />
-            ) : (
-              <Fragment key={i} />
-            ),
-          )
+          // Render theo THỨ TỰ thời gian: text → dòng tra cứu → text.
+          message.parts.map((part, i) => {
+            if (part.kind === 'text') return <AssistantText key={i} text={part.text} streaming={streaming} />;
+            // Dòng tra cứu: ẩn NGAY khi đã có đoạn văn bản SAU nó (model bắt đầu nhả câu trả lời) — hoặc khi xong.
+            const answered = message.parts.some((p, j) => j > i && p.kind === 'text' && p.text.trim() !== '');
+            return streaming && !answered ? <ToolChip key={i} tool={part} /> : <Fragment key={i} />;
+          })
         )}
       </Box>
     </Box>

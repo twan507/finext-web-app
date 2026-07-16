@@ -35,7 +35,7 @@ export default function Composer({ disabled, streaming, onSend, onStop }: Compos
   };
 
   return (
-    <Box sx={{ position: 'sticky', bottom: 0, zIndex: 2, bgcolor: 'background.default', borderTop: `1px solid ${theme.palette.divider}`, px: { xs: 2, md: 3 }, py: 1.5 }}>
+    <Box sx={{ position: 'sticky', bottom: 0, zIndex: 2, px: { xs: 2, md: 3 }, pt: 3, pb: 2, background: `linear-gradient(to top, ${theme.palette.background.default} 55%, transparent)` }}>
       <Box sx={{ maxWidth: 760, mx: 'auto', width: '100%' }}>
         <Box
           sx={{
@@ -45,7 +45,8 @@ export default function Composer({ disabled, streaming, onSend, onStop }: Compos
             p: 1,
             borderRadius: `${borderRadius.lg}px`,
             border: `1px solid ${theme.palette.divider}`,
-            bgcolor: alpha(theme.palette.text.primary, 0.02),
+            bgcolor: theme.palette.background.default,
+            boxShadow: theme.palette.mode === 'dark' ? '0 2px 16px rgba(0,0,0,0.45)' : '0 2px 16px rgba(0,0,0,0.10)',
             transition: transitions.colors,
             '&:focus-within': { borderColor: alpha(theme.palette.primary.main, 0.5) }
           }}
