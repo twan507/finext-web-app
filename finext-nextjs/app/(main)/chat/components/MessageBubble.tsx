@@ -103,11 +103,11 @@ function AssistantText({ text, streaming }: { text: string; streaming: boolean }
   );
 }
 
-// Chờ token/tool đầu tiên: bong bóng rỗng trông như treo → hiện "đang soạn" + chấm nhảy.
+// Chờ token/tool đầu tiên: bong bóng rỗng trông như treo → hiện "đang suy nghĩ" + chấm nhảy.
 function TypingIndicator() {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, py: 0.5 }}>
-      <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary' }}>Finext AI đang soạn</Typography>
+      <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary' }}>Finext AI đang suy nghĩ</Typography>
       <Box sx={{ display: 'flex', gap: 0.4 }}>
         {[0, 1, 2].map((i) => (
           <Box
