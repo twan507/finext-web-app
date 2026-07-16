@@ -32,16 +32,19 @@ function ChatApp() {
 
   return (
     <Box sx={{ display: 'flex', height: '100%', minHeight: 0 }}>
-      <ConversationSidebar
-        conversations={store.conversations}
-        activeId={store.activeId}
-        collapsed={collapsed}
-        onNew={store.newConversation}
-        onSelect={store.selectConversation}
-        onToggle={() => setCollapsed((v) => !v)}
-      />
+      {/* Panel lịch sử ẩn trên mobile (<900px) → khu chat full width; desktop mới hiện (spec R4). */}
+      <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
+        <ConversationSidebar
+          conversations={store.conversations}
+          activeId={store.activeId}
+          collapsed={collapsed}
+          onNew={store.newConversation}
+          onSelect={store.selectConversation}
+          onToggle={() => setCollapsed((v) => !v)}
+        />
+      </Box>
       <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        {hasMessages && (
+        {store.asOf && (
           <Box sx={{ px: 3, pt: 1.5 }}>
             <Box sx={{ maxWidth: 760, mx: 'auto' }}>
               <AsOfChip asOf={store.asOf} />
@@ -49,7 +52,7 @@ function ChatApp() {
           </Box>
         )}
         {hasMessages ? (
-          <MessageList messages={store.messages} onRetry={store.retry} error={store.error} />
+          <MessageList key={store.activeId} messages={store.messages} onRetry={store.retry} error={store.error} />
         ) : (
           <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex' }}>
             <EmptyState onPick={store.send} />

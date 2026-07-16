@@ -38,7 +38,6 @@ export interface UseChatStoreReturn {
   retry: () => void;
   newConversation: () => void;
   selectConversation: (id: string) => void;
-  newChat: () => void; // alias newConversation — giữ PageContent cũ compile giữa các task
 }
 
 const IDLE_MS = 45000;
@@ -61,9 +60,8 @@ function newConv(): Conversation {
 }
 
 export default function useChatStore(): UseChatStoreReturn {
-  const first = useRef<Conversation>(newConv());
-  const [conversations, setConversations] = useState<Conversation[]>(() => [first.current]);
-  const [activeId, setActiveId] = useState<string>(first.current.id);
+  const [conversations, setConversations] = useState<Conversation[]>(() => [newConv()]);
+  const [activeId, setActiveId] = useState<string>(() => conversations[0]?.id ?? '');
   const [phase, setPhase] = useState<ChatPhase>('idle');
   const [asOf, setAsOf] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -271,5 +269,5 @@ export default function useChatStore(): UseChatStoreReturn {
     [clearIdle],
   );
 
-  return { conversations, activeId, messages, phase, asOf, error, send, stop, retry, newConversation, selectConversation, newChat: newConversation };
+  return { conversations, activeId, messages, phase, asOf, error, send, stop, retry, newConversation, selectConversation };
 }
