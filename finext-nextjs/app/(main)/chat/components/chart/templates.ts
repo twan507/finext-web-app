@@ -386,83 +386,6 @@ function buildPie(o: Record<string, unknown>, p: ChartPalette): EChartsOption | 
 }
 
 // =====================================================================
-// 7 CANDLESTICK (nến VN: xanh=tăng, đỏ=giảm; volume→panel phụ; ma→đường)
-// =====================================================================
-function buildCandlestick(o: Record<string, unknown>, p: ChartPalette): EChartsOption | null {
-  const dates = readXLabels(o.dates, 300);
-  const ohlc = toArr(o.ohlc)
-    .map((d) => toArr(d))
-    .filter((d) => d.length >= 4)
-    .slice(0, 300)
-    .map((d) => [toNum(d[0]), toNum(d[1]), toNum(d[2]), toNum(d[3])]);
-  if (!ohlc.length) return null;
-  const xLabels = dates.length ? dates : ohlc.map((_, i) => String(i + 1));
-  const candleStyle = { color: p.up, color0: p.down, borderColor: p.up, borderColor0: p.down };
-
-  // MA đường (nếu có).
-  const maObj = isObj(o.ma) ? o.ma : null;
-  const maKeys = maObj ? Object.keys(maObj).slice(0, 4) : [];
-  const maSeries = (gridPair: boolean): SeriesOpt[] =>
-    maKeys.map((k, i): SeriesOpt => ({
-      type: 'line',
-      name: k,
-      data: toArr(maObj?.[k]).slice(0, 300).map(toGap),
-      smooth: true,
-      symbol: 'none',
-      lineStyle: { width: 1.4, color: col(p, i + 2) },
-      ...(gridPair ? { xAxisIndex: 0, yAxisIndex: 0 } : {}),
-    }));
-
-  const volume = Array.isArray(o.volume) ? o.volume.slice(0, 300).map(toNum) : null;
-  const legend = maKeys.length > 0;
-
-  if (volume && volume.length) {
-    // 2 panel: giá (trên) + khối lượng (dưới).
-    const opt = base(p, { trigger: 'axis', cross: true });
-    delete opt.grid;
-    opt.axisPointer = { link: [{ xAxisIndex: 'all' }] };
-    if (legend) {
-      opt.legend = { show: true, top: 2, left: 'center', icon: 'roundRect', itemWidth: 12, itemHeight: 3, itemGap: 14, textStyle: { color: p.muted, fontSize: 10 } };
-    }
-    opt.grid = [
-      { left: 8, right: 14, top: legend ? 26 : 12, height: '56%', containLabel: true } as GridOpt,
-      { left: 8, right: 14, top: '78%', height: '16%', containLabel: true } as GridOpt,
-    ];
-    opt.xAxis = [
-      xCat(p, xLabels, { gridIndex: 0, axisLabel: { show: false } }),
-      xCat(p, xLabels, { gridIndex: 1, axisLabel: { color: p.muted, fontSize: 9, interval: Math.max(0, Math.ceil(xLabels.length / 6) - 1) } }),
-    ];
-    opt.yAxis = [
-      yVal(p, { scale: true, gridIndex: 0, axisLabel: { color: p.muted, fontSize: 10 } }),
-      yVal(p, { gridIndex: 1, splitNumber: 2, splitLine: { show: false }, axisLabel: { color: p.muted, fontSize: 9 } }),
-    ];
-    opt.series = [
-      { type: 'candlestick', name: 'Nến', xAxisIndex: 0, yAxisIndex: 0, data: ohlc, itemStyle: candleStyle },
-      ...maSeries(true),
-      {
-        type: 'bar',
-        name: 'KL',
-        xAxisIndex: 1,
-        yAxisIndex: 1,
-        barWidth: '62%',
-        data: volume.map((v, i) => ({ value: v, itemStyle: { color: ohlc[i] && ohlc[i][1] >= ohlc[i][0] ? alpha(p.up, 0.55) : alpha(p.down, 0.55) } })),
-      },
-    ];
-    return opt;
-  }
-
-  // 1 panel: nến (+ MA nếu có).
-  const opt = base(p, { trigger: 'axis', cross: true, gridTop: legend ? 28 : 12 });
-  if (legend) {
-    opt.legend = { show: true, top: 2, left: 'center', icon: 'roundRect', itemWidth: 12, itemHeight: 3, itemGap: 14, textStyle: { color: p.muted, fontSize: 10 } };
-  }
-  opt.xAxis = xCat(p, xLabels, { axisLabel: { color: p.muted, fontSize: 9, interval: Math.max(0, Math.ceil(xLabels.length / 8) - 1) } });
-  opt.yAxis = yVal(p, { scale: true, axisLabel: { color: p.muted, fontSize: 10 } });
-  opt.series = [{ type: 'candlestick', name: 'Nến', data: ohlc, itemStyle: candleStyle }, ...maSeries(false)];
-  return opt;
-}
-
-// =====================================================================
 // 8 HEATMAP
 // =====================================================================
 function buildHeatmap(o: Record<string, unknown>, p: ChartPalette): EChartsOption | null {
@@ -716,8 +639,6 @@ export function buildOption(payload: unknown, p: ChartPalette): EChartsOption | 
       return buildGroupedBar(payload, p);
     case 'pie':
       return buildPie(payload, p);
-    case 'candlestick':
-      return buildCandlestick(payload, p);
     case 'heatmap':
       return buildHeatmap(payload, p);
     case 'scatter':
