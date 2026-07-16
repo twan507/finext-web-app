@@ -48,8 +48,8 @@ collections:
   history_industry:  { size: large, key: industry_name, require_filter: [industry_name], require_series_slice: true, allow_aggregate: false, max_slice: 500 }
   history_index:     { size: large, require_series_slice: true, allow_aggregate: false, max_slice: 500 }
   # History định giá (điểm TUẦN, ~340 điểm)
-  history_finratios_stock:    { size: large, key: ticker, require_filter: [ticker], require_series_slice: true, allow_aggregate: false, max_slice: 260 }
-  history_finratios_industry: { size: large, key: industry_name, require_filter: [industry_name], require_series_slice: true, allow_aggregate: false, max_slice: 260 }
+  history_finratios_stock:    { size: large, key: ticker, require_filter: [ticker], require_series_slice: true, allow_aggregate: false, max_slice: 520, max_response_kb: 200, stats_fields: [series.pe, series.pb, series.ps, series.pcf, series.ev_ebitda, series.peg] }
+  history_finratios_industry: { size: large, key: industry_name, require_filter: [industry_name], require_series_slice: true, allow_aggregate: false, max_slice: 520, max_response_kb: 200, stats_fields: [series.pe, series.pb, series.ps, series.pcf, series.ev_ebitda, series.peg] }
   # Phase & danh mục
   market_phase:         { size: small }
   market_phase_history: { size: large, key: date, require_filter: [date] }

@@ -100,7 +100,9 @@ async def test_single_oversize_doc_returns_teaching_error_not_silent_empty():
     # model tưởng không có data → loop tới MAX_ITERS. Giờ phải trả ok=False kèm gợi ý giảm $slice/projection.
     huge = {"ticker": "HPG", "type": "SXKD", "series": [{"i": i, "blob": "x" * 200} for i in range(400)]}
     collection = FakeCollection([huge])  # ~86 KB > 50 KB
-    gateway = MongoGateway(FakeDB(collection), Policy.load())
+    policy = Policy.load()
+    policy.collections["history_finratios_stock"].max_response_kb = None  # kiểm guard ở cap mặc định (Task 6 nới cap thật 200)
+    gateway = MongoGateway(FakeDB(collection), policy)
     result = await gateway.find(
         CTX, "history_finratios_stock",
         filter={"ticker": "HPG"}, projection={"ticker": 1, "type": 1, "series": {"$slice": -260}},
@@ -281,7 +283,9 @@ async def test_stats_returns_only_scalars_from_full_series():
 
 async def test_stats_rejects_collection_without_stats_fields():
     collection = FakeCollection([{"industry_name": "X", "series": []}])
-    gateway = MongoGateway(FakeDB(collection), Policy.load())  # stats_fields rỗng
+    policy = Policy.load()
+    policy.collections["history_finratios_industry"].stats_fields = []  # ép rỗng: kiểm path 'không hỗ trợ' độc lập YAML
+    gateway = MongoGateway(FakeDB(collection), policy)
     result = await gateway.stats(
         CTX, "history_finratios_industry", field="series.pe", ops=["min"], filter={"industry_name": "X"}
     )

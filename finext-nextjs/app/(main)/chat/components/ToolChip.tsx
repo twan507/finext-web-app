@@ -9,6 +9,7 @@ const ACTION: Record<string, string> = {
   db_find: 'Đọc',
   db_aggregate: 'Tổng hợp',
   read_kb: 'Tham khảo',
+  db_stats: 'Thống kê',
   get_my_watchlist: 'Đọc'
 };
 

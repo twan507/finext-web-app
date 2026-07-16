@@ -186,6 +186,10 @@ projection: { "industry_name": 1, "series": { "$slice": -52 } }
 
 P/E ngành là **cap-weighted**, không phải trung bình P/E các mã. NH/BH thiếu `pcf`/`ev_ebitda` là có chủ đích.
 
+> Khi cần **min/đỉnh/đáy/percentile/mức sụt so đỉnh** trên chuỗi định giá dài (P/E, P/B qua nhiều năm),
+> gọi `db_stats(collection, field="series.pe", ops=[...], filter={...})` để server tính chính xác —
+> đừng tự lấy chuỗi dài bằng `db_find` rồi tự tính (chuỗi bị `$slice` cắt, dễ sai).
+
 ## 2. Tra cứu 1 ngành, 1 nhóm, thị trường
 
 ### 2.1. Tổng quan ngành

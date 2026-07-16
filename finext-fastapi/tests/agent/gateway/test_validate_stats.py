@@ -22,7 +22,8 @@ def test_valid_call_returns_rule():
 
 
 def test_collection_without_stats_fields_is_rejected():
-    policy = Policy.load()  # stats_fields rỗng khắp nơi
+    policy = Policy.load()
+    policy.collections["history_finratios_industry"].stats_fields = []  # ép rỗng, độc lập giá trị YAML
     with pytest.raises(ValidationError, match="không hỗ trợ"):
         validate_stats(
             policy, "history_finratios_industry",
