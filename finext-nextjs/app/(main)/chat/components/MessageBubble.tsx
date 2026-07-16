@@ -165,7 +165,9 @@ function MessageBubbleBase({ message }: { message: ChatMessage }) {
                 if (part.kind === 'text') return <AssistantText key={i} text={part.text} streaming={streaming} />;
                 // Dòng tra cứu: ẩn NGAY khi đã có đoạn văn bản SAU nó (model bắt đầu nhả câu trả lời) — hoặc khi xong.
                 const answered = message.parts.some((p, j) => j > i && p.kind === 'text' && p.text.trim() !== '');
-                return streaming && !answered ? <ToolChip key={i} tool={part} /> : <Fragment key={i} />;
+                // Nối timeline: còn dòng tra cứu khác phía sau → vẽ đường nối xuống.
+                const moreTools = message.parts.some((p, j) => j > i && p.kind === 'tool');
+                return streaming && !answered ? <ToolChip key={i} tool={part} connected={moreTools} /> : <Fragment key={i} />;
               })
             )}
             {/* Chấm typing chờ câu trả lời (sau khi đã có dòng tra cứu) — TẮT ngay khi chữ bắt đầu hiện. */}

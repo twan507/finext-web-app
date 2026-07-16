@@ -1,51 +1,78 @@
 'use client';
 
-import { Box, Typography, alpha, useTheme } from '@mui/material';
+import { Box, Typography, useTheme } from '@mui/material';
+import {
+  SearchRounded,
+  SummarizeRounded,
+  MenuBookRounded,
+  InsightsRounded,
+  BookmarkBorderRounded,
+  type SvgIconComponent,
+} from '@mui/icons-material';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import type { ToolChip as ToolChipState } from '../../../../hooks/useChatStore';
 
-// Động từ in đậm theo tool (kiểu Claude Code: **Đọc** dữ liệu cổ phiếu FPT). label backend = chi tiết.
+// Động từ in đậm theo tool (kiểu Claude: **Đọc** dữ liệu cổ phiếu FPT). label backend = chi tiết.
 const ACTION: Record<string, string> = {
   db_find: 'Đọc',
   db_aggregate: 'Tổng hợp',
-  read_kb: 'Tham khảo',
   db_stats: 'Thống kê',
-  get_my_watchlist: 'Đọc'
+  read_kb: 'Tham khảo',
+  get_my_watchlist: 'Đọc',
 };
 
-// Dòng tra cứu: chấm trạng thái + ĐỘNG TỪ đậm + chi tiết nhỏ hơn (không '…'). Chạy: chấm pulse + quầng sáng.
-export default function ToolChip({ tool }: { tool: ToolChipState }) {
+// Icon theo tool (thay chấm trạng thái cũ).
+const ICON: Record<string, SvgIconComponent> = {
+  db_find: SearchRounded,
+  db_aggregate: SummarizeRounded,
+  db_stats: InsightsRounded,
+  read_kb: MenuBookRounded,
+  get_my_watchlist: BookmarkBorderRounded,
+};
+
+// Dòng tra cứu kiểu timeline (Claude): icon + động từ đậm + chi tiết nhỏ; các dòng liên tiếp nối bằng đường dọc.
+// `connected` = còn dòng tra cứu khác PHÍA SAU → vẽ đường nối xuống dòng kế.
+export default function ToolChip({ tool, connected = false }: { tool: ToolChipState; connected?: boolean }) {
   const theme = useTheme();
-  const running = tool.running;
-  const dotColor = tool.ok === false && !running ? theme.palette.error.main : theme.palette.success.main;
   const action = ACTION[tool.name] ?? 'Đọc';
+  const Icon = ICON[tool.name] ?? SearchRounded;
+  const failed = tool.ok === false && !tool.running;
+  const iconColor = failed
+    ? theme.palette.error.main
+    : tool.running
+      ? theme.palette.primary.main
+      : theme.palette.text.secondary;
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'baseline',
-        gap: 1.5, // giãn chấm ↔ chữ
-        py: 0.35,
-        '@keyframes chatDotPulse': { '0%, 100%': { opacity: 1, transform: 'scale(1)' }, '50%': { opacity: 0.35, transform: 'scale(0.82)' } }
-      }}
-    >
-      <Box
-        sx={{
-          width: 7,
-          height: 7,
-          borderRadius: '50%',
-          flexShrink: 0,
-          alignSelf: 'center',
-          bgcolor: dotColor,
-          boxShadow: running ? `0 0 0 4px ${alpha(dotColor, 0.16)}` : 'none',
-          animation: running ? 'chatDotPulse 1.1s ease-in-out infinite' : 'none'
-        }}
-      />
-      <Typography component="span" sx={{ fontSize: getResponsiveFontSize('sm'), lineHeight: 1.5 }}>
-        <Box component="span" sx={{ fontWeight: fontWeight.semibold, color: 'text.primary' }}>{action}</Box>
-        <Box component="span" sx={{ ml: 0.75, fontSize: getResponsiveFontSize('xs'), color: 'text.secondary' }}>{tool.label}</Box>
-      </Typography>
+    <Box sx={{ display: 'flex', gap: 1.25, alignItems: 'stretch' }}>
+      {/* Cột icon + đường nối timeline */}
+      <Box sx={{ position: 'relative', width: 22, flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
+        <Icon sx={{ fontSize: 18, color: iconColor, mt: '2px', zIndex: 1 }} />
+        {connected && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 23,
+              bottom: -2,
+              left: '50%',
+              width: '1.5px',
+              transform: 'translateX(-50%)',
+              bgcolor: 'divider',
+            }}
+          />
+        )}
+      </Box>
+      {/* Nội dung: động từ đậm + chi tiết */}
+      <Box sx={{ pb: connected ? 1.25 : 0.25, minWidth: 0 }}>
+        <Typography component="span" sx={{ fontSize: getResponsiveFontSize('sm'), lineHeight: 1.55 }}>
+          <Box component="span" sx={{ fontWeight: fontWeight.semibold, color: 'text.primary' }}>
+            {action}
+          </Box>
+          <Box component="span" sx={{ ml: 0.75, fontSize: getResponsiveFontSize('xs'), color: 'text.secondary' }}>
+            {tool.label}
+          </Box>
+        </Typography>
+      </Box>
     </Box>
   );
 }
