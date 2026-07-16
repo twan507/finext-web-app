@@ -3,6 +3,7 @@
 from typing import Any
 
 from .policy import CollectionRule, Policy
+from .stats_compute import STATS_OPS
 
 # Stage có thể cắt mảng dài bằng $slice trong aggregate.
 SLICE_STAGES = ("$project", "$addFields", "$set")
@@ -476,3 +477,50 @@ def validate_aggregate(policy: Policy, collection: str, pipeline: Any) -> None:
     _check_aggregate_anchor_match(policy, rule, stages)
     _check_aggregate_limit(policy, rule, stages)
     _check_aggregate_series(rule, stages)
+
+
+def validate_stats(
+    policy: Policy, collection: str, field: Any, ops: Any, filter: Any
+) -> CollectionRule:
+    """Kiểm tra call db_stats. Trả về rule khi hợp lệ; raise ValidationError kèm gợi ý khi sai.
+
+    db_stats an toàn vì server dựng phép đọc + chỉ trả scalar — nhưng vẫn ép: collection whitelist,
+    stats_fields opt-in, chỉ collection series, field ∈ allowlist, ops ⊆ STATS_OPS, filter theo require_filter.
+    """
+    if filter is not None and not isinstance(filter, dict):
+        raise ValidationError(
+            f"filter phải là object (dict) hoặc bỏ trống — nhận được {type(filter).__name__}. "
+            'Ví dụ: filter={"industry_name": "Toàn bộ thị trường"}'
+        )
+    rule = _require_rule(policy, collection)
+    if not rule.stats_fields:
+        raise ValidationError(
+            f"Collection '{collection}' không hỗ trợ tính thống kê bằng db_stats. Hãy dùng db_find để đọc dữ liệu."
+        )
+    if not rule.require_series_slice:
+        raise ValidationError(
+            f"db_stats hiện chỉ hỗ trợ collection dạng chuỗi lịch sử. '{collection}' không phải dạng đó — "
+            "hãy dùng db_find hoặc db_aggregate."
+        )
+    if not (isinstance(field, str) and field in rule.stats_fields):
+        allowed = ", ".join(rule.stats_fields)
+        raise ValidationError(
+            f"field '{field}' không hợp lệ cho '{collection}'. Các field được phép: {allowed}."
+        )
+    if not (isinstance(ops, list) and ops):
+        raise ValidationError(
+            'ops phải là mảng không rỗng, ví dụ ops=["min", "max", "latest"]. '
+            f"Các phép hợp lệ: {', '.join(sorted(STATS_OPS))}."
+        )
+    bad_ops = [op for op in ops if op not in STATS_OPS]
+    if bad_ops:
+        raise ValidationError(
+            f"Phép không hợp lệ: {bad_ops}. Các phép hợp lệ: {', '.join(sorted(STATS_OPS))}."
+        )
+    banned = _find_banned(filter, policy.defaults.banned_operators)
+    if banned:
+        raise ValidationError(
+            f"Toán tử '{banned}' không được phép trong filter. Hãy viết lại filter không dùng toán tử này."
+        )
+    _check_find_require_filter(policy, rule, filter or {})
+    return rule
