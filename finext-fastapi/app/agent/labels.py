@@ -48,27 +48,27 @@ COLLECTION_LABELS: dict[str, str] = {
     "other_data": "dữ liệu bổ sung",
 }
 
-FALLBACK = "Đang tổng hợp dữ liệu…"
+FALLBACK = "dữ liệu"
 
 
 def _ticker_suffix(args: dict[str, Any]) -> str:
-    """Gắn mã cổ phiếu vào label nếu filter có ticker (VD '… cổ phiếu FPT…')."""
+    """Gắn mã cổ phiếu vào label nếu filter có ticker (VD 'dữ liệu cổ phiếu FPT')."""
     filter_ = args.get("filter")
     ticker = filter_.get("ticker") if isinstance(filter_, dict) else None
     return f" {ticker}" if isinstance(ticker, str) else ""
 
 
 def label_for(call: ToolCall) -> str:
+    """Trả CHI TIẾT (cụm danh từ tự nhiên) cho dòng tra cứu. FE tự thêm ĐỘNG TỪ in đậm theo tool name
+    (db_find→Đọc, db_aggregate→Tổng hợp, read_kb→Tham khảo) — kiểu Claude Code: **Đọc** dữ liệu cổ phiếu FPT."""
     if call.name == "read_kb":
-        return "Đang tham khảo tài liệu phương pháp…"
+        return "tài liệu phương pháp"
     if call.name == "get_my_watchlist":
-        return "Đang đọc danh sách theo dõi của bạn…"
+        return "danh sách theo dõi của bạn"
     # arguments đến từ json.loads của model → có thể không phải dict; label KHÔNG được raise.
     args: dict[str, Any] = call.arguments if isinstance(call.arguments, dict) else {}
     collection = args.get("collection")
     label = COLLECTION_LABELS.get(collection) if isinstance(collection, str) else None
     if label is None:
         return FALLBACK
-    # aggregate = tính toán/gộp → "tổng hợp"; find = đọc thẳng → "đọc".
-    verb = "Đang tổng hợp" if call.name == "db_aggregate" else "Đang đọc"
-    return f"{verb} {label}{_ticker_suffix(args)}…"
+    return f"{label}{_ticker_suffix(args)}"

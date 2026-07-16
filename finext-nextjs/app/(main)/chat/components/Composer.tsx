@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { Box, IconButton, TextField, Typography, alpha, useTheme } from '@mui/material';
-import { SendRounded, StopRounded } from '@mui/icons-material';
-import { getResponsiveFontSize, borderRadius, transitions } from 'theme/tokens';
+import { ArrowUpwardRounded, StopRounded } from '@mui/icons-material';
+import { getResponsiveFontSize, transitions } from 'theme/tokens';
 
 interface ComposerProps {
   disabled: boolean;
@@ -47,13 +47,15 @@ export default function Composer({ disabled, streaming, onSend, onStop, centered
         <Box
           sx={{
             display: 'flex',
-            alignItems: 'flex-end',
-            gap: 1,
-            p: 1,
-            borderRadius: `${borderRadius.lg}px`,
+            alignItems: 'center', // chữ nằm GIỮA theo chiều dọc (bỏ khoảng dư trên)
+            gap: 0.75,
+            pl: 2,
+            pr: 0.75,
+            py: 0.75,
+            borderRadius: '26px', // bo tròn kiểu ChatGPT — thanh thoát hơn
             border: `1px solid ${theme.palette.divider}`,
             bgcolor: theme.palette.background.default,
-            boxShadow: theme.palette.mode === 'dark' ? '0 2px 16px rgba(0,0,0,0.45)' : '0 2px 16px rgba(0,0,0,0.10)',
+            boxShadow: theme.palette.mode === 'dark' ? '0 1px 8px rgba(0,0,0,0.4)' : '0 1px 8px rgba(0,0,0,0.06)',
             transition: transitions.colors,
             '&:focus-within': { borderColor: alpha(theme.palette.primary.main, 0.5) }
           }}
@@ -69,7 +71,7 @@ export default function Composer({ disabled, streaming, onSend, onStop, centered
             maxRows={6}
             variant="standard"
             fullWidth
-            InputProps={{ disableUnderline: true, sx: { fontSize: getResponsiveFontSize('md'), px: 1, py: 0.5 } }}
+            InputProps={{ disableUnderline: true, sx: { fontSize: getResponsiveFontSize('md'), py: 0.25 } }}
           />
           {streaming ? (
             <IconButton
@@ -92,11 +94,14 @@ export default function Composer({ disabled, streaming, onSend, onStop, centered
                 '&.Mui-disabled': { bgcolor: alpha(theme.palette.text.primary, 0.08), color: 'text.disabled' }
               }}
             >
-              <SendRounded />
+              <ArrowUpwardRounded />
             </IconButton>
           )}
         </Box>
-        <Typography sx={{ fontSize: getResponsiveFontSize('xxs'), color: 'text.disabled', textAlign: 'center', mt: 0.75 }}>{DISCLAIMER}</Typography>
+        {/* Disclaimer chỉ hiện khi ĐÃ chat (composer về đáy), không hiện ở màn hình chào giữa. */}
+        {!centered && (
+          <Typography sx={{ fontSize: getResponsiveFontSize('xxs'), color: 'text.disabled', textAlign: 'center', mt: 0.75 }}>{DISCLAIMER}</Typography>
+        )}
       </Box>
     </Box>
   );

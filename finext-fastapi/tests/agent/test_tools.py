@@ -68,12 +68,13 @@ async def test_arg_error_gives_model_actionable_feedback_not_missing_collection(
 
 def test_label_uses_vietnamese_map_and_ticker():
     call = ToolCall(id="c1", name="db_find", arguments={"collection": "stock_snapshot", "filter": {"ticker": "FPT"}})
-    assert label_for(call) == "Đang đọc dữ liệu cổ phiếu FPT…"
+    # label giờ = CHI TIẾT (danh từ), FE tự thêm động từ đậm "Đọc".
+    assert label_for(call) == "dữ liệu cổ phiếu FPT"
 
 
 def test_label_falls_back_for_unmapped_collection():
     call = ToolCall(id="c1", name="db_find", arguments={"collection": "collection_la"})
-    assert label_for(call) == "Đang tổng hợp dữ liệu…"
+    assert label_for(call) == "dữ liệu"
 
 
 # --- Hardening: execute_tool KHÔNG BAO GIỜ raise, kể cả input dị dạng từ LLM (doc 02 §4.2) ---
@@ -99,8 +100,8 @@ async def test_execute_tool_missing_second_required_key_does_not_raise():
 
 
 def test_label_for_handles_non_dict_arguments():
-    assert label_for(ToolCall(id="c7", name="db_find", arguments=None)) == "Đang tổng hợp dữ liệu…"  # type: ignore[arg-type]
-    assert label_for(ToolCall(id="c8", name="db_find", arguments=["x"])) == "Đang tổng hợp dữ liệu…"  # type: ignore[arg-type]
+    assert label_for(ToolCall(id="c7", name="db_find", arguments=None)) == "dữ liệu"  # type: ignore[arg-type]
+    assert label_for(ToolCall(id="c8", name="db_find", arguments=["x"])) == "dữ liệu"  # type: ignore[arg-type]
     # filter là list (không phải dict) không được làm label_for raise.
     call = ToolCall(id="c9", name="db_find", arguments={"collection": "stock_snapshot", "filter": ["FPT"]})
-    assert label_for(call) == "Đang đọc dữ liệu cổ phiếu…"
+    assert label_for(call) == "dữ liệu cổ phiếu"

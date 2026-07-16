@@ -67,7 +67,7 @@ function ChatApp() {
         ) : (
           // Chưa có tin nhắn: lời chào + composer NỔI Ở GIỮA màn hình (kiểu ChatGPT/Claude). Gửi câu đầu → chuyển sang layout trên (composer về đáy).
           <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, py: 4 }}>
-            <ChatGreeting />
+            <ChatGreeting name={session?.user?.full_name} />
             <Box sx={{ width: '100%' }}>
               <Composer centered disabled={consented !== true || streaming} streaming={streaming} onSend={store.send} onStop={store.stop} />
             </Box>

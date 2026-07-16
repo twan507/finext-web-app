@@ -71,7 +71,7 @@ async def test_tool_call_round_trip_feeds_result_back_to_model():
     emitted = await _collect(adapter)
     types = [e[0] for e in emitted]
     assert types == ["tool_start", "tool_end", "token", "done"]
-    assert emitted[0][1]["label"] == "Đang đọc dữ liệu cổ phiếu FPT…"
+    assert emitted[0][1]["label"] == "dữ liệu cổ phiếu FPT"
     assert emitted[1][1]["ok"] is True
 
     second_call_messages = adapter.calls[1]

@@ -4,23 +4,14 @@ import { Box, Typography } from '@mui/material';
 import { AutoAwesomeRounded } from '@mui/icons-material';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 
-// Lời chào khi mới vào /chat (chưa có tin nhắn): logo Finext AI + câu chào theo giờ. KHÔNG gợi ý câu hỏi.
-function greeting(): string {
-  const h = new Date().getHours();
-  if (h < 11) return 'Chào buổi sáng';
-  if (h < 18) return 'Chào buổi chiều';
-  return 'Chào buổi tối';
-}
-
-export default function ChatGreeting() {
+// Lời chào khi mới vào /chat (chưa có tin nhắn): logo Finext AI cùng dòng với câu chào, gọi tên người dùng.
+export default function ChatGreeting({ name }: { name?: string }) {
+  const who = name?.trim() ? `, ${name.trim()}` : '';
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 1.25, px: 2 }}>
-      <AutoAwesomeRounded sx={{ fontSize: 44, color: 'primary.main' }} />
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.25, px: 2, textAlign: 'center', flexWrap: 'wrap' }}>
+      <AutoAwesomeRounded sx={{ fontSize: 32, color: 'primary.main' }} />
       <Typography sx={{ fontSize: getResponsiveFontSize('xxl'), fontWeight: fontWeight.bold, lineHeight: 1.2 }}>
-        {greeting()}, tôi là Finext AI
-      </Typography>
-      <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary', maxWidth: 460 }}>
-        Hỏi gì về thị trường, cổ phiếu hay nhóm ngành cũng được — bằng ngôn ngữ tự nhiên.
+        Rất vui được tư vấn cho bạn{who}
       </Typography>
     </Box>
   );

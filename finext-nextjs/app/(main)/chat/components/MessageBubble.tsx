@@ -128,6 +128,25 @@ function TypingIndicator() {
   );
 }
 
+// Dòng hiệu ứng LUÔN chuyển động ở dưới cùng khi model còn làm việc (kể cả giữa các bước) — tránh nhìn như treo.
+function WorkingIndicator() {
+  const theme = useTheme();
+  return (
+    <Box
+      sx={{
+        mt: 1,
+        height: 3,
+        width: 96,
+        borderRadius: 999,
+        backgroundImage: `linear-gradient(90deg, ${alpha(theme.palette.text.primary, 0.06)} 0%, ${alpha(theme.palette.primary.main, 0.55)} 50%, ${alpha(theme.palette.text.primary, 0.06)} 100%)`,
+        backgroundSize: '200% 100%',
+        animation: 'chatWorking 1.15s linear infinite',
+        '@keyframes chatWorking': { '0%': { backgroundPosition: '150% 0' }, '100%': { backgroundPosition: '-150% 0' } }
+      }}
+    />
+  );
+}
+
 function MessageBubbleBase({ message }: { message: ChatMessage }) {
   const theme = useTheme();
   const isUser = message.role === 'user';
@@ -145,16 +164,22 @@ function MessageBubbleBase({ message }: { message: ChatMessage }) {
       >
         {isUser ? (
           <Typography sx={{ fontSize: getResponsiveFontSize('md'), whiteSpace: 'pre-wrap' }}>{message.content}</Typography>
-        ) : message.parts.length === 0 && streaming ? (
-          <TypingIndicator />
         ) : (
-          // Render theo THỨ TỰ thời gian: text → dòng tra cứu → text.
-          message.parts.map((part, i) => {
-            if (part.kind === 'text') return <AssistantText key={i} text={part.text} streaming={streaming} />;
-            // Dòng tra cứu: ẩn NGAY khi đã có đoạn văn bản SAU nó (model bắt đầu nhả câu trả lời) — hoặc khi xong.
-            const answered = message.parts.some((p, j) => j > i && p.kind === 'text' && p.text.trim() !== '');
-            return streaming && !answered ? <ToolChip key={i} tool={part} /> : <Fragment key={i} />;
-          })
+          <>
+            {message.parts.length === 0 && streaming ? (
+              <TypingIndicator />
+            ) : (
+              // Render theo THỨ TỰ thời gian: text → dòng tra cứu → text.
+              message.parts.map((part, i) => {
+                if (part.kind === 'text') return <AssistantText key={i} text={part.text} streaming={streaming} />;
+                // Dòng tra cứu: ẩn NGAY khi đã có đoạn văn bản SAU nó (model bắt đầu nhả câu trả lời) — hoặc khi xong.
+                const answered = message.parts.some((p, j) => j > i && p.kind === 'text' && p.text.trim() !== '');
+                return streaming && !answered ? <ToolChip key={i} tool={part} /> : <Fragment key={i} />;
+              })
+            )}
+            {/* Dòng hiệu ứng luôn chuyển động dưới cùng khi đã có nội dung mà vẫn đang chạy. */}
+            {streaming && message.parts.length > 0 && <WorkingIndicator />}
+          </>
         )}
       </Box>
     </Box>
