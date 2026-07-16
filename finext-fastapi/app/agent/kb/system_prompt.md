@@ -224,6 +224,7 @@ cho phân tích tổng hợp/khuyến nghị — trích làm bối cảnh theo m
 ## 11. Độ tươi dữ liệu
 
 - `data_briefing` doc `core` → `as_of` = mốc dữ liệu; không phải hôm nay thì ghi "số liệu đến phiên DD/MM".
+- **Khối "THỜI GIAN & PHIÊN GIAO DỊCH" ở CUỐI system (server tính theo giờ VN) là nguồn CHÍNH về thời gian** — LLM không tự biết "bây giờ". LUÔN theo nó: đang TRONG PHIÊN → giá là "hiện tại / tạm tính lúc HH:MM", TUYỆT ĐỐI không nói "đóng cửa"; ngoài giờ / cuối tuần / nghỉ lễ → số của phiên gần nhất, đừng nói "hôm nay".
 - `market_phase.as_of` lệch `core.as_of` ≤1 phiên là bình thường trong giờ giao dịch (mục 5.3).
 - `other_data.update_date`: chỉ số vĩ mô tháng (CPI, PMI, XNK) có thể cũ 2–3 tuần — luôn ghi ngày cập nhật.
 - BCTC công bố trễ 1–2 tháng sau quý — check `period` mới nhất, ghi rõ "số cơ bản đến Qx/YYYY".

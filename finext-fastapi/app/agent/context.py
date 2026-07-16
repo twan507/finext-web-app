@@ -2,8 +2,10 @@
 
 import logging
 import time
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from app.agent.adapters.base import SystemBlock
 from app.agent.gateway.types import GatewayContext, GatewayProtocol
@@ -23,6 +25,56 @@ FRESHNESS_NOTE = (
     "riêng dữ liệu PHASE chốt cuối ngày (có thể trễ 1 phiên)."
 )
 NO_BRIEFING_NOTE = "Hiện chưa có bản tin tổng hợp — hãy chủ động query dữ liệu khi cần."
+
+# Nhận thức thời gian: LLM không biết "bây giờ" — server tính giờ VN + trạng thái phiên rồi tiêm vào.
+# Phiên HOSE ~9:00–15:00 (gồm ATC). Phân biệt realtime-trong-phiên vs giá-đóng-cửa-chốt (bug model tưởng đã đóng cửa).
+_VN_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
+_OPEN_MIN, _CLOSE_MIN = 9 * 60, 15 * 60
+
+
+def _as_of_date(as_of: str | None) -> date | None:
+    if not as_of:
+        return None
+    s = str(as_of)
+    try:
+        return datetime.fromisoformat(s).date()
+    except ValueError:
+        pass
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y"):
+        try:
+            return datetime.strptime(s[:10], fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def _session_note(as_of: str | None) -> str:
+    """Diễn giải trạng thái phiên từ giờ VN hiện tại + so as_of với hôm nay (bắt cả cuối tuần/nghỉ lễ)."""
+    now = datetime.now(_VN_TZ)
+    now_str, hhmm = now.strftime("%d/%m/%Y %H:%M"), now.strftime("%H:%M")
+    minutes = now.hour * 60 + now.minute
+    weekend = now.weekday() >= 5
+    same_day = (_as_of_date(as_of) == now.date()) if _as_of_date(as_of) is not None else None
+    lbl = as_of or "phiên gần nhất"
+
+    if weekend:
+        s = f"Hôm nay {now_str} là CUỐI TUẦN — thị trường nghỉ, không giao dịch. Số liệu là của phiên gần nhất ({lbl}); đừng nói 'hôm nay' cho các số này."
+    elif _OPEN_MIN <= minutes < _CLOSE_MIN and same_day is not False:
+        s = (
+            f"Bây giờ {now_str} — thị trường ĐANG TRONG PHIÊN. Giá/chỉ số/khối lượng là số REALTIME TẠM TÍNH lúc {hhmm}, "
+            f"CHƯA phải giá đóng cửa. Diễn đạt 'hiện tại / tạm tính lúc {hhmm}', TUYỆT ĐỐI không nói 'đóng cửa'. "
+            "Thanh khoản/khối lượng là lũy kế tới giờ này, còn tăng tới hết phiên."
+        )
+    elif minutes < _OPEN_MIN:
+        s = f"Bây giờ {now_str} — CHƯA MỞ CỬA phiên hôm nay. Số liệu đang có là của phiên giao dịch gần nhất ({lbl})."
+    elif minutes >= _CLOSE_MIN and same_day:
+        s = f"Bây giờ {now_str} — phiên hôm nay ĐÃ ĐÓNG CỬA. Giá đóng cửa {lbl} là số chính thức."
+    else:
+        s = (
+            f"Bây giờ {now_str}, nhưng dữ liệu mới nhất là phiên {lbl} (không phải hôm nay) — có thể hôm nay là NGÀY NGHỈ LỄ "
+            "hoặc phiên hôm nay chưa có dữ liệu. Trình bày số liệu là của phiên gần nhất, đừng khẳng định 'hôm nay'."
+        )
+    return "THỜI GIAN & PHIÊN GIAO DỊCH (server tính theo giờ VN — tin cậy hơn suy đoán, LUÔN tuân theo): " + s
 
 
 def _read_resident() -> str:
@@ -68,8 +120,10 @@ async def build_system_blocks(
     briefing, as_of = await _read_briefing(gateway, ctx)
     if briefing is None:
         blocks.append(SystemBlock(text=NO_BRIEFING_NOTE, cache_hint=True))
+        blocks.append(SystemBlock(text=_session_note(None), cache_hint=False))  # đổi mỗi request → không cache
         return blocks, None
     blocks.append(
         SystemBlock(text=f"{briefing}\n\n{FRESHNESS_NOTE.format(as_of=as_of)}", cache_hint=True)
     )
+    blocks.append(SystemBlock(text=_session_note(as_of), cache_hint=False))  # đổi mỗi request → không cache
     return blocks, as_of
