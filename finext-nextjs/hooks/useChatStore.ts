@@ -10,21 +10,25 @@ export interface ToolChip {
   ok?: boolean;
   ms?: number;
 }
-
-// Message assistant = chuỗi PHẦN theo THỜI GIAN: text ↔ tool ↔ text. Giữ đúng thứ tự model nhả ra
-// (câu mở đầu → tra cứu → phân tích), thay vì gom tool riêng render lên đầu.
 export type MessagePart = { kind: 'text'; text: string } | ({ kind: 'tool' } & ToolChip);
-
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
-  content: string; // text phẳng (mọi text-part nối lại) — dùng cho history gửi backend + nút Sao chép
+  content: string;
   parts: MessagePart[];
   status: 'streaming' | 'done' | 'error' | 'interrupted';
+}
+export interface Conversation {
+  id: string;
+  title: string;
+  createdAt: number;
+  messages: ChatMessage[];
 }
 export type ChatPhase = 'idle' | 'waiting' | 'streaming' | 'tool';
 
 export interface UseChatStoreReturn {
+  conversations: Conversation[];
+  activeId: string;
   messages: ChatMessage[];
   phase: ChatPhase;
   asOf: string | null;
@@ -32,45 +36,60 @@ export interface UseChatStoreReturn {
   send: (text: string) => void;
   stop: () => void;
   retry: () => void;
-  newChat: () => void;
+  newConversation: () => void;
+  selectConversation: (id: string) => void;
+  newChat: () => void; // alias newConversation — giữ PageContent cũ compile giữa các task
 }
 
 const IDLE_MS = 45000;
-const FLUSH_MS = 80; // throttle re-render khi token nhả nhanh (04 §6 R1)
-
+const FLUSH_MS = 80;
 type HistoryTurn = { role: 'user' | 'assistant'; content: string };
-
-// Backend cap: history ≤20 item, content ≤8000 ký tự/turn (schemas/chat.py). Ép client-side
-// để tránh 422 phá hội thoại sau nhiều lượt.
 const capHistory = (h: HistoryTurn[]): HistoryTurn[] => h.slice(-20).map((t) => ({ role: t.role, content: t.content.slice(0, 8000) }));
 
 function uid(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
-
 function flattenText(parts: MessagePart[]): string {
   return parts.reduce((acc, p) => (p.kind === 'text' ? acc + p.text : acc), '');
 }
+function titleFrom(text: string): string {
+  const t = text.trim().replace(/\s+/g, ' ');
+  return t.length > 42 ? t.slice(0, 42) + '…' : t;
+}
+function newConv(): Conversation {
+  return { id: uid(), title: 'Cuộc trò chuyện mới', createdAt: Date.now(), messages: [] };
+}
 
 export default function useChatStore(): UseChatStoreReturn {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const first = useRef<Conversation>(newConv());
+  const [conversations, setConversations] = useState<Conversation[]>(() => [first.current]);
+  const [activeId, setActiveId] = useState<string>(first.current.id);
   const [phase, setPhase] = useState<ChatPhase>('idle');
   const [asOf, setAsOf] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const conversationsRef = useRef<Conversation[]>(conversations);
+  conversationsRef.current = conversations;
+  const activeIdRef = useRef<string>(activeId);
+  activeIdRef.current = activeId;
+
   const controllerRef = useRef<AbortController | null>(null);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const messagesRef = useRef<ChatMessage[]>([]);
-  messagesRef.current = messages;
-
-  // Xây parts cho message assistant đang stream; pendingRef = text-part cuối (từ khi có tool gần nhất).
+  const convIdRef = useRef<string>(''); // hội thoại đang stream
   const partsRef = useRef<MessagePart[]>([]);
   const pendingRef = useRef<string>('');
   const lastFlushRef = useRef<number>(0);
   const assistantIdRef = useRef<string>('');
 
+  const messages = conversations.find((c) => c.id === activeId)?.messages ?? [];
+
+  // Patch message assistant TRONG hội thoại đang stream (convIdRef) — không phụ thuộc active view.
   const patchAssistant = useCallback((patch: (m: ChatMessage) => ChatMessage) => {
-    setMessages((prev) => prev.map((m) => (m.id === assistantIdRef.current ? patch(m) : m)));
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === convIdRef.current ? { ...c, messages: c.messages.map((m) => (m.id === assistantIdRef.current ? patch(m) : m)) } : c,
+      ),
+    );
   }, []);
 
   const flush = useCallback(
@@ -78,7 +97,7 @@ export default function useChatStore(): UseChatStoreReturn {
       const now = Date.now();
       if (!force && now - lastFlushRef.current < FLUSH_MS) return;
       lastFlushRef.current = now;
-      const parts = partsRef.current.map((p) => ({ ...p })); // copy để React thấy đổi
+      const parts = partsRef.current.map((p) => ({ ...p }));
       patchAssistant((m) => ({ ...m, parts, content: flattenText(parts) }));
     },
     [patchAssistant],
@@ -90,9 +109,10 @@ export default function useChatStore(): UseChatStoreReturn {
   }, []);
 
   const runStream = useCallback(
-    async (history: HistoryTurn[], message: string) => {
+    async (convId: string, history: HistoryTurn[], message: string) => {
       const controller = new AbortController();
       controllerRef.current = controller;
+      convIdRef.current = convId;
       const assistantId = uid();
       assistantIdRef.current = assistantId;
       partsRef.current = [];
@@ -101,7 +121,11 @@ export default function useChatStore(): UseChatStoreReturn {
 
       setError(null);
       setPhase('waiting');
-      setMessages((prev) => [...prev, { id: assistantId, role: 'assistant', content: '', parts: [], status: 'streaming' }]);
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === convId ? { ...c, messages: [...c.messages, { id: assistantId, role: 'assistant', content: '', parts: [], status: 'streaming' }] } : c,
+        ),
+      );
 
       const resetIdle = () => {
         clearIdle();
@@ -126,7 +150,7 @@ export default function useChatStore(): UseChatStoreReturn {
           }
           case 'tool_start':
             setPhase('tool');
-            pendingRef.current = ''; // đóng text-part hiện tại; token sau mở text-part mới (DƯỚI tool)
+            pendingRef.current = '';
             partsRef.current.push({ kind: 'tool', name: ev.name, label: ev.label, running: true });
             flush(true);
             break;
@@ -161,8 +185,6 @@ export default function useChatStore(): UseChatStoreReturn {
           reduce(ev);
         }
       } catch {
-        // abort (dừng tay / idle 45s) hoặc network/HTTP 500/422 — giữ text đã nhả, đánh dấu interrupted.
-        // LUÔN set error để bong bóng rỗng tự giải thích, không im lặng.
         flush(true);
         patchAssistant((m) => (m.status === 'streaming' ? { ...m, status: 'interrupted' } : m));
         const aborted = controller.signal.aborted;
@@ -180,11 +202,19 @@ export default function useChatStore(): UseChatStoreReturn {
     (text: string) => {
       const trimmed = text.trim();
       if (!trimmed || phase !== 'idle') return;
-      const history = capHistory(
-        messagesRef.current.filter((m) => m.status !== 'error' && m.content.trim() !== '').map((m) => ({ role: m.role, content: m.content }))
+      const convId = activeIdRef.current;
+      const active = conversationsRef.current.find((c) => c.id === convId);
+      if (!active) return;
+      const history = capHistory(active.messages.filter((m) => m.status !== 'error' && m.content.trim() !== '').map((m) => ({ role: m.role, content: m.content })));
+      const isFirst = active.messages.length === 0;
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === convId
+            ? { ...c, title: isFirst ? titleFrom(trimmed) : c.title, messages: [...c.messages, { id: uid(), role: 'user', content: trimmed, parts: [], status: 'done' }] }
+            : c,
+        ),
       );
-      setMessages((prev) => [...prev, { id: uid(), role: 'user', content: trimmed, parts: [], status: 'done' }]);
-      void runStream(history, trimmed);
+      void runStream(convId, history, trimmed);
     },
     [phase, runStream],
   );
@@ -195,32 +225,51 @@ export default function useChatStore(): UseChatStoreReturn {
 
   const retry = useCallback(() => {
     if (phase !== 'idle') return;
-    // Bỏ assistant lỗi cuối (nếu có), gửi lại user message cuối.
-    const msgs = messagesRef.current;
-    const lastUser = [...msgs].reverse().find((m) => m.role === 'user');
+    const convId = activeIdRef.current;
+    const active = conversationsRef.current.find((c) => c.id === convId);
+    if (!active) return;
+    const lastUser = [...active.messages].reverse().find((m) => m.role === 'user');
     if (!lastUser) return;
-    setMessages((prev) => {
-      const out = prev.slice();
-      while (out.length && out[out.length - 1].role === 'assistant') out.pop();
-      return out;
-    });
+    setConversations((prev) =>
+      prev.map((c) => {
+        if (c.id !== convId) return c;
+        const msgs = c.messages.slice();
+        while (msgs.length && msgs[msgs.length - 1].role === 'assistant') msgs.pop();
+        return { ...c, messages: msgs };
+      }),
+    );
     const history = capHistory(
-      messagesRef.current
+      active.messages
         .filter((m) => m.role === 'user' || (m.status === 'done' && m.content.trim() !== ''))
         .filter((m) => m.id !== lastUser.id)
-        .map((m) => ({ role: m.role, content: m.content }))
+        .map((m) => ({ role: m.role, content: m.content })),
     );
-    void runStream(history, lastUser.content);
+    void runStream(convId, history, lastUser.content);
   }, [phase, runStream]);
 
-  const newChat = useCallback(() => {
+  const newConversation = useCallback(() => {
     controllerRef.current?.abort();
     clearIdle();
-    setMessages([]);
+    const c = newConv();
+    setConversations((prev) => [c, ...prev]);
+    setActiveId(c.id);
     setError(null);
     setPhase('idle');
     setAsOf(null);
   }, [clearIdle]);
 
-  return { messages, phase, asOf, error, send, stop, retry, newChat };
+  const selectConversation = useCallback(
+    (id: string) => {
+      if (id === activeIdRef.current) return;
+      controllerRef.current?.abort();
+      clearIdle();
+      setActiveId(id);
+      setError(null);
+      setPhase('idle');
+      setAsOf(null);
+    },
+    [clearIdle],
+  );
+
+  return { conversations, activeId, messages, phase, asOf, error, send, stop, retry, newConversation, selectConversation, newChat: newConversation };
 }
