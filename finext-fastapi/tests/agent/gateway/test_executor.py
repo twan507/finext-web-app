@@ -316,6 +316,20 @@ async def test_stats_range_filter_applied():
     assert row["min"] == 2.0 and row["max"] == 4.0 and row["count"] == 3
 
 
+async def test_stats_rejects_multi_doc_pool():
+    # filter $in khớp 2 doc → KHÔNG được gộp series trộn lẫn; phải reject dạy model gọi từng entity.
+    d1 = {"industry_name": "A", "series": [{"date": "d1", "pe": 10.0}]}
+    d2 = {"industry_name": "B", "series": [{"date": "d1", "pe": 20.0}]}
+    collection = FakeCollection([d1, d2])
+    gateway = MongoGateway(FakeDB(collection), _stats_policy())
+    result = await gateway.stats(
+        CTX, "history_finratios_industry", field="series.pe", ops=["min"],
+        filter={"industry_name": {"$in": ["A", "B"]}},
+    )
+    assert result.ok is False
+    assert "MỘT thực thể" in result.error
+
+
 async def test_stats_mongo_error_returns_gateway_result():
     gateway = MongoGateway(RaisingDB(), _stats_policy())
     result = await gateway.stats(

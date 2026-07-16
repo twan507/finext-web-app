@@ -190,6 +190,16 @@ class MongoGateway:
         except PyMongoError:
             return self._mongo_error(ctx, collection)
 
+        if len(docs) > 1:
+            return GatewayResult(
+                ok=False,
+                error=(
+                    "db_stats chỉ tính cho MỘT thực thể mỗi lần. Hãy lọc theo đúng một giá trị khoá "
+                    "(một industry_name hoặc một ticker, không dùng $in nhiều giá trị) rồi gọi lại."
+                ),
+                meta={"collection": collection},
+            )
+
         points = extract_series_points(docs, sub)
         if len(points) > INTERNAL_MAX_POINTS:
             return GatewayResult(

@@ -86,6 +86,15 @@ class FixtureGateway:
             return GatewayResult(ok=False, error=exc.message, meta={"collection": collection, "rejected": True})
         sub = field.split(".", 1)[1] if "." in field else field
         docs = [doc for doc in self._data.get(collection, []) if _matches(doc, filter or {})]
+        if len(docs) > 1:
+            return GatewayResult(
+                ok=False,
+                error=(
+                    "db_stats chỉ tính cho MỘT thực thể mỗi lần. Hãy lọc theo đúng một giá trị khoá "
+                    "(một industry_name hoặc một ticker, không dùng $in nhiều giá trị) rồi gọi lại."
+                ),
+                meta={"collection": collection},
+            )
         points = filter_range(extract_series_points(docs, sub), date_range)
         if not points:
             return GatewayResult(

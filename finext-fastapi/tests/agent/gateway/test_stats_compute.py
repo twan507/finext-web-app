@@ -54,6 +54,13 @@ def test_single_point_all_ops_equal_value():
     assert r["drawdown_from_peak"] == 0.0
 
 
+def test_drawdown_none_when_peak_not_positive():
+    # P/E cổ phiếu thua lỗ có thể âm → drawdown_from_peak không xác định (None), không sign-flip/che thành 0.
+    r = compute_stats("series.pe", _pts([-3, -10]), ["drawdown_from_peak", "min", "max"])
+    assert r["drawdown_from_peak"] is None
+    assert r["min"] == -10.0 and r["max"] == -3.0
+
+
 def test_extract_skips_non_numeric_and_missing():
     docs = [{"series": [
         {"date": "d1", "pe": 10.0},

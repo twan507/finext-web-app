@@ -101,5 +101,5 @@ def compute_stats(field: str, points: list[tuple[str, float]], ops: list[str]) -
         elif op in ("last", "latest"):
             result[op] = latest
         elif op == "drawdown_from_peak":
-            result["drawdown_from_peak"] = (latest - peak) / peak if peak else 0.0
+            result["drawdown_from_peak"] = (latest - peak) / peak if peak > 0 else None
     return result
