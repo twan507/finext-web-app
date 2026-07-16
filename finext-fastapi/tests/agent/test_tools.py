@@ -12,11 +12,11 @@ CTX = GatewayContext(request_id="r1", user_id="u1")
 
 def test_tool_schemas_shape():
     names = {schema["function"]["name"] for schema in TOOL_SCHEMAS}
-    assert names == {"db_find", "db_aggregate", "read_kb"}
+    assert names == {"db_find", "db_aggregate", "db_stats", "read_kb"}
     for schema in TOOL_SCHEMAS:
         assert schema["type"] == "function"
         # tool db bắt buộc có 'collection'; read_kb là tool tài liệu, dùng 'doc'
-        if schema["function"]["name"] in {"db_find", "db_aggregate"}:
+        if schema["function"]["name"] in {"db_find", "db_aggregate", "db_stats"}:
             assert "collection" in schema["function"]["parameters"]["properties"]
 
 
