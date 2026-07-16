@@ -34,6 +34,30 @@ def parse_sse_chunk(line: str) -> dict[str, Any] | None:
         return None
 
 
+def _repair_tool_json(raw: str, max_fix: int = 6) -> dict[str, Any] | None:
+    """Vá lỗi JSON hay gặp của LLM: object phần tử mảng chưa đóng trước ', {' (thiếu '}' ở pipeline dài).
+
+    CHỈ chèn '}' (đóng ngoặc) trước dấu phẩy liền trước lỗi, KHÔNG đổi key/value; re-parse mỗi vòng nên
+    kết quả BẮT BUỘC json.loads được. An toàn 2 lớp: (1) phải parse ra dict; (2) query vá xong vẫn đi qua
+    validator gateway (chặn ngữ nghĩa). Trả dict nếu vá được, None nếu không (khi đó báo model gọi lại).
+    """
+    s = raw
+    for _ in range(max_fix):
+        try:
+            parsed = json.loads(s)
+            return parsed if isinstance(parsed, dict) else None
+        except json.JSONDecodeError as exc:
+            # Chữ ký: đang chờ tên property nhưng gặp '{' → một object phần tử mảng chưa được đóng.
+            if "property name" in exc.msg and exc.pos < len(s) and s[exc.pos] == "{":
+                comma = s.rfind(",", 0, exc.pos)
+                if comma == -1:
+                    return None
+                s = s[:comma] + "}" + s[comma:]
+                continue
+            return None
+    return None
+
+
 class _ToolCallBuffer:
     """Tích luỹ tool_call theo index — arguments về theo mảnh JSON string."""
 
@@ -56,12 +80,22 @@ class _ToolCallBuffer:
         calls: list[ToolCall] = []
         for index in sorted(self._calls):
             slot = self._calls[index]
+            arg_error: str | None = None
             try:
                 arguments = json.loads(slot["arguments"]) if slot["arguments"] else {}
-            except json.JSONDecodeError:
-                logger.warning("Tool call arguments không phải JSON hợp lệ — trả dict rỗng cho loop xử lý")
-                arguments = {}
-            calls.append(ToolCall(id=slot["id"], name=slot["name"], arguments=arguments))
+            except json.JSONDecodeError as exc:
+                # Model (DeepSeek) đôi khi nhả JSON tool-args hỏng ở pipeline dài (thiếu dấu ngoặc).
+                # Thử vá an toàn trước (chỉ chèn '}', re-parse + vẫn qua validator gateway); vá không được
+                # thì báo model gọi lại (execute_tool đọc arg_error).
+                repaired = _repair_tool_json(slot["arguments"])
+                if repaired is not None:
+                    logger.info("Tool call arguments JSON hỏng — đã tự vá (chèn dấu ngoặc thiếu)")
+                    arguments = repaired
+                else:
+                    logger.warning("Tool call arguments không phải JSON hợp lệ (%s) — báo model gọi lại", exc)
+                    arguments = {}
+                    arg_error = "tham số JSON của lần gọi trước không hợp lệ (sai cú pháp, thường do thiếu dấu ngoặc trong pipeline dài)"
+            calls.append(ToolCall(id=slot["id"], name=slot["name"], arguments=arguments, arg_error=arg_error))
         return calls
 
 

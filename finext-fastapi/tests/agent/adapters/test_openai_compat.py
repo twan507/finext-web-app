@@ -96,7 +96,29 @@ async def test_malformed_tool_arguments_do_not_crash():
     events = await _collect(_adapter_with(broken))
     tool_events = [e for e in events if isinstance(e, ToolCallsEvent)]
     assert len(tool_events) == 1
-    assert tool_events[0].calls[0].arguments == {}  # parse hỏng → dict rỗng, loop sẽ trả error cho model
+    call = tool_events[0].calls[0]
+    assert call.arguments == {}  # không vá được (garbage) → dict rỗng
+    # arg_error set → execute_tool báo model đúng (thiếu dấu ngoặc), tránh feedback "thiếu collection" sai lệch
+    assert call.arg_error is not None and "JSON" in call.arg_error
+
+
+def test_repair_tool_json_closes_missing_brace_in_pipeline():
+    # ROOT CAUSE thực tế (câu 'nhóm ngành nào mạnh'): DeepSeek nhả pipeline dài thiếu 1 '}' —
+    # object $match chưa đóng trước ', {"$sort'. Repair chèn '}' đúng chỗ, KHÔNG đổi key/value.
+    from app.agent.adapters.openai_compat import _repair_tool_json
+
+    broken = '{"collection": "x", "pipeline": [{"$match": {"a": {"$in": [1, 2]}}, {"$sort": {"b": -1}}, {"$limit": 5}]}'
+    fixed = _repair_tool_json(broken)
+    assert fixed is not None
+    assert fixed["collection"] == "x"
+    assert [next(iter(stage)) for stage in fixed["pipeline"]] == ["$match", "$sort", "$limit"]
+
+
+def test_repair_tool_json_gives_up_on_unrepairable():
+    from app.agent.adapters.openai_compat import _repair_tool_json
+
+    assert _repair_tool_json("{not json") is None  # chữ ký không phải chèn-'}'
+    assert _repair_tool_json('{"a": ') is None  # truncated mid-value
 
 
 class _StreamThenError(httpx.AsyncByteStream):

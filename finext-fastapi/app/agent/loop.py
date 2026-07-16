@@ -155,4 +155,4 @@ async def run_agent(
         working.extend(await _run_tools(gateway, ctx, pending, emit))
 
     logger.warning("Agent chạm MAX_ITERS request_id=%s", ctx.request_id)
-    await emit("error", {"message": "Vượt giới hạn bước xử lý. Bạn thử hỏi ngắn gọn hơn nhé."})
+    await emit("error", {"message": "Có lỗi khi tra cứu dữ liệu cho câu này. Bạn thử hỏi lại hoặc diễn đạt theo cách khác giúp mình nhé."})

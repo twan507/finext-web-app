@@ -26,6 +26,15 @@ async def execute_tool(
     gateway: GatewayProtocol, ctx: GatewayContext, call: ToolCall
 ) -> tuple[str, dict[str, Any]]:
     """Trả (content cho model, meta cho event tool_end)."""
+    if call.arg_error is not None:
+        # Adapter báo arguments model gửi hỏng JSON → cho model feedback ĐÚNG (thay vì "thiếu collection"
+        # sai lệch khiến model retry y hệt), gợi ý dùng db_find đơn giản để tránh JSON dài dễ sai.
+        return (
+            f"Lỗi: {call.arg_error}. Hãy gọi lại với JSON hợp lệ. "
+            "Nếu chỉ cần xếp hạng/so sánh, ưu tiên db_find (sort + limit) thay cho db_aggregate nhiều tầng.",
+            {"ok": False, "ms": 0},
+        )
+
     if call.name == "get_my_watchlist":
         try:
             result = await run_get_my_watchlist(get_database("user_db"), gateway, ctx, call.arguments)

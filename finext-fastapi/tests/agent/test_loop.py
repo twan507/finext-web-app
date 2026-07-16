@@ -109,7 +109,8 @@ async def test_max_iters_guard_emits_error():
     adapter = ScriptedAdapter([[ToolCallsEvent(calls=[looping_call])]])  # không bao giờ Done
     emitted = await _collect(adapter)
     assert emitted[-1][0] == "error"
-    assert "giới hạn" in emitted[-1][1]["message"]
+    # Message trung thực + tiếng Việt phổ thông: không đổ lỗi user "hỏi dài" mà nêu lỗi tra cứu (owner feedback 2026-07-15).
+    assert "có lỗi khi tra cứu dữ liệu" in emitted[-1][1]["message"].lower()
     assert len(adapter.calls) == MAX_ITERS
 
 

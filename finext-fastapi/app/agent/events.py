@@ -9,6 +9,7 @@ class ToolCall:
     id: str
     name: str
     arguments: dict[str, Any]
+    arg_error: str | None = None  # set khi arguments model gửi không parse được JSON — loop báo model gọi lại
 
 
 @dataclass

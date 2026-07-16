@@ -25,8 +25,9 @@ function AssistantBlock({ message, onRetry, errorText }: { message: ChatMessage;
 
   return (
     <Box>
-      {message.tools.length > 0 && (
-        <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1, mb: 1 }}>
+      {/* Chip tra cứu xếp DỌC, CHỈ hiện khi đang stream — xong thì ẩn, chỉ giữ kết quả (owner 2026-07-15). */}
+      {message.status === 'streaming' && message.tools.length > 0 && (
+        <Stack direction="column" alignItems="flex-start" sx={{ gap: 0.75, mb: 1 }}>
           {message.tools.map((t, i) => (
             <ToolChip key={`${t.name}-${i}`} tool={t} />
           ))}

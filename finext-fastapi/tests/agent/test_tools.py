@@ -53,6 +53,19 @@ async def test_empty_arguments_returns_error():
     assert meta["ok"] is False
 
 
+async def test_arg_error_gives_model_actionable_feedback_not_missing_collection():
+    # Adapter set arg_error khi model nhả JSON args hỏng (thiếu dấu ngoặc ở pipeline dài).
+    # execute_tool phải trả feedback ĐÚNG (nhắc JSON + gợi ý db_find) thay vì "thiếu collection" sai lệch
+    # khiến model retry y hệt tới MAX_ITERS. ms=0 (chưa chạm gateway).
+    gateway = FixtureGateway(Policy.load())
+    call = ToolCall(id="cE", name="db_aggregate", arguments={}, arg_error="tham số JSON không hợp lệ")
+    content, meta = await execute_tool(gateway, CTX, call)
+    assert meta["ok"] is False
+    assert meta["ms"] == 0
+    assert "JSON" in content and "db_find" in content
+    assert "collection" not in content  # KHÔNG được đổ lỗi 'thiếu collection'
+
+
 def test_label_uses_vietnamese_map_and_ticker():
     call = ToolCall(id="c1", name="db_find", arguments={"collection": "stock_snapshot", "filter": {"ticker": "FPT"}})
     assert label_for(call) == "Đang đọc dữ liệu cổ phiếu FPT…"
