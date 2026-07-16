@@ -35,59 +35,61 @@ export default function Composer({ disabled, streaming, onSend, onStop }: Compos
   };
 
   return (
-    <Box sx={{ pt: 1 }}>
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'flex-end',
-          gap: 1,
-          p: 1,
-          borderRadius: `${borderRadius.lg}px`,
-          border: `1px solid ${theme.palette.divider}`,
-          bgcolor: alpha(theme.palette.text.primary, 0.02),
-          transition: transitions.colors,
-          '&:focus-within': { borderColor: alpha(theme.palette.primary.main, 0.5) }
-        }}
-      >
-        <TextField
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={onKeyDown}
-          disabled={disabled}
-          placeholder="Hỏi Finext AI về thị trường, cổ phiếu, nhóm ngành…"
-          multiline
-          minRows={1}
-          maxRows={6}
-          variant="standard"
-          fullWidth
-          InputProps={{ disableUnderline: true, sx: { fontSize: getResponsiveFontSize('md'), px: 1, py: 0.5 } }}
-        />
-        {streaming ? (
-          <IconButton
-            aria-label="Dừng"
-            onClick={onStop}
-            sx={{ flexShrink: 0, bgcolor: alpha(theme.palette.error.main, 0.12), color: 'error.main', '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.2) } }}
-          >
-            <StopRounded />
-          </IconButton>
-        ) : (
-          <IconButton
-            aria-label="Gửi"
-            onClick={submit}
-            disabled={disabled || text.trim() === ''}
-            sx={{
-              flexShrink: 0,
-              bgcolor: 'primary.main',
-              color: 'primary.contrastText',
-              '&:hover': { bgcolor: 'primary.dark' },
-              '&.Mui-disabled': { bgcolor: alpha(theme.palette.text.primary, 0.08), color: 'text.disabled' }
-            }}
-          >
-            <SendRounded />
-          </IconButton>
-        )}
+    <Box sx={{ borderTop: `1px solid ${theme.palette.divider}`, px: { xs: 2, md: 3 }, py: 1.5 }}>
+      <Box sx={{ maxWidth: 760, mx: 'auto', width: '100%' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'flex-end',
+            gap: 1,
+            p: 1,
+            borderRadius: `${borderRadius.lg}px`,
+            border: `1px solid ${theme.palette.divider}`,
+            bgcolor: alpha(theme.palette.text.primary, 0.02),
+            transition: transitions.colors,
+            '&:focus-within': { borderColor: alpha(theme.palette.primary.main, 0.5) }
+          }}
+        >
+          <TextField
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={onKeyDown}
+            disabled={disabled}
+            placeholder="Hỏi Finext AI về thị trường, cổ phiếu, nhóm ngành…"
+            multiline
+            minRows={1}
+            maxRows={6}
+            variant="standard"
+            fullWidth
+            InputProps={{ disableUnderline: true, sx: { fontSize: getResponsiveFontSize('md'), px: 1, py: 0.5 } }}
+          />
+          {streaming ? (
+            <IconButton
+              aria-label="Dừng"
+              onClick={onStop}
+              sx={{ flexShrink: 0, bgcolor: alpha(theme.palette.error.main, 0.12), color: 'error.main', '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.2) } }}
+            >
+              <StopRounded />
+            </IconButton>
+          ) : (
+            <IconButton
+              aria-label="Gửi"
+              onClick={submit}
+              disabled={disabled || text.trim() === ''}
+              sx={{
+                flexShrink: 0,
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+                '&:hover': { bgcolor: 'primary.dark' },
+                '&.Mui-disabled': { bgcolor: alpha(theme.palette.text.primary, 0.08), color: 'text.disabled' }
+              }}
+            >
+              <SendRounded />
+            </IconButton>
+          )}
+        </Box>
+        <Typography sx={{ fontSize: getResponsiveFontSize('xxs'), color: 'text.disabled', textAlign: 'center', mt: 0.75 }}>{DISCLAIMER}</Typography>
       </Box>
-      <Typography sx={{ fontSize: getResponsiveFontSize('xxs'), color: 'text.disabled', textAlign: 'center', mt: 0.75 }}>{DISCLAIMER}</Typography>
     </Box>
   );
 }

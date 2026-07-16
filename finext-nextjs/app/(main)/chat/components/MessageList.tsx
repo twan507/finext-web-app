@@ -71,14 +71,16 @@ export default function MessageList({ messages, onRetry, error }: { messages: Ch
   }, [messages]);
 
   return (
-    <Box ref={scrollRef} onScroll={onScroll} sx={{ height: 1, overflowY: 'auto', px: { xs: 0.5, md: 1 }, py: 1 }}>
-      {messages.map((m, idx) => {
-        if (m.role === 'user') return <MessageBubble key={m.id} message={m} />;
-        // Chỉ assistant lỗi/gián đoạn cuối cùng mới hiện dòng lý do cạnh nút "Thử lại".
-        const showErr = idx === lastIdx && (m.status === 'error' || m.status === 'interrupted');
-        const errorText = showErr ? (error ?? 'Không lấy được phản hồi. Bạn thử lại nhé.') : null;
-        return <AssistantBlock key={m.id} message={m} onRetry={onRetry} errorText={errorText} />;
-      })}
+    <Box ref={scrollRef} onScroll={onScroll} sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+      <Box sx={{ maxWidth: 760, mx: 'auto', px: { xs: 2, md: 3 }, py: 3 }}>
+        {messages.map((m, idx) => {
+          if (m.role === 'user') return <MessageBubble key={m.id} message={m} />;
+          // Chỉ assistant lỗi/gián đoạn cuối cùng mới hiện dòng lý do cạnh nút "Thử lại".
+          const showErr = idx === lastIdx && (m.status === 'error' || m.status === 'interrupted');
+          const errorText = showErr ? (error ?? 'Không lấy được phản hồi. Bạn thử lại nhé.') : null;
+          return <AssistantBlock key={m.id} message={m} onRetry={onRetry} errorText={errorText} />;
+        })}
+      </Box>
     </Box>
   );
 }
