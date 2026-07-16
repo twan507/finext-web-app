@@ -172,3 +172,47 @@ def test_text_around_widget_still_sanitized():
     out = sanitize_answer(f"Thanh khoản (VSI 0,92).\n{widget}\nHết.")
     assert "VSI" not in out.split("```finext-widget")[0]  # text NGOÀI widget vẫn dọn
     assert widget in out
+
+
+# --- Taxonomy nội bộ (Workflow A-M / Kịch bản A-G) lọt → strip ---
+def test_workflow_taxonomy_stripped():
+    out = sanitize_answer("Tôi chạy Workflow E rồi Workflow I để lấy dữ liệu")
+    assert "Workflow E" not in out and "Workflow I" not in out
+
+
+def test_kich_ban_taxonomy_stripped():
+    out = sanitize_answer("Áp dụng Kịch bản A và Kịch bản G cho câu này")
+    assert "Kịch bản A" not in out and "Kịch bản G" not in out
+
+
+def test_widget_block_still_verbatim_with_workflow_rule():
+    # Khối finext-widget chứa chữ "Workflow" trong title KHÔNG bị đụng (fence 3-backtick nguyên).
+    widget = '```finext-widget\n{"v":1,"type":"line","title":"Workflow E","series":[{"name":"x","points":[1]}]}\n```'
+    out = sanitize_answer(f"Xem biểu đồ:\n{widget}\nKết thúc.")
+    assert widget in out
+
+
+# --- Token underscore/English lọt ở dạng TRẦN → gỡ span (giữ số) ---
+def test_underscore_pct_tokens_stripped_keep_numbers():
+    out = sanitize_answer("top 28,57% ngành (industry_rank_pct), thay đổi năm (y_pct) -34%")
+    assert "industry_rank_pct" not in out and "y_pct" not in out
+    assert "28,57%" in out and "-34%" in out
+
+
+def test_more_pct_tokens_stripped():
+    out = sanitize_answer("market_rank_pct 62, w_pct 3, m_pct 5, q_pct 8, free_float_pct 40")
+    for tok in ("market_rank_pct", "w_pct", "m_pct", "q_pct", "free_float_pct"):
+        assert tok not in out
+    assert "62" in out and "40" in out
+
+
+def test_breadth_mapped_to_vietnamese():
+    out = sanitize_answer("chỉ số breadth đang cải thiện")
+    assert "breadth" not in out and "độ rộng" in out
+
+
+def test_exposure_capitalized_replaced():
+    # "Exposure" viết hoa (đầu bullet) cũng phải dịch — bug thiếu IGNORECASE (Q22).
+    out = sanitize_answer("- **Exposure gợi ý theo nhãn**: 70%")
+    assert "Exposure" not in out and "exposure" not in out
+    assert "tỷ lệ nắm giữ" in out

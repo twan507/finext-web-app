@@ -2,6 +2,7 @@
 
 import json
 import logging
+import math
 import time
 from typing import Any
 
@@ -35,6 +36,34 @@ def _cap_bytes(docs: list[dict[str, Any]], max_kb: int) -> tuple[list[dict[str, 
         kept.append(doc)
         total += size
     return kept, total, False
+
+
+def _projection_field_hint(
+    projection: dict[str, Any] | None, docs: list[dict[str, Any]]
+) -> str | None:
+    """Note (model đọc trong tool-result) khi inclusion-projection có ≥nửa field TOP-LEVEL vắng ở MỌI doc.
+
+    Dấu hiệu M3 chiếu SAI TÊN FIELD (vd 'period' trên stock_finstats): Mongo lặng lẽ bỏ field không tồn tại
+    → doc gần rỗng → model tưởng tool hỏng → flail retry. Note liệt kê field vắng để model tự sửa query.
+    None nếu: không phải inclusion, <2 field chiếu, hoặc <nửa field vắng (tránh nhiễu).
+    """
+    if not projection or not docs:
+        return None
+    # Chỉ xét path inclusion (value == 1); bỏ _id và path $slice/expression (không phải "sai tên").
+    requested_top = {path.split(".", 1)[0] for path, val in projection.items() if val == 1 and path != "_id"}
+    if len(requested_top) < 2:
+        return None
+    present_top: set[str] = set()
+    for doc in docs:
+        present_top |= set(doc.keys())
+    missing = requested_top - present_top
+    if len(missing) < math.ceil(len(requested_top) / 2):
+        return None
+    fields = ", ".join(sorted(missing))
+    return (
+        f"Các field không tồn tại trong collection này (đã bị bỏ khỏi kết quả): {fields}. "
+        "Hãy xem lại tên field đúng trong schema (read_kb agent_db_01) — đừng lặp lại query y hệt."
+    )
 
 
 def _strip_id(docs: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -144,7 +173,13 @@ class MongoGateway:
             docs = await cursor.to_list(length=effective_limit)
         except PyMongoError:
             return self._mongo_error(ctx, collection)
-        return self._ok_result(ctx, collection, docs, started)
+        result = self._ok_result(ctx, collection, docs, started)
+        if result.ok:
+            # Additive: chỉ THÊM note khi trả được data; không đụng nhánh oversize/reject.
+            hint = _projection_field_hint(projection, docs)
+            if hint:
+                result.meta["note"] = hint
+        return result
 
     async def aggregate(
         self, ctx: GatewayContext, collection: str, pipeline: list[dict[str, Any]]

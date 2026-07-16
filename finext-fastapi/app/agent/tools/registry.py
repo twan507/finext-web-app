@@ -76,4 +76,9 @@ async def execute_tool(
     content = json.dumps(result.data, ensure_ascii=False, default=str)
     if len(content) > MAX_TOOL_RESULT_CHARS:
         content = content[:MAX_TOOL_RESULT_CHARS] + " …[đã cắt]"
+    # Note nội bộ cho MODEL (vd projection field không tồn tại) — thêm SAU cap để không bị cắt mất.
+    # Chỉ đi vào tool-result trung gian; câu trả lời khách vẫn qua sanitize nên không lộ tên field.
+    note = result.meta.get("note")
+    if note:
+        content = f"{content}\n\n[GHI CHÚ NỘI BỘ — không đọc cho khách] {note}"
     return content, meta

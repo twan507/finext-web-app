@@ -339,6 +339,70 @@ async def test_stats_mongo_error_returns_gateway_result():
     assert result.error is not None and "thu hẹp" in result.error
 
 
+# --- projection-absent-field feedback (fix: M3 chiếu field không tồn tại → doc gần rỗng → flail retry) ---
+
+
+async def test_find_projection_missing_fields_adds_note():
+    # M3 hay chiếu field không tồn tại (vd 'period' trên stock_finstats) → doc trả về gần rỗng, model tưởng
+    # tool hỏng. Khi ≥nửa field chiếu (inclusion) vắng ở MỌI doc → gắn note (model đọc) liệt kê field vắng.
+    collection = FakeCollection([{"ticker": "FPT"}])  # doc THIẾU period + nonexist
+    gateway = MongoGateway(FakeDB(collection), Policy.load())
+    result = await gateway.find(
+        CTX, "stock_snapshot",
+        filter={"ticker": "FPT"}, projection={"ticker": 1, "period": 1, "nonexist": 1}, limit=1,
+    )
+    assert result.ok is True  # KHÔNG đổi ok→False
+    assert result.data == [{"ticker": "FPT"}]  # data thật vẫn trả
+    note = result.meta.get("note")
+    assert note is not None
+    assert "period" in note and "nonexist" in note  # liệt kê field vắng
+    assert "ticker" not in note  # field có thật không bị liệt kê
+
+
+async def test_find_all_fields_present_no_note():
+    collection = FakeCollection([{"ticker": "FPT", "price": 100.0}])
+    gateway = MongoGateway(FakeDB(collection), Policy.load())
+    result = await gateway.find(
+        CTX, "stock_snapshot", filter={"ticker": "FPT"}, projection={"ticker": 1, "price": 1}, limit=1
+    )
+    assert result.ok is True
+    assert result.meta.get("note") is None  # toàn field có thật → không nhiễu
+
+
+async def test_find_single_field_projection_no_false_note():
+    # Chỉ 1 field chiếu (< ngưỡng ≥2) → không được cảnh báo oan dù doc rỗng field khác.
+    collection = FakeCollection([{"ticker": "FPT"}])
+    gateway = MongoGateway(FakeDB(collection), Policy.load())
+    result = await gateway.find(
+        CTX, "stock_snapshot", filter={"ticker": "FPT"}, projection={"ticker": 1}, limit=1
+    )
+    assert result.ok is True
+    assert result.meta.get("note") is None
+
+
+async def test_exclusion_projection_no_note():
+    # Projection thuần exclusion {_id:0} → không có field inclusion nào → không note.
+    collection = FakeCollection([{"ticker": "FPT"}])
+    gateway = MongoGateway(FakeDB(collection), Policy.load())
+    result = await gateway.find(
+        CTX, "stock_snapshot", filter={"ticker": "FPT"}, projection={"_id": 0}, limit=1
+    )
+    assert result.ok is True
+    assert result.meta.get("note") is None
+
+
+async def test_find_partial_missing_below_half_no_note():
+    # 1/3 field vắng (< nửa) → chưa đủ tín hiệu SAI TÊN → giữ im lặng.
+    collection = FakeCollection([{"ticker": "FPT", "price": 100.0}])  # chỉ thiếu 'period'
+    gateway = MongoGateway(FakeDB(collection), Policy.load())
+    result = await gateway.find(
+        CTX, "stock_snapshot",
+        filter={"ticker": "FPT"}, projection={"ticker": 1, "price": 1, "period": 1}, limit=1,
+    )
+    assert result.ok is True
+    assert result.meta.get("note") is None
+
+
 async def test_find_cap_uses_per_rule_override():
     # Part B: collection có max_response_kb override → dùng cap lớn hơn default 50.
     policy = Policy.load()

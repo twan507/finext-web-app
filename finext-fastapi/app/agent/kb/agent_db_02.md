@@ -293,7 +293,7 @@ pipeline: [
 
 Top 10 giảm mạnh nhất: đổi `pct_change: { "$gt": 0 }` thành `{ "$lt": 0 }` và stage `{ "$sort": { "pct_change": 1 } }`.
 
-**Filter ngành whitelist 18 áp dụng:** khi screen cho phân tích pack, `industry` phải ∈ 18 ngành whitelist (xem `agent_db_01` Section B).
+**Screen phủ đủ 24 ngành:** khi screen cho phân tích pack, xét mã thuộc đủ 24 ngành (xem `agent_db_01` Section B).
 
 Top theo nhóm vốn hoá / nhóm dòng tiền: dùng `group_snapshot` filter `group_name` hoặc query `stock_snapshot` join qua `stock_info.marketcap` / `stock_info.category`.
 
@@ -375,13 +375,12 @@ Top bán ròng: `$sort: 1`.
 
 ### 3.6. Ngành mạnh nhất / yếu nhất theo điểm dòng tiền — TỰ TỔNG HỢP RANK
 
-> DB **không lưu** `industry_rank` ngành-vs-ngành. Agent tự sort theo `week_score` (dòng tiền tuần) qua scope phân tích (default: 18 ngành whitelist).
+> DB **không lưu** `industry_rank` ngành-vs-ngành. Agent tự sort theo `week_score` (dòng tiền tuần) qua đủ 24 ngành.
 
 ```
 # gọi db_aggregate
 collection: industry_snapshot
 pipeline: [
-  { "$match": { "industry_name": { "$in": [<18 tên chuẩn whitelist>] } } },   // default mode; override: bỏ $match nhưng PHẢI giữ $limit bên dưới
   { "$project": { "industry_name": 1,
                   "day_score": "$money_flow_score.day_score",
                   "week_score": "$money_flow_score.week_score",
@@ -389,7 +388,7 @@ pipeline: [
                   "breadth_in": "$breadth.breadth_in",
                   "breadth_out": "$breadth.breadth_out" } },
   { "$sort": { "week_score": -1 } },   // rank theo dòng tiền tuần — field chuẩn để rank ngành
-  { "$limit": 25 }   // đủ phủ 24 ngành; BẮT BUỘC khi override bỏ anchor $match (large không anchor phải có $limit)
+  { "$limit": 25 }   // đủ phủ 24 ngành (large collection BẮT BUỘC có $limit)
 ]
 ```
 

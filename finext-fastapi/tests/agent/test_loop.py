@@ -242,8 +242,8 @@ async def test_repeated_failed_query_blocked_and_not_re_executed():
     # Chỉ chạm gateway.find ĐÚNG 1 lần (vòng đầu); các vòng sau bị chặn trước khi execute.
     assert gateway.find_calls == 1
     # Model nhận feedback chống-lặp trong tool message vòng cuối.
-    last_tool_msg = adapter.calls[-1][-1]
-    assert last_tool_msg["role"] == "tool"
+    # (Vòng force nay chèn _FORCE_ANSWER_NUDGE ở cuối working nên tìm tool message gần nhất, không dùng [-1].)
+    last_tool_msg = next(m for m in reversed(adapter.calls[-1]) if m["role"] == "tool")
     assert "Đừng lặp lại" in last_tool_msg["content"]
     # Vẫn kết thúc bằng error (MAX_ITERS), không treo.
     assert emitted[-1][0] == "error"
@@ -265,3 +265,369 @@ async def test_distinct_failed_queries_each_execute_once():
         messages=[{"role": "user", "content": "x"}], emit=emit,
     )
     assert gateway.find_calls == 2  # hai chữ ký khác nhau, không chặn oan
+
+
+class ToolsAwareAdapter:
+    """Adapter đọc `tools`: tools rỗng → trả text (vòng-ép); tools non-rỗng → gọi tool mãi."""
+
+    def __init__(self, tool_call: ToolCall, final_text: str) -> None:
+        self._tool_call = tool_call
+        self._final_text = final_text
+        self.calls: list[list[dict[str, Any]]] = []
+        self.tools_seen: list[list[dict[str, Any]]] = []
+
+    async def stream_chat(
+        self, system: list[SystemBlock], messages: list[dict[str, Any]], tools: list[dict[str, Any]], max_tokens: int
+    ) -> AsyncIterator[AgentEvent]:
+        self.calls.append(messages)
+        self.tools_seen.append(tools)
+        if tools:
+            yield ToolCallsEvent(calls=[self._tool_call])
+        else:
+            yield TokenEvent(text=self._final_text)
+            yield DoneEvent(usage={})
+
+
+async def test_preamble_only_final_triggers_retry():
+    # Lượt 1: chỉ có câu dẫn "Tôi sẽ..." + Done (KHÔNG gọi tool) → coi như chưa trả lời → nudge.
+    # Lượt 2 (sau nudge): trả nội dung thật.
+    adapter = ScriptedAdapter(
+        [
+            [TokenEvent(text="Tôi sẽ lấy dữ liệu VNINDEX..."), DoneEvent(usage={})],
+            [TokenEvent(text="VNINDEX 1804 điểm."), DoneEvent(usage={"in": 5, "out": 4})],
+        ]
+    )
+    emitted = await _collect(adapter)
+    answer = "".join(e[1]["text"] for e in emitted if e[0] == "token")
+    assert "Tôi sẽ" not in answer
+    assert "VNINDEX 1804 điểm." in answer
+    assert emitted[-1][0] == "done"
+    assert all(e[0] != "error" for e in emitted)
+
+
+async def test_empty_final_retries_then_answers():
+    # Lượt 1: Done rỗng (0 token) → không stream rỗng cho khách, mà nudge tiếp.
+    adapter = ScriptedAdapter(
+        [
+            [DoneEvent(usage={})],
+            [TokenEvent(text="VNINDEX 1804 điểm."), DoneEvent(usage={"in": 5, "out": 4})],
+        ]
+    )
+    emitted = await _collect(adapter)
+    answer = "".join(e[1]["text"] for e in emitted if e[0] == "token")
+    assert "VNINDEX 1804 điểm." in answer
+    assert emitted[-1][0] == "done"
+    assert all(e[0] != "error" for e in emitted)
+
+
+async def test_max_iters_forces_answer_not_error():
+    # Adapter gọi tool mãi khi còn tools; vòng cuối force (tools=[]) → trả text best-effort.
+    tool_call = ToolCall(id="c1", name="db_find", arguments={"collection": "market_phase", "filter": {}})
+    adapter = ToolsAwareAdapter(tool_call, "Trả lời best-effort.")
+    emitted = await _collect(adapter)
+    answer = "".join(e[1]["text"] for e in emitted if e[0] == "token")
+    assert "Trả lời best-effort." in answer
+    assert emitted[-1][0] == "done"
+    assert all(e[0] != "error" for e in emitted)  # KHÔNG phải error rỗng
+    assert adapter.tools_seen[-1] == []  # vòng cuối bị cấm tool
+
+
+async def test_normal_answer_still_streams_chunks():
+    long_text = "VNINDEX đang ở vùng 1.804 điểm, thanh khoản ổn định và dòng tiền lan tỏa nhiều nhóm ngành."
+    adapter = ScriptedAdapter([[TokenEvent(text=long_text), DoneEvent(usage={"in": 3, "out": 40})]])
+    emitted = await _collect(adapter)
+    token_events = [e for e in emitted if e[0] == "token"]
+    assert len(token_events) >= 2  # vẫn nhả nhiều chunk
+    assert emitted[-1][0] == "done"
+    assert "".join(e[1]["text"] for e in token_events) == long_text
+
+
+async def test_tools_then_final_answer_unchanged():
+    # Lượt 1 gọi tool → chạy tool (fake gateway) → lượt 2 text. Giữ hành vi cũ.
+    tool_call = ToolCall(
+        id="c1", name="db_find",
+        arguments={"collection": "stock_snapshot", "filter": {"ticker": "FPT"}, "projection": {"price": 1}},
+    )
+    adapter = ScriptedAdapter(
+        [
+            [ToolCallsEvent(calls=[tool_call])],
+            [TokenEvent(text="Giá FPT là 118,5"), DoneEvent(usage={"in": 50, "out": 6})],
+        ]
+    )
+    emitted = await _collect(adapter)
+    types = [e[0] for e in emitted]
+    assert types[0] == "tool_start" and types[1] == "tool_end" and types[-1] == "done"
+    assert "token" in types
+    assert "".join(e[1]["text"] for e in emitted if e[0] == "token") == "Giá FPT là 118,5"
+
+
+# ── Round 3: grounding + force-nudge ─────────────────────────────────────────
+
+_RANK_TABLE_GUESS = "| Hạng | Ngành | Điểm |\n| 1 | Ngân hàng | 8.5 |\n| 2 | Thép | 7.2 |\nƯớc lượng."
+_RANK_TABLE_FINAL = "| Hạng | Ngành | Điểm |\n| 1 | Ngân hàng | 9.1 |\n| 2 | Thép | 6.8 |\nDữ liệu thật."
+
+
+def test_looks_like_data_answer_table_only():
+    from app.agent.loop import _looks_like_data_answer
+    assert _looks_like_data_answer("| 1 | Ngân hàng | 8.5 |")  # bảng có ô số → data (grounding)
+    # BỎ heuristic ≥6 số: câu nhiều số nhưng KHÔNG bảng KHÔNG còn bị coi là data (regression Q04).
+    assert not _looks_like_data_answer("a 1,2 b 3,4 c 5,6 d 7,8 e 9,1 f 2,3")
+    # Headline vài số (Q03-style) KHÔNG bị coi là data → không ép grounding.
+    assert not _looks_like_data_answer("VNINDEX 1.804,24 tăng 22,12 (+1,24%)")
+    assert not _looks_like_data_answer("Chào bạn, hôm nay thị trường ổn định.")
+
+
+def test_looks_like_data_answer_price_claim():
+    """Khẳng định GIÁ cụ thể 'X đồng' → data cần grounding (diệt bịa giá Q02); 'triệu đồng' khái niệm KHÔNG khớp."""
+    from app.agent.loop import _looks_like_data_answer
+    assert _looks_like_data_answer("Giá FPT hôm nay là 138.500 đồng, tăng nhẹ.")  # bịa giá inline → phải bắt
+    assert _looks_like_data_answer("FPT đóng cửa 68.000 đ/cp.")
+    # Câu tư vấn khái niệm "10 triệu đồng" — 'triệu' chen giữa số và 'đồng' → KHÔNG khớp (không ép grounding).
+    assert not _looks_like_data_answer("Với 10 triệu đồng, anh nên phân bổ vào 2-3 mã.")
+
+
+class NudgeAwareForceAdapter:
+    """Còn tools → gọi tool mãi. tools==[] (vòng ép): CHỈ trả lời khi thấy _FORCE_ANSWER_NUDGE;
+    không có nudge → trả RỖNG (tái hiện LỖI 1 để chứng minh nudge là bắt buộc)."""
+
+    def __init__(self, tool_call: ToolCall, final_text: str) -> None:
+        self._tool_call = tool_call
+        self._final_text = final_text
+        self.calls: list[list[dict[str, Any]]] = []
+        self.tools_seen: list[list[dict[str, Any]]] = []
+
+    async def stream_chat(
+        self, system: list[SystemBlock], messages: list[dict[str, Any]], tools: list[dict[str, Any]], max_tokens: int
+    ) -> AsyncIterator[AgentEvent]:
+        from app.agent.loop import _FORCE_ANSWER_NUDGE
+        self.calls.append(messages)
+        self.tools_seen.append(tools)
+        if tools:
+            yield ToolCallsEvent(calls=[self._tool_call])
+            return
+        has_nudge = any(isinstance(m.get("content"), str) and _FORCE_ANSWER_NUDGE in m["content"] for m in messages)
+        if has_nudge:
+            yield TokenEvent(text=self._final_text)
+        yield DoneEvent(usage={})
+
+
+async def test_force_turn_injects_answer_nudge_not_empty():
+    # LỖI 1: vòng force (tools=[]) phải được chèn _FORCE_ANSWER_NUDGE → M3 trả best-effort, KHÔNG error.
+    tool_call = ToolCall(id="c1", name="db_find", arguments={"collection": "market_phase", "filter": {}})
+    adapter = NudgeAwareForceAdapter(tool_call, "Best-effort answer.")
+    emitted = await _collect(adapter)
+    answer = "".join(e[1]["text"] for e in emitted if e[0] == "token")
+    assert "Best-effort answer." in answer
+    assert emitted[-1][0] == "done"
+    assert all(e[0] != "error" for e in emitted)
+    assert adapter.tools_seen[-1] == []  # vòng cuối cấm tool
+    # Nudge thực sự có mặt trong messages của vòng ép cuối.
+    from app.agent.loop import _FORCE_ANSWER_NUDGE
+    assert any(isinstance(m.get("content"), str) and _FORCE_ANSWER_NUDGE in m["content"] for m in adapter.calls[-1])
+
+
+async def test_data_answer_without_tool_retries_then_grounds():
+    # LỖI 2: lượt 1 trả THẲNG bảng số (tools_ran==0) → ép grounding → lượt 2 gọi tool → lượt 3 bảng cuối.
+    tool_call = ToolCall(
+        id="c1", name="db_find",
+        arguments={"collection": "stock_snapshot", "filter": {"ticker": "FPT"}, "projection": {"price": 1}},
+    )
+    adapter = ScriptedAdapter(
+        [
+            [TokenEvent(text=_RANK_TABLE_GUESS), DoneEvent(usage={})],                      # bảng bịa, chưa gọi tool
+            [ToolCallsEvent(calls=[tool_call])],                                            # bị ép → gọi tool
+            [TokenEvent(text=_RANK_TABLE_FINAL), DoneEvent(usage={"in": 5, "out": 9})],     # bảng cuối
+        ]
+    )
+    emitted = await _collect(adapter)
+    answer = "".join(e[1]["text"] for e in emitted if e[0] == "token")
+    assert "Dữ liệu thật." in answer          # khách nhận câu CUỐI
+    assert "Ước lượng." not in answer          # bảng bịa lượt 1 bị bỏ, không stream ra
+    assert any(e[0] == "tool_start" for e in emitted)  # đã bị ép gọi tool (>=1 tool_start)
+    assert emitted[-1][0] == "done"
+    assert all(e[0] != "error" for e in emitted)
+    # _GROUND_NUDGE đã được chèn cho lượt 2.
+    assert any(isinstance(m.get("content"), str) and "CHƯA gọi tool" in m["content"] for m in adapter.calls[1])
+
+
+async def test_headline_numbers_no_table_not_retried():
+    # Headline vài số, KHÔNG bảng, tools_ran==0 → phát luôn (table-only check, không ép nhầm Q03-style).
+    adapter = ScriptedAdapter(
+        [[TokenEvent(text="VNINDEX 1.804,24 tăng 22,12 (+1,24%)"), DoneEvent(usage={"in": 3, "out": 8})]]
+    )
+    emitted = await _collect(adapter)
+    answer = "".join(e[1]["text"] for e in emitted if e[0] == "token")
+    assert "1.804,24" in answer
+    assert emitted[-1][0] == "done"
+    assert len(adapter.calls) == 1  # không retry: chỉ 1 lượt LLM
+    assert all(e[0] not in ("error", "tool_start") for e in emitted)  # không error, không ép gọi tool
+
+
+async def test_answer_with_tool_and_numbers_not_retried():
+    # Đã gọi tool (tools_ran>0) rồi trả bảng số → đã grounded → KHÔNG ép grounding lại.
+    tool_call = ToolCall(
+        id="c1", name="db_find",
+        arguments={"collection": "stock_snapshot", "filter": {"ticker": "FPT"}, "projection": {"price": 1}},
+    )
+    adapter = ScriptedAdapter(
+        [
+            [ToolCallsEvent(calls=[tool_call])],
+            [TokenEvent(text=_RANK_TABLE_FINAL), DoneEvent(usage={"in": 5, "out": 9})],
+        ]
+    )
+    emitted = await _collect(adapter)
+    answer = "".join(e[1]["text"] for e in emitted if e[0] == "token")
+    assert "Dữ liệu thật." in answer
+    assert emitted[-1][0] == "done"
+    assert len(adapter.calls) == 2  # tool + final, KHÔNG có lượt grounding phụ
+    assert all(e[0] != "error" for e in emitted)
+
+
+# ── Round 4: table-only grounding + force preamble → clean error ─────────────
+
+async def test_conceptual_answer_with_numbers_no_table_not_grounded():
+    # Q04: tư vấn khái niệm CÓ nhiều số minh hoạ (>=6 số thập phân) nhưng KHÔNG bảng, tools_ran==0.
+    # Trước Round 4: heuristic ≥6 số bắt nhầm → ép grounding (regression). Nay table-only → phát LUÔN.
+    advice = (
+        "Với 10 triệu, bạn có thể phân bổ 3,5 triệu cổ phiếu, 2,5 triệu trái phiếu, "
+        "1,5 triệu vàng, 1,2 triệu tiền gửi, 0,8 triệu quỹ mở và 0,5 triệu dự phòng."
+    )
+    adapter = ScriptedAdapter([[TokenEvent(text=advice), DoneEvent(usage={"in": 3, "out": 20})]])
+    emitted = await _collect(adapter)
+    answer = "".join(e[1]["text"] for e in emitted if e[0] == "token")
+    assert "quỹ mở" in answer
+    assert emitted[-1][0] == "done"
+    assert len(adapter.calls) == 1  # KHÔNG grounding-retry: đúng 1 lượt LLM
+    assert all(e[0] not in ("error", "tool_start") for e in emitted)  # không error, không ép gọi tool
+
+
+async def test_data_table_without_tool_still_grounded():
+    # Q10: answer CÓ bảng markdown số + tools_ran==0 → VẪN grounding-retry (giữ fix Round 3).
+    tool_call = ToolCall(
+        id="c1", name="db_find",
+        arguments={"collection": "stock_snapshot", "filter": {"ticker": "FPT"}, "projection": {"price": 1}},
+    )
+    adapter = ScriptedAdapter(
+        [
+            [TokenEvent(text=_RANK_TABLE_GUESS), DoneEvent(usage={})],                   # bảng bịa, chưa gọi tool
+            [ToolCallsEvent(calls=[tool_call])],                                         # bị ép → gọi tool
+            [TokenEvent(text=_RANK_TABLE_FINAL), DoneEvent(usage={"in": 5, "out": 9})],  # bảng cuối
+        ]
+    )
+    emitted = await _collect(adapter)
+    answer = "".join(e[1]["text"] for e in emitted if e[0] == "token")
+    assert "Dữ liệu thật." in answer               # khách nhận câu CUỐI (đã grounded)
+    assert "Ước lượng." not in answer               # bảng bịa lượt 1 bị bỏ
+    assert any(e[0] == "tool_start" for e in emitted)  # đã bị ép gọi tool
+    assert emitted[-1][0] == "done"
+    assert all(e[0] != "error" for e in emitted)
+
+
+async def test_force_turn_preamble_emits_error_not_narration():
+    # Q04/Q21: lượt force (tools=[]) model nhả preamble cụt "Tôi sẽ thử lại..." → khách nhận ERROR
+    # sạch (_MAX_ITERS_ERROR), KHÔNG nhận nửa câu narration.
+    tool_call = ToolCall(id="c1", name="db_find", arguments={"collection": "market_phase", "filter": {}})
+    adapter = ToolsAwareAdapter(tool_call, "Tôi sẽ thử lại với cách khác:")
+    emitted = await _collect(adapter)
+    assert emitted[-1][0] == "error"
+    assert "có lỗi khi tra cứu dữ liệu" in emitted[-1][1]["message"].lower()
+    answer = "".join(e[1]["text"] for e in emitted if e[0] == "token")
+    assert "Tôi sẽ thử lại" not in answer  # narration cụt KHÔNG được stream ra khách
+    assert adapter.tools_seen[-1] == []    # vòng cuối cấm tool
+
+
+async def test_force_turn_real_answer_still_emitted():
+    # Lượt force trả câu THẬT (không preamble) → khách NHẬN câu đó, không bị nuốt nhầm.
+    tool_call = ToolCall(id="c1", name="db_find", arguments={"collection": "market_phase", "filter": {}})
+    adapter = ToolsAwareAdapter(tool_call, "Đây là kết luận best-effort dựa trên dữ liệu đã có.")
+    emitted = await _collect(adapter)
+    answer = "".join(e[1]["text"] for e in emitted if e[0] == "token")
+    assert "Đây là kết luận best-effort" in answer
+    assert emitted[-1][0] == "done"
+    assert all(e[0] != "error" for e in emitted)
+
+
+# ── Round 5: numeric-grounding guard cho GIÁ (diệt bịa giá cổ phiếu Q02) ──────
+
+
+def test_parse_number_vn():
+    # VN: dot=thousands, comma=decimal. Diệt bịa giá cần parse ĐÚNG con số.
+    from app.agent.loop import _parse_number
+    assert _parse_number("145.500") == 145500.0   # dot thousands
+    assert _parse_number("68.000") == 68000.0
+    assert _parse_number("13,08") == 13.08         # comma decimal
+    assert _parse_number("1.804,24") == 1804.24    # dot thousands + comma decimal
+
+
+def test_ungrounded_price_detects_fabrication():
+    # Tool trả close=68 → grounded nạp 68 & 68000; answer bịa "145.500 đồng" KHÔNG khớp → ungrounded.
+    from app.agent.loop import _register_grounded, _ungrounded_price
+    grounded: set[int] = set()
+    _register_grounded('[{"ticker": "FPT", "close": 68}]', grounded)
+    assert 68 in grounded and 68000 in grounded
+    assert _ungrounded_price("FPT hiện 145.500 đồng.", grounded) is True
+
+
+def test_grounded_price_ok():
+    # Tool trả close=68 (→ 68000 qua nạp *1000); answer "68.000 đồng" khớp → KHÔNG nghi bịa.
+    from app.agent.loop import _register_grounded, _ungrounded_price
+    grounded: set[int] = set()
+    _register_grounded('[{"ticker": "FPT", "close": 68}]', grounded)
+    assert _ungrounded_price("FPT đóng cửa 68.000 đồng.", grounded) is False
+
+
+def test_non_price_numbers_not_guarded():
+    # CHỈ guard claim GIÁ (đơn vị "đồng"). Số phái sinh %/điểm/median KHÔNG bị guard (dù grounded rỗng).
+    from app.agent.loop import _ungrounded_price
+    grounded: set[int] = set()
+    assert _ungrounded_price("Cả năm +45,98%, trung vị ngành 12,3 điểm.", grounded) is False
+
+
+class _PriceGateway:
+    """Gateway trả kết quả tool CÓ KIỂM SOÁT (close=68) → grounded_nums nạp 68 & 68000 để đối chiếu."""
+
+    async def find(self, ctx: Any, collection: str, filter: Any = None, projection: Any = None,
+                   sort: Any = None, limit: Any = None) -> Any:
+        from app.agent.gateway.types import GatewayResult
+        return GatewayResult(ok=True, data=[{"ticker": "FPT", "close": 68}], meta={"collection": collection, "ms": 0})
+
+    async def aggregate(self, *a: Any, **k: Any) -> Any:
+        from app.agent.gateway.types import GatewayResult
+        return GatewayResult(ok=False, error="n/a", meta={})
+
+    async def stats(self, *a: Any, **k: Any) -> Any:
+        from app.agent.gateway.types import GatewayResult
+        return GatewayResult(ok=False, error="n/a", meta={})
+
+
+async def test_price_guard_retries_then_corrects():
+    # M3 GỌI tool (close=68) nhưng lượt kế PHỚT LỜ, tự chế "145.500 đồng" → guard thấy giá không grounded
+    # → nudge → lượt sau model sửa "68.000 đồng" (grounded) → phát câu ĐÚNG.
+    tool_call = ToolCall(
+        id="c1", name="db_find",
+        arguments={"collection": "stock_snapshot", "filter": {"ticker": "FPT"}, "projection": {"close": 1}},
+    )
+    adapter = ScriptedAdapter(
+        [
+            [ToolCallsEvent(calls=[tool_call])],
+            [TokenEvent(text="FPT hiện 145.500 đồng."), DoneEvent(usage={})],                    # bịa giá
+            [TokenEvent(text="FPT đóng cửa 68.000 đồng."), DoneEvent(usage={"in": 5, "out": 6})],  # đúng
+        ]
+    )
+    emitted: list[tuple[str, dict[str, Any]]] = []
+
+    async def emit(event_type: str, payload: dict[str, Any]) -> None:
+        emitted.append((event_type, payload))
+
+    await run_agent(
+        adapter=adapter, gateway=_PriceGateway(), ctx=CTX, system=SYSTEM,
+        messages=[{"role": "user", "content": "FPT giá bao nhiêu?"}], emit=emit,
+    )
+    answer = "".join(e[1]["text"] for e in emitted if e[0] == "token")
+    assert "68.000 đồng" in answer     # khách nhận giá ĐÚNG
+    assert "145.500" not in answer      # giá bịa bị chặn, KHÔNG stream ra khách
+    assert emitted[-1][0] == "done"
+    assert all(e[0] != "error" for e in emitted)
+    # _NUM_GUARD_NUDGE đã được chèn cho lượt sửa (lượt 3 = adapter.calls[2]).
+    from app.agent.loop import _NUM_GUARD_NUDGE
+    assert any(isinstance(m.get("content"), str) and _NUM_GUARD_NUDGE in m["content"] for m in adapter.calls[2])

@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import re
 from collections.abc import Awaitable, Callable
 from typing import Any
 
@@ -30,7 +31,8 @@ from app.core.config import (
 
 logger = logging.getLogger(__name__)
 
-MAX_ITERS = 8
+MAX_ITERS = 10  # nới từ 8: dư chỗ cho retry + câu phân tích nhiều nguồn
+MAX_EMPTY_RETRY = 3  # quota CHUNG cho nudge lượt-cuối: rỗng/preamble + grounding (bịa số chưa gọi tool)
 # Trần token/lượt trả lời. Trần cứng v4-flash/pro = 384K; default 64K cho câu phân tích dài, dư đầu cho thinking sau.
 MAX_OUTPUT_TOKENS = int(LLM_MAX_OUTPUT_TOKENS) if LLM_MAX_OUTPUT_TOKENS else 64000
 MAX_TOTAL_TOOL_CHARS = 30_000
@@ -42,6 +44,102 @@ _REPEAT_FEEDBACK = (
     "sửa tham số theo gợi ý lỗi trước, hoặc dùng db_stats để lấy số tổng hợp (min/đỉnh/đáy/percentile) "
     "thay vì tự tính trên chuỗi dài."
 )
+
+_CONTINUE_NUDGE = (
+    "Bạn chưa trả lời câu hỏi của khách. Nếu cần dữ liệu hãy GỌI TOOL ngay bây giờ; "
+    "nếu đã đủ dữ liệu hãy trả lời TRỰC TIẾP nội dung cho khách. "
+    "TUYỆT ĐỐI không mô tả việc bạn sắp làm (không 'Tôi sẽ...', không nêu tên bước/tool)."
+)
+_FORCE_ANSWER_NUDGE = (
+    "Đã đủ dữ liệu để trả lời. Hãy trả lời NGAY câu hỏi của khách dựa trên dữ liệu đã lấy được ở trên, "
+    "trình bày gọn, không gọi thêm tool, không mô tả tiến trình."
+)
+_GROUND_NUDGE = (
+    "Bạn đưa số liệu/bảng nhưng CHƯA gọi tool nào để lấy dữ liệu thật. TUYỆT ĐỐI không dùng số từ trí nhớ. "
+    "Hãy GỌI TOOL (db_find/db_aggregate/db_stats) lấy số thật từ hệ thống rồi trả lời lại."
+)
+_NUM_GUARD_NUDGE = (
+    "Giá bạn nêu KHÔNG khớp dữ liệu tool trả về. TUYỆT ĐỐI không tự chế/nhớ giá. "
+    "Đọc lại kết quả tool ở trên, lấy ĐÚNG con số giá (trường close/price) rồi trả lời lại; "
+    "nếu tool chưa trả giá thì gọi lại db_find lấy giá."
+)
+_MAX_ITERS_ERROR = "Có lỗi khi tra cứu dữ liệu cho câu này. Bạn thử hỏi lại hoặc diễn đạt theo cách khác giúp mình nhé."
+
+# Lượt cuối coi như CHƯA trả lời nếu là câu dẫn "Tôi sẽ..." ngắn (chưa có nội dung thật).
+_PREAMBLE_ONLY_RE = re.compile(
+    r"^\s*(tôi sẽ|mình sẽ|để (?:tôi|mình)|bắt đầu (?:bằng|với)|trước tiên|trước hết|đầu tiên|hãy để tôi|let me|i'?ll)\b",
+    re.IGNORECASE,
+)
+
+
+def _needs_retry(answer: str) -> bool:
+    """Lượt cuối coi như CHƯA trả lời nếu: rỗng, hoặc là câu dẫn 'Tôi sẽ...' ngắn (chưa có nội dung thật)."""
+    a = answer.strip()
+    if not a:
+        return True
+    return bool(_PREAMBLE_ONLY_RE.match(a) and len(a) < 300)
+
+
+# Bảng markdown có ô số → dấu hiệu CHẮC CHẮN câu trả lời DỮ LIỆU (từ tool) cần grounding.
+_TABLE_ROW_RE = re.compile(r"^\s*\|.*\d.*\|.*\|", re.MULTILINE)
+# Khẳng định GIÁ cụ thể "138.500 đồng" / "68.000 đ/cp" → số tiền LUÔN phải từ tool (không có sẵn trong briefing,
+# không phải số minh hoạ khái niệm: "10 triệu đồng" KHÔNG khớp vì 'triệu' chen giữa). Diệt bịa giá cổ phiếu (Q02).
+_PRICE_CLAIM_RE = re.compile(r"\d[\d.,]{2,}\s*(?:đồng|đ/\s*cp|đ\b)", re.IGNORECASE)
+
+
+def _looks_like_data_answer(answer: str) -> bool:
+    """Câu 'dữ liệu cần grounding': có BẢNG markdown số HOẶC khẳng định GIÁ cụ thể 'X đồng' (luôn từ tool).
+
+    BỎ heuristic '>=6 số thập phân' (bắt nhầm câu khái niệm, regression Q04); giữ 2 tín hiệu CHẮC CHẮN."""
+    return bool(_TABLE_ROW_RE.search(answer) or _PRICE_CLAIM_RE.search(answer))
+
+
+# ── Numeric-grounding guard cho GIÁ (diệt bịa giá cổ phiếu Q02) ───────────────
+# Bắt case M3 GỌI tool nhưng PHỚT LỜ kết quả rồi tự chế giá (tools_ran>0, grounding-retry cũ không bắt).
+# CHỈ kiểm claim GIÁ (đơn vị "đồng") — KHÔNG kiểm số phái sinh (%/median/điểm) để tránh false-positive.
+_NUM_IN_TEXT_RE = re.compile(r"\d[\d.,]*\d|\d")
+# Chỉ khớp con số đứng NGAY TRƯỚC đơn vị tiền ("145.500 đồng" / "68.000 đ/cp" / "68000 đ").
+_PRICE_VALUE_RE = re.compile(r"(\d[\d.,]*\d|\d)\s*(?:đồng|đ/\s*cp|đ)\b", re.IGNORECASE)
+
+
+def _parse_number(tok: str) -> float | None:
+    """Parse số kiểu VN: dot=thousands, comma=decimal. '145.500'→145500; '13,08'→13.08; '1.804,24'→1804.24."""
+    t = tok.strip().rstrip(".,")
+    if not t:
+        return None
+    if "," in t:
+        t = t.replace(".", "").replace(",", ".")
+    else:
+        # chỉ có dot: nhóm 3 số (145.500) là thousands; còn lại (13.08) là decimal.
+        if re.fullmatch(r"\d{1,3}(\.\d{3})+", t):
+            t = t.replace(".", "")
+    try:
+        return float(t)
+    except ValueError:
+        return None
+
+
+def _register_grounded(text: str, acc: set[int]) -> None:
+    """Nạp mọi số THẬT từ 1 tool_result vào registry, có dung sai đơn vị nghìn đồng ↔ đồng (*1000, /1000)."""
+    for tok in _NUM_IN_TEXT_RE.findall(text):
+        v = _parse_number(tok)
+        if v is None:
+            continue
+        for m in (v, v * 1000, v / 1000):
+            if 0 < abs(m) < 1e15:
+                acc.add(int(round(m)))
+
+
+def _ungrounded_price(answer: str, grounded: set[int]) -> bool:
+    """True nếu có claim GIÁ 'X đồng' mà X (và X/1000, X*1000) KHÔNG truy được về grounded (đã bịa)."""
+    for tok in _PRICE_VALUE_RE.findall(answer):
+        v = _parse_number(tok)
+        if v is None:
+            continue
+        cand = {int(round(v)), int(round(v / 1000)), int(round(v * 1000))}
+        if not any((c in grounded or (c - 1) in grounded or (c + 1) in grounded) for c in cand):
+            return True  # 1 giá không khớp tool = đủ để nghi bịa
+    return False
 
 
 def _call_signature(call: ToolCall) -> str:
@@ -162,33 +260,41 @@ async def _drive_turn(
     adapter: ModelAdapter,
     system: list[SystemBlock],
     working: list[dict[str, Any]],
-    emit: Emit,
+    tools: list[dict[str, Any]],
     usage_total: dict[str, int],
-) -> tuple[list[ToolCall], str | None, bool]:
-    """Chạy 1 lượt stream. Buffer text: lượt gọi-tool (interim) BỎ text; lượt cuối sanitize rồi nhả chunk."""
+) -> tuple[list[ToolCall], str | None, str, bool, str]:
+    """Chạy 1 lượt stream, KHÔNG emit gì — run_agent quyết định chấp nhận/retry trước khi stream.
+
+    Trả (pending_calls, reasoning, final_text, truncated, status); status ∈ {"tools","final","error","empty"}.
+    Token được buffer (interim/final chưa biết ở đây); chỉ sanitize khi status="final".
+    """
     pending: list[ToolCall] = []
     pending_reasoning: str | None = None
     buffer: list[str] = []
     async for event in adapter.stream_chat(
-        system=system, messages=working, tools=TOOL_SCHEMAS, max_tokens=MAX_OUTPUT_TOKENS
+        system=system, messages=working, tools=tools, max_tokens=MAX_OUTPUT_TOKENS
     ):
         if isinstance(event, TokenEvent):
-            buffer.append(event.text)  # KHÔNG emit ngay — chờ biết interim hay final
+            buffer.append(event.text)  # KHÔNG emit — chờ run_agent quyết định
         elif isinstance(event, ToolCallsEvent):
             pending = event.calls
             pending_reasoning = event.reasoning_content
+            return pending, pending_reasoning, "", False, "tools"
         elif isinstance(event, DoneEvent):
             _merge_usage(usage_total, event.usage)
-            for i, chunk in enumerate(_stream_chunks(sanitize_answer("".join(buffer)))):
-                if i:
-                    await asyncio.sleep(STREAM_CHUNK_DELAY_S)  # tạo nhịp → FE nhả chữ dần, không đổ 1 lần
-                await emit("token", {"text": chunk})
-            await emit("done", {"usage": usage_total, "truncated": event.truncated})
-            return pending, pending_reasoning, True
+            return pending, pending_reasoning, sanitize_answer("".join(buffer)), event.truncated, "final"
         elif isinstance(event, ErrorEvent):
-            await emit("error", {"message": event.message})
-            return pending, pending_reasoning, True
-    return pending, pending_reasoning, False  # interim: buffer bị bỏ (preamble không lộ)
+            return pending, pending_reasoning, event.message, False, "error"
+    return pending, pending_reasoning, "", False, "empty"  # stream hết mà không có terminal
+
+
+async def _emit_answer(emit: Emit, text: str, usage_total: dict[str, int], truncated: bool) -> None:
+    """Nhả câu trả lời (ĐÃ sanitize) theo chunk rồi phát done. Giữ nguyên SSE contract token/done."""
+    for i, chunk in enumerate(_stream_chunks(text)):
+        if i:
+            await asyncio.sleep(STREAM_CHUNK_DELAY_S)  # tạo nhịp → FE nhả chữ dần, không đổ 1 lần
+        await emit("token", {"text": chunk})
+    await emit("done", {"usage": usage_total, "truncated": truncated})
 
 
 async def run_agent(
@@ -202,16 +308,73 @@ async def run_agent(
     working: list[dict[str, Any]] = list(messages)
     usage_total: dict[str, int] = {}
     failed_sig: set[str] = set()
+    empty_retry = 0
+    tools_ran = 0  # tổng tool call đã thực thi — để phát hiện câu 'dữ liệu' chưa gọi tool nào (bịa số)
+    grounded_nums: set[int] = set()  # số THẬT trích từ tool_result — để đối chiếu claim GIÁ ở câu cuối
 
-    for _ in range(MAX_ITERS):
-        pending, pending_reasoning, stop = await _drive_turn(adapter, system, working, emit, usage_total)
-        if stop:
-            return
-        if not pending:
-            await emit("done", {"usage": usage_total, "truncated": False})
-            return
-        working.append(_assistant_tool_message(pending, pending_reasoning))
-        working.extend(await _run_tools(gateway, ctx, pending, emit, failed_sig))
+    for i in range(MAX_ITERS):
+        force = i == MAX_ITERS - 1  # vòng cuối: cấm tool, ép trả lời
+        tools = [] if force else TOOL_SCHEMAS
+        if force:
+            # LỖI 1: vòng ép PHẢI kèm nudge để M3 trả lời best-effort với dữ liệu đang có (kể cả khi
+            # phần lớn tool đã fail). Thiếu nudge → M3 trả RỖNG → rơi xuống emit error.
+            working.append({"role": "user", "content": _FORCE_ANSWER_NUDGE})
+        pending, reasoning, final_text, truncated, status = await _drive_turn(
+            adapter, system, working, tools, usage_total
+        )
 
-    logger.warning("Agent chạm MAX_ITERS request_id=%s", ctx.request_id)
-    await emit("error", {"message": "Có lỗi khi tra cứu dữ liệu cho câu này. Bạn thử hỏi lại hoặc diễn đạt theo cách khác giúp mình nhé."})
+        if status == "error":
+            await emit("error", {"message": final_text or _MAX_ITERS_ERROR})
+            return
+
+        if status == "tools" and pending and not force:
+            working.append(_assistant_tool_message(pending, reasoning))
+            tool_messages = await _run_tools(gateway, ctx, pending, emit, failed_sig)
+            for msg in tool_messages:  # nạp số THẬT từ kết quả tool VỪA THÊM (chỉ role=="tool")
+                _register_grounded(msg["content"], grounded_nums)
+            working.extend(tool_messages)
+            tools_ran += len(pending)
+            continue
+
+        # status "final"/"empty" (hoặc force): đây là câu trả lời ứng viên.
+        answer = final_text if status == "final" else ""
+        if not force and _needs_retry(answer) and empty_retry < MAX_EMPTY_RETRY:
+            empty_retry += 1  # rỗng/preamble → nudge, chưa stream gì cho khách
+            working.append({"role": "user", "content": _CONTINUE_NUDGE})
+            continue
+        # LỖI 2: câu có DẤU HIỆU DỮ LIỆU (bảng/nhiều số) mà CHƯA gọi tool nào → bịa số. Ép gọi tool
+        # lấy số thật rồi trả lại (bounded bởi quota CHUNG MAX_EMPTY_RETRY → không loop vô hạn).
+        if (
+            not force
+            and answer.strip()
+            and tools_ran == 0
+            and _looks_like_data_answer(answer)
+            and empty_retry < MAX_EMPTY_RETRY
+        ):
+            empty_retry += 1
+            working.append({"role": "user", "content": _GROUND_NUDGE})
+            continue
+        # NUMERIC-GROUNDING GUARD (GIÁ): đã gọi tool nhưng câu trả lời nêu GIÁ 'X đồng' KHÔNG truy được về
+        # số thật trong tool_result → M3 phớt lờ kết quả, tự chế giá (Q02). Ép đọc lại số đúng (quota CHUNG).
+        if (
+            not force
+            and answer.strip()
+            and _ungrounded_price(answer, grounded_nums)
+            and empty_retry < MAX_EMPTY_RETRY
+        ):
+            empty_retry += 1
+            working.append({"role": "user", "content": _NUM_GUARD_NUDGE})
+            continue
+        # Lượt force mà answer là preamble/rỗng (_needs_retry) → KHÔNG phát narration cụt; rơi xuống error sạch.
+        if answer.strip() and not (force and _needs_retry(answer)):
+            await _emit_answer(emit, answer, usage_total, truncated)
+            return
+        if not force:
+            working.append({"role": "user", "content": _FORCE_ANSWER_NUDGE})  # rỗng nhưng còn vòng → thúc trả lời
+            continue
+        logger.warning("Agent chạm MAX_ITERS request_id=%s", ctx.request_id)
+        await emit("error", {"message": _MAX_ITERS_ERROR})  # force mà rỗng/preamble → error trung thực
+        return
+
+    logger.warning("Agent hết vòng không return request_id=%s", ctx.request_id)  # an toàn
+    await emit("error", {"message": _MAX_ITERS_ERROR})

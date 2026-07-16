@@ -1,9 +1,11 @@
 import json
 
+from typing import Any
+
 from app.agent.events import ToolCall
 from app.agent.gateway.fixture import FixtureGateway
 from app.agent.gateway.policy import Policy
-from app.agent.gateway.types import GatewayContext
+from app.agent.gateway.types import GatewayContext, GatewayResult
 from app.agent.labels import label_for
 from app.agent.tools.registry import TOOL_SCHEMAS, execute_tool
 
@@ -64,6 +66,54 @@ async def test_arg_error_gives_model_actionable_feedback_not_missing_collection(
     assert meta["ms"] == 0
     assert "JSON" in content and "db_find" in content
     assert "collection" not in content  # KHÔNG được đổ lỗi 'thiếu collection'
+
+
+class _NoteGateway:
+    """Gateway giả trả note trong meta — kiểm registry đưa note vào content model THẤY được."""
+
+    async def find(
+        self,
+        ctx: GatewayContext,
+        collection: str,
+        filter: dict[str, Any] | None = None,
+        projection: dict[str, Any] | None = None,
+        sort: list[list[Any]] | None = None,
+        limit: int | None = None,
+    ) -> GatewayResult:
+        return GatewayResult(
+            ok=True,
+            data=[{"ticker": "FPT"}],
+            meta={
+                "collection": collection,
+                "ms": 0,
+                "note": "Các field không tồn tại trong collection này (đã bỏ): period, nonexist.",
+            },
+        )
+
+
+async def test_execute_tool_surfaces_projection_note_to_model():
+    # Note ở meta phải xuất hiện trong content (model đọc trong tool-result), nhưng data thật vẫn parse được.
+    call = ToolCall(
+        id="cN", name="db_find",
+        arguments={"collection": "stock_finstats", "filter": {"ticker": "FPT"}, "projection": {"ticker": 1, "period": 1}},
+    )
+    content, meta = await execute_tool(_NoteGateway(), CTX, call)  # type: ignore[arg-type]
+    assert meta["ok"] is True
+    head, _, tail = content.partition("\n\n")
+    assert json.loads(head)[0]["ticker"] == "FPT"  # data thật vẫn nguyên vẹn JSON
+    assert "period" in tail and "nonexist" in tail  # field vắng được nêu cho model
+
+
+async def test_execute_tool_no_note_stays_pure_json():
+    # Không có note → content là JSON thuần (giữ hành vi cũ, các test json.loads khác không vỡ).
+    gateway = FixtureGateway(Policy.load())
+    call = ToolCall(
+        id="cP", name="db_find",
+        arguments={"collection": "stock_snapshot", "filter": {"ticker": "FPT"}, "projection": {"price": 1}},
+    )
+    content, meta = await execute_tool(gateway, CTX, call)
+    assert meta["ok"] is True
+    assert json.loads(content)[0]["price"] == 118.5  # parse trọn, không có đuôi note
 
 
 def test_label_uses_vietnamese_map_and_ticker():

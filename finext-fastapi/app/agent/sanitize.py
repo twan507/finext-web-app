@@ -9,7 +9,9 @@ _INTERNAL_NAMES = (
     "history_finratios_stock", "history_finratios_industry", "industry_finstats", "stock_finstats",
     "valuation_ratios", "market_snapshot", "market_recent", "data_briefing", "stock_snapshot",
     "market_intensity", "technical_zone", "breadth_slow", "breadth_blend", "breadth_aux",
+    "industry_rank_pct", "market_rank_pct", "free_float_pct",
     "px_ret20_pct", "conf_dir", "conf_flat", "rank_pct", "marketcap", "corr60", "period",
+    "y_pct", "w_pct", "m_pct", "q_pct",
     "db_aggregate", "read_kb", "db_find", "core",
 )  # dài trước ngắn để regex thay đúng cụm dài (history_finratios_stock trước ...ratios)
 
@@ -21,6 +23,7 @@ _PHRASE_MAP = {
     "day_score": "điểm dòng tiền ngày", "week_score": "điểm dòng tiền tuần",
     "month_score": "điểm dòng tiền tháng",
     "industry_rank": "phân vị xếp hạng trong ngành", "rank_pct": "phân vị xếp hạng thị trường",
+    "breadth": "độ rộng",
 }
 
 # Câu mở đầu kể tiến trình lọt ở LƯỢT CUỐI (loop chỉ bỏ preamble ở lượt gọi-tool; model đôi khi để ở
@@ -35,7 +38,7 @@ _PREAMBLE_RE = re.compile(
 
 _VSI_NUM_RE = re.compile(r"`?\bVSI\b`?\s*(=|:|≥|>=|≤|<=|>|<)?\s*(\d+(?:[.,]\d+)?)")
 _VSI_BARE_RE = re.compile(r"`?\bVSI\b`?")
-_EXPOSURE_RE = re.compile(r"`?\bexposure\b`?")
+_EXPOSURE_RE = re.compile(r"`?\bexposure\b`?", re.IGNORECASE)  # bắt cả "Exposure" viết hoa (đầu bullet)
 _BACKTICK_RE = re.compile(r"`([^`]+)`")
 _SNAKE_RE = re.compile(r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$")
 _ZONE_GRADE_RE = re.compile(r"(?<=\w)\s*\(([ABC])\)")
@@ -56,6 +59,9 @@ _MONTH_NUM = {
 _MONTH_RE = re.compile(r"\b(" + "|".join(sorted((k.title() for k in _MONTH_NUM), key=len, reverse=True)) + r")\.?\b")
 _MAY_RE = re.compile(r"\bMay\b(?=[\s/.–-]*\d{4})")  # chỉ "May" viết hoa + kề năm 4 số → tháng 5
 _MONTH_YEAR_RE = re.compile(r"\btháng (\d{1,2})\s+(\d{4})\b")  # "tháng 10 2023" → "tháng 10/2023"
+
+# Taxonomy nội bộ (§8.5) đôi khi lọt ở TRẦN: "Workflow A-M" / "Kịch bản A-M" → xóa nhãn (giữ nội dung quanh).
+_TAXONOMY_RE = re.compile(r"\b(?:Workflow|Kịch bản)\s+[A-M]\b", re.IGNORECASE)
 
 # Khối biểu đồ ```finext-widget``` — sanitize CHỪA NGUYÊN (fence + JSON tới FE verbatim; khớp splitWidgets FE).
 # Bắt buộc chừa: _BACKTICK_RE gỡ backtick sẽ phá fence ```→``, và xóa tên nội bộ sẽ phá JSON.
@@ -90,6 +96,9 @@ def _sanitize_text(s: str) -> str:
         if new == s:
             break
         s = new
+
+    # 0b) Taxonomy nội bộ lọt ("Workflow E", "Kịch bản A") → xóa nhãn (bước 7 dọn khoảng trắng thừa).
+    s = _TAXONOMY_RE.sub("", s)
 
     # 1) VSI: có số → giữ số + toán tử; trơ → cụm tự nhiên.
     s = _VSI_NUM_RE.sub(_vsi_num, s)
