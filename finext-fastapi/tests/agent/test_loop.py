@@ -70,7 +70,10 @@ async def test_tool_call_round_trip_feeds_result_back_to_model():
     )
     emitted = await _collect(adapter)
     types = [e[0] for e in emitted]
-    assert types == ["tool_start", "tool_end", "token", "done"]
+    # Số token event tuỳ STREAM_CHUNK — kiểm THỨ TỰ: tool_start → tool_end → (≥1 token) → done.
+    assert types[0] == "tool_start" and types[1] == "tool_end" and types[-1] == "done"
+    assert "token" in types
+    assert "".join(e[1]["text"] for e in emitted if e[0] == "token") == "Giá FPT là 118,5"
     assert emitted[0][1]["label"] == "dữ liệu cổ phiếu FPT"
     assert emitted[1][1]["ok"] is True
 
@@ -200,7 +203,7 @@ async def test_final_answer_is_sanitized():
     emitted = await _collect(adapter)
     answer = "".join(e[1]["text"] for e in emitted if e[0] == "token")
     assert "VSI" not in answer and "stock_finstats" not in answer and "`" not in answer
-    assert "0,92× TB 5 phiên" in answer
+    assert "92% trung bình 5 phiên" in answer
 
 
 class CountingGateway:

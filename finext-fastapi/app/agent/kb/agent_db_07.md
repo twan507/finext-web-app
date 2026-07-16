@@ -98,7 +98,7 @@ thu vài quý của nhiều mã. Khác `bar_h` (1 tiêu chí, nhiều mã) ở c
 **Khi nào dùng:** **tỷ trọng cơ cấu** (phần của một tổng) — cơ cấu vốn hoá theo ngành, phân bổ danh mục, tỷ trọng
 GTGD theo nhóm. `donut`=vành rỗng giữa. `rose`=hoa hồng (bán kính theo giá trị). Không dùng khi >10 phần.
 
-**Khuôn:** `{template:"pie", title?, items:[{name, value:num}], donut?:bool, rose?:bool}` — ≤10 phần.
+**Khuôn:** `{template:"pie", title?, items:[{name, value:num, tone?:"up"|"down"|"flat"}], donut?:bool, rose?:bool}` — ≤10 phần. Với dữ liệu độ rộng (Tăng/Giảm/Đứng) đặt `tone` để tô đúng màu (Tăng→xanh, Giảm→đỏ, Đứng→vàng); tên phần bắt đầu bằng "Tăng/Giảm/Đứng" cũng tự nhận màu.
 
 ```finext-widget
 {"template":"pie","title":"Cơ cấu vốn hoá thị trường theo nhóm ngành","items":[{"name":"Ngân hàng","value":34},{"name":"BĐS","value":18},{"name":"Chứng khoán","value":9},{"name":"Thép","value":7},{"name":"Bán lẻ","value":6},{"name":"Ngành khác","value":26}],"donut":true}

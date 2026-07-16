@@ -64,7 +64,11 @@ _WIDGET_BLOCK_RE = re.compile(r"```finext-widget\s*\n[\s\S]*?```", re.IGNORECASE
 
 def _vsi_num(m: "re.Match[str]") -> str:
     op = (m.group(1) or "").replace("=", "").replace(":", "").strip()
-    return f"{op}{m.group(2)}× TB 5 phiên"
+    try:
+        pct = round(float(m.group(2).replace(",", ".")) * 100)
+    except ValueError:
+        return m.group(0)
+    return f"{op}{pct}% trung bình 5 phiên"
 
 
 def _unwrap_backtick(m: "re.Match[str]") -> str:
@@ -89,7 +93,7 @@ def _sanitize_text(s: str) -> str:
 
     # 1) VSI: có số → giữ số + toán tử; trơ → cụm tự nhiên.
     s = _VSI_NUM_RE.sub(_vsi_num, s)
-    s = _VSI_BARE_RE.sub("thanh khoản (×TB5)", s)
+    s = _VSI_BARE_RE.sub("thanh khoản (so với trung bình 5 phiên)", s)
 
     # 2) exposure → tỷ lệ nắm giữ.
     s = _EXPOSURE_RE.sub("tỷ lệ nắm giữ", s)

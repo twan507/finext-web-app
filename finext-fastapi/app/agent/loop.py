@@ -34,8 +34,8 @@ MAX_ITERS = 8
 # Trần token/lượt trả lời. Trần cứng v4-flash/pro = 384K; default 64K cho câu phân tích dài, dư đầu cho thinking sau.
 MAX_OUTPUT_TOKENS = int(LLM_MAX_OUTPUT_TOKENS) if LLM_MAX_OUTPUT_TOKENS else 64000
 MAX_TOTAL_TOOL_CHARS = 30_000
-STREAM_CHUNK = 32  # ký tự/đoạn khi nhả lại câu đã sanitize — cắt ở khoảng trắng.
-STREAM_CHUNK_DELAY_S = 0.03  # nhịp giữa các đoạn (giả "nhả chữ"); vì câu cuối buffer trọn nên phải tự tạo nhịp.
+STREAM_CHUNK = 12  # ký tự/đoạn khi nhả lại câu đã sanitize — cắt ở khoảng trắng.
+STREAM_CHUNK_DELAY_S = 0.05  # nhịp giữa các đoạn (giả "nhả chữ" ~240 ký tự/giây, tự nhiên hơn); câu cuối buffer trọn nên tự tạo nhịp.
 
 _REPEAT_FEEDBACK = (
     "Query này đã được thử ở trên và bị lỗi. Đừng lặp lại y hệt — hãy đổi cách: thu hẹp phạm vi, "

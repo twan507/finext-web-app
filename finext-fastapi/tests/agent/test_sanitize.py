@@ -3,18 +3,18 @@ from app.agent.sanitize import sanitize_answer
 
 # --- VSI: giữ số, đổi nhãn thành đơn vị tự nhiên ---
 def test_vsi_with_number_keeps_number():
-    assert "0,92× TB 5 phiên" in sanitize_answer("thanh khoản (VSI 0,92) thấp")
+    assert "92% trung bình 5 phiên" in sanitize_answer("thanh khoản (VSI 0,92) thấp")
     assert "VSI" not in sanitize_answer("thanh khoản (VSI 0,92) thấp")
 
 
 def test_vsi_with_equals_drops_label_keeps_number():
     out = sanitize_answer("dưới trung bình 5 phiên (VSI = 0,92).")
-    assert "0,92× TB 5 phiên" in out and "VSI" not in out
+    assert "92% trung bình 5 phiên" in out and "VSI" not in out
 
 
 def test_vsi_with_operator_keeps_operator():
     out = sanitize_answer("Thanh khoản đột biến (VSI ≥ 2)")
-    assert "≥2× TB 5 phiên" in out and "VSI" not in out
+    assert "≥200% trung bình 5 phiên" in out and "VSI" not in out
 
 
 def test_bare_vsi_table_header_replaced():
