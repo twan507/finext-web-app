@@ -267,7 +267,14 @@ def test_payload_builds_anthropic_body() -> None:
     assert payload["system"][0]["cache_control"] == {"type": "ephemeral"}
     assert payload["messages"] == [{"role": "user", "content": [{"type": "text", "text": "hi"}]}]
     assert payload["tools"][0]["input_schema"] == {"type": "object"}
+    assert payload["tool_choice"] == {"type": "auto"}  # bắt buộc: MiniMax /anthropic cần explicit để bật tool-calling
     assert "thinking" not in payload
+
+
+def test_payload_no_tool_choice_when_no_tools() -> None:
+    adapter = AnthropicCompatAdapter(base_url="https://api.test", api_key="k", model="m")
+    payload = adapter._payload([SystemBlock(text="s")], [{"role": "user", "content": "hi"}], [], 100)
+    assert "tool_choice" not in payload
 
 
 def test_payload_thinking_enabled_adds_budget() -> None:

@@ -251,6 +251,9 @@ class AnthropicCompatAdapter:
         }
         if tools:
             payload["tools"] = _convert_tools(tools)
+            # BẮT BUỘC với MiniMax /anthropic: thiếu tool_choice tường minh thì endpoint KHÔNG bật tool-calling
+            # (model bịa số thay vì gọi tool). Anthropic thật mặc định auto nên gửi cũng vô hại. (verify live 2026-07-16)
+            payload["tool_choice"] = {"type": "auto"}
         if self._temperature is not None:
             payload["temperature"] = self._temperature
         if self._thinking == "enabled":  # mặc định disabled → KHÔNG gửi field (§3.4)
