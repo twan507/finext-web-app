@@ -23,6 +23,7 @@
     "apexcharts": "5.3.5",
     "bcryptjs": "3.0.2",
     "date-fns": "4.1.0",
+    "echarts": "^5.6.0",
     "lightweight-charts": "5.0.8",
     "next": "15.5.12",
     "next-themes": "0.4.6",
