@@ -103,47 +103,35 @@ function AssistantText({ text, streaming }: { text: string; streaming: boolean }
   );
 }
 
-// Chờ token/tool đầu tiên: bong bóng rỗng trông như treo → hiện "đang suy nghĩ" + chấm nhảy.
-function TypingIndicator() {
+// 3 chấm nhảy kiểu "đang gõ" (typing). Dùng cho lúc suy nghĩ ban đầu + lúc chờ câu trả lời sau tra cứu.
+function TypingDots() {
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, py: 0.5 }}>
-      <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary' }}>Đang suy nghĩ</Typography>
-      <Box sx={{ display: 'flex', gap: 0.4 }}>
-        {[0, 1, 2].map((i) => (
-          <Box
-            key={i}
-            sx={{
-              width: 5,
-              height: 5,
-              borderRadius: '50%',
-              bgcolor: 'text.disabled',
-              animation: 'finextTyping 1.2s ease-in-out infinite',
-              animationDelay: `${i * 0.2}s`,
-              '@keyframes finextTyping': { '0%, 60%, 100%': { opacity: 0.25 }, '30%': { opacity: 1 } }
-            }}
-          />
-        ))}
-      </Box>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+      {[0, 1, 2].map((i) => (
+        <Box
+          key={i}
+          sx={{
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            bgcolor: 'text.disabled',
+            animation: 'finextTyping 1.1s ease-in-out infinite',
+            animationDelay: `${i * 0.16}s`,
+            '@keyframes finextTyping': { '0%, 70%, 100%': { opacity: 0.25, transform: 'translateY(0)' }, '35%': { opacity: 1, transform: 'translateY(-3px)' } }
+          }}
+        />
+      ))}
     </Box>
   );
 }
 
-// Dòng hiệu ứng LUÔN chuyển động ở dưới cùng khi model còn làm việc (kể cả giữa các bước) — tránh nhìn như treo.
-function WorkingIndicator() {
-  const theme = useTheme();
+// Chờ token/tool đầu tiên (bong bóng rỗng): "Đang suy nghĩ" + chấm typing.
+function TypingIndicator() {
   return (
-    <Box
-      sx={{
-        mt: 1,
-        height: 3,
-        width: 96,
-        borderRadius: 999,
-        backgroundImage: `linear-gradient(90deg, ${alpha(theme.palette.text.primary, 0.06)} 0%, ${alpha(theme.palette.primary.main, 0.55)} 50%, ${alpha(theme.palette.text.primary, 0.06)} 100%)`,
-        backgroundSize: '200% 100%',
-        animation: 'chatWorking 1.15s linear infinite',
-        '@keyframes chatWorking': { '0%': { backgroundPosition: '150% 0' }, '100%': { backgroundPosition: '-150% 0' } }
-      }}
-    />
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, py: 0.5 }}>
+      <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary' }}>Đang suy nghĩ</Typography>
+      <TypingDots />
+    </Box>
   );
 }
 
@@ -151,6 +139,8 @@ function MessageBubbleBase({ message }: { message: ChatMessage }) {
   const theme = useTheme();
   const isUser = message.role === 'user';
   const streaming = message.status === 'streaming';
+  // Đã có chữ trả lời chưa? Có rồi → tắt hiệu ứng chờ (chính câu trả lời đang nhả là tín hiệu model làm việc).
+  const hasAnswerText = message.parts.some((p) => p.kind === 'text' && p.text.trim() !== '');
   return (
     <Box sx={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', mb: 2 }}>
       <Box
@@ -177,8 +167,10 @@ function MessageBubbleBase({ message }: { message: ChatMessage }) {
                 return streaming && !answered ? <ToolChip key={i} tool={part} /> : <Fragment key={i} />;
               })
             )}
-            {/* Dòng hiệu ứng luôn chuyển động dưới cùng khi đã có nội dung mà vẫn đang chạy. */}
-            {streaming && message.parts.length > 0 && <WorkingIndicator />}
+            {/* Chấm typing chờ câu trả lời (sau khi đã có dòng tra cứu) — TẮT ngay khi chữ bắt đầu hiện. */}
+            {streaming && message.parts.length > 0 && !hasAnswerText && (
+              <Box sx={{ py: 0.75 }}><TypingDots /></Box>
+            )}
           </>
         )}
       </Box>

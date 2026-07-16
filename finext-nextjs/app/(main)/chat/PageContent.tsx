@@ -65,12 +65,16 @@ function ChatApp() {
             <Composer disabled={consented !== true || streaming} streaming={streaming} onSend={store.send} onStop={store.stop} />
           </>
         ) : (
-          // Chưa có tin nhắn: lời chào + composer NỔI Ở GIỮA màn hình (kiểu ChatGPT/Claude). Gửi câu đầu → chuyển sang layout trên (composer về đáy).
-          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, py: 4 }}>
-            <ChatGreeting name={session?.user?.full_name} />
-            <Box sx={{ width: '100%' }}>
-              <Composer centered disabled={consented !== true || streaming} streaming={streaming} onSend={store.send} onStop={store.stop} />
+          // Chưa có tin nhắn: lời chào + composer NỔI (kiểu ChatGPT/Claude), đặt ở ~40% chiều cao (spacer 2:3) — hơi cao hơn giữa. Gửi câu đầu → composer về đáy.
+          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', px: 2 }}>
+            <Box sx={{ flexGrow: 2 }} />
+            <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+              <ChatGreeting name={session?.user?.full_name} />
+              <Box sx={{ width: '100%' }}>
+                <Composer centered disabled={consented !== true || streaming} streaming={streaming} onSend={store.send} onStop={store.stop} />
+              </Box>
             </Box>
+            <Box sx={{ flexGrow: 3 }} />
           </Box>
         )}
       </Box>
