@@ -11,11 +11,12 @@ interface ComposerProps {
   streaming: boolean;
   onSend: (t: string) => void;
   onStop: () => void;
+  centered?: boolean; // true = khối nổi ở GIỮA (empty state), không dính đáy; false = dính đáy viewport khi đã chat.
 }
 
 const DISCLAIMER = 'Thông tin tham khảo, không phải khuyến nghị đầu tư. AI có thể nhầm lẫn — kiểm tra số liệu quan trọng.';
 
-export default function Composer({ disabled, streaming, onSend, onStop }: ComposerProps) {
+export default function Composer({ disabled, streaming, onSend, onStop, centered = false }: ComposerProps) {
   const theme = useTheme();
   const [text, setText] = useState('');
 
@@ -35,7 +36,13 @@ export default function Composer({ disabled, streaming, onSend, onStop }: Compos
   };
 
   return (
-    <Box sx={{ position: 'sticky', bottom: 0, zIndex: 2, px: { xs: 2, md: 3 }, pt: 3, pb: 2, background: `linear-gradient(to top, ${theme.palette.background.default} 55%, transparent)` }}>
+    <Box
+      sx={
+        centered
+          ? { width: '100%', px: { xs: 2, md: 3 } } // GIỮA màn hình: khối nổi thường, không sticky/gradient
+          : { position: 'sticky', bottom: 0, zIndex: 2, px: { xs: 2, md: 3 }, pt: 3, pb: 2, background: `linear-gradient(to top, ${theme.palette.background.default} 55%, transparent)` }
+      }
+    >
       <Box sx={{ maxWidth: 760, mx: 'auto', width: '100%' }}>
         <Box
           sx={{

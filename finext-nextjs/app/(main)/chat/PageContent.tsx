@@ -8,7 +8,7 @@ import useChatStore from '../../../hooks/useChatStore';
 import ConversationSidebar from './components/ConversationSidebar';
 import MessageList from './components/MessageList';
 import Composer from './components/Composer';
-import EmptyState from './components/EmptyState';
+import ChatGreeting from './components/EmptyState';
 import ConsentModal from './components/ConsentModal';
 import AsOfChip from './components/AsOfChip';
 import ChatSkeleton from './components/ChatSkeleton';
@@ -56,15 +56,23 @@ function ChatApp() {
             </Box>
           </Box>
         )}
-        {/* Vùng tin nhắn flex:1 → đẩy composer xuống ĐÁY khi nội dung ngắn; nội dung dài thì cuộn window. */}
-        <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-          {hasMessages ? (
-            <MessageList key={store.activeId} messages={store.messages} onRetry={store.retry} error={store.error} />
-          ) : (
-            <EmptyState onPick={store.send} />
-          )}
-        </Box>
-        <Composer disabled={consented !== true || streaming} streaming={streaming} onSend={store.send} onStop={store.stop} />
+        {hasMessages ? (
+          <>
+            {/* Vùng tin nhắn flex:1 → đẩy composer xuống ĐÁY khi nội dung ngắn; nội dung dài thì cuộn window. */}
+            <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+              <MessageList key={store.activeId} messages={store.messages} onRetry={store.retry} error={store.error} />
+            </Box>
+            <Composer disabled={consented !== true || streaming} streaming={streaming} onSend={store.send} onStop={store.stop} />
+          </>
+        ) : (
+          // Chưa có tin nhắn: lời chào + composer NỔI Ở GIỮA màn hình (kiểu ChatGPT/Claude). Gửi câu đầu → chuyển sang layout trên (composer về đáy).
+          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, py: 4 }}>
+            <ChatGreeting />
+            <Box sx={{ width: '100%' }}>
+              <Composer centered disabled={consented !== true || streaming} streaming={streaming} onSend={store.send} onStop={store.stop} />
+            </Box>
+          </Box>
+        )}
       </Box>
 
       {session && <ConsentModal open={consented === false} onAccept={accept} />}
