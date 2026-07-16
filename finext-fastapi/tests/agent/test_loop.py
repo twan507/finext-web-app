@@ -201,3 +201,64 @@ async def test_final_answer_is_sanitized():
     answer = "".join(e[1]["text"] for e in emitted if e[0] == "token")
     assert "VSI" not in answer and "stock_finstats" not in answer and "`" not in answer
     assert "0,92× TB 5 phiên" in answer
+
+
+class CountingGateway:
+    """Đếm số lần chạm gateway.find để kiểm anti-loop KHÔNG execute lại query đã lỗi."""
+
+    def __init__(self, inner: Any) -> None:
+        self._inner = inner
+        self.find_calls = 0
+
+    async def find(self, *args: Any, **kwargs: Any) -> Any:
+        self.find_calls += 1
+        return await self._inner.find(*args, **kwargs)
+
+    async def aggregate(self, *args: Any, **kwargs: Any) -> Any:
+        return await self._inner.aggregate(*args, **kwargs)
+
+    async def stats(self, *args: Any, **kwargs: Any) -> Any:
+        return await self._inner.stats(*args, **kwargs)
+
+
+async def test_repeated_failed_query_blocked_and_not_re_executed():
+    # Model lặp lại y hệt db_find hỏng (thiếu projection trên collection large → ok=False) mỗi vòng.
+    bad = ToolCall(id="c1", name="db_find", arguments={"collection": "stock_snapshot", "filter": {"ticker": "FPT"}})
+    adapter = ScriptedAdapter([[ToolCallsEvent(calls=[bad])]])  # không bao giờ Done
+    gateway = CountingGateway(FixtureGateway(Policy.load()))
+
+    emitted: list[tuple[str, dict[str, Any]]] = []
+
+    async def emit(event_type: str, payload: dict[str, Any]) -> None:
+        emitted.append((event_type, payload))
+
+    await run_agent(
+        adapter=adapter, gateway=gateway, ctx=CTX, system=SYSTEM,
+        messages=[{"role": "user", "content": "x"}], emit=emit,
+    )
+    # Chỉ chạm gateway.find ĐÚNG 1 lần (vòng đầu); các vòng sau bị chặn trước khi execute.
+    assert gateway.find_calls == 1
+    # Model nhận feedback chống-lặp trong tool message vòng cuối.
+    last_tool_msg = adapter.calls[-1][-1]
+    assert last_tool_msg["role"] == "tool"
+    assert "Đừng lặp lại" in last_tool_msg["content"]
+    # Vẫn kết thúc bằng error (MAX_ITERS), không treo.
+    assert emitted[-1][0] == "error"
+    assert len(adapter.calls) == MAX_ITERS
+
+
+async def test_distinct_failed_queries_each_execute_once():
+    # 2 query KHÁC nhau (khác filter) → cả hai đều được chạy (không bị nhầm là lặp).
+    call_a = ToolCall(id="a", name="db_find", arguments={"collection": "stock_snapshot", "filter": {"ticker": "FPT"}})
+    call_b = ToolCall(id="b", name="db_find", arguments={"collection": "stock_snapshot", "filter": {"ticker": "HPG"}})
+    adapter = ScriptedAdapter([[ToolCallsEvent(calls=[call_a])], [ToolCallsEvent(calls=[call_b])]])
+    gateway = CountingGateway(FixtureGateway(Policy.load()))
+
+    async def emit(event_type: str, payload: dict[str, Any]) -> None:
+        return None
+
+    await run_agent(
+        adapter=adapter, gateway=gateway, ctx=CTX, system=SYSTEM,
+        messages=[{"role": "user", "content": "x"}], emit=emit,
+    )
+    assert gateway.find_calls == 2  # hai chữ ký khác nhau, không chặn oan

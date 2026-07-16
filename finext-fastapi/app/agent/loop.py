@@ -1,6 +1,7 @@
 """Vòng lặp LLM ↔ tools. Không biết provider nào, không biết gateway nào (doc 02 §4.2)."""
 
 import asyncio
+import hashlib
 import json
 import logging
 from collections.abc import Awaitable, Callable
@@ -35,6 +36,19 @@ MAX_OUTPUT_TOKENS = int(LLM_MAX_OUTPUT_TOKENS) if LLM_MAX_OUTPUT_TOKENS else 640
 MAX_TOTAL_TOOL_CHARS = 30_000
 STREAM_CHUNK = 32  # ký tự/đoạn khi nhả lại câu đã sanitize — cắt ở khoảng trắng.
 STREAM_CHUNK_DELAY_S = 0.03  # nhịp giữa các đoạn (giả "nhả chữ"); vì câu cuối buffer trọn nên phải tự tạo nhịp.
+
+_REPEAT_FEEDBACK = (
+    "Query này đã được thử ở trên và bị lỗi. Đừng lặp lại y hệt — hãy đổi cách: thu hẹp phạm vi, "
+    "sửa tham số theo gợi ý lỗi trước, hoặc dùng db_stats để lấy số tổng hợp (min/đỉnh/đáy/percentile) "
+    "thay vì tự tính trên chuỗi dài."
+)
+
+
+def _call_signature(call: ToolCall) -> str:
+    """Chữ ký ổn định cho 1 tool call (name + arguments) — để phát hiện lặp lại query đã lỗi."""
+    args = call.arguments if isinstance(call.arguments, dict) else {}
+    payload = json.dumps(args, sort_keys=True, ensure_ascii=False, default=str)
+    return hashlib.sha1(f"{call.name}|{payload}".encode("utf-8")).hexdigest()
 
 
 def _stream_chunks(text: str) -> list[str]:
@@ -100,17 +114,25 @@ def _merge_usage(total: dict[str, int], usage: dict[str, int]) -> None:
 
 
 async def _run_tools(
-    gateway: GatewayProtocol, ctx: GatewayContext, calls: list[ToolCall], emit: Emit
+    gateway: GatewayProtocol, ctx: GatewayContext, calls: list[ToolCall], emit: Emit, failed_sig: set[str]
 ) -> list[dict[str, Any]]:
     for call in calls:
         await emit("tool_start", {"name": call.name, "label": label_for(call)})
 
-    results = await asyncio.gather(*(execute_tool(gateway, ctx, call) for call in calls))
+    async def _run_one(call: ToolCall) -> tuple[str, dict[str, Any]]:
+        # Chữ ký đã lỗi ở lượt trước → KHÔNG chạm gateway, trả feedback mạnh để model đổi cách.
+        if _call_signature(call) in failed_sig:
+            return _REPEAT_FEEDBACK, {"ok": False, "ms": 0}
+        return await execute_tool(gateway, ctx, call)
+
+    results = await asyncio.gather(*(_run_one(call) for call in calls))
 
     messages: list[dict[str, Any]] = []
     budget = MAX_TOTAL_TOOL_CHARS
     for call, (content, meta) in zip(calls, results, strict=True):
         await emit("tool_end", {"name": call.name, "ok": meta["ok"], "ms": meta["ms"]})
+        if not meta["ok"]:
+            failed_sig.add(_call_signature(call))
         if len(content) > budget:
             content = content[:budget] + " …[đã cắt do vượt ngân sách]" if budget > 0 else "[đã cắt do vượt ngân sách]"
         budget = max(0, budget - len(content))
@@ -179,6 +201,7 @@ async def run_agent(
 ) -> None:
     working: list[dict[str, Any]] = list(messages)
     usage_total: dict[str, int] = {}
+    failed_sig: set[str] = set()
 
     for _ in range(MAX_ITERS):
         pending, pending_reasoning, stop = await _drive_turn(adapter, system, working, emit, usage_total)
@@ -188,7 +211,7 @@ async def run_agent(
             await emit("done", {"usage": usage_total, "truncated": False})
             return
         working.append(_assistant_tool_message(pending, pending_reasoning))
-        working.extend(await _run_tools(gateway, ctx, pending, emit))
+        working.extend(await _run_tools(gateway, ctx, pending, emit, failed_sig))
 
     logger.warning("Agent chạm MAX_ITERS request_id=%s", ctx.request_id)
     await emit("error", {"message": "Có lỗi khi tra cứu dữ liệu cho câu này. Bạn thử hỏi lại hoặc diễn đạt theo cách khác giúp mình nhé."})
