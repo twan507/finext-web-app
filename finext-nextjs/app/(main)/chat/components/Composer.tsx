@@ -103,7 +103,7 @@ export default function Composer({ disabled, streaming, onSend, onStop, thinking
             />
             {/* Hàng nút DƯỚI trong khung. */}
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-              <Tooltip title="Trả lời kỹ hơn nhưng chậm hơn" arrow>
+              <Tooltip title="Suy nghĩ sâu hơn trước khi trả lời nhưng tốc độ chậm hơn" arrow>
                 <Chip
                   icon={<PsychologyRounded />}
                   label="Suy nghĩ sâu"

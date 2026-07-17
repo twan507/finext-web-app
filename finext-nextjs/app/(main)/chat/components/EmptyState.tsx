@@ -11,7 +11,7 @@ export default function ChatGreeting({ name }: { name?: string }) {
     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.25, px: 2, textAlign: 'center', flexWrap: 'wrap' }}>
       <AutoAwesomeRounded sx={{ fontSize: 32, color: 'primary.main' }} />
       <Typography sx={{ fontSize: getResponsiveFontSize('xxl'), fontWeight: fontWeight.bold, lineHeight: 1.2 }}>
-        Rất vui được tư vấn cho bạn{who}
+        Tôi có thẻ giúp gì cho bạn{who}
       </Typography>
     </Box>
   );
