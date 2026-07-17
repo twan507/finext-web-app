@@ -67,6 +67,9 @@ _TAXONOMY_RE = re.compile(r"\b(?:Workflow|Kịch bản)\s+[A-M]\b", re.IGNORECAS
 # Bắt buộc chừa: _BACKTICK_RE gỡ backtick sẽ phá fence ```→``, và xóa tên nội bộ sẽ phá JSON.
 _WIDGET_BLOCK_RE = re.compile(r"```finext-widget\s*\n[\s\S]*?```", re.IGNORECASE)
 
+# Khối reasoning của M3 khi thinking=adaptive: "<think>…</think>" nhả inline trong content → BỎ (không lộ ra khách).
+_THINK_BLOCK_RE = re.compile(r"<think>[\s\S]*?</think>\s*", re.IGNORECASE)
+
 # Câu TỰ XIN LỖI / TỰ TỐ ẢO GIÁC vô căn cứ (đo thật multi-turn): model tự nhận "dùng số liệu từ trí nhớ /
 # có thể sai hoàn toàn / xin lỗi" giữa hội thoại dù user KHÔNG chê và ĐÃ gọi tool → META vô căn cứ, cắt TRỌN câu.
 # AN TOÀN (không cắt nhầm nội dung hợp lệ): câu phải VỪA có ngôi thứ nhất (tôi/mình/em) VỪA có 1 dấu hiệu tự tố.
@@ -134,6 +137,10 @@ def _cut_self_apology(s: str) -> str:
 
 def _sanitize_text(s: str) -> str:
     """Dọn ký hiệu nội bộ trên MỘT đoạn văn bản thường (KHÔNG phải khối widget). KHÔNG strip (để wrapper ghép)."""
+    # 00) Bỏ khối reasoning <think>…</think> — M3 nhả inline vào content khi thinking=adaptive (English/ký hiệu thô).
+    #     Ở non-thinking (disabled) không có → no-op. Bắt buộc để reasoning KHÔNG lộ ra khách nếu bật thinking.
+    s = _THINK_BLOCK_RE.sub("", s)
+
     # 0) Cắt câu TỰ XIN LỖI / TỰ TỐ ẢO GIÁC vô căn cứ (giữ nội dung phân tích thật còn lại).
     s = _cut_self_apology(s)
 

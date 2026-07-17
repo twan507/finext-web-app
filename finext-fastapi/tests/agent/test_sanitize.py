@@ -261,3 +261,10 @@ def test_self_apology_with_widget_preserves_both():
     assert widget in out
     assert "xin lỗi" not in out
     assert "VNM vẫn ở vùng hấp dẫn." in out
+
+
+def test_think_block_stripped():
+    """Khối <think>…</think> (M3 adaptive) bị bỏ; phần trả lời thật giữ nguyên."""
+    out = sanitize_answer("<think>Calculating recovery from trough</think>\n\nP/B HPG hiện 1,34 lần.")
+    assert "<think>" not in out and "Calculating" not in out
+    assert "P/B HPG hiện 1,34 lần." in out
