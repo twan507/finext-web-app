@@ -2,7 +2,7 @@
 
 import { forwardRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
-import { Box, Chip, IconButton, TextField, Typography, alpha, useTheme } from '@mui/material';
+import { Box, Chip, IconButton, TextField, Typography, alpha, useMediaQuery, useTheme } from '@mui/material';
 import { ArrowUpwardRounded, PsychologyRounded, StopRounded } from '@mui/icons-material';
 import { getResponsiveFontSize, transitions } from 'theme/tokens';
 
@@ -25,6 +25,9 @@ const Composer = forwardRef<HTMLDivElement, ComposerProps>(function Composer(
   const theme = useTheme();
   const [text, setText] = useState('');
   const isDark = theme.palette.mode === 'dark';
+  // Mobile: placeholder NGẮN để không wrap 2 dòng; desktop: đầy đủ.
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'), { noSsr: true });
+  const placeholder = isMobile ? 'Hỏi Finext AI…' : 'Hỏi Finext AI về thị trường, cổ phiếu, nhóm ngành…';
   // Quầng gradient màu chủ đề kiểu Gemini: centered rõ hơn, bottom subtle; dark đậm hơn light. (Owner: tăng cường độ.)
   const glowAlpha = centered ? (isDark ? 0.34 : 0.2) : isDark ? 0.24 : 0.14;
   const glow = (
@@ -97,7 +100,7 @@ const Composer = forwardRef<HTMLDivElement, ComposerProps>(function Composer(
               onChange={(e) => setText(e.target.value)}
               onKeyDown={onKeyDown}
               disabled={disabled}
-              placeholder="Hỏi Finext AI về thị trường, cổ phiếu, nhóm ngành…"
+              placeholder={placeholder}
               multiline
               minRows={1}
               maxRows={8}

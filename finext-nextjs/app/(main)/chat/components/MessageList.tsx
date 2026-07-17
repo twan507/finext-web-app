@@ -99,7 +99,7 @@ export default function MessageList({ messages, onRetry, onFeedback, error }: { 
   }, [messages]);
 
   return (
-    <Box sx={{ maxWidth: 760, mx: 'auto', width: '100%', px: { xs: 2, md: 3 }, py: 3 }}>
+    <Box sx={{ maxWidth: 760, mx: 'auto', width: '100%', px: { xs: 2, md: 3 }, pt: { xs: 7, md: 3 }, pb: 3 }}>
         {messages.map((m, idx) => {
           if (m.role === 'user') return <MessageBubble key={m.id} message={m} />;
           // Chỉ assistant lỗi/gián đoạn cuối cùng mới hiện dòng lý do cạnh nút "Thử lại".

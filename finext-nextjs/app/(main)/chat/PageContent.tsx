@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Box, CircularProgress, alpha } from '@mui/material';
+import { Box, CircularProgress, Drawer, IconButton, alpha, useTheme } from '@mui/material';
+import { AddCommentOutlined, HistoryOutlined } from '@mui/icons-material';
 import { layoutTokens } from 'theme/tokens';
 import OptionalAuthWrapper from 'components/auth/OptionalAuthWrapper';
 import { useAuth } from 'components/auth/AuthProvider';
@@ -19,7 +20,21 @@ function ChatApp({ initialConversationId }: { initialConversationId?: string }) 
   // Consent: KHÔNG cần pop-up — người dùng đã đồng ý khi tạo tài khoản (điều khoản + /policies/privacy).
   const store = useChatStore(initialConversationId);
   const { session } = useAuth();
+  const theme = useTheme();
   const [collapsed, setCollapsed] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false); // Drawer lịch sử (mobile)
+  // Bong bóng góc (mobile): nền glass nhẹ, hợp giao diện chung.
+  const bubbleSx = {
+    pointerEvents: 'auto' as const,
+    width: 38,
+    height: 38,
+    color: 'text.primary',
+    bgcolor: alpha(theme.palette.background.paper, theme.palette.mode === 'dark' ? 0.7 : 0.85),
+    backdropFilter: 'blur(12px)',
+    border: `1px solid ${theme.palette.divider}`,
+    boxShadow: theme.palette.mode === 'dark' ? '0 2px 10px rgba(0,0,0,0.4)' : '0 2px 10px rgba(15,23,42,0.1)',
+    '&:hover': { bgcolor: theme.palette.background.paper }
+  };
   const streaming = store.phase !== 'idle';
   const hasMessages = store.messages.length > 0;
 
@@ -73,6 +88,50 @@ function ChatApp({ initialConversationId }: { initialConversationId?: string }) 
 
   return (
     <Box sx={{ display: 'flex', flex: 1 }}>
+      {/* MOBILE: 2 bong bóng góc trên — trái = hội thoại mới, phải = lịch sử (mở Drawer). Ẩn ở >=md (đã có sidebar). */}
+      <Box
+        sx={{
+          display: { xs: 'flex', md: 'none' },
+          position: 'fixed',
+          top: `calc(${layoutTokens.appBarHeight}px + 10px)`,
+          left: 0,
+          right: 0,
+          px: 1.5,
+          justifyContent: 'space-between',
+          zIndex: 20,
+          pointerEvents: 'none'
+        }}
+      >
+        <IconButton onClick={store.newConversation} aria-label="Cuộc trò chuyện mới" sx={bubbleSx}>
+          <AddCommentOutlined sx={{ fontSize: 20 }} />
+        </IconButton>
+        <IconButton onClick={() => setHistoryOpen(true)} aria-label="Lịch sử trò chuyện" sx={bubbleSx}>
+          <HistoryOutlined sx={{ fontSize: 20 }} />
+        </IconButton>
+      </Box>
+
+      {/* Drawer lịch sử (mobile): dùng lại ConversationSidebar; chọn/tạo mới → đóng Drawer. */}
+      <Drawer anchor="right" open={historyOpen} onClose={() => setHistoryOpen(false)}>
+        <ConversationSidebar
+          conversations={store.conversations}
+          activeId={store.activeId}
+          collapsed={false}
+          loading={store.historyLoading}
+          onNew={() => {
+            store.newConversation();
+            setHistoryOpen(false);
+          }}
+          onSelect={(id) => {
+            store.selectConversation(id);
+            setHistoryOpen(false);
+          }}
+          onToggle={() => setHistoryOpen(false)}
+          onDelete={store.deleteConversation}
+          onTogglePin={store.togglePin}
+          onRename={store.renameConversation}
+        />
+      </Drawer>
+
       {/* Panel lịch sử: DÍNH (sticky) dưới appbar, cuộn RIÊNG; ẩn <900px */}
       <Box sx={{ display: { xs: 'none', md: 'flex' }, position: 'sticky', top: layoutTokens.appBarHeight, alignSelf: 'flex-start', height: VIEWPORT }}>
         <ConversationSidebar
