@@ -82,9 +82,12 @@ def _needs_retry(answer: str) -> bool:
 
 # Bảng markdown có ô số → dấu hiệu CHẮC CHẮN câu trả lời DỮ LIỆU (từ tool) cần grounding.
 _TABLE_ROW_RE = re.compile(r"^\s*\|.*\d.*\|.*\|", re.MULTILINE)
-# Khẳng định GIÁ cụ thể "138.500 đồng" / "68.000 đ/cp" → số tiền LUÔN phải từ tool (không có sẵn trong briefing,
-# không phải số minh hoạ khái niệm: "10 triệu đồng" KHÔNG khớp vì 'triệu' chen giữa). Diệt bịa giá cổ phiếu (Q02).
-_PRICE_CLAIM_RE = re.compile(r"\d[\d.,]{2,}\s*(?:đồng|đ/\s*cp|đ\b)", re.IGNORECASE)
+# Đơn vị GIÁ HÀNG HOÁ (luôn raw từ tool, KHÔNG phái sinh) — model bịa được từ trí nhớ
+# (cu T10 multi-turn: "593 USD/tấn" trong khi DB thật là 3342 CNY/tấn).
+_COMMODITY_UNIT = r"(?:USD|CNY|EUR)\s*/\s*(?:tấn|thùng|oz|ounce|MT|kg|lít|gallon|bushel|barrel)"
+# Khẳng định GIÁ cụ thể "138.500 đồng" / "68.000 đ/cp" / "593 USD/tấn" → LUÔN phải từ tool (không có sẵn trong briefing,
+# không phải số minh hoạ khái niệm: "10 triệu đồng" KHÔNG khớp vì 'triệu' chen giữa). Diệt bịa giá cổ phiếu + hàng hoá.
+_PRICE_CLAIM_RE = re.compile(rf"\d[\d.,]{{2,}}\s*(?:đồng|đ/\s*cp|đ\b|{_COMMODITY_UNIT})", re.IGNORECASE)
 
 
 def _looks_like_data_answer(answer: str) -> bool:
@@ -98,8 +101,8 @@ def _looks_like_data_answer(answer: str) -> bool:
 # Bắt case M3 GỌI tool nhưng PHỚT LỜ kết quả rồi tự chế giá (tools_ran>0, grounding-retry cũ không bắt).
 # CHỈ kiểm claim GIÁ (đơn vị "đồng") — KHÔNG kiểm số phái sinh (%/median/điểm) để tránh false-positive.
 _NUM_IN_TEXT_RE = re.compile(r"\d[\d.,]*\d|\d")
-# Chỉ khớp con số đứng NGAY TRƯỚC đơn vị tiền ("145.500 đồng" / "68.000 đ/cp" / "68000 đ").
-_PRICE_VALUE_RE = re.compile(r"(\d[\d.,]*\d|\d)\s*(?:đồng|đ/\s*cp|đ)\b", re.IGNORECASE)
+# Con số đứng NGAY TRƯỚC đơn vị giá ("145.500 đồng" / "68.000 đ/cp" / "593 USD/tấn" / "3342 CNY/tấn").
+_PRICE_VALUE_RE = re.compile(rf"(\d[\d.,]*\d|\d)\s*(?:đồng|đ/\s*cp|đ|{_COMMODITY_UNIT})\b", re.IGNORECASE)
 
 
 def _parse_number(tok: str) -> float | None:

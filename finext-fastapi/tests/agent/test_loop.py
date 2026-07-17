@@ -631,3 +631,14 @@ async def test_price_guard_retries_then_corrects():
     # _NUM_GUARD_NUDGE đã được chèn cho lượt sửa (lượt 3 = adapter.calls[2]).
     from app.agent.loop import _NUM_GUARD_NUDGE
     assert any(isinstance(m.get("content"), str) and _NUM_GUARD_NUDGE in m["content"] for m in adapter.calls[2])
+
+
+def test_commodity_price_guard():
+    """Bịa giá hàng hoá (cu T10: "593 USD/tấn" thật 3342 CNY/tấn) — mở guard sang đơn vị hàng hoá."""
+    from app.agent.loop import _looks_like_data_answer, _ungrounded_price, _register_grounded
+    assert _looks_like_data_answer("Giá thép HRC hiện khoảng 593 USD/tấn.")   # commodity → cần grounding
+    assert _ungrounded_price("Giá thép HRC 593 USD/tấn.", set())              # chưa query → nghi bịa
+    g = set(); _register_grounded('{"name":"Thép HRC","value":3342,"unit":"CNY/tấn"}', g)
+    assert not _ungrounded_price("Giá thép HRC 3342 CNY/tấn.", g)             # đã query đúng → không nghi
+    # số phái sinh %/khái niệm không đơn vị giá → KHÔNG đụng
+    assert not _looks_like_data_answer("Biên lợi nhuận giảm 15% do giá đầu ra.")
