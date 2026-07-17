@@ -7,7 +7,14 @@ from app.agent.events import AgentEvent, DoneEvent, ToolCall, ToolCallsEvent, To
 from app.agent.gateway.fixture import FixtureGateway
 from app.agent.gateway.policy import Policy
 from app.agent.gateway.types import GatewayContext
-from app.agent.loop import MAX_ITERS, run_agent
+from app.agent.loop import (
+    MAX_ITERS,
+    _last_assistant_text,
+    _rebrief_overlap,
+    _salient_numbers,
+    _should_dedup,
+    run_agent,
+)
 from app.routers.chat import STREAM_END, _produce
 from app.schemas.chat import ChatStreamRequest
 
@@ -731,3 +738,83 @@ async def test_no_data_verify_retries_when_no_tool_called():
     assert ans == good
     assert "chưa có dữ liệu" not in ans
     assert len(adapter.calls) == 2
+
+
+# ── Guard chống re-briefing đa lượt ──────────────────────────────────────────────────────────────
+def test_salient_numbers_extracts_and_skips_trivial():
+    nums = _salient_numbers("Giá 67,7 và 1.234,5; đếm 1 mã, 0 mã; vốn hoá 116060 tỷ")
+    assert 67.7 in nums and 1234.5 in nums and 116060 in nums
+    assert 1 not in nums and 0 not in nums  # 0/1 (đếm mã) bị loại
+
+
+def test_rebrief_overlap_high_when_numbers_repeat():
+    prev = "A 12,3 B 45,6 C 78,9 D 101,2 E 131,4 F 151,6 G 171,8 H 192,0 I 212,2 J 232,4 K 252,6"
+    draft = "Nhắc lại 12,3 45,6 78,9 101,2 131,4 151,6 171,8 192,0 212,2 232,4 và thêm 999,9"
+    overlap, n = _rebrief_overlap(draft, prev)
+    assert n >= 10 and overlap >= 0.75
+
+
+def test_should_dedup_gate():
+    prev = " ".join(f"{i + 10},{i}" for i in range(20))  # 20 số nổi bật
+    draft = prev + " " + "x" * 1000  # dài + trùng cao
+    assert _should_dedup(draft, prev) is True
+    assert _should_dedup(draft, None) is False  # không có câu trước
+    assert _should_dedup("ngắn 12,3 45,6", prev) is False  # quá ngắn
+    fresh = "Nội dung mới " + " ".join(f"{i + 900},{i}" for i in range(20)) + " y" * 1000
+    assert _should_dedup(fresh, prev) is False  # số khác hẳn → overlap thấp
+
+
+def test_last_assistant_text_skips_tool_call_turns():
+    msgs = [
+        {"role": "user", "content": "hỏi 1"},
+        {"role": "assistant", "content": "trả lời 1"},
+        {"role": "assistant", "content": None, "tool_calls": [{}]},
+        {"role": "user", "content": "hỏi 2"},
+    ]
+    assert _last_assistant_text(msgs) == "trả lời 1"
+
+
+async def _run_with_history(adapter: Any, prev: str, question: str) -> str:
+    emitted: list[tuple[str, dict[str, Any]]] = []
+
+    async def emit(event_type: str, payload: dict[str, Any]) -> None:
+        emitted.append((event_type, payload))
+
+    await run_agent(
+        adapter=adapter,
+        gateway=FixtureGateway(Policy.load()),
+        ctx=CTX,
+        system=SYSTEM,
+        messages=[
+            {"role": "user", "content": "phân tích FPT"},
+            {"role": "assistant", "content": prev},
+            {"role": "user", "content": question},
+        ],
+        emit=emit,
+    )
+    return "".join(p["text"] for t, p in emitted if t == "token")
+
+
+async def test_guard_rewrites_rebriefing_followup():
+    prev = "Phân tích FPT. " + " ".join(f"chỉ số {10 + i},{i}" for i in range(15))
+    draft = "Nhìn chung không đổi. " + " ".join(f"vẫn {10 + i},{i}" for i in range(15)) + " chi tiết" * 200
+    deduped = "So với phần trên, điểm mới đáng chú ý: thanh khoản cải thiện nhẹ."
+    adapter = ScriptedAdapter(
+        [
+            [TokenEvent(text=draft), DoneEvent(usage={"in": 5, "out": 5})],  # lượt chính: re-brief
+            [TokenEvent(text=deduped), DoneEvent(usage={"in": 3, "out": 3})],  # lượt viết lại
+        ]
+    )
+    out = await _run_with_history(adapter, prev, "FPT dạo này thế nào?")
+    assert out == deduped  # đã dùng bản viết lại, không phải bản re-brief
+    assert len(adapter.calls) == 2  # main + rewrite
+    assert prev in adapter.calls[1][0]["content"]  # call 2 là dedup prompt (nhúng câu trước)
+
+
+async def test_guard_skips_when_answer_is_fresh():
+    prev = "Phân tích FPT. " + " ".join(f"chỉ số {10 + i},{i}" for i in range(15))
+    fresh = "Câu trả lời mới với số khác. " + " ".join(f"mục {900 + i},{i}" for i in range(15)) + " nội dung" * 200
+    adapter = ScriptedAdapter([[TokenEvent(text=fresh), DoneEvent(usage={"in": 5, "out": 5})]])
+    out = await _run_with_history(adapter, prev, "còn điểm nào đáng chú ý nữa không?")
+    assert out == fresh  # giữ nguyên
+    assert len(adapter.calls) == 1  # KHÔNG gọi rewrite

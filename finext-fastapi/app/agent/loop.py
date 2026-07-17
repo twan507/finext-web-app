@@ -180,6 +180,77 @@ def _ungrounded_data(answer: str, grounded: set[int]) -> bool:
 _ungrounded_price = _ungrounded_data
 
 
+# ── Guard chống RE-BRIEFING đa lượt (gated LLM rewrite) ─────────────────────────────────────────
+# Câu nối tiếp đôi khi (M3 biến thiên) dựng lại gần trọn câu trả lời lượt trước. Prompt hạ mức TB nhưng
+# không diệt 100% được (model ngẫu nhiên). CỔNG rẻ = trùng-SỐ cao vs câu assistant liền trước → chạy 1 lượt
+# M3 viết lại bỏ phần lặp (có sẵn bản nháp → không bịa/không cụt). Rewriter CONSERVATIVE: nháp vốn mới thì giữ.
+DEDUP_MIN_LEN = 1000  # câu ngắn (ý kiến/tóm tắt) bỏ qua
+DEDUP_MIN_NUMS = 10  # cần đủ số nổi bật để phép trùng có nghĩa
+DEDUP_OVERLAP = 0.75  # ≥75% số nổi bật của nháp đã có ở câu trước → nghi re-brief
+_SALIENT_NUM_RE = re.compile(r"\d[\d.]*,\d+|\d{1,3}(?:\.\d{3})+|\d{2,}")
+
+
+def _salient_numbers(text: str) -> list[float]:
+    """Số 'nổi bật' (thập phân / nhóm nghìn / nguyên ≥2 chữ số), bỏ 0/1 (đếm mã) — để đo trùng giữa 2 lượt."""
+    text = re.sub(r"```finext-widget[\s\S]*?```", " ", text)
+    out: list[float] = []
+    for tok in _SALIENT_NUM_RE.findall(text):
+        v = _parse_number(tok)
+        if v is not None and abs(v) >= 2:
+            out.append(round(v, 2))
+    return out
+
+
+def _rebrief_overlap(draft: str, prev: str) -> tuple[float, int]:
+    """(tỷ lệ số nổi bật của draft (dedupe) khớp số trong prev với dung sai 1%, số_uniq_của_draft)."""
+    cand = sorted(set(_salient_numbers(draft)))
+    if not cand:
+        return 0.0, 0
+    prev_nums = _salient_numbers(prev)
+    matched = sum(1 for a in cand if any(abs(a - b) <= max(0.5, 0.01 * abs(a)) for b in prev_nums))
+    return matched / len(cand), len(cand)
+
+
+def _should_dedup(draft: str, prev: str | None) -> bool:
+    """CỔNG: chỉ nghi re-brief khi có câu trước + nháp dài + nhiều số + trùng-số cao vs câu trước."""
+    if not prev or len(draft) < DEDUP_MIN_LEN:
+        return False
+    overlap, n = _rebrief_overlap(draft, prev)
+    return n >= DEDUP_MIN_NUMS and overlap >= DEDUP_OVERLAP
+
+
+def _last_assistant_text(messages: list[dict[str, Any]]) -> str | None:
+    """Câu trả lời assistant gần nhất trong history (content chuỗi — bỏ qua lượt tool-call content=None)."""
+    for msg in reversed(messages):
+        if msg.get("role") == "assistant" and isinstance(msg.get("content"), str) and msg["content"].strip():
+            return msg["content"]
+    return None
+
+
+_DEDUP_SYS = (
+    "Bạn CHÍNH LÀ trợ lý đó, đang trả lời khách ở lượt tiếp theo. Viết lại nội dung cho lượt này sao cho KHÔNG lặp "
+    "lại thứ đã nói ở lượt trước. Viết như đang nói trực tiếp với khách — TUYỆT ĐỐI không nhắc tới 'bản nháp', "
+    "'phần mới', 'lượt trước', hay việc bạn đang biên tập. Chỉ xuất câu trả lời gửi khách."
+)
+
+
+def _dedup_prompt(prev: str, draft: str) -> str:
+    return (
+        "[NỘI DUNG ĐÃ GỬI KHÁCH Ở LƯỢT TRƯỚC]\n" + prev + "\n\n[NỘI DUNG DỰ ĐỊNH GỬI LƯỢT NÀY]\n" + draft + "\n\n"
+        "Nội dung dự định gửi đang lặp lại nhiều số liệu/bảng/nhận định đã gửi ở lượt trước. Viết lại thành câu trả "
+        "lời gửi khách, CẮT TRIỆT ĐỂ mọi thứ đã nói:\n"
+        "- MỞ ĐẦU bằng phần MỚI (thay đổi/kết luận/góc chưa nêu); nhắc thứ cũ tối đa 1 câu ngắn (\"như đã nêu\").\n"
+        "- Nếu THỰC SỰ không có gì mới so với lượt trước: trả lời NGẮN rằng chưa có thay đổi đáng kể so với phần "
+        "phân tích trước, kèm 1-2 số chốt hiện tại, rồi mời khách hỏi sâu khía cạnh cụ thể. KHÔNG nói 'phần mới rỗng'.\n"
+        "- TUYỆT ĐỐI không thêm số liệu không có trong nội dung trên; giữ giá/khuyến nghị quan trọng nếu có.\n"
+        "- Tiếng Việt tự nhiên như đang trả lời khách, markdown. CHỈ xuất câu trả lời, không lời dẫn/không nhắc 'bản nháp'."
+    )
+
+
+# Chặn rò meta biên tập ra output khách (từ không bao giờ hợp lệ trong câu trả lời).
+_DEDUP_META_RE = re.compile(r"bản nháp|\bdraft\b|phần mới ở đây|trùng lặp hoàn toàn", re.IGNORECASE)
+
+
 def _call_signature(call: ToolCall) -> str:
     """Chữ ký ổn định cho 1 tool call (name + arguments) — để phát hiện lặp lại query đã lỗi."""
     args = call.arguments if isinstance(call.arguments, dict) else {}
@@ -337,6 +408,39 @@ async def _emit_answer(emit: Emit, text: str, usage_total: dict[str, int], trunc
     await emit("done", {"usage": usage_total, "truncated": truncated})
 
 
+async def _complete(
+    adapter: ModelAdapter, system: list[SystemBlock], messages: list[dict[str, Any]], usage_total: dict[str, int]
+) -> str:
+    """Gọi model 1 lượt KHÔNG tool, gom text (dùng cho guard rewrite). Trả '' nếu lỗi/tool-call bất ngờ."""
+    buffer: list[str] = []
+    async for event in adapter.stream_chat(system=system, messages=messages, tools=[], max_tokens=MAX_OUTPUT_TOKENS):
+        if isinstance(event, TokenEvent):
+            buffer.append(event.text)
+        elif isinstance(event, DoneEvent):
+            _merge_usage(usage_total, event.usage)
+            return "".join(buffer)
+        elif isinstance(event, (ToolCallsEvent, ErrorEvent)):
+            return ""
+    return "".join(buffer)
+
+
+async def _dedup_rewrite(
+    adapter: ModelAdapter, prev: str, draft: str, usage_total: dict[str, int]
+) -> str:
+    """1 lượt M3 viết lại 'draft' bỏ phần lặp so với 'prev'. Lỗi/rỗng → '' (giữ nguyên câu gốc)."""
+    system = [SystemBlock(text=_DEDUP_SYS, cache_hint=False)]
+    messages = [{"role": "user", "content": _dedup_prompt(prev, draft)}]
+    try:
+        out = await _complete(adapter, system, messages, usage_total)
+    except Exception:  # never-raise: guard hỏng không được làm sập câu trả lời
+        logger.exception("dedup rewrite lỗi — giữ nguyên câu gốc")
+        return ""
+    # Backstop: bỏ dòng rò meta biên tập ("bản nháp"/"phần mới ở đây"…) — không bao giờ hợp lệ trong câu gửi khách.
+    if _DEDUP_META_RE.search(out):
+        out = "\n".join(ln for ln in out.split("\n") if not _DEDUP_META_RE.search(ln)).strip()
+    return out
+
+
 async def run_agent(
     adapter: ModelAdapter,
     gateway: GatewayProtocol,
@@ -346,6 +450,7 @@ async def run_agent(
     emit: Emit,
 ) -> None:
     working: list[dict[str, Any]] = list(messages)
+    prev_answer = _last_assistant_text(messages)  # câu trả lời lượt trước — để guard chống re-briefing
     usage_total: dict[str, int] = {}
     failed_sig: set[str] = set()
     empty_retry = 0
@@ -420,6 +525,16 @@ async def run_agent(
             continue
         # Lượt force mà answer là preamble/rỗng (_needs_retry) → KHÔNG phát narration cụt; rơi xuống error sạch.
         if answer.strip() and not (force and _needs_retry(answer)):
+            # GUARD chống re-briefing: câu nối tiếp trùng-số cao vs lượt trước → viết lại bỏ phần lặp (gated).
+            if _should_dedup(answer, prev_answer):
+                overlap, _n = _rebrief_overlap(answer, prev_answer)
+                rewritten = sanitize_answer(await _dedup_rewrite(adapter, prev_answer, answer, usage_total))
+                if rewritten.strip():
+                    logger.info(
+                        "dedup guard fired: overlap=%.2f len %d->%d request_id=%s",
+                        overlap, len(answer), len(rewritten), ctx.request_id,
+                    )
+                    answer = rewritten
             await _emit_answer(emit, answer, usage_total, truncated)
             return
         if not force:
