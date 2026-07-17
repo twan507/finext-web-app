@@ -61,6 +61,43 @@ async def test_produce_persists_assistant_and_usage_on_done(monkeypatch):
     assert g["tok_in"] == 500 and g["tok_out"] == 40  # record_usage đã chạy
 
 
+async def test_produce_generates_title_on_new_conversation(monkeypatch):
+    db = FakeDB()
+    _wire(monkeypatch, db, _fake_run_agent_done)
+
+    async def _fake_title(adapter, first_message, usage_total=None):
+        return "Thị trường hôm nay"
+    monkeypatch.setattr(chat_router, "generate_title", _fake_title)
+
+    conv_id = await crud.start_turn(db, USER, None, "thị trường hôm nay thế nào")
+    ctx = GatewayContext(request_id="r3", user_id=USER)
+    body = ChatStreamRequest(message="thị trường hôm nay thế nào")
+    queue: asyncio.Queue = asyncio.Queue(maxsize=64)
+    await chat_router._produce(queue, body, ctx, conv_id, is_new=True)
+    frames = await _drain(queue)
+    # emit frame 'title' + DB cập nhật tiêu đề
+    assert any('"type": "title"' in f and "Thị trường hôm nay" in f for f in frames)
+    conv = await db[crud.CONVERSATIONS].find_one({"_id": __import__("bson").ObjectId(conv_id)})
+    assert conv["title"] == "Thị trường hôm nay"
+
+
+async def test_produce_no_title_when_not_new(monkeypatch):
+    db = FakeDB()
+    _wire(monkeypatch, db, _fake_run_agent_done)
+
+    async def _fake_title(adapter, first_message, usage_total=None):
+        return "KHÔNG NÊN GỌI"
+    monkeypatch.setattr(chat_router, "generate_title", _fake_title)
+
+    conv_id = await crud.start_turn(db, USER, None, "câu hỏi")
+    ctx = GatewayContext(request_id="r4", user_id=USER)
+    body = ChatStreamRequest(message="câu hỏi tiếp")
+    queue: asyncio.Queue = asyncio.Queue(maxsize=64)
+    await chat_router._produce(queue, body, ctx, conv_id, is_new=False)  # lượt nối tiếp → không đặt tiêu đề
+    frames = await _drain(queue)
+    assert not any('"type": "title"' in f for f in frames)
+
+
 async def test_produce_does_not_persist_assistant_on_error(monkeypatch):
     db = FakeDB()
     _wire(monkeypatch, db, _fake_run_agent_error)

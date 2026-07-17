@@ -4,6 +4,7 @@ from bson import ObjectId
 
 import app.crud.chat as crud
 import app.routers.chat as chat_router
+from app.schemas.chat import ConversationPinRequest, ConversationRenameRequest
 from tests.agent._fake_mongo import FakeDB
 
 USER = str(ObjectId())
@@ -39,6 +40,36 @@ async def test_get_conversation_detail_ok_and_ownership_404():
     assert len(data["messages"]) == 2 and data["messages"][0]["role"] == "user"
     # user khác → 404
     denied = await chat_router.get_my_conversation(conversation_id=conv_id, current_user=_User(OTHER), db=db)
+    assert _body(denied)["status"] == 404
+
+
+async def test_pin_conversation_ok_and_ownership_404():
+    db = FakeDB()
+    conv_id = await crud.start_turn(db, USER, None, "x")
+    ok = await chat_router.pin_my_conversation(
+        conversation_id=conv_id, body=ConversationPinRequest(pinned=True), current_user=_User(USER), db=db
+    )
+    assert _body(ok)["status"] == 200
+    conv = await db[crud.CONVERSATIONS].find_one({"_id": ObjectId(conv_id)})
+    assert conv["pinned"] is True
+    denied = await chat_router.pin_my_conversation(
+        conversation_id=conv_id, body=ConversationPinRequest(pinned=True), current_user=_User(OTHER), db=db
+    )
+    assert _body(denied)["status"] == 404
+
+
+async def test_rename_conversation_ok_and_ownership_404():
+    db = FakeDB()
+    conv_id = await crud.start_turn(db, USER, None, "x")
+    ok = await chat_router.rename_my_conversation(
+        conversation_id=conv_id, body=ConversationRenameRequest(title="Tên mới"), current_user=_User(USER), db=db
+    )
+    assert _body(ok)["status"] == 200
+    conv = await db[crud.CONVERSATIONS].find_one({"_id": ObjectId(conv_id)})
+    assert conv["title"] == "Tên mới"
+    denied = await chat_router.rename_my_conversation(
+        conversation_id=conv_id, body=ConversationRenameRequest(title="Cướp"), current_user=_User(OTHER), db=db
+    )
     assert _body(denied)["status"] == 404
 
 

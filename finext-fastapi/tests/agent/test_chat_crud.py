@@ -94,3 +94,42 @@ async def test_list_conversations_sorted_desc_and_scoped_to_user():
     lst = await crud.list_conversations(db, USER)
     assert len(lst) == 2  # chỉ của USER
     assert str(lst[0]["_id"]) == c  # mới nhất trước
+
+
+async def test_set_pinned_and_list_orders_pinned_first():
+    db = FakeDB()
+    a = await crud.start_turn(db, USER, None, "a")
+    b = await crud.start_turn(db, USER, None, "b")  # b mới hơn
+    assert [str(c["_id"]) for c in await crud.list_conversations(db, USER)] == [b, a]  # chưa ghim: mới nhất trước
+    assert await crud.set_pinned(db, a, USER, True) is True
+    lst = await crud.list_conversations(db, USER)
+    assert str(lst[0]["_id"]) == a and lst[0]["pinned"] is True  # ghim lên đầu
+    assert str(lst[1]["_id"]) == b
+
+
+async def test_set_pinned_checks_owner():
+    db = FakeDB()
+    a = await crud.start_turn(db, USER, None, "a")
+    assert await crud.set_pinned(db, a, OTHER, True) is False  # không phải chủ
+
+
+async def test_rename_conversation_ok_owner_and_empty():
+    db = FakeDB()
+    a = await crud.start_turn(db, USER, None, "tên cũ")
+    assert await crud.rename_conversation(db, a, USER, "  Tên mới xịn  ") is True
+    conv = await db[crud.CONVERSATIONS].find_one({"_id": ObjectId(a)})
+    assert conv["title"] == "Tên mới xịn"  # đã trim
+    assert await crud.rename_conversation(db, a, OTHER, "cướp") is False  # không phải chủ
+    assert await crud.rename_conversation(db, a, USER, "   ") is False  # rỗng sau trim
+
+
+async def test_prune_skips_pinned(monkeypatch):
+    monkeypatch.setattr(crud, "CHAT_MAX_CONVERSATIONS", 2)
+    db = FakeDB()
+    first = await crud.start_turn(db, USER, None, "giữ bằng ghim")
+    await crud.set_pinned(db, first, USER, True)
+    for i in range(3):  # thêm 3 non-pinned (cap non-pinned = 2)
+        await crud.start_turn(db, USER, None, f"c{i}")
+    convs = db[crud.CONVERSATIONS].docs
+    assert first in {str(c["_id"]) for c in convs}  # hội thoại ghim luôn còn (miễn nhiễm prune)
+    assert len([c for c in convs if not c.get("pinned")]) == 2  # non-pinned chỉ giữ 2 mới nhất

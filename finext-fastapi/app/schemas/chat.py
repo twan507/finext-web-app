@@ -32,8 +32,17 @@ class ConversationSummary(BaseModel):
     created_at: datetime
     updated_at: datetime
     msg_count: int = 0
+    pinned: bool = False
 
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+
+class ConversationPinRequest(BaseModel):
+    pinned: bool
+
+
+class ConversationRenameRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
 
 
 class MessagePublic(BaseModel):

@@ -58,10 +58,11 @@ async def add_message(
 
 
 async def _prune_conversations(db: Any, user_id: str) -> None:
-    """Giữ CHAT_MAX_CONVERSATIONS hội thoại mới nhất/user; xoá lố + cascade messages."""
+    """Giữ CHAT_MAX_CONVERSATIONS hội thoại KHÔNG-ghim mới nhất/user; xoá lố + cascade messages.
+    Hội thoại đã ghim (pinned) MIỄN NHIỄM prune (không bao giờ tự xoá)."""
     olds = await (
         db[CONVERSATIONS]
-        .find({"user_id": ObjectId(user_id)})
+        .find({"user_id": ObjectId(user_id), "pinned": {"$ne": True}})
         .sort("updated_at", -1)
         .skip(CHAT_MAX_CONVERSATIONS)
         .to_list(length=None)
@@ -88,7 +89,7 @@ async def start_turn(db: Any, user_id: str, conversation_id: str | None, message
         title = message.strip()[:TITLE_MAX] or "Cuộc trò chuyện mới"
         res = await db[CONVERSATIONS].insert_one(
             {"user_id": ObjectId(user_id), "title": title,
-             "created_at": now, "updated_at": now, "msg_count": 0}
+             "created_at": now, "updated_at": now, "msg_count": 0, "pinned": False}
         )
         conv_oid = res.inserted_id
         await _prune_conversations(db, user_id)
@@ -96,10 +97,44 @@ async def start_turn(db: Any, user_id: str, conversation_id: str | None, message
     return str(conv_oid)
 
 
+async def update_title(db: Any, conversation_id: str, title: str) -> None:
+    """Đặt lại tiêu đề hội thoại (AI sinh ở lượt đầu)."""
+    await db[CONVERSATIONS].update_one({"_id": ObjectId(conversation_id)}, {"$set": {"title": title}})
+
+
 async def list_conversations(db: Any, user_id: str) -> list[dict]:
+    # Ghim trước (pinned desc), rồi mới nhất trước (updated_at desc).
     return await (
-        db[CONVERSATIONS].find({"user_id": ObjectId(user_id)}).sort("updated_at", -1).to_list(length=None)
+        db[CONVERSATIONS]
+        .find({"user_id": ObjectId(user_id)})
+        .sort([("pinned", -1), ("updated_at", -1)])
+        .to_list(length=None)
     )
+
+
+async def set_pinned(db: Any, conversation_id: str, user_id: str, pinned: bool) -> bool:
+    """Ghim/bỏ ghim hội thoại (kiểm quyền). True nếu hội thoại thuộc user + cập nhật."""
+    if not ObjectId.is_valid(conversation_id):
+        return False
+    res = await db[CONVERSATIONS].update_one(
+        {"_id": ObjectId(conversation_id), "user_id": ObjectId(user_id)},
+        {"$set": {"pinned": bool(pinned)}},
+    )
+    return res.matched_count > 0
+
+
+async def rename_conversation(db: Any, conversation_id: str, user_id: str, title: str) -> bool:
+    """User tự đổi tên hội thoại (kiểm quyền + trim + cap 120). True nếu thuộc user + tên hợp lệ."""
+    if not ObjectId.is_valid(conversation_id):
+        return False
+    clean = title.strip()[:120]
+    if not clean:
+        return False
+    res = await db[CONVERSATIONS].update_one(
+        {"_id": ObjectId(conversation_id), "user_id": ObjectId(user_id)},
+        {"$set": {"title": clean}},
+    )
+    return res.matched_count > 0
 
 
 async def get_conversation_detail(db: Any, conversation_id: str, user_id: str) -> dict | None:

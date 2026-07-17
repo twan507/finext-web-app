@@ -13,6 +13,7 @@ from app.agent.loop import (
     _rebrief_overlap,
     _salient_numbers,
     _should_dedup,
+    generate_title,
     run_agent,
 )
 from app.routers.chat import STREAM_END, _produce
@@ -181,6 +182,18 @@ async def test_produce_emits_error_and_sentinel_when_gateway_init_fails(monkeypa
 
     assert frames[-1] is STREAM_END
     assert any(f is not STREAM_END and '"type": "error"' in f for f in frames)
+
+
+async def test_generate_title_cleans_quotes_label_and_period():
+    """generate_title bỏ ngoặc kép + tiền tố 'Tiêu đề:' + dấu chấm cuối, lấy 1 dòng."""
+    adapter = ScriptedAdapter([[TokenEvent(text='"Tiêu đề: Thị trường hôm nay."'), DoneEvent(usage={"in": 5, "out": 3})]])
+    title = await generate_title(adapter, "thị trường hôm nay thế nào")
+    assert title == "Thị trường hôm nay"
+
+
+async def test_generate_title_empty_output_returns_empty():
+    adapter = ScriptedAdapter([[DoneEvent(usage={})]])  # không có token
+    assert await generate_title(adapter, "câu hỏi") == ""
 
 
 async def test_interim_turn_text_is_discarded():

@@ -441,6 +441,40 @@ async def _dedup_rewrite(
     return out
 
 
+# ── Đặt tiêu đề hội thoại bằng AI (1 call rẻ, chỉ ở lượt đầu) ─────────────────────────────────────
+_TITLE_SYS = (
+    "Bạn đặt tiêu đề cho cuộc trò chuyện. Chỉ trả về MỘT tiêu đề tiếng Việt ngắn gọn (tối đa 6 từ), "
+    "viết hoa đầu câu, KHÔNG dấu ngoặc kép, KHÔNG dấu chấm cuối, KHÔNG giải thích, KHÔNG tiền tố 'Tiêu đề:'."
+)
+_TITLE_LABEL_RE = re.compile(r"^\s*(tiêu đề|title)\s*[:：\-]\s*", re.IGNORECASE)
+
+
+def _title_prompt(first_message: str) -> str:
+    return (
+        "Đặt tiêu đề tiếng Việt ngắn gọn (tối đa 6 từ) tóm tắt chủ đề cuộc trò chuyện bắt đầu bằng câu hỏi sau. "
+        "CHỈ trả về tiêu đề:\n\n" + first_message.strip()[:500]
+    )
+
+
+async def generate_title(adapter: ModelAdapter, first_message: str, usage_total: dict[str, int] | None = None) -> str:
+    """1 call model đặt tiêu đề tiếng Việt cho hội thoại (lượt đầu). Lỗi/rỗng → '' (giữ tiêu đề mặc định)."""
+    system = [SystemBlock(text=_TITLE_SYS, cache_hint=False)]
+    messages = [{"role": "user", "content": _title_prompt(first_message)}]
+    usage: dict[str, int] = {}
+    try:
+        out = await _complete(adapter, system, messages, usage)
+    except Exception:  # never-raise: đặt tiêu đề hỏng không được ảnh hưởng chat
+        logger.exception("generate_title lỗi")
+        return ""
+    if usage_total is not None:
+        _merge_usage(usage_total, usage)
+    line = out.strip().splitlines()[0].strip() if out.strip() else ""
+    line = line.strip('"').strip("'").strip()  # bỏ ngoặc kép bao ngoài
+    line = _TITLE_LABEL_RE.sub("", line).strip()  # bỏ tiền tố "Tiêu đề:"
+    line = line.strip('"').strip("'").strip().rstrip(".").strip()  # bỏ ngoặc/dấu chấm còn sót
+    return line[:60]
+
+
 async def run_agent(
     adapter: ModelAdapter,
     gateway: GatewayProtocol,

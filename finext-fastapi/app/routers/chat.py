@@ -12,12 +12,14 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 import app.crud.chat as crud_chat
 from app.agent.context import build_system_blocks
 from app.agent.gateway import GatewayContext, build_gateway
-from app.agent.loop import build_adapter, run_agent
+from app.agent.loop import build_adapter, generate_title, run_agent
 from app.auth.dependencies import get_current_active_user
 from app.core.database import get_database
 from app.schemas.chat import (
     ChatStreamRequest,
     ConversationDetail,
+    ConversationPinRequest,
+    ConversationRenameRequest,
     ConversationSummary,
 )
 from app.schemas.users import UserInDB
@@ -86,6 +88,22 @@ class _AnswerCollector:
         return out
 
 
+async def _maybe_generate_title(user_id: str, conversation_id: str, first_message: str, emit: Any) -> None:
+    """Hội thoại MỚI: sinh tiêu đề tiếng Việt bằng AI (1 call rẻ) → cập nhật DB + emit event 'title'.
+    Best-effort: lỗi thì giữ tiêu đề mặc định (60 ký tự đầu do start_turn đặt)."""
+    try:
+        title_usage: dict[str, int] = {}
+        title = await generate_title(build_adapter(thinking="disabled"), first_message, title_usage)
+        if not title:
+            return
+        db = get_database("user_db")
+        await crud_chat.update_title(db, conversation_id, title)
+        await crud_chat.record_usage(db, user_id, title_usage)
+        await emit("title", {"conversation_id": conversation_id, "title": title})
+    except Exception:
+        logger.exception("Đặt tiêu đề AI thất bại conversation_id=%s", conversation_id)
+
+
 async def _persist_answer(user_id: str, conversation_id: str, collector: _AnswerCollector) -> None:
     """Lưu assistant-msg + cộng token — CHỈ khi stream đã 'done'. Best-effort (không làm sập stream)."""
     if not collector.done_seen:
@@ -101,7 +119,9 @@ async def _persist_answer(user_id: str, conversation_id: str, collector: _Answer
         logger.exception("Lưu câu trả lời/usage thất bại conversation_id=%s", conversation_id)
 
 
-async def _produce(queue: asyncio.Queue, body: ChatStreamRequest, ctx: GatewayContext, conversation_id: str) -> None:
+async def _produce(
+    queue: asyncio.Queue, body: ChatStreamRequest, ctx: GatewayContext, conversation_id: str, is_new: bool = False
+) -> None:
     """Chạy agent, đẩy frame vào queue, thu câu trả lời để persistence. None = kết thúc stream."""
     collector = _AnswerCollector()
 
@@ -129,16 +149,21 @@ async def _produce(queue: asyncio.Queue, body: ChatStreamRequest, ctx: GatewayCo
     else:
         # CHỈ path sạch (không exception, run_agent tự return kể cả khi emit "error"): lưu nếu đã 'done'.
         await _persist_answer(ctx.user_id, conversation_id, collector)
+        # Hội thoại mới → đặt tiêu đề AI (sau khi đã trả lời xong, không chặn câu trả lời).
+        if is_new:
+            await _maybe_generate_title(ctx.user_id, conversation_id, body.message, emit)
     # Nhánh BÌNH THƯỜNG: consumer còn drain → sentinel chắc chắn tới.
     await queue.put(STREAM_END)
 
 
-async def _event_stream(request: Request, body: ChatStreamRequest, user_id: str, conversation_id: str) -> AsyncIterator[str]:
+async def _event_stream(
+    request: Request, body: ChatStreamRequest, user_id: str, conversation_id: str, is_new: bool
+) -> AsyncIterator[str]:
     request_id = str(uuid.uuid4())
     ctx = GatewayContext(request_id=request_id, user_id=user_id)
 
     queue: asyncio.Queue = asyncio.Queue(maxsize=64)
-    task = asyncio.create_task(_produce(queue, body, ctx, conversation_id))
+    task = asyncio.create_task(_produce(queue, body, ctx, conversation_id, is_new))
 
     # meta.as_of = null ở v1: briefing đọc trong task nền, không chặn frame đầu (doc 02 §5.2)
     yield sse_frame("meta", {"conversation_id": conversation_id, "message_id": request_id, "as_of": None})
@@ -174,9 +199,11 @@ async def chat_stream(
     if not decision.ok:
         raise HTTPException(status_code=decision.status_code, detail=decision.message)
     # Lưu user-msg + tạo/nối hội thoại → conversation_id thật để trả về meta.
+    # is_new: FE không gửi conversation_id = bắt đầu hội thoại mới → sẽ đặt tiêu đề AI ở cuối lượt.
+    is_new = not (body.conversation_id and body.conversation_id.strip())
     conversation_id = await crud_chat.start_turn(db, user_id, body.conversation_id, body.message)
     return StreamingResponse(
-        _event_stream(request, body, user_id, conversation_id),
+        _event_stream(request, body, user_id, conversation_id, is_new),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
@@ -216,6 +243,50 @@ async def get_my_conversation(
             detail="Không tìm thấy hội thoại hoặc bạn không có quyền truy cập.",
         )
     return ConversationDetail.model_validate(detail)
+
+
+@router.patch(
+    "/conversations/{conversation_id}/pin",
+    response_model=StandardApiResponse[None],
+    summary="[User] Ghim / bỏ ghim 1 hội thoại",
+    tags=["chat"],
+)
+@api_response_wrapper(default_success_message="Đã cập nhật ghim hội thoại.")
+async def pin_my_conversation(
+    conversation_id: str,
+    body: ConversationPinRequest,
+    current_user: UserInDB = Depends(get_current_active_user),
+    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
+):
+    ok = await crud_chat.set_pinned(db, conversation_id, str(current_user.id), body.pinned)
+    if not ok:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy hội thoại hoặc bạn không có quyền.",
+        )
+    return None
+
+
+@router.patch(
+    "/conversations/{conversation_id}/rename",
+    response_model=StandardApiResponse[None],
+    summary="[User] Đổi tên 1 hội thoại",
+    tags=["chat"],
+)
+@api_response_wrapper(default_success_message="Đã đổi tên hội thoại.")
+async def rename_my_conversation(
+    conversation_id: str,
+    body: ConversationRenameRequest,
+    current_user: UserInDB = Depends(get_current_active_user),
+    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
+):
+    ok = await crud_chat.rename_conversation(db, conversation_id, str(current_user.id), body.title)
+    if not ok:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy hội thoại hoặc bạn không có quyền.",
+        )
+    return None
 
 
 @router.delete(

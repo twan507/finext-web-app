@@ -2,6 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { streamChat, type ChatEvent } from '../services/chatClient';
+import {
+  deleteConversationApi,
+  fetchConversationDetail,
+  fetchConversations,
+  renameConversationApi,
+  setPinnedApi,
+  type ConversationSummaryDTO,
+  type MessageDTO,
+} from '../services/chatConversations';
 
 export interface ToolChip {
   name: string;
@@ -19,10 +28,13 @@ export interface ChatMessage {
   status: 'streaming' | 'done' | 'error' | 'interrupted';
 }
 export interface Conversation {
-  id: string;
+  id: string; // id cục bộ (client) — bằng serverId với hội thoại đã lưu, hoặc uid() với hội thoại mới chưa gửi
+  serverId: string | null; // _id backend (null = chưa persist); gửi lên để nối đúng hội thoại + tải lại
   title: string;
   createdAt: number;
   messages: ChatMessage[];
+  loaded: boolean; // đã tải messages từ backend chưa (lazy-load khi mở hội thoại cũ)
+  pinned: boolean; // ghim → hiện nhóm "Đã ghim" ở đầu + miễn nhiễm prune
 }
 export type ChatPhase = 'idle' | 'waiting' | 'streaming' | 'tool';
 
@@ -34,12 +46,17 @@ export interface UseChatStoreReturn {
   asOf: string | null;
   error: string | null;
   thinking: boolean;
+  historyLoading: boolean;
+  msgLoading: boolean;
   toggleThinking: () => void;
   send: (text: string) => void;
   stop: () => void;
   retry: () => void;
   newConversation: () => void;
   selectConversation: (id: string) => void;
+  deleteConversation: (id: string) => void;
+  togglePin: (id: string) => void;
+  renameConversation: (id: string, title: string) => void;
 }
 
 const THINKING_KEY = 'finext-chat-thinking';
@@ -60,7 +77,22 @@ function titleFrom(text: string): string {
   return t.length > 42 ? t.slice(0, 42) + '…' : t;
 }
 function newConv(): Conversation {
-  return { id: uid(), title: 'Cuộc trò chuyện mới', createdAt: Date.now(), messages: [] };
+  return { id: uid(), serverId: null, title: 'Cuộc trò chuyện mới', createdAt: Date.now(), messages: [], loaded: true, pinned: false };
+}
+// Map DTO backend → Conversation (chưa tải messages: loaded=false, lazy khi mở).
+function toConversation(c: ConversationSummaryDTO): Conversation {
+  return { id: c.id, serverId: c.id, title: c.title, createdAt: Date.parse(c.updated_at) || Date.now(), messages: [], loaded: false, pinned: !!c.pinned };
+}
+// Map message backend → ChatMessage. Assistant render qua parts (1 text part = content markdown+widget);
+// user render qua content (parts rỗng). tool chip không hiện lại khi done nên không cần tái dựng.
+function toChatMessage(m: MessageDTO): ChatMessage {
+  return {
+    id: m.id,
+    role: m.role,
+    content: m.content,
+    parts: m.role === 'assistant' ? [{ kind: 'text', text: m.content }] : [],
+    status: m.interrupted ? 'interrupted' : 'done',
+  };
 }
 
 export default function useChatStore(): UseChatStoreReturn {
@@ -69,6 +101,8 @@ export default function useChatStore(): UseChatStoreReturn {
   const [phase, setPhase] = useState<ChatPhase>('idle');
   const [asOf, setAsOf] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(true); // tải danh sách hội thoại lúc mount
+  const [msgLoading, setMsgLoading] = useState(false); // tải messages 1 hội thoại khi mở
   // "Suy nghĩ sâu": init false (SSR-safe), hydrate từ localStorage sau mount để tránh mismatch.
   const [thinking, setThinking] = useState(false);
 
@@ -86,6 +120,8 @@ export default function useChatStore(): UseChatStoreReturn {
   const pendingRef = useRef<string>('');
   const lastFlushRef = useRef<number>(0);
   const assistantIdRef = useRef<string>('');
+  const listLoadedRef = useRef<boolean>(false); // chỉ tải danh sách 1 lần
+  const msgLoadIdRef = useRef<string | null>(null); // id hội thoại đang tải messages (chống race)
 
   const messages = conversations.find((c) => c.id === activeId)?.messages ?? [];
 
@@ -95,6 +131,25 @@ export default function useChatStore(): UseChatStoreReturn {
     } catch {
       // localStorage không khả dụng — bỏ qua, giữ default false
     }
+  }, []);
+
+  // Tải danh sách hội thoại từ backend 1 lần lúc mount → nối vào sau conv rỗng ban đầu (đứng đầu).
+  useEffect(() => {
+    if (listLoadedRef.current) return;
+    listLoadedRef.current = true;
+    setHistoryLoading(true);
+    fetchConversations()
+      .then((list) => {
+        const mapped = list.map(toConversation);
+        setConversations((prev) => {
+          const seen = new Set(prev.map((c) => c.serverId).filter(Boolean));
+          return [...prev, ...mapped.filter((c) => !seen.has(c.serverId))];
+        });
+      })
+      .catch(() => {
+        // chưa đăng nhập / lỗi mạng → giữ local, không phá UI
+      })
+      .finally(() => setHistoryLoading(false));
   }, []);
 
   const toggleThinking = useCallback(() => {
@@ -135,7 +190,7 @@ export default function useChatStore(): UseChatStoreReturn {
   }, []);
 
   const runStream = useCallback(
-    async (convId: string, history: HistoryTurn[], message: string) => {
+    async (convId: string, serverId: string | null, history: HistoryTurn[], message: string) => {
       const controller = new AbortController();
       controllerRef.current = controller;
       convIdRef.current = convId;
@@ -162,6 +217,12 @@ export default function useChatStore(): UseChatStoreReturn {
         switch (ev.type) {
           case 'meta':
             setAsOf(ev.as_of);
+            // Backend gán conversation_id thật → gắn vào conv đang stream để lượt sau nối đúng + tải lại được.
+            if (ev.conversation_id) {
+              setConversations((prev) =>
+                prev.map((c) => (c.id === convIdRef.current && !c.serverId ? { ...c, serverId: ev.conversation_id, loaded: true } : c)),
+              );
+            }
             break;
           case 'token': {
             if (!ev.text) break;
@@ -197,6 +258,12 @@ export default function useChatStore(): UseChatStoreReturn {
             setError(ev.message);
             patchAssistant((m) => ({ ...m, status: 'error' }));
             break;
+          case 'title':
+            // Tiêu đề AI (hội thoại mới) → gắn vào conv theo serverId đã nhận ở 'meta'.
+            if (ev.title) {
+              setConversations((prev) => prev.map((c) => (c.serverId === ev.conversation_id ? { ...c, title: ev.title } : c)));
+            }
+            break;
           case 'done':
             flush(true);
             patchAssistant((m) => ({ ...m, status: 'done' }));
@@ -206,7 +273,7 @@ export default function useChatStore(): UseChatStoreReturn {
 
       try {
         resetIdle();
-        for await (const ev of streamChat({ history, message, thinking: thinkingRef.current }, controller.signal)) {
+        for await (const ev of streamChat({ history, message, conversation_id: serverId ?? undefined, thinking: thinkingRef.current }, controller.signal)) {
           resetIdle();
           reduce(ev);
         }
@@ -231,6 +298,7 @@ export default function useChatStore(): UseChatStoreReturn {
       const convId = activeIdRef.current;
       const active = conversationsRef.current.find((c) => c.id === convId);
       if (!active) return;
+      const serverId = active.serverId;
       const history = capHistory(active.messages.filter((m) => m.status !== 'error' && m.content.trim() !== '').map((m) => ({ role: m.role, content: m.content })));
       const isFirst = active.messages.length === 0;
       setConversations((prev) =>
@@ -240,7 +308,7 @@ export default function useChatStore(): UseChatStoreReturn {
             : c,
         ),
       );
-      void runStream(convId, history, trimmed);
+      void runStream(convId, serverId, history, trimmed);
     },
     [phase, runStream],
   );
@@ -270,14 +338,19 @@ export default function useChatStore(): UseChatStoreReturn {
         .filter((m) => m.id !== lastUser.id)
         .map((m) => ({ role: m.role, content: m.content })),
     );
-    void runStream(convId, history, lastUser.content);
+    void runStream(convId, active.serverId, history, lastUser.content);
   }, [phase, runStream]);
 
   const newConversation = useCallback(() => {
+    const cur = conversationsRef.current;
+    const active = cur.find((c) => c.id === activeIdRef.current);
+    // Đã ở 1 chat rỗng chưa lưu → không tạo thêm (tránh nhiều "Cuộc trò chuyện mới").
+    if (active && active.messages.length === 0 && !active.serverId) return;
     controllerRef.current?.abort();
     clearIdle();
     const c = newConv();
-    setConversations((prev) => [c, ...prev]);
+    // Dọn các conv rỗng chưa lưu khác khi mở chat mới.
+    setConversations((prev) => [c, ...prev.filter((x) => x.serverId || x.messages.length > 0)]);
     setActiveId(c.id);
     setError(null);
     setPhase('idle');
@@ -293,9 +366,85 @@ export default function useChatStore(): UseChatStoreReturn {
       setError(null);
       setPhase('idle');
       setAsOf(null);
+      // Hội thoại cũ (có serverId) chưa tải messages → lazy-load từ backend.
+      const conv = conversationsRef.current.find((c) => c.id === id);
+      if (conv && conv.serverId && !conv.loaded) {
+        msgLoadIdRef.current = id;
+        setMsgLoading(true);
+        fetchConversationDetail(conv.serverId)
+          .then((detail) => {
+            if (!detail) return;
+            setConversations((prev) =>
+              prev.map((c) => (c.id === id ? { ...c, loaded: true, title: detail.title, messages: detail.messages.map(toChatMessage) } : c)),
+            );
+          })
+          .catch(() => {
+            // lỗi tải → để trống; user chọn lại để thử lại
+          })
+          .finally(() => {
+            if (msgLoadIdRef.current === id) setMsgLoading(false);
+          });
+      }
     },
     [clearIdle],
   );
 
-  return { conversations, activeId, messages, phase, asOf, error, thinking, toggleThinking, send, stop, retry, newConversation, selectConversation };
+  const togglePin = useCallback((id: string) => {
+    const conv = conversationsRef.current.find((c) => c.id === id);
+    if (!conv || !conv.serverId) return; // chỉ ghim được hội thoại đã lưu
+    const next = !conv.pinned;
+    void setPinnedApi(conv.serverId, next).catch(() => {});
+    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, pinned: next } : c)));
+  }, []);
+
+  const renameConversation = useCallback((id: string, title: string) => {
+    const clean = title.trim().slice(0, 120);
+    const conv = conversationsRef.current.find((c) => c.id === id);
+    if (!conv || !clean || clean === conv.title) return;
+    if (conv.serverId) void renameConversationApi(conv.serverId, clean).catch(() => {});
+    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, title: clean } : c)));
+  }, []);
+
+  const deleteConversation = useCallback((id: string) => {
+    const cur = conversationsRef.current;
+    const conv = cur.find((c) => c.id === id);
+    if (!conv) return;
+    if (conv.serverId) void deleteConversationApi(conv.serverId).catch(() => {});
+    const wasActive = id === activeIdRef.current;
+    const remaining = cur.filter((c) => c.id !== id);
+    if (wasActive) {
+      // Xoá hội thoại đang mở → về 1 chat mới rỗng (predictable, tránh mở nhầm conv cũ chưa lazy-load).
+      controllerRef.current?.abort();
+      clearIdle();
+      const fresh = newConv();
+      setConversations([fresh, ...remaining.filter((x) => x.serverId || x.messages.length > 0)]);
+      setActiveId(fresh.id);
+      setError(null);
+      setPhase('idle');
+      setAsOf(null);
+    } else {
+      setConversations(remaining.length ? remaining : [newConv()]);
+    }
+  }, [clearIdle]);
+
+  return {
+    conversations,
+    activeId,
+    messages,
+    phase,
+    asOf,
+    error,
+    thinking,
+    historyLoading,
+    msgLoading,
+    toggleThinking,
+    send,
+    stop,
+    retry,
+    newConversation,
+    selectConversation,
+    deleteConversation,
+    togglePin,
+    renameConversation,
+  };
 }

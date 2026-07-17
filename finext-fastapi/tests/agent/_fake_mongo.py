@@ -39,8 +39,13 @@ class _Cursor:
     def __init__(self, docs: list[dict]) -> None:
         self._docs = docs
 
-    def sort(self, field: str, direction: int = 1) -> "_Cursor":
-        self._docs = sorted(self._docs, key=lambda d: d.get(field), reverse=direction < 0)
+    def sort(self, key_or_list: Any, direction: int = 1) -> "_Cursor":
+        # Hỗ trợ sort đơn (field, dir) và compound ([(field, dir), ...]). Compound: sort ổn định từ khoá phụ → chính.
+        keys = key_or_list if isinstance(key_or_list, list) else [(key_or_list, direction)]
+        for field, d in reversed(keys):
+            self._docs = sorted(
+                self._docs, key=lambda x: (x.get(field) is not None, x.get(field)), reverse=d < 0
+            )
         return self
 
     def skip(self, n: int) -> "_Cursor":

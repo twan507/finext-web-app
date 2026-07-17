@@ -1,6 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { Box, alpha } from '@mui/material';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Box, CircularProgress, alpha } from '@mui/material';
 import { layoutTokens } from 'theme/tokens';
 import OptionalAuthWrapper from 'components/auth/OptionalAuthWrapper';
 import { useAuth } from 'components/auth/AuthProvider';
@@ -33,6 +33,41 @@ function ChatApp() {
   const streaming = store.phase !== 'idle';
   const hasMessages = store.messages.length > 0;
 
+  // FLIP "trượt xuống": khi gửi câu ĐẦU (empty → có tin nhắn), composer trượt mượt từ vị trí giữa
+  // xuống đáy thay vì nhảy tức thì. Đo vị trí thật (không phụ thuộc kích thước màn hình).
+  const composerElRef = useRef<HTMLDivElement | null>(null);
+  const emptyComposerTopRef = useRef<number | null>(null);
+  const prevHasRef = useRef(hasMessages);
+  const setComposerNode = useCallback((node: HTMLDivElement | null) => {
+    composerElRef.current = node;
+  }, []);
+  useLayoutEffect(() => {
+    const el = composerElRef.current;
+    const prevHas = prevHasRef.current;
+    prevHasRef.current = hasMessages;
+    if (!el) return;
+    if (!prevHas && hasMessages && emptyComposerTopRef.current != null) {
+      const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      const delta = emptyComposerTopRef.current - el.getBoundingClientRect().top; // âm = đi xuống
+      if (!reduce && Math.abs(delta) > 8) {
+        el.style.transform = `translateY(${delta}px)`;
+        el.style.transition = 'none';
+        void el.offsetHeight; // reflow để trình duyệt ghi nhận vị trí bắt đầu
+        requestAnimationFrame(() => {
+          el.style.transition = 'transform 0.55s cubic-bezier(0.22, 1, 0.36, 1)';
+          el.style.transform = 'translateY(0)';
+          const clear = () => {
+            el.style.transform = '';
+            el.style.transition = '';
+            el.removeEventListener('transitionend', clear);
+          };
+          el.addEventListener('transitionend', clear);
+        });
+      }
+    }
+    if (!hasMessages) emptyComposerTopRef.current = el.getBoundingClientRect().top; // mốc vị trí giữa
+  }, [hasMessages]);
+
   return (
     <Box sx={{ display: 'flex', flex: 1 }}>
       {/* Panel lịch sử: DÍNH (sticky) dưới appbar, cuộn RIÊNG; ẩn <900px */}
@@ -41,9 +76,13 @@ function ChatApp() {
           conversations={store.conversations}
           activeId={store.activeId}
           collapsed={collapsed}
+          loading={store.historyLoading}
           onNew={store.newConversation}
           onSelect={store.selectConversation}
           onToggle={() => setCollapsed((v) => !v)}
+          onDelete={store.deleteConversation}
+          onTogglePin={store.togglePin}
+          onRename={store.renameConversation}
         />
       </Box>
 
@@ -56,13 +95,18 @@ function ChatApp() {
             </Box>
           </Box>
         )}
-        {hasMessages ? (
+        {store.msgLoading ? (
+          // Đang tải messages của 1 hội thoại cũ (lazy-load khi mở) — spinner ngắn.
+          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <CircularProgress size={28} />
+          </Box>
+        ) : hasMessages ? (
           <>
             {/* Vùng tin nhắn flex:1 → đẩy composer xuống ĐÁY khi nội dung ngắn; nội dung dài thì cuộn window. */}
             <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
               <MessageList key={store.activeId} messages={store.messages} onRetry={store.retry} error={store.error} />
             </Box>
-            <Composer disabled={consented !== true || streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} />
+            <Composer ref={setComposerNode} disabled={consented !== true || streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} />
           </>
         ) : (
           // Chưa có tin nhắn: lời chào + composer NỔI (kiểu ChatGPT/Claude), đặt ở ~40% chiều cao (spacer 2:3) — hơi cao hơn giữa. Gửi câu đầu → composer về đáy.
@@ -89,7 +133,7 @@ function ChatApp() {
               <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                 <ChatGreeting name={session?.user?.full_name} />
                 <Box sx={{ width: '100%' }}>
-                  <Composer centered disabled={consented !== true || streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} />
+                  <Composer ref={setComposerNode} centered disabled={consented !== true || streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} />
                 </Box>
               </Box>
             </Box>

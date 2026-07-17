@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { forwardRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
-import { Box, Chip, IconButton, TextField, Tooltip, Typography, alpha, useTheme } from '@mui/material';
+import { Box, Chip, IconButton, TextField, Typography, alpha, useTheme } from '@mui/material';
 import { ArrowUpwardRounded, PsychologyRounded, StopRounded } from '@mui/icons-material';
 import { getResponsiveFontSize, transitions } from 'theme/tokens';
 
@@ -18,7 +18,10 @@ interface ComposerProps {
 
 const DISCLAIMER = 'Thông tin tham khảo, không phải khuyến nghị đầu tư. AI có thể nhầm lẫn — kiểm tra số liệu quan trọng.';
 
-export default function Composer({ disabled, streaming, onSend, onStop, thinking, onToggleThinking, centered = false }: ComposerProps) {
+const Composer = forwardRef<HTMLDivElement, ComposerProps>(function Composer(
+  { disabled, streaming, onSend, onStop, thinking, onToggleThinking, centered = false },
+  ref,
+) {
   const theme = useTheme();
   const [text, setText] = useState('');
   const isDark = theme.palette.mode === 'dark';
@@ -60,6 +63,7 @@ export default function Composer({ disabled, streaming, onSend, onStop, thinking
 
   return (
     <Box
+      ref={ref}
       sx={
         centered
           ? { width: '100%', px: { xs: 2, md: 3 } } // GIỮA màn hình: glow do PageContent lo (trùm cả lời chào)
@@ -103,25 +107,42 @@ export default function Composer({ disabled, streaming, onSend, onStop, thinking
             />
             {/* Hàng nút DƯỚI trong khung. */}
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-              <Tooltip title="Suy nghĩ sâu hơn trước khi trả lời nhưng tốc độ chậm hơn" arrow>
-                <Chip
-                  icon={<PsychologyRounded />}
-                  label="Suy nghĩ sâu"
-                  size="small"
-                  clickable
-                  onClick={onToggleThinking}
-                  aria-pressed={thinking}
-                  variant={thinking ? 'filled' : 'outlined'}
-                  color={thinking ? 'primary' : 'default'}
-                  sx={{
-                    fontSize: getResponsiveFontSize('xs'),
-                    fontWeight: 500,
-                    transition: transitions.colors,
-                    '& .MuiChip-icon': { color: 'inherit' },
-                    ...(thinking ? {} : { color: 'text.secondary', borderColor: theme.palette.divider }),
-                  }}
-                />
-              </Tooltip>
+              <Chip
+                icon={<PsychologyRounded />}
+                label="Suy nghĩ sâu"
+                size="small"
+                clickable
+                onClick={onToggleThinking}
+                aria-pressed={thinking}
+                sx={{
+                  height: 30,
+                  borderRadius: '999px',
+                  border: '1px solid',
+                  fontSize: getResponsiveFontSize('xs'),
+                  fontWeight: 600,
+                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '& .MuiChip-icon': { color: 'inherit', fontSize: 17, ml: 0.75 },
+                  '& .MuiChip-label': { px: 0.9 },
+                  ...(thinking
+                    ? {
+                        color: '#fff',
+                        borderColor: 'transparent',
+                        background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.light} 100%)`,
+                        boxShadow: `0 2px 12px ${alpha(theme.palette.primary.main, 0.45)}`,
+                        '&:hover': { background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)` },
+                      }
+                    : {
+                        color: 'text.secondary',
+                        borderColor: theme.palette.divider,
+                        bgcolor: 'transparent',
+                        '&:hover': {
+                          color: 'primary.main',
+                          borderColor: alpha(theme.palette.primary.main, 0.5),
+                          bgcolor: alpha(theme.palette.primary.main, 0.06),
+                        },
+                      }),
+                }}
+              />
               {streaming ? (
                 <IconButton
                   aria-label="Dừng"
@@ -156,4 +177,6 @@ export default function Composer({ disabled, streaming, onSend, onStop, thinking
       </Box>
     </Box>
   );
-}
+});
+
+export default Composer;
