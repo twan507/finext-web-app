@@ -173,7 +173,7 @@ async def test_produce_emits_error_and_sentinel_when_gateway_init_fails(monkeypa
 
     queue: asyncio.Queue = asyncio.Queue(maxsize=64)
     body = ChatStreamRequest(message="FPT giá bao nhiêu?")
-    await _produce(queue, body, CTX)  # không được raise, không được treo
+    await _produce(queue, body, CTX, "conv-test")  # không được raise, không được treo
 
     frames = []
     while not queue.empty():

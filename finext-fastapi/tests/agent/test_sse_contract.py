@@ -60,7 +60,7 @@ async def test_produce_cancel_does_not_block_on_full_queue(monkeypatch):
     queue: asyncio.Queue = asyncio.Queue(maxsize=2)
     ctx = GatewayContext(request_id="r1", user_id="u1")
     body = ChatStreamRequest(message="một hai ba bốn năm sáu bảy tám chín mười")
-    task = asyncio.create_task(_produce(queue, body, ctx))
+    task = asyncio.create_task(_produce(queue, body, ctx, "conv-test"))
 
     await asyncio.sleep(0.3)  # producer điền đầy queue rồi block trên put (không ai drain)
     assert queue.full()

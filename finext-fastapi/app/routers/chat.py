@@ -5,15 +5,23 @@ import uuid
 from collections.abc import AsyncIterator
 from typing import Any
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
+import app.crud.chat as crud_chat
 from app.agent.context import build_system_blocks
 from app.agent.gateway import GatewayContext, build_gateway
 from app.agent.loop import build_adapter, run_agent
 from app.auth.dependencies import get_current_active_user
-from app.schemas.chat import ChatStreamRequest
+from app.core.database import get_database
+from app.schemas.chat import (
+    ChatStreamRequest,
+    ConversationDetail,
+    ConversationSummary,
+)
 from app.schemas.users import UserInDB
+from app.utils.response_wrapper import StandardApiResponse, api_response_wrapper
 
 logger = logging.getLogger(__name__)
 router = APIRouter()  # Prefix và tags thêm ở main.py
@@ -24,7 +32,7 @@ STREAM_END = None
 
 
 def _messages_from(body: ChatStreamRequest) -> list[dict[str, str]]:
-    """Ghép history (client giữ) + message hiện tại thành messages cho run_agent."""
+    """Ghép history (client giữ) + message hiện tại thành messages cho run_agent (sidecar, không đổi)."""
     return [*(t.model_dump() for t in body.history), {"role": "user", "content": body.message}]
 
 
@@ -41,10 +49,64 @@ def _put_sentinel_nowait(queue: asyncio.Queue) -> None:
         pass
 
 
-async def _produce(queue: asyncio.Queue, body: ChatStreamRequest, ctx: GatewayContext) -> None:
-    """Chạy agent, đẩy frame vào queue. None = kết thúc stream."""
+class _AnswerCollector:
+    """Quan sát các frame emit để thu câu trả lời + usage + tool metadata cho persistence.
+    KHÔNG can thiệp stream — chỉ đọc. Chỉ lưu assistant khi thấy 'done' (done_seen)."""
+
+    def __init__(self) -> None:
+        self._parts: list[str] = []
+        self._starts: list[dict[str, Any]] = []
+        self._ends: list[dict[str, Any]] = []
+        self.usage: dict[str, int] = {}
+        self.done_seen = False
+
+    def observe(self, event_type: str, payload: dict[str, Any]) -> None:
+        if event_type == "token":
+            self._parts.append(payload.get("text", ""))
+        elif event_type == "tool_start":
+            self._starts.append(payload)
+        elif event_type == "tool_end":
+            self._ends.append(payload)
+        elif event_type == "done":
+            self.usage = payload.get("usage", {}) or {}
+            self.done_seen = True
+
+    def text(self) -> str:
+        return "".join(self._parts)
+
+    def tool_calls(self) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        for s, e in zip(self._starts, self._ends):
+            out.append({
+                "name": s.get("name", ""),
+                "args_summary": s.get("label", ""),
+                "ok": bool(e.get("ok", True)),
+                "ms": int(e.get("ms", 0)),
+            })
+        return out
+
+
+async def _persist_answer(user_id: str, conversation_id: str, collector: _AnswerCollector) -> None:
+    """Lưu assistant-msg + cộng token — CHỈ khi stream đã 'done'. Best-effort (không làm sập stream)."""
+    if not collector.done_seen:
+        return  # lỗi/huỷ giữa chừng → không lưu assistant → FE thấy user-msg trống reply → "Thử lại"
+    db = get_database("user_db")
+    try:
+        await crud_chat.add_message(
+            db, conversation_id, user_id, "assistant",
+            collector.text(), tool_calls=collector.tool_calls(), usage=collector.usage or None,
+        )
+        await crud_chat.record_usage(db, user_id, collector.usage)
+    except Exception:
+        logger.exception("Lưu câu trả lời/usage thất bại conversation_id=%s", conversation_id)
+
+
+async def _produce(queue: asyncio.Queue, body: ChatStreamRequest, ctx: GatewayContext, conversation_id: str) -> None:
+    """Chạy agent, đẩy frame vào queue, thu câu trả lời để persistence. None = kết thúc stream."""
+    collector = _AnswerCollector()
 
     async def emit(event_type: str, payload: dict[str, Any]) -> None:
+        collector.observe(event_type, payload)
         await queue.put(sse_frame(event_type, payload))
 
     try:
@@ -64,22 +126,22 @@ async def _produce(queue: asyncio.Queue, body: ChatStreamRequest, ctx: GatewayCo
     except Exception:
         logger.exception("Lỗi khi chạy agent request_id=%s", ctx.request_id)
         await queue.put(sse_frame("error", {"message": "Hệ thống AI gặp sự cố, vui lòng thử lại."}))
-    # Nhánh BÌNH THƯỜNG (xong hoặc lỗi đã xử lý): consumer còn drain → sentinel chắc chắn tới.
+    else:
+        # CHỈ path sạch (không exception, run_agent tự return kể cả khi emit "error"): lưu nếu đã 'done'.
+        await _persist_answer(ctx.user_id, conversation_id, collector)
+    # Nhánh BÌNH THƯỜNG: consumer còn drain → sentinel chắc chắn tới.
     await queue.put(STREAM_END)
 
 
-async def _event_stream(request: Request, body: ChatStreamRequest, user_id: str) -> AsyncIterator[str]:
+async def _event_stream(request: Request, body: ChatStreamRequest, user_id: str, conversation_id: str) -> AsyncIterator[str]:
     request_id = str(uuid.uuid4())
     ctx = GatewayContext(request_id=request_id, user_id=user_id)
-    conversation_id = body.conversation_id or str(uuid.uuid4())
 
     queue: asyncio.Queue = asyncio.Queue(maxsize=64)
-    task = asyncio.create_task(_produce(queue, body, ctx))
+    task = asyncio.create_task(_produce(queue, body, ctx, conversation_id))
 
-    # meta.as_of = null ở v1 slice: briefing đọc trong task nền, không chặn frame đầu (doc 02 §5.2)
-    yield sse_frame(
-        "meta", {"conversation_id": conversation_id, "message_id": request_id, "as_of": None}
-    )
+    # meta.as_of = null ở v1: briefing đọc trong task nền, không chặn frame đầu (doc 02 §5.2)
+    yield sse_frame("meta", {"conversation_id": conversation_id, "message_id": request_id, "as_of": None})
 
     try:
         while True:
@@ -105,8 +167,73 @@ async def chat_stream(
     body: ChatStreamRequest,
     current_user: UserInDB = Depends(get_current_active_user),
 ) -> StreamingResponse:
+    user_id = str(current_user.id)
+    db = get_database("user_db")
+    # Quota + kill-switch: chặn TRƯỚC khi mở stream (429 lượt / 503 budget).
+    decision = await crud_chat.check_and_reserve_quota(db, user_id)
+    if not decision.ok:
+        raise HTTPException(status_code=decision.status_code, detail=decision.message)
+    # Lưu user-msg + tạo/nối hội thoại → conversation_id thật để trả về meta.
+    conversation_id = await crud_chat.start_turn(db, user_id, body.conversation_id, body.message)
     return StreamingResponse(
-        _event_stream(request, body, str(current_user.id)),
+        _event_stream(request, body, user_id, conversation_id),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@router.get(
+    "/conversations",
+    response_model=StandardApiResponse[list[ConversationSummary]],
+    summary="[User] Danh sách hội thoại của tôi",
+    tags=["chat"],
+)
+@api_response_wrapper(default_success_message="Lấy danh sách hội thoại thành công.")
+async def list_my_conversations(
+    current_user: UserInDB = Depends(get_current_active_user),
+    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
+):
+    docs = await crud_chat.list_conversations(db, str(current_user.id))
+    return [ConversationSummary.model_validate(d) for d in docs]
+
+
+@router.get(
+    "/conversations/{conversation_id}",
+    response_model=StandardApiResponse[ConversationDetail],
+    summary="[User] Chi tiết 1 hội thoại (kèm messages)",
+    tags=["chat"],
+)
+@api_response_wrapper(default_success_message="Lấy chi tiết hội thoại thành công.")
+async def get_my_conversation(
+    conversation_id: str,
+    current_user: UserInDB = Depends(get_current_active_user),
+    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
+):
+    detail = await crud_chat.get_conversation_detail(db, conversation_id, str(current_user.id))
+    if not detail:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy hội thoại hoặc bạn không có quyền truy cập.",
+        )
+    return ConversationDetail.model_validate(detail)
+
+
+@router.delete(
+    "/conversations/{conversation_id}",
+    response_model=StandardApiResponse[None],
+    summary="[User] Xoá 1 hội thoại (kèm toàn bộ messages)",
+    tags=["chat"],
+)
+@api_response_wrapper(default_success_message="Đã xoá hội thoại.")
+async def delete_my_conversation(
+    conversation_id: str,
+    current_user: UserInDB = Depends(get_current_active_user),
+    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
+):
+    ok = await crud_chat.delete_conversation(db, conversation_id, str(current_user.id))
+    if not ok:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy hội thoại hoặc bạn không có quyền xoá.",
+        )
+    return None

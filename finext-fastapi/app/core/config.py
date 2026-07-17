@@ -147,3 +147,11 @@ AGENT_GATEWAY = os.getenv("AGENT_GATEWAY", "mongo")  # mongo | fixture
 GATEWAY_EXPLAIN_MODE = os.getenv("GATEWAY_EXPLAIN_MODE", "off")  # on | off (heuristic — doc 01 §6 R1c)
 AGENT_PACK_DIR = os.getenv("AGENT_PACK_DIR")  # None → dùng pack stub trong repo
 # ---------------------------------
+
+# --- Chat persistence / quota / kill-switch (Bước 3) ---
+# Số lấy default trong code; owner chỉnh qua env sau 2 tuần chạy nhóm nhỏ (doc 03 §4-5).
+AGENT_MSG_PER_DAY = int(os.getenv("AGENT_MSG_PER_DAY") or 60)  # trần msg/user/ngày → vượt trả 429
+AGENT_MSG_PER_MIN = int(os.getenv("AGENT_MSG_PER_MIN") or 6)  # trần msg/user/phút → vượt trả 429
+AGENT_DAILY_TOKEN_BUDGET = int(os.getenv("AGENT_DAILY_TOKEN_BUDGET") or 4_000_000)  # kill-switch global/ngày (token)
+CHAT_MAX_CONVERSATIONS = int(os.getenv("CHAT_MAX_CONVERSATIONS") or 50)  # giữ N hội thoại mới nhất/user (prune)
+# ---------------------------------

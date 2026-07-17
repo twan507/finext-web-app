@@ -108,6 +108,12 @@ async def connect_to_mongo():
             await db.uploads.create_index("upload_key")
             await db.uploads.create_index("object_name", unique=True)
 
+            # chat collections indexes (agent — Bước 3)
+            await db.chat_conversations.create_index([("user_id", 1), ("updated_at", -1)])
+            await db.chat_messages.create_index([("conversation_id", 1), ("created_at", 1)])
+            await db.chat_messages.create_index([("user_id", 1), ("created_at", -1)])  # rate-limit đếm msg/phút
+            await db.chat_quota.create_index([("user_id", 1), ("date", 1)], unique=True)
+
             logger.info("Đã đảm bảo các indexes cần thiết cho các Collections")
 
         active_dbs = [name for name, db_instance in mongodb.dbs.items() if db_instance is not None]
