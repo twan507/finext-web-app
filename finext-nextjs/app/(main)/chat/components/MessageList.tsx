@@ -8,7 +8,7 @@ import type { ChatMessage } from '../../../../hooks/useChatStore';
 import MessageBubble from './MessageBubble';
 
 // Khối assistant: chip tool xếp trên → bong bóng → hàng action (Sao chép, và Thử lại khi lỗi).
-function AssistantBlock({ message, onRetry, errorText }: { message: ChatMessage; onRetry: () => void; errorText?: string | null }) {
+function AssistantBlock({ message, onRetry, errorText, isLast }: { message: ChatMessage; onRetry: () => void; errorText?: string | null; isLast: boolean }) {
   const [copied, setCopied] = useState(false);
   const canRetry = message.status === 'error' || message.status === 'interrupted';
   // Nút sao chép chỉ hiện khi câu trả lời đã XONG hẳn (còn đang suy nghĩ/tra cứu/nhả chữ thì ẩn — tránh đè dòng tra cứu + copy nội dung dở).
@@ -34,6 +34,14 @@ function AssistantBlock({ message, onRetry, errorText }: { message: ChatMessage;
             <Tooltip title={copied ? 'Đã sao chép' : 'Sao chép'} placement="top">
               <IconButton size="small" onClick={copy} sx={{ color: 'text.secondary' }}>
                 {copied ? <CheckOutlined sx={{ fontSize: 16 }} /> : <ContentCopyOutlined sx={{ fontSize: 16 }} />}
+              </IconButton>
+            </Tooltip>
+          )}
+          {/* Tạo lại: chỉ ở câu trả lời CUỐI đã xong (retry chạy lại lượt user gần nhất). */}
+          {showCopy && isLast && (
+            <Tooltip title="Tạo lại" placement="top">
+              <IconButton size="small" onClick={onRetry} sx={{ color: 'text.secondary' }}>
+                <RefreshOutlined sx={{ fontSize: 16 }} />
               </IconButton>
             </Tooltip>
           )}
@@ -82,7 +90,7 @@ export default function MessageList({ messages, onRetry, error }: { messages: Ch
           // Chỉ assistant lỗi/gián đoạn cuối cùng mới hiện dòng lý do cạnh nút "Thử lại".
           const showErr = idx === lastIdx && (m.status === 'error' || m.status === 'interrupted');
           const errorText = showErr ? (error ?? 'Không lấy được phản hồi. Bạn thử lại nhé.') : null;
-          return <AssistantBlock key={m.id} message={m} onRetry={onRetry} errorText={errorText} />;
+          return <AssistantBlock key={m.id} message={m} onRetry={onRetry} errorText={errorText} isLast={idx === lastIdx} />;
         })}
     </Box>
   );
