@@ -6,6 +6,7 @@ export type ChatEvent =
   | { type: 'tool_start'; name: string; label: string }
   | { type: 'tool_end'; name: string; ok: boolean; ms: number }
   | { type: 'title'; conversation_id: string; title: string }
+  | { type: 'message_saved'; message_id: string }
   | { type: 'done'; usage: Record<string, number>; truncated: boolean }
   | { type: 'error'; message: string };
 
@@ -16,7 +17,7 @@ export interface ChatStreamBody {
   thinking?: boolean; // true = M3 suy nghĩ sâu (adaptive) — backend nhận, default false
 }
 
-const KNOWN_TYPES = new Set(['meta', 'token', 'tool_start', 'tool_end', 'title', 'done', 'error']);
+const KNOWN_TYPES = new Set(['meta', 'token', 'tool_start', 'tool_end', 'title', 'message_saved', 'done', 'error']);
 
 function parseFrame(frame: string): ChatEvent | null {
   // Mỗi frame là các dòng; lấy dòng bắt đầu 'data: '. Comment ': hb' → bỏ qua (không có data:).

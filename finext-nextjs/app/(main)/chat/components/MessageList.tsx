@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Box, Button, IconButton, Stack, Tooltip, Typography } from '@mui/material';
-import { CheckOutlined, ContentCopyOutlined, RefreshOutlined } from '@mui/icons-material';
+import { CheckOutlined, ContentCopyOutlined, RefreshOutlined, ThumbDown, ThumbDownOutlined, ThumbUp, ThumbUpOutlined } from '@mui/icons-material';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import type { ChatMessage } from '../../../../hooks/useChatStore';
 import MessageBubble from './MessageBubble';
 
 // Khối assistant: chip tool xếp trên → bong bóng → hàng action (Sao chép, và Thử lại khi lỗi).
-function AssistantBlock({ message, onRetry, errorText, isLast }: { message: ChatMessage; onRetry: () => void; errorText?: string | null; isLast: boolean }) {
+function AssistantBlock({ message, onRetry, onFeedback, errorText, isLast }: { message: ChatMessage; onRetry: () => void; onFeedback: (serverId: string, rating: 1 | -1) => void; errorText?: string | null; isLast: boolean }) {
   const [copied, setCopied] = useState(false);
   const canRetry = message.status === 'error' || message.status === 'interrupted';
   // Nút sao chép chỉ hiện khi câu trả lời đã XONG hẳn (còn đang suy nghĩ/tra cứu/nhả chữ thì ẩn — tránh đè dòng tra cứu + copy nội dung dở).
@@ -45,6 +45,21 @@ function AssistantBlock({ message, onRetry, errorText, isLast }: { message: Chat
               </IconButton>
             </Tooltip>
           )}
+          {/* 👍/👎: chỉ khi câu trả lời đã lưu (có serverId) — click set rating. */}
+          {showCopy && message.serverId && (
+            <>
+              <Tooltip title="Hữu ích" placement="top">
+                <IconButton size="small" onClick={() => onFeedback(message.serverId!, 1)} sx={{ color: message.feedback === 1 ? 'primary.main' : 'text.secondary' }}>
+                  {message.feedback === 1 ? <ThumbUp sx={{ fontSize: 15 }} /> : <ThumbUpOutlined sx={{ fontSize: 15 }} />}
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Chưa tốt" placement="top">
+                <IconButton size="small" onClick={() => onFeedback(message.serverId!, -1)} sx={{ color: message.feedback === -1 ? 'error.main' : 'text.secondary' }}>
+                  {message.feedback === -1 ? <ThumbDown sx={{ fontSize: 15 }} /> : <ThumbDownOutlined sx={{ fontSize: 15 }} />}
+                </IconButton>
+              </Tooltip>
+            </>
+          )}
           {canRetry && (
             <>
               {errorText && (
@@ -66,7 +81,7 @@ function AssistantBlock({ message, onRetry, errorText, isLast }: { message: Chat
   );
 }
 
-export default function MessageList({ messages, onRetry, error }: { messages: ChatMessage[]; onRetry: () => void; error: string | null }) {
+export default function MessageList({ messages, onRetry, onFeedback, error }: { messages: ChatMessage[]; onRetry: () => void; onFeedback: (serverId: string, rating: 1 | -1) => void; error: string | null }) {
   const pinnedRef = useRef(true);
   const lastIdx = messages.length - 1;
 
@@ -90,7 +105,7 @@ export default function MessageList({ messages, onRetry, error }: { messages: Ch
           // Chỉ assistant lỗi/gián đoạn cuối cùng mới hiện dòng lý do cạnh nút "Thử lại".
           const showErr = idx === lastIdx && (m.status === 'error' || m.status === 'interrupted');
           const errorText = showErr ? (error ?? 'Không lấy được phản hồi. Bạn thử lại nhé.') : null;
-          return <AssistantBlock key={m.id} message={m} onRetry={onRetry} errorText={errorText} isLast={idx === lastIdx} />;
+          return <AssistantBlock key={m.id} message={m} onRetry={onRetry} onFeedback={onFeedback} errorText={errorText} isLast={idx === lastIdx} />;
         })}
     </Box>
   );

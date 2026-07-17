@@ -7,6 +7,7 @@ import {
   fetchConversationDetail,
   fetchConversations,
   renameConversationApi,
+  sendFeedbackApi,
   setPinnedApi,
   type ConversationSummaryDTO,
   type MessageDTO,
@@ -21,11 +22,13 @@ export interface ToolChip {
 }
 export type MessagePart = { kind: 'text'; text: string } | ({ kind: 'tool' } & ToolChip);
 export interface ChatMessage {
-  id: string;
+  id: string; // id cục bộ (client)
+  serverId?: string; // _id message backend — có sau 'message_saved' (live) / khi tải lại; cần cho 👍👎
   role: 'user' | 'assistant';
   content: string;
   parts: MessagePart[];
   status: 'streaming' | 'done' | 'error' | 'interrupted';
+  feedback?: 1 | -1; // 👍 / 👎 đã chọn
 }
 export interface Conversation {
   id: string; // id cục bộ (client) — bằng serverId với hội thoại đã lưu, hoặc uid() với hội thoại mới chưa gửi
@@ -57,6 +60,7 @@ export interface UseChatStoreReturn {
   deleteConversation: (id: string) => void;
   togglePin: (id: string) => void;
   renameConversation: (id: string, title: string) => void;
+  sendFeedback: (messageServerId: string, rating: 1 | -1) => void;
 }
 
 const THINKING_KEY = 'finext-chat-thinking';
@@ -86,16 +90,19 @@ function toConversation(c: ConversationSummaryDTO): Conversation {
 // Map message backend → ChatMessage. Assistant render qua parts (1 text part = content markdown+widget);
 // user render qua content (parts rỗng). tool chip không hiện lại khi done nên không cần tái dựng.
 function toChatMessage(m: MessageDTO): ChatMessage {
+  const rating = m.feedback?.rating;
   return {
     id: m.id,
+    serverId: m.id,
     role: m.role,
     content: m.content,
     parts: m.role === 'assistant' ? [{ kind: 'text', text: m.content }] : [],
     status: m.interrupted ? 'interrupted' : 'done',
+    feedback: rating === 1 ? 1 : rating === -1 ? -1 : undefined,
   };
 }
 
-export default function useChatStore(): UseChatStoreReturn {
+export default function useChatStore(initialConversationId?: string): UseChatStoreReturn {
   const [conversations, setConversations] = useState<Conversation[]>(() => [newConv()]);
   const [activeId, setActiveId] = useState<string>(() => conversations[0]?.id ?? '');
   const [phase, setPhase] = useState<ChatPhase>('idle');
@@ -122,6 +129,7 @@ export default function useChatStore(): UseChatStoreReturn {
   const assistantIdRef = useRef<string>('');
   const listLoadedRef = useRef<boolean>(false); // chỉ tải danh sách 1 lần
   const msgLoadIdRef = useRef<string | null>(null); // id hội thoại đang tải messages (chống race)
+  const pendingOpenRef = useRef<string | null>(initialConversationId ?? null); // serverId cần mở theo URL /chat/{id}
 
   const messages = conversations.find((c) => c.id === activeId)?.messages ?? [];
 
@@ -264,6 +272,10 @@ export default function useChatStore(): UseChatStoreReturn {
               setConversations((prev) => prev.map((c) => (c.serverId === ev.conversation_id ? { ...c, title: ev.title } : c)));
             }
             break;
+          case 'message_saved':
+            // Gắn _id thật của câu trả lời vừa lưu (dùng cho 👍👎).
+            if (ev.message_id) patchAssistant((m) => ({ ...m, serverId: ev.message_id }));
+            break;
           case 'done':
             flush(true);
             patchAssistant((m) => ({ ...m, status: 'done' }));
@@ -389,12 +401,31 @@ export default function useChatStore(): UseChatStoreReturn {
     [clearIdle],
   );
 
+  // Mở hội thoại theo URL /chat/{id}: chờ danh sách tải xong (có serverId đó) rồi mở đúng 1 lần.
+  useEffect(() => {
+    const pid = pendingOpenRef.current;
+    if (!pid) return;
+    const conv = conversations.find((c) => c.serverId === pid);
+    if (conv) {
+      pendingOpenRef.current = null;
+      selectConversation(conv.id);
+    }
+  }, [conversations, selectConversation]);
+
   const togglePin = useCallback((id: string) => {
     const conv = conversationsRef.current.find((c) => c.id === id);
     if (!conv || !conv.serverId) return; // chỉ ghim được hội thoại đã lưu
     const next = !conv.pinned;
     void setPinnedApi(conv.serverId, next).catch(() => {});
     setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, pinned: next } : c)));
+  }, []);
+
+  const sendFeedback = useCallback((messageServerId: string, rating: 1 | -1) => {
+    if (!messageServerId) return;
+    void sendFeedbackApi(messageServerId, rating).catch(() => {});
+    setConversations((prev) =>
+      prev.map((c) => ({ ...c, messages: c.messages.map((m) => (m.serverId === messageServerId ? { ...m, feedback: rating } : m)) })),
+    );
   }, []);
 
   const renameConversation = useCallback((id: string, title: string) => {
@@ -446,5 +477,6 @@ export default function useChatStore(): UseChatStoreReturn {
     deleteConversation,
     togglePin,
     renameConversation,
+    sendFeedback,
   };
 }

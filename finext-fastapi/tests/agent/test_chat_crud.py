@@ -113,6 +113,18 @@ async def test_set_pinned_checks_owner():
     assert await crud.set_pinned(db, a, OTHER, True) is False  # không phải chủ
 
 
+async def test_set_feedback_ok_owner_and_role():
+    db = FakeDB()
+    conv_id = await crud.start_turn(db, USER, None, "hỏi")
+    mid = await crud.add_message(db, conv_id, USER, "assistant", "trả lời")
+    assert await crud.set_feedback(db, mid, USER, 1, "chuẩn") is True
+    msg = await db[crud.MESSAGES].find_one({"_id": ObjectId(mid)})
+    assert msg["feedback"]["rating"] == 1 and msg["feedback"]["reason"] == "chuẩn"
+    assert await crud.set_feedback(db, mid, OTHER, -1) is False  # không phải chủ
+    umsg = [m for m in db[crud.MESSAGES].docs if m["role"] == "user"][0]
+    assert await crud.set_feedback(db, str(umsg["_id"]), USER, 1) is False  # user msg không nhận 👍👎
+
+
 async def test_rename_conversation_ok_owner_and_empty():
     db = FakeDB()
     a = await crud.start_turn(db, USER, None, "tên cũ")

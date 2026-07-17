@@ -138,7 +138,33 @@ export default function PrivacyPolicyContent() {
         </ul>
       </Section>
 
-      <Section title="6. Lưu trữ và thời hạn giữ dữ liệu">
+      <Section title="6. Trợ lý AI (Finext AI)">
+        Khi bạn sử dụng trợ lý AI (Finext AI) tại mục Chat, chúng tôi thu thập và xử lý thêm:
+        <ul>
+          <li><strong>Nội dung hội thoại:</strong> câu hỏi bạn gửi và câu trả lời của AI được lưu lại để bạn
+            xem lại và tiếp tục cuộc trò chuyện.</li>
+          <li><strong>Dữ liệu sử dụng:</strong> số lượt hỏi và lượng token tiêu thụ, phục vụ giới hạn sử dụng
+            công bằng và kiểm soát chi phí.</li>
+          <li><strong>Đánh giá của bạn:</strong> lựa chọn 👍/👎 và lý do (nếu có) cho mỗi câu trả lời.</li>
+        </ul>
+        <strong>Mục đích:</strong> trả lời câu hỏi của bạn, lưu lịch sử để bạn xem lại, và cải thiện chất lượng
+        trợ lý.
+        <br /><br />
+        <strong>Ai có thể xem:</strong> nội dung hội thoại được lưu trong hệ thống của Finext. Đội ngũ Finext có
+        thể xem lại hội thoại để đảm bảo chất lượng và tuân thủ. Nội dung hội thoại <strong>không</strong> được
+        dùng để huấn luyện mô hình AI của bên thứ ba.
+        <br /><br />
+        <strong>Lưu trữ:</strong> hệ thống giữ khoảng 50 hội thoại gần nhất của mỗi người dùng; hội thoại cũ hơn
+        (không được ghim) sẽ tự động bị xoá. Số liệu sử dụng được giữ khoảng 90 ngày.
+        <br /><br />
+        <strong>Quyền của bạn:</strong> bạn có thể xem lại, đổi tên, ghim hoặc xoá bất kỳ hội thoại nào ngay
+        trong giao diện Chat; xoá hội thoại sẽ xoá toàn bộ tin nhắn của hội thoại đó.
+        <br /><br />
+        <em>Lưu ý:</em> thông tin do AI cung cấp chỉ mang tính tham khảo, không phải khuyến nghị đầu tư — vui
+        lòng tự kiểm chứng số liệu quan trọng.
+      </Section>
+
+      <Section title="7. Lưu trữ và thời hạn giữ dữ liệu">
         <ul>
           <li>Dữ liệu tài khoản được lưu trữ trong suốt thời gian bạn sử dụng nền tảng</li>
           <li>Khi bạn yêu cầu xóa tài khoản, chúng tôi sẽ xóa hoặc ẩn danh hóa dữ liệu cá nhân
@@ -148,7 +174,7 @@ export default function PrivacyPolicyContent() {
         </ul>
       </Section>
 
-      <Section title="7. Cookie và công nghệ theo dõi">
+      <Section title="8. Cookie và công nghệ theo dõi">
         Finext sử dụng cookie và các công nghệ tương tự để:
         <ul>
           <li>Duy trì phiên đăng nhập và trạng thái xác thực</li>
@@ -159,7 +185,7 @@ export default function PrivacyPolicyContent() {
         thể ảnh hưởng đến trải nghiệm sử dụng.
       </Section>
 
-      <Section title="8. Quyền của người dùng">
+      <Section title="9. Quyền của người dùng">
         Bạn có quyền:
         <ul>
           <li>Truy cập và xem lại thông tin cá nhân đã cung cấp</li>
@@ -171,13 +197,13 @@ export default function PrivacyPolicyContent() {
         Để thực hiện các quyền trên, vui lòng liên hệ chúng tôi qua mục Hỗ trợ.
       </Section>
 
-      <Section title="9. Thay đổi chính sách">
+      <Section title="10. Thay đổi chính sách">
         Chúng tôi có thể cập nhật chính sách bảo mật này theo thời gian. Mọi thay đổi quan trọng
         sẽ được thông báo qua email hoặc thông báo trên nền tảng. Việc tiếp tục sử dụng nền tảng
         sau khi chính sách được cập nhật đồng nghĩa với việc bạn chấp nhận các thay đổi đó.
       </Section>
 
-      <Section title="10. Liên hệ">
+      <Section title="11. Liên hệ">
         Nếu bạn có câu hỏi hoặc thắc mắc về chính sách bảo mật, vui lòng liên hệ:
         <ul>
           <li><strong>Nền tảng:</strong> Finext — Your Next FInancial Step</li>

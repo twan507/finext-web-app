@@ -9,29 +9,32 @@ import ConversationSidebar from './components/ConversationSidebar';
 import MessageList from './components/MessageList';
 import Composer from './components/Composer';
 import ChatGreeting from './components/EmptyState';
-import ConsentModal from './components/ConsentModal';
 import AsOfChip from './components/AsOfChip';
 import ChatSkeleton from './components/ChatSkeleton';
 
-const CONSENT_KEY = 'finext-chat-consent';
 // Chiều cao khả kiến dưới appbar (appbar là sticky top). Dùng cho panel lịch sử sticky + empty state.
 const VIEWPORT = `calc(100dvh - ${layoutTokens.appBarHeight}px - env(titlebar-area-height, 0px))`;
 
-function ChatApp() {
-  const store = useChatStore();
+function ChatApp({ initialConversationId }: { initialConversationId?: string }) {
+  // Consent: KHÔNG cần pop-up — người dùng đã đồng ý khi tạo tài khoản (điều khoản + /policies/privacy).
+  const store = useChatStore(initialConversationId);
   const { session } = useAuth();
-  const [consented, setConsented] = useState<boolean | null>(null);
   const [collapsed, setCollapsed] = useState(false);
-  useEffect(() => {
-    if (!session) return;
-    setConsented(localStorage.getItem(CONSENT_KEY) === '1');
-  }, [session]);
-  const accept = () => {
-    localStorage.setItem(CONSENT_KEY, '1');
-    setConsented(true);
-  };
   const streaming = store.phase !== 'idle';
   const hasMessages = store.messages.length > 0;
+
+  // URL riêng mỗi hội thoại: /chat/{serverId} khi đã lưu, /chat khi chat mới. replaceState → KHÔNG điều hướng
+  // lại, KHÔNG remount, KHÔNG giật UI người dùng đang thao tác.
+  const activeServerId = store.conversations.find((c) => c.id === store.activeId)?.serverId ?? null;
+  const initialPendingRef = useRef(!!initialConversationId);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (activeServerId) initialPendingRef.current = false;
+    // Đừng hạ URL về /chat khi vẫn đang chờ mở hội thoại ban đầu (tránh nháy /chat/{id} → /chat → /chat/{id}).
+    if (!activeServerId && initialPendingRef.current) return;
+    const target = activeServerId ? `/chat/${activeServerId}` : '/chat';
+    if (window.location.pathname !== target) window.history.replaceState(null, '', target);
+  }, [activeServerId]);
 
   // FLIP "trượt xuống": khi gửi câu ĐẦU (empty → có tin nhắn), composer trượt mượt từ vị trí giữa
   // xuống đáy thay vì nhảy tức thì. Đo vị trí thật (không phụ thuộc kích thước màn hình).
@@ -104,9 +107,9 @@ function ChatApp() {
           <>
             {/* Vùng tin nhắn flex:1 → đẩy composer xuống ĐÁY khi nội dung ngắn; nội dung dài thì cuộn window. */}
             <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-              <MessageList key={store.activeId} messages={store.messages} onRetry={store.retry} error={store.error} />
+              <MessageList key={store.activeId} messages={store.messages} onRetry={store.retry} onFeedback={store.sendFeedback} error={store.error} />
             </Box>
-            <Composer ref={setComposerNode} disabled={consented !== true || streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} />
+            <Composer ref={setComposerNode} disabled={streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} />
           </>
         ) : (
           // Chưa có tin nhắn: lời chào + composer NỔI (kiểu ChatGPT/Claude), đặt ở ~40% chiều cao (spacer 2:3) — hơi cao hơn giữa. Gửi câu đầu → composer về đáy.
@@ -133,7 +136,7 @@ function ChatApp() {
               <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                 <ChatGreeting name={session?.user?.full_name} />
                 <Box sx={{ width: '100%' }}>
-                  <Composer ref={setComposerNode} centered disabled={consented !== true || streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} />
+                  <Composer ref={setComposerNode} centered disabled={streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} />
                 </Box>
               </Box>
             </Box>
@@ -141,17 +144,15 @@ function ChatApp() {
           </Box>
         )}
       </Box>
-
-      {session && <ConsentModal open={consented === false} onAccept={accept} />}
     </Box>
   );
 }
 
-export default function PageContent() {
+export default function PageContent({ initialConversationId }: { initialConversationId?: string }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
       <OptionalAuthWrapper requireAuth loadingFallback={<ChatSkeleton />}>
-        <ChatApp />
+        <ChatApp initialConversationId={initialConversationId} />
       </OptionalAuthWrapper>
     </Box>
   );

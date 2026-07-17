@@ -4,7 +4,7 @@ from bson import ObjectId
 
 import app.crud.chat as crud
 import app.routers.chat as chat_router
-from app.schemas.chat import ConversationPinRequest, ConversationRenameRequest
+from app.schemas.chat import ConversationPinRequest, ConversationRenameRequest, MessageFeedbackRequest
 from tests.agent._fake_mongo import FakeDB
 
 USER = str(ObjectId())
@@ -69,6 +69,22 @@ async def test_rename_conversation_ok_and_ownership_404():
     assert conv["title"] == "Tên mới"
     denied = await chat_router.rename_my_conversation(
         conversation_id=conv_id, body=ConversationRenameRequest(title="Cướp"), current_user=_User(OTHER), db=db
+    )
+    assert _body(denied)["status"] == 404
+
+
+async def test_feedback_message_ok_and_ownership_404():
+    db = FakeDB()
+    conv_id = await crud.start_turn(db, USER, None, "hỏi")
+    mid = await crud.add_message(db, conv_id, USER, "assistant", "trả lời")
+    ok = await chat_router.feedback_message(
+        message_id=mid, body=MessageFeedbackRequest(rating=1, reason="chuẩn"), current_user=_User(USER), db=db
+    )
+    assert _body(ok)["status"] == 200
+    msg = await db[crud.MESSAGES].find_one({"_id": ObjectId(mid)})
+    assert msg["feedback"]["rating"] == 1 and msg["feedback"]["reason"] == "chuẩn"
+    denied = await chat_router.feedback_message(
+        message_id=mid, body=MessageFeedbackRequest(rating=-1), current_user=_User(OTHER), db=db
     )
     assert _body(denied)["status"] == 404
 

@@ -25,6 +25,7 @@ export interface MessageDTO {
   tool_calls: ToolCallMetaDTO[];
   usage?: Record<string, number> | null;
   interrupted?: boolean;
+  feedback?: { rating: number; reason?: string } | null;
   created_at: string;
 }
 
@@ -67,5 +68,11 @@ export async function setPinnedApi(id: string, pinned: boolean): Promise<boolean
 /** Đổi tên 1 hội thoại. true nếu backend xác nhận. */
 export async function renameConversationApi(id: string, title: string): Promise<boolean> {
   const res = await apiClient({ url: `/api/v1/chat/conversations/${id}/rename`, method: 'PATCH', body: { title } });
+  return res.status === 200;
+}
+
+/** Đánh giá 👍/👎 một câu trả lời (rating 1 hoặc -1, kèm lý do tuỳ chọn). */
+export async function sendFeedbackApi(messageId: string, rating: 1 | -1, reason?: string): Promise<boolean> {
+  const res = await apiClient({ url: `/api/v1/chat/messages/${messageId}/feedback`, method: 'PATCH', body: reason ? { rating, reason } : { rating } });
   return res.status === 200;
 }

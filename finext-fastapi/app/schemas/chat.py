@@ -52,9 +52,15 @@ class MessagePublic(BaseModel):
     tool_calls: list[ToolCallMeta] = Field(default_factory=list)
     usage: dict[str, int] | None = None
     interrupted: bool = False
+    feedback: dict | None = None  # {rating: 1|-1, reason?, at} — 👍/👎 người dùng
     created_at: datetime
 
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+
+class MessageFeedbackRequest(BaseModel):
+    rating: Literal[1, -1]
+    reason: str | None = Field(default=None, max_length=200)
 
 
 class ConversationDetail(ConversationSummary):

@@ -21,6 +21,7 @@ from app.schemas.chat import (
     ConversationPinRequest,
     ConversationRenameRequest,
     ConversationSummary,
+    MessageFeedbackRequest,
 )
 from app.schemas.users import UserInDB
 from app.utils.response_wrapper import StandardApiResponse, api_response_wrapper
@@ -104,17 +105,19 @@ async def _maybe_generate_title(user_id: str, conversation_id: str, first_messag
         logger.exception("Đặt tiêu đề AI thất bại conversation_id=%s", conversation_id)
 
 
-async def _persist_answer(user_id: str, conversation_id: str, collector: _AnswerCollector) -> None:
-    """Lưu assistant-msg + cộng token — CHỈ khi stream đã 'done'. Best-effort (không làm sập stream)."""
+async def _persist_answer(user_id: str, conversation_id: str, collector: _AnswerCollector, emit: Any) -> None:
+    """Lưu assistant-msg + cộng token — CHỈ khi stream đã 'done'. Best-effort (không làm sập stream).
+    Emit 'message_saved' {message_id} để FE gắn id thật cho câu vừa trả lời (dùng cho 👍/👎)."""
     if not collector.done_seen:
         return  # lỗi/huỷ giữa chừng → không lưu assistant → FE thấy user-msg trống reply → "Thử lại"
     db = get_database("user_db")
     try:
-        await crud_chat.add_message(
+        message_id = await crud_chat.add_message(
             db, conversation_id, user_id, "assistant",
             collector.text(), tool_calls=collector.tool_calls(), usage=collector.usage or None,
         )
         await crud_chat.record_usage(db, user_id, collector.usage)
+        await emit("message_saved", {"message_id": message_id})
     except Exception:
         logger.exception("Lưu câu trả lời/usage thất bại conversation_id=%s", conversation_id)
 
@@ -148,7 +151,7 @@ async def _produce(
         await queue.put(sse_frame("error", {"message": "Hệ thống AI gặp sự cố, vui lòng thử lại."}))
     else:
         # CHỈ path sạch (không exception, run_agent tự return kể cả khi emit "error"): lưu nếu đã 'done'.
-        await _persist_answer(ctx.user_id, conversation_id, collector)
+        await _persist_answer(ctx.user_id, conversation_id, collector, emit)
         # Hội thoại mới → đặt tiêu đề AI (sau khi đã trả lời xong, không chặn câu trả lời).
         if is_new:
             await _maybe_generate_title(ctx.user_id, conversation_id, body.message, emit)
@@ -285,6 +288,28 @@ async def rename_my_conversation(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Không tìm thấy hội thoại hoặc bạn không có quyền.",
+        )
+    return None
+
+
+@router.patch(
+    "/messages/{message_id}/feedback",
+    response_model=StandardApiResponse[None],
+    summary="[User] Đánh giá 👍/👎 một câu trả lời",
+    tags=["chat"],
+)
+@api_response_wrapper(default_success_message="Đã ghi nhận đánh giá.")
+async def feedback_message(
+    message_id: str,
+    body: MessageFeedbackRequest,
+    current_user: UserInDB = Depends(get_current_active_user),
+    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
+):
+    ok = await crud_chat.set_feedback(db, message_id, str(current_user.id), body.rating, body.reason)
+    if not ok:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy câu trả lời hoặc bạn không có quyền.",
         )
     return None
 

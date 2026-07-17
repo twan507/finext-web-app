@@ -102,6 +102,20 @@ async def update_title(db: Any, conversation_id: str, title: str) -> None:
     await db[CONVERSATIONS].update_one({"_id": ObjectId(conversation_id)}, {"$set": {"title": title}})
 
 
+async def set_feedback(db: Any, message_id: str, user_id: str, rating: int, reason: str | None = None) -> bool:
+    """Lưu 👍/👎 (+ lý do) cho 1 message ASSISTANT của user (kiểm quyền). rating: 1 hoặc -1."""
+    if not ObjectId.is_valid(message_id):
+        return False
+    fb: dict[str, Any] = {"rating": int(rating), "at": _now()}
+    if reason:
+        fb["reason"] = reason.strip()[:200]
+    res = await db[MESSAGES].update_one(
+        {"_id": ObjectId(message_id), "user_id": ObjectId(user_id), "role": "assistant"},
+        {"$set": {"feedback": fb}},
+    )
+    return res.matched_count > 0
+
+
 async def list_conversations(db: Any, user_id: str) -> list[dict]:
     # Ghim trước (pinned desc), rồi mới nhất trước (updated_at desc).
     return await (
