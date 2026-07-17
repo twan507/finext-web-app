@@ -642,3 +642,12 @@ def test_commodity_price_guard():
     assert not _ungrounded_price("Giá thép HRC 3342 CNY/tấn.", g)             # đã query đúng → không nghi
     # số phái sinh %/khái niệm không đơn vị giá → KHÔNG đụng
     assert not _looks_like_data_answer("Biên lợi nhuận giảm 15% do giá đầu ra.")
+
+
+def test_market_figure_guard():
+    """Số thị trường thập phân + tỷ/lần (khối ngoại/P/E inline) → cần grounding; số làm tròn khái niệm thì không."""
+    from app.agent.loop import _looks_like_data_answer
+    assert _looks_like_data_answer("HSG khối ngoại mua ròng 17,82 tỷ tuần qua.")  # bịa foreign-flow inline
+    assert _looks_like_data_answer("P/E HPG hiện 8.88 lần.")                       # P/E inline
+    assert not _looks_like_data_answer("P/E khoảng 15 lần là hợp lý cho ngành này.")  # làm tròn/khái niệm → bỏ qua
+    assert not _looks_like_data_answer("Nên để dành vài tỷ đồng tiền mặt.")           # 'vài tỷ' không thập phân

@@ -67,6 +67,23 @@ _TAXONOMY_RE = re.compile(r"\b(?:Workflow|Kịch bản)\s+[A-M]\b", re.IGNORECAS
 # Bắt buộc chừa: _BACKTICK_RE gỡ backtick sẽ phá fence ```→``, và xóa tên nội bộ sẽ phá JSON.
 _WIDGET_BLOCK_RE = re.compile(r"```finext-widget\s*\n[\s\S]*?```", re.IGNORECASE)
 
+# Câu TỰ XIN LỖI / TỰ TỐ ẢO GIÁC vô căn cứ (đo thật multi-turn): model tự nhận "dùng số liệu từ trí nhớ /
+# có thể sai hoàn toàn / xin lỗi" giữa hội thoại dù user KHÔNG chê và ĐÃ gọi tool → META vô căn cứ, cắt TRỌN câu.
+# AN TOÀN (không cắt nhầm nội dung hợp lệ): câu phải VỪA có ngôi thứ nhất (tôi/mình/em) VỪA có 1 dấu hiệu tự tố.
+# Ngôi thứ nhất phân biệt lời tự thú ("số liệu TÔI đưa ra có thể sai hoàn toàn") với nhận định hợp lệ
+# ("dự báo có thể sai hoàn toàn"); "anh/chị đúng" khi kèm tự phê luôn đi cùng 1 dấu hiệu mạnh nên không cần liệt kê riêng.
+_FIRST_PERSON_RE = re.compile(r"\b(?:tôi|mình|em)\b", re.IGNORECASE)
+_APOLOGY_MARKER_RE = re.compile(
+    r"xin\s+lỗi"                                                     # xin lỗi
+    r"|(?:tôi|mình|em)\s+(?:đang|đã)\s+(?:mắc\s+|có\s+)?(?:lỗi|sai)"  # tôi đang mắc lỗi / tôi đã sai
+    r"|dùng\s+số\s+(?:liệu\s+)?từ\s+trí\s+nhớ"                       # dùng số (liệu) từ trí nhớ
+    r"|(?:có thể|có lẽ)\s+sai\s+(?:hoàn toàn|rồi)"                   # có thể sai hoàn toàn / có lẽ sai rồi
+    r"|(?:tôi|mình|em)\s+nhầm",                                      # tôi nhầm
+    re.IGNORECASE,
+)
+# Ranh giới câu: cụm .!?… đứng ngay trước khoảng trắng/hết chuỗi. KHÔNG tính "." giữa 2 chữ số (1.837 / 0,29%.).
+_SENTENCE_END_RE = re.compile(r"[.!?…]+(?=\s|$)")
+
 
 def _vsi_num(m: "re.Match[str]") -> str:
     op = (m.group(1) or "").replace("=", "").replace(":", "").strip()
@@ -88,9 +105,39 @@ def _month_vn(m: "re.Match[str]") -> str:
     return f"tháng {_MONTH_NUM[m.group(1).lower()]}"
 
 
+def _split_sentences(s: str) -> list[str]:
+    """Tách theo câu; khoảng trắng trước mỗi câu bám vào đầu câu kế (ghép lại không mất spacing)."""
+    parts: list[str] = []
+    pos = 0
+    for m in _SENTENCE_END_RE.finditer(s):
+        parts.append(s[pos:m.end()])
+        pos = m.end()
+    if pos < len(s):
+        parts.append(s[pos:])
+    return parts
+
+
+def _is_self_apology(sentence: str) -> bool:
+    """Câu tự tố khi VỪA có ngôi thứ nhất VỪA có dấu hiệu tự nhận lỗi (AND — tránh cắt nhầm)."""
+    return bool(_FIRST_PERSON_RE.search(sentence) and _APOLOGY_MARKER_RE.search(sentence))
+
+
+def _cut_self_apology(s: str) -> str:
+    """Cắt TRỌN các câu tự xin lỗi/tự tố; rỗng sau khi cắt → trả nguyên bản (không tạo câu rỗng)."""
+    sentences = _split_sentences(s)
+    kept = [sent for sent in sentences if not _is_self_apology(sent)]
+    if len(kept) == len(sentences):
+        return s  # không câu nào bị cắt → giữ nguyên (an toàn spacing/số)
+    result = "".join(kept)
+    return result if result.strip() else s
+
+
 def _sanitize_text(s: str) -> str:
     """Dọn ký hiệu nội bộ trên MỘT đoạn văn bản thường (KHÔNG phải khối widget). KHÔNG strip (để wrapper ghép)."""
-    # 0) Cắt câu mở đầu kể tiến trình ở lượt cuối (tối đa 2 dòng narration liên tiếp).
+    # 0) Cắt câu TỰ XIN LỖI / TỰ TỐ ẢO GIÁC vô căn cứ (giữ nội dung phân tích thật còn lại).
+    s = _cut_self_apology(s)
+
+    # 0a) Cắt câu mở đầu kể tiến trình ở lượt cuối (tối đa 2 dòng narration liên tiếp).
     for _ in range(2):
         new = _PREAMBLE_RE.sub("", s, count=1)
         if new == s:

@@ -45,23 +45,25 @@ _REPEAT_FEEDBACK = (
     "thay vì tự tính trên chuỗi dài."
 )
 
+# Nudge nội bộ hay bị model NHẠI thành lời xin lỗi/tự-nhận-lỗi trước khách (apology ảo giác, multi-turn) → cấm rõ.
+_NO_META = "Không xin lỗi, không tự nhận lỗi, không kể việc bạn đã/đang làm — chỉ đưa NỘI DUNG trả lời cho khách."
+
 _CONTINUE_NUDGE = (
     "Bạn chưa trả lời câu hỏi của khách. Nếu cần dữ liệu hãy GỌI TOOL ngay bây giờ; "
     "nếu đã đủ dữ liệu hãy trả lời TRỰC TIẾP nội dung cho khách. "
-    "TUYỆT ĐỐI không mô tả việc bạn sắp làm (không 'Tôi sẽ...', không nêu tên bước/tool)."
+    "TUYỆT ĐỐI không mô tả việc bạn sắp làm (không 'Tôi sẽ...', không nêu tên bước/tool). " + _NO_META
 )
 _FORCE_ANSWER_NUDGE = (
     "Đã đủ dữ liệu để trả lời. Hãy trả lời NGAY câu hỏi của khách dựa trên dữ liệu đã lấy được ở trên, "
-    "trình bày gọn, không gọi thêm tool, không mô tả tiến trình."
+    "trình bày gọn, không gọi thêm tool, không mô tả tiến trình. " + _NO_META
 )
 _GROUND_NUDGE = (
-    "Bạn đưa số liệu/bảng nhưng CHƯA gọi tool nào để lấy dữ liệu thật. TUYỆT ĐỐI không dùng số từ trí nhớ. "
-    "Hãy GỌI TOOL (db_find/db_aggregate/db_stats) lấy số thật từ hệ thống rồi trả lời lại."
+    "Bạn đưa số liệu/bảng nhưng CHƯA gọi tool nào để lấy dữ liệu thật. Hãy GỌI TOOL "
+    "(db_find/db_aggregate/db_stats) lấy số thật từ hệ thống rồi trả lời lại. " + _NO_META
 )
 _NUM_GUARD_NUDGE = (
-    "Giá bạn nêu KHÔNG khớp dữ liệu tool trả về. TUYỆT ĐỐI không tự chế/nhớ giá. "
-    "Đọc lại kết quả tool ở trên, lấy ĐÚNG con số giá (trường close/price) rồi trả lời lại; "
-    "nếu tool chưa trả giá thì gọi lại db_find lấy giá."
+    "Số/giá bạn nêu chưa khớp dữ liệu tool. Đọc lại kết quả tool ở trên, lấy ĐÚNG con số (trường close/price/value) "
+    "rồi trả lời lại; nếu tool chưa trả thì gọi lại db_find. " + _NO_META
 )
 _MAX_ITERS_ERROR = "Có lỗi khi tra cứu dữ liệu cho câu này. Bạn thử hỏi lại hoặc diễn đạt theo cách khác giúp mình nhé."
 
@@ -90,11 +92,16 @@ _COMMODITY_UNIT = r"(?:USD|CNY|EUR)\s*/\s*(?:tấn|thùng|oz|ounce|MT|kg|lít|ga
 _PRICE_CLAIM_RE = re.compile(rf"\d[\d.,]{{2,}}\s*(?:đồng|đ/\s*cp|đ\b|{_COMMODITY_UNIT})", re.IGNORECASE)
 
 
-def _looks_like_data_answer(answer: str) -> bool:
-    """Câu 'dữ liệu cần grounding': có BẢNG markdown số HOẶC khẳng định GIÁ cụ thể 'X đồng' (luôn từ tool).
+# Số thị trường CHÍNH XÁC (thập phân + tỷ/lần): khối ngoại "17.82 tỷ", P/E "8.88 lần" — luôn từ tool, KHÔNG phải
+# số minh hoạ khái niệm (số làm tròn "15 lần"/"vài tỷ" KHÔNG khớp vì không có phần thập phân). Bắt bịa inline khi tools=0.
+_MARKET_FIGURE_RE = re.compile(r"\d+[.,]\d+\s*(?:tỷ|lần)\b", re.IGNORECASE)
 
-    BỎ heuristic '>=6 số thập phân' (bắt nhầm câu khái niệm, regression Q04); giữ 2 tín hiệu CHẮC CHẮN."""
-    return bool(_TABLE_ROW_RE.search(answer) or _PRICE_CLAIM_RE.search(answer))
+
+def _looks_like_data_answer(answer: str) -> bool:
+    """Câu 'dữ liệu cần grounding': BẢNG markdown số / GIÁ 'X đồng'|hàng hoá / số thị trường thập phân 'X tỷ'|'X lần'.
+
+    BỎ heuristic '>=6 số thập phân' (bắt nhầm câu khái niệm, regression Q04); giữ các tín hiệu CHẮC CHẮN từ-tool."""
+    return bool(_TABLE_ROW_RE.search(answer) or _PRICE_CLAIM_RE.search(answer) or _MARKET_FIGURE_RE.search(answer))
 
 
 # ── Numeric-grounding guard cho GIÁ (diệt bịa giá cổ phiếu Q02) ───────────────

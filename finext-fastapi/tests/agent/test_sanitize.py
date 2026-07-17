@@ -216,3 +216,48 @@ def test_exposure_capitalized_replaced():
     out = sanitize_answer("- **Exposure gợi ý theo nhãn**: 70%")
     assert "Exposure" not in out and "exposure" not in out
     assert "tỷ lệ nắm giữ" in out
+
+
+# --- Bậc 2b: cắt câu TỰ XIN LỖI / TỰ TỐ ẢO GIÁC vô căn cứ (đo thật multi-turn) ---
+def test_self_apology_block_at_start_stripped():
+    # moi T8 (rút gọn nguyên văn): 4 câu tự tố ở đầu → cắt trọn, giữ nội dung phân tích thật.
+    text = (
+        "Anh/chị ơi, anh/chị đúng — tôi đang mắc lỗi nghiêm trọng. "
+        "Trong các câu trả lời trước tôi đã dùng số liệu từ trí nhớ thay vì gọi tool... "
+        "Số liệu tôi đưa ra có thể sai hoàn toàn. Tôi xin lỗi anh/chị.\n\n"
+        "Người mới nên CHIA NHIỀU MÃ để giảm rủi ro."
+    )
+    out = sanitize_answer(text)
+    assert "xin lỗi" not in out and "trí nhớ" not in out
+    assert not out.startswith("Anh/chị")
+    assert "Người mới nên CHIA NHIỀU MÃ để giảm rủi ro." in out
+
+
+def test_self_apology_inline_stripped_keeps_data():
+    assert sanitize_answer("Tôi xin lỗi, tôi nhầm. VNM P/E 11,3 lần.") == "VNM P/E 11,3 lần."
+
+
+def test_first_person_opinion_not_cut():
+    # nhận định ngôi-thứ-nhất KHÔNG kèm dấu hiệu tự tố → GIỮ NGUYÊN.
+    assert sanitize_answer("Tôi thấy VNM đang hấp dẫn.") == "Tôi thấy VNM đang hấp dẫn."
+
+
+def test_third_person_mistake_not_cut():
+    # "sai lầm" ngôi-thứ-ba, không phải tự tố → GIỮ NGUYÊN.
+    assert sanitize_answer("Doanh nghiệp có thể sai lầm khi mở rộng.") == "Doanh nghiệp có thể sai lầm khi mở rộng."
+
+
+def test_apology_only_answer_kept_not_empty():
+    # câu trả lời CHỈ có apology (không nội dung sau) → giữ nguyên bản (không rỗng).
+    pure = "Tôi xin lỗi anh/chị. Tôi nhầm số liệu rồi."
+    out = sanitize_answer(pure)
+    assert out == pure and out != ""
+
+
+def test_self_apology_with_widget_preserves_both():
+    # cắt apology NHƯNG chừa nguyên khối finext-widget (fence + JSON verbatim).
+    widget = '```finext-widget\n{"v":1,"type":"line","series":[{"name":"x","points":[1]}]}\n```'
+    out = sanitize_answer(f"Tôi xin lỗi, tôi nhầm. VNM vẫn ở vùng hấp dẫn.\n{widget}\nKết luận: nắm giữ.")
+    assert widget in out
+    assert "xin lỗi" not in out
+    assert "VNM vẫn ở vùng hấp dẫn." in out
