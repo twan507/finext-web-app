@@ -36,8 +36,8 @@ MAX_EMPTY_RETRY = 3  # quota CHUNG cho nudge lượt-cuối: rỗng/preamble + g
 # Trần token/lượt trả lời. Trần cứng v4-flash/pro = 384K; default 64K cho câu phân tích dài, dư đầu cho thinking sau.
 MAX_OUTPUT_TOKENS = int(LLM_MAX_OUTPUT_TOKENS) if LLM_MAX_OUTPUT_TOKENS else 64000
 MAX_TOTAL_TOOL_CHARS = 30_000
-STREAM_CHUNK = 12  # ký tự/đoạn khi nhả lại câu đã sanitize — cắt ở khoảng trắng.
-STREAM_CHUNK_DELAY_S = 0.05  # nhịp giữa các đoạn (giả "nhả chữ" ~240 ký tự/giây, tự nhiên hơn); câu cuối buffer trọn nên tự tạo nhịp.
+STREAM_CHUNK = 8  # ký tự/đoạn khi nhả lại câu đã sanitize — cắt ở khoảng trắng (nhỏ hơn = mượt hơn).
+STREAM_CHUNK_DELAY_S = 0.09  # nhịp giữa các đoạn (~89 ký tự/giây — chậm & tự nhiên hơn, tránh "phọt một đống" sau khi nghĩ lâu).
 
 _REPEAT_FEEDBACK = (
     "Query này đã được thử ở trên và bị lỗi. Đừng lặp lại y hệt — hãy đổi cách: thu hẹp phạm vi, "
@@ -216,10 +216,12 @@ def _get_client() -> httpx.AsyncClient:
     return _shared_client
 
 
-def build_adapter() -> ModelAdapter:
+def build_adapter(thinking: str | None = None) -> ModelAdapter:
+    """thinking: override per-request ("adaptive"|"disabled" cho M3). None → dùng cấu hình env LLM_THINKING."""
     if not (LLM_BASE_URL and LLM_API_KEY and LLM_MODEL):
         raise RuntimeError("Thiếu cấu hình LLM_BASE_URL / LLM_API_KEY / LLM_MODEL")
     temp = float(LLM_TEMPERATURE) if LLM_TEMPERATURE else None
+    _thinking = thinking if thinking is not None else LLM_THINKING
     if LLM_API_STYLE == "anthropic":
         return AnthropicCompatAdapter(
             base_url=LLM_BASE_URL,
@@ -227,7 +229,7 @@ def build_adapter() -> ModelAdapter:
             model=LLM_MODEL,
             client=_get_client(),
             temperature=temp,
-            thinking=LLM_THINKING,
+            thinking=_thinking,
             reasoning_effort=LLM_REASONING_EFFORT,
         )
     return OpenAICompatAdapter(
@@ -236,7 +238,7 @@ def build_adapter() -> ModelAdapter:
         model=LLM_MODEL,
         client=_get_client(),
         temperature=temp,
-        thinking=LLM_THINKING,
+        thinking=_thinking,
         reasoning_effort=LLM_REASONING_EFFORT,
     )
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { streamChat, type ChatEvent } from '../services/chatClient';
 
 export interface ToolChip {
@@ -33,12 +33,16 @@ export interface UseChatStoreReturn {
   phase: ChatPhase;
   asOf: string | null;
   error: string | null;
+  thinking: boolean;
+  toggleThinking: () => void;
   send: (text: string) => void;
   stop: () => void;
   retry: () => void;
   newConversation: () => void;
   selectConversation: (id: string) => void;
 }
+
+const THINKING_KEY = 'finext-chat-thinking';
 
 const IDLE_MS = 45000;
 const FLUSH_MS = 80;
@@ -65,11 +69,15 @@ export default function useChatStore(): UseChatStoreReturn {
   const [phase, setPhase] = useState<ChatPhase>('idle');
   const [asOf, setAsOf] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // "Suy nghĩ sâu": init false (SSR-safe), hydrate từ localStorage sau mount để tránh mismatch.
+  const [thinking, setThinking] = useState(false);
 
   const conversationsRef = useRef<Conversation[]>(conversations);
   conversationsRef.current = conversations;
   const activeIdRef = useRef<string>(activeId);
   activeIdRef.current = activeId;
+  const thinkingRef = useRef<boolean>(thinking); // đọc giá trị mới nhất lúc gửi
+  thinkingRef.current = thinking;
 
   const controllerRef = useRef<AbortController | null>(null);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -80,6 +88,26 @@ export default function useChatStore(): UseChatStoreReturn {
   const assistantIdRef = useRef<string>('');
 
   const messages = conversations.find((c) => c.id === activeId)?.messages ?? [];
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(THINKING_KEY) === '1') setThinking(true);
+    } catch {
+      // localStorage không khả dụng — bỏ qua, giữ default false
+    }
+  }, []);
+
+  const toggleThinking = useCallback(() => {
+    setThinking((v) => {
+      const next = !v;
+      try {
+        localStorage.setItem(THINKING_KEY, next ? '1' : '0');
+      } catch {
+        // localStorage không khả dụng — vẫn đổi state trong phiên
+      }
+      return next;
+    });
+  }, []);
 
   // Patch message assistant TRONG hội thoại đang stream (convIdRef) — không phụ thuộc active view.
   const patchAssistant = useCallback((patch: (m: ChatMessage) => ChatMessage) => {
@@ -178,7 +206,7 @@ export default function useChatStore(): UseChatStoreReturn {
 
       try {
         resetIdle();
-        for await (const ev of streamChat({ history, message }, controller.signal)) {
+        for await (const ev of streamChat({ history, message, thinking: thinkingRef.current }, controller.signal)) {
           resetIdle();
           reduce(ev);
         }
@@ -269,5 +297,5 @@ export default function useChatStore(): UseChatStoreReturn {
     [clearIdle],
   );
 
-  return { conversations, activeId, messages, phase, asOf, error, send, stop, retry, newConversation, selectConversation };
+  return { conversations, activeId, messages, phase, asOf, error, thinking, toggleThinking, send, stop, retry, newConversation, selectConversation };
 }

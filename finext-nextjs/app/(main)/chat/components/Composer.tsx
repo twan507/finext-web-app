@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import type { KeyboardEvent } from 'react';
-import { Box, IconButton, TextField, Typography, alpha, useTheme } from '@mui/material';
-import { ArrowUpwardRounded, StopRounded } from '@mui/icons-material';
+import { Box, Chip, IconButton, TextField, Tooltip, Typography, alpha, useTheme } from '@mui/material';
+import { ArrowUpwardRounded, PsychologyRounded, StopRounded } from '@mui/icons-material';
 import { getResponsiveFontSize, transitions } from 'theme/tokens';
 
 interface ComposerProps {
@@ -11,14 +11,37 @@ interface ComposerProps {
   streaming: boolean;
   onSend: (t: string) => void;
   onStop: () => void;
+  thinking: boolean;
+  onToggleThinking: () => void;
   centered?: boolean; // true = khối nổi ở GIỮA (empty state), không dính đáy; false = dính đáy viewport khi đã chat.
 }
 
 const DISCLAIMER = 'Thông tin tham khảo, không phải khuyến nghị đầu tư. AI có thể nhầm lẫn — kiểm tra số liệu quan trọng.';
 
-export default function Composer({ disabled, streaming, onSend, onStop, centered = false }: ComposerProps) {
+export default function Composer({ disabled, streaming, onSend, onStop, thinking, onToggleThinking, centered = false }: ComposerProps) {
   const theme = useTheme();
   const [text, setText] = useState('');
+  const isDark = theme.palette.mode === 'dark';
+  // Quầng gradient màu chủ đề kiểu Gemini: centered rõ hơn, bottom subtle; dark đậm hơn light.
+  const glowAlpha = centered ? (isDark ? 0.2 : 0.13) : isDark ? 0.14 : 0.09;
+  const glow = (
+    <Box
+      aria-hidden
+      sx={{
+        position: 'absolute',
+        left: '50%',
+        top: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: centered ? '150%' : '128%',
+        height: centered ? '320%' : '190%',
+        borderRadius: '50%',
+        background: `radial-gradient(ellipse at center, ${alpha(theme.palette.primary.main, glowAlpha)} 0%, transparent 70%)`,
+        filter: `blur(${centered ? 34 : 22}px)`,
+        pointerEvents: 'none',
+        zIndex: 0,
+      }}
+    />
+  );
 
   const submit = () => {
     const t = text.trim();
@@ -39,13 +62,17 @@ export default function Composer({ disabled, streaming, onSend, onStop, centered
     <Box
       sx={
         centered
-          ? { width: '100%', px: { xs: 2, md: 3 } } // GIỮA màn hình: khối nổi thường, không sticky/gradient
-          : { position: 'sticky', bottom: 0, zIndex: 2, px: { xs: 2, md: 3 }, pt: 3, pb: 2, background: `linear-gradient(to top, ${theme.palette.background.default} 55%, transparent)` }
+          ? { width: '100%', px: { xs: 2, md: 3 }, py: { xs: 4, md: 6 }, overflow: 'hidden' } // GIỮA màn hình: khối nổi thường; overflow:hidden ôm quầng glow, không tràn ngang
+          : { position: 'sticky', bottom: 0, zIndex: 2, px: { xs: 2, md: 3 }, pt: 3, pb: 2, overflow: 'hidden', background: `linear-gradient(to top, ${theme.palette.background.default} 55%, transparent)` }
       }
     >
       <Box sx={{ maxWidth: 760, mx: 'auto', width: '100%' }}>
-        <Box
+        <Box sx={{ position: 'relative' }}>
+          {glow}
+          <Box
           sx={{
+            position: 'relative',
+            zIndex: 1, // hộp input NỔI trên lớp glow
             display: 'flex',
             alignItems: 'center', // chữ nằm GIỮA theo chiều dọc (bỏ khoảng dư trên)
             gap: 0.75,
@@ -97,6 +124,29 @@ export default function Composer({ disabled, streaming, onSend, onStop, centered
               <ArrowUpwardRounded />
             </IconButton>
           )}
+          </Box>
+        </Box>
+        {/* Toggle "Suy nghĩ sâu" — chip nhỏ dưới thanh input, canh trái. */}
+        <Box sx={{ display: 'flex', justifyContent: 'flex-start', mt: 1, px: 0.5, position: 'relative', zIndex: 1 }}>
+          <Tooltip title="Trả lời kỹ hơn nhưng chậm hơn" arrow>
+            <Chip
+              icon={<PsychologyRounded />}
+              label="Suy nghĩ sâu"
+              size="small"
+              clickable
+              onClick={onToggleThinking}
+              aria-pressed={thinking}
+              variant={thinking ? 'filled' : 'outlined'}
+              color={thinking ? 'primary' : 'default'}
+              sx={{
+                fontSize: getResponsiveFontSize('xs'),
+                fontWeight: 500,
+                transition: transitions.colors,
+                '& .MuiChip-icon': { color: 'inherit' },
+                ...(thinking ? {} : { color: 'text.secondary', borderColor: theme.palette.divider }),
+              }}
+            />
+          </Tooltip>
         </Box>
         {/* Disclaimer chỉ hiện khi ĐÃ chat (composer về đáy), không hiện ở màn hình chào giữa. */}
         {!centered && (

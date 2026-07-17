@@ -62,7 +62,7 @@ function ChatApp() {
             <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
               <MessageList key={store.activeId} messages={store.messages} onRetry={store.retry} error={store.error} />
             </Box>
-            <Composer disabled={consented !== true || streaming} streaming={streaming} onSend={store.send} onStop={store.stop} />
+            <Composer disabled={consented !== true || streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} />
           </>
         ) : (
           // Chưa có tin nhắn: lời chào + composer NỔI (kiểu ChatGPT/Claude), đặt ở ~40% chiều cao (spacer 2:3) — hơi cao hơn giữa. Gửi câu đầu → composer về đáy.
@@ -71,7 +71,7 @@ function ChatApp() {
             <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
               <ChatGreeting name={session?.user?.full_name} />
               <Box sx={{ width: '100%' }}>
-                <Composer centered disabled={consented !== true || streaming} streaming={streaming} onSend={store.send} onStop={store.stop} />
+                <Composer centered disabled={consented !== true || streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} />
               </Box>
             </Box>
             <Box sx={{ flexGrow: 3 }} />

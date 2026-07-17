@@ -12,6 +12,7 @@ export interface ChatStreamBody {
   message: string;
   history: { role: 'user' | 'assistant'; content: string }[];
   conversation_id?: string;
+  thinking?: boolean; // true = M3 suy nghĩ sâu (adaptive) — backend nhận, default false
 }
 
 const KNOWN_TYPES = new Set(['meta', 'token', 'tool_start', 'tool_end', 'done', 'error']);

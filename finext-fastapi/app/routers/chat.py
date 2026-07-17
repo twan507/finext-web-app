@@ -51,7 +51,7 @@ async def _produce(queue: asyncio.Queue, body: ChatStreamRequest, ctx: GatewayCo
         gateway = build_gateway()  # M1: trong try → lỗi khởi tạo vẫn ra error frame + sentinel
         system, _as_of = await build_system_blocks(gateway, ctx)
         await run_agent(
-            adapter=build_adapter(),
+            adapter=build_adapter(thinking="adaptive" if body.thinking else "disabled"),
             gateway=gateway,
             ctx=ctx,
             system=system,

@@ -12,3 +12,4 @@ class ChatStreamRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
     conversation_id: str | None = None  # persistence ở session sau — v1 slice chưa lưu
     history: list[ChatTurn] = Field(default_factory=list, max_length=20)  # client-held transcript
+    thinking: bool = False  # user bật "suy nghĩ sâu" (M3 thinking=adaptive) — chậm hơn nhưng câu gọn/kỹ hơn

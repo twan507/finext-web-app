@@ -54,7 +54,7 @@ async def test_produce_cancel_does_not_block_on_full_queue(monkeypatch):
         return [SystemBlock(text="stub", cache_hint=True)], None
 
     monkeypatch.setattr("app.routers.chat.build_gateway", lambda: None)
-    monkeypatch.setattr("app.routers.chat.build_adapter", lambda: _SlowAdapter())
+    monkeypatch.setattr("app.routers.chat.build_adapter", lambda **_: _SlowAdapter())
     monkeypatch.setattr("app.routers.chat.build_system_blocks", _blocks)
 
     queue: asyncio.Queue = asyncio.Queue(maxsize=2)

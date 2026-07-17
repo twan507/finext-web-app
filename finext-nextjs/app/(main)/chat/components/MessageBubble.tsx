@@ -41,16 +41,19 @@ function MarkdownBody({ text }: { text: string }) {
           // Bảng kiểu Claude: KHÔNG khung/grid — chỉ 1 vạch dưới header, hàng thân viền rất mờ.
           // Cột đầu = nhãn canh trái (flush-left), các cột sau = số canh phải + tabular-nums (nhất quán).
           table: ({ children }) => (
+            // overflowX:auto = lưới an toàn cho bảng thật rộng (>4 cột); mục tiêu là fixed layout fit không cuộn.
             <Box sx={{ my: 2, overflowX: 'auto' }}>
               <Box
                 component="table"
                 sx={{
                   width: '100%',
+                  tableLayout: 'fixed', // chia diện tích ỔN ĐỊNH — không cột nào nuốt hết, không tràn ngang
                   borderCollapse: 'collapse',
                   fontSize: '0.9rem',
                   lineHeight: 1.5,
-                  '& th, & td': { px: 2, py: 1.15, textAlign: 'right', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' },
-                  '& th:first-of-type, & td:first-of-type': { pl: 0, textAlign: 'left', whiteSpace: 'normal' },
+                  // Bỏ nowrap → cho XUỐNG DÒNG + ngắt từ dài để cột co giãn thay vì kéo bảng rộng ra.
+                  '& th, & td': { px: 2, py: 1.15, textAlign: 'right', fontVariantNumeric: 'tabular-nums', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere', verticalAlign: 'top' },
+                  '& th:first-of-type, & td:first-of-type': { pl: 0, textAlign: 'left' },
                   '& th:last-of-type, & td:last-of-type': { pr: 0 },
                   '& thead th': { fontWeight: 600, color: 'text.secondary', pb: 1, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` },
                   '& tbody td': { borderTop: `1px solid ${alpha(theme.palette.divider, 0.14)}` },
@@ -64,7 +67,12 @@ function MarkdownBody({ text }: { text: string }) {
           tbody: ({ children }) => <Box component="tbody">{children}</Box>,
           tr: ({ children }) => <Box component="tr">{children}</Box>,
           th: ({ children }) => <Box component="th">{children}</Box>,
-          td: ({ children }) => <Box component="td">{children}</Box>,
+          // Cắt ô dài ở tối đa 4 dòng (ưu tiên xuống dòng tới 4 dòng rồi mới ẩn phần thừa).
+          td: ({ children }) => (
+            <Box component="td">
+              <Box sx={{ display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{children}</Box>
+            </Box>
+          ),
           a: ({ children, href }) => (
             <Box component="a" href={href} target="_blank" rel="noopener noreferrer" sx={{ color: 'primary.main', textDecoration: 'underline' }}>
               {children}
