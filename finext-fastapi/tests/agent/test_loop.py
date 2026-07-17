@@ -710,3 +710,24 @@ def test_ungrounded_price_alias_kept():
     # Alias tương thích: _ungrounded_price vẫn tồn tại và trỏ tới _ungrounded_data.
     from app.agent.loop import _ungrounded_data, _ungrounded_price
     assert _ungrounded_price is _ungrounded_data
+
+
+def test_claims_no_data_detector():
+    from app.agent.loop import _claims_no_data
+    assert _claims_no_data("He chua co du lieu cho ma HPG.".replace("He","Hệ").replace("chua co du lieu","chưa có dữ liệu"))
+    assert not _claims_no_data("HPG P/B hien 1,34 lan.")
+
+
+async def test_no_data_verify_retries_when_no_tool_called():
+    """Model ket luan 'khong co du lieu' ma tools_ran==0 -> ep kiem tra ky (retry) -> luot sau tra loi khac."""
+    no_data = "Hệ chưa có dữ liệu định giá cho HPG."
+    good = "Định giá HPG đang ở vùng thấp so với lịch sử."
+    adapter = ScriptedAdapter([
+        [TokenEvent(text=no_data), DoneEvent(usage={})],
+        [TokenEvent(text=good), DoneEvent(usage={})],
+    ])
+    emitted = await _collect(adapter)
+    ans = "".join(e[1]["text"] for e in emitted if e[0] == "token")
+    assert ans == good
+    assert "chưa có dữ liệu" not in ans
+    assert len(adapter.calls) == 2

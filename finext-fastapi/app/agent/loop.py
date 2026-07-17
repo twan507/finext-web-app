@@ -65,6 +65,11 @@ _NUM_GUARD_NUDGE = (
     "Số/giá bạn nêu chưa khớp dữ liệu tool. Đọc lại kết quả tool ở trên, lấy ĐÚNG con số (trường close/price/value) "
     "rồi trả lời lại; nếu tool chưa trả thì gọi lại db_find. " + _NO_META
 )
+_VERIFY_NODATA_NUDGE = (
+    "Bạn kết luận 'không có dữ liệu' — hãy KIỂM TRA KỸ trước khi nói vậy với khách: query lại bằng cách khác "
+    "(đúng tên field/collection theo schema, thử db_find/db_stats). Nếu sau khi thử đủ cách VẪN không có thì mới "
+    "khẳng định không có; KHÔNG bịa số để lấp chỗ trống. " + _NO_META
+)
 _MAX_ITERS_ERROR = "Có lỗi khi tra cứu dữ liệu cho câu này. Bạn thử hỏi lại hoặc diễn đạt theo cách khác giúp mình nhé."
 
 # Lượt cuối coi như CHƯA trả lời nếu là câu dẫn "Tôi sẽ..." ngắn (chưa có nội dung thật).
@@ -104,6 +109,19 @@ def _looks_like_data_answer(answer: str) -> bool:
 
     BỎ heuristic '>=6 số thập phân' (bắt nhầm câu khái niệm, regression Q04); giữ các tín hiệu CHẮC CHẮN từ-tool."""
     return bool(_TABLE_ROW_RE.search(answer) or _PRICE_CLAIM_RE.search(answer) or _MARKET_FIGURE_RE.search(answer))
+
+
+# Kết luận "không có dữ liệu" — cần LOOP KĨ xác minh trước khi để khách nghe (M3, nhất là thinking, đôi khi
+# tuyên bố thiếu-dữ-liệu DÙ dữ liệu CÓ thật: khai sai tên field, đọc sót kết quả tool, hoặc chưa query gì).
+_NO_DATA_RE = re.compile(
+    r"(?:không|chưa)\s+có\s+dữ liệu|dữ liệu\s+(?:bị\s+)?thiếu|block\s+dữ liệu(?:\s+bị)?\s+thiếu|"
+    r"chưa\s+phát sinh|khoảng trống\s+dữ liệu|không\s+có\s+số\s+để",
+    re.IGNORECASE,
+)
+
+
+def _claims_no_data(answer: str) -> bool:
+    return bool(_NO_DATA_RE.search(answer))
 
 
 # ── Numeric-grounding guard cho SỐ (giá + tỷ + lần) — diệt bịa số khi M3 phớt lờ kết quả tool ────
@@ -384,6 +402,19 @@ async def run_agent(
         ):
             empty_retry += 1
             working.append({"role": "user", "content": _NUM_GUARD_NUDGE})
+            continue
+        # NO-DATA VERIFY: model kết luận "không có dữ liệu" mà CHƯA query gì (tools_ran==0) hoặc có query ĐÃ FAIL
+        # (failed_sig) → có thể bỏ sót/khai sai field. Ép kiểm tra kỹ 1 nhịp trước khi để khách nghe "không có".
+        # An toàn: nudge cho phép giữ kết luận nếu thật sự không có + CẤM bịa; numeric-guard chặn nếu model chế số.
+        if (
+            not force
+            and answer.strip()
+            and _claims_no_data(answer)
+            and (tools_ran == 0 or failed_sig)
+            and empty_retry < MAX_EMPTY_RETRY
+        ):
+            empty_retry += 1
+            working.append({"role": "user", "content": _VERIFY_NODATA_NUDGE})
             continue
         # Lượt force mà answer là preamble/rỗng (_needs_retry) → KHÔNG phát narration cụt; rơi xuống error sạch.
         if answer.strip() and not (force and _needs_retry(answer)):
