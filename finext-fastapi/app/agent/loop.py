@@ -94,6 +94,8 @@ _PRICE_CLAIM_RE = re.compile(rf"\d[\d.,]{{2,}}\s*(?:đồng|đ/\s*cp|đ\b|{_COMM
 
 # Số thị trường CHÍNH XÁC (thập phân + tỷ/lần): khối ngoại "17.82 tỷ", P/E "8.88 lần" — luôn từ tool, KHÔNG phải
 # số minh hoạ khái niệm (số làm tròn "15 lần"/"vài tỷ" KHÔNG khớp vì không có phần thập phân). Bắt bịa inline khi tools=0.
+# CHỦ Ý KHÔNG thêm "%": %-thay-đổi thập phân trong HEADLINE ("VNINDEX ... (+1,24%)") là số grounded-từ-briefing,
+# thêm "%" sẽ false-trigger đúng lớp headline mà spec muốn tránh (giống lý do loại "điểm"). Xem báo cáo Round 6.
 _MARKET_FIGURE_RE = re.compile(r"\d+[.,]\d+\s*(?:tỷ|lần)\b", re.IGNORECASE)
 
 
@@ -104,12 +106,12 @@ def _looks_like_data_answer(answer: str) -> bool:
     return bool(_TABLE_ROW_RE.search(answer) or _PRICE_CLAIM_RE.search(answer) or _MARKET_FIGURE_RE.search(answer))
 
 
-# ── Numeric-grounding guard cho GIÁ (diệt bịa giá cổ phiếu Q02) ───────────────
-# Bắt case M3 GỌI tool nhưng PHỚT LỜ kết quả rồi tự chế giá (tools_ran>0, grounding-retry cũ không bắt).
-# CHỈ kiểm claim GIÁ (đơn vị "đồng") — KHÔNG kiểm số phái sinh (%/median/điểm) để tránh false-positive.
+# ── Numeric-grounding guard cho SỐ (giá + tỷ + lần) — diệt bịa số khi M3 phớt lờ kết quả tool ────
+# Bắt case M3 GỌI tool nhưng PHỚT LỜ kết quả rồi tự chế số (tools_ran>0, grounding-retry cũ không bắt).
+# Kiểm claim GIÁ + "X tỷ" + "X lần" — KHÔNG kiểm "%" (số phái sinh, không có raw trong tool) / điểm / median.
 _NUM_IN_TEXT_RE = re.compile(r"\d[\d.,]*\d|\d")
-# Con số đứng NGAY TRƯỚC đơn vị giá ("145.500 đồng" / "68.000 đ/cp" / "593 USD/tấn" / "3342 CNY/tấn").
-_PRICE_VALUE_RE = re.compile(rf"(\d[\d.,]*\d|\d)\s*(?:đồng|đ/\s*cp|đ|{_COMMODITY_UNIT})\b", re.IGNORECASE)
+# Con số đứng NGAY TRƯỚC đơn vị dữ liệu ("145.500 đồng" / "68.000 đ/cp" / "593 USD/tấn" / "17,82 tỷ" / "8,9 lần").
+_DATA_VALUE_RE = re.compile(rf"(\d[\d.,]*\d|\d)\s*(?:đồng|đ/\s*cp|đ|{_COMMODITY_UNIT}|tỷ|lần)\b", re.IGNORECASE)
 
 
 def _parse_number(tok: str) -> float | None:
@@ -140,16 +142,24 @@ def _register_grounded(text: str, acc: set[int]) -> None:
                 acc.add(int(round(m)))
 
 
-def _ungrounded_price(answer: str, grounded: set[int]) -> bool:
-    """True nếu có claim GIÁ 'X đồng' mà X (và X/1000, X*1000) KHÔNG truy được về grounded (đã bịa)."""
-    for tok in _PRICE_VALUE_RE.findall(answer):
+def _ungrounded_data(answer: str, grounded: set[int]) -> bool:
+    """True nếu 1 claim SỐ (giá 'X đồng'/hàng hoá | 'X tỷ' | 'X lần') KHÔNG truy được về grounded (đã bịa).
+
+    DUNG SAI TƯƠNG ĐỐI 2% HOẶC ±1 tuyệt đối (cái nào lớn hơn): số lớn model làm tròn ("700 tỷ" vs grounded
+    702.55 → |700-703|=3 ≤ max(1, 14) → GROUNDED) KHÔNG bị báo nhầm. Candidate 0 bị loại (vô nghĩa, tránh
+    trùng oan với 0 sinh ra do /1000 làm tròn). '%' KHÔNG vào đây (số phái sinh, không có raw trong tool)."""
+    for tok in _DATA_VALUE_RE.findall(answer):
         v = _parse_number(tok)
         if v is None:
             continue
-        cand = {int(round(v)), int(round(v / 1000)), int(round(v * 1000))}
-        if not any((c in grounded or (c - 1) in grounded or (c + 1) in grounded) for c in cand):
-            return True  # 1 giá không khớp tool = đủ để nghi bịa
+        cands = {c for c in (round(v), round(v * 1000), round(v / 1000)) if c != 0}
+        if not any(abs(cand - g) <= max(1.0, 0.02 * abs(cand)) for cand in cands for g in grounded):
+            return True  # 1 số không khớp tool = đủ để nghi bịa
     return False
+
+
+# Alias tương thích: guard cũ chỉ cho GIÁ (_ungrounded_price), nay tổng quát hoá sang giá + tỷ + lần.
+_ungrounded_price = _ungrounded_data
 
 
 def _call_signature(call: ToolCall) -> str:
@@ -364,12 +374,12 @@ async def run_agent(
             empty_retry += 1
             working.append({"role": "user", "content": _GROUND_NUDGE})
             continue
-        # NUMERIC-GROUNDING GUARD (GIÁ): đã gọi tool nhưng câu trả lời nêu GIÁ 'X đồng' KHÔNG truy được về
-        # số thật trong tool_result → M3 phớt lờ kết quả, tự chế giá (Q02). Ép đọc lại số đúng (quota CHUNG).
+        # NUMERIC-GROUNDING GUARD (số: giá/tỷ/lần): đã gọi tool nhưng câu trả lời nêu SỐ KHÔNG truy được về
+        # số thật trong tool_result (dung sai tương đối 2%) → M3 phớt lờ kết quả, tự chế số (Q02). Ép đọc lại (quota CHUNG).
         if (
             not force
             and answer.strip()
-            and _ungrounded_price(answer, grounded_nums)
+            and _ungrounded_data(answer, grounded_nums)
             and empty_retry < MAX_EMPTY_RETRY
         ):
             empty_retry += 1

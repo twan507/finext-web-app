@@ -651,3 +651,62 @@ def test_market_figure_guard():
     assert _looks_like_data_answer("P/E HPG hiện 8.88 lần.")                       # P/E inline
     assert not _looks_like_data_answer("P/E khoảng 15 lần là hợp lý cho ngành này.")  # làm tròn/khái niệm → bỏ qua
     assert not _looks_like_data_answer("Nên để dành vài tỷ đồng tiền mặt.")           # 'vài tỷ' không thập phân
+
+
+# ── Round 6: tổng quát hoá numeric-grounding guard (giá + tỷ + lần, dung sai tương đối 2%) ────────
+
+
+def test_ungrounded_data_detects_fabricated_price():
+    # DƯƠNG TÍNH: bịa giá "145.500 đồng" trong khi tool chỉ có 68/68000 → nghi bịa.
+    from app.agent.loop import _ungrounded_data
+    assert _ungrounded_data("Giá FPT 145.500 đồng", {68, 68000}) is True
+
+
+def test_ungrounded_data_detects_fabricated_foreign_flow():
+    # DƯƠNG TÍNH: khối ngoại thật 4.95 tỷ, model chế "17,82 tỷ" → không truy được → nghi bịa.
+    from app.agent.loop import _register_grounded, _ungrounded_data
+    g: set[int] = set()
+    _register_grounded('{"ticker":"HSG","net":4.95}', g)
+    assert _ungrounded_data("HSG mua ròng 17,82 tỷ", g) is True
+
+
+def test_ungrounded_data_rounded_billion_not_flagged():
+    # ÂM TÍNH (QUAN TRỌNG): tool trả 702.55, model làm tròn "700 tỷ" → dung sai 2% → KHÔNG báo nhầm.
+    from app.agent.loop import _register_grounded, _ungrounded_data
+    g: set[int] = set()
+    _register_grounded('{"value":702.55}', g)
+    assert _ungrounded_data("bán ròng 700 tỷ", g) is False
+
+
+def test_ungrounded_data_rounded_pe_not_flagged():
+    # ÂM TÍNH: P/E 8.88 làm tròn "8,9 lần" → khớp round → KHÔNG báo nhầm.
+    from app.agent.loop import _register_grounded, _ungrounded_data
+    g: set[int] = set()
+    _register_grounded('{"pe":8.88}', g)
+    assert _ungrounded_data("P/E 8,9 lần", g) is False
+
+
+def test_ungrounded_data_median_from_db_stats_not_flagged():
+    # ÂM TÍNH: median 13.16 từ db_stats → "median 13,16 lần" khớp → KHÔNG báo nhầm.
+    from app.agent.loop import _register_grounded, _ungrounded_data
+    g: set[int] = set()
+    _register_grounded('{"median":13.16}', g)
+    assert _ungrounded_data("median 13,16 lần", g) is False
+
+
+def test_ungrounded_data_percent_is_not_checked():
+    # ÂM TÍNH: '%' là số phái sinh → KHÔNG thuộc value-check (dù grounded rỗng) → không báo nhầm.
+    from app.agent.loop import _ungrounded_data
+    assert _ungrounded_data("sụt 41% từ đỉnh", set()) is False
+
+
+def test_ungrounded_data_price_grounded_via_thousand():
+    # ÂM TÍNH: "68.000 đồng" grounded qua *1000 từ close=68.
+    from app.agent.loop import _ungrounded_data
+    assert _ungrounded_data("68.000 đồng", {68}) is False
+
+
+def test_ungrounded_price_alias_kept():
+    # Alias tương thích: _ungrounded_price vẫn tồn tại và trỏ tới _ungrounded_data.
+    from app.agent.loop import _ungrounded_data, _ungrounded_price
+    assert _ungrounded_price is _ungrounded_data
