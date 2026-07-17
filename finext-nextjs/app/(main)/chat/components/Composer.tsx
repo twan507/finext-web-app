@@ -62,13 +62,13 @@ export default function Composer({ disabled, streaming, onSend, onStop, thinking
     <Box
       sx={
         centered
-          ? { width: '100%', px: { xs: 2, md: 3 }, py: { xs: 4, md: 6 }, overflow: 'hidden' } // GIỮA màn hình; overflow:hidden ôm quầng glow
+          ? { width: '100%', px: { xs: 2, md: 3 } } // GIỮA màn hình: glow do PageContent lo (trùm cả lời chào)
           : { position: 'sticky', bottom: 0, zIndex: 2, px: { xs: 2, md: 3 }, pt: 3, pb: 2, overflow: 'hidden', background: `linear-gradient(to top, ${theme.palette.background.default} 55%, transparent)` }
       }
     >
       <Box sx={{ maxWidth: 760, mx: 'auto', width: '100%' }}>
         <Box sx={{ position: 'relative' }}>
-          {glow}
+          {!centered && glow /* bottom state: glow nội bộ; centered: glow chung ở PageContent trùm cả lời chào */}
           {/* Khung chat kiểu DeepSeek: input TRÊN (full-width), hàng nút DƯỚI trong khung (trái = Suy nghĩ sâu, phải = gửi/dừng). */}
           <Box
             sx={{
@@ -76,10 +76,10 @@ export default function Composer({ disabled, streaming, onSend, onStop, thinking
               zIndex: 1, // khung NỔI trên lớp glow
               display: 'flex',
               flexDirection: 'column',
-              gap: 0.5,
+              gap: 1,
               px: 2,
               pt: 1.5,
-              pb: 1,
+              pb: 0.75,
               borderRadius: '24px',
               border: `1px solid ${theme.palette.divider}`,
               bgcolor: theme.palette.background.default,

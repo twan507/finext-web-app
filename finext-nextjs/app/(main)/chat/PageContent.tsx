@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Box } from '@mui/material';
+import { Box, alpha } from '@mui/material';
 import { layoutTokens } from 'theme/tokens';
 import OptionalAuthWrapper from 'components/auth/OptionalAuthWrapper';
 import { useAuth } from 'components/auth/AuthProvider';
@@ -66,12 +66,31 @@ function ChatApp() {
           </>
         ) : (
           // Chưa có tin nhắn: lời chào + composer NỔI (kiểu ChatGPT/Claude), đặt ở ~40% chiều cao (spacer 2:3) — hơi cao hơn giữa. Gửi câu đầu → composer về đáy.
-          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', px: 2 }}>
+          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', px: 2, overflow: 'hidden' }}>
             <Box sx={{ flexGrow: 2 }} />
-            <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-              <ChatGreeting name={session?.user?.full_name} />
-              <Box sx={{ width: '100%' }}>
-                <Composer centered disabled={consented !== true || streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} />
+            {/* Lời chào + Composer + GLOW CHUNG: quầng gradient nằm DƯỚI chữ, trùm cả lời chào lẫn ô nhập (không cắt ngang). */}
+            <Box sx={{ position: 'relative', width: '100%', maxWidth: 760 }}>
+              <Box
+                aria-hidden
+                sx={(t) => ({
+                  position: 'absolute',
+                  left: '50%',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: '135%',
+                  height: '260%',
+                  borderRadius: '50%',
+                  background: `radial-gradient(ellipse at center, ${alpha(t.palette.primary.main, t.palette.mode === 'dark' ? 0.3 : 0.17)} 0%, transparent 68%)`,
+                  filter: 'blur(46px)',
+                  pointerEvents: 'none',
+                  zIndex: 0,
+                })}
+              />
+              <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <ChatGreeting name={session?.user?.full_name} />
+                <Box sx={{ width: '100%' }}>
+                  <Composer centered disabled={consented !== true || streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} />
+                </Box>
               </Box>
             </Box>
             <Box sx={{ flexGrow: 3 }} />
