@@ -7,6 +7,7 @@ import {
   PersonOutline,
   LockResetOutlined,
   DevicesOutlined,
+  DataUsageOutlined,
   // CardMembership, // Compliance pivot 2026-05-07: only used by commented "Gói đăng ký" menu item
   LogoutOutlined
 } from '@mui/icons-material';
@@ -23,6 +24,7 @@ const menuItems = [
   // { text: 'Gói đăng ký', icon: <CardMembership />, href: '/profile/subscriptions' },
   { text: 'Đổi mật khẩu', icon: <LockResetOutlined />, href: '/profile/change-password' },
   { text: 'Session đăng nhập', icon: <DevicesOutlined />, href: '/profile/login-sessions' },
+  { text: 'Hạn mức AI', icon: <DataUsageOutlined />, href: '/profile/ai-usage' },
 ];
 
 export default function LayoutContent({ children }: ProfileLayoutProps) {

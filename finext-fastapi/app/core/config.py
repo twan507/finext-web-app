@@ -150,8 +150,14 @@ AGENT_PACK_DIR = os.getenv("AGENT_PACK_DIR")  # None → dùng pack stub trong r
 
 # --- Chat persistence / quota / kill-switch (Bước 3) ---
 # Số lấy default trong code; owner chỉnh qua env sau 2 tuần chạy nhóm nhỏ (doc 03 §4-5).
-AGENT_MSG_PER_DAY = int(os.getenv("AGENT_MSG_PER_DAY") or 60)  # trần msg/user/ngày → vượt trả 429
-AGENT_MSG_PER_MIN = int(os.getenv("AGENT_MSG_PER_MIN") or 6)  # trần msg/user/phút → vượt trả 429
 AGENT_DAILY_TOKEN_BUDGET = int(os.getenv("AGENT_DAILY_TOKEN_BUDGET") or 4_000_000)  # kill-switch global/ngày (token)
 CHAT_MAX_CONVERSATIONS = int(os.getenv("CHAT_MAX_CONVERSATIONS") or 50)  # giữ N hội thoại mới nhất/user (prune)
+# --- Quota token per-license: cửa sổ 5h (anchored) + weekly ---
+AGENT_TOKENS_5H = int(os.getenv("AGENT_TOKENS_5H") or 500_000)  # trần token/5h (standard)
+AGENT_TOKENS_WEEK = int(os.getenv("AGENT_TOKENS_WEEK") or 5_000_000)  # trần token/tuần (standard)
+AGENT_ADVANCED_MULT = int(os.getenv("AGENT_ADVANCED_MULT") or 5)  # advanced = ×5 standard
+AGENT_SESSION_HOURS = int(os.getenv("AGENT_SESSION_HOURS") or 5)  # độ dài cửa sổ session
+AGENT_WEEK_DAYS = int(os.getenv("AGENT_WEEK_DAYS") or 7)
+AGENT_ADVANCED_LICENSES = set((os.getenv("AGENT_ADVANCED_LICENSES") or "PATRON,PARTNER").upper().replace(" ", "").split(","))
+AGENT_UNLIMITED_LICENSES = set((os.getenv("AGENT_UNLIMITED_LICENSES") or "MANAGER,ADMIN").upper().replace(" ", "").split(","))
 # ---------------------------------

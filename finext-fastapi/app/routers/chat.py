@@ -198,7 +198,7 @@ async def chat_stream(
     user_id = str(current_user.id)
     db = get_database("user_db")
     # Quota + kill-switch: chặn TRƯỚC khi mở stream (429 lượt / 503 budget).
-    decision = await crud_chat.check_and_reserve_quota(db, user_id)
+    decision = await crud_chat.check_quota(db, user_id)
     if not decision.ok:
         raise HTTPException(status_code=decision.status_code, detail=decision.message)
     # Lưu user-msg + tạo/nối hội thoại → conversation_id thật để trả về meta.
@@ -210,6 +210,20 @@ async def chat_stream(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@router.get(
+    "/quota",
+    response_model=StandardApiResponse[dict],
+    summary="[User] Hạn mức token còn lại (5h + tuần)",
+    tags=["chat"],
+)
+@api_response_wrapper(default_success_message="Lấy hạn mức thành công.")
+async def my_quota(
+    current_user: UserInDB = Depends(get_current_active_user),
+    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
+):
+    return await crud_chat.quota_status(db, str(current_user.id))
 
 
 @router.get(

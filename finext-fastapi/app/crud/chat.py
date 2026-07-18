@@ -7,11 +7,17 @@ from typing import Any
 from bson import ObjectId
 
 from app.core.config import (
+    AGENT_ADVANCED_LICENSES,
+    AGENT_ADVANCED_MULT,
     AGENT_DAILY_TOKEN_BUDGET,
-    AGENT_MSG_PER_DAY,
-    AGENT_MSG_PER_MIN,
+    AGENT_SESSION_HOURS,
+    AGENT_TOKENS_5H,
+    AGENT_TOKENS_WEEK,
+    AGENT_UNLIMITED_LICENSES,
+    AGENT_WEEK_DAYS,
     CHAT_MAX_CONVERSATIONS,
 )
+from app.crud.subscriptions import get_active_subscription_for_user_db
 
 logger = logging.getLogger(__name__)
 
@@ -24,10 +30,6 @@ TITLE_MAX = 60
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
-
-
-def _today() -> str:
-    return _now().strftime("%Y-%m-%d")  # theo UTC — nhất quán với created_at toàn repo
 
 
 # ── Persistence: conversations & messages ────────────────────────────────
@@ -177,8 +179,9 @@ async def delete_conversation(db: Any, conversation_id: str, user_id: str) -> bo
     return True
 
 
-# ── Quota (Lớp 1) + Kill-switch budget (Lớp 2) ───────────────────────────
+# ── Quota TOKEN theo license: cửa sổ 5h (anchored) + weekly + kill-switch global 24h ──
 # chat_quota.user_id = STRING (real user = str(ObjectId); global sentinel = "__global__").
+# Doc user: {user_id, s5_start, s5_tokens, wk_start, wk_tokens}. Global: {user_id, g_start, g_tokens}.
 @dataclass
 class QuotaDecision:
     ok: bool
@@ -186,54 +189,117 @@ class QuotaDecision:
     message: str = ""
 
 
+SESSION_DUR = timedelta(hours=AGENT_SESSION_HOURS)
+WEEK_DUR = timedelta(days=AGENT_WEEK_DAYS)
+DAY_DUR = timedelta(hours=24)
+
 # Thông điệp thân thiện, KHÔNG lộ số trần / tên collection (K-hygiene).
-_MSG_DAILY_DENY = "Bạn đã dùng hết lượt trò chuyện với Finext AI trong hôm nay. Vui lòng quay lại vào ngày mai nhé."
-_MSG_RATE_DENY = "Bạn đang gửi câu hỏi hơi nhanh. Vui lòng chờ một chút rồi thử lại nhé."
-_MSG_BUDGET_DENY = "Finext AI đang tạm nghỉ do đã đạt giới hạn sử dụng chung trong hôm nay. Vui lòng quay lại sau nhé."
+_MSG_SESSION_DENY = "Bạn đã dùng hết lượt trò chuyện trong phiên hiện tại. Vui lòng quay lại sau {t}."
+_MSG_WEEK_DENY = "Bạn đã dùng hết lượt trò chuyện trong tuần này. Vui lòng quay lại sau {t}."
+_MSG_BUDGET_DENY = "Finext AI đang tạm nghỉ do đã đạt giới hạn sử dụng chung. Vui lòng quay lại sau nhé."
 
 
-async def _global_tokens_today(db: Any) -> int:
-    doc = await db[QUOTA].find_one({"user_id": GLOBAL_QUOTA_KEY, "date": _today()})
-    if not doc:
-        return 0
-    return int(doc.get("tok_in", 0)) + int(doc.get("tok_out", 0))
+def _tier_limits(tier: str) -> tuple[int | None, int | None]:
+    """(limit_5h, limit_week); None,None = không giới hạn."""
+    if tier == "unlimited":
+        return None, None
+    mult = AGENT_ADVANCED_MULT if tier == "advanced" else 1
+    return AGENT_TOKENS_5H * mult, AGENT_TOKENS_WEEK * mult
 
 
-async def check_and_reserve_quota(db: Any, user_id: str) -> QuotaDecision:
-    """Chặn TRƯỚC khi mở stream. Thứ tự: kill-switch budget (503, fail-closed) → daily (429)
-    → per-minute (429) → reserve (+1 msg_count). Chỉ reserve khi được phép."""
-    # Lớp 2 — global kill-switch (fail-closed: chạm ngưỡng là dừng, không âm thầm gọi tiếp)
-    if await _global_tokens_today(db) >= AGENT_DAILY_TOKEN_BUDGET:
+async def resolve_tier(db: Any, user_id: str) -> str:
+    """Tier theo LICENSE đang hiệu lực (không theo role)."""
+    try:
+        sub = await get_active_subscription_for_user_db(db, str(user_id))
+    except Exception:
+        sub = None
+    key = ((sub.license_key if sub else "") or "").upper()
+    if key in AGENT_UNLIMITED_LICENSES:
+        return "unlimited"
+    if key in AGENT_ADVANCED_LICENSES:
+        return "advanced"
+    return "standard"
+
+
+def _window_used(start: Any, used: Any, now: datetime, dur: timedelta) -> tuple[int, datetime | None]:
+    """(token đã dùng trong cửa sổ còn hiệu lực, reset_at). Cửa sổ hết hạn/chưa có → (0, None)."""
+    if not start or now >= start + dur:
+        return 0, None
+    return int(used or 0), start + dur
+
+
+def _fmt_reset(reset_at: datetime | None, now: datetime) -> str:
+    if not reset_at:
+        return "ít phút nữa"
+    mins = max(1, int((reset_at - now).total_seconds() // 60))
+    return f"{mins} phút" if mins < 60 else f"{mins // 60} giờ {mins % 60} phút"
+
+
+async def check_quota(db: Any, user_id: str) -> QuotaDecision:
+    """Chặn TRƯỚC stream: global kill-switch (503) → 5h (429) → weekly (429). Unlimited bỏ qua per-user.
+    KHÔNG reserve token ở đây (token thật cộng ở record_usage sau khi done)."""
+    now = _now()
+    g = await db[QUOTA].find_one({"user_id": GLOBAL_QUOTA_KEY})
+    g_used, _ = _window_used(g.get("g_start") if g else None, g.get("g_tokens") if g else 0, now, DAY_DUR)
+    if g_used >= AGENT_DAILY_TOKEN_BUDGET:
         return QuotaDecision(False, 503, _MSG_BUDGET_DENY)
-    # Lớp 1a — per-user/ngày
-    daily = await db[QUOTA].find_one({"user_id": str(user_id), "date": _today()})
-    if daily and int(daily.get("msg_count", 0)) >= AGENT_MSG_PER_DAY:
-        return QuotaDecision(False, 429, _MSG_DAILY_DENY)
-    # Lớp 1b — per-user/phút (đếm user-msg 60s gần nhất; dùng chat_messages, không cần collection mới)
-    since = _now() - timedelta(seconds=60)
-    recent = await db[MESSAGES].count_documents(
-        {"user_id": ObjectId(user_id), "role": "user", "created_at": {"$gte": since}}
-    )
-    if recent >= AGENT_MSG_PER_MIN:
-        return QuotaDecision(False, 429, _MSG_RATE_DENY)
-    # Reserve: +1 msg_count cho doc ngày (upsert)
-    await db[QUOTA].update_one(
-        {"user_id": str(user_id), "date": _today()},
-        {"$inc": {"msg_count": 1}, "$setOnInsert": {"tok_in": 0, "tok_out": 0}},
-        upsert=True,
-    )
+    tier = await resolve_tier(db, user_id)
+    lim5, limw = _tier_limits(tier)
+    if lim5 is None:
+        return QuotaDecision(True)
+    doc = await db[QUOTA].find_one({"user_id": str(user_id)}) or {}
+    used5, reset5 = _window_used(doc.get("s5_start"), doc.get("s5_tokens"), now, SESSION_DUR)
+    if used5 >= lim5:
+        return QuotaDecision(False, 429, _MSG_SESSION_DENY.format(t=_fmt_reset(reset5, now)))
+    usedw, resetw = _window_used(doc.get("wk_start"), doc.get("wk_tokens"), now, WEEK_DUR)
+    if usedw >= limw:
+        return QuotaDecision(False, 429, _MSG_WEEK_DENY.format(t=_fmt_reset(resetw, now)))
     return QuotaDecision(True)
 
 
+def _accumulate(start: Any, used: Any, now: datetime, dur: timedelta, add: int) -> tuple[datetime, int]:
+    """Cộng token vào cửa sổ anchored: hết hạn/chưa có → mở cửa sổ mới (start=now); còn hạn → cộng dồn."""
+    if not start or now >= start + dur:
+        return now, add
+    return start, int(used or 0) + add
+
+
 async def record_usage(db: Any, user_id: str, usage: dict[str, int]) -> None:
-    """Sau khi stream done: cộng token THẬT vào counter user-ngày + global-ngày (kill-switch)."""
-    tok_in = int(usage.get("in", 0) or 0)
-    tok_out = int(usage.get("out", 0) or 0)
-    if tok_in == 0 and tok_out == 0:
+    """Sau done: cộng token THẬT (in+out) vào cửa sổ 5h + weekly của user + cửa sổ global 24h."""
+    tok = int(usage.get("in", 0) or 0) + int(usage.get("out", 0) or 0)
+    if tok <= 0:
         return
-    for key in (str(user_id), GLOBAL_QUOTA_KEY):
-        await db[QUOTA].update_one(
-            {"user_id": key, "date": _today()},
-            {"$inc": {"tok_in": tok_in, "tok_out": tok_out}, "$setOnInsert": {"msg_count": 0}},
-            upsert=True,
-        )
+    now = _now()
+    doc = await db[QUOTA].find_one({"user_id": str(user_id)}) or {}
+    s5_start, s5_tokens = _accumulate(doc.get("s5_start"), doc.get("s5_tokens"), now, SESSION_DUR, tok)
+    wk_start, wk_tokens = _accumulate(doc.get("wk_start"), doc.get("wk_tokens"), now, WEEK_DUR, tok)
+    await db[QUOTA].update_one(
+        {"user_id": str(user_id)},
+        {"$set": {"s5_start": s5_start, "s5_tokens": s5_tokens, "wk_start": wk_start, "wk_tokens": wk_tokens}},
+        upsert=True,
+    )
+    g = await db[QUOTA].find_one({"user_id": GLOBAL_QUOTA_KEY}) or {}
+    g_start, g_tokens = _accumulate(g.get("g_start"), g.get("g_tokens"), now, DAY_DUR, tok)
+    await db[QUOTA].update_one(
+        {"user_id": GLOBAL_QUOTA_KEY},
+        {"$set": {"g_start": g_start, "g_tokens": g_tokens}},
+        upsert=True,
+    )
+
+
+async def quota_status(db: Any, user_id: str) -> dict[str, Any]:
+    """Cho trang /profile: tier + usage 5h/weekly + reset_at ISO."""
+    now = _now()
+    tier = await resolve_tier(db, user_id)
+    lim5, limw = _tier_limits(tier)
+    if lim5 is None:
+        return {"tier": tier, "unlimited": True, "session": None, "weekly": None}
+    doc = await db[QUOTA].find_one({"user_id": str(user_id)}) or {}
+    used5, reset5 = _window_used(doc.get("s5_start"), doc.get("s5_tokens"), now, SESSION_DUR)
+    usedw, resetw = _window_used(doc.get("wk_start"), doc.get("wk_tokens"), now, WEEK_DUR)
+    return {
+        "tier": tier,
+        "unlimited": False,
+        "session": {"used": used5, "limit": lim5, "reset_at": reset5.isoformat() if reset5 else None},
+        "weekly": {"used": usedw, "limit": limw, "reset_at": resetw.isoformat() if resetw else None},
+    }

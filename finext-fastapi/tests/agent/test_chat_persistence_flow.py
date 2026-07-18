@@ -57,8 +57,8 @@ async def test_produce_persists_assistant_and_usage_on_done(monkeypatch):
     assert len(asst) == 1
     assert asst[0]["content"] == "Xin chào, đây là câu trả lời."
     assert asst[0]["usage"] == {"in": 500, "out": 40}
-    g = await db[crud.QUOTA].find_one({"user_id": crud.GLOBAL_QUOTA_KEY, "date": crud._today()})
-    assert g["tok_in"] == 500 and g["tok_out"] == 40  # record_usage đã chạy
+    g = await db[crud.QUOTA].find_one({"user_id": crud.GLOBAL_QUOTA_KEY})
+    assert g["g_tokens"] == 540  # record_usage đã chạy (in 500 + out 40, cửa sổ global 24h)
 
 
 async def test_produce_generates_title_on_new_conversation(monkeypatch):
@@ -116,7 +116,7 @@ async def test_chat_stream_blocks_when_quota_denied(monkeypatch):
 
     async def _deny(db_, uid):
         return crud.QuotaDecision(False, 429, "hết lượt")
-    monkeypatch.setattr(chat_router.crud_chat, "check_and_reserve_quota", _deny)
+    monkeypatch.setattr(chat_router.crud_chat, "check_quota", _deny)
 
     class _User:
         id = USER
@@ -143,7 +143,5 @@ async def test_chat_stream_saves_user_msg_and_returns_stream(monkeypatch):
     body = ChatStreamRequest(message="câu hỏi đầu tiên")
     resp = await chat_router.chat_stream(request=_Req(), body=body, current_user=_User())
     assert resp.media_type == "text/event-stream"
-    # user-msg đã lưu + quota đã reserve TRƯỚC khi mở stream
+    # user-msg đã lưu TRƯỚC khi mở stream (model mới không reserve token ở check_quota)
     assert [m for m in db[crud.MESSAGES].docs if m["role"] == "user"][0]["content"] == "câu hỏi đầu tiên"
-    q = await db[crud.QUOTA].find_one({"user_id": USER, "date": crud._today()})
-    assert q["msg_count"] == 1

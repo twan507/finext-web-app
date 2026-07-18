@@ -112,7 +112,7 @@ async def connect_to_mongo():
             await db.chat_conversations.create_index([("user_id", 1), ("updated_at", -1)])
             await db.chat_messages.create_index([("conversation_id", 1), ("created_at", 1)])
             await db.chat_messages.create_index([("user_id", 1), ("created_at", -1)])  # rate-limit đếm msg/phút
-            await db.chat_quota.create_index([("user_id", 1), ("date", 1)], unique=True)
+            await db.chat_quota.create_index("user_id", unique=True)
 
             logger.info("Đã đảm bảo các indexes cần thiết cho các Collections")
 
