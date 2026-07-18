@@ -1,8 +1,9 @@
 'use client';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Box, CircularProgress, Drawer, IconButton, alpha, useTheme } from '@mui/material';
-import { AddCommentOutlined, HistoryOutlined } from '@mui/icons-material';
-import { layoutTokens } from 'theme/tokens';
+import Link from 'next/link';
+import { Box, CircularProgress, Drawer, IconButton, Typography, alpha, useTheme } from '@mui/material';
+import { AddCommentOutlined, HistoryOutlined, WarningAmberOutlined } from '@mui/icons-material';
+import { layoutTokens, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import OptionalAuthWrapper from 'components/auth/OptionalAuthWrapper';
 import { useAuth } from 'components/auth/AuthProvider';
 import useChatStore from '../../../hooks/useChatStore';
@@ -15,6 +16,41 @@ import ChatSkeleton from './components/ChatSkeleton';
 
 // Chiều cao khả kiến dưới appbar (appbar là sticky top). Dùng cho panel lịch sử sticky + empty state.
 const VIEWPORT = `calc(100dvh - ${layoutTokens.appBarHeight}px - env(titlebar-area-height, 0px))`;
+
+// Thanh thông báo nhỏ NGAY TRÊN ô chat khi chạm limit / server quá tải (kèm link xem chi tiết nếu là limit user).
+function LimitNotice({ notice }: { notice: { message: string; detail: boolean } }) {
+    return (
+        <Box sx={{ px: { xs: 2, md: 3 } }}>
+            <Box
+                sx={(t) => ({
+                    maxWidth: 760,
+                    mx: 'auto',
+                    mb: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    px: 1.75,
+                    py: 1,
+                    borderRadius: 2,
+                    bgcolor: alpha(t.palette.warning.main, t.palette.mode === 'dark' ? 0.18 : 0.12),
+                    border: `1px solid ${alpha(t.palette.warning.main, 0.3)}`,
+                })}
+            >
+                <WarningAmberOutlined sx={{ fontSize: 18, color: 'warning.main', flexShrink: 0 }} />
+                <Typography sx={{ flex: 1, minWidth: 0, fontSize: getResponsiveFontSize('sm'), color: 'text.primary' }}>{notice.message}</Typography>
+                {notice.detail && (
+                    <Box
+                        component={Link}
+                        href="/profile/ai-usage"
+                        sx={{ flexShrink: 0, fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.medium, color: 'primary.main', textDecoration: 'none', whiteSpace: 'nowrap', '&:hover': { textDecoration: 'underline' } }}
+                    >
+                        Xem chi tiết
+                    </Box>
+                )}
+            </Box>
+        </Box>
+    );
+}
 
 function ChatApp({ initialConversationId }: { initialConversationId?: string }) {
   // Consent: KHÔNG cần pop-up — người dùng đã đồng ý khi tạo tài khoản (điều khoản + /policies/privacy).
@@ -168,6 +204,7 @@ function ChatApp({ initialConversationId }: { initialConversationId?: string }) 
             <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
               <MessageList key={store.activeId} messages={store.messages} onRetry={store.retry} onFeedback={store.sendFeedback} error={store.error} />
             </Box>
+            {store.limitNotice && <LimitNotice notice={store.limitNotice} />}
             <Composer ref={setComposerNode} disabled={streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} />
           </>
         ) : (

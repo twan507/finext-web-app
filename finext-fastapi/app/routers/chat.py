@@ -148,7 +148,7 @@ async def _produce(
         raise
     except Exception:
         logger.exception("Lỗi khi chạy agent request_id=%s", ctx.request_id)
-        await queue.put(sse_frame("error", {"message": "Hệ thống AI gặp sự cố, vui lòng thử lại."}))
+        await queue.put(sse_frame("error", {"message": "Server đang quá tải, vui lòng thử lại sau nhé."}))
     else:
         # CHỈ path sạch (không exception, run_agent tự return kể cả khi emit "error"): lưu nếu đã 'done'.
         await _persist_answer(ctx.user_id, conversation_id, collector, emit)

@@ -48,6 +48,7 @@ export interface UseChatStoreReturn {
   phase: ChatPhase;
   asOf: string | null;
   error: string | null;
+  limitNotice: { message: string; detail: boolean } | null; // thanh nhỏ trên ô chat khi chạm limit (detail=có link xem chi tiết)
   thinking: boolean;
   historyLoading: boolean;
   msgLoading: boolean;
@@ -61,6 +62,7 @@ export interface UseChatStoreReturn {
   togglePin: (id: string) => void;
   renameConversation: (id: string, title: string) => void;
   sendFeedback: (messageServerId: string, rating: 1 | -1) => void;
+  clearLimitNotice: () => void;
 }
 
 const THINKING_KEY = 'finext-chat-thinking';
@@ -108,6 +110,7 @@ export default function useChatStore(initialConversationId?: string): UseChatSto
   const [phase, setPhase] = useState<ChatPhase>('idle');
   const [asOf, setAsOf] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [limitNotice, setLimitNotice] = useState<{ message: string; detail: boolean } | null>(null);
   const [historyLoading, setHistoryLoading] = useState(true); // tải danh sách hội thoại lúc mount
   const [msgLoading, setMsgLoading] = useState(false); // tải messages 1 hội thoại khi mở
   // "Suy nghĩ sâu": init false (SSR-safe), hydrate từ localStorage sau mount để tránh mismatch.
@@ -209,6 +212,7 @@ export default function useChatStore(initialConversationId?: string): UseChatSto
       lastFlushRef.current = 0;
 
       setError(null);
+      setLimitNotice(null);
       setPhase('waiting');
       setConversations((prev) =>
         prev.map((c) =>
@@ -289,11 +293,21 @@ export default function useChatStore(initialConversationId?: string): UseChatSto
           resetIdle();
           reduce(ev);
         }
-      } catch {
+      } catch (err: unknown) {
         flush(true);
-        patchAssistant((m) => (m.status === 'streaming' ? { ...m, status: 'interrupted' } : m));
-        const aborted = controller.signal.aborted;
-        setError((e) => e ?? (aborted ? 'Kết nối bị gián đoạn. Bạn thử lại nhé.' : 'Không lấy được phản hồi. Bạn thử lại nhé.'));
+        const status = (err as { statusCode?: number } | null)?.statusCode;
+        if (status === 429 || status === 503) {
+          // Chạm limit / server quá tải → bỏ bong bóng assistant rỗng, hiện thanh thông báo nhỏ trên ô chat.
+          setConversations((prev) =>
+            prev.map((c) => (c.id === convId ? { ...c, messages: c.messages.filter((m) => m.id !== assistantId) } : c)),
+          );
+          const msg = (err as { message?: string } | null)?.message;
+          setLimitNotice({ message: msg || 'Bạn đã hết lượt trò chuyện.', detail: status === 429 });
+        } else {
+          patchAssistant((m) => (m.status === 'streaming' ? { ...m, status: 'interrupted' } : m));
+          const aborted = controller.signal.aborted;
+          setError((e) => e ?? (aborted ? 'Kết nối bị gián đoạn. Bạn thử lại nhé.' : 'Không lấy được phản hồi. Bạn thử lại nhé.'));
+        }
       } finally {
         clearIdle();
         controllerRef.current = null;
@@ -376,6 +390,7 @@ export default function useChatStore(initialConversationId?: string): UseChatSto
       clearIdle();
       setActiveId(id);
       setError(null);
+      setLimitNotice(null);
       setPhase('idle');
       setAsOf(null);
       // Hội thoại cũ (có serverId) chưa tải messages → lazy-load từ backend.
@@ -419,6 +434,8 @@ export default function useChatStore(initialConversationId?: string): UseChatSto
     void setPinnedApi(conv.serverId, next).catch(() => {});
     setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, pinned: next } : c)));
   }, []);
+
+  const clearLimitNotice = useCallback(() => setLimitNotice(null), []);
 
   const sendFeedback = useCallback((messageServerId: string, rating: 1 | -1) => {
     if (!messageServerId) return;
@@ -465,6 +482,7 @@ export default function useChatStore(initialConversationId?: string): UseChatSto
     phase,
     asOf,
     error,
+    limitNotice,
     thinking,
     historyLoading,
     msgLoading,
@@ -478,5 +496,6 @@ export default function useChatStore(initialConversationId?: string): UseChatSto
     togglePin,
     renameConversation,
     sendFeedback,
+    clearLimitNotice,
   };
 }

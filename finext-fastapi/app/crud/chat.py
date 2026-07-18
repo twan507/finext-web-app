@@ -193,10 +193,10 @@ SESSION_DUR = timedelta(hours=AGENT_SESSION_HOURS)
 WEEK_DUR = timedelta(days=AGENT_WEEK_DAYS)
 DAY_DUR = timedelta(hours=24)
 
-# Thông điệp thân thiện, KHÔNG lộ số trần / tên collection (K-hygiene).
-_MSG_SESSION_DENY = "Bạn đã dùng hết lượt trò chuyện trong phiên hiện tại. Vui lòng quay lại sau {t}."
-_MSG_WEEK_DENY = "Bạn đã dùng hết lượt trò chuyện trong tuần này. Vui lòng quay lại sau {t}."
-_MSG_BUDGET_DENY = "Finext AI đang tạm nghỉ do đã đạt giới hạn sử dụng chung. Vui lòng quay lại sau nhé."
+# Thông điệp NGẮN GỌN, KHÔNG lộ số trần / tên collection (K-hygiene). Chi tiết reset xem ở /profile/ai-usage.
+_MSG_SESSION_DENY = "Bạn đã hết lượt trò chuyện trong phiên này."
+_MSG_WEEK_DENY = "Bạn đã hết lượt trò chuyện trong tuần này."
+_MSG_BUDGET_DENY = "Server đang quá tải, vui lòng thử lại sau."
 
 
 def _tier_limits(tier: str) -> tuple[int | None, int | None]:
@@ -228,13 +228,6 @@ def _window_used(start: Any, used: Any, now: datetime, dur: timedelta) -> tuple[
     return int(used or 0), start + dur
 
 
-def _fmt_reset(reset_at: datetime | None, now: datetime) -> str:
-    if not reset_at:
-        return "ít phút nữa"
-    mins = max(1, int((reset_at - now).total_seconds() // 60))
-    return f"{mins} phút" if mins < 60 else f"{mins // 60} giờ {mins % 60} phút"
-
-
 async def check_quota(db: Any, user_id: str) -> QuotaDecision:
     """Chặn TRƯỚC stream: global kill-switch (503) → 5h (429) → weekly (429). Unlimited bỏ qua per-user.
     KHÔNG reserve token ở đây (token thật cộng ở record_usage sau khi done)."""
@@ -248,12 +241,12 @@ async def check_quota(db: Any, user_id: str) -> QuotaDecision:
     if lim5 is None:
         return QuotaDecision(True)
     doc = await db[QUOTA].find_one({"user_id": str(user_id)}) or {}
-    used5, reset5 = _window_used(doc.get("s5_start"), doc.get("s5_tokens"), now, SESSION_DUR)
+    used5, _ = _window_used(doc.get("s5_start"), doc.get("s5_tokens"), now, SESSION_DUR)
     if used5 >= lim5:
-        return QuotaDecision(False, 429, _MSG_SESSION_DENY.format(t=_fmt_reset(reset5, now)))
-    usedw, resetw = _window_used(doc.get("wk_start"), doc.get("wk_tokens"), now, WEEK_DUR)
+        return QuotaDecision(False, 429, _MSG_SESSION_DENY)
+    usedw, _ = _window_used(doc.get("wk_start"), doc.get("wk_tokens"), now, WEEK_DUR)
     if usedw >= limw:
-        return QuotaDecision(False, 429, _MSG_WEEK_DENY.format(t=_fmt_reset(resetw, now)))
+        return QuotaDecision(False, 429, _MSG_WEEK_DENY)
     return QuotaDecision(True)
 
 
