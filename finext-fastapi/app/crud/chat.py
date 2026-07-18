@@ -194,8 +194,8 @@ WEEK_DUR = timedelta(days=AGENT_WEEK_DAYS)
 DAY_DUR = timedelta(hours=24)
 
 # Thông điệp NGẮN GỌN, KHÔNG lộ số trần / tên collection (K-hygiene). Chi tiết reset xem ở /profile/ai-usage.
-_MSG_SESSION_DENY = "Bạn đã hết lượt trò chuyện trong phiên này."
-_MSG_WEEK_DENY = "Bạn đã hết lượt trò chuyện trong tuần này."
+_MSG_SESSION_DENY = "Bạn đã đạt giới hạn sử dụng trong phiên này."
+_MSG_WEEK_DENY = "Bạn đã đạt giới hạn sử dụng trong tuần này."
 _MSG_BUDGET_DENY = "Server đang quá tải, vui lòng thử lại sau."
 
 

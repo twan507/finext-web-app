@@ -302,7 +302,7 @@ export default function useChatStore(initialConversationId?: string): UseChatSto
             prev.map((c) => (c.id === convId ? { ...c, messages: c.messages.filter((m) => m.id !== assistantId) } : c)),
           );
           const msg = (err as { message?: string } | null)?.message;
-          setLimitNotice({ message: msg || 'Bạn đã hết lượt trò chuyện.', detail: status === 429 });
+          setLimitNotice({ message: msg || 'Bạn đã đạt giới hạn sử dụng.', detail: status === 429 });
         } else {
           patchAssistant((m) => (m.status === 'streaming' ? { ...m, status: 'interrupted' } : m));
           const aborted = controller.signal.aborted;
