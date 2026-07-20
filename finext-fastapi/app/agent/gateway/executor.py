@@ -196,7 +196,22 @@ class MongoGateway:
             docs = await cursor.to_list(length=self._policy.defaults.max_limit)
         except PyMongoError:
             return self._mongo_error(ctx, collection)
-        return self._ok_result(ctx, collection, docs, started, suffix=" (aggregate)")
+        result = self._ok_result(ctx, collection, docs, started, suffix=" (aggregate)")
+        if result.ok:
+            # Additive (giống nhánh find): bắt ca Q12 — model $project field LỒNG sai tên (week_score...
+            # thực nằm trong money_flow_score) → Mongo bỏ field → doc gần rỗng → model BỊA số. Lấy $project
+            # CUỐI trong pipeline, dựng pseudo-projection {key: 1} (kể cả key giá trị biểu thức — key đó vẫn
+            # phải xuất hiện trong doc kết quả nên kiểm-vắng-mặt vẫn đúng) rồi tái dùng _projection_field_hint.
+            last_project = None
+            for stage in pipeline:
+                if "$project" in stage and isinstance(stage["$project"], dict):
+                    last_project = stage["$project"]
+            if last_project:
+                pseudo = {k: 1 for k, v in last_project.items() if k != "_id" and v not in (0, False)}
+                hint = _projection_field_hint(pseudo, docs)
+                if hint:
+                    result.meta["note"] = hint
+        return result
 
     async def stats(
         self,

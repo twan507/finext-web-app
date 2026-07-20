@@ -416,3 +416,78 @@ async def test_find_cap_uses_per_rule_override():
     assert result.ok is True
     assert result.data is not None and len(result.data) == 50  # 100 KB < 200 KB cap → không cắt
     assert result.meta["truncated"] is False
+
+
+# --- aggregate $project absent-field feedback (fix Q12: model $project field LỒNG sai tên → doc gần rỗng
+#     → model BỊA toàn bộ bảng số mà không một cảnh báo nào; đường find đã có note, aggregate thì chưa) ---
+
+
+async def test_aggregate_project_missing_nested_fields_adds_note():
+    # Q12 tái hiện: model $project 6 field nhưng week_score/w_pct/m_pct/breadth_* thực nằm LỒNG trong
+    # money_flow_score (không có ở top-level) → Mongo lặng lẽ bỏ → doc chỉ còn industry_name → model tưởng
+    # "chỉ có danh sách tên" rồi tự chế bảng xếp hạng. Aggregate phải gắn note dạy model xem lại schema.
+    collection = FakeCollection([{"industry_name": "Bán lẻ"}])  # 5 field số vắng
+    gateway = MongoGateway(FakeDB(collection), Policy.load())
+    result = await gateway.aggregate(
+        CTX, "industry_snapshot",
+        pipeline=[
+            {"$project": {
+                "industry_name": 1, "week_score": 1, "w_pct": 1,
+                "m_pct": 1, "breadth_in": 1, "breadth_out": 1,
+            }},
+            {"$limit": 50},
+        ],
+    )
+    assert result.ok is True  # KHÔNG đổi ok→False, data thật vẫn trả
+    note = result.meta.get("note")
+    assert note is not None
+    assert "week_score" in note  # liệt kê field vắng
+    assert "industry_name" not in note  # field có thật không bị liệt kê
+
+
+async def test_aggregate_project_all_fields_present_no_note():
+    # $project field ĐÚNG, docs chứa đủ key → không note (không nhiễu).
+    collection = FakeCollection([
+        {"industry_name": "Bán lẻ", "week_score": 9.27, "w_pct": 1.0, "m_pct": 2.0, "breadth_in": 5, "breadth_out": 3}
+    ])
+    gateway = MongoGateway(FakeDB(collection), Policy.load())
+    result = await gateway.aggregate(
+        CTX, "industry_snapshot",
+        pipeline=[
+            {"$project": {
+                "industry_name": 1, "week_score": 1, "w_pct": 1,
+                "m_pct": 1, "breadth_in": 1, "breadth_out": 1,
+            }},
+            {"$limit": 50},
+        ],
+    )
+    assert result.ok is True
+    assert result.meta.get("note") is None
+
+
+async def test_aggregate_without_project_no_note_no_raise():
+    # Pipeline không có $project → không note, không raise.
+    collection = FakeCollection([{"industry_name": "Bán lẻ"}])
+    gateway = MongoGateway(FakeDB(collection), Policy.load())
+    result = await gateway.aggregate(
+        CTX, "industry_snapshot",
+        pipeline=[{"$sort": {"week_score": -1}}, {"$limit": 20}],
+    )
+    assert result.ok is True
+    assert result.meta.get("note") is None
+
+
+async def test_aggregate_project_expression_key_present_no_false_note():
+    # $project có key giá trị biểu thức ({"week_score": "$money_flow_score.week_score"}); doc kết quả CHỨA
+    # week_score → không báo oan (key output vẫn phải xuất hiện, nên kiểm-vắng-mặt trên pseudo-projection đúng).
+    collection = FakeCollection([{"industry_name": "Bán lẻ", "week_score": 9.27}])
+    gateway = MongoGateway(FakeDB(collection), Policy.load())
+    result = await gateway.aggregate(
+        CTX, "industry_snapshot",
+        pipeline=[
+            {"$project": {"industry_name": 1, "week_score": "$money_flow_score.week_score"}},
+            {"$limit": 50},
+        ],
+    )
+    assert result.ok is True
+    assert result.meta.get("note") is None
