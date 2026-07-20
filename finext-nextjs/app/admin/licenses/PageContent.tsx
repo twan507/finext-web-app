@@ -30,6 +30,7 @@ import {
     getNextSortDirection,
     getResponsiveDisplayStyle
 } from '../components/TableSortUtils';
+import { computeClientTable, ALL_ROWS_VALUE } from '../components/TableClientPagination';
 import LicenseSearch from './components/LicenseSearch';
 import CreateLicenseModal from './components/CreateLicenseModal';
 import EditLicenseModal from './components/EditLicenseModal';
@@ -191,18 +192,15 @@ export default function LicensesPage() {
         setLoading(true);
         setError(null);
         try {
+            // Backend licenses chỉ hỗ trợ skip/limit + include_inactive (KHÔNG có
+            // search/sort server-side). Nạp toàn bộ tập rồi lọc/sắp xếp/phân trang
+            // phía client để tìm kiếm & sắp xếp áp lên đúng toàn bộ dữ liệu.
             const queryParams: Record<string, any> = {
-                skip: page * rowsPerPage,
-                limit: rowsPerPage,
-                include_inactive: true, // Thêm tham số để lấy cả license không hoạt động
-                show_all: true, // Thêm tham số backup để đảm bảo lấy tất cả
+                skip: 0,
+                limit: ALL_ROWS_VALUE,
+                include_inactive: true, // Lấy cả license không hoạt động
+                show_all: true,
             };
-
-            // Add sort parameters if sortConfig is defined
-            if (sortConfig && sortConfig.key && sortConfig.direction) {
-                queryParams.sort_by = sortConfig.key;
-                queryParams.sort_order = sortConfig.direction;
-            }
 
             const response = await apiClient<PaginatedLicensesResponse | LicensePublic[]>({
                 url: `/api/v1/licenses/`,
@@ -242,7 +240,7 @@ export default function LicensesPage() {
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage, sortConfig]);
+    }, []);
 
     useEffect(() => {
         fetchLicenses();
@@ -286,39 +284,19 @@ export default function LicensesPage() {
         setPage(0); // Reset to first page when sorting
     };
 
-    // Compute sorted data
-    const sortedLicenses = useMemo(() => {
-        const dataToSort = isFiltering ? filteredLicenses : licenses;
-
-        if (!sortConfig || !sortConfig.direction) {
-            return dataToSort;
-        }
-
-        const column = columnConfigs.find(col => col.id === sortConfig.key);
-        if (!column) return dataToSort;
-
-        return sortData(dataToSort, sortConfig, column);
-    }, [licenses, filteredLicenses, isFiltering, sortConfig, columnConfigs]);
-
-    // Calculate paginated licenses - use client-side pagination when sorting/filtering, server-side pagination otherwise
-    const paginatedLicenses = useMemo(() => {
-        if (isFiltering || sortConfig) {
-            // Client-side pagination for filtered/sorted results
-            if (rowsPerPage === 99999) {
-                // Show all results
-                return sortedLicenses;
-            }
-            const startIndex = page * rowsPerPage;
-            const endIndex = startIndex + rowsPerPage;
-            return sortedLicenses.slice(startIndex, endIndex);
-        } else {
-            // Server-side pagination - use licenses directly as they are already paginated
-            return licenses;
-        }
-    }, [licenses, sortedLicenses, isFiltering, sortConfig, page, rowsPerPage]);
-
-    // Calculate total count for pagination
-    const displayTotalCount = (isFiltering || sortConfig) ? sortedLicenses.length : totalCount;
+    // Toàn bộ dữ liệu đã nạp -> lọc (ở LicenseSearch) -> sắp xếp -> phân trang
+    // đều thực hiện phía client, nhất quán cho cả trường hợp có/không tìm kiếm.
+    const { pageItems: paginatedLicenses, displayTotalCount } = useMemo(
+        () => computeClientTable<LicensePublic>({
+            rows: isFiltering ? filteredLicenses : licenses,
+            sortConfig,
+            columns: columnConfigs,
+            page,
+            rowsPerPage,
+            sortFn: sortData,
+        }),
+        [licenses, filteredLicenses, isFiltering, sortConfig, columnConfigs, page, rowsPerPage]
+    );
     // Activate/Deactivate handlers
     const handleOpenActivateDialog = (license: LicensePublic) => {
         setActionLicense(license);

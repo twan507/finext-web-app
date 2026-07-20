@@ -31,6 +31,7 @@ import {
   getNextSortDirection,
   getResponsiveDisplayStyle
 } from '../components/TableSortUtils';
+import { computeClientTable, ALL_ROWS_VALUE } from '../components/TableClientPagination';
 import { isSystemUser } from 'utils/systemProtection';
 import { useAuth } from '@/components/auth/AuthProvider';
 
@@ -222,9 +223,11 @@ const UsersPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      // Expecting StandardApiResponse<PaginatedUsersResponse>
+      // Backend users chỉ hỗ trợ skip/limit (KHÔNG có search/sort server-side).
+      // Nạp toàn bộ để tìm kiếm & sắp xếp áp lên đúng toàn bộ dữ liệu, rồi phân
+      // trang phía client.
       const response = await apiClient<PaginatedUsersResponse>({
-        url: `/api/v1/users/?skip=${page * rowsPerPage}&limit=${rowsPerPage}`,
+        url: `/api/v1/users/?skip=0&limit=${ALL_ROWS_VALUE}`,
         method: 'GET',
       });
 
@@ -245,7 +248,7 @@ const UsersPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage]);
+  }, []);
 
   const fetchRoles = useCallback(async () => {
     if (!hasPermission('role:manage')) return;
@@ -374,19 +377,19 @@ const UsersPage: React.FC = () => {
     setPage(0); // Reset to first page when sorting
   };
 
-  // Compute sorted data
-  const sortedUsers = useMemo(() => {
-    const dataToSort = isFiltering ? filteredUsers : users;
-
-    if (!sortConfig || !sortConfig.direction) {
-      return dataToSort;
-    }
-
-    const column = columnConfigs.find(col => col.id === sortConfig.key);
-    if (!column) return dataToSort;
-
-    return sortData(dataToSort, sortConfig, column);
-  }, [users, filteredUsers, isFiltering, sortConfig, columnConfigs, subscriptions, roles]);
+  // Toàn bộ dữ liệu đã nạp -> lọc (ở UserSearch) -> sắp xếp -> phân trang đều
+  // thực hiện phía client, nhất quán cho cả trường hợp có/không tìm kiếm.
+  const { pageItems: paginatedUsers, displayTotalCount } = useMemo(
+    () => computeClientTable<UserPublic>({
+      rows: isFiltering ? filteredUsers : users,
+      sortConfig,
+      columns: columnConfigs,
+      page,
+      rowsPerPage,
+      sortFn: sortData,
+    }),
+    [users, filteredUsers, isFiltering, sortConfig, columnConfigs, page, rowsPerPage]
+  );
   const handleOpenDeleteDialog = (user: UserPublic) => {
     // Check if user is protected
     if (isUserProtected(user.email)) {
@@ -518,25 +521,6 @@ const UsersPage: React.FC = () => {
     if (nonUserRoles.length > 0) return `Không thể xóa người dùng đã được cấp quyền ${nonUserRoles.join(', ')}`;
     return null;
   };
-  // Calculate paginated users - use server pagination when not filtering/sorting, client pagination when filtering/sorting
-  const paginatedUsers = React.useMemo(() => {
-    if (isFiltering || sortConfig) {
-      // Client-side pagination for filtered/sorted results
-      if (rowsPerPage === 99999) {
-        // Show all results
-        return sortedUsers;
-      }
-      const startIndex = page * rowsPerPage;
-      const endIndex = startIndex + rowsPerPage;
-      return sortedUsers.slice(startIndex, endIndex);
-    } else {
-      // Server-side pagination - use users directly as they are already paginated
-      return users;
-    }
-  }, [users, sortedUsers, isFiltering, sortConfig, page, rowsPerPage]);
-  // Calculate total count for pagination
-  const displayTotalCount = (isFiltering || sortConfig) ? sortedUsers.length : totalCount;
-
   return (
     <Box sx={{
       maxWidth: '100%',

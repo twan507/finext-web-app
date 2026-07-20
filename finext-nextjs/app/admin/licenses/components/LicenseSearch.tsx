@@ -262,12 +262,12 @@ const LicenseSearch: React.FC<LicenseSearchProps> = ({
                                 sx={{ height: '20px' }}
                             />
                             <Typography variant="caption" color="text.secondary">
-                                (trang hiện tại)
+                                kết quả
                             </Typography>
                         </>
                     ) : (
                         <Typography variant="caption" color="text.secondary">
-                            {filteredLicenses.length} licenses tìm thấy
+                            {filteredLicenses.length} licenses
                         </Typography>
                     )}
                 </Box>

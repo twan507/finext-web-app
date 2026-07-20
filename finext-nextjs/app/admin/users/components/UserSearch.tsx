@@ -258,12 +258,12 @@ const UserSearch: React.FC<UserSearchProps> = ({
                                 sx={{ height: '20px' }}
                             />
                             <Typography variant="caption" color="text.secondary">
-                                (trang hiện tại)
+                                kết quả
                             </Typography>
                         </>
                     ) : (
                         <Typography variant="caption" color="text.secondary">
-                            {stats.total} users (trang hiện tại)
+                            {stats.total} users
                         </Typography>
                     )}
                 </Box>
