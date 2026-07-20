@@ -1,13 +1,13 @@
 # finext-fastapi/app/utils/otp_utils.py
-import random
+import secrets
 import string
 import bcrypt
 from app.core.config import OTP_LENGTH
 
 
 def generate_otp_code() -> str:
-    """Generates a random OTP code of configured length."""
-    return "".join(random.choices(string.digits, k=OTP_LENGTH))
+    """Generates a cryptographically secure random OTP code of configured length."""
+    return "".join(secrets.choice(string.digits) for _ in range(OTP_LENGTH))
 
 
 def hash_otp_code(otp_code: str) -> str:

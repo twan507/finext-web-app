@@ -55,6 +55,14 @@ async def request_otp(
     if not user.is_active and request_data.otp_type != OtpTypeEnum.EMAIL_VERIFICATION:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tài khoản người dùng này chưa được kích hoạt hoặc đã bị khóa.")
 
+    # Chống email bombing: từ chối nếu vừa gửi OTP cùng loại trong cửa sổ cooldown.
+    if await crud_otps.has_recent_otp(db, str(user.id), request_data.otp_type):
+        logger.warning(f"OTP request throttled (cooldown) for {user.email}, type {request_data.otp_type.value}")
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Bạn vừa yêu cầu mã OTP. Vui lòng đợi khoảng {crud_otps.OTP_RESEND_COOLDOWN_SECONDS} giây rồi thử lại.",
+        )
+
     raw_otp_code = generate_otp_code()
     now = datetime.now(timezone.utc)
 

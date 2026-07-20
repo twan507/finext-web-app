@@ -18,6 +18,11 @@ from app.utils.types import PyObjectId
 logger = logging.getLogger(__name__)
 OTP_COLLECTION = "otps"  # Nên định nghĩa tên collection ở một chỗ
 
+# Chống email bombing: khoảng chờ tối thiểu (giây) giữa 2 lần yêu cầu OTP CÙNG LOẠI cho 1 user.
+# Đặt = 60s để khớp countdown "Gửi lại" 60s của FE (forgot-password) → không chặn nhầm luồng
+# hợp lệ. Rate-limit theo IP ở biên (nginx) sẽ bổ sung ở đợt sau.
+OTP_RESEND_COOLDOWN_SECONDS = 60
+
 
 async def create_otp_record(db: AsyncIOMotorDatabase, otp_data: OtpCreateInternal) -> Optional[OtpInDB]:
     """Tạo bản ghi OTP mới và lưu vào DB sau khi hash mã OTP."""
@@ -98,6 +103,27 @@ async def find_valid_otp(db: AsyncIOMotorDatabase, user_id: PyObjectId, otp_type
     return None
 
 
+async def has_recent_otp(
+    db: AsyncIOMotorDatabase,
+    user_id: PyObjectId,
+    otp_type: OtpTypeEnum,
+    cooldown_seconds: int = OTP_RESEND_COOLDOWN_SECONDS,
+) -> bool:
+    """True nếu đã có OTP CÙNG LOẠI được tạo trong cửa sổ cooldown (chống email bombing)."""
+    if not ObjectId.is_valid(user_id):
+        return False
+
+    threshold = datetime.now(timezone.utc) - timedelta(seconds=cooldown_seconds)
+    recent_otp = await db[OTP_COLLECTION].find_one(
+        {
+            "user_id": ObjectId(user_id),
+            "otp_type": otp_type.value,
+            "created_at": {"$gt": threshold},
+        }
+    )
+    return recent_otp is not None
+
+
 async def verify_and_use_otp(db: AsyncIOMotorDatabase, user_id: PyObjectId, otp_type: OtpTypeEnum, plain_otp_code: str) -> bool:
     """
     Xác thực OTP và đánh dấu là đã sử dụng nếu hợp lệ. Tăng số lần thử.
@@ -140,15 +166,18 @@ async def verify_and_use_otp(db: AsyncIOMotorDatabase, user_id: PyObjectId, otp_
             return False
     else:
         new_attempts = valid_otp_record.attempts + 1
-        set_payload: dict = {"attempts": new_attempts, "updated_at": datetime.now(timezone.utc)}
+        now = datetime.now(timezone.utc)
+        # Dùng $inc NGUYÊN TỬ thay cho $set(read-modify-write): nhiều request verify sai chạy
+        # song song sẽ được đếm đúng, tránh attacker vượt trần MAX_OTP_ATTEMPTS bằng race.
+        update_doc: dict = {"$inc": {"attempts": 1}, "$set": {"updated_at": now}}
 
         if new_attempts >= MAX_OTP_ATTEMPTS:
-            set_payload["expires_at"] = datetime.now(timezone.utc) - timedelta(seconds=1)  # Làm cho OTP hết hạn ngay
+            update_doc["$set"]["expires_at"] = now - timedelta(seconds=1)  # Làm cho OTP hết hạn ngay
             logger.warning(
                 f"OTP {valid_otp_record.id} cho user {user_id}, type {otp_type.value} đã đạt số lần thử tối đa ({new_attempts}) và bị vô hiệu hóa."
             )
 
-        await db[OTP_COLLECTION].update_one({"_id": ObjectId(valid_otp_record.id)}, {"$set": set_payload})
+        await db[OTP_COLLECTION].update_one({"_id": ObjectId(valid_otp_record.id)}, update_doc)
         logger.warning(f"Xác thực OTP thất bại cho user {user_id}, type {otp_type.value}. Mã không đúng. Số lần thử: {new_attempts}.")
         return False
 
