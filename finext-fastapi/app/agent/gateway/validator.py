@@ -260,6 +260,30 @@ def _check_find_require_filter(policy: Policy, rule: CollectionRule, filter: dic
         )
 
 
+def _check_projection_values(collection: str, projection: dict[str, Any] | None) -> None:
+    """Giá trị projection phải là 0/1, hoặc biểu thức dạng dict (vd {"$slice": -20}).
+
+    BẪY THẬT ĐÃ GẶP: từ Mongo 4.4, value trong projection được hiểu là aggregation expression.
+    Nên {"title": "1"} — CHUỖI thay vì SỐ — là một hằng số: mọi document trả về đúng chữ "1",
+    query vẫn thành công, không log lỗi nào. Model không hiểu vì sao dữ liệu vô nghĩa nên gọi
+    lại vòng này tới vòng khác; một lượt từng lặp 10 vòng, đốt hơn 600 nghìn token rồi trả cho
+    khách một câu vô dụng. Chặn tại đây để model nhận lỗi rõ ràng và sửa ngay ở vòng sau.
+    """
+    if not projection:
+        return
+    for key, value in projection.items():
+        if isinstance(value, dict):
+            continue  # biểu thức — đã có _check_find_banned và _check_series_* lo phần ngữ nghĩa
+        if isinstance(value, bool) or (isinstance(value, (int, float)) and value in (0, 1)):
+            continue
+        raise ValidationError(
+            f"Trong projection của '{collection}', field '{key}' có giá trị {value!r} không hợp lệ. "
+            'Giá trị phải là SỐ 1 (lấy field) hoặc 0 (bỏ field), ví dụ {"ticker": 1, "price": 1}. '
+            'Đặc biệt KHÔNG dùng chuỗi "1" — Mongo hiểu đó là hằng số nên mọi document sẽ trả về '
+            "đúng chữ đó thay vì dữ liệu thật."
+        )
+
+
 def validate_find(
     policy: Policy,
     collection: str,
@@ -288,6 +312,9 @@ def validate_find(
         )
 
     _check_series_slice(rule, projection)
+    # Đặt CUỐI có chủ đích: các luật series ở trên cho thông báo cụ thể hơn nhiều (chỉ rõ phải
+    # dùng $slice thế nào). Check này là lưới chung, chỉ nên bắt phần các luật kia không phủ.
+    _check_projection_values(collection, projection)
 
     return _effective_limit(policy, limit)
 
