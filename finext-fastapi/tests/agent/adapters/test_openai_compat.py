@@ -76,6 +76,47 @@ async def test_text_stream_yields_tokens_then_done_with_usage():
     assert done.usage == {"in": 1200, "out": 42}
 
 
+# Nhà cung cấp (MiniMax M3) trả cache hit trong prompt_tokens_details.cached_tokens.
+# prompt_tokens ĐÃ BAO GỒM cached_tokens — adapter không được cộng thêm lần nữa.
+CACHED_STREAM = (
+    'data: {"choices":[{"delta":{"content":"ok"},"index":0}]}\n\n'
+    'data: {"choices":[{"delta":{},"finish_reason":"stop","index":0}]}\n\n'
+    'data: {"choices":[],"usage":{"prompt_tokens":324291,"completion_tokens":7222,'
+    '"prompt_tokens_details":{"cached_tokens":314562}}}\n\n'
+    "data: [DONE]\n\n"
+)
+
+# Cache nguội: nhà cung cấp VẪN trả khoá nhưng giá trị 0 → phải giữ khoá với giá trị 0.
+COLD_CACHE_STREAM = (
+    'data: {"choices":[{"delta":{},"finish_reason":"stop","index":0}]}\n\n'
+    'data: {"choices":[],"usage":{"prompt_tokens":5000,"completion_tokens":100,'
+    '"prompt_tokens_details":{"cached_tokens":0}}}\n\n'
+    "data: [DONE]\n\n"
+)
+
+
+async def test_cached_tokens_duoc_doc_vao_usage():
+    """Số THẬT đã đo của một lượt: adapter phải mang cache_read ra, nếu không quota trừ gấp ~4-5 lần."""
+    events = await _collect(_adapter_with(CACHED_STREAM))
+    done = events[-1]
+    assert isinstance(done, DoneEvent)
+    assert done.usage["cache_read"] == 314562
+    # "in" là TỔNG (đã gồm cache) — KHÔNG cộng cached_tokens thêm lần nữa.
+    assert done.usage["in"] == 324291
+    assert done.usage["out"] == 7222
+
+
+async def test_cached_tokens_bang_0_van_giu_khoa():
+    events = await _collect(_adapter_with(COLD_CACHE_STREAM))
+    assert events[-1].usage["cache_read"] == 0
+
+
+async def test_khong_co_prompt_tokens_details_thi_khong_dat_khoa():
+    """Nhà cung cấp không báo cache → KHÔNG bịa khoá cache_read=0 (phân biệt 'không biết' với 'bằng 0')."""
+    events = await _collect(_adapter_with(TEXT_STREAM))
+    assert "cache_read" not in events[-1].usage
+
+
 async def test_tool_call_arguments_accumulated_across_chunks():
     events = await _collect(_adapter_with(TOOL_STREAM))
     tool_events = [e for e in events if isinstance(e, ToolCallsEvent)]

@@ -150,11 +150,21 @@ AGENT_PACK_DIR = os.getenv("AGENT_PACK_DIR")  # None → dùng pack stub trong r
 
 # --- Chat persistence / quota / kill-switch (Bước 3) ---
 # Số lấy default trong code; owner chỉnh qua env sau 2 tuần chạy nhóm nhỏ (doc 03 §4-5).
-AGENT_DAILY_TOKEN_BUDGET = int(os.getenv("AGENT_DAILY_TOKEN_BUDGET") or 4_000_000)  # kill-switch global/ngày (token)
+# Kill-switch global/ngày (đơn vị quy đổi). MẶC ĐỊNH TẮT (0) theo quyết định owner: đang dùng gói
+# token trả trước của nhà cung cấp — hết gói thì chính nhà cung cấp báo lỗi và agent trả "server quá
+# tải", nên đây là lớp chặn thừa. Muốn bật lại phanh an toàn thì đặt env một số dương, ví dụ
+# 20_000_000 (~6 USD/ngày) để một vòng lặp hỏng không ăn hết gói trong một ngày.
+AGENT_DAILY_TOKEN_BUDGET = int(os.getenv("AGENT_DAILY_TOKEN_BUDGET") or 0)  # <= 0 nghĩa là TẮT
 CHAT_MAX_CONVERSATIONS = int(os.getenv("CHAT_MAX_CONVERSATIONS") or 50)  # giữ N hội thoại mới nhất/user (prune)
-# --- Quota token per-license: cửa sổ 5h (anchored) + weekly ---
-AGENT_TOKENS_5H = int(os.getenv("AGENT_TOKENS_5H") or 500_000)  # trần token/5h (standard)
-AGENT_TOKENS_WEEK = int(os.getenv("AGENT_TOKENS_WEEK") or 5_000_000)  # trần token/tuần (standard)
+# --- Giá LLM (USD / 1 triệu token) — dùng quy đổi quota theo CHI PHÍ THẬT, không theo token thô ---
+# Token đọc từ cache rẻ hơn nhiều lần token input thường; token output đắt hơn. Quota đếm bằng
+# "đơn vị quy đổi" (1 đơn vị = 1 token input giá thường) — xem app/crud/chat.py::billable_units.
+LLM_PRICE_INPUT = float(os.getenv("LLM_PRICE_INPUT") or 0.30)
+LLM_PRICE_CACHED = float(os.getenv("LLM_PRICE_CACHED") or 0.06)
+LLM_PRICE_OUTPUT = float(os.getenv("LLM_PRICE_OUTPUT") or 1.20)
+# --- Quota per-license: cửa sổ 5h (anchored) + weekly. Đơn vị = ĐƠN VỊ QUY ĐỔI (không phải token thô) ---
+AGENT_TOKENS_5H = int(os.getenv("AGENT_TOKENS_5H") or 1_000_000)  # trần/5h (standard) ≈ 8 lượt
+AGENT_TOKENS_WEEK = int(os.getenv("AGENT_TOKENS_WEEK") or 10_000_000)  # trần/tuần (standard) ≈ 76 lượt
 AGENT_ADVANCED_MULT = int(os.getenv("AGENT_ADVANCED_MULT") or 5)  # advanced = ×5 standard
 AGENT_SESSION_HOURS = int(os.getenv("AGENT_SESSION_HOURS") or 5)  # độ dài cửa sổ session
 AGENT_WEEK_DAYS = int(os.getenv("AGENT_WEEK_DAYS") or 7)

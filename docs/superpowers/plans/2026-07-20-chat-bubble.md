@@ -235,7 +235,7 @@ import { buildPageContext, getSuggestions, hasBubble, PAGE_CONTEXT_MAX } from '.
 const ROUTES_CO_BUBBLE = [
   '/', '/markets', '/phase', '/stocks', '/sectors', '/groups',
   '/commodities', '/macro', '/international', '/watchlist',
-  '/stocks/HPG', '/sectors/ngan_hang', '/groups/FNXINDEX', '/charts/VNINDEX',
+  '/stocks/HPG', '/sectors/nganhang', '/groups/FNXINDEX', '/charts/VNINDEX',
 ];
 
 test('đủ 14 trang sản phẩm đều dựng được ngữ cảnh', () => {
@@ -257,7 +257,7 @@ test('trang ngoài danh sách không có ngữ cảnh và không có bubble', ()
 
 test('trang chi tiết đưa được chủ thể đang xem vào ngữ cảnh', () => {
   assert.ok(buildPageContext('/stocks/HPG')!.includes('HPG'));
-  assert.ok(buildPageContext('/sectors/ngan_hang')!.includes('ngan_hang'));
+  assert.ok(buildPageContext('/sectors/nganhang')!.includes('nganhang'));
   assert.ok(buildPageContext('/groups/FNXINDEX')!.includes('FNXINDEX'));
   assert.ok(buildPageContext('/charts/VNINDEX')!.includes('VNINDEX'));
 });
@@ -886,4 +886,4 @@ Không tự dựng browser. Báo owner checklist tự kiểm:
 
 1. **Huỷ stream khi unmount** (Task 3) — plan yêu cầu huỷ, nhưng backend chỉ lưu câu trả lời ở nhánh chạy trọn vẹn nên huỷ là mất câu trả lời đúng lúc bàn giao sang `/chat`. Đã bỏ.
 2. **Bọc Box con để cuộn** (Task 4) — không cuộn được vì Box cha không phải flex column bị chặn chiều cao. Đã đặt thuộc tính cuộn thẳng lên Box gốc.
-3. **Mã ngành ví dụ `ryganhang`** — là mã **bịa**, do subagent khảo sát nêu ra và plan chép lại mà không đối chiếu dữ liệu thật. Mã thật dùng gạch dưới (`ngan_hang`, `chung_khoan`, `dmts`…). Test vẫn xanh với mã bịa vì nó chỉ kiểm định dạng chuỗi. **Bài học: giá trị ví dụ đưa vào test phải đối chiếu dữ liệu thật.**
+3. **Mã ngành ví dụ `ryganhang`** — là mã **bịa**, do subagent khảo sát nêu ra và plan chép lại mà không đối chiếu dữ liệu thật. Mã thật dùng gạch dưới (`nganhang`, `chung_khoan`, `dmts`…). Test vẫn xanh với mã bịa vì nó chỉ kiểm định dạng chuỗi. **Bài học: giá trị ví dụ đưa vào test phải đối chiếu dữ liệu thật.**

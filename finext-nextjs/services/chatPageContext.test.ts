@@ -8,7 +8,7 @@ import {
 const ROUTES_CO_BUBBLE = [
   '/', '/markets', '/phase', '/stocks', '/sectors', '/groups',
   '/commodities', '/macro', '/international', '/watchlist',
-  '/stocks/HPG', '/sectors/ngan_hang', '/groups/FNXINDEX', '/charts/VNINDEX',
+  '/stocks/HPG', '/sectors/nganhang', '/groups/FNXINDEX', '/charts/VNINDEX',
 ];
 
 /** Mọi tổ hợp trang · tab có kho riêng — phải phủ hết, không được rơi về kho mặc định của trang. */
@@ -19,7 +19,7 @@ const TABS_THEO_TRANG: Record<string, string[]> = {
   '/macro': ['economy', 'monetary', 'exchange_rate'],
   '/international': ['global_index', 'fx', 'bonds', 'crypto'],
   '/stocks/HPG': ['cashflow', 'pricemap', 'financials', 'news'],
-  '/sectors/ngan_hang': ['cashflow', 'stocks', 'financials', 'news'],
+  '/sectors/nganhang': ['cashflow', 'stocks', 'financials', 'news'],
 };
 
 test('đủ 14 trang sản phẩm đều dựng được ngữ cảnh', () => {
@@ -41,7 +41,7 @@ test('trang ngoài danh sách không có ngữ cảnh và không có bubble', ()
 
 test('trang chi tiết đưa được chủ thể đang xem vào ngữ cảnh', () => {
   assert.ok(buildPageContext('/stocks/HPG')!.includes('HPG'));
-  assert.ok(buildPageContext('/sectors/ngan_hang')!.includes('ngan_hang'));
+  assert.ok(buildPageContext('/sectors/nganhang')!.includes('nganhang'));
   assert.ok(buildPageContext('/groups/FNXINDEX')!.includes('FNXINDEX'));
   assert.ok(buildPageContext('/charts/VNINDEX')!.includes('VNINDEX'));
 });
@@ -124,7 +124,7 @@ test('getSuggestions cắt đúng số câu giao diện render được', () => 
 });
 
 test('câu hỏi không dùng tên tab nội bộ và không lộ slug đường dẫn', () => {
-  const CAM = [/\btab\b/i, /ngan_hang/, /FNXINDEX/];
+  const CAM = [/\btab\b/i, /nganhang/, /FNXINDEX/];
   for (const r of ROUTES_CO_BUBBLE) {
     const tabs = TABS_THEO_TRANG[r] ?? [];
     const pools = [getSuggestionPool(r), ...tabs.map((t) => getSuggestionPool(r, new URLSearchParams(`tab=${t}`)))];

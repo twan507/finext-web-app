@@ -80,26 +80,112 @@ async def test_unlimited_tier_always_ok(monkeypatch):
     assert d.ok is True
 
 
-async def test_global_kill_switch_503(monkeypatch):
+async def test_global_kill_switch_503_khi_bat(monkeypatch):
+    """Cầu dao BẬT (trần > 0): chạm trần thì chặn 503 cho mọi user."""
     async def _tier(db, uid):
         return "standard"
     monkeypatch.setattr(crud, "resolve_tier", _tier)
+    monkeypatch.setattr(crud, "AGENT_DAILY_TOKEN_BUDGET", 4_000_000)
     db = FakeDB()
     await db[crud.QUOTA].insert_one(
-        {"user_id": crud.GLOBAL_QUOTA_KEY, "g_start": crud._now(), "g_tokens": crud.AGENT_DAILY_TOKEN_BUDGET}
+        {"user_id": crud.GLOBAL_QUOTA_KEY, "g_start": crud._now(), "g_tokens": 4_000_000}
     )
     d = await crud.check_quota(db, USER)
     assert d.ok is False and d.status_code == 503
 
 
+async def test_global_kill_switch_tat_khi_tran_bang_khong(monkeypatch):
+    """Cầu dao TẮT (trần <= 0) — mặc định hiện tại.
+
+    Bẫy: nếu quên kiểm trần trước thì "đã dùng 0 >= trần 0" là ĐÚNG, và mọi request bị
+    chặn 503 ngay lượt đầu — tức tắt cầu dao lại hoá ra chặn sạch.
+    """
+    async def _tier(db, uid):
+        return "standard"
+    monkeypatch.setattr(crud, "resolve_tier", _tier)
+    monkeypatch.setattr(crud, "AGENT_DAILY_TOKEN_BUDGET", 0)
+    db = FakeDB()
+    # Global đã tiêu rất nhiều nhưng cầu dao tắt → vẫn cho qua.
+    await db[crud.QUOTA].insert_one(
+        {"user_id": crud.GLOBAL_QUOTA_KEY, "g_start": crud._now(), "g_tokens": 999_000_000}
+    )
+    d = await crud.check_quota(db, USER)
+    assert d.ok is True, "cầu dao tắt thì không được chặn"
+
+
+# ── Quy đổi token → đơn vị chi phí (billable_units) ──────────────────────
+# Hệ số theo giá mặc định: cache 0,06/0,30 = 0,2 ; output 1,20/0,30 = 4,0.
+
+def test_billable_units_tru_phan_cache_theo_gia():
+    # in=1000 (đã gồm 900 cache) → 100 token thường + 900×0,2 + 100 out×4 = 100+180+400 = 680
+    assert crud.billable_units({"in": 1000, "out": 100, "cache_read": 900}) == 680
+
+
+def test_billable_units_khong_cache_dat_hon_han():
+    # Cùng lượng token nhưng không cache: 1000×1 + 100×4 = 1400 — đắt gấp hơn 2 lần bản có cache.
+    assert crud.billable_units({"in": 1000, "out": 100, "cache_read": 0}) == 1400
+
+
+def test_billable_units_thieu_khoa_cache_coi_nhu_khong_cache():
+    """Tương thích ngược: nhà cung cấp không báo cache → không được vỡ, tính như cache_read=0."""
+    assert crud.billable_units({"in": 1000, "out": 100}) == 1400
+
+
+def test_billable_units_khong_duoc_coi_in_la_phan_chua_cache():
+    """Bẫy ngữ nghĩa: "in" ĐÃ GỒM cache. Nếu ai đó tính uncached = in (không trừ) thì ra 1360, sai."""
+    assert crud.billable_units({"in": 1000, "out": 100, "cache_read": 900}) != 1360
+
+
+def test_billable_units_zero_va_rong():
+    assert crud.billable_units({"in": 0, "out": 0, "cache_read": 0}) == 0
+    assert crud.billable_units({}) == 0
+
+
+def test_billable_units_lam_tron_len():
+    # 1 token cache = 0,2 đơn vị → làm tròn LÊN thành 1 (không cho lọt lượt 0 đơn vị)
+    assert crud.billable_units({"in": 1, "out": 0, "cache_read": 1}) == 1
+
+
+def test_billable_units_gia_tri_am_bi_kep_ve_0():
+    """Không thể xảy ra với provider lành mạnh, nhưng không được trả số âm (sẽ TRỪ ngược quota)."""
+    assert crud.billable_units({"in": -5, "out": -3, "cache_read": -2}) == 0
+
+
+def test_billable_units_cache_lon_hon_in_bi_kep():
+    """cache_read > in là dữ liệu bẩn — kẹp về in, không để uncached âm."""
+    assert crud.billable_units({"in": 100, "out": 0, "cache_read": 500}) == 20
+
+
+def test_billable_units_du_lieu_that_re_hon_token_tho_nhieu_lan():
+    """Số THẬT đã đo của 1 lượt agent. Cách cũ (in+out) trừ 331.513 đơn vị — quy đổi phải rẻ hơn hẳn.
+
+    9.729 chưa cache ×1 + 314.562 cache ×0,2 + 7.222 out ×4 = 101.529,4 → 101.530.
+    """
+    real = {"in": 324_291, "out": 7_222, "cache_read": 314_562}
+    units = crud.billable_units(real)
+    assert units == 101_530
+    raw = real["in"] + real["out"]  # 331.513 — cách tính cũ
+    assert raw / units > 3.2  # cách cũ trừ gấp hơn 3 lần chi phí thật
+
+
+async def test_record_usage_dung_don_vi_quy_doi_khong_phai_token_tho():
+    db = FakeDB()
+    await crud.record_usage(db, USER, {"in": 1000, "out": 100, "cache_read": 900})
+    doc = await db[crud.QUOTA].find_one({"user_id": USER})
+    assert doc["s5_tokens"] == 680  # KHÔNG phải 1100 (token thô)
+    g = await db[crud.QUOTA].find_one({"user_id": crud.GLOBAL_QUOTA_KEY})
+    assert g["g_tokens"] == 680  # cầu dao global dùng CÙNG đơn vị
+
+
 async def test_record_usage_accumulates_and_global():
     db = FakeDB()
+    # Mỗi lượt (không cache): 100 in ×1 + 50 out ×4 = 300 đơn vị → 2 lượt = 600.
     await crud.record_usage(db, USER, {"in": 100, "out": 50})
     await crud.record_usage(db, USER, {"in": 100, "out": 50})
     doc = await db[crud.QUOTA].find_one({"user_id": USER})
-    assert doc["s5_tokens"] == 300 and doc["wk_tokens"] == 300
+    assert doc["s5_tokens"] == 600 and doc["wk_tokens"] == 600
     g = await db[crud.QUOTA].find_one({"user_id": crud.GLOBAL_QUOTA_KEY})
-    assert g["g_tokens"] == 300
+    assert g["g_tokens"] == 600
 
 
 async def test_record_usage_new_window_after_expiry():

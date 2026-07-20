@@ -8,6 +8,8 @@ export type ChatEvent =
   | { type: 'title'; conversation_id: string; title: string }
   | { type: 'message_saved'; message_id: string }
   | { type: 'done'; usage: Record<string, number>; truncated: boolean }
+  // Cảnh báo sớm hạn mức (50%/75%) — chỉ nhắc, KHÔNG chặn; user vẫn chat tiếp được.
+  | { type: 'quota_warn'; threshold: number; window: 'session' | 'week'; message: string }
   | { type: 'error'; message: string };
 
 export interface ChatStreamBody {
@@ -18,7 +20,7 @@ export interface ChatStreamBody {
   page_context?: string; // ngữ cảnh trang (bubble chat) — không hiển thị cho user, không lưu lịch sử
 }
 
-const KNOWN_TYPES = new Set(['meta', 'token', 'tool_start', 'tool_end', 'title', 'message_saved', 'done', 'error']);
+const KNOWN_TYPES = new Set(['meta', 'token', 'tool_start', 'tool_end', 'title', 'message_saved', 'done', 'quota_warn', 'error']);
 
 function parseFrame(frame: string): ChatEvent | null {
   // Mỗi frame là các dòng; lấy dòng bắt đầu 'data: '. Comment ': hb' → bỏ qua (không có data:).

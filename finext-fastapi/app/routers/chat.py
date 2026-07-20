@@ -130,8 +130,11 @@ async def _persist_answer(user_id: str, conversation_id: str, collector: _Answer
             db, conversation_id, user_id, "assistant",
             collector.text(), tool_calls=collector.tool_calls(), usage=collector.usage or None,
         )
-        await crud_chat.record_usage(db, user_id, collector.usage)
+        warn = await crud_chat.record_usage(db, user_id, collector.usage)
         await emit("message_saved", {"message_id": message_id})
+        # Cảnh báo sớm 50%/75%: chỉ NHẮC, user vẫn chat tiếp được (khác 429/503 là chặn hẳn).
+        if warn:
+            await emit("quota_warn", warn)
     except Exception:
         logger.exception("Lưu câu trả lời/usage thất bại conversation_id=%s", conversation_id)
 

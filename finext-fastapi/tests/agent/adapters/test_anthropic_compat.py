@@ -199,10 +199,36 @@ def test_text_stream_yields_tokens_then_done_with_usage() -> None:
     done = events[-1]
     assert isinstance(done, DoneEvent)
     assert done.truncated is False
-    assert done.usage["in"] == 1200
+    # "in" = TỔNG token đầu vào ĐÃ GỒM cache: wire trả input_tokens=1200 (chưa gồm cache) + 900 cache.
+    assert done.usage["in"] == 2100
     assert done.usage["out"] == 42
     assert done.usage["cache_read"] == 900
     assert done.usage["cache_write"] == 100
+
+
+def test_in_la_tong_da_gom_cache_de_dong_nhat_voi_adapter_openai() -> None:
+    """Chuẩn hoá ngữ nghĩa: wire Anthropic tách input_tokens / cache_read, adapter phải CỘNG lại.
+
+    Không cộng thì cùng một hoá đơn thật, đi qua wire Anthropic sẽ bị tính hụt toàn bộ phần cache
+    so với wire OpenAI (nơi prompt_tokens đã bao gồm cache) — hai adapter lệch nhau.
+    """
+    from app.crud.chat import billable_units
+
+    events = parse_sse_lines(_lines(TEXT_STREAM))
+    anthropic_usage = events[-1].usage
+    # Cùng hoá đơn đó mô tả theo wire OpenAI: prompt_tokens = 2100 (đã gồm 900 cache).
+    openai_usage = {"in": 2100, "out": 42, "cache_read": 900}
+    assert anthropic_usage["in"] == openai_usage["in"]
+    assert anthropic_usage["cache_read"] == openai_usage["cache_read"]
+    assert billable_units(anthropic_usage) == billable_units(openai_usage)
+
+
+def test_khong_co_cache_thi_in_bang_input_tokens() -> None:
+    """Vòng không cache (TOOL_STREAM: chỉ có input_tokens) → "in" giữ nguyên, không có khoá cache_read."""
+    events = parse_sse_lines(_lines(TOOL_STREAM))
+    usage = events[-1].usage
+    assert usage["in"] == 1000
+    assert "cache_read" not in usage
 
 
 def test_tool_use_stream_yields_toolcalls_with_dict_args() -> None:

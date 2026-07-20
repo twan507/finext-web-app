@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Box, CircularProgress, Drawer, IconButton, Typography, alpha, useTheme } from '@mui/material';
-import { AddCommentOutlined, HistoryOutlined, WarningAmberOutlined } from '@mui/icons-material';
+import { AddCommentOutlined, HistoryOutlined, InfoOutlined, WarningAmberOutlined } from '@mui/icons-material';
 import { layoutTokens, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import OptionalAuthWrapper from 'components/auth/OptionalAuthWrapper';
 import { useAuth } from 'components/auth/AuthProvider';
@@ -18,7 +18,9 @@ import ChatSkeleton from './components/ChatSkeleton';
 const VIEWPORT = `calc(100dvh - ${layoutTokens.appBarHeight}px - env(titlebar-area-height, 0px))`;
 
 // Thanh thông báo nhỏ NGAY TRÊN ô chat khi chạm limit / server quá tải (kèm link xem chi tiết nếu là limit user).
-function LimitNotice({ notice }: { notice: { message: string; detail: boolean } }) {
+// severity='info' dùng cho nhắc sớm 50%/75%: nhẹ nhàng hơn vì user vẫn chat tiếp được bình thường.
+function LimitNotice({ notice, severity = 'warning' }: { notice: { message: string; detail: boolean }; severity?: 'warning' | 'info' }) {
+    const Icon = severity === 'info' ? InfoOutlined : WarningAmberOutlined;
     return (
         <Box sx={{ px: { xs: 2, md: 3 } }}>
             <Box
@@ -32,11 +34,11 @@ function LimitNotice({ notice }: { notice: { message: string; detail: boolean } 
                     px: 1.75,
                     py: 1,
                     borderRadius: 2,
-                    bgcolor: alpha(t.palette.warning.main, t.palette.mode === 'dark' ? 0.18 : 0.12),
-                    border: `1px solid ${alpha(t.palette.warning.main, 0.3)}`,
+                    bgcolor: alpha(t.palette[severity].main, t.palette.mode === 'dark' ? 0.18 : 0.12),
+                    border: `1px solid ${alpha(t.palette[severity].main, 0.3)}`,
                 })}
             >
-                <WarningAmberOutlined sx={{ fontSize: 18, color: 'warning.main', flexShrink: 0 }} />
+                <Icon sx={{ fontSize: 18, color: `${severity}.main`, flexShrink: 0 }} />
                 <Typography sx={{ flex: 1, minWidth: 0, fontSize: getResponsiveFontSize('sm'), color: 'text.primary' }}>{notice.message}</Typography>
                 {notice.detail && (
                     <Box
@@ -204,7 +206,8 @@ function ChatApp({ initialConversationId }: { initialConversationId?: string }) 
             <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
               <MessageList key={store.activeId} messages={store.messages} onRetry={store.retry} onFeedback={store.sendFeedback} error={store.error} />
             </Box>
-            {store.limitNotice && <LimitNotice notice={store.limitNotice} />}
+            {/* Chặn (429/503) ưu tiên hơn nhắc sớm — không hiện hai thanh cùng lúc. */}
+            {store.limitNotice ? <LimitNotice notice={store.limitNotice} /> : store.quotaWarn ? <LimitNotice notice={store.quotaWarn} severity="info" /> : null}
             <Composer ref={setComposerNode} disabled={streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} />
           </>
         ) : (

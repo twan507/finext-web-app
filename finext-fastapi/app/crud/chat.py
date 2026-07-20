@@ -2,6 +2,7 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from math import ceil
 from typing import Any
 
 from bson import ObjectId
@@ -16,6 +17,9 @@ from app.core.config import (
     AGENT_UNLIMITED_LICENSES,
     AGENT_WEEK_DAYS,
     CHAT_MAX_CONVERSATIONS,
+    LLM_PRICE_CACHED,
+    LLM_PRICE_INPUT,
+    LLM_PRICE_OUTPUT,
 )
 from app.crud.subscriptions import get_active_subscription_for_user_db
 
@@ -179,7 +183,9 @@ async def delete_conversation(db: Any, conversation_id: str, user_id: str) -> bo
     return True
 
 
-# ── Quota TOKEN theo license: cửa sổ 5h (anchored) + weekly + kill-switch global 24h ──
+# ── Quota theo license: cửa sổ 5h (anchored) + weekly + kill-switch global 24h ──
+# ĐƠN VỊ ĐẾM là "đơn vị quy đổi theo chi phí" (billable_units), KHÔNG phải token thô — mọi trần,
+# mọi trường s5_tokens/wk_tokens/g_tokens trong DB đều mang đơn vị này (tên trường giữ nguyên).
 # chat_quota.user_id = STRING (real user = str(ObjectId); global sentinel = "__global__").
 # Doc user: {user_id, s5_start, s5_tokens, wk_start, wk_tokens}. Global: {user_id, g_start, g_tokens}.
 @dataclass
@@ -197,6 +203,14 @@ DAY_DUR = timedelta(hours=24)
 _MSG_SESSION_DENY = "Bạn đã đạt giới hạn sử dụng trong phiên này."
 _MSG_WEEK_DENY = "Bạn đã đạt giới hạn sử dụng trong tuần này."
 _MSG_BUDGET_DENY = "Server đang quá tải, vui lòng thử lại sau."
+
+# Cảnh báo SỚM (không chặn): nhắc user khi mức dùng vừa vượt các mốc này.
+WARN_THRESHOLDS = (50, 75)
+# CHỈ nói phần trăm — không số token, không số trần (K-hygiene).
+_MSG_WARN = {
+    "session": "Bạn đã dùng {pct}% hạn mức trong phiên này.",
+    "week": "Bạn đã dùng {pct}% hạn mức trong tuần này.",
+}
 
 
 def _tier_limits(tier: str) -> tuple[int | None, int | None]:
@@ -241,10 +255,13 @@ async def check_quota(db: Any, user_id: str) -> QuotaDecision:
     """Chặn TRƯỚC stream: global kill-switch (503) → 5h (429) → weekly (429). Unlimited bỏ qua per-user.
     KHÔNG reserve token ở đây (token thật cộng ở record_usage sau khi done)."""
     now = _now()
-    g = await db[QUOTA].find_one({"user_id": GLOBAL_QUOTA_KEY})
-    g_used, _ = _window_used(g.get("g_start") if g else None, g.get("g_tokens") if g else 0, now, DAY_DUR)
-    if g_used >= AGENT_DAILY_TOKEN_BUDGET:
-        return QuotaDecision(False, 503, _MSG_BUDGET_DENY)
+    # Cầu dao global TẮT khi trần <= 0. Bắt buộc phải kiểm trước: nếu không, "đã dùng 0 >= trần 0"
+    # là đúng, và MỌI request sẽ bị chặn 503 ngay từ lượt đầu.
+    if AGENT_DAILY_TOKEN_BUDGET > 0:
+        g = await db[QUOTA].find_one({"user_id": GLOBAL_QUOTA_KEY})
+        g_used, _ = _window_used(g.get("g_start") if g else None, g.get("g_tokens") if g else 0, now, DAY_DUR)
+        if g_used >= AGENT_DAILY_TOKEN_BUDGET:
+            return QuotaDecision(False, 503, _MSG_BUDGET_DENY)
     tier = await resolve_tier(db, user_id)
     lim5, limw = _tier_limits(tier)
     if lim5 is None:
@@ -267,13 +284,74 @@ def _accumulate(start: Any, used: Any, now: datetime, dur: timedelta, add: int) 
     return start, int(used or 0) + add
 
 
-async def record_usage(db: Any, user_id: str, usage: dict[str, int]) -> None:
-    """Sau done: cộng token THẬT (in+out) vào cửa sổ 5h + weekly của user + cửa sổ global 24h."""
-    tok = int(usage.get("in", 0) or 0) + int(usage.get("out", 0) or 0)
+def billable_units(usage: dict[str, int]) -> int:
+    """usage của 1 lượt → ĐƠN VỊ QUY ĐỔI THEO CHI PHÍ (1 đơn vị = 1 token input giá thường).
+
+    Đếm token thô (in+out) làm user bị trừ hạn mức gấp nhiều lần chi phí thật, vì ~99% token đầu vào
+    là cache hit (rẻ hơn 5 lần) trong khi output đắt hơn 4 lần. Quy đổi theo giá cho công bằng.
+
+    Quy ước usage (mọi adapter tuân thủ): "in" = TỔNG token đầu vào (ĐÃ gồm phần cache),
+    "cache_read" = phần trong đó là cache hit. Thiếu khoá "cache_read" → coi như 0 (tương thích ngược
+    với nhà cung cấp không báo cache). Giá trị âm/vượt ngưỡng bị kẹp về biên hợp lệ.
+    """
+    total_in = max(0, int(usage.get("in", 0) or 0))
+    out = max(0, int(usage.get("out", 0) or 0))
+    cache_read = min(max(0, int(usage.get("cache_read", 0) or 0)), total_in)
+    uncached = total_in - cache_read
+    units = (
+        uncached * 1.0
+        + cache_read * (LLM_PRICE_CACHED / LLM_PRICE_INPUT)
+        + out * (LLM_PRICE_OUTPUT / LLM_PRICE_INPUT)
+    )
+    return ceil(units)
+
+
+def crossed_threshold(before: int, after: int, limit: int) -> int | None:
+    """Mốc % CAO NHẤT mà lượt này vừa vượt qua: trước lượt còn dưới mốc, sau lượt đã chạm/vượt.
+
+    Đây cũng là cơ chế chống nhắc lại: lượt sau `before` đã nằm trên mốc nên không mốc nào
+    thoả điều kiện nữa → im lặng cho tới khi chạm mốc kế tiếp (hoặc cửa sổ reset về 0).
+    """
+    if limit <= 0:
+        return None
+    for pct in sorted(WARN_THRESHOLDS, reverse=True):
+        need = pct * limit / 100
+        if before < need <= after:
+            return pct
+    return None
+
+
+async def _quota_warning(
+    db: Any, user_id: str, used5: tuple[int, int], usedw: tuple[int, int]
+) -> dict[str, Any] | None:
+    """Cảnh báo sớm cho lượt vừa rồi, từ cặp (trước, sau) của mỗi cửa sổ. None = không nhắc.
+
+    Ưu tiên PHIÊN hơn TUẦN (phiên chặn sớm hơn nên gấp hơn); vượt cả 50 lẫn 75 trong một lượt
+    thì báo mốc cao. Gói không giới hạn không bao giờ bị nhắc."""
+    tier = await resolve_tier(db, user_id)
+    lim5, limw = _tier_limits(tier)
+    if lim5 is None or limw is None:
+        return None
+    for window, (before, after), limit in (("session", used5, lim5), ("week", usedw, limw)):
+        pct = crossed_threshold(before, after, limit)
+        if pct is not None:
+            return {"threshold": pct, "window": window, "message": _MSG_WARN[window].format(pct=pct)}
+    return None
+
+
+async def record_usage(db: Any, user_id: str, usage: dict[str, int]) -> dict[str, Any] | None:
+    """Sau done: cộng ĐƠN VỊ QUY ĐỔI (billable_units) vào cửa sổ 5h + weekly của user + global 24h.
+    Mọi trần (AGENT_TOKENS_5H/WEEK, AGENT_DAILY_TOKEN_BUDGET) đều hiểu theo cùng đơn vị này.
+
+    Trả về cảnh báo sớm {threshold, window, message} nếu lượt này VỪA vượt mốc %, ngược lại None."""
+    tok = billable_units(usage)
     if tok <= 0:
-        return
+        return None
     now = _now()
     doc = await db[QUOTA].find_one({"user_id": str(user_id)}) or {}
+    # Mức đã dùng TRƯỚC lượt này (cửa sổ hết hạn → 0), đọc từ chính doc cũ vừa lấy — không truy vấn thêm.
+    used5_before, _ = _window_used(doc.get("s5_start"), doc.get("s5_tokens"), now, SESSION_DUR)
+    usedw_before, _ = _window_used(doc.get("wk_start"), doc.get("wk_tokens"), now, WEEK_DUR)
     s5_start, s5_tokens = _accumulate(doc.get("s5_start"), doc.get("s5_tokens"), now, SESSION_DUR, tok)
     wk_start, wk_tokens = _accumulate(doc.get("wk_start"), doc.get("wk_tokens"), now, WEEK_DUR, tok)
     await db[QUOTA].update_one(
@@ -288,6 +366,7 @@ async def record_usage(db: Any, user_id: str, usage: dict[str, int]) -> None:
         {"$set": {"g_start": g_start, "g_tokens": g_tokens}},
         upsert=True,
     )
+    return await _quota_warning(db, user_id, (used5_before, s5_tokens), (usedw_before, wk_tokens))
 
 
 async def quota_status(db: Any, user_id: str) -> dict[str, Any]:

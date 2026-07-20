@@ -163,10 +163,19 @@ class OpenAICompatAdapter:
                 continue
             usage = chunk.get("usage")
             if usage:
+                # QUY ƯỚC USAGE CHUNG CHO MỌI ADAPTER (đừng đổi nếu chưa đọc cả 2 file adapter):
+                #   "in"         = TỔNG token đầu vào của vòng, ĐÃ BAO GỒM phần đọc từ cache.
+                #   "cache_read" = phần trong "in" là cache hit (tập con của "in", giá rẻ hơn).
+                # Wire OpenAI-compat đã đúng ngữ nghĩa này sẵn: prompt_tokens ĐÃ GỒM cached_tokens
+                # (khác wire Anthropic — xem anthropic_compat._apply_chunk).
                 state.usage = {
                     "in": usage.get("prompt_tokens", 0),
                     "out": usage.get("completion_tokens", 0),
                 }
+                details = usage.get("prompt_tokens_details") or {}
+                # Chỉ đặt khoá khi nhà cung cấp THẬT SỰ trả về — thiếu khoá ≠ cache_read = 0.
+                if isinstance(details, dict) and "cached_tokens" in details:
+                    state.usage["cache_read"] = int(details.get("cached_tokens") or 0)
             for choice in chunk.get("choices") or []:
                 delta = choice.get("delta") or {}
                 if delta.get("content"):
@@ -214,6 +223,8 @@ class OpenAICompatAdapter:
                 await asyncio.sleep(2**attempt)
 
         if state.finish_reason == "tool_calls":
-            yield ToolCallsEvent(calls=state.buffer.flush(), reasoning_content=state.reasoning or None)
+            yield ToolCallsEvent(
+                calls=state.buffer.flush(), reasoning_content=state.reasoning or None, usage=state.usage
+            )
             return
         yield DoneEvent(usage=state.usage, truncated=state.finish_reason == "length")

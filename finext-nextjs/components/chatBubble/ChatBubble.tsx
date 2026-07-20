@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Box, Button, CircularProgress, Fab, IconButton, Tooltip, Typography, alpha, useTheme } from '@mui/material';
-import { AddCommentOutlined, AutoAwesomeRounded, CloseRounded, Launch, WarningAmberOutlined } from '@mui/icons-material';
+import { AddCommentOutlined, AutoAwesomeRounded, CloseRounded, InfoOutlined, Launch, WarningAmberOutlined } from '@mui/icons-material';
 import { easings, getGlassCard, getGlassEdgeLight, getGlassHighlight, getGlowButton, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import { useAuth } from 'components/auth/AuthProvider';
 import useChatStore from 'hooks/useChatStore';
@@ -85,7 +85,9 @@ function PanelHeader({ onNew, onExpand, onClose }: { onNew?: () => void; onExpan
 }
 
 // Thanh thông báo hạn mức, cùng kiểu trang /chat nhưng gọn cho khung nhỏ.
-function BubbleLimitNotice({ notice }: { notice: { message: string; detail: boolean } }) {
+// severity='info' cho nhắc sớm 50%/75% (chỉ nhắc, không chặn) — nhẹ hơn thanh chặn 429/503.
+function BubbleLimitNotice({ notice, severity = 'warning' }: { notice: { message: string; detail: boolean }; severity?: 'warning' | 'info' }) {
+  const Icon = severity === 'info' ? InfoOutlined : WarningAmberOutlined;
   return (
     <Box
       sx={(t) => ({
@@ -98,11 +100,11 @@ function BubbleLimitNotice({ notice }: { notice: { message: string; detail: bool
         py: 0.75,
         borderRadius: 2,
         flexShrink: 0,
-        bgcolor: alpha(t.palette.warning.main, t.palette.mode === 'dark' ? 0.18 : 0.12),
-        border: `1px solid ${alpha(t.palette.warning.main, 0.3)}`,
+        bgcolor: alpha(t.palette[severity].main, t.palette.mode === 'dark' ? 0.18 : 0.12),
+        border: `1px solid ${alpha(t.palette[severity].main, 0.3)}`,
       })}
     >
-      <WarningAmberOutlined sx={{ fontSize: 16, color: 'warning.main', flexShrink: 0 }} />
+      <Icon sx={{ fontSize: 16, color: `${severity}.main`, flexShrink: 0 }} />
       <Typography sx={{ flex: 1, minWidth: 0, fontSize: getResponsiveFontSize('xs'), color: 'text.primary' }}>{notice.message}</Typography>
       {notice.detail && (
         <Box
@@ -167,7 +169,8 @@ function BubbleChat({ visible, onClose }: { visible: boolean; onClose: () => voi
         onFeedback={store.sendFeedback}
         error={store.error}
       />
-      {store.limitNotice && <BubbleLimitNotice notice={store.limitNotice} />}
+      {/* Chặn (429/503) ưu tiên hơn nhắc sớm — không hiện hai thanh cùng lúc. */}
+      {store.limitNotice ? <BubbleLimitNotice notice={store.limitNotice} /> : store.quotaWarn ? <BubbleLimitNotice notice={store.quotaWarn} severity="info" /> : null}
       <Box sx={{ flexShrink: 0 }}>
         <Composer
           compact

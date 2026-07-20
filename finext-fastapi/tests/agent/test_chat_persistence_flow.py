@@ -58,7 +58,9 @@ async def test_produce_persists_assistant_and_usage_on_done(monkeypatch):
     assert asst[0]["content"] == "Xin chào, đây là câu trả lời."
     assert asst[0]["usage"] == {"in": 500, "out": 40}
     g = await db[crud.QUOTA].find_one({"user_id": crud.GLOBAL_QUOTA_KEY})
-    assert g["g_tokens"] == 540  # record_usage đã chạy (in 500 + out 40, cửa sổ global 24h)
+    # record_usage đã chạy, cửa sổ global 24h. ĐƠN VỊ QUY ĐỔI theo chi phí (không phải token thô 540):
+    # không có cache → 500 in ×1 + 40 out ×4 = 660.
+    assert g["g_tokens"] == 660
 
 
 async def test_produce_generates_title_on_new_conversation(monkeypatch):

@@ -315,8 +315,8 @@ def build_adapter(thinking: str | None = None) -> ModelAdapter:
 
 
 def _merge_usage(total: dict[str, int], usage: dict[str, int]) -> None:
-    """Carryover #1: cộng dồn usage qua các vòng LLM. Vòng kết thúc bằng ToolCallsEvent không mang
-    usage (known-gap v1 — cần thêm field usage vào ToolCallsEvent ở task sau)."""
+    """Cộng dồn usage qua MỌI vòng LLM của một lượt chat — cả vòng gọi tool lẫn vòng trả lời cuối.
+    Mỗi vòng gửi lại toàn bộ system prompt + history nên vòng gọi tool tốn token không kém vòng cuối."""
     for key, value in usage.items():
         if isinstance(value, int):
             total[key] = total.get(key, 0) + value
@@ -390,6 +390,7 @@ async def _drive_turn(
         elif isinstance(event, ToolCallsEvent):
             pending = event.calls
             pending_reasoning = event.reasoning_content
+            _merge_usage(usage_total, event.usage)  # vòng gọi tool cũng tốn token — không được bỏ sót
             return pending, pending_reasoning, "", False, "tools"
         elif isinstance(event, DoneEvent):
             _merge_usage(usage_total, event.usage)

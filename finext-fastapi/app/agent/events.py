@@ -21,6 +21,9 @@ class TokenEvent:
 class ToolCallsEvent:
     calls: list[ToolCall]
     reasoning_content: str | None = None
+    # Vòng gọi tool CŨNG tốn token (system prompt + history gửi lại mỗi vòng). Thiếu field này
+    # thì quota và cầu dao ngân sách chỉ đếm vòng cuối — đo thật cho thấy hụt ~2,5 lần.
+    usage: dict[str, int] = field(default_factory=dict)  # {"in": N, "out": M}
 
 
 @dataclass

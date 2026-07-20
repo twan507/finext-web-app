@@ -49,6 +49,7 @@ export interface UseChatStoreReturn {
   asOf: string | null;
   error: string | null;
   limitNotice: { message: string; detail: boolean } | null; // thanh nhỏ trên ô chat khi chạm limit (detail=có link xem chi tiết)
+  quotaWarn: { message: string; detail: boolean } | null; // nhắc sớm 50%/75% — KHÔNG chặn, tự ẩn ở lượt gửi kế tiếp
   thinking: boolean;
   historyLoading: boolean;
   msgLoading: boolean;
@@ -114,6 +115,7 @@ export default function useChatStore(
   const [asOf, setAsOf] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [limitNotice, setLimitNotice] = useState<{ message: string; detail: boolean } | null>(null);
+  const [quotaWarn, setQuotaWarn] = useState<{ message: string; detail: boolean } | null>(null);
   const [historyLoading, setHistoryLoading] = useState(true); // tải danh sách hội thoại lúc mount
   const [msgLoading, setMsgLoading] = useState(false); // tải messages 1 hội thoại khi mở
   // "Suy nghĩ sâu": init false (SSR-safe), hydrate từ localStorage sau mount để tránh mismatch.
@@ -227,6 +229,7 @@ export default function useChatStore(
 
       setError(null);
       setLimitNotice(null);
+      setQuotaWarn(null); // nhắc hạn mức của lượt trước tự ẩn khi user gửi lượt mới
       setPhase('waiting');
       setConversations((prev) =>
         prev.map((c) =>
@@ -293,6 +296,10 @@ export default function useChatStore(
           case 'message_saved':
             // Gắn _id thật của câu trả lời vừa lưu (dùng cho 👍👎).
             if (ev.message_id) patchAssistant((m) => ({ ...m, serverId: ev.message_id }));
+            break;
+          case 'quota_warn':
+            // Nhắc sớm (50%/75%) — chỉ hiện thanh nhẹ, không đụng tới câu trả lời đang stream.
+            if (ev.message) setQuotaWarn({ message: ev.message, detail: true });
             break;
           case 'done':
             flush(true);
@@ -414,6 +421,7 @@ export default function useChatStore(
       setActiveId(id);
       setError(null);
       setLimitNotice(null);
+      setQuotaWarn(null);
       setPhase('idle');
       setAsOf(null);
       // Hội thoại cũ (có serverId) chưa tải messages → lazy-load từ backend.
@@ -506,6 +514,7 @@ export default function useChatStore(
     asOf,
     error,
     limitNotice,
+    quotaWarn,
     thinking,
     historyLoading,
     msgLoading,

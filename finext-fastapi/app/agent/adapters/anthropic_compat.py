@@ -162,9 +162,17 @@ def _apply_chunk(chunk: dict[str, Any], state: _TurnState) -> TokenEvent | None:
         message = chunk.get("message") or {}
         usage = message.get("usage") or chunk.get("usage") or {}
         if usage:
-            state.usage["in"] = usage.get("input_tokens", 0)
+            # QUY ƯỚC USAGE CHUNG CHO MỌI ADAPTER (xem openai_compat._read_stream):
+            #   "in"         = TỔNG token đầu vào của vòng, ĐÃ BAO GỒM phần đọc từ cache.
+            #   "cache_read" = phần trong "in" là cache hit (tập con của "in").
+            # CẢNH BÁO: wire Anthropic KHÁC wire OpenAI — input_tokens ở đây KHÔNG bao gồm cache,
+            # cache_read_input_tokens là khoản RIÊNG. Phải CỘNG vào thì "in" mới cùng ngữ nghĩa với
+            # adapter OpenAI, nếu không quota sẽ tính hụt toàn bộ phần cache (billable_units trừ
+            # ngược cache_read khỏi "in" để ra phần chưa cache).
+            cache_read = int(usage.get("cache_read_input_tokens") or 0)
+            state.usage["in"] = int(usage.get("input_tokens") or 0) + cache_read
             if "cache_read_input_tokens" in usage:
-                state.usage["cache_read"] = usage.get("cache_read_input_tokens", 0)
+                state.usage["cache_read"] = cache_read
             if "cache_creation_input_tokens" in usage:
                 state.usage["cache_write"] = usage.get("cache_creation_input_tokens", 0)
         return None
@@ -197,7 +205,9 @@ def _apply_chunk(chunk: dict[str, Any], state: _TurnState) -> TokenEvent | None:
 def _terminal_event(state: _TurnState) -> AgentEvent:
     """Cuối lượt: stop_reason=="tool_use" → ToolCallsEvent; else → DoneEvent(truncated=max_tokens) (§5)."""
     if state.stop_reason == "tool_use":
-        return ToolCallsEvent(calls=state.buffer.flush(), reasoning_content=state.reasoning or None)
+        return ToolCallsEvent(
+            calls=state.buffer.flush(), reasoning_content=state.reasoning or None, usage=state.usage
+        )
     return DoneEvent(usage=state.usage, truncated=state.stop_reason == "max_tokens")
 
 

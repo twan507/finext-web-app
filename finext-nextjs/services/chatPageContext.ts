@@ -14,7 +14,7 @@
 //  b. KHÔNG dùng tên tab / quy ước nội bộ của Finext trong câu hỏi — khách mới không hiểu.
 //  c. Mỗi trang và mỗi tab một kho riêng, tối thiểu ba câu, không lặp giữa các trang.
 //  d. Chỉ hỏi thứ agent trả lời được từ dữ liệu — agent KHÔNG đọc được danh mục riêng của user.
-//  e. Không chèn slug đường dẫn (VD 'ngan_hang') vào câu hỏi — dùng "ngành này" / "nhóm này".
+//  e. Không chèn slug đường dẫn (VD 'nganhang') vào câu hỏi — dùng "ngành này" / "nhóm này".
 //
 // PHÂN CÔNG: file này chỉ giữ DỮ LIỆU. Cơ chế chọn ngẫu nhiên câu hỏi / câu chào nằm ở lớp UI
 // (ChatBubble bốc từ `getSuggestionPool` và `BUBBLE_GREETINGS`). `getSuggestions` giữ lại như
