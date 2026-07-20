@@ -447,3 +447,262 @@ Cái đắt vẫn là bão retry, không phải kích thước kết quả tool.
 
 Các mục §6.1 (projection hằng chuỗi) và §6.2 (đếm token) đã xong; §6.4 (chọn sai kỳ BCTC) xong bằng
 plan `2026-07-20-cat-du-lieu-tool.md`; §6.3 (câu preamble cụt) không tái hiện ở lần đo này.
+
+---
+
+## 8. Chạy lại sau batch tối ưu (repair pipeline + cầu dao bão retry + KB $slice) — 2026-07-20
+
+> **Vì sao chạy lại:** ba fix mới vào working tree (chưa commit): (1) `tools/db.py::_repair_stage` bóc
+> stage bị bọc `{"$text": "<JSON>"}` — nguyên nhân câu 10 hỏng 9 vòng ở §7; (2) `loop.py` hai cầu dao
+> chặn bão retry (`MAX_FAILED_TOOL_ROUNDS=2` ép trả lời trung thực bằng `_GIVE_UP_NUDGE`; `MAX_TURN_TOKENS=600k`
+> ép trả lời); (3) `kb/agent_db_02.md` hạ ví dụ `$slice` -104/-156 → -52 + trỏ `db_stats` cho cửa sổ dài.
+>
+> **Cách chạy:** y hệt §7 (probe scratchpad `eval_smoke3.py` = tái dùng `eval_smoke2.py`, đổi output
+> `eval3_*`, thêm bắt log `"loop give-up"` để đo cầu dao). Đi đúng đường `/chat/stream`, `thinking=disabled`,
+> ngữ cảnh trang KHÔNG tự chèn nhãn (backend chèn), lưu nguyên văn tool-result. **Sau giờ đóng cửa**
+> (VNINDEX -2,46% đóng 1743,51 — cùng phiên với §7). Mỗi câu 1 lượt, 14/14.
+
+### 8.1 Bảng 14 câu — lần 3 đặt cạnh §7
+
+| # | Route | §7 | **Lần 3** | Đổi | Token thật §7→lần 3 | Tool §7→3 | Vòng §7→3 | Cầu dao |
+|---|---|---|---|---|---|---|---|---|
+| 1 | `/phase?tab=conservative` | ĐẠT | **ĐẠT** | giữ | 131.224→131.844 | 1→1 | 2→2 | - |
+| 2 | `/phase?tab=aggressive` | ĐẠT | **KHÔNG ĐẠT** | **XẤU ĐI** | 131.318→63.870 | 1→0 | 2→1 | - |
+| 3 | `/phase?tab=core` | ĐẠT | **ĐẠT** | giữ | 127.750→101.949 | 2→3 | 2→2 | - |
+| 4 | `/commodities?tab=metals` | ĐẠT | **ĐẠT** | giữ | 96.939→128.801 | 2→2 | 2→2 | - |
+| 5 | `/international?tab=global_index` | ĐẠT | **KHÔNG ĐẠT — bịa số** | **XẤU ĐI** | 127.734→63.820 | 1→0 | 2→1 | - |
+| 6 | `/stocks/HPG?tab=financials` | ĐẠT | **KHÔNG ĐẠT — từ chối** | **XẤU ĐI** | 105.036→**449.930** | 3→6 | 2→7 | **YES** |
+| 7 | `/stocks/FPT?tab=news` | ĐẠT | **KHÔNG ĐẠT — từ chối** | **XẤU ĐI** | 650.170→192.803 | 11→4 | 10→3 | **YES** |
+| 8 | `/` | ĐẠT | **ĐẠT** | giữ | 235.134→164.400 | 5→3 | 4→3 | - |
+| 9 | `/stocks` | KHÔNG ĐẠT | **ĐẠT** | **TỐT LÊN** | 650.376→259.336 | 9→1 | 10→4 | - |
+| 10 | `/sectors` | KHÔNG ĐẠT | **KHÔNG ĐẠT** | giữ (rẻ hơn) | 643.288→191.260 | 9→2 | 10→3 | **YES** |
+| 11 | `/groups/largecap` | KHÔNG ĐẠT | **KHÔNG ĐẠT** | giữ (cải thiện) | 191.247→194.245 | 2→2 | 3→3 | - |
+| 12 | `/watchlist` | ĐẠT | **KHÔNG ĐẠT — bịa số** | **XẤU ĐI** | 194.207→193.318 | 2→2 | 3→3 | - |
+| 13 | `/macro?tab=monetary` | ĐẠT | **ĐẠT** | giữ | 255.943→128.269 | 2→1 | 4→2 | - |
+| 14 | `/sectors/kimloai?tab=stocks` | ĐẠT | **KHÔNG ĐẠT — từ chối** | **XẤU ĐI** | 327.753→192.095 | 5→2 | 5→3 | **YES** |
+
+**Tỷ lệ đạt: 6/14 (43%)** — **XẤU ĐI RÕ** so với **11/14 (79%)** ở §7.
+
+- **Tốt lên: 1 câu** — 9.
+- **Xấu đi: 6 câu** — 2, 5, 6, 7, 12, 14.
+- **Giữ nguyên: 7 câu** — 1, 3, 4, 8 (ĐẠT); 10, 11 (KHÔNG, nhưng rẻ hơn/cải thiện); 13 (ĐẠT).
+- **Cầu dao kích hoạt: 4 câu** — 6, 7, 10, 14.
+
+> **Đây là số đo thật, tệ hơn §7.** Quan trọng: 3 fix **KHÔNG phải nguyên nhân** (§8.5 điều tra). Sụt điểm
+> do **một phiên model xấu**: M3 lần này hỏng cú pháp truy vấn trên diện rộng (bọc SỐ thành CHUỖI, sai
+> đường field), cộng 2 ca bịa số âm thầm (5, 12) + 1 ca lộ kế hoạch nội bộ (2). One-shot, phương sai cao.
+
+### 8.2 Trọng tâm 1 — Câu 10 `/sectors`: VẪN KHÔNG ĐẠT (kỳ vọng đạt nhờ fix 1 — KHÔNG đạt)
+
+- 2 `db_aggregate`, **cả 2 fail**, 3 vòng, **cầu dao kích hoạt** (`loop give-up: failed_rounds=2 spent=127753 iter=2`).
+- **Root cause KHÁC §7.** Kiểu `$text` cũ mà fix 1 nhắm tới **không tái diễn** — tức fix 1 có tác dụng.
+  Nhưng model hỏng theo kiểu MỚI: **bọc số thành chuỗi** — `$limit: "25"`, `$sort: {"week_score": "-1"}`,
+  `$project: {"industry_name": "1"}`. Validator từ chối đúng ("$limit='25' không hợp lệ — phải là số nguyên"),
+  model không tự sửa được lớp chuỗi này.
+- Trả lời **TRUNG THỰC** (không bịa): *"Tôi chưa tra cứu được bảng xếp hạng ngành lúc này... không đưa ra
+  được thứ hạng cụ thể."* Token 643k→191k (giảm 70% nhờ cầu dao).
+
+### 8.3 Trọng tâm 2 — Câu 6 HPG: KHÔNG GIỮ ĐƯỢC ĐẠT — XẤU ĐI NẶNG (điểm đau nhất)
+
+- §7 ĐẠT (+168,94% YoY đúng, 105k). Lần 3: **6 tool, 7 vòng, 449.930 token — lượt ĐẮT NHẤT bộ**, cầu dao
+  kích hoạt MUỘN (`failed_rounds=2 spent=385743 iter=6`), rồi **từ chối trung thực**.
+- Root cause: model **mangle cú pháp `$slice`/`$arrayElemAt`** lặp lại:
+  `{"$slice": {"item": "$financial_statements.quarterly", "-5": ""}}`,
+  `{"$arrayElemAt": {"item": ..., "-1": ""}}` — dùng số âm làm KEY, sai hoàn toàn.
+- **KB `agent_db_02.md` KHÔNG phải thủ phạm** (đã kiểm diff): chỉ đổi `$slice -104/-156 → -52` + thêm ví
+  dụ `db_stats`; cú pháp `{"$slice": -52}` vẫn đúng. Model tự chế cú pháp hỏng (nondeterminism).
+- Cầu dao nhảy MUỘN (iter 6, 385k) vì có 2 lần tool `ok=True` trả **rác** (1 lần projection key = cả biểu
+  thức chuỗi; 1 lần chỉ lấy `period`) làm **reset bộ đếm `failed_rounds`** → bão chạy tới 385k mới bị chặn.
+  Đây là lỗ hổng của cầu dao: vòng "thành công nhưng vô ích" reset bộ đếm fail-sạch.
+- Trả lời **không bịa số** (khác hẳn thảm hoạ §4.1 lần 1): *"Chưa tra cứu được dữ liệu BCTC của HPG..."*
+
+### 8.4 Trọng tâm 3 — Token: ĐẠT mục tiêu (không lượt nào >650k) + cầu dao đều trung thực
+
+- Lượt đắt nhất **Q6 = 449.930** (< 600k, < 650k). §7 có **3 lượt >640k** (7, 9, 10) → lần này **không còn**.
+- Tổng 14 lượt: 3.868.119 → **2.455.940 (-36,5%)**.
+- **Cầu dao kích hoạt 4 lần (Q6, Q7, Q10, Q14)** — tất cả theo nhánh `starved` (2 vòng tool fail sạch);
+  **không** lượt nào chạm trần token 600k. **Cả 4 câu ép trả lời đều TRUNG THỰC, không bịa số** — cầu dao
+  chạy đúng thiết kế.
+
+### 8.5 Các câu XẤU ĐI + nguyên nhân đã điều tra (đọc tool_log từng lượt)
+
+- **Q2 `/phase?tab=aggressive` — LỘ KẾ HOẠCH NỘI BỘ, 0 tool.** Nguyên văn câu trả lời: *"User đang hỏi về
+  rủi ro của rổ Mạo Hiểm (AGGRESSIVE) — tab đang mở. Cần đọc AGGRESSIVE + market_phase + phase_trading (sổ
+  lệnh rổ) để đánh giá rủi ro thật."* — suy nghĩ/kế hoạch của model bị stream thẳng làm câu trả lời.
+  `_needs_retry` không bắt vì `_PREAMBLE_ONLY_RE` chỉ khớp mở đầu "tôi sẽ/mình sẽ/để tôi..."; câu này mở
+  đầu "User đang hỏi..." nên lọt qua.
+- **Q5 `/international` — BỊA SỐ, 0 tool.** Nói *"S&P 500 tăng nhẹ gần đỉnh, Dow tăng mạnh, Nikkei +0,52%,
+  Shanghai +0,32%, Hang Seng & Kospi giảm nhẹ."* Đối chiếu `other_data` (group=international,
+  category=global_index): S&P **-1,03%**, Dow **-0,77%**, Nikkei **-4,07%** (đều GIẢM), Shanghai **+0,85%**
+  (không phải 0,32); **Hang Seng/Kospi không tồn tại** trong DB. Bịa hoàn toàn. Guard không bắt vì câu văn
+  xuôi dùng "%" (guard loại trừ % có chủ ý). Q5 vốn bất định: lần1 fail (lạc VNINDEX), lần2 pass, lần3 fail.
+- **Q6** — xem §8.3.
+- **Q7 `/stocks/FPT?tab=news` — string projection, không lấy được tin.** Model gửi
+  `projection: {"title": "1", "sapo": "1", ...}` (chuỗi "1") — commit 218222a chặn ĐÚNG với thông báo rõ.
+  Model không sửa, lặp lại (news_today_feed + news_history_feed 2 vòng) → **cầu dao iter=2** → trả lời
+  trung thực "chưa tra được do trục trặc kỹ thuật". Khách không có tin (§7 trả 5 tin). Điểm sáng: 650k→193k,
+  không bịa.
+- **Q12 `/watchlist` — BỊA SỐ ÂM THẦM, lọt mọi guard (ca nguy hiểm nhất bộ).** `db_aggregate`
+  industry_snapshot với projection **field phẳng** `{week_score:1, w_pct:1, m_pct:1, breadth_in:1}` trong
+  khi schema **lồng**: `money_flow_score.week_score`, `change.w_pct`, `breadth.breadth_in`. Mongo trả về
+  **CHỈ 24 tên ngành, không một con số** (sort theo field không tồn tại → thứ tự tuỳ ý). Model **tự chế**
+  toàn bộ: *"1. Bán lẻ Tiêu dùng +3,40 / tuần +2,20%; 2. Kinh doanh Bảo hiểm +0,46..."* Đối chiếu DB:
+  Bán lẻ Tiêu dùng week_score = **9,27**, w_pct = **-4,05**; top thật là **Thiết bị Công nghiệp 40,84**,
+  Nhựa Bao bì 30,1, Thực phẩm 26,6 — không mã nào của model khớp thứ hạng. Guard số không bắt vì "+3,40"
+  không kèm "tỷ/lần" và "%" bị loại. §7 ĐẠT.
+- **Q14 `/sectors/kimloai` — string-quoted numbers, từ chối.** `$match {"price.volume": {"$gt": "50000"}}`,
+  `$project {"ticker": "1"}` (chuỗi) → 2 fail → **cầu dao iter=2** → trả lời trung thực, không xếp hạng được
+  (chỉ nêu HPG/HSG/NKG/POM từ trí nhớ, đúng thành viên nhưng không có số). §7 ĐẠT (5 tool). 328k→192k, không bịa.
+
+### 8.6 Câu TỐT LÊN và câu KHÔNG ĐẠT nhưng CẢI THIỆN
+
+- **Q9 `/stocks` — KHÔNG→ĐẠT.** 1 `db_aggregate` stock_snapshot (lọc `volume>100k, trading_value>5`, sort
+  week_score), bảng 15 mã **khớp CHÍNH XÁC DB**: SHN 312, VVS 195, EVS 170,7, VPX 151,8, HUT 138,3, PVD
+  118,5, KSF 117,8... (đối chiếu trực tiếp, tất cả đúng cả giá/`pct_change`). §7 bão retry 650k không trả
+  lời được; lần này 259k có bảng đúng. Vẫn lộ "TRANSITION", dài 1.813 ký tự (vi phạm brevity).
+- **Q11 `/groups/largecap` — KHÔNG ĐẠT nhưng cải thiện.** Lần này lấy ĐÚNG field `industry` (grounded),
+  phân ngành **chính xác** (TCX/VPX → Chứng khoán — khác §7 bịa "Cao su"/"Khác"). Nhưng: (1) liệt kê **42
+  mã** trong khi DB có **41** — thêm nhầm **VCI** (không phải LargeCap; 41/41 mã thật đều có mặt, chỉ dư 1
+  mã bịa); (2) nhãn ngoặc sai (ghi "Ngân hàng (11)" nhưng liệt kê 14; "Chứng khoán (4)" liệt kê 5). Gần đạt
+  nhất trong nhóm trượt.
+
+### 8.7 Root cause chung (điều tra) — KHÔNG do 3 fix
+
+Phiên này M3 hỏng cú pháp truy vấn trên diện rộng:
+1. **Bọc SỐ/giá trị thành CHUỖI**: Q7 `"title":"1"`; Q10 `$limit:"25"`, `$sort:"-1"`; Q14 `$gt:"50000"`,
+   `"ticker":"1"`; Q6 `$slice`/`$arrayElemAt` dạng dict-số-âm-làm-key. Validator chặn ĐÚNG (không bịa) nhưng
+   model không hồi phục → cầu dao → từ chối. (Q11/Q12 có lúc thoát ra được → nondeterminism thuần.)
+2. **Sai đường field (phẳng vs lồng)**: Q12 project `week_score` thay vì `money_flow_score.week_score` →
+   tool trả rỗng số → model bịa (lỗ hổng bịa-âm-thầm).
+3. **Đã loại trừ 3 fix**: `_repair_stage` chỉ đụng stage `{"$text":...}`/chuỗi, **không** đụng value trong
+   stage thường (kiểm code); KB `$slice` cú pháp đúng; cầu dao chỉ đổi điều kiện dừng. Ba fix chạy đúng
+   thiết kế và kiềm chế chi phí tốt.
+
+**Cảnh báo phương pháp:** 1 lần đo, one-shot, dữ liệu thị trường khác thời điểm §7. Phương sai cao (§7.3 đã
+cảnh báo Q10 có thể nondeterminism — lần này xác nhận biên độ dao động rất lớn: Q6 105k→450k, Q9 fail→pass,
+Q2/5/6/7/12/14 pass→fail). **Không kết luận được "batch fix làm tệ đi".** Kết luận được: fix **kiềm chế chi
+phí xuất sắc** (-36,5%, không lượt >650k, 4 câu ép trả lời đều trung thực), nhưng **không nâng tỷ lệ đúng**,
+và **bộ guard hiện không bắt được 3 lớp lỗi**: string-number query, bịa-khi-projection-trả-rỗng-số, lộ-kế-hoạch.
+
+### 8.8 Đề xuất (chỉ nêu, chưa sửa)
+
+| Ưu tiên | Việc | Vì sao |
+|---|---|---|
+| 1 | **Coerce chuỗi-số ở validator/gateway trước khi từ chối**: `$limit "25"`→25, `$sort "-1"`→-1, value "1"/"50000"→số | tự sửa lớp lỗi giết Q6/7/10/14 mà không cần model hồi phục (cùng tinh thần `_repair_stage`) |
+| 2 | **Chặn bịa-âm-thầm khi projection trả rỗng field số** (Q12): câu bảng/xếp-hạng-có-số mà tool chỉ trả tên → coi chưa grounded; hoặc cảnh báo projection field phẳng không tồn tại trong doc | Q12 bịa lọt mọi guard — nguy hiểm nhất |
+| 3 | **Cầu dao: đừng reset `failed_rounds` khi tool `ok=True` trả rác + đếm token sớm hơn** (vd 300k/lượt) | Q6 đốt 385k mới bị chặn vì rác reset bộ đếm |
+| 4 | **Mở rộng guard lộ-kế-hoạch/preamble** (Q2): câu mở đầu "User đang hỏi/Cần đọc/Cần lấy..." + 0 tool → nudge | câu kế-hoạch lọt tới khách |
+| 5 | **Guard bịa văn-xuôi-% khi 0 tool trên trang có nguồn** (Q5): khẳng định chiều tăng/giảm chỉ số nước ngoài cụ thể mà 0 tool → ép gọi `other_data` | bịa số văn xuôi lọt guard (% bị loại) |
+
+**Bộ 14 câu nên chạy lại ≥2-3 lần/đợt** để tách nondeterminism khỏi hồi quy thật — một lần đo không đủ.
+
+---
+
+## 9. Chạy lại sau batch coerce số-chuỗi + hint aggregate + chặn độc thoại (2026-07-20)
+
+> **Vì sao chạy lại:** §8 ra 6/14 vì một phiên M3 hỏng cú pháp diện rộng — bọc SỐ thành CHUỖI
+> (`$limit:"25"`, `$sort:"-1"`, `$gt:"50000"`, projection `"1"`), bẻ MẢNG thành DICT
+> (`{"$slice": {"item": X, "-5": ""}}`), độc thoại kế hoạch lọt ra làm câu trả lời (Q2), và 1 ca bịa số
+> âm thầm do `$project` field lồng sai tên không cảnh báo (Q12). Từ đó vào 3 fix (chưa commit, working tree,
+> **507 pytest xanh**):
+> - **Fix D** `tools/db.py`: coerce số-bọc-chuỗi THEO VỊ TRÍ (`$limit "25"`→25, `$sort "-1"`→-1,
+>   `$gt "50000"`→50000, projection/`$project` `"1"`→1) + unmangle `$slice`/`$arrayElemAt` dạng dict-số-âm-làm-key
+>   + key-mangle. Chỉ ép ở vị trí mà chuỗi-số không bao giờ hợp lệ.
+> - **Fix E** `gateway/executor.py`: đường aggregate giờ cũng gắn `meta["note"]` "field không tồn tại" như find
+>   (bịt ca Q12 §8 bịa xếp hạng do projection field phẳng trả rỗng số).
+> - **Fix F** `loop.py::_needs_retry`: bắt độc thoại kế hoạch (`^(user|khách|người dùng)…(đang|vừa) hỏi`)
+>   và câu cụt ≤300 ký tự kết thúc bằng ":".
+>
+> **Cách chạy:** y hệt §8 — probe `eval_smoke4.py` (tái dùng nguyên `eval_smoke3.py`, đổi output → `eval4_*`,
+> request_id `eval4-`). Đi đúng đường `/chat/stream`, `thinking=disabled`, ngữ cảnh trang KHÔNG tự chèn nhãn
+> (backend chèn), lưu NGUYÊN VĂN tool-result. Cùng ảnh chụp `agent_db` với §7/§8 (sau đóng cửa 20/07,
+> VNINDEX -2,46% đóng 1743,51 — ground-truth khớp §8 từng số). Mỗi câu 1 lượt, 14/14, không rerun lượt nào.
+
+### 9.1 Bảng 14 câu — lần 4 đặt cạnh §7 và §8
+
+| # | Route | §7 | §8 | **Lần 4** | Token thật §8→4 | Tool | Vòng | Cầu dao |
+|---|---|---|---|---|---|---|---|---|
+| 1 | /phase conservative | ĐẠT | ĐẠT | **ĐẠT** | 131.844→131.765 | 1 | 2 | - |
+| 2 | /phase aggressive | ĐẠT | KHÔNG | **ĐẠT** (phục hồi) | 63.870→139.533 | 2 | 2 | - |
+| 3 | /phase core | ĐẠT | ĐẠT | **ĐẠT** | 101.949→192.101 | 2 (1 fail) | 3 | - |
+| 4 | /commodities metals | ĐẠT | ĐẠT | **ĐẠT** | 128.801→128.548 | 1 | 2 | - |
+| 5 | /international | ĐẠT | KHÔNG (bịa) | **ĐẠT** (phục hồi) | 63.820→97.030 | 2 | 2 | - |
+| 6 | /stocks/HPG financials | ĐẠT | KHÔNG (từ chối) | **ĐẠT** (phục hồi) | 449.930→134.284 | 1 | 2 | - |
+| 7 | /stocks/FPT news | ĐẠT | KHÔNG (từ chối) | **ĐẠT** (phục hồi) | 192.803→131.307 | 2 | 2 | - |
+| 8 | / | ĐẠT | ĐẠT | **ĐẠT** | 164.400→229.191 | 2 | 4 | - |
+| 9 | /stocks | KHÔNG | ĐẠT | **ĐẠT** | 259.336→329.606 | 4 (1 fail) | 5 | - |
+| 10 | /sectors | KHÔNG | KHÔNG | **ĐẠT** (tốt lên) | 191.260→129.433 | 1 | 2 | - |
+| 11 | /groups/largecap | KHÔNG | KHÔNG | **KHÔNG** | 194.245→63.757 | 0 | 1 | - |
+| 12 | /watchlist | ĐẠT | KHÔNG (bịa) | **ĐẠT** (phục hồi) | 193.318→97.732 | 1 | 2 | - |
+| 13 | /macro monetary | ĐẠT | ĐẠT | **ĐẠT** | 128.269→96.664 | 1 | 2 | - |
+| 14 | /sectors/kimloai stocks | ĐẠT | KHÔNG (từ chối) | **KHÔNG** | 192.095→128.069 | 1 | 2 | - |
+
+**Tỷ lệ đạt: 12/14 (86%)** — cao nhất 3 đợt (§7 11/14 · 79%; §8 6/14 · 43%).
+
+- **Phục hồi từ §8: 5 câu** — 2, 5, 6, 7, 12; **cộng Q10** (§7 và §8 đều trượt, nay đạt).
+- **Vẫn trượt: 2 câu** — 11, 14 (cả hai TRUNG THỰC, không bịa số).
+- **Tổng token 14 lượt: 2.029.020** (§8 2.455.940 · -17,4%; §7 3.868.119 · -47,5%). Lượt đắt nhất Q9 = 329.606.
+
+**12 câu ĐẠT đều đối chiếu DB khớp từng số** (không tin câu trả lời): Q1 held 6 mã Phòng Thủ; Q2 TCM/MSH tỷ trọng +
+khối ngoại tuần -1.905 tỷ; Q3 trạng thái ngành khớp `phase_industry`; Q4 quặng sắt/HRC/vàng/bạc + %; Q5 6 chỉ số Mỹ/Á khớp
+(không bịa Hang Seng/Kospi như §8); Q6 Q1/2026 +168,94% YoY; Q7 5 tin FPT thật kèm ngày; Q8 VNINDEX 1743,51 + breadth +
+khối ngoại; Q9 top day_score SHN/KSF/ABS/… khớp tuyệt đối; Q10 top5 + đáy ngành khớp; Q12 top w_pct 1,82/0,40/0,14; Q13 lãi suất.
+
+### 9.2 Soi (a)–(e)
+
+**(a) Lời gọi chết vì số-bọc-chuỗi / mảng-mangle: KHÔNG CÒN.** 3 câu emit đúng quirk đã giết §8 — Q6
+`{"$slice": {"item": "$financial_statements.quarterly", "-5": ""}}`, Q7 projection `{"title":"1", …}`, Q14
+`$match {"price.volume": {"$gt": "100000"}}` + `$project {"ticker":"1"}` — **cả 3 được Fix D coerce → `ok=True`
+ngay lần đầu**, không câu nào chạm cầu dao. *Dạng MỚI (chưa cover, nhưng KHÔNG chết):* Q9 vòng đầu bọc field-path
+thành hằng chuỗi trong `$project` — `"close":"¥$price.close¥"` rồi `{"$literal":"$price.close"}` → Mongo trả về
+đúng chuỗi hằng (rác) với `ok=True`, im lặng; **model tự phát hiện, sửa sang `"price.close":1` ở lần gọi thứ 3** →
+dữ liệu thật. Cùng họ §4.2 (projection hằng) nhưng ở nhánh aggregate và model tự thoát, không thành death/bịa.
+
+**(b) Bịa số khi đối chiếu DB: KHÔNG có lượt nào.** 12 câu ĐẠT khớp từng số; Q11/Q14 từ chối trung thực. Q9 tuy có
+2 vòng "ok=True trả rác" nhưng câu trả lời cuối lấy từ vòng dữ liệu thật.
+
+**(c) Độc thoại kế hoạch / câu cụt: KHÔNG lọt ra.** Không câu nào mở đầu "User đang hỏi…", không câu cụt kết thúc ":".
+Loại lỗi §8 Q2/§4.4 không tái diễn nên **Fix F không có gì để bắt lượt này** — chỉ khẳng định được không có rác kiểu đó
+lọt qua, chưa quan sát được nó KÍCH HOẠT trên đường thật. (Q11 tuy 0 tool nhưng là câu từ chối mạch lạc + hỏi lại, không rơi vào diện Fix F.)
+
+**(d) Token & cầu dao.** Lượt đắt nhất **Q9 = 329.606** (< trần 600k; §8 đắt nhất 449.930; §7 có 3 lượt >640k).
+**Cầu dao kích hoạt 0 lần** (§8: 4). Vì không kích hoạt → không có "câu ép trả lời" để đánh giá trung thực đợt này.
+Không lượt nào chạm trần token hay `MAX_ITERS` (vòng cao nhất = 5 ở Q9). Rẻ chủ yếu vì coerce chặn bão retry **tại gốc**.
+
+**(e) Note field-vắng của aggregate (Fix E): KHÔNG xuất hiện.** 0/14 câu có `meta["note"]`. Ca mục tiêu Q12 lần này
+model tự viết `$project` bằng **biểu thức tham chiếu đúng đường lồng** (`"week_change":"$change.w_pct"`,
+`"week_score":"$money_flow_score.week_score"`) → tool trả số thật, không phát sinh field-vắng → note không cần bắn.
+Tức **Fix E hiện diện nhưng chưa được thử lửa trên đường thật đợt này** (chỉ có bằng chứng unit-test); không thể kết luận
+model có "nghe theo" hay không.
+
+### 9.3 Hai câu trượt — nguyên nhân gốc (đọc tool_log)
+
+**Q11 `/groups/largecap` — phân loại: VARIANCE MODEL.** 0 tool, 1 vòng, 63.757 token. Model trả lời *"tôi không có sẵn
+danh sách đầy đủ các thành phần trong collection này"* + hỏi lại. Nhưng 41 mã LargeCaps **truy vấn được**
+(`stock_info` `marketcap=="LargeCaps"`) — §7 và §8 đều đã query ra 41 mã. Lần này model **không thử query**. Không fix nào
+ức chế query → không phải hồi quy; không có lời gọi nào → không phải quirk cú pháp. Thuần phương sai model. Điểm sáng so với
+§7 (bịa "Cao su") / §8 (dư VCI + đếm sai ngoặc): lần này KHÔNG bịa — thà không trả còn hơn bịa.
+
+**Q14 `/sectors/kimloai` — phân loại: QUIRK CHƯA COVER (sai đường field/collection).** 1 tool `ok=True` nhưng **rỗng
+(chars=2 `[]`)** → từ chối trung thực. Chuỗi-số trong lời gọi (`$gt:"100000"`, `"ticker":"1"`) **đã được Fix D coerce đúng**
+(không còn death như §8). Nhưng `$match {"industry": "Kim loại công nghiệp"}` chạy trên `stock_snapshot`, mà
+**`stock_snapshot` KHÔNG có field `industry`** (industry nằm ở `stock_info`) → khớp 0 doc → rỗng. Đây là lỗ hổng SCHEMA/đường-field
+(cần truy `stock_info` để lấy thành viên ngành), KHÔNG phải string-number, KHÔNG phải hồi quy. Fix D đã đổi **cách hỏng** của Q14
+từ "bị từ chối + bão + cầu dao" (§8) sang "chạy rỗng + từ chối sạch" (lần 4) — rẻ hơn, trung thực hơn, nhưng vẫn KHÔNG ĐẠT vì gốc là kiến thức schema.
+
+### 9.4 Nhận định: các fix có hoạt động đúng không?
+
+**Fix D (coerce số-chuỗi): HOẠT ĐỘNG ĐÚNG, LÀ ĐỘNG LỰC CHÍNH của cú nhảy 6/14→12/14.** Bằng chứng đường thật, 3 ca quirk
+§8 tái xuất **nguyên dạng** nhưng bị vô hiệu hoá tại gateway: Q6 (§8 đốt 449k + cầu dao + từ chối) nay 1 tool / 134k / đúng
+nhờ `$slice` dict-mangle ép về `["$…quarterly", -5]`; Q7 (§8 từ chối vì projection chuỗi) nay lấy 5 tin thật; Q10 (§7+§8 đều
+trượt vì `$limit:"25"`/`$sort:"-1"`) nay 1 tool đúng top5 ngành.
+
+**Fix E (note aggregate) và Fix F (chặn độc thoại): CÓ MẶT nhưng CHƯA THỬ LỬA đợt này** — vì loại lỗi chúng nhắm tới
+(Q12 field-vắng, Q2 độc thoại) không tái diễn (Q12 tự query đúng đường lồng, Q2 tự trả lời substantive). Không có bằng chứng
+đường-thật lần này; cũng không thấy tác dụng phụ. Cần đợt sau hoặc ca cố ý tái hiện để xác nhận.
+
+**Cảnh báo phương sai (giữ nguyên tinh thần §8.7):** vẫn one-shot, một ảnh chụp. Q11 lật ĐẠT(§7/§8→)KHÔNG, Q2/5/12 lật
+KHÔNG(§8→)ĐẠT cho thấy biên độ dao động còn lớn. **Kết luận chắc chắn:** Fix D triệt lớp death do string-number/slice-mangle
+(đo được, tái lập trên 3 ca) và kiềm chế chi phí xuất sắc (0 cầu dao, không lượt >330k, tổng -17,4% so §8). **Chưa kết luận được**
+Fix E/F trên đường thật. Còn treo: (1) field-path bọc-hằng trong aggregate `$project` vẫn trả rác im lặng (Q9, may model tự thoát);
+(2) model không biết `industry` ở `stock_info` không phải `stock_snapshot` (Q14); (3) đôi khi bỏ query khả thi mà từ chối (Q11).
