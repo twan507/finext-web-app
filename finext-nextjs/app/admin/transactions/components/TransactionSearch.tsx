@@ -242,12 +242,12 @@ const TransactionSearch: React.FC<TransactionSearchProps> = ({
                                 sx={{ height: '20px' }}
                             />
                             <Typography variant="caption" color="text.secondary">
-                                (trang hiện tại)
+                                kết quả
                             </Typography>
                         </>
                     ) : (
                         <Typography variant="caption" color="text.secondary">
-                            {filteredTransactions.length} giao dịch tìm thấy
+                            {filteredTransactions.length} giao dịch
                         </Typography>
                     )}
                 </Box>

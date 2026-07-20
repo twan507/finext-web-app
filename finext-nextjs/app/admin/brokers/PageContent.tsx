@@ -33,6 +33,7 @@ import {
     getNextSortDirection,
     getResponsiveDisplayStyle
 } from '../components/TableSortUtils';
+import { computeClientTable, ALL_ROWS_VALUE } from '../components/TableClientPagination';
 import { isSystemUser } from 'utils/systemProtection';
 
 interface BrokerPublic {
@@ -167,8 +168,10 @@ export default function BrokersPage() {
         setLoading(true);
         setError(null);
         try {
+            // Backend brokers chỉ hỗ trợ skip/limit (KHÔNG có search/sort server-side).
+            // Nạp toàn bộ tập rồi lọc/sắp xếp/phân trang phía client.
             const response = await apiClient<PaginatedBrokersResponse>({
-                url: `/api/v1/brokers/?skip=${page * rowsPerPage}&limit=${rowsPerPage}`,
+                url: `/api/v1/brokers/?skip=0&limit=${ALL_ROWS_VALUE}`,
                 method: 'GET',
             });
             if (response.status === 200 && response.data &&
@@ -187,7 +190,7 @@ export default function BrokersPage() {
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage]);
+    }, []);
 
     const fetchUserEmails = useCallback(async (userIds: string[]) => {
         if (userIds.length === 0) return;
@@ -276,20 +279,6 @@ export default function BrokersPage() {
         setSortConfig(newDirection ? { key: columnKey, direction: newDirection } : null);
         setPage(0); // Reset to first page when sorting
     };
-
-    // Compute sorted data
-    const sortedBrokers = useMemo(() => {
-        const dataToSort = isFiltering ? filteredBrokers : brokers;
-
-        if (!sortConfig || !sortConfig.direction) {
-            return dataToSort;
-        }
-
-        const column = columnConfigs.find(col => col.id === sortConfig.key);
-        if (!column) return dataToSort;
-
-        return sortData(dataToSort, sortConfig, column);
-    }, [brokers, filteredBrokers, isFiltering, sortConfig, columnConfigs]);
 
     const handleToggleBrokerStatus = async (broker: BrokerPublic) => {
         const newStatus = !broker.is_active;
@@ -442,25 +431,19 @@ export default function BrokersPage() {
         fetchAllUsers();
     }, [fetchAllUsers]);
 
-    // Calculate paginated brokers - use server pagination when not filtering/sorting, client pagination when filtering/sorting
-    const paginatedBrokers = React.useMemo(() => {
-        if (isFiltering || sortConfig) {
-            // Client-side pagination for filtered/sorted results
-            if (rowsPerPage === 99999) {
-                // Show all results
-                return sortedBrokers;
-            }
-            const startIndex = page * rowsPerPage;
-            const endIndex = startIndex + rowsPerPage;
-            return sortedBrokers.slice(startIndex, endIndex);
-        } else {
-            // Server-side pagination - use brokers directly as they are already paginated
-            return brokers;
-        }
-    }, [brokers, sortedBrokers, isFiltering, sortConfig, page, rowsPerPage]);
-
-    // Calculate total count for pagination
-    const displayTotalCount = (isFiltering || sortConfig) ? sortedBrokers.length : totalCount;
+    // Toàn bộ dữ liệu đã nạp -> lọc (ở BrokerSearch) -> sắp xếp -> phân trang
+    // đều thực hiện phía client, nhất quán cho cả trường hợp có/không tìm kiếm.
+    const { pageItems: paginatedBrokers, displayTotalCount } = React.useMemo(
+        () => computeClientTable<BrokerPublic>({
+            rows: isFiltering ? filteredBrokers : brokers,
+            sortConfig,
+            columns: columnConfigs,
+            page,
+            rowsPerPage,
+            sortFn: sortData,
+        }),
+        [brokers, filteredBrokers, isFiltering, sortConfig, columnConfigs, page, rowsPerPage]
+    );
 
     return (
         <Box sx={{

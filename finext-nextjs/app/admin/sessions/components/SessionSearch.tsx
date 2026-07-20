@@ -206,12 +206,12 @@ const SessionSearch: React.FC<SessionSearchProps> = ({
                                 sx={{ height: '20px' }}
                             />
                             <Typography variant="caption" color="text.secondary">
-                                (trang hiện tại)
+                                kết quả
                             </Typography>
                         </>
                     ) : (
                         <Typography variant="caption" color="text.secondary">
-                            {filteredSessions.length} phiên tìm thấy
+                            {filteredSessions.length} phiên
                         </Typography>
                     )}
                 </Box>

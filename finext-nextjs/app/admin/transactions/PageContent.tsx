@@ -31,6 +31,7 @@ import {
   getNextSortDirection,
   getResponsiveDisplayStyle
 } from '../components/TableSortUtils';
+import { computeClientTable, ALL_ROWS_VALUE } from '../components/TableClientPagination';
 import CreateTransactionModal from './components/CreateTransactionModal';
 import ConfirmTransactionModal from './components/ConfirmTransactionModal';
 import TransactionSearch from './components/TransactionSearch';
@@ -269,16 +270,12 @@ export default function TransactionsPage() {
     setLoading(true);
     setError(null);
     try {
+      // Backend transactions chỉ hỗ trợ skip/limit (KHÔNG có search/sort
+      // server-side). Nạp toàn bộ tập rồi lọc/sắp xếp/phân trang phía client.
       const queryParams: Record<string, any> = {
-        skip: page * rowsPerPage,
-        limit: rowsPerPage,
+        skip: 0,
+        limit: ALL_ROWS_VALUE,
       };
-
-      // Add sort parameters if sortConfig is defined
-      if (sortConfig && sortConfig.key && sortConfig.direction) {
-        queryParams.sort_by = sortConfig.key;
-        queryParams.sort_order = sortConfig.direction;
-      }
 
       const url = isBroker ? `/api/v1/transactions/me/referred` : `/api/v1/transactions/admin/all`;
       const response = await apiClient<PaginatedTransactionsResponse | TransactionPublic[]>({
@@ -319,7 +316,7 @@ export default function TransactionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, sortConfig, isBroker]);
+  }, [isBroker]);
 
   const fetchUserEmails = useCallback(async (userIds: string[]) => {
     if (userIds.length === 0) return;
@@ -389,37 +386,21 @@ export default function TransactionsPage() {
     }
   };
 
-  // Sort data when sortConfig changes
-  const sortedTransactions = useMemo(() => {
-    const dataToSort = isFiltering ? filteredTransactions : transactions;
+  // Toàn bộ dữ liệu đã nạp -> lọc (ở TransactionSearch) -> sắp xếp -> phân trang
+  // đều thực hiện phía client, nhất quán cho cả trường hợp có/không tìm kiếm.
+  const { pageItems: paginatedTransactions, displayTotalCount } = useMemo(
+    () => computeClientTable<TransactionPublic>({
+      rows: isFiltering ? filteredTransactions : transactions,
+      sortConfig,
+      columns: columnConfigs,
+      page,
+      rowsPerPage,
+      sortFn: sortData,
+    }),
+    [transactions, filteredTransactions, isFiltering, sortConfig, columnConfigs, page, rowsPerPage]
+  );
 
-    if (!sortConfig || !sortConfig.direction) {
-      return dataToSort;
-    }
-
-    const column = columnConfigs.find(col => col.id === sortConfig.key);
-    if (!column) return dataToSort;
-
-    return sortData(dataToSort, sortConfig, column);
-  }, [transactions, filteredTransactions, isFiltering, sortConfig, columnConfigs]);    // Calculate paginated transactions - use client-side pagination when sorting/filtering, server-side pagination otherwise
-  const paginatedTransactions = useMemo(() => {
-    if (isFiltering || sortConfig) {
-      // Client-side pagination for filtered/sorted results
-      if (rowsPerPage === 99999) {
-        // Show all results
-        return sortedTransactions;
-      }
-      const startIndex = page * rowsPerPage;
-      const endIndex = startIndex + rowsPerPage;
-      return sortedTransactions.slice(startIndex, endIndex);
-    } else {
-      // Server-side pagination - use transactions directly as they are already paginated
-      return transactions;
-    }
-  }, [transactions, sortedTransactions, isFiltering, sortConfig, page, rowsPerPage]);
-
-  // Calculate total count for pagination
-  const displayTotalCount = (isFiltering || sortConfig) ? sortedTransactions.length : totalCount; const handleSort = (columnKey: string) => {
+  const handleSort = (columnKey: string) => {
     const column = columnConfigs.find(col => col.id === columnKey);
     if (!column?.sortable) return;
 

@@ -236,12 +236,12 @@ const SubscriptionSearch: React.FC<SubscriptionSearchProps> = ({
                                 sx={{ height: '20px' }}
                             />
                             <Typography variant="caption" color="text.secondary">
-                                (trang hiện tại)
+                                kết quả
                             </Typography>
                         </>
                     ) : (
                         <Typography variant="caption" color="text.secondary">
-                            {filteredSubscriptions.length} đăng ký tìm thấy
+                            {filteredSubscriptions.length} đăng ký
                         </Typography>
                     )}
                 </Box>

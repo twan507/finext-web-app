@@ -31,6 +31,7 @@ import {
     getNextSortDirection,
     getResponsiveDisplayStyle
 } from '../components/TableSortUtils';
+import { computeClientTable, ALL_ROWS_VALUE } from '../components/TableClientPagination';
 import PromotionSearch from './components/PromotionSearch';
 import CreatePromotionModal from './components/CreatePromotionModal';
 import EditPromotionModal from './components/EditPromotionModal';
@@ -198,9 +199,11 @@ export default function PromotionsPage() {
         setLoading(true);
         setError(null);
         try {
+            // Backend promotions chỉ hỗ trợ skip/limit (KHÔNG có search/sort server-side).
+            // Nạp toàn bộ tập rồi lọc/sắp xếp/phân trang phía client.
             const queryParams: Record<string, any> = {
-                skip: page * rowsPerPage,
-                limit: rowsPerPage,
+                skip: 0,
+                limit: ALL_ROWS_VALUE,
             };
 
             const response = await apiClient<PaginatedPromotionsResponse | PromotionPublic[]>({
@@ -239,7 +242,7 @@ export default function PromotionsPage() {
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage]);
+    }, []);
 
     useEffect(() => {
         fetchPromotions();
@@ -266,39 +269,19 @@ export default function PromotionsPage() {
         setPage(0); // Reset to first page when sorting
     };
 
-    // Compute sorted data
-    const sortedPromotions = useMemo(() => {
-        const dataToSort = isFiltering ? filteredPromotions : promotions;
-
-        if (!sortConfig || !sortConfig.direction) {
-            return dataToSort;
-        }
-
-        const column = columnConfigs.find(col => col.id === sortConfig.key);
-        if (!column) return dataToSort;
-
-        return sortData(dataToSort, sortConfig, column);
-    }, [promotions, filteredPromotions, isFiltering, sortConfig, columnConfigs]);
-
-    // Calculate paginated promotions - use client-side pagination when sorting/filtering, server-side pagination otherwise
-    const paginatedPromotions = useMemo(() => {
-        if (isFiltering || sortConfig) {
-            // Client-side pagination for filtered/sorted results
-            if (rowsPerPage === 99999) {
-                // Show all results
-                return sortedPromotions;
-            }
-            const startIndex = page * rowsPerPage;
-            const endIndex = startIndex + rowsPerPage;
-            return sortedPromotions.slice(startIndex, endIndex);
-        } else {
-            // Server-side pagination - use promotions directly as they are already paginated
-            return promotions;
-        }
-    }, [promotions, sortedPromotions, isFiltering, sortConfig, page, rowsPerPage]);
-
-    // Calculate total count for pagination
-    const displayTotalCount = (isFiltering || sortConfig) ? sortedPromotions.length : totalCount;
+    // Toàn bộ dữ liệu đã nạp -> lọc (ở PromotionSearch) -> sắp xếp -> phân trang
+    // đều thực hiện phía client, nhất quán cho cả trường hợp có/không tìm kiếm.
+    const { pageItems: paginatedPromotions, displayTotalCount } = useMemo(
+        () => computeClientTable<PromotionPublic>({
+            rows: isFiltering ? filteredPromotions : promotions,
+            sortConfig,
+            columns: columnConfigs,
+            page,
+            rowsPerPage,
+            sortFn: sortData,
+        }),
+        [promotions, filteredPromotions, isFiltering, sortConfig, columnConfigs, page, rowsPerPage]
+    );
 
     const handleChangePage = (event: unknown, newPage: number) => {
         setPage(newPage);

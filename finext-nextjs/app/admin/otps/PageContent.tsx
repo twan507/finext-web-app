@@ -29,6 +29,7 @@ import {
     sortData,
     getNextSortDirection, getResponsiveDisplayStyle
 } from '../components/TableSortUtils';
+import { computeClientTable, ALL_ROWS_VALUE } from '../components/TableClientPagination';
 import OtpSearch, { OtpPublicAdmin, OtpTypeEnumFE } from './components/OtpSearch';
 
 interface PaginatedOtpsResponse {
@@ -202,11 +203,9 @@ const OtpsPage: React.FC = () => {
         setLoading(true);
         setError(null);
         try {
-            let url = `/api/v1/otps/admin/all?skip=${page * rowsPerPage}&limit=${rowsPerPage}`;
-
-            if (sortConfig && sortConfig.key && sortConfig.direction) {
-                url += `&sort_by=${sortConfig.key}&sort_order=${sortConfig.direction}`;
-            }
+            // Backend OTPs chỉ hỗ trợ skip/limit (KHÔNG có search/sort
+            // server-side). Nạp toàn bộ tập rồi lọc/sắp xếp/phân trang phía client.
+            const url = `/api/v1/otps/admin/all?skip=0&limit=${ALL_ROWS_VALUE}`;
 
             const response = await apiClient<PaginatedOtpsResponse | OtpPublicAdmin[]>({
                 url: url,
@@ -241,7 +240,7 @@ const OtpsPage: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage, sortConfig]);
+    }, []);
 
     useEffect(() => {
         fetchOtps();
@@ -327,36 +326,19 @@ const OtpsPage: React.FC = () => {
         setOtpToDelete(null);
     };
 
-    // Compute sorted data
-    const sortedOtps = useMemo(() => {
-        const dataToSort = isFiltering ? filteredOtps : otps;
-
-        if (!sortConfig || !sortConfig.direction) {
-            return dataToSort;
-        }
-
-        const column = columnConfigs.find(col => col.id === sortConfig.key);
-        if (!column) return dataToSort;
-
-        return sortData(dataToSort, sortConfig, column);
-    }, [otps, filteredOtps, isFiltering, sortConfig, columnConfigs]);
-
-    // Calculate paginated OTPs
-    const paginatedOtps = useMemo(() => {
-        if (isFiltering || sortConfig) {
-            if (rowsPerPage === 99999) {
-                return sortedOtps;
-            }
-            const startIndex = page * rowsPerPage;
-            const endIndex = startIndex + rowsPerPage;
-            return sortedOtps.slice(startIndex, endIndex);
-        } else {
-            return otps;
-        }
-    }, [otps, sortedOtps, isFiltering, sortConfig, page, rowsPerPage]);
-
-    // Calculate total count for pagination
-    const displayTotalCount = (isFiltering || sortConfig) ? sortedOtps.length : totalCount;
+    // Toàn bộ dữ liệu đã nạp -> lọc (ở OtpSearch) -> sắp xếp -> phân trang
+    // đều thực hiện phía client, nhất quán cho cả trường hợp có/không tìm kiếm.
+    const { pageItems: paginatedOtps, displayTotalCount } = useMemo(
+        () => computeClientTable<OtpPublicAdmin>({
+            rows: isFiltering ? filteredOtps : otps,
+            sortConfig,
+            columns: columnConfigs,
+            page,
+            rowsPerPage,
+            sortFn: sortData,
+        }),
+        [otps, filteredOtps, isFiltering, sortConfig, columnConfigs, page, rowsPerPage]
+    );
 
     // Helper function to get OTP type display
     const getOtpTypeDisplay = (type: OtpTypeEnumFE) => {

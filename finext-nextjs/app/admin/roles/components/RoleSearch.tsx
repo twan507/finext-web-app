@@ -184,12 +184,12 @@ const RoleSearch: React.FC<RoleSearchProps> = ({
                                 sx={{ height: '20px' }}
                             />
                             <Typography variant="caption" color="text.secondary">
-                                (trang hiện tại)
+                                kết quả
                             </Typography>
                         </>
                     ) : (
                         <Typography variant="caption" color="text.secondary">
-                            {filteredRoles.length} vai trò tìm thấy
+                            {filteredRoles.length} vai trò
                         </Typography>
                     )}
                 </Box>

@@ -26,6 +26,7 @@ import {
     sortData,
     getNextSortDirection, getResponsiveDisplayStyle
 } from '../components/TableSortUtils';
+import { computeClientTable, ALL_ROWS_VALUE } from '../components/TableClientPagination';
 import WatchlistSearch from './components/WatchlistSearch';
 
 // Interface matching WatchlistPublic from backend schemas/watchlists.py
@@ -140,11 +141,9 @@ const WatchlistsPage: React.FC = () => {
         setLoading(true);
         setError(null);
         try {
-            let url = `/api/v1/watchlists/admin/all?skip=${page * rowsPerPage}&limit=${rowsPerPage}`;
-
-            if (sortConfig && sortConfig.key && sortConfig.direction) {
-                url += `&sort_by=${sortConfig.key}&sort_order=${sortConfig.direction}`;
-            }
+            // Backend watchlists chỉ hỗ trợ skip/limit (KHÔNG có search/sort
+            // server-side). Nạp toàn bộ tập rồi lọc/sắp xếp/phân trang phía client.
+            const url = `/api/v1/watchlists/admin/all?skip=0&limit=${ALL_ROWS_VALUE}`;
 
             const response = await apiClient<PaginatedWatchlistsResponse | WatchlistPublicAdmin[]>({
                 url: url,
@@ -183,7 +182,7 @@ const WatchlistsPage: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage, sortConfig]);
+    }, []);
 
     useEffect(() => {
         fetchWatchlists();
@@ -263,34 +262,19 @@ const WatchlistsPage: React.FC = () => {
         setWatchlistToDelete(null);
     };
 
-    // Compute sorted data
-    const sortedWatchlists = useMemo(() => {
-        const dataToSort = isFiltering ? filteredWatchlists : watchlists;
-
-        if (!sortConfig || !sortConfig.direction) {
-            return dataToSort;
-        }
-
-        const column = columnConfigs.find(col => col.id === sortConfig.key);
-        if (!column) return dataToSort;
-
-        return sortData(dataToSort, sortConfig, column);
-    }, [watchlists, filteredWatchlists, isFiltering, sortConfig, columnConfigs]);
-
-    // Calculate paginated watchlists
-    const paginatedWatchlists = useMemo(() => {
-        if (isFiltering || sortConfig) {
-            if (rowsPerPage === 99999) {
-                return sortedWatchlists;
-            }
-            const startIndex = page * rowsPerPage;
-            const endIndex = startIndex + rowsPerPage;
-            return sortedWatchlists.slice(startIndex, endIndex);
-        } else {
-            return watchlists;
-        }
-    }, [watchlists, sortedWatchlists, isFiltering, sortConfig, page, rowsPerPage]);    // Calculate total count for pagination
-    const displayTotalCount = (isFiltering || sortConfig) ? sortedWatchlists.length : totalCount;
+    // Toàn bộ dữ liệu đã nạp -> lọc (ở WatchlistSearch) -> sắp xếp -> phân trang
+    // đều thực hiện phía client, nhất quán cho cả trường hợp có/không tìm kiếm.
+    const { pageItems: paginatedWatchlists, displayTotalCount } = useMemo(
+        () => computeClientTable<WatchlistPublicAdmin>({
+            rows: isFiltering ? filteredWatchlists : watchlists,
+            sortConfig,
+            columns: columnConfigs,
+            page,
+            rowsPerPage,
+            sortFn: sortData,
+        }),
+        [watchlists, filteredWatchlists, isFiltering, sortConfig, columnConfigs, page, rowsPerPage]
+    );
 
     return (
         <Box sx={{ maxWidth: '100%', overflow: 'hidden' }}>

@@ -28,6 +28,7 @@ import {
     sortData,
     getNextSortDirection, getResponsiveDisplayStyle
 } from '../components/TableSortUtils';
+import { computeClientTable, ALL_ROWS_VALUE } from '../components/TableClientPagination';
 import SessionSearch, { SessionPublicAdmin } from './components/SessionSearch';
 
 // Interface also defined in SessionSearch component
@@ -191,11 +192,9 @@ const SessionsPage: React.FC = () => {
         setLoading(true);
         setError(null);
         try {
-            let url = `/api/v1/sessions/all?skip=${page * rowsPerPage}&limit=${rowsPerPage}`;
-
-            if (sortConfig && sortConfig.key && sortConfig.direction) {
-                url += `&sort_by=${sortConfig.key}&sort_order=${sortConfig.direction}`;
-            }
+            // Backend sessions chỉ hỗ trợ skip/limit (KHÔNG có search/sort
+            // server-side). Nạp toàn bộ tập rồi lọc/sắp xếp/phân trang phía client.
+            const url = `/api/v1/sessions/all?skip=0&limit=${ALL_ROWS_VALUE}`;
 
             const response = await apiClient<PaginatedSessionsResponse | SessionPublicAdmin[]>({
                 url: url,
@@ -234,7 +233,7 @@ const SessionsPage: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage, sortConfig]);
+    }, []);
     useEffect(() => {
         fetchSessions();
     }, [fetchSessions]);
@@ -323,36 +322,19 @@ const SessionsPage: React.FC = () => {
         setSessionToDelete(null);
     };
 
-    // Compute sorted data
-    const sortedSessions = useMemo(() => {
-        const dataToSort = isFiltering ? filteredSessions : sessions;
-
-        if (!sortConfig || !sortConfig.direction) {
-            return dataToSort;
-        }
-
-        const column = columnConfigs.find(col => col.id === sortConfig.key);
-        if (!column) return dataToSort;
-
-        return sortData(dataToSort, sortConfig, column);
-    }, [sessions, filteredSessions, isFiltering, sortConfig, columnConfigs]);
-
-    // Calculate paginated sessions
-    const paginatedSessions = useMemo(() => {
-        if (isFiltering || sortConfig) {
-            if (rowsPerPage === 99999) {
-                return sortedSessions;
-            }
-            const startIndex = page * rowsPerPage;
-            const endIndex = startIndex + rowsPerPage;
-            return sortedSessions.slice(startIndex, endIndex);
-        } else {
-            return sessions;
-        }
-    }, [sessions, sortedSessions, isFiltering, sortConfig, page, rowsPerPage]);
-
-    // Calculate total count for pagination
-    const displayTotalCount = (isFiltering || sortConfig) ? sortedSessions.length : totalCount;
+    // Toàn bộ dữ liệu đã nạp -> lọc (ở SessionSearch) -> sắp xếp -> phân trang
+    // đều thực hiện phía client, nhất quán cho cả trường hợp có/không tìm kiếm.
+    const { pageItems: paginatedSessions, displayTotalCount } = useMemo(
+        () => computeClientTable<SessionPublicAdmin>({
+            rows: isFiltering ? filteredSessions : sessions,
+            sortConfig,
+            columns: columnConfigs,
+            page,
+            rowsPerPage,
+            sortFn: sortData,
+        }),
+        [sessions, filteredSessions, isFiltering, sortConfig, columnConfigs, page, rowsPerPage]
+    );
 
     // Helper function to get device icon
     const getDeviceIcon = (deviceInfo?: string) => {

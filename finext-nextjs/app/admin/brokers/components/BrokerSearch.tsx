@@ -198,12 +198,12 @@ const BrokerSearch: React.FC<BrokerSearchProps> = ({
                                 sx={{ height: '20px' }}
                             />
                             <Typography variant="caption" color="text.secondary">
-                                (trang hiện tại)
+                                kết quả
                             </Typography>
                         </>
                     ) : (
                         <Typography variant="caption" color="text.secondary">
-                            {filteredBrokers.length} nhà môi giới tìm thấy
+                            {filteredBrokers.length} nhà môi giới
                         </Typography>
                     )}
                 </Box>

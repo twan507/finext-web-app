@@ -175,12 +175,12 @@ const PermissionSearch: React.FC<PermissionSearchProps> = ({
                                 sx={{ height: '20px', fontSize: getResponsiveFontSize('xxs').md }}
                             />
                             <Typography variant="caption" color="text.secondary" sx={{ fontSize: getResponsiveFontSize('xxs').md }}>
-                                (trang hiện tại)
+                                kết quả
                             </Typography>
                         </>
                     ) : (
                         <Typography variant="caption" color="text.secondary" sx={{ fontSize: getResponsiveFontSize('xxs').md }}>
-                            {stats.total} quyền (trang hiện tại)
+                            {stats.total} quyền
                         </Typography>
                     )}
                 </Box>

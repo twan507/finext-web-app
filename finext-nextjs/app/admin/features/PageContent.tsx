@@ -29,6 +29,7 @@ import {
     getNextSortDirection,
     getResponsiveDisplayStyle
 } from '../components/TableSortUtils';
+import { computeClientTable, ALL_ROWS_VALUE } from '../components/TableClientPagination';
 import FeatureSearch from './components/FeatureSearch';
 import CreateFeatureModal from './components/CreateFeatureModal';
 import EditFeatureModal from './components/EditFeatureModal';
@@ -154,19 +155,10 @@ export default function FeaturesPage() {
         setLoading(true);
         setError(null);
         try {
-            const queryParams: Record<string, any> = {
-                skip: page * rowsPerPage,
-                limit: rowsPerPage,
-            };
-
-            // Add sort parameters if sortConfig is defined
-            if (sortConfig && sortConfig.key && sortConfig.direction) {
-                queryParams.sort_by = sortConfig.key;
-                queryParams.sort_order = sortConfig.direction;
-            }
-
+            // Backend features chỉ hỗ trợ skip/limit (KHÔNG có search/sort server-side).
+            // Nạp toàn bộ tập rồi lọc/sắp xếp/phân trang phía client.
             const response = await apiClient<PaginatedFeaturesResponse | FeaturePublic[]>({
-                url: `/api/v1/features/?skip=${page * rowsPerPage}&limit=${rowsPerPage}`,
+                url: `/api/v1/features/?skip=0&limit=${ALL_ROWS_VALUE}`,
                 method: 'GET',
             });
 
@@ -200,7 +192,7 @@ export default function FeaturesPage() {
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage, sortConfig]);
+    }, []);
 
     useEffect(() => {
         fetchFeatures();
@@ -242,37 +234,19 @@ export default function FeaturesPage() {
         setPage(0); // Reset to first page when sorting
     };
 
-    // Compute sorted data
-    const sortedFeatures = useMemo(() => {
-        const dataToSort = isFiltering ? filteredFeatures : features;
-
-        if (!sortConfig || !sortConfig.direction) {
-            return dataToSort;
-        }
-
-        const column = columnConfigs.find(col => col.id === sortConfig.key);
-        if (!column) return dataToSort;
-
-        return sortData(dataToSort, sortConfig, column);
-    }, [features, filteredFeatures, isFiltering, sortConfig, columnConfigs]);
-
-    // Calculate paginated features - use client-side pagination when sorting/filtering, server-side pagination otherwise
-    const paginatedFeatures = useMemo(() => {
-        if (isFiltering || sortConfig) {
-            // Client-side pagination for filtered/sorted results
-            if (rowsPerPage === 99999) {
-                // Show all results
-                return sortedFeatures;
-            }
-            const startIndex = page * rowsPerPage;
-            const endIndex = startIndex + rowsPerPage;
-            return sortedFeatures.slice(startIndex, endIndex);
-        } else {
-            // Server-side pagination - use features directly as they are already paginated
-            return features;
-        }
-    }, [features, sortedFeatures, isFiltering, sortConfig, page, rowsPerPage]);    // Calculate total count for pagination
-    const displayTotalCount = (isFiltering || sortConfig) ? sortedFeatures.length : totalCount;
+    // Toàn bộ dữ liệu đã nạp -> lọc (ở FeatureSearch) -> sắp xếp -> phân trang
+    // đều thực hiện phía client, nhất quán cho cả trường hợp có/không tìm kiếm.
+    const { pageItems: paginatedFeatures, displayTotalCount } = useMemo(
+        () => computeClientTable<FeaturePublic>({
+            rows: isFiltering ? filteredFeatures : features,
+            sortConfig,
+            columns: columnConfigs,
+            page,
+            rowsPerPage,
+            sortFn: sortData,
+        }),
+        [features, filteredFeatures, isFiltering, sortConfig, columnConfigs, page, rowsPerPage]
+    );
 
     // Helper function to check if feature can be deleted
     const canDeleteFeature = (feature: FeaturePublic): boolean => {

@@ -31,6 +31,7 @@ import {
     getNextSortDirection,
     getResponsiveDisplayStyle
 } from '../components/TableSortUtils';
+import { computeClientTable, ALL_ROWS_VALUE } from '../components/TableClientPagination';
 import RoleSearch from './components/RoleSearch';
 import CreateRoleModal from './components/CreateRoleModal';
 import EditRoleModal from './components/EditRoleModal';
@@ -153,16 +154,12 @@ export default function RolesPage() {
         setLoading(true);
         setError(null);
         try {
+            // Backend roles chỉ hỗ trợ skip/limit (KHÔNG có search/sort server-side).
+            // Nạp toàn bộ tập rồi lọc/sắp xếp/phân trang phía client.
             const queryParams: Record<string, any> = {
-                skip: page * rowsPerPage,
-                limit: rowsPerPage,
+                skip: 0,
+                limit: ALL_ROWS_VALUE,
             };
-
-            // Add sort parameters if sortConfig is defined
-            if (sortConfig && sortConfig.key && sortConfig.direction) {
-                queryParams.sort_by = sortConfig.key;
-                queryParams.sort_order = sortConfig.direction;
-            }
 
             const response = await apiClient<PaginatedRolesResponse | RolePublic[]>({
                 url: `/api/v1/roles/`,
@@ -200,7 +197,7 @@ export default function RolesPage() {
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage, sortConfig]);
+    }, []);
 
     useEffect(() => {
         fetchRoles();
@@ -242,39 +239,19 @@ export default function RolesPage() {
         setPage(0); // Reset to first page when sorting
     };
 
-    // Compute sorted data
-    const sortedRoles = useMemo(() => {
-        const dataToSort = isFiltering ? filteredRoles : roles;
-
-        if (!sortConfig || !sortConfig.direction) {
-            return dataToSort;
-        }
-
-        const column = columnConfigs.find(col => col.id === sortConfig.key);
-        if (!column) return dataToSort;
-
-        return sortData(dataToSort, sortConfig, column);
-    }, [roles, filteredRoles, isFiltering, sortConfig, columnConfigs]);
-
-    // Calculate paginated roles - use client-side pagination when sorting/filtering, server-side pagination otherwise
-    const paginatedRoles = useMemo(() => {
-        if (isFiltering || sortConfig) {
-            // Client-side pagination for filtered/sorted results
-            if (rowsPerPage === 99999) {
-                // Show all results
-                return sortedRoles;
-            }
-            const startIndex = page * rowsPerPage;
-            const endIndex = startIndex + rowsPerPage;
-            return sortedRoles.slice(startIndex, endIndex);
-        } else {
-            // Server-side pagination - use roles directly as they are already paginated
-            return roles;
-        }
-    }, [roles, sortedRoles, isFiltering, sortConfig, page, rowsPerPage]);
-
-    // Calculate total count for pagination
-    const displayTotalCount = (isFiltering || sortConfig) ? sortedRoles.length : totalCount;    // Delete handlers
+    // Toàn bộ dữ liệu đã nạp -> lọc (ở RoleSearch) -> sắp xếp -> phân trang
+    // đều thực hiện phía client, nhất quán cho cả trường hợp có/không tìm kiếm.
+    const { pageItems: paginatedRoles, displayTotalCount } = useMemo(
+        () => computeClientTable<RolePublic>({
+            rows: isFiltering ? filteredRoles : roles,
+            sortConfig,
+            columns: columnConfigs,
+            page,
+            rowsPerPage,
+            sortFn: sortData,
+        }),
+        [roles, filteredRoles, isFiltering, sortConfig, columnConfigs, page, rowsPerPage]
+    );    // Delete handlers
     const handleOpenDeleteDialog = (role: RolePublic) => {
         setRoleToDelete(role);
         setOpenDeleteDialog(true);

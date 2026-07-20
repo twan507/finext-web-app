@@ -230,12 +230,12 @@ const PromotionSearch: React.FC<PromotionSearchProps> = ({
                                 sx={{ height: '20px' }}
                             />
                             <Typography variant="caption" color="text.secondary">
-                                (trang hiện tại)
+                                kết quả
                             </Typography>
                         </>
                     ) : (
                         <Typography variant="caption" color="text.secondary">
-                            {stats.total} khuyến mãi (trang hiện tại)
+                            {stats.total} khuyến mãi
                         </Typography>
                     )}
                 </Box>

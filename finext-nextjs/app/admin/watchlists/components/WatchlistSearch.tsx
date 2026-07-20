@@ -179,12 +179,12 @@ const WatchlistSearch: React.FC<WatchlistSearchProps> = ({
                                 sx={{ height: '20px' }}
                             />
                             <Typography variant="caption" color="text.secondary">
-                                (trang hiện tại)
+                                kết quả
                             </Typography>
                         </>
                     ) : (
                         <Typography variant="caption" color="text.secondary">
-                            {stats.total} watchlists (trang hiện tại)
+                            {stats.total} watchlists
                         </Typography>
                     )}
                 </Box>

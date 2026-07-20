@@ -33,6 +33,7 @@ import {
 	getNextSortDirection,
 	getResponsiveDisplayStyle
 } from '../components/TableSortUtils';
+import { computeClientTable, ALL_ROWS_VALUE } from '../components/TableClientPagination';
 
 // Interface matching SubscriptionPublic from backend
 interface SubscriptionPublic {
@@ -208,16 +209,12 @@ export default function SubscriptionsPage() {
 		setLoading(true);
 		setError(null);
 		try {
+			// Backend subscriptions chỉ hỗ trợ skip/limit (KHÔNG có search/sort
+			// server-side). Nạp toàn bộ tập rồi lọc/sắp xếp/phân trang phía client.
 			const queryParams: Record<string, any> = {
-				skip: page * rowsPerPage,
-				limit: rowsPerPage,
+				skip: 0,
+				limit: ALL_ROWS_VALUE,
 			};
-
-			// Add sort parameters if sortConfig is defined
-			if (sortConfig && sortConfig.key && sortConfig.direction) {
-				queryParams.sort_by = sortConfig.key;
-				queryParams.sort_order = sortConfig.direction;
-			}
 
 			const response = await apiClient<PaginatedSubscriptionsResponse | SubscriptionPublic[]>({
 				url: `/api/v1/subscriptions/admin/all`,
@@ -255,7 +252,7 @@ export default function SubscriptionsPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [page, rowsPerPage, sortConfig]);
+	}, []);
 
 	useEffect(() => {
 		fetchSubscriptions();
@@ -299,39 +296,21 @@ export default function SubscriptionsPage() {
 		setPage(0); // Reset to first page when sorting
 	};
 
-	// Compute sorted data
-	const sortedSubscriptions = useMemo(() => {
-		const dataToSort = isFiltering ? filteredSubscriptions : subscriptions;
+	// Toàn bộ dữ liệu đã nạp -> lọc (ở SubscriptionSearch) -> sắp xếp -> phân trang
+	// đều thực hiện phía client, nhất quán cho cả trường hợp có/không tìm kiếm.
+	const { pageItems: paginatedSubscriptions, displayTotalCount } = useMemo(
+		() => computeClientTable<SubscriptionPublic>({
+			rows: isFiltering ? filteredSubscriptions : subscriptions,
+			sortConfig,
+			columns: columnConfigs,
+			page,
+			rowsPerPage,
+			sortFn: sortData,
+		}),
+		[subscriptions, filteredSubscriptions, isFiltering, sortConfig, columnConfigs, page, rowsPerPage]
+	);
 
-		if (!sortConfig || !sortConfig.direction) {
-			return dataToSort;
-		}
-
-		const column = columnConfigs.find(col => col.id === sortConfig.key);
-		if (!column) return dataToSort;
-
-		return sortData(dataToSort, sortConfig, column);
-	}, [subscriptions, filteredSubscriptions, isFiltering, sortConfig, columnConfigs]);
-
-	// Calculate paginated subscriptions - use client-side pagination when sorting/filtering, server-side pagination otherwise
-	const paginatedSubscriptions = useMemo(() => {
-		if (isFiltering || sortConfig) {
-			// Client-side pagination for filtered/sorted results
-			if (rowsPerPage === 99999) {
-				// Show all results
-				return sortedSubscriptions;
-			}
-			const startIndex = page * rowsPerPage;
-			const endIndex = startIndex + rowsPerPage;
-			return sortedSubscriptions.slice(startIndex, endIndex);
-		} else {
-			// Server-side pagination - use subscriptions directly as they are already paginated
-			return subscriptions;
-		}
-	}, [subscriptions, sortedSubscriptions, isFiltering, sortConfig, page, rowsPerPage]);
-
-	// Calculate total count for pagination
-	const displayTotalCount = (isFiltering || sortConfig) ? sortedSubscriptions.length : totalCount; const handleOpenDeactivateDialog = (sub: SubscriptionPublic) => {
+	const handleOpenDeactivateDialog = (sub: SubscriptionPublic) => {
 		setActionSubscription(sub);
 		setOpenDeactivateDialog(true);
 	};

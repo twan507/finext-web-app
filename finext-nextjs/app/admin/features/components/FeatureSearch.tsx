@@ -188,12 +188,12 @@ const FeatureSearch: React.FC<FeatureSearchProps> = ({
                                 sx={{ height: '20px' }}
                             />
                             <Typography variant="caption" color="text.secondary">
-                                (trang hiện tại)
+                                kết quả
                             </Typography>
                         </>
                     ) : (
                         <Typography variant="caption" color="text.secondary">
-                            {stats.total} tính năng (trang hiện tại)
+                            {stats.total} tính năng
                         </Typography>
                     )}
                 </Box>

@@ -227,12 +227,12 @@ const OtpSearch: React.FC<OtpSearchProps> = ({
                                 sx={{ height: '20px' }}
                             />
                             <Typography variant="caption" color="text.secondary">
-                                (trang hiện tại)
+                                kết quả
                             </Typography>
                         </>
                     ) : (
                         <Typography variant="caption" color="text.secondary">
-                            {stats.total} OTPs (trang hiện tại)
+                            {stats.total} OTPs
                         </Typography>
                     )}
                 </Box>

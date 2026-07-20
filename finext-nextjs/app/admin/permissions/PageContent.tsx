@@ -29,6 +29,7 @@ import {
     getNextSortDirection,
     getResponsiveDisplayStyle
 } from '../components/TableSortUtils';
+import { computeClientTable, ALL_ROWS_VALUE } from '../components/TableClientPagination';
 import PermissionSearch from './components/PermissionSearch';
 import CreatePermissionModal from './components/CreatePermissionModal';
 import EditPermissionModal from './components/EditPermissionModal';
@@ -158,11 +159,9 @@ const PermissionsPage: React.FC = () => {
         setLoading(true);
         setError(null);
         try {
-            let url = `/api/v1/permissions/admin/definitions?skip=${page * rowsPerPage}&limit=${rowsPerPage}`;
-
-            if (sortConfig && sortConfig.key && sortConfig.direction) {
-                url += `&sort_by=${sortConfig.key}&sort_order=${sortConfig.direction}`;
-            }
+            // Backend permissions chỉ hỗ trợ skip/limit (KHÔNG có search/sort server-side).
+            // Nạp toàn bộ tập rồi lọc/sắp xếp/phân trang phía client.
+            const url = `/api/v1/permissions/admin/definitions?skip=0&limit=${ALL_ROWS_VALUE}`;
 
             const response = await apiClient<PaginatedPermissionsResponse | PermissionSystemPublic[]>({
                 url: url,
@@ -199,7 +198,7 @@ const PermissionsPage: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage, sortConfig]); // Added sortConfig dependency
+    }, []);
 
     useEffect(() => {
         fetchPermissions();
@@ -240,36 +239,19 @@ const PermissionsPage: React.FC = () => {
         setPage(0);
     };
 
-    // Compute sorted data // Added section
-    const sortedPermissions = useMemo(() => {
-        const dataToSort = isFiltering ? filteredPermissions : permissions;
-
-        if (!sortConfig || !sortConfig.direction) {
-            return dataToSort;
-        }
-
-        const column = columnConfigs.find(col => col.id === sortConfig.key);
-        if (!column) return dataToSort;
-
-        return sortData(dataToSort, sortConfig, column);
-    }, [permissions, filteredPermissions, isFiltering, sortConfig, columnConfigs]);
-
-    // Calculate paginated permissions // Added section
-    const paginatedPermissions = useMemo(() => {
-        if (isFiltering || sortConfig) {
-            if (rowsPerPage === 99999) { // Option to show all
-                return sortedPermissions;
-            }
-            const startIndex = page * rowsPerPage;
-            const endIndex = startIndex + rowsPerPage;
-            return sortedPermissions.slice(startIndex, endIndex);
-        } else {
-            return permissions; // Already paginated by server
-        }
-    }, [permissions, sortedPermissions, isFiltering, sortConfig, page, rowsPerPage]);
-
-    // Calculate total count for pagination // Added
-    const displayTotalCount = (isFiltering || sortConfig) ? sortedPermissions.length : totalCount;    // Action handlers
+    // Toàn bộ dữ liệu đã nạp -> lọc (ở PermissionSearch) -> sắp xếp -> phân trang
+    // đều thực hiện phía client, nhất quán cho cả trường hợp có/không tìm kiếm.
+    const { pageItems: paginatedPermissions, displayTotalCount } = useMemo(
+        () => computeClientTable<PermissionSystemPublic>({
+            rows: isFiltering ? filteredPermissions : permissions,
+            sortConfig,
+            columns: columnConfigs,
+            page,
+            rowsPerPage,
+            sortFn: sortData,
+        }),
+        [permissions, filteredPermissions, isFiltering, sortConfig, columnConfigs, page, rowsPerPage]
+    );    // Action handlers
     const handleAddPermission = () => {
         setCreateModalOpen(true);
     };
