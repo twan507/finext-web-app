@@ -211,7 +211,6 @@ async def delete_sessions_for_user_except_jti(db: AsyncIOMotorDatabase, user_id_
 
     delete_result = await db[SESSIONS_COLLECTION].delete_many(query)
     if delete_result.deleted_count > 0:
-        logger.info(
-            f"Đã xóa {delete_result.deleted_count} session(s) cho user ID {user_id_str} (giữ lại JTI: {current_jti_to_keep if current_jti_to_keep else 'TOÀN BỘ'})."
-        )
+        keep_desc = f"giữ lại JTI: {current_jti_to_keep}" if current_jti_to_keep else "KHÔNG giữ lại phiên nào (xóa toàn bộ)"
+        logger.info(f"Đã xóa {delete_result.deleted_count} session(s) cho user ID {user_id_str} ({keep_desc}).")
     return delete_result.deleted_count

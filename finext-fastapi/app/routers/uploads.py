@@ -103,7 +103,11 @@ def compress_image(image_bytes: bytes, content_type: str, target_size: int = TAR
         return output_buffer.getvalue(), "image/jpeg"
 
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Failed to process image: {str(e)}")
+        logger.error(f"Lỗi khi xử lý/nén ảnh: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Không thể xử lý ảnh. Vui lòng thử lại với ảnh khác.",
+        )
 
 
 @router.post(

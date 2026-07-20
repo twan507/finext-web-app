@@ -90,7 +90,8 @@ async def create_permission(
         new_permission = await crud_permissions.create_permission(db, permission)
         return PermissionPublic(**new_permission.model_dump())
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.warning(f"Không thể tạo permission: {e}")
+        raise HTTPException(status_code=400, detail="Không thể tạo permission. Dữ liệu không hợp lệ hoặc permission đã tồn tại.")
     except Exception as e:
         logger.error(f"Error creating permission: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -137,7 +138,8 @@ async def update_permission(
 
         return PermissionPublic(**updated_permission.model_dump())
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.warning(f"Không thể cập nhật permission {permission_id}: {e}")
+        raise HTTPException(status_code=400, detail="Không thể cập nhật permission. Dữ liệu không hợp lệ hoặc tên permission đã tồn tại.")
     except Exception as e:
         logger.error(f"Error updating permission {permission_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")

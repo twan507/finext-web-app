@@ -180,7 +180,7 @@ async def admin_confirm_transaction_payment(  # Đổi tên hàm
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Lỗi máy chủ khi xử lý subscription sau khi xác nhận thanh toán: {str(e)}",
+            detail="Lỗi máy chủ khi xử lý subscription sau khi xác nhận thanh toán.",
         )
 
 

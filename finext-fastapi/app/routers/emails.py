@@ -80,7 +80,7 @@ async def send_consultation_request(
         raise
     except Exception as e:
         logger.error(f"Lỗi khi xử lý yêu cầu trao đổi: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Đã xảy ra lỗi: {str(e)}")
+        raise HTTPException(status_code=500, detail="Đã xảy ra lỗi khi xử lý yêu cầu. Vui lòng thử lại sau.")
 
 
 @router.post(
@@ -122,7 +122,7 @@ async def send_open_account_request(
         raise
     except Exception as e:
         logger.error(f"Lỗi khi xử lý yêu cầu mở tài khoản: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Đã xảy ra lỗi: {str(e)}")
+        raise HTTPException(status_code=500, detail="Đã xảy ra lỗi khi xử lý yêu cầu. Vui lòng thử lại sau.")
 
 
 @router.post(
@@ -165,4 +165,4 @@ async def send_plan_inquiry_request(
         raise
     except Exception as e:
         logger.error(f"Lỗi khi xử lý yêu cầu trao đổi gói: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Đã xảy ra lỗi: {str(e)}")
+        raise HTTPException(status_code=500, detail="Đã xảy ra lỗi khi xử lý yêu cầu. Vui lòng thử lại sau.")

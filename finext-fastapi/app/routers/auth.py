@@ -6,6 +6,7 @@ from datetime import datetime, timezone, timedelta  # noqa: F401  # timedelta gi
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status, Request, BackgroundTasks  # noqa: F401  # BackgroundTasks giữ lại nếu cần
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -763,7 +764,10 @@ async def google_oauth_callback(
             detail="Không thể lấy thông tin người dùng từ Google (thiếu id_token).",
         )  # Xác thực id_token và lấy thông tin user với clock skew tolerance
     try:
-        id_info = get_google_user_info_from_token(google_id_token_str, GOOGLE_CLIENT_ID)
+        # get_google_user_info_from_token dùng httpx.get + time.sleep ĐỒNG BỘ (fetch Google
+        # public keys, có retry/backoff). Chạy trực tiếp trên event loop sẽ đóng băng cả worker
+        # tới ~33s khi cache miss/Google chậm -> đẩy sang threadpool để không nghẽn event loop.
+        id_info = await run_in_threadpool(get_google_user_info_from_token, google_id_token_str, GOOGLE_CLIENT_ID)
 
         if not id_info:
             raise ValueError("Unable to verify Google ID token")

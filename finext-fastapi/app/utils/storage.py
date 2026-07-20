@@ -129,7 +129,7 @@ async def upload_file_to_r2(
         logger.error(f"Failed to upload {object_name} to R2. Error Code: {error_code}. Message: {error_message}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Could not upload file to R2: {error_message}"
+            detail="Không thể tải tệp lên bộ lưu trữ. Vui lòng thử lại sau."
         )
     except Exception as e:
         logger.error(f"An unexpected error occurred during R2 upload of {object_name}: {e}")

@@ -173,7 +173,7 @@ async def create_or_reactivate_broker_endpoint(
             except Exception as rollback_e:
                 logger.error(f"Lỗi khi rollback trạng thái broker: {rollback_e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Lỗi máy chủ nội bộ khi tạo/kích hoạt đối tác: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Lỗi máy chủ nội bộ khi tạo/kích hoạt đối tác."
         )
 
 
