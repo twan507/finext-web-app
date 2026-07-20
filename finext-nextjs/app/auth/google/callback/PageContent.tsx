@@ -47,8 +47,6 @@ function GoogleCallbackContent() {
       return;
     }
 
-    console.log('GoogleCallbackPage: useEffect triggered for processing.');
-
     const code = searchParams.get('code');
     const errorParam = searchParams.get('error');
     const errorDescriptionParam = searchParams.get('error_description');
@@ -62,11 +60,9 @@ function GoogleCallbackContent() {
     }
 
     if (code) {
-      console.log('GoogleCallbackPage: Received authorization code:', code);
       setProcessing(true); // Đảm bảo set processing khi bắt đầu
       // redirect_uri này phải chính xác là URI của trang callback này
       const frontendRedirectUriForBackend = window.location.origin + "/auth/google/callback";
-      console.log('GoogleCallbackPage: Sending code to backend with redirect_uri:', frontendRedirectUriForBackend);
 
       apiClient<LoginResponse>({ //
         url: '/api/v1/auth/google/callback', // Backend endpoint
@@ -79,23 +75,16 @@ function GoogleCallbackContent() {
         withCredentials: true, // Để nhận HttpOnly cookie từ backend
       })
         .then(async (googleLoginResponse) => {
-          console.log('GoogleCallbackPage: Received response from backend:', googleLoginResponse);
           if (googleLoginResponse.status === 200 && googleLoginResponse.data?.access_token) {
             const { access_token } = googleLoginResponse.data;
-            console.log('GoogleCallbackPage: Backend returned access_token:', access_token);
             const tempHeaders = { 'Authorization': `Bearer ${access_token}` };
 
-            console.log('GoogleCallbackPage: Fetching /me from backend...');
             const userResponse = await apiClient<UserInfoFromGoogleCallback>({ url: '/api/v1/auth/me', method: 'GET', headers: tempHeaders }); //
-            console.log('GoogleCallbackPage: /me response:', userResponse);
 
-            console.log('GoogleCallbackPage: Fetching /me/features and /me/permissions from backend...');
             const [featuresResponse, permissionsResponse] = await Promise.all([
               apiClient<string[]>({ url: '/api/v1/auth/me/features', method: 'GET', headers: tempHeaders }),
               apiClient<string[]>({ url: '/api/v1/auth/me/permissions', method: 'GET', headers: tempHeaders }),
             ]); //
-            console.log('GoogleCallbackPage: /me/features response:', featuresResponse);
-            console.log('GoogleCallbackPage: /me/permissions response:', permissionsResponse);
 
             if (userResponse.status === 200 && userResponse.data && featuresResponse.status === 200 && permissionsResponse.status === 200) {
               const sessionData = {
@@ -104,9 +93,7 @@ function GoogleCallbackContent() {
                 features: featuresResponse.data || [],
                 permissions: permissionsResponse.data || [],
               };
-              console.log('GoogleCallbackPage: Preparing to call login() with sessionData:', sessionData);
               login(sessionData);
-              console.log('GoogleCallbackPage: login() called, redirecting to home...');
 
               // Redirect về trang chủ sau khi đăng nhập thành công
               // Sử dụng window.location.href để full page reload, đảm bảo middleware nhận được cookie
