@@ -263,3 +263,187 @@ Sau khi liệt kê đủ 20 mã LargeCaps đúng, agent thêm dòng thứ 21 *"H
 | 6 | Chốt lại trần token sau khi có số đo mới | §3.5 |
 
 Bộ 14 câu ở §1 nên chạy lại sau mỗi lần đổi model hoặc đổi prompt, và so với bảng §2.
+
+---
+
+## 7. Chạy lại sau khi sửa chỗ cắt dữ liệu (2026-07-20)
+
+> **Vì sao chạy lại:** §4.1 kết luận sai. Lúc đó tưởng "tool đã trả đủ 9 kỳ, model tự chọn sai kỳ".
+> Điều tra sau đó tìm ra nguyên nhân thật: `registry.py` cắt `content[:12000]` **giữ phần ĐẦU**,
+> nên kết quả HPG 28.026 ký tự (9 kỳ `2024_1…2026_1`) bị cắt còn 4 kỳ **CŨ NHẤT** và JSON hỏng
+> giữa chừng. Model **không hề nhìn thấy** dữ liệu 2025/2026 nên đã bịa số. Bản ghi eval lần 1
+> cắt tool-result ở 6.000 ký tự (xem §5) nên đúng cái bằng chứng đó bị giấu suốt một phiên.
+>
+> **Đã sửa** (plan `2026-07-20-cat-du-lieu-tool.md`, Task 1-4): module mới `app/agent/tools/shrink.py`
+> thu gọn theo **cấu trúc** — bỏ trọn phần tử, giữ kỳ **MỚI**, kèm ghi chú `[GHI CHÚ NỘI BỘ]`
+> nói rõ đã bỏ gì và cấm tự điền số. Trần nâng lên `MAX_TOOL_RESULT_CHARS = 24.000` /
+> `MAX_TOTAL_TOOL_CHARS = 40.000` (chia đều cho các lời gọi song song). Bỏ nhãn ngữ cảnh trang
+> bị chèn trùng ở frontend.
+>
+> **Cách chạy:** y hệt §1 (probe scratchpad đi đúng đường `/chat/stream`, `thinking = disabled`),
+> khác đúng ba điểm: (1) ngữ cảnh trang **không** tự chèn nhãn nữa — để backend chèn, giống
+> production sau Task 4; (2) **lưu nguyên văn** tool-result, không cắt 6.000 ký tự; (3) lưu thêm
+> khối briefing của system prompt theo từng lượt để chốt được các lượt lấy số từ briefing.
+>
+> **Số lượt:** 14/14, mỗi câu đúng một lượt, không chạy lại lượt nào. Chạy 16:0x–16:2x,
+> tức **sau khi thị trường đóng cửa** — lần 1 chạy 10:56–11:05 **trong phiên**. Đây là khác biệt
+> quan trọng khi đối chiếu: dữ liệu thị trường của hai lần đo khác nhau thật sự
+> (VNINDEX lần 1 `-1,17%` tạm tính, lần 2 `-2,46%` đóng cửa).
+
+### 7.1 Bảng 14 câu — mới đặt cạnh cũ
+
+| # | Route | Kết quả CŨ (§2) | Kết quả MỚI | Đổi | Tool cũ→mới | Vòng cũ→mới | Token thật cũ→mới |
+|---|---|---|---|---|---|---|---|
+| 1 | `/phase?tab=conservative` | ĐẠT (có ghi chú) | ĐẠT | giữ nguyên | 1→1 | 2→2 | 131.494→131.224 |
+| 2 | `/phase?tab=aggressive` | ĐẠT (có ghi chú) | ĐẠT | giữ nguyên | 2→1 | 2→2 | 101.545→131.318 |
+| 3 | `/phase?tab=core` | ĐẠT | ĐẠT | giữ nguyên | 1→2 | 2→2 | 133.355→127.750 |
+| 4 | `/commodities?tab=metals` | ĐẠT (có ghi chú) | ĐẠT | giữ nguyên | 2→2 | 3→2 | 192.705→96.939 |
+| 5 | `/international?tab=global_index` | **KHÔNG ĐẠT** | ĐẠT (có ghi chú) | **tốt lên** | 0→1 | 1→2 | 63.417→127.734 |
+| 6 | `/stocks/HPG?tab=financials` | **KHÔNG ĐẠT — bịa số** | **ĐẠT** | **tốt lên** | 1→3 | 2→2 | 132.303→105.036 |
+| 7 | `/stocks/FPT?tab=news` | **KHÔNG ĐẠT — lỗi kỹ thuật** | ĐẠT (có ghi chú) | **tốt lên** | 10→11 | 10→10 | 644.883→650.170 |
+| 8 | `/` | ĐẠT (có ghi chú) | ĐẠT | giữ nguyên | 5→5 | 8→4 | 532.212→235.134 |
+| 9 | `/stocks` | **KHÔNG ĐẠT — câu cụt** | **KHÔNG ĐẠT — không trả lời được** | tốt lên (chưa đạt) | 0→9 | 1→10 | 63.731→650.376 |
+| 10 | `/sectors` | ĐẠT | **KHÔNG ĐẠT — từ chối vì không lấy được dữ liệu** | **XẤU ĐI** | 1→9 | 3→10 | 161.998→643.288 |
+| 11 | `/groups/largecap` | ĐẠT (có ghi chú) | **KHÔNG ĐẠT — bịa phân ngành** | **XẤU ĐI** | 2→2 | 2→3 | 128.574→191.247 |
+| 12 | `/watchlist` | ĐẠT | ĐẠT | giữ nguyên | 1→2 | 2→3 | 97.465→194.207 |
+| 13 | `/macro?tab=monetary` | ĐẠT (có ghi chú) | ĐẠT | giữ nguyên | 2→2 | 2→4 | 129.303→255.943 |
+| 14 | `/sectors/kimloai?tab=stocks` | ĐẠT (có ghi chú) | ĐẠT | giữ nguyên | 4→5 | 5→5 | 323.081→327.753 |
+
+**Tỷ lệ đạt: 11/14 (79%)**, so với **10/14 (71%)** lần 1.
+
+- **Tốt lên: 3 câu** — 5, 6, 7.
+- **Xấu đi: 2 câu** — 10, 11 (xem §7.3).
+- **Giữ nguyên: 9 câu.**
+
+### 7.2 Câu 6 — ĐẠT, đối chiếu trực tiếp với `agent_db`
+
+Câu trả lời của agent:
+
+> Lợi nhuận HPG **tăng mạnh so với cùng kỳ**.
+> - **Quý I/2026:** lợi nhuận sau thuế tăng **168,94%** so với quý I/2025.
+> - Doanh thu cũng tăng **40,48%** […]
+> - Tuy nhiên, dữ liệu dòng tiền hiện tại chưa ủng hộ: điểm dòng tiền tuần của HPG ở mức **-41,7** […]; giá đã giảm **8,04% trong tuần**.
+
+Đối chiếu với `agent_db` (truy vấn trực tiếp, không tin câu trả lời):
+
+| Agent nói | Trong DB | |
+|---|---|---|
+| Kỳ mới nhất là **Quý I/2026** | `financial_statements.quarterly` kỳ cuối = `2026_1` | ĐÚNG |
+| LNST **+168,94%** YoY | `Tăng trưởng LNST YoY = 1.6894` | ĐÚNG |
+| Doanh thu **+40,48%** YoY | `Tăng trưởng doanh thu YoY = 0.4048` | ĐÚNG |
+| Điểm dòng tiền tuần **-41,7** | `money_flow_score.week_score = -41.7` | ĐÚNG |
+| Giá tuần **-8,04%** | `change.w_pct = -8.04` | ĐÚNG |
+
+**Không có số nào sai, không có số nào bịa.** So với lần 1: khẳng định sai kỳ (Q1/2025 là "mới nhất"),
+bịa doanh thu 34.643 tỷ, sai `11,5%` và `9,2%`, và tự mâu thuẫn với chính mình.
+
+*Một khác biệt so với kỳ vọng nghiệm thu:* plan chờ agent nêu doanh thu tuyệt đối **53.313 tỷ**;
+agent nêu **mức tăng +40,48%** thay vì con số tuyệt đối. Con số 53.313 tỷ **có** trong tool-result
+(`Doanh thu thuần = 53312910120686`) — agent chọn diễn đạt theo phần trăm, phù hợp với câu hỏi
+("tăng hay giảm"), không phải lỗi dữ liệu.
+
+**Ghi chú `[GHI CHÚ NỘI BỘ]` có hoạt động thật.** Lượt này model gọi `db_aggregate` lấy `$slice: -5`
+(5 kỳ); kết quả vượt ngân sách nên `shrink_result` bỏ đúng **kỳ CŨ NHẤT** và nối ghi chú — nguyên văn
+phần đuôi tool-result mà model nhận được:
+
+```
+… {"period": "2026_1", "data": [… {"vi_name": "Doanh thu thuần", …, "value": 53312910120686},
+{"vi_name": "Tăng trưởng doanh thu YoY", …, "value": 0.4048},
+{"vi_name": "Tăng trưởng LNST YoY", …, "value": 1.6894}, …]}]}]
+
+[GHI CHÚ NỘI BỘ — không đọc cho khách] Kết quả quá lớn nên đã lược bớt. Chỉ kết luận trên phần
+còn lại. Nếu khách hỏi về phần đã bỏ, hãy nói là chưa lấy được — TUYỆT ĐỐI không tự điền số.
+Đã giữ 4/5 phần tử MỚI NHẤT của quarterly_recent, từ 2025_2 đến 2026_1. Đã bỏ các phần tử cũ hơn:
+2025_1. Cần phần đã bỏ thì truy vấn lại với projection ít field hơn hoặc $slice nhỏ hơn.
+```
+
+Đây đúng là hình dạng mà hành vi cũ làm hỏng: cùng một kết quả vượt trần, nhưng nay **giữ `2026_1`**
+và **bỏ `2025_1`** thay vì ngược lại, JSON vẫn hợp lệ, và model được nói rõ đã mất gì.
+
+**Tần suất kích hoạt trên toàn bộ 14 lượt:** 55 lời gọi tool, **1** lời gọi có `shrunk = True`
+(chính là lượt 6) và **1** lời gọi mang `[GHI CHÚ NỘI BỘ]`. Ba lời gọi khác vượt 12.000 ký tự
+(`read_kb` 21.751 và 60.059 ký tự) — các lời gọi này trả markdown nên đi đường `_cap_text`,
+cắt theo ranh giới **dòng** kèm ghi chú "đã cắt", không phải đường `shrink_result`.
+Tức là **4/55 lời gọi (7%)** trước đây sẽ bị cắt mù ở trần 12.000.
+
+### 7.3 Hai câu xấu đi
+
+**Câu 10 `/sectors` — ĐẠT → KHÔNG ĐẠT.** Model gọi `db_aggregate` **9 lần, hỏng cả 9**, chạm
+`MAX_ITERS = 10`, rồi trả lời trung thực là không có dữ liệu:
+
+> Vì không có dữ liệu trong tay nên mình không thể đưa ra câu trả lời có số liệu thật cho câu hỏi này — đoán số sẽ làm sai lệch hoàn toàn.
+
+Nguyên nhân: model tự bọc từng stage pipeline thành chuỗi trong một khoá `$text`, ví dụ
+`pipeline: [{"$text": "{\"$sort\": {…}}"}, {"$text": "{\"$limit\": 24}"}]`. Validator không thấy
+stage `$limit` thật nên từ chối: *"pipeline bắt buộc có stage $limit (1..50)"*. Model sửa loanh quanh
+9 lần mà không bỏ được lớp `$text`.
+
+**Đây không phải hành vi mới.** Cùng dạng lỗi `$text` đã có trong bản ghi eval lần 1 (lượt 8, 3 lần
+gọi) — khi đó model tự thoát ra được. Sửa lần này (`shrink.py`, chia ngân sách, bỏ nhãn trùng) chỉ
+động tới **kích thước kết quả trả về**, không động tới cách dựng lời gọi, nên nhiều khả năng đây là
+tính bất định của model chứ không phải hồi quy do thay đổi. Nhưng một lần đo không chứng minh được
+điều đó — **cần theo dõi**. Điểm tích cực: khi bí, agent chọn nói thật thay vì bịa số.
+
+**Câu 11 `/groups/largecap` — ĐẠT → KHÔNG ĐẠT.** Lời gọi đầu hỏng; lời gọi thứ hai model đặt sai chỗ
+các khoá (`"projection": {"ticker": 1}, "industry": 1, "outstandingShare": 1` — `industry` nằm **ngoài**
+projection) nên tool chỉ trả về **20 mã trần, không có field ngành**. Model vẫn dựng bảng phân ngành,
+lấy từ trí nhớ của chính nó:
+
+- **TCX xếp "Cao su"** — sai; TCX là công ty chứng khoán (lần 1 phân đúng "Công ty Chứng khoán").
+- **VPX xếp "Khác"** — thực tế là công ty chứng khoán.
+- Ghi "**Ngân hàng (7)**" rồi liệt kê **8 mã**.
+- Lộ câu nội bộ ra cho khách: *"(nhóm này có nhưng danh sách trả về chỉ liệt kê 20 mã — kiểm tra kỹ hơn nếu cần)"*.
+
+Danh sách **20 mã là đúng** (khớp `stock_info`), phần **phân ngành là bịa**. Cùng họ với §4.9 lần 1
+(bịa thêm dòng "Hàng không") nhưng nặng hơn. Ghi chú `[GHI CHÚ NỘI BỘ]` không cứu được ca này vì
+tool **thành công** và **không bị cắt** — nó trả đúng thứ model xin, chỉ là model xin thiếu.
+
+### 7.4 Ba câu tốt lên
+
+- **Câu 5 `/international`.** Lần 1: 0 tool, lạc sang VNINDEX, hỏi ngược khách. Lần 2: gọi
+  `other_data` (`group: international`, `category: global_index`), trả lời đúng trọng tâm. Đối chiếu
+  nguyên văn tool-result: S&P 500 `-1,03%` phiên / `-1,57%` tuần, Dow `-0,77%` / `-0,93%`,
+  Nasdaq `-1,40%` / `-2,90%`, Shanghai `+0,85%` / `-2,97%` / `-9,03%` tháng,
+  Nikkei `-4,07%` / `-6,55%` / `-10,02%` tháng — **tất cả khớp**. *Một lỗi:* câu
+  "Riêng Nasdaq và Dow tuần qua giảm mạnh hơn (−2,90% và −6,55%)" gán nhầm `-6,55%` (của Nikkei)
+  cho Dow, mâu thuẫn với chính con số `-0,93%` nó vừa nêu cho Dow ở câu trước.
+- **Câu 6.** Xem §7.2 — đây là câu mà bản sửa nhắm tới.
+- **Câu 7 `/stocks/FPT?tab=news`.** Lần 1 trả về vô dụng ("Tiêu đề: (chưa có chi tiết)"). Lần 2 trả
+  5 tin thật kèm link và ngày. Công lớn thuộc về commit `218222a` (chặn projection hằng chuỗi —
+  đúng việc §6 ưu tiên 1 yêu cầu), **không** phải bản sửa cắt dữ liệu. Vẫn còn **11 tool / 10 vòng /
+  650.170 token** cho một câu hỏi — chi phí chưa được chữa.
+
+### 7.5 Token — hai con số, và một cảnh báo khi đọc bảng
+
+**Cột "quota" của §2 không còn so sánh được với lần này.** Commit `7f770a3` (20/07 14:00, tức **sau**
+lần đo 1) đã thêm `usage` vào `ToolCallsEvent` và cộng dồn trong `_merge_usage` — đúng việc §6 ưu tiên 2
+yêu cầu. Nên trong lần đo 2, **quota = token thật** ở cả 14 lượt (§3.1 đo được lệch 2,47× nay bằng 1,00×).
+Con số quota tổng nhảy từ 1.148.759 lên 3.868.119 (+237%) **không phải chi phí tăng** — là hệ thống
+thôi đếm thiếu.
+
+Token **thật** (so sánh được):
+
+| | Lần 1 | Lần 2 |
+|---|---|---|
+| Tổng 14 lượt | 2.836.066 | 3.868.119 (+36,4%) |
+| Tổng, **bỏ lượt 9 và 10** | 2.610.337 | 2.574.455 (**-1,4%**) |
+| Trung bình/lượt | 202.576 | 276.294 |
+| Ký tự trả lời trung bình | 720 | 848 |
+| Giây trung bình | 29,7 | 43,6 |
+
+Toàn bộ mức tăng 36% nằm ở hai lượt bão retry 9 và 10 (63.731→650.376 và 161.998→643.288). Bỏ hai
+lượt đó ra thì tổng token **giảm nhẹ 1,4%** — tức việc nâng trần 12.000 → 24.000 **không** làm chi
+phí tăng đáng kể, đúng như ước tính trong plan (+12.000 ký tự ≈ 3.000 token ≈ 0,0009 USD/lượt).
+Cái đắt vẫn là bão retry, không phải kích thước kết quả tool.
+
+### 7.6 Còn treo sau lần đo này
+
+| Ưu tiên | Việc | Vì sao |
+|---|---|---|
+| 1 | Chặn/sửa lời gọi bọc stage trong `$text` (câu 9, 10) | 2 trong 14 câu tiêu 650k token rồi không trả lời được |
+| 2 | Chặn trần vòng lặp theo **token** chứ chỉ theo `MAX_ITERS` là chưa đủ | 3 lượt chạm 10 vòng, mỗi lượt >640k token |
+| 3 | Không cho model tự phân ngành khi tool không trả field ngành (câu 11) | bịa phân loại lọt tới khách |
+| 4 | Còn nguyên §3.5: bật cache prompt rồi chốt lại trần | 99,6% chi phí vẫn là system prompt lặp lại |
+
+Các mục §6.1 (projection hằng chuỗi) và §6.2 (đếm token) đã xong; §6.4 (chọn sai kỳ BCTC) xong bằng
+plan `2026-07-20-cat-du-lieu-tool.md`; §6.3 (câu preamble cụt) không tái hiện ở lần đo này.

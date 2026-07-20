@@ -1,6 +1,14 @@
 # 10 — Widget tham chiếu: chặn tận gốc việc AI bịa số
 
-> **Trạng thái:** ĐÃ CHỐT LÀM BẢN ĐẦY ĐỦ (owner, 2026-07-20). Chưa bắt đầu. Cần spec riêng trước khi code.
+> ⚠ **TRẠNG THÁI ĐÃ ĐỔI (2026-07-20, cuối ngày): GÁC LẠI — ĐỪNG BẮT ĐẦU TỪ FILE NÀY.**
+> Đo đạc sau đó cho thấy doc này **sai chỗ và sai thứ tự**. Nguyên nhân gốc của vụ bịa số HPG
+> không phải thiếu cơ chế cưỡng chế mà là **kết quả tool bị cắt mất 5 kỳ mới nhất trước khi model
+> nhìn thấy**. Đọc `docs/superpowers/specs/2026-07-20-cat-du-lieu-tool-design.md` — đặc biệt §2
+> (vì sao guard chống bịa số là bất khả thi, có số đo) và §9 (vì sao widget sai chỗ: xuất hiện
+> 0/14 lượt eval, 5,9% câu `/chat`, chỉ dùng 2/12 template). Sau khi sửa gốc, câu HPG đã ĐẠT.
+> Quay lại doc này chỉ khi có số đo mới chứng minh còn vấn đề bịa số đáng kể.
+>
+> **Trạng thái cũ (đã lỗi thời):** ĐÃ CHỐT LÀM BẢN ĐẦY ĐỦ (owner, 2026-07-20). Chưa bắt đầu.
 > **Nguồn phát hiện:** [`eval-smoke-2026-07-20.md`](eval-smoke-2026-07-20.md) — 14 lượt hỏi thật.
 
 ## 1. Vấn đề

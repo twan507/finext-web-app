@@ -155,3 +155,135 @@ def test_label_for_handles_non_dict_arguments():
     # filter là list (không phải dict) không được làm label_for raise.
     call = ToolCall(id="c9", name="db_find", arguments={"collection": "stock_snapshot", "filter": ["FPT"]})
     assert label_for(call) == "dữ liệu cổ phiếu"
+
+
+# --- Thu gọn kết quả quá lớn: cắt theo CẤU TRÚC, không cắt mù giữa chuỗi ---
+# Hành vi cũ content[:12000] giữ phần ĐẦU: kết quả 9 kỳ báo cáo bị cắt còn 4 kỳ CŨ NHẤT,
+# JSON hỏng giữa chừng, model chỉ thấy "…[đã cắt]" nên đã bịa số cho các kỳ nó không nhìn thấy.
+
+
+class _FakeGateway:
+    """Gateway giả trả đúng data đã đặt trước — chỉ để soi hành vi của execute_tool."""
+
+    def __init__(self, result: GatewayResult):
+        self._result = result
+
+    async def find(self, *args: Any, **kwargs: Any) -> GatewayResult:
+        return self._result
+
+    async def aggregate(self, *args: Any, **kwargs: Any) -> GatewayResult:
+        return self._result
+
+    async def stats(self, *args: Any, **kwargs: Any) -> GatewayResult:
+        return self._result
+
+
+def _call(name: str, arguments: dict[str, Any]) -> ToolCall:
+    return ToolCall(id="cS", name=name, arguments=arguments)
+
+
+def _big_doc(n_periods: int) -> dict[str, Any]:
+    return {
+        "ticker": "HPG",
+        "financial_statements": {
+            "quarterly": [
+                {
+                    "period": f"20{24 + i // 4}_{i % 4 + 1}",
+                    "metrics": [{"vi_name": f"CT {k}", "value": 1_000_000 + k} for k in range(34)],
+                }
+                for i in range(n_periods)
+            ]
+        },
+    }
+
+
+async def test_ket_qua_qua_lon_van_la_JSON_hop_le_va_giu_ky_moi():
+    """Hành vi cũ: content[:12000] → JSON hỏng + mất kỳ mới. Nay phải ngược lại."""
+    result = GatewayResult(ok=True, data=[_big_doc(9)], meta={"ms": 5, "bytes": 30_000})
+    content, meta = await execute_tool(
+        _FakeGateway(result),  # type: ignore[arg-type]
+        CTX,
+        _call("db_find", {"collection": "stock_finstats"}),
+        max_chars=6_000,
+    )
+
+    body = content.split("\n\n[GHI CHÚ NỘI BỘ")[0]
+    data = json.loads(body)  # không được raise — hành vi cũ raise ở đây
+    kept = [q["period"] for q in data[0]["financial_statements"]["quarterly"]]
+    assert "2026_1" in kept
+    assert "2024_1" not in kept
+    assert meta["shrunk"] is True
+
+
+async def test_ghi_chu_cat_di_kem_va_cam_bia_so():
+    result = GatewayResult(ok=True, data=[_big_doc(9)], meta={"ms": 5})
+    content, _ = await execute_tool(
+        _FakeGateway(result),  # type: ignore[arg-type]
+        CTX,
+        _call("db_find", {"collection": "stock_finstats"}),
+        max_chars=6_000,
+    )
+    assert "[GHI CHÚ NỘI BỘ" in content
+    assert "TUYỆT ĐỐI không tự điền số" in content
+
+
+async def test_chuyen_tiep_co_truncated_cua_gateway():
+    """Gateway biết mình đã bỏ document nhưng registry đang VỨT cờ này — không ai đo được."""
+    result = GatewayResult(
+        ok=True, data=[{"ticker": "FPT"}], meta={"ms": 3, "bytes": 120, "truncated": True}
+    )
+    _, meta = await execute_tool(
+        _FakeGateway(result),  # type: ignore[arg-type]
+        CTX,
+        _call("db_find", {"collection": "stock_snapshot"}),
+    )
+    assert meta["truncated"] is True
+    assert meta["bytes"] == 120
+
+
+async def test_giu_note_san_co_cua_gateway():
+    result = GatewayResult(
+        ok=True, data=[{"ticker": "FPT"}], meta={"ms": 3, "note": "Field abc không tồn tại."}
+    )
+    content, _ = await execute_tool(
+        _FakeGateway(result),  # type: ignore[arg-type]
+        CTX,
+        _call("db_find", {"collection": "stock_snapshot"}),
+    )
+    assert "Field abc không tồn tại." in content
+
+
+async def test_qua_lon_khong_thu_noi_thi_bao_loi_day_model():
+    result = GatewayResult(ok=True, data=[{"blob": "x" * 5_000}], meta={"ms": 3})
+    content, meta = await execute_tool(
+        _FakeGateway(result),  # type: ignore[arg-type]
+        CTX,
+        _call("db_find", {"collection": "stock_snapshot"}),
+        max_chars=1_000,
+    )
+    assert meta["ok"] is False
+    assert "$slice" in content or "projection" in content
+
+
+async def test_JSON_cong_ghi_chu_luon_vua_TRAN_da_cho():
+    """Canh hợp đồng ngầm giữa _NOTE_RESERVE (registry) và _cap_text (loop).
+
+    loop.py áp _cap_text lên MỌI content với đúng trần này. _cap_text cắt mù khi chuỗi
+    không có xuống dòng ở nửa sau — mà JSON là một dòng. Nên nếu JSON cộng ghi chú vượt
+    trần thì _cap_text sẽ xé giữa JSON, làm SỐNG LẠI đúng con bug đang sửa. Nới nội dung
+    shrink_note mà quên nới _NOTE_RESERVE là đủ để tái sinh nó, và không test nào khác bắt được.
+    """
+    for limit in (3_000, 6_000, 12_000, 24_000):
+        result = GatewayResult(ok=True, data=[_big_doc(40)], meta={"ms": 5})
+        content, meta = await execute_tool(
+            _FakeGateway(result),  # type: ignore[arg-type]
+            CTX,
+            _call("db_find", {"collection": "stock_finstats"}),
+            max_chars=limit,
+        )
+        if not meta["ok"]:
+            continue  # ca không thu nổi: trả thông điệp lỗi ngắn, không phải JSON
+        assert meta["shrunk"] is True, f"limit={limit}: phải đi qua đường thu gọn"
+        assert len(content) <= limit, (
+            f"limit={limit}: JSON+ghi chú dài {len(content)} ký tự — _cap_text sẽ xé giữa JSON"
+        )

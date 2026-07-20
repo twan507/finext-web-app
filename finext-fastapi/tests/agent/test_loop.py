@@ -831,3 +831,83 @@ async def test_guard_skips_when_answer_is_fresh():
     out = await _run_with_history(adapter, prev, "còn điểm nào đáng chú ý nữa không?")
     assert out == fresh  # giữ nguyên
     assert len(adapter.calls) == 1  # KHÔNG gọi rewrite
+
+
+# ── Ngân sách kết quả tool: chia đều TRƯỚC khi chạy, bỏ cắt mù ────────────────────────────────────
+
+
+def test_cap_text_cat_tai_ranh_gioi_dong():
+    """read_kb trả markdown, không đi qua shrink. Cắt giữa chữ là mất nghĩa."""
+    from app.agent.loop import _cap_text
+
+    content = "\n".join(f"dòng số {i} có nội dung dài dài" for i in range(200))
+    out = _cap_text(content, 500)
+    assert len(out) <= 500 + 120, "phần ghi chú nối thêm phải ngắn"
+    body = out.split("…[đã cắt")[0]
+    assert body.endswith("dài") or body.endswith("\n"), "phải kết thúc ở ranh giới dòng"
+    assert "đã cắt" in out
+
+
+def test_cap_text_khong_dong_vao_noi_dung_vua_tran():
+    from app.agent.loop import _cap_text
+
+    content = "ngắn thôi"
+    assert _cap_text(content, 500) == content
+
+
+def test_ngan_sach_chia_deu_cho_cac_loi_goi_song_song():
+    """Trước đây ngân sách tiêu theo thứ tự: tool cuối hàng có thể nhận về RỖNG."""
+    from app.agent.loop import MAX_TOOL_RESULT_CHARS, MAX_TOTAL_TOOL_CHARS, _per_call_budget
+
+    assert _per_call_budget(1) == MAX_TOOL_RESULT_CHARS
+    assert _per_call_budget(4) == MAX_TOTAL_TOOL_CHARS // 4
+    assert _per_call_budget(0) >= 1, "không được chia cho 0"
+    assert _per_call_budget(100) >= 1, "nhiều lời gọi vẫn phải còn chỗ, không được ra 0"
+    # Tổng không bao giờ vượt ngân sách chung.
+    for n in (1, 2, 3, 5, 10):
+        assert _per_call_budget(n) * n <= max(MAX_TOTAL_TOOL_CHARS, MAX_TOOL_RESULT_CHARS)
+
+
+class _BulkGateway:
+    """Mỗi lời gọi trả một kết quả LỚN — để soi cách chia ngân sách giữa các tool song song."""
+
+    async def find(self, ctx: Any, collection: str, filter: Any = None, projection: Any = None,
+                   sort: Any = None, limit: Any = None) -> Any:
+        from app.agent.gateway.types import GatewayResult
+        data = [{"ticker": f"M{i:03d}", "note": "x" * 400} for i in range(60)]
+        return GatewayResult(ok=True, data=data, meta={"collection": collection, "ms": 0})
+
+    async def aggregate(self, *a: Any, **k: Any) -> Any:
+        from app.agent.gateway.types import GatewayResult
+        return GatewayResult(ok=False, error="n/a", meta={})
+
+    async def stats(self, *a: Any, **k: Any) -> Any:
+        from app.agent.gateway.types import GatewayResult
+        return GatewayResult(ok=False, error="n/a", meta={})
+
+
+async def test_moi_tool_song_song_deu_nhan_du_lieu_that():
+    """GHIM NGUYÊN NHÂN GỐC: ngân sách tiêu theo THỨ TỰ khiến tool THÀNH CÔNG ở cuối hàng
+    nhận về đúng chuỗi '[đã cắt do vượt ngân sách]' — không một byte dữ liệu nào."""
+    import json as _json
+
+    from app.agent.loop import _run_tools
+
+    calls = [
+        ToolCall(
+            id=f"c{i}", name="db_find",
+            arguments={"collection": "stock_snapshot", "filter": {"ticker": f"T{i}"}, "projection": {"price": 1}},
+        )
+        for i in range(4)
+    ]
+
+    async def emit(event_type: str, payload: dict[str, Any]) -> None:
+        return None
+
+    messages = await _run_tools(_BulkGateway(), CTX, calls, emit, set())
+
+    assert len(messages) == 4
+    for msg in messages:
+        body = msg["content"].split("\n\n[GHI CHÚ NỘI BỘ")[0].split("…[đã cắt")[0]
+        docs = _json.loads(body)  # hành vi cũ: tool cuối hàng không có JSON để parse
+        assert docs and docs[0]["ticker"] == "M000", "tool nào cũng phải nhận DỮ LIỆU THẬT"

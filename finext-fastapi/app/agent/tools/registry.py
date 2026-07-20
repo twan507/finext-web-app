@@ -11,6 +11,7 @@ from app.core.database import get_database
 from .db import DB_AGGREGATE_SCHEMA, DB_FIND_SCHEMA, run_db_aggregate, run_db_find
 from .db_stats import DB_STATS_SCHEMA, run_db_stats
 from .kb import READ_KB_SCHEMA, read_kb_doc
+from .shrink import shrink_note, shrink_result
 from .user import GET_WATCHLIST_SCHEMA, run_get_my_watchlist
 
 logger = logging.getLogger(__name__)
@@ -18,13 +19,26 @@ logger = logging.getLogger(__name__)
 # get_my_watchlist tạm gỡ khỏi tool surface tới khi tích hợp watchlist thật (schema stock_symbols/multi-doc) — code giữ nguyên để nối lại
 TOOL_SCHEMAS: list[dict[str, Any]] = [DB_FIND_SCHEMA, DB_AGGREGATE_SCHEMA, DB_STATS_SCHEMA, READ_KB_SCHEMA]
 
-MAX_TOOL_RESULT_CHARS = 12_000
+# Nâng từ 12.000: trần cũ cắt mất 5/9 kỳ báo cáo của một truy vấn thường gặp. Thêm 12.000
+# ký tự ≈ 3.000 token ≈ 0,0009 USD, so với 0,039 USD một lượt — rẻ hơn nhiều so với việc
+# model không có dữ liệu rồi bịa số.
+MAX_TOOL_RESULT_CHARS = 24_000
+# Chừa chỗ cho [GHI CHÚ NỘI BỘ] nối SAU phần JSON, để trần ngân sách ở loop.py không cắt mất nó.
+_NOTE_RESERVE = 800
+_OVERSIZE_MSG = (
+    "Kết quả quá lớn nên không trả được. Hãy giảm số phần tử $slice (ví dụ -20) "
+    "hoặc projection ít field hơn (chỉ các field thật sự cần)."
+)
 
 _HANDLERS = {"db_find": run_db_find, "db_aggregate": run_db_aggregate, "db_stats": run_db_stats}
 
 
 async def execute_tool(
-    gateway: GatewayProtocol, ctx: GatewayContext, call: ToolCall
+    gateway: GatewayProtocol,
+    ctx: GatewayContext,
+    call: ToolCall,
+    *,
+    max_chars: int = MAX_TOOL_RESULT_CHARS,
 ) -> tuple[str, dict[str, Any]]:
     """Trả (content cho model, meta cho event tool_end)."""
     if call.arg_error is not None:
@@ -69,16 +83,28 @@ async def execute_tool(
         logger.exception("Tool %s lỗi không mong đợi", call.name)
         return "Lỗi khi truy vấn dữ liệu. Hãy thử query khác.", {"ok": False, "ms": 0}
 
-    meta = {"ok": result.ok, "ms": result.meta.get("ms", 0)}
+    meta = {
+        "ok": result.ok,
+        "ms": result.meta.get("ms", 0),
+        # Gateway đã biết mình bỏ bớt document; trước đây cờ này bị vứt nên không ai đo được.
+        "truncated": bool(result.meta.get("truncated")),
+        "bytes": result.meta.get("bytes", 0),
+        "shrunk": False,
+    }
     if not result.ok:
         return result.error or "Query bị từ chối.", meta
 
-    content = json.dumps(result.data, ensure_ascii=False, default=str)
-    if len(content) > MAX_TOOL_RESULT_CHARS:
-        content = content[:MAX_TOOL_RESULT_CHARS] + " …[đã cắt]"
-    # Note nội bộ cho MODEL (vd projection field không tồn tại) — thêm SAU cap để không bị cắt mất.
-    # Chỉ đi vào tool-result trung gian; câu trả lời khách vẫn qua sanitize nên không lộ tên field.
-    note = result.meta.get("note")
-    if note:
-        content = f"{content}\n\n[GHI CHÚ NỘI BỘ — không đọc cho khách] {note}"
+    data, report = shrink_result(result.data or [], max(1, max_chars - _NOTE_RESERVE))
+    meta["shrunk"] = report.shrunk
+    if report.shrunk and not data:
+        # Không trả rỗng CÂM: rỗng câm khiến model tưởng không có dữ liệu và lặp query vô ích.
+        meta["ok"] = False
+        return _OVERSIZE_MSG, meta
+
+    content = json.dumps(data, ensure_ascii=False, default=str)
+    # Note nội bộ cho MODEL. Chỉ đi vào tool-result trung gian; câu trả lời khách vẫn qua
+    # sanitize nên không lộ tên field/collection.
+    notes = [n for n in (shrink_note(report), result.meta.get("note")) if n]
+    if notes:
+        content = f"{content}\n\n[GHI CHÚ NỘI BỘ — không đọc cho khách] " + " ".join(notes)
     return content, meta

@@ -17,7 +17,7 @@ from app.agent.events import DoneEvent, ErrorEvent, ToolCall, ToolCallsEvent, To
 from app.agent.gateway.types import GatewayContext, GatewayProtocol
 from app.agent.labels import label_for
 from app.agent.sanitize import sanitize_answer
-from app.agent.tools.registry import TOOL_SCHEMAS, execute_tool
+from app.agent.tools.registry import MAX_TOOL_RESULT_CHARS, TOOL_SCHEMAS, execute_tool
 from app.core.config import (
     LLM_API_KEY,
     LLM_API_STYLE,
@@ -35,7 +35,10 @@ MAX_ITERS = 10  # nới từ 8: dư chỗ cho retry + câu phân tích nhiều n
 MAX_EMPTY_RETRY = 3  # quota CHUNG cho nudge lượt-cuối: rỗng/preamble + grounding (bịa số chưa gọi tool)
 # Trần token/lượt trả lời. Trần cứng v4-flash/pro = 384K; default 64K cho câu phân tích dài, dư đầu cho thinking sau.
 MAX_OUTPUT_TOKENS = int(LLM_MAX_OUTPUT_TOKENS) if LLM_MAX_OUTPUT_TOKENS else 64000
-MAX_TOTAL_TOOL_CHARS = 30_000
+# Nâng từ 30.000 cùng với trần mỗi kết quả. Ngân sách này được CHIA ĐỀU cho các lời gọi
+# song song TRƯỚC khi chạy, thay vì tiêu theo thứ tự (kiểu cũ làm tool cuối hàng nhận rỗng).
+MAX_TOTAL_TOOL_CHARS = 40_000
+_TEXT_CUT_NOTE = "\n\n…[đã cắt bớt phần cuối do quá dài — hãy đọc mục cần thiết bằng lời gọi hẹp hơn]"
 STREAM_CHUNK = 8  # ký tự/đoạn khi nhả lại câu đã sanitize — cắt ở khoảng trắng (nhỏ hơn = mượt hơn).
 STREAM_CHUNK_DELAY_S = 0.09  # nhịp giữa các đoạn (~89 ký tự/giây — chậm & tự nhiên hơn, tránh "phọt một đống" sau khi nghĩ lâu).
 
@@ -322,29 +325,51 @@ def _merge_usage(total: dict[str, int], usage: dict[str, int]) -> None:
             total[key] = total.get(key, 0) + value
 
 
+def _per_call_budget(n_calls: int) -> int:
+    """Phần ngân sách cho MỖI lời gọi, chia đều trước khi chạy."""
+    return max(1, min(MAX_TOOL_RESULT_CHARS, MAX_TOTAL_TOOL_CHARS // max(1, n_calls)))
+
+
+def _cap_text(content: str, max_chars: int) -> str:
+    """Trần phòng thủ cho các đường KHÔNG đi qua shrink_result (read_kb trả markdown).
+
+    Cắt tại ranh giới DÒNG chứ không giữa chữ, và nói rõ là đã cắt.
+    """
+    if len(content) <= max_chars:
+        return content
+    head = content[:max_chars]
+    newline = head.rfind("\n")
+    if newline > max_chars // 2:
+        head = head[:newline]
+    return head + _TEXT_CUT_NOTE
+
+
 async def _run_tools(
     gateway: GatewayProtocol, ctx: GatewayContext, calls: list[ToolCall], emit: Emit, failed_sig: set[str]
 ) -> list[dict[str, Any]]:
     for call in calls:
         await emit("tool_start", {"name": call.name, "label": label_for(call)})
 
+    # Chia ngân sách TRƯỚC khi chạy: kiểu cũ tiêu theo thứ tự nên tool THÀNH CÔNG ở cuối
+    # hàng có thể nhận về đúng chuỗi "[đã cắt]" — không một byte dữ liệu nào.
+    per_call = _per_call_budget(len(calls))
+
     async def _run_one(call: ToolCall) -> tuple[str, dict[str, Any]]:
         # Chữ ký đã lỗi ở lượt trước → KHÔNG chạm gateway, trả feedback mạnh để model đổi cách.
         if _call_signature(call) in failed_sig:
             return _REPEAT_FEEDBACK, {"ok": False, "ms": 0}
-        return await execute_tool(gateway, ctx, call)
+        return await execute_tool(gateway, ctx, call, max_chars=per_call)
 
     results = await asyncio.gather(*(_run_one(call) for call in calls))
 
     messages: list[dict[str, Any]] = []
-    budget = MAX_TOTAL_TOOL_CHARS
     for call, (content, meta) in zip(calls, results, strict=True):
         await emit("tool_end", {"name": call.name, "ok": meta["ok"], "ms": meta["ms"]})
         if not meta["ok"]:
             failed_sig.add(_call_signature(call))
-        if len(content) > budget:
-            content = content[:budget] + " …[đã cắt do vượt ngân sách]" if budget > 0 else "[đã cắt do vượt ngân sách]"
-        budget = max(0, budget - len(content))
+        # shrink_result đã lo phần JSON có cấu trúc; _cap_text chỉ chặn các đường văn bản
+        # (read_kb, watchlist) và cắt theo ranh giới dòng.
+        content = _cap_text(content, per_call)
         messages.append({"role": "tool", "tool_call_id": call.id, "content": content})
     return messages
 
