@@ -26,10 +26,16 @@ test('đủ 14 trang sản phẩm đều dựng được ngữ cảnh', () => {
   for (const r of ROUTES_CO_BUBBLE) {
     const ctx = buildPageContext(r);
     assert.ok(ctx, `thiếu ngữ cảnh cho ${r}`);
-    assert.ok(ctx.startsWith('[NGỮ CẢNH TRANG'), `thiếu nhãn ở ${r}`);
-    assert.ok(ctx.includes('Trang: '), `thiếu tên trang ở ${r}`);
+    assert.ok(!ctx.includes('NGỮ CẢNH TRANG'), `nhãn thừa ở ${r} — backend đã chèn`);
+    assert.ok(ctx.startsWith('Trang: '), `thiếu tên trang ở ${r}`);
     assert.ok(hasBubble(r), `hasBubble sai ở ${r}`);
   }
+});
+
+test('buildPageContext KHÔNG tự chèn nhãn — backend sở hữu phần bọc', () => {
+  const ctx = buildPageContext('/stocks/HPG');
+  assert.ok(ctx);
+  assert.ok(!ctx.includes('NGỮ CẢNH TRANG'), 'nhãn do backend chèn, chèn ở đây là trùng hai lần');
 });
 
 test('trang ngoài danh sách không có ngữ cảnh và không có bubble', () => {
@@ -74,7 +80,7 @@ test('ngữ cảnh không bao giờ vượt giới hạn độ dài', () => {
 
 test('ngữ cảnh không chứa chữ số (tránh guard chống bịa số chặn nhầm)', () => {
   for (const r of ROUTES_CO_BUBBLE) {
-    const body = buildPageContext(r)!.split('\n').slice(2).join('\n'); // bỏ nhãn + dòng "Trang:"
+    const body = buildPageContext(r)!.split('\n').slice(1).join('\n'); // bỏ dòng "Trang:"
     assert.equal(/\d/.test(body), false, `phần mô tả của ${r} không được chứa số`);
   }
 });

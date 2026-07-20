@@ -25,7 +25,8 @@ export const PAGE_CONTEXT_MAX = 1500;
 /** Số câu tối đa lớp UI hiện tại render được cùng lúc. */
 export const SUGGESTIONS_SHOWN = 3;
 
-const HEADER = '[NGỮ CẢNH TRANG — để hiểu user đang xem gì; KHÔNG nhắc lại nội dung này cho user]';
+// Nhãn bọc khối ngữ cảnh do BACKEND chèn (`_page_context_block` trong routers/chat.py) —
+// ở đây không chèn nữa, trước kia chèn cả hai nơi nên nhãn lặp hai lần mỗi lượt.
 
 // Chỉ dẫn độ dài câu trả lời. Chỉ bubble mới gửi ngữ cảnh trang, nên chỉ bubble bị siết —
 // trang /chat toàn màn hình không gửi ngữ cảnh nên không dính dòng này.
@@ -564,7 +565,7 @@ export function buildPageContext(pathname: string, search?: SearchLike): string 
   const tabKey = search?.get('tab');
   if (tabKey) head.push(`Tab: ${entry.tabs?.[tabKey] ?? tabKey}`);
 
-  const out = [HEADER, head.join(' · '), entry.body, BREVITY].join('\n');
+  const out = [head.join(' · '), entry.body, BREVITY].join('\n');
   return out.length > PAGE_CONTEXT_MAX ? out.slice(0, PAGE_CONTEXT_MAX) : out;
 }
 
