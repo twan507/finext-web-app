@@ -1,4 +1,4 @@
-// finext-nextjs/app/(main)/market-phase/hooks/useMarketPhaseData.ts
+// finext-nextjs/app/(main)/phase/hooks/useMarketPhaseData.ts
 // Fetch dữ liệu page Giai đoạn thị trường — MỘT LẦN (không polling, không SSE).
 import { useEffect, useState } from 'react';
 import { apiClient } from 'services/apiClient';

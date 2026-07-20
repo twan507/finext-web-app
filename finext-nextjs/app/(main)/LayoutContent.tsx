@@ -49,7 +49,7 @@ interface NavItem {
 }
 
 const navigationStructure: NavItem[] = [
-  { text: 'Giai đoạn thị trường', href: '/market-phase', icon: <MarketPhaseNavIcon />, special: true },
+  { text: 'Giai đoạn thị trường', href: '/phase', icon: <MarketPhaseNavIcon />, special: true },
   { text: 'Finext AI', href: '/chat', icon: <AutoAwesomeOutlined /> },
   { text: 'Biểu đồ kĩ thuật', href: '/charts', icon: <CandlestickChartOutlined /> },
   { text: 'Danh sách theo dõi', href: '/watchlist', icon: <StarBorderPurple500Outlined /> },

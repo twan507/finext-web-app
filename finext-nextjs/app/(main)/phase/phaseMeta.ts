@@ -1,4 +1,4 @@
-// finext-nextjs/app/(main)/market-phase/phaseMeta.ts
+// finext-nextjs/app/(main)/phase/phaseMeta.ts
 // Bản đồ phase → nhãn (EN chính + VN phụ) + icon + màu (accessibility: màu + icon + chữ).
 import type { Theme } from '@mui/material';
 import type { PhaseLabel } from './types';

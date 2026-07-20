@@ -1,4 +1,4 @@
-// finext-nextjs/app/(main)/market-phase/types.ts
+// finext-nextjs/app/(main)/phase/types.ts
 // Kiểu dữ liệu cho page "Giai đoạn thị trường" (đọc từ stock_db qua keyword REST).
 
 export type PhaseLabel = 'uptrend' | 'downtrend' | 'sideway' | 'transition';

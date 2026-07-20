@@ -85,7 +85,7 @@ SSE_QUERY_REGISTRY: Dict[str, Any] = {
     "home_hist_industry": home_hist_industry,
     # Phase signal
     "phase_signal": phase_signal,
-    # Giai đoạn thị trường (page market-phase)
+    # Giai đoạn thị trường (page phase)
     "phase_daily": phase_daily,
     "phase_comment": phase_comment,
     "phase_perf": phase_perf,

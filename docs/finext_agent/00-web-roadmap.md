@@ -115,7 +115,7 @@ Thứ tự code thực tế có thể xen kẽ (FE làm song song backend từ k
 | `apiClient` với refresh-token flow tự động | [`apiClient.ts`](../../finext-nextjs/services/apiClient.ts) | Bước 4 — thêm `responseType: 'stream'` |
 | Layering convention `routers/ → crud/ → schemas/` | `finext-fastapi/app/` | Bước 2/3 |
 | Pattern lưu dữ liệu per-user (`watchlists`) trong `user_db` | `crud/watchlists` | Bước 3 — `chat_conversations`/`chat_messages` theo cùng pattern |
-| Ngôn ngữ thiết kế "Ambient Signal" + `AiCommentBody` (render text AI có highlight) | `app/(main)/market-phase/components/` | Bước 4 — chat cùng ngôn ngữ FINEXT AI (style/token màu; render chat đã chốt markdown+widget — spec 07-14) |
+| Ngôn ngữ thiết kế "Ambient Signal" + `AiCommentBody` (render text AI có highlight) | `app/(main)/phase/components/` | Bước 4 — chat cùng ngôn ngữ FINEXT AI (style/token màu; render chat đã chốt markdown+widget — spec 07-14) |
 | `OptionalAuthWrapper requireAuth` + store pattern (Zustand-like) | `components/auth/`, `hooks/` | Bước 4 |
 | Motor async + `httpx` async đã trong deps backend | `pyproject.toml` | Bước 1/2 — adapter tự parse không cần dep mới |
 | Spec kiến trúc runtime cũ (SSE contract 6 event, quota, persistence…) | [`2026-07-12-ai-chat-agent-architecture.md`](../superpowers/specs/2026-07-12-ai-chat-agent-architecture.md) | Nguyên liệu — phần còn dùng được đã hấp thụ vào bộ doc này |

@@ -1,4 +1,4 @@
-// finext-nextjs/app/(main)/market-phase/hooks/useBasketData.ts
+// finext-nextjs/app/(main)/phase/hooks/useBasketData.ts
 // Fetch dữ liệu các tab rổ (PAID) — MỘT LẦN. Tải cả 6 nguồn để chuyển tab không refetch.
 import { useEffect, useState } from 'react';
 import { apiClient } from 'services/apiClient';

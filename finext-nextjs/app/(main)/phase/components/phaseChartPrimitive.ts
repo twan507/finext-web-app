@@ -1,4 +1,4 @@
-// finext-nextjs/app/(main)/market-phase/components/phaseChartPrimitive.ts
+// finext-nextjs/app/(main)/phase/components/phaseChartPrimitive.ts
 // Custom lightweight-charts series primitive cho PhaseFnxChart ("Neon Regime"):
 // vẽ nền wash theo pha + vạch ranh giới + đường giá neon (glow 3 lớp) + huy hiệu đổi pha.
 // Đường giá thật do primitive vẽ; series gắn kèm để trong suốt (chỉ giữ price scale/crosshair/tooltip).

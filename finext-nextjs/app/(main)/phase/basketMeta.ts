@@ -1,4 +1,4 @@
-// finext-nextjs/app/(main)/market-phase/basketMeta.ts
+// finext-nextjs/app/(main)/phase/basketMeta.ts
 import { decomposeColor, recomposeColor, type Theme } from '@mui/material';
 import type { RankStatus } from './types';
 import { getPhaseMeta } from './phaseMeta';

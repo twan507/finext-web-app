@@ -1,4 +1,4 @@
-# 08 — Page "Giai đoạn thị trường" (`/market-phase`)
+# 08 — Page "Giai đoạn thị trường" (`/phase`)
 
 > Doc context cho page Giai đoạn thị trường. Giữ trạng thái + kiến trúc + các mốc chỉnh sửa đáng chú ý để nối tiếp phiên làm việc sau.
 > **Cập nhật:** 2026-07-12 (cụm Sóng Ngành mới · 4 đoạn nhận định AI · chuẩn hoá + responsive 3 bảng vận hành · nav icon gauge · skeleton tab rổ — xem §9) · **Spec gốc:** [`../superpowers/specs/2026-07-09-market-phase-page-design.md`](../superpowers/specs/2026-07-09-market-phase-page-design.md)
@@ -25,8 +25,8 @@ stock_db (Mongo, READ-ONLY, khác user_db)  →  REST keyword ONE-SHOT GET /api/
 ```
 
 - **Nguồn dữ liệu:** batch EOD 1 lần/ngày (không realtime). `max(phase_daily.date)` = phiên mới nhất. Backend đã kết nối `stock_db` sẵn (`database.py:35` `db_names_to_connect=["user_db","stock_db"]`).
-- **Route:** `app/(main)/market-phase/` → `page.tsx` (server, metadata) + `PageContent.tsx` (client).
-- **Nav:** `NavItem` `Giai đoạn thị trường` (href `/market-phase`) đứng **ĐẦU** `navigationStructure` (`app/(main)/LayoutContent.tsx`), có cờ `special: true`. Icon = component riêng **`app/(main)/MarketPhaseNavIcon.tsx`** (đồng hồ định pha + khung Aurora tím Finext xoay) — xem §7.
+- **Route:** `app/(main)/phase/` → `page.tsx` (server, metadata) + `PageContent.tsx` (client).
+- **Nav:** `NavItem` `Giai đoạn thị trường` (href `/phase`) đứng **ĐẦU** `navigationStructure` (`app/(main)/LayoutContent.tsx`), có cờ `special: true`. Icon = component riêng **`app/(main)/MarketPhaseNavIcon.tsx`** (đồng hồ định pha + khung Aurora tím Finext xoay) — xem §7.
 - **Tabs:** `SubNavbar` **tràn viền (full-bleed)** đồng bộ `?tab=` (copy pattern markets: `mx: calc(-50vw + 50% + compactDrawerWidth/2)`). Keys → nhãn nav (có prefix "Danh mục"): `market` (FREE, "Phân tích thị trường") / `conservative` ("Danh mục Phòng Thủ") / `aggressive` ("Danh mục Mạo Hiểm") / `core` ("Danh mục Sóng Ngành"). Tên rổ ngắn (legend/tooltip/TopTrades, `SERIES` + `PRODUCT_FALLBACK_NAME`): **Phòng Thủ / Mạo Hiểm / Sóng Ngành**. Màu: CORE=primary (tím), Phòng Thủ=**xanh biển đậm** (`#3b82f6`/`#2563eb`, KHÔNG dùng `trend.floor` = xanh sàn), Mạo Hiểm=warning (cam).
 - **Shared header (trên slider, chung 4 tab):** **CHỈ còn hero** (`PhaseHero`). Biểu đồ giai đoạn FNX (`PhaseFnxChart`) **đã dời xuống Tab ①** (vào section "Diễn biến và phân tích phiên") → tab PAID không còn chart FNX ở đầu (nếu cần thì thêm lại riêng cho PAID).
 - **Gating:** 1 lớp `OptionalAuthWrapper requireAuth` bọc toàn bộ (header+slider+content) → chưa login = 1 overlay đăng nhập. Tab PAID lồng thêm `requiredFeatures={ADVANCED_AND_ABOVE_STRICT}`. Hằng mới trong `components/auth/features.ts` = `[ADVANCED, PARTNER, MANAGER, ADMIN]` (advanced-trở-lên, KHÔNG gồm BASIC) — **không đụng** `ADVANCED_AND_ABOVE` global (đang bị compliance-pivot gộp BASIC).
@@ -53,7 +53,7 @@ stock_db (Mongo, READ-ONLY, khác user_db)  →  REST keyword ONE-SHOT GET /api/
 
 ---
 
-## 4. Frontend — cây file (`app/(main)/market-phase/`)
+## 4. Frontend — cây file (`app/(main)/phase/`)
 
 - **Entry/điều phối:** `page.tsx`, `PageContent.tsx` (title + shared header + SubNavbar + gating + chọn tab).
 - **Data hooks (one-shot):** `hooks/useMarketPhaseData.ts` (Tab ①: phase_daily/comment/perf/comment_indicator/**trading**), `hooks/useBasketData.ts` (Tab rổ: basket/rank/comment_basket/trading/perf/industry). Chuyển tab rổ ②↔③↔④ **không refetch** (BasketTab giữ mount, hook chạy 1 lần). `phase_trading` fetch ở cả 2 (dedupe qua `useCache`).

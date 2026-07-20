@@ -21,7 +21,7 @@
 | Tính năng nổi bật + mô hình bảo mật (JWT, OTP, OAuth, CORS, rate-limit) | [`05-features-security.md`](05-features-security.md) |
 | Compliance pivot 2026-05-07 — gì bị disable, blocked routes, cách rollback | [`06-compliance-pivot.md`](06-compliance-pivot.md) |
 | Setup dev/prod, quy ước code, session protocol, specs/plans index | [`07-dev-guide.md`](07-dev-guide.md) |
-| Page "Giai đoạn thị trường" (`/market-phase`): trạng thái, kiến trúc, lịch sử chỉnh sửa | [`08-market-phase.md`](08-market-phase.md) |
+| Page "Giai đoạn thị trường" (`/phase`): trạng thái, kiến trúc, lịch sử chỉnh sửa | [`08-market-phase.md`](08-market-phase.md) |
 
 ---
 

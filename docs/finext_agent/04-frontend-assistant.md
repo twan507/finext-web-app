@@ -1,6 +1,6 @@
 # 04 — Bước 4: Frontend `/chat`
 
-> **Vai trò trong lộ trình:** mặt tiền của agent. Nguyên tắc: **diff tối thiểu vào code chung** (`apiClient` chỉ thêm 1 nhánh), mọi thứ mới nằm gọn trong `services/chatClient.ts` + `app/(main)/chat/`. Chat phải trông cùng ngôn ngữ thiết kế FINEXT AI đã có ở `/market-phase`.
+> **Vai trò trong lộ trình:** mặt tiền của agent. Nguyên tắc: **diff tối thiểu vào code chung** (`apiClient` chỉ thêm 1 nhánh), mọi thứ mới nằm gọn trong `services/chatClient.ts` + `app/(main)/chat/`. Chat phải trông cùng ngôn ngữ thiết kế FINEXT AI đã có ở `/phase`.
 > **Phụ thuộc:** chỉ cần contract stream (02 §3) đã chốt — làm song song với backend, test bằng endpoint echo giả của bước 2.
 > **⚠ V1 slice (2026-07-15):** doc này mô tả Bước 4 ĐẦY ĐỦ. Lát cắt đang code là **client-held multi-turn**, làm trước Bước 3 — phần persistence (sidebar/history/feedback-DB/quota) DEFERRED. Boundary IN/OUT + backend delta: [`specs/2026-07-15-chat-fe-v1-slice-design.md`](../superpowers/specs/2026-07-15-chat-fe-v1-slice-design.md). Route `/assistant`→`/chat`.
 
@@ -11,7 +11,7 @@
 | Hạng mục | Trạng thái |
 |----------|-----------|
 | `apiClient` + refresh-token flow | ✅ — thêm `responseType: 'stream'` (diff ~10 dòng, đã có thiết kế sẵn trong spec cũ §6.1, dùng lại nguyên) |
-| Ngôn ngữ thiết kế: `AmbientCard`, `AiCommentBody` (highlight số/%, lede, dropCap), glass card | ✅ tái dùng từ `/market-phase` |
+| Ngôn ngữ thiết kế: `AmbientCard`, `AiCommentBody` (highlight số/%, lede, dropCap), glass card | ✅ tái dùng từ `/phase` |
 | Guard: `OptionalAuthWrapper requireAuth` + skeleton loading 2 giai đoạn | ✅ pattern market-phase |
 | Store pattern (Zustand-like: `useChartStore`...) | ✅ copy pattern |
 | `chatClient.ts`, `useChatStore`, page + components | ❌ chưa có |

@@ -21,7 +21,7 @@ Mỗi vòng có thể LÙI: phát hiện sai số liệu nghiêm trọng → qua
 | Câu | Kỳ vọng |
 |---|---|
 | "Thị trường hôm nay thế nào?" | đọc `market_phase` TRƯỚC (pha là tầng trên), số khớp snapshot, có ngày as_of |
-| "Thị trường đang ở pha nào?" | phase + exposure + ý từ comments; khớp UI `/market-phase` |
+| "Thị trường đang ở pha nào?" | phase + exposure + ý từ comments; khớp UI `/phase` |
 | "FPT dạo này ra sao?" | số đúng đơn vị nghìn đồng; ≤3 query (đo hiệu quả query) |
 | "FPT 1 năm qua tăng bao nhiêu?" | query `history_stock` có `$slice`/filter — KHÔNG bị gateway từ chối, KHÔNG đổ thô |
 | "So sánh FPT với ngành công nghệ" | bảng ngắn, 2 nguồn dữ liệu |

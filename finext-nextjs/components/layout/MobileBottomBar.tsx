@@ -94,7 +94,7 @@ export default function MobileBottomBar() {
                 }}
             >
                 <MuiIconButton
-                    onClick={() => router.push('/market-phase')}
+                    onClick={() => router.push('/phase')}
                     aria-label="Giai đoạn thị trường"
                     sx={{
                         width: FAB_SIZE,
