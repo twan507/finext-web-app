@@ -394,6 +394,11 @@ async def create_subscription_db(
                     }
                 },
             )
+            # Phòng thủ race (Mongo standalone không có transaction đa-document / partial unique index):
+            # sau khi chèn sub trả phí, hủy kích hoạt mọi sub trả phí active KHÁC (trừ sub vừa tạo).
+            # Nếu 2 luồng cùng lọt qua pre-check, bước này bảo đảm không tồn tại 2 sub trả phí active song song.
+            if sub_create_data.license_key != BASIC_LICENSE_KEY and sub_create_data.license_key not in PROTECTED_LICENSE_KEYS:
+                await deactivate_all_active_subscriptions_for_user(db, user_obj_id, exclude_sub_id=insert_result.inserted_id)
             return await get_subscription_by_id_db(db, str(insert_result.inserted_id))
         logger.error(f"Failed to create subscription for user: {user['email']}")
         return None

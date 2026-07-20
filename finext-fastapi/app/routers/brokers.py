@@ -210,6 +210,28 @@ async def list_all_brokers(
 # <<<< KẾT THÚC PHẦN CẬP NHẬT >>>>
 
 
+# LƯU Ý: route "/me" PHẢI khai báo TRƯỚC "/{broker_id_or_code}", nếu không FastAPI match theo
+# thứ tự khai báo sẽ coi "me" là broker_id_or_code và handler /me không bao giờ được gọi.
+@router.get(
+    "/me",
+    response_model=StandardApiResponse[BrokerPublic],
+    summary="[Broker] Lấy thông tin Đối tác của người dùng hiện tại",
+    dependencies=[Depends(require_permission("broker", "read_own"))],
+)
+@api_response_wrapper(default_success_message="Lấy thông tin Đối tác của bạn thành công.")
+async def get_my_broker_details(
+    current_user: UserInDB = Depends(get_current_active_user),
+    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
+):
+    broker_info = await crud_brokers.get_broker_by_user_id(db, current_user.id)  # type: ignore
+    if not broker_info:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Bạn hiện không phải là một Đối tác hoặc thông tin Đối tác không tìm thấy.",
+        )
+    return BrokerPublic.model_validate(broker_info)
+
+
 @router.get(
     "/{broker_id_or_code}",
     response_model=StandardApiResponse[BrokerPublic],
@@ -434,26 +456,6 @@ async def deactivate_and_revoke_broker(  # Đổi tên hàm cho rõ nghĩa
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(ve))
 
     return None
-
-
-@router.get(
-    "/me",
-    response_model=StandardApiResponse[BrokerPublic],
-    summary="[Broker] Lấy thông tin Đối tác của người dùng hiện tại",
-    dependencies=[Depends(require_permission("broker", "read_own"))],
-)
-@api_response_wrapper(default_success_message="Lấy thông tin Đối tác của bạn thành công.")
-async def get_my_broker_details(
-    current_user: UserInDB = Depends(get_current_active_user),
-    db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
-):
-    broker_info = await crud_brokers.get_broker_by_user_id(db, current_user.id)  # type: ignore
-    if not broker_info:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Bạn hiện không phải là một Đối tác hoặc thông tin Đối tác không tìm thấy.",
-        )
-    return BrokerPublic.model_validate(broker_info)
 
 
 @router.get(

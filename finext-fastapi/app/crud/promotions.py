@@ -204,8 +204,27 @@ async def delete_promotion(db: AsyncIOMotorDatabase, promotion_id: PyObjectId) -
 
 
 async def increment_promotion_usage(db: AsyncIOMotorDatabase, promotion_code: str) -> bool:
+    """Tăng usage_count một cách nguyên tử, không vượt usage_limit.
+
+    Trả về True nếu tăng thành công; False nếu mã không tồn tại hoặc đã hết lượt.
+    Điều kiện `usage_count < usage_limit` được đặt ngay trong filter của update_one nên
+    check-và-inc là nguyên tử trên một document (an toàn khi 2 confirm chạy song song).
+    """
+    code = promotion_code.upper()
+    promo = await get_promotion_by_code(db, code)
+    if not promo:
+        return False
+
+    now = datetime.now(timezone.utc)
+    if promo.usage_limit is None:  # Không giới hạn lượt dùng
+        result = await db[PROMOTIONS_COLLECTION].update_one(
+            {"promotion_code": code}, {"$inc": {"usage_count": 1}, "$set": {"updated_at": now}}
+        )
+        return result.modified_count > 0
+
     result = await db[PROMOTIONS_COLLECTION].update_one(
-        {"promotion_code": promotion_code.upper()}, {"$inc": {"usage_count": 1}, "$set": {"updated_at": datetime.now(timezone.utc)}}
+        {"promotion_code": code, "usage_count": {"$lt": promo.usage_limit}},
+        {"$inc": {"usage_count": 1}, "$set": {"updated_at": now}},
     )
     return result.modified_count > 0
 
