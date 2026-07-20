@@ -10,12 +10,22 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    # mem_limit/mem_reservation (V1-compatible) mirror deploy.resources (V2/swarm)
+    # để hard cap RAM có hiệu lực dù chạy `docker-compose` (V1) hay `docker compose` (V2).
+    mem_limit: 256M
+    mem_reservation: 64M
     deploy:
       resources:
         limits:
           memory: 256M # Tăng lên một chút để xử lý SSL/Caching tốt hơn
         reservations:
           memory: 64M
+    # Giới hạn log json-file: 10m x 3 file = tối đa 30m/service → không phình đầy đĩa VPS.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/templates/default.conf.template
       - ./ssl:/etc/nginx/ssl
@@ -36,8 +46,12 @@ services:
   fastapi:
     build:
       context: ./finext-fastapi
-      dockerfile: Dockerfile
+      dockerfile: dockerfile
     restart: always
+    # mem_limit/cpus (V1-compatible) mirror deploy.resources (V2/swarm). ~1.5G = 1536M.
+    mem_limit: 1536M
+    cpus: 1.5
+    mem_reservation: 512M
     deploy:
       resources:
         limits:
@@ -45,6 +59,19 @@ services:
           cpus: '1.5' # 2 worker share 1.5 core → mỗi worker ~0.75 core, đủ cho async I/O
         reservations:
           memory: 512M # 2 worker × ~250MB Python+lib = ~500MB baseline
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Healthcheck qua endpoint public 200 (app.main:152 @app.get("/api/v1")) bằng python stdlib
+    # (python có sẵn trong image, không cần curl/wget). Chạy bằng user non-root cũng OK.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1', timeout=5).status == 200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
     networks:
       - web-proxy
     env_file:
@@ -56,7 +83,7 @@ services:
   nextjs:
     build:
       context: ./finext-nextjs
-      dockerfile: Dockerfile
+      dockerfile: dockerfile
       args:
         - NEXT_PUBLIC_API_URL_ARG=${NEXT_PUBLIC_API_URL}
         - NEXT_PUBLIC_GOOGLE_CLIENT_ID_ARG=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
@@ -69,6 +96,10 @@ services:
       # Runtime-only env var (không phải NEXT_PUBLIC_) — chỉ dùng trên server.
       # Server-side fetch gọi API qua Docker internal network thay vì public URL.
       - INTERNAL_API_URL=http://fastapi:8000
+    # mem_limit/cpus (V1-compatible) mirror deploy.resources (V2/swarm). ~1.5G = 1536M.
+    mem_limit: 1536M
+    cpus: 2.0
+    mem_reservation: 384M
     deploy:
       resources:
         limits:
@@ -76,6 +107,18 @@ services:
           cpus: '2.0' # Cho phép dùng 2 nhân để Render UI nhanh hơn
         reservations:
           memory: 384M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Healthcheck qua trang chủ (200) bằng node stdlib (node là runtime, luôn có sẵn).
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/',res=>process.exit(res.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
     networks:
       - web-proxy
     env_file:

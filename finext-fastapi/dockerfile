@@ -13,6 +13,14 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 # Đặt thư mục làm việc bên trong container
 WORKDIR /code
 
+# Tạo group + user hệ thống không đặc quyền để chạy app (không chạy root).
+RUN addgroup -S appgroup && adduser -S -G appgroup appuser
+
+# HOME + cache uv trỏ vào /code (được chown cho appuser bên dưới) để `uv run` runtime
+# ghi được cache/metadata khi chạy bằng user non-root, tránh lỗi permission.
+ENV HOME=/code
+ENV UV_CACHE_DIR=/code/.uv-cache
+
 # Sao chép pyproject.toml và uv.lock vào trước để tận dụng Docker cache
 COPY pyproject.toml uv.lock /code/
 
@@ -23,6 +31,11 @@ RUN uv sync --frozen --no-dev --no-install-project
 
 # Sao chép toàn bộ thư mục 'app' (chứa code FastAPI) vào container
 COPY ./app /code/app
+
+# Cấp quyền sở hữu toàn bộ /code (gồm .venv + .uv-cache) cho user không đặc quyền,
+# rồi chuyển sang user đó → process uvicorn chạy non-root.
+RUN chown -R appuser:appgroup /code
+USER appuser
 
 # Mở cổng 8000 để container có thể nhận kết nối từ bên ngoài
 EXPOSE 8000
