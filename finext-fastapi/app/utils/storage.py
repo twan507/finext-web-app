@@ -2,6 +2,7 @@ import boto3
 from botocore.client import Config as BotoConfig, BaseClient
 from botocore.exceptions import ClientError
 from fastapi import HTTPException, status
+from fastapi.concurrency import run_in_threadpool
 import logging
 from typing import IO, Optional, Any
 
@@ -67,6 +68,24 @@ def get_s3_client() -> BaseClient:
             )
     return _s3_client
 
+def _blocking_upload_fileobj(
+    s3: BaseClient,
+    file_object: IO[bytes],
+    object_name: str,
+    extra_args: dict[str, Any],
+) -> None:
+    """Phần I/O blocking của boto3 (seek + upload_fileobj), chạy trong threadpool."""
+    # Đảm bảo con trỏ file ở đầu, đặc biệt quan trọng nếu file_object là UploadFile.file
+    if hasattr(file_object, "seek") and callable(file_object.seek):
+        file_object.seek(0)
+
+    s3.upload_fileobj(
+        Fileobj=file_object,
+        Bucket=config.R2_BUCKET_NAME,  # Sử dụng biến config trực tiếp
+        Key=object_name,
+        ExtraArgs=extra_args,
+    )
+
 async def upload_file_to_r2(
     file_object: IO[bytes],
     object_name: str,
@@ -90,16 +109,8 @@ async def upload_file_to_r2(
         extra_args['ACL'] = acl
 
     try:
-        # Đảm bảo con trỏ file ở đầu, đặc biệt quan trọng nếu file_object là UploadFile.file
-        if hasattr(file_object, 'seek') and callable(file_object.seek):
-            file_object.seek(0)
-
-        s3.upload_fileobj(
-            Fileobj=file_object,
-            Bucket=config.R2_BUCKET_NAME, # Sử dụng biến config trực tiếp
-            Key=object_name,
-            ExtraArgs=extra_args
-        )
+        # boto3 upload_fileobj là blocking -> chạy trong threadpool để không nghẽn event loop.
+        await run_in_threadpool(_blocking_upload_fileobj, s3, file_object, object_name, extra_args)
         logger.info(f"File {object_name} uploaded successfully to bucket {config.R2_BUCKET_NAME}.")
         
         # Xây dựng URL công khai

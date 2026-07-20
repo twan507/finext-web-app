@@ -3,6 +3,7 @@ import io
 from typing import Annotated  # Make sure Annotated is imported
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi.concurrency import run_in_threadpool
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from PIL import Image
 from bson import ObjectId
@@ -23,9 +24,34 @@ router = APIRouter()
 MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB
 # Kích thước file sau khi nén (1MB)
 TARGET_COMPRESSED_SIZE = 1 * 1024 * 1024  # 1 MB
+# Kích thước mỗi lần đọc chunk khi nạp file (giới hạn RAM giữ lúc đọc dở)
+UPLOAD_READ_CHUNK_SIZE = 64 * 1024  # 64 KB
 
 # Chỉ cho phép các loại file ảnh
 ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+
+
+async def _read_upload_limited(file: UploadFile, max_bytes: int) -> bytes:
+    """Đọc UploadFile theo từng chunk và cộng dồn, hủy NGAY khi vượt max_bytes.
+
+    Không tin Content-Length / ``file.size`` (có thể thiếu hoặc bị nói dối): giới
+    hạn theo dữ liệu THỰC đọc được để không bao giờ nạp quá ``max_bytes`` (cộng tối
+    đa một chunk dở) vào RAM -> chống OOM.
+    """
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await file.read(UPLOAD_READ_CHUNK_SIZE)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"Image size exceeds the limit of {max_bytes // (1024 * 1024)}MB.",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 def compress_image(image_bytes: bytes, content_type: str, target_size: int = TARGET_COMPRESSED_SIZE) -> tuple[bytes, str]:
@@ -106,9 +132,13 @@ async def upload_image(
         )
 
     try:
-        original_image_bytes = await file.read()
+        # Giới hạn kích thước THỰC khi đọc (chống OOM), không tin file.size/Content-Length.
+        original_image_bytes = await _read_upload_limited(file, MAX_IMAGE_SIZE_BYTES)
 
-        compressed_image_bytes, final_content_type = compress_image(original_image_bytes, file.content_type or "image/jpeg")
+        # compress_image dùng PIL (blocking) -> đẩy sang threadpool để không nghẽn event loop.
+        compressed_image_bytes, final_content_type = await run_in_threadpool(
+            compress_image, original_image_bytes, file.content_type or "image/jpeg"
+        )
         compressed_size = len(compressed_image_bytes)
 
         object_name = f"images/{upload_key.value}/{current_user.id}/{uuid.uuid4()}.jpg"
@@ -140,9 +170,12 @@ async def upload_image(
     except HTTPException as http_exc:
         raise http_exc
     except Exception as e:
+        # Chi tiết đầy đủ chỉ ghi log nội bộ; KHÔNG trả str(e) ra client (tránh lộ
+        # đường dẫn, lỗi driver/DB, connection string...).
         logger.error(f"Unexpected error during image upload for user {current_user.email}: {e}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An unexpected error occurred while uploading image: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while uploading the image.",
         )
     finally:
         await file.close()
