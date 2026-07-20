@@ -250,10 +250,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                     });
                     successMessage = 'Xóa quyền broker thành công.';
                     break; case 'reset_password':
-                    console.log('Reset password case reached');
-                    console.log('newPassword:', newPassword);
-                    console.log('confirmPassword:', confirmPassword);
-
                     if (!newPassword || newPassword.length < 8) {
                         throw new Error('Mật khẩu mới phải có ít nhất 8 ký tự');
                     }
@@ -262,13 +258,11 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                         throw new Error('Mật khẩu xác nhận không khớp với mật khẩu mới');
                     }
 
-                    console.log('About to call API...');
                     response = await apiClient({
                         url: `/api/v1/users/${localUser.id}/change-password`,
                         method: 'PUT',
                         body: { new_password: newPassword }
                     });
-                    console.log('API response:', response);
                     successMessage = 'Đặt lại mật khẩu thành công.';
                     setNewPassword(''); // Clear password after success
                     setConfirmPassword(''); // Clear confirm password after success

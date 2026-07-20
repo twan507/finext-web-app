@@ -26,6 +26,7 @@ import { useGoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import BrandLogo from '@/components/layout/BrandLogo';
 import { LoginResponse, UserSchema } from 'services/core/types';
 import { iconSize, layoutTokens, getResponsiveFontSize, borderRadius, fontWeight, getGlowButton } from 'theme/tokens';
+import { sanitizeInternalPath } from 'utils/urlSafety';
 
 interface UserInfoFromAuth extends UserSchema { }
 
@@ -180,8 +181,10 @@ function SignInFormContent() {
     const { login, session, loading: authLoading } = useAuth();
     const [mounted, setMounted] = useState(false);
 
-    // Lấy callback URL từ query params (nếu có) hoặc mặc định về trang chủ
-    const callbackUrl = searchParams.get('callbackUrl') || '/';
+    // Lấy callback URL từ query params (nếu có) hoặc mặc định về trang chủ.
+    // sanitizeInternalPath chặn open redirect: chỉ cho phép đường dẫn nội bộ, mọi
+    // absolute/protocol-relative URL do kẻ tấn công gắn vào link đều bị ép về '/'.
+    const callbackUrl = sanitizeInternalPath(searchParams.get('callbackUrl'));
 
     useEffect(() => {
         if (resendCooldown <= 0) return;
