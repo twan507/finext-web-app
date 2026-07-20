@@ -641,6 +641,13 @@ async def reset_password_with_otp(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Lỗi không xác định khi đặt lại mật khẩu. Vui lòng thử lại sau.",
         )
+
+    # Bảo mật: luồng khôi phục (quên mật khẩu) thường được dùng khi user nghi ngờ bị
+    # chiếm tài khoản. Phải thu hồi TẤT CẢ phiên hiện có (current_jti=None → xóa toàn bộ),
+    # nếu không token/refresh của kẻ tấn công vẫn sống sau khi đổi mật khẩu.
+    revoked_count = await delete_sessions_for_user_except_jti(db, str(user.id), None)
+    logger.info(f"Đã thu hồi {revoked_count} session của user {user.email} sau khi đặt lại mật khẩu qua OTP.")
+
     # Mặc định sẽ trả về success message từ wrapper
     return MessageResponse(message="Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.")
 
