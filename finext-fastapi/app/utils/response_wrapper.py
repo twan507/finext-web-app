@@ -115,9 +115,11 @@ def api_response_wrapper(
                 logger.error(
                     f"Exception không được xử lý (ngoài HTTPEx & ValueErr) trong {func.__name__}: {str(e)}", exc_info=True
                 )
+                # Không trả str(e) cho client: tránh lộ chi tiết nội bộ (đường dẫn, lỗi driver
+                # DB, connection string...). Chi tiết đầy đủ đã được log ở trên (exc_info=True).
                 error_response_payload = StandardApiResponse[Any](
                     status=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    message=f"Lỗi máy chủ nội bộ: {str(e)}", # Return specific exception message
+                    message="Lỗi máy chủ nội bộ. Vui lòng thử lại sau.",
                     data=None,
                 )
                 return JSONResponse(

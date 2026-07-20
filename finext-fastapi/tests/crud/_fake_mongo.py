@@ -76,6 +76,16 @@ class _Cursor:
         docs = self._docs if length is None else self._docs[:length]
         return [dict(d) for d in docs]
 
+    def __aiter__(self) -> "_Cursor":
+        self._iter = iter(list(self._docs))
+        return self
+
+    async def __anext__(self) -> dict:
+        try:
+            return dict(next(self._iter))
+        except StopIteration:
+            raise StopAsyncIteration
+
 
 def _apply_update(target: dict, update: dict) -> None:
     for k, v in update.get("$set", {}).items():
