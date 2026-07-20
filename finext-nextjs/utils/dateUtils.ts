@@ -18,23 +18,20 @@
  */
 export function convertGMT7ToUTC(dateString: string, isEndOfDay: boolean = false): string {
     // Parse the date string as GMT+7
+    // Note: Month is 0-indexed in JavaScript Date
     const [year, month, day] = dateString.split('-').map(Number);
 
-    // Create date object in GMT+7 (UTC+7)
-    // Note: Month is 0-indexed in JavaScript Date
-    const gmt7Date = new Date();
-    gmt7Date.setFullYear(year, month - 1, day);
+    // Build the GMT+7 wall-clock instant as a UTC timestamp (Date.UTC is
+    // timezone-independent), then subtract the 7h offset to get real UTC.
+    // Using explicit UTC math keeps the result independent of the runtime's
+    // local timezone.
+    const gmt7Millis = isEndOfDay
+        ? Date.UTC(year, month - 1, day, 23, 59, 59, 999)
+        : Date.UTC(year, month - 1, day, 0, 0, 0, 0);
 
-    if (isEndOfDay) {
-        gmt7Date.setHours(23, 59, 59, 999);
-    } else {
-        gmt7Date.setHours(0, 0, 0, 0);
-    }
+    const utcMillis = gmt7Millis - 7 * 60 * 60 * 1000;
 
-    // Subtract 7 hours to convert from GMT+7 to UTC
-    const utcDate = new Date(gmt7Date.getTime() - (7 * 60 * 60 * 1000));
-
-    return utcDate.toISOString();
+    return new Date(utcMillis).toISOString();
 }
 
 /**
@@ -48,10 +45,11 @@ export function convertUTCToGMT7DateString(utcISOString: string): string {
     // Add 7 hours to convert from UTC to GMT+7
     const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
 
-    // Format as YYYY-MM-DD
-    const year = gmt7Date.getFullYear();
-    const month = String(gmt7Date.getMonth() + 1).padStart(2, '0');
-    const day = String(gmt7Date.getDate()).padStart(2, '0');
+    // Read with getUTC* so the formatted GMT+7 date is independent of the
+    // runtime's local timezone.
+    const year = gmt7Date.getUTCFullYear();
+    const month = String(gmt7Date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(gmt7Date.getUTCDate()).padStart(2, '0');
 
     return `${year}-${month}-${day}`;
 }
@@ -68,16 +66,18 @@ export function formatUTCToGMT7(utcISOString: string, includeTime: boolean = tru
     // Add 7 hours to convert from UTC to GMT+7
     const gmt7Date = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
 
-    const year = gmt7Date.getFullYear();
-    const month = String(gmt7Date.getMonth() + 1).padStart(2, '0');
-    const day = String(gmt7Date.getDate()).padStart(2, '0');
+    // Read with getUTC* so the formatted GMT+7 output is independent of the
+    // runtime's local timezone.
+    const year = gmt7Date.getUTCFullYear();
+    const month = String(gmt7Date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(gmt7Date.getUTCDate()).padStart(2, '0');
 
     if (!includeTime) {
         return `${day}/${month}/${year}`;
     }
 
-    const hours = String(gmt7Date.getHours()).padStart(2, '0');
-    const minutes = String(gmt7Date.getMinutes()).padStart(2, '0');
+    const hours = String(gmt7Date.getUTCHours()).padStart(2, '0');
+    const minutes = String(gmt7Date.getUTCMinutes()).padStart(2, '0');
 
     return `${day}/${month}/${year} ${hours}:${minutes}`;
 }

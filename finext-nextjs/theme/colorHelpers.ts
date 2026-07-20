@@ -1,7 +1,7 @@
 // finext-nextjs/theme/colorHelpers.ts
 // Utility functions for stock data color coding
 
-import { Theme } from '@mui/material';
+import type { Theme } from '@mui/material';
 
 /**
  * Get color based on price change percentage and exchange
@@ -45,21 +45,39 @@ export const getFlowColor = (t0Score: number, theme: Theme): string => {
 };
 
 /**
- * Get color based on VSI (Volume Strength Index)
- * VSI ranges and their meanings:
- * < 0.6: Floor (Cyan/Blue)
- * 0.6-0.9: Down (Red)
- * 0.9-1.2: Ref (Yellow)
- * 1.2-1.5: Up (Green)
- * >= 1.5: Ceil (Purple)
+ * VSI (Volume Strength Index) band.
+ * Single source of truth for the VSI thresholds used across the app
+ * (colorHelpers + treemaps). Any consumer that needs a VSI-derived color
+ * MUST classify through this function instead of re-listing the thresholds.
+ */
+export type VsiBand = 'floor' | 'down' | 'ref' | 'up' | 'ceil';
+
+/**
+ * Classify a VSI value into a trend band.
+ * Thresholds (the ONLY place they are defined):
+ * vsi === 0: Ref (special case — treated as neutral)
+ * < 0.6: Floor
+ * 0.6–0.9: Down
+ * 0.9–1.2: Ref
+ * 1.2–1.5: Up
+ * >= 1.5: Ceil
+ */
+export const classifyVsiBand = (vsi: number): VsiBand => {
+    if (vsi === 0) return 'ref';
+    if (vsi < 0.6) return 'floor';
+    if (vsi < 0.9) return 'down';
+    if (vsi < 1.2) return 'ref';
+    if (vsi < 1.5) return 'up';
+    return 'ceil';
+};
+
+/**
+ * Get color based on VSI (Volume Strength Index).
+ * Maps the shared VSI band (see classifyVsiBand) to the theme trend palette:
+ * floor (Cyan/Blue), down (Red), ref (Yellow), up (Green), ceil (Purple).
  */
 export const getVsiColor = (vsi: number, theme: Theme): string => {
-    if (vsi === 0) return theme.palette.trend.ref; // Yellow
-    if (vsi < 0.5) return theme.palette.trend.floor; // Cyan/Blue (Sàn)
-    if (vsi < 0.8) return theme.palette.trend.down; // Red
-    if (vsi < 1.0) return theme.palette.trend.ref; // Yellow
-    if (vsi < 1.5) return theme.palette.trend.up; // Green
-    return theme.palette.trend.ceil; // Purple (Ceiling)
+    return theme.palette.trend[classifyVsiBand(vsi)];
 };
 
 /**

@@ -7,15 +7,19 @@ import dynamic from 'next/dynamic';
 import { ApexOptions } from 'apexcharts';
 import type { StockData } from '../../app/(main)/home/components/marketSection/MarketVolatility';
 import { fontWeight, trendColors } from 'theme/tokens';
+import { classifyVsiBand, type VsiBand } from 'theme/colorHelpers';
 
-/** Get VSI color hex based on VSI value */
+/** Get VSI color hex based on VSI value. Thresholds come from the shared
+ * classifyVsiBand (single source of truth); only the hex mapping is local. */
 function getVsiColorHex(vsi: number, isDark: boolean): string {
-    if (vsi === 0) return isDark ? '#e0e0a0' : '#eadb08';
-    if (vsi < 0.6) return isDark ? trendColors.floor.dark : trendColors.floor.light;
-    if (vsi < 0.9) return isDark ? trendColors.down.dark : trendColors.down.light;
-    if (vsi < 1.2) return isDark ? '#e0e0a0' : '#eadb08';
-    if (vsi < 1.5) return isDark ? trendColors.up.dark : trendColors.up.light;
-    return isDark ? trendColors.ceil.dark : trendColors.ceil.light;
+    const hexMap: Record<VsiBand, string> = {
+        floor: isDark ? trendColors.floor.dark : trendColors.floor.light,
+        down: isDark ? trendColors.down.dark : trendColors.down.light,
+        ref: isDark ? '#e0e0a0' : '#eadb08',
+        up: isDark ? trendColors.up.dark : trendColors.up.light,
+        ceil: isDark ? trendColors.ceil.dark : trendColors.ceil.light,
+    };
+    return hexMap[classifyVsiBand(vsi)];
 }
 
 /** Get flow color hex based on t0_score value */
