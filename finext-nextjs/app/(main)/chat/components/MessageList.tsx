@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Box, Button, IconButton, Stack, Tooltip, Typography } from '@mui/material';
 import { CheckOutlined, ContentCopyOutlined, RefreshOutlined, ThumbDown, ThumbDownOutlined, ThumbUp, ThumbUpOutlined } from '@mui/icons-material';
 import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
@@ -81,25 +81,51 @@ function AssistantBlock({ message, onRetry, onFeedback, errorText, isLast }: { m
   );
 }
 
-export default function MessageList({ messages, onRetry, onFeedback, error }: { messages: ChatMessage[]; onRetry: () => void; onFeedback: (serverId: string, rating: 1 | -1) => void; error: string | null }) {
+// scrollMode: 'window' = cuộn theo trang (mặc định, trang /chat) · 'container' = cuộn trong khung riêng (bubble chat).
+export default function MessageList({ messages, onRetry, onFeedback, error, scrollMode = 'window' }: { messages: ChatMessage[]; onRetry: () => void; onFeedback: (serverId: string, rating: 1 | -1) => void; error: string | null; scrollMode?: 'window' | 'container' }) {
   const pinnedRef = useRef(true);
+  const scrollBoxRef = useRef<HTMLDivElement | null>(null);
   const lastIdx = messages.length - 1;
 
+  // Đọc vị trí cuộn từ đúng nguồn: window (trang /chat) hoặc khung riêng (bubble).
+  const readScroll = useCallback(() => {
+    if (scrollMode === 'container') {
+      const el = scrollBoxRef.current;
+      if (!el) return { top: 0, height: 0, viewport: 0 };
+      return { top: el.scrollTop, height: el.scrollHeight, viewport: el.clientHeight };
+    }
+    return { top: window.scrollY, height: document.documentElement.scrollHeight, viewport: window.innerHeight };
+  }, [scrollMode]);
+
+  const scrollToBottom = useCallback(() => {
+    if (scrollMode === 'container') {
+      const el = scrollBoxRef.current;
+      if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+      return;
+    }
+    window.scrollTo({ top: document.documentElement.scrollHeight });
+  }, [scrollMode]);
+
   // Cuộn theo TRÌNH DUYỆT (window), không phải vùng nội bộ riêng. Bám đáy khi user đang ở gần cuối trang.
+  // Ở chế độ 'container' thì listener gắn vào chính khung cuộn.
   useEffect(() => {
     const onScroll = () => {
-      pinnedRef.current = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 160;
+      const { top, height, viewport } = readScroll();
+      pinnedRef.current = viewport + top >= height - 160;
     };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+    const target: HTMLElement | Window | null = scrollMode === 'container' ? scrollBoxRef.current : window;
+    if (!target) return;
+    target.addEventListener('scroll', onScroll, { passive: true });
+    return () => target.removeEventListener('scroll', onScroll);
+  }, [readScroll, scrollMode]);
 
   useEffect(() => {
-    if (pinnedRef.current) window.scrollTo({ top: document.documentElement.scrollHeight });
-  }, [messages]);
+    if (pinnedRef.current) scrollToBottom();
+  }, [messages, scrollToBottom]);
 
   return (
-    <Box sx={{ maxWidth: 760, mx: 'auto', width: '100%', px: { xs: 2, md: 3 }, pt: { xs: 7, md: 3 }, pb: 3 }}>
+    // Ở 'container', chính Box này là khung cuộn (cần cha là flex column có chiều cao chặn). Ở 'window' không đặt thuộc tính cuộn nào — bố cục y hệt trước.
+    <Box ref={scrollBoxRef} sx={{ maxWidth: 760, mx: 'auto', width: '100%', px: { xs: 2, md: 3 }, pt: { xs: 7, md: 3 }, pb: 3, ...(scrollMode === 'container' && { flex: 1, minHeight: 0, overflowY: 'auto', px: 1.5, pt: 2 }) }}>
         {messages.map((m, idx) => {
           if (m.role === 'user') return <MessageBubble key={m.id} message={m} />;
           // Chỉ assistant lỗi/gián đoạn cuối cùng mới hiện dòng lý do cạnh nút "Thử lại".

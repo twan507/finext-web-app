@@ -104,7 +104,10 @@ function toChatMessage(m: MessageDTO): ChatMessage {
   };
 }
 
-export default function useChatStore(initialConversationId?: string): UseChatStoreReturn {
+export default function useChatStore(
+  initialConversationId?: string,
+  getPageContext?: () => string | undefined,
+): UseChatStoreReturn {
   const [conversations, setConversations] = useState<Conversation[]>(() => [newConv()]);
   const [activeId, setActiveId] = useState<string>(() => conversations[0]?.id ?? '');
   const [phase, setPhase] = useState<ChatPhase>('idle');
@@ -122,6 +125,8 @@ export default function useChatStore(initialConversationId?: string): UseChatSto
   activeIdRef.current = activeId;
   const thinkingRef = useRef<boolean>(thinking); // đọc giá trị mới nhất lúc gửi
   thinkingRef.current = thinking;
+  const pageContextRef = useRef<(() => string | undefined) | undefined>(getPageContext); // đọc lúc gửi → luôn khớp trang hiện tại
+  pageContextRef.current = getPageContext;
 
   const controllerRef = useRef<AbortController | null>(null);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -133,6 +138,15 @@ export default function useChatStore(initialConversationId?: string): UseChatSto
   const listLoadedRef = useRef<boolean>(false); // chỉ tải danh sách 1 lần
   const msgLoadIdRef = useRef<string | null>(null); // id hội thoại đang tải messages (chống race)
   const pendingOpenRef = useRef<string | null>(initialConversationId ?? null); // serverId cần mở theo URL /chat/{id}
+
+  // Unmount: CHỈ dọn timer. CỐ Ý KHÔNG abort stream đang chạy — backend chỉ lưu câu trả lời ở
+  // nhánh chạy trọn vẹn, bị huỷ là mất luôn. Để stream chạy nốt thì câu trả lời vẫn được lưu và
+  // user thấy đủ khi mở lại hội thoại ở /chat (đúng cơ chế bàn giao qua CSDL của bubble).
+  useEffect(() => {
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, []);
 
   const messages = conversations.find((c) => c.id === activeId)?.messages ?? [];
 
@@ -289,7 +303,16 @@ export default function useChatStore(initialConversationId?: string): UseChatSto
 
       try {
         resetIdle();
-        for await (const ev of streamChat({ history, message, conversation_id: serverId ?? undefined, thinking: thinkingRef.current }, controller.signal)) {
+        for await (const ev of streamChat(
+          {
+            history,
+            message,
+            conversation_id: serverId ?? undefined,
+            thinking: thinkingRef.current,
+            page_context: pageContextRef.current?.(),
+          },
+          controller.signal,
+        )) {
           resetIdle();
           reduce(ev);
         }

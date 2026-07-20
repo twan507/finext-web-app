@@ -16,6 +16,8 @@ class ChatStreamRequest(BaseModel):
     conversation_id: str | None = None  # persistence ở session sau — v1 slice chưa lưu
     history: list[ChatTurn] = Field(default_factory=list, max_length=20)  # client-held transcript
     thinking: bool = False  # user bật "suy nghĩ sâu" (M3 thinking=adaptive) — chậm hơn nhưng câu gọn/kỹ hơn
+    # Ngữ cảnh trang user đang xem (bubble chat gửi lên). Không hiển thị cho user, không lưu lịch sử.
+    page_context: str | None = Field(default=None, max_length=2000)
 
 
 # ── Persistence / REST (Bước 3) ─────────────────────────────────────────

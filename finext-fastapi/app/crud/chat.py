@@ -221,8 +221,17 @@ async def resolve_tier(db: Any, user_id: str) -> str:
     return "standard"
 
 
+def _as_utc(value: Any) -> datetime | None:
+    """Mốc thời gian đọc từ Mongo là naive (giá trị đã là UTC nhưng driver bỏ tzinfo).
+    Gắn lại UTC để so sánh được với _now() — thiếu bước này là TypeError, sập cả lượt chat."""
+    if not isinstance(value, datetime):
+        return None
+    return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+
+
 def _window_used(start: Any, used: Any, now: datetime, dur: timedelta) -> tuple[int, datetime | None]:
     """(token đã dùng trong cửa sổ còn hiệu lực, reset_at). Cửa sổ hết hạn/chưa có → (0, None)."""
+    start = _as_utc(start)
     if not start or now >= start + dur:
         return 0, None
     return int(used or 0), start + dur
@@ -252,6 +261,7 @@ async def check_quota(db: Any, user_id: str) -> QuotaDecision:
 
 def _accumulate(start: Any, used: Any, now: datetime, dur: timedelta, add: int) -> tuple[datetime, int]:
     """Cộng token vào cửa sổ anchored: hết hạn/chưa có → mở cửa sổ mới (start=now); còn hạn → cộng dồn."""
+    start = _as_utc(start)
     if not start or now >= start + dur:
         return now, add
     return start, int(used or 0) + add

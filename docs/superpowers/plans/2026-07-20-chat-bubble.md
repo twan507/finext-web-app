@@ -183,14 +183,14 @@ Trong `_produce` của `finext-fastapi/app/routers/chat.py`, ngay sau dòng 137 
 ```bash
 cd finext-fastapi && python -m pytest tests/agent/test_chat_page_context.py -v
 ```
-Expected: PASS 6/6.
+Expected: PASS 7/7.
 
 - [ ] **Step 7: Chạy toàn bộ suite kiểm hồi quy**
 
 ```bash
 cd finext-fastapi && python -m pytest -q 2>&1 | tail -20; echo "EXIT=${PIPESTATUS[0]}"
 ```
-Expected: `EXIT=0`, tổng số test = 394 cũ + 6 mới = 400 passed.
+Expected: `EXIT=0`, tổng số test = 394 cũ + 7 mới = 401 passed.
 
 - [ ] **Step 8: Dừng — KHÔNG commit**
 
@@ -235,7 +235,7 @@ import { buildPageContext, getSuggestions, hasBubble, PAGE_CONTEXT_MAX } from '.
 const ROUTES_CO_BUBBLE = [
   '/', '/markets', '/phase', '/stocks', '/sectors', '/groups',
   '/commodities', '/macro', '/international', '/watchlist',
-  '/stocks/HPG', '/sectors/ryganhang', '/groups/FNXINDEX', '/charts/VNINDEX',
+  '/stocks/HPG', '/sectors/ngan_hang', '/groups/FNXINDEX', '/charts/VNINDEX',
 ];
 
 test('đủ 14 trang sản phẩm đều dựng được ngữ cảnh', () => {
@@ -257,7 +257,7 @@ test('trang ngoài danh sách không có ngữ cảnh và không có bubble', ()
 
 test('trang chi tiết đưa được chủ thể đang xem vào ngữ cảnh', () => {
   assert.ok(buildPageContext('/stocks/HPG')!.includes('HPG'));
-  assert.ok(buildPageContext('/sectors/ryganhang')!.includes('ryganhang'));
+  assert.ok(buildPageContext('/sectors/ngan_hang')!.includes('ngan_hang'));
   assert.ok(buildPageContext('/groups/FNXINDEX')!.includes('FNXINDEX'));
   assert.ok(buildPageContext('/charts/VNINDEX')!.includes('VNINDEX'));
 });
@@ -630,19 +630,22 @@ Trong cùng file, sửa lời gọi `streamChat` (dòng 292) thành:
 
 Lấy ngữ cảnh **tại thời điểm gửi** nên `send` và `retry` đều tự động dùng ngữ cảnh của trang user đang đứng, không cần sửa hai hàm đó.
 
-- [ ] **Step 4: Huỷ stream khi component bị gỡ**
+- [ ] **Step 4: Dọn timer khi component bị gỡ — CỐ Ý KHÔNG huỷ stream**
 
-Vẫn trong `finext-nextjs/hooks/useChatStore.ts`, thêm effect ngay sau khối khai báo ref (sau đoạn vừa thêm ở Step 2):
+Vẫn trong `finext-nextjs/hooks/useChatStore.ts`, thêm effect sau trọn khối khai báo ref (sau `pendingOpenRef`):
 
 ```ts
-  // Bubble bị gỡ (user rời sang /chat) mà đang stream → huỷ, tránh cập nhật state đã unmount.
+  // Unmount: CHỈ dọn timer. CỐ Ý KHÔNG abort stream đang chạy — backend chỉ lưu câu trả lời ở
+  // nhánh chạy trọn vẹn, bị huỷ là mất luôn. Để stream chạy nốt thì câu trả lời vẫn được lưu và
+  // user thấy đủ khi mở lại hội thoại ở /chat (đúng cơ chế bàn giao qua CSDL của bubble).
   useEffect(() => {
     return () => {
-      controllerRef.current?.abort();
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     };
   }, []);
 ```
+
+**Lý do quan trọng:** trong `app/routers/chat.py`, `_persist_answer` chỉ chạy ở nhánh `else` của khối try; `asyncio.CancelledError` được `raise` lại nên **bỏ qua bước lưu**. Nếu abort khi unmount thì kịch bản "đang trả lời dở → bấm Mở rộng → sang `/chat`" sẽ **mất câu trả lời** — phá đúng luồng bàn giao cốt lõi. React 18 không còn cảnh báo setState sau unmount nên để stream chạy nốt là an toàn.
 
 - [ ] **Step 5: Kiểm tra kiểu**
 
@@ -683,7 +686,7 @@ Trong `finext-nextjs/app/(main)/chat/components/MessageList.tsx`:
    `/** 'window' = cuộn theo trang (mặc định, trang /chat). 'container' = cuộn trong khung (bubble). */`
 2. Nhận prop với mặc định: `scrollMode = 'window'`.
 3. Thêm `const scrollBoxRef = useRef<HTMLDivElement | null>(null);`
-4. Bọc nội dung danh sách bằng một `Box` gắn `ref={scrollBoxRef}`; khi `scrollMode === 'container'` thì `Box` này có `sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}`, khi `'window'` thì không đặt thuộc tính cuộn nào (giữ nguyên bố cục cũ).
+4. Gắn `ref={scrollBoxRef}` vào **Box gốc sẵn có** của component (Box `maxWidth: 760`), và chỉ khi `scrollMode === 'container'` thì spread thêm `{ flex: 1, minHeight: 0, overflowY: 'auto', px: 1.5, pt: 2 }` vào `sx`. **KHÔNG bọc thêm Box con**: Box gốc không nằm trong flex column bị chặn chiều cao, nên `flex: 1` đặt trên một Box con sẽ vô tác dụng và khung sẽ không cuộn được. Việc ghi đè `px`/`pt` ở nhánh container là để bỏ khoảng đệm 56px vốn dùng để né header cố định của trang `/chat` — trong cửa sổ bubble nhỏ khoảng đệm đó là thừa. Nhánh `'window'` không thêm key nào nên bố cục giữ nguyên tuyệt đối.
 
 - [ ] **Step 2: Cho logic auto-scroll đọc đúng nguồn**
 
@@ -709,9 +712,11 @@ Thay hai chỗ đọc vị trí cuộn (khoảng dòng 91 và 98) bằng hai hà
       if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
       return;
     }
-    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+    window.scrollTo({ top: document.documentElement.scrollHeight });
   }, [scrollMode]);
 ```
+
+Lưu ý: nhánh `'window'` cuộn **tức thì** đúng như mã hiện tại của `/chat` (không thêm `behavior: 'smooth'`), chỉ nhánh `'container'` mới cuộn mượt.
 
 Sửa các chỗ đang dùng trực tiếp `window.scrollY` / `document.documentElement.scrollHeight` / `window.scrollTo` để gọi `readScroll()` và `scrollToBottom()`. Khi `scrollMode === 'container'`, listener `scroll` phải gắn vào `scrollBoxRef.current` thay vì `window`.
 
@@ -773,6 +778,7 @@ Yêu cầu bắt buộc:
 5. **Nút tròn:** cố định góc trái dưới. Desktop cách mép 24px. Trên mobile phải đẩy cao hơn thanh điều hướng đáy **56px** để không đè lên (tham chiếu `BAR_HEIGHT` trong `components/layout/MobileBottomBar.tsx`).
 6. **Cửa sổ:** khoảng 380×560 trên desktop; mobile gần toàn màn hình. Dùng glass card chuẩn của dự án (`getGlassCard` trong `theme/tokens`). Header có tên trợ lý, nút **Mở rộng**, nút **Đóng**. Thân là `BubbleMessages`. Chân là `Composer` ở chế độ **không** căn giữa (`centered={false}`) cộng thanh thông báo hạn mức khi `store.limitNotice` khác null.
 7. **z-index:** cao hơn Drawer điều hướng (MUI `drawer` = 1200) để không bị che — dùng `theme.zIndex.modal` hoặc giá trị lớn hơn 1200.
+7b. **RÀNG BUỘC BỐ CỤC BẮT BUỘC (kéo từ Task 4):** `MessageList` ở chế độ `container` tự nó là khung cuộn bằng `flex: 1; minHeight: 0; overflowY: auto`. Vì vậy **phần tử cha của nó bắt buộc phải là flex column có chiều cao bị chặn** (`display: flex; flexDirection: column;` + chiều cao cố định hoặc `height: 100%`). Nếu cha không chặn chiều cao, khung sẽ không cuộn mà đùn dài ra. Tham khảo cách trang `/chat` dựng cột ở `app/(main)/chat/PageContent.tsx`.
 8. **Nút Mở rộng:** lấy `serverId` của hội thoại đang mở; nếu có thì `router.push('/chat/' + serverId)`, nếu chưa có (chưa gửi lượt nào) thì `router.push('/chat')`.
 
 - [ ] **Step 3: Kiểm tra kiểu**
@@ -832,7 +838,7 @@ Expected: PASS 11/11.
 ```bash
 cd finext-fastapi && python -m pytest -q 2>&1 | tail -10; echo "EXIT=${PIPESTATUS[0]}"
 ```
-Expected: `EXIT=0`, 400 passed.
+Expected: `EXIT=0`, 401 passed.
 
 - [ ] **Step 5: Dừng — KHÔNG commit**
 
@@ -861,3 +867,23 @@ Không tự dựng browser. Báo owner checklist tự kiểm:
 - Trang `/chat` không hồi quy.
 - `pytest` toàn bộ xanh · `node --test` xanh · `npx tsc --noEmit` exit 0.
 - Không thêm dependency nào; không sửa dòng nào trong 14 trang sản phẩm.
+
+---
+
+## Kết quả thực thi (2026-07-20)
+
+**Cả 6 task XONG.** Sau đó có thêm nhiều vòng chỉnh giao diện theo phản hồi trực tiếp của owner — chi tiết đầy đủ ở **§10 của spec**.
+
+| Cổng kiểm tra | Kết quả |
+|---|---|
+| `pytest` toàn bộ | 405 passed (401 cũ + 7 test ngữ cảnh + 4 test hồi quy múi giờ, trừ trùng lặp đếm) |
+| `node --test` | 17/17 |
+| `npx tsc --noEmit` | exit 0 |
+| Không thêm dependency | đúng |
+| Không sửa 14 trang sản phẩm | đúng |
+
+**Ba chỗ plan viết sai, đã sửa trong lúc thực thi** (ghi lại để rút kinh nghiệm cho plan sau):
+
+1. **Huỷ stream khi unmount** (Task 3) — plan yêu cầu huỷ, nhưng backend chỉ lưu câu trả lời ở nhánh chạy trọn vẹn nên huỷ là mất câu trả lời đúng lúc bàn giao sang `/chat`. Đã bỏ.
+2. **Bọc Box con để cuộn** (Task 4) — không cuộn được vì Box cha không phải flex column bị chặn chiều cao. Đã đặt thuộc tính cuộn thẳng lên Box gốc.
+3. **Mã ngành ví dụ `ryganhang`** — là mã **bịa**, do subagent khảo sát nêu ra và plan chép lại mà không đối chiếu dữ liệu thật. Mã thật dùng gạch dưới (`ngan_hang`, `chung_khoan`, `dmts`…). Test vẫn xanh với mã bịa vì nó chỉ kiểm định dạng chuỗi. **Bài học: giá trị ví dụ đưa vào test phải đối chiếu dữ liệu thật.**

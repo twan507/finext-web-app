@@ -213,9 +213,12 @@ const _sendRequest = async <TResponseData = any>(
         if (error.statusCode) {
             throw error;
         }
+        // Lỗi mạng/parse (KHÔNG phải lỗi từ API): tuyệt đối không để nguyên văn kỹ thuật của
+        // trình duyệt ("Failed to fetch"...) lọt ra màn hình người dùng. Chi tiết gốc vẫn giữ
+        // nguyên ở errorDetails để debug.
         throw {
             statusCode: error.statusCode || 503,
-            message: error.message || "Network or server connection error.",
+            message: 'Không kết nối được tới máy chủ. Bạn kiểm tra mạng rồi thử lại nhé.',
             errorDetails: error
         } as ApiErrorResponse;
     }

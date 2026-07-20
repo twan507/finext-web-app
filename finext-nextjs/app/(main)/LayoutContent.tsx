@@ -37,6 +37,7 @@ import AuthButtons from '@/components/auth/AuthButtons';
 import ConsultationSection from './home/components/ConsultationSection';
 import PwaTitleBar from '@/components/layout/PwaTitleBar';
 import MobileBottomBar from '@/components/layout/MobileBottomBar';
+import ChatBubble from '@/components/chatBubble/ChatBubble';
 import MarketPhaseNavIcon from './MarketPhaseNavIcon';
 
 interface NavItem {
@@ -1081,6 +1082,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
         {/* MOBILE BOTTOM BAR - chỉ hiện trên mobile (< md) */}
         <MobileBottomBar />
+
+        {/* BONG BÓNG CHAT AI - tự ẩn ở các trang không có ngữ cảnh (/chat, /profile, tin tức...) */}
+        <ChatBubble />
       </Box>
     </Box >
   );

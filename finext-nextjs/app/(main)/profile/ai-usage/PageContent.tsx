@@ -50,9 +50,11 @@ function UsageRow({ name, sub, value, right, color }: {
 }) {
     return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 3 }, py: 1.5 }}>
-            <Box sx={{ width: { xs: 108, sm: 150 }, flexShrink: 0 }}>
+            {/* Cột nhãn đủ rộng để "Làm mới sau X giờ Y phút" nằm gọn một dòng ở màn hình lớn;
+                trên mobile hẹp thì vẫn cho xuống dòng để không tràn. */}
+            <Box sx={{ width: { xs: 120, sm: 210 }, flexShrink: 0 }}>
                 <Typography sx={{ fontSize: getResponsiveFontSize('sm'), fontWeight: fontWeight.semibold }}>{name}</Typography>
-                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', mt: 0.25 }}>{sub}</Typography>
+                <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary', mt: 0.25, whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>{sub}</Typography>
             </Box>
             <LinearProgress
                 variant="determinate"
@@ -108,7 +110,7 @@ export default function PageContent() {
     const unlimited = quota?.unlimited ?? false;
 
     return (
-        <Box sx={{ maxWidth: 640, width: '100%', color: 'text.primary' }}>
+        <Box sx={{ maxWidth: 880, width: '100%', color: 'text.primary' }}>
             {/* Tiêu đề + badge bậc */}
             <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5, flexWrap: 'wrap', mb: 3 }}>
                 <Typography component="h1" sx={{ fontSize: getResponsiveFontSize('h4'), fontWeight: fontWeight.bold }}>

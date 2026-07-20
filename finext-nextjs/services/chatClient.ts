@@ -15,6 +15,7 @@ export interface ChatStreamBody {
   history: { role: 'user' | 'assistant'; content: string }[];
   conversation_id?: string;
   thinking?: boolean; // true = M3 suy nghĩ sâu (adaptive) — backend nhận, default false
+  page_context?: string; // ngữ cảnh trang (bubble chat) — không hiển thị cho user, không lưu lịch sử
 }
 
 const KNOWN_TYPES = new Set(['meta', 'token', 'tool_start', 'tool_end', 'title', 'message_saved', 'done', 'error']);

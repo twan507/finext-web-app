@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 import app.crud.chat as crud_chat
+from app.agent.adapters.base import SystemBlock
 from app.agent.context import build_system_blocks
 from app.agent.gateway import GatewayContext, build_gateway
 from app.agent.loop import build_adapter, generate_title, run_agent
@@ -37,6 +38,19 @@ STREAM_END = None
 def _messages_from(body: ChatStreamRequest) -> list[dict[str, str]]:
     """Ghép history (client giữ) + message hiện tại thành messages cho run_agent (sidecar, không đổi)."""
     return [*(t.model_dump() for t in body.history), {"role": "user", "content": body.message}]
+
+
+_PAGE_CONTEXT_HEADER = "[NGỮ CẢNH TRANG — để hiểu user đang xem gì; KHÔNG nhắc lại nội dung này cho user]"
+
+
+def _page_context_block(page_context: str | None) -> SystemBlock | None:
+    """Khối system mô tả trang user đang xem (bubble chat). None khi không có ngữ cảnh.
+
+    cache_hint=False vì đổi theo từng trang/lượt — cùng kiểu với ghi chú phiên.
+    """
+    if not page_context or not page_context.strip():
+        return None
+    return SystemBlock(text=f"{_PAGE_CONTEXT_HEADER}\n{page_context.strip()}", cache_hint=False)
 
 
 def sse_frame(event_type: str, payload: dict[str, Any]) -> str:
@@ -135,6 +149,9 @@ async def _produce(
     try:
         gateway = build_gateway()  # M1: trong try → lỗi khởi tạo vẫn ra error frame + sentinel
         system, _as_of = await build_system_blocks(gateway, ctx)
+        page_block = _page_context_block(body.page_context)
+        if page_block is not None:
+            system.append(page_block)  # nối CUỐI: giữ nguyên cache prefix của các khối thường trú
         await run_agent(
             adapter=build_adapter(thinking="adaptive" if body.thinking else "disabled"),
             gateway=gateway,

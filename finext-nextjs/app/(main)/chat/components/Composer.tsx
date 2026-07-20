@@ -14,12 +14,16 @@ interface ComposerProps {
   thinking: boolean;
   onToggleThinking: () => void;
   centered?: boolean; // true = khối nổi ở GIỮA (empty state), không dính đáy; false = dính đáy viewport khi đã chat.
+  /** true = khung hẹp (bubble ~380px): dùng chữ ngắn để không wrap. Trang /chat KHÔNG truyền → giữ nguyên chữ đầy đủ. */
+  compact?: boolean;
 }
 
 const DISCLAIMER = 'Thông tin tham khảo, không phải khuyến nghị đầu tư. AI có thể nhầm lẫn — kiểm tra số liệu quan trọng.';
+const DISCLAIMER_COMPACT = 'Tham khảo, không phải khuyến nghị đầu tư.';
+const PLACEHOLDER_COMPACT = 'Hỏi Finext AI về trang này…';
 
 const Composer = forwardRef<HTMLDivElement, ComposerProps>(function Composer(
-  { disabled, streaming, onSend, onStop, thinking, onToggleThinking, centered = false },
+  { disabled, streaming, onSend, onStop, thinking, onToggleThinking, centered = false, compact = false },
   ref,
 ) {
   const theme = useTheme();
@@ -27,7 +31,7 @@ const Composer = forwardRef<HTMLDivElement, ComposerProps>(function Composer(
   const isDark = theme.palette.mode === 'dark';
   // Mobile: placeholder NGẮN để không wrap 2 dòng; desktop: đầy đủ.
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'), { noSsr: true });
-  const placeholder = isMobile ? 'Hỏi Finext AI…' : 'Hỏi Finext AI về thị trường, cổ phiếu, nhóm ngành…';
+  const placeholder = compact ? PLACEHOLDER_COMPACT : isMobile ? 'Hỏi Finext AI…' : 'Hỏi Finext AI về thị trường, cổ phiếu, nhóm ngành…';
   // Quầng gradient màu chủ đề kiểu Gemini: centered rõ hơn, bottom subtle; dark đậm hơn light. (Owner: tăng cường độ.)
   const glowAlpha = centered ? (isDark ? 0.34 : 0.2) : isDark ? 0.24 : 0.14;
   const glow = (
@@ -70,7 +74,11 @@ const Composer = forwardRef<HTMLDivElement, ComposerProps>(function Composer(
       sx={
         centered
           ? { width: '100%', px: { xs: 2, md: 3 } } // GIỮA màn hình: glow do PageContent lo (trùm cả lời chào)
-          : { position: 'sticky', bottom: 0, zIndex: 2, px: { xs: 2, md: 3 }, pt: 3, pb: 2, overflow: 'hidden', background: `linear-gradient(to top, ${theme.palette.background.default} 55%, transparent)` }
+          : compact
+            // Trong bubble: ô nhập là phần tử anh em của vùng tin nhắn (không đè lên), nên KHÔNG cần
+            // dải nền đặc để che chữ cuộn qua — bỏ đi để thấy được lớp kính của khung chat.
+            ? { flexShrink: 0, px: 1.5, pt: 1, pb: 1.25 }
+            : { position: 'sticky', bottom: 0, zIndex: 2, px: { xs: 2, md: 3 }, pt: 3, pb: 2, overflow: 'hidden', background: `linear-gradient(to top, ${theme.palette.background.default} 55%, transparent)` }
       }
     >
       <Box sx={{ maxWidth: 760, mx: 'auto', width: '100%' }}>
@@ -89,7 +97,8 @@ const Composer = forwardRef<HTMLDivElement, ComposerProps>(function Composer(
               pb: 0.75,
               borderRadius: '24px',
               border: `1px solid ${theme.palette.divider}`,
-              bgcolor: theme.palette.background.default,
+              // Bubble: nền mờ để lớp kính của khung chat ánh qua, vẫn đủ tương phản cho chữ.
+              bgcolor: compact ? alpha(theme.palette.background.paper, isDark ? 0.5 : 0.65) : theme.palette.background.default,
               boxShadow: isDark ? '0 1px 8px rgba(0,0,0,0.4)' : '0 1px 8px rgba(0,0,0,0.06)',
               transition: transitions.colors,
               '&:focus-within': { borderColor: alpha(theme.palette.primary.main, 0.5) },
@@ -175,7 +184,9 @@ const Composer = forwardRef<HTMLDivElement, ComposerProps>(function Composer(
         </Box>
         {/* Disclaimer chỉ hiện khi ĐÃ chat (composer về đáy), không hiện ở màn hình chào giữa. */}
         {!centered && (
-          <Typography sx={{ fontSize: getResponsiveFontSize('xxs'), color: 'text.disabled', textAlign: 'center', mt: 0.75 }}>{DISCLAIMER}</Typography>
+          <Typography sx={{ fontSize: getResponsiveFontSize('xxs'), color: 'text.disabled', textAlign: 'center', mt: 0.75 }}>
+            {compact ? DISCLAIMER_COMPACT : DISCLAIMER}
+          </Typography>
         )}
       </Box>
     </Box>
