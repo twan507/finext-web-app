@@ -27,6 +27,7 @@ import { getCachedStockViewMode, setCachedStockViewMode } from './viewModeStore'
 import type { StockData } from '../../home/components/marketSection/MarketVolatility';
 import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
 import { ADVANCED_AND_ABOVE, BASIC_AND_ABOVE } from '@/components/auth/features';
+import ErrorState from 'components/states/ErrorState';
 
 const MarketIndexChart = dynamic(
     () => import('../../home/components/marketSection/MarketIndexChart').then(mod => ({ default: mod.default })),
@@ -238,7 +239,9 @@ export default function StockDetailContent() {
 
     // Loading state
     const [isLoading, setIsLoading] = useState<boolean>(true);
-    const [error] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    // Đếm số lần bấm "Thử lại" — thay đổi giá trị này để chạy lại effect fetch lịch sử.
+    const [retryTick, setRetryTick] = useState(0);
 
     // ========== REST - History Data (lazy load) ==========
     const baseChunk = 90;
@@ -256,6 +259,7 @@ export default function StockDetailContent() {
         setHistoryData([]);
         setLoadedBars(0);
         setHasMoreHistory(true);
+        setError(null);
 
         apiClient<RawMarketData[]>({
             url: '/api/v1/sse/rest/home_hist_stock',
@@ -274,10 +278,19 @@ export default function StockDetailContent() {
             .catch(() => {
                 if (cancelled) return;
                 setHistoryLoading(false);
+                setIsLoading(false);
+                setError('Đã có sự cố khi tải dữ liệu biểu đồ. Vui lòng thử lại.');
             });
 
         return () => { cancelled = true; };
-    }, [ticker]);
+    }, [ticker, retryTick]);
+
+    // Bấm "Thử lại" khi tải lịch sử lỗi → xóa lỗi, hiện loading, chạy lại fetch.
+    const handleRetry = useCallback(() => {
+        setError(null);
+        setIsLoading(true);
+        setRetryTick((t) => t + 1);
+    }, []);
 
     const loadMoreHistory = useCallback(() => {
         if (isLoadingMoreRef.current || !hasMoreHistory) return;
@@ -787,18 +800,27 @@ export default function StockDetailContent() {
                 {/* Left: Chart or Info (toggle controlled) */}
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                     {viewMode === 'chart' ? (
-                        <MarketIndexChart
-                            key={ticker}
-                            symbol={ticker}
-                            title={stockName}
-                            eodData={eodData}
-                            intradayData={intradayData}
-                            isLoading={isLoading}
-                            error={error}
-                            timeRange={timeRange}
-                            onTimeRangeChange={setTimeRange}
-                            onLoadMore={loadMoreHistory}
-                        />
+                        error ? (
+                            <ErrorState
+                                size="small"
+                                title="Không tải được dữ liệu"
+                                message={error}
+                                onRetry={handleRetry}
+                            />
+                        ) : (
+                            <MarketIndexChart
+                                key={ticker}
+                                symbol={ticker}
+                                title={stockName}
+                                eodData={eodData}
+                                intradayData={intradayData}
+                                isLoading={isLoading}
+                                error={error}
+                                timeRange={timeRange}
+                                onTimeRangeChange={setTimeRange}
+                                onLoadMore={loadMoreHistory}
+                            />
+                        )
                     ) : (
                         <StockInfoSection
                             info={stockInfo}

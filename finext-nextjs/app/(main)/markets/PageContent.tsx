@@ -21,6 +21,7 @@ import TuDoanhSection from './components/TuDoanhSection';
 import PTKTSection from './components/PTKTSection';
 import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
 import { BASIC_AND_ABOVE, ADVANCED_AND_ABOVE } from '@/components/auth/features';
+import ErrorState from 'components/states/ErrorState';
 
 import { ISseRequest } from 'services/core/types';
 import { sseClient } from 'services/sseClient';
@@ -187,6 +188,8 @@ export default function MarketsContent() {
   // Loading & Error states
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  // Đếm số lần bấm "Thử lại" — thay đổi giá trị này để chạy lại effect fetch lịch sử.
+  const [retryTick, setRetryTick] = useState(0);
 
   // ========== REST - History Data (lazy load) ==========
   const baseChunk = 90;
@@ -204,6 +207,7 @@ export default function MarketsContent() {
     setHistoryData([]);
     setLoadedBars(0);
     setHasMoreHistory(true);
+    setError(null);
 
     apiClient<RawMarketData[]>({
       url: '/api/v1/sse/rest/home_hist_index',
@@ -222,10 +226,12 @@ export default function MarketsContent() {
       .catch(() => {
         if (cancelled) return;
         setHistoryLoading(false);
+        setIsLoading(false);
+        setError('Đã có sự cố khi tải dữ liệu biểu đồ. Vui lòng thử lại.');
       });
 
     return () => { cancelled = true; };
-  }, [ticker]);
+  }, [ticker, retryTick]);
 
   const loadMoreHistory = useCallback(() => {
     if (isLoadingMoreRef.current || !hasMoreHistory) return;
@@ -396,6 +402,13 @@ export default function MarketsContent() {
     setIntradayData(emptyChartData);
   };
 
+  // Bấm "Thử lại" khi tải lịch sử lỗi → xóa lỗi, hiện loading, chạy lại fetch.
+  const handleRetry = useCallback(() => {
+    setError(null);
+    setIsLoading(true);
+    setRetryTick((t) => t + 1);
+  }, []);
+
   // Get display name for ticker
   const indexName = useMemo(() => {
     const firstRecord = historyData[0] || todayAllData[ticker]?.[0] || itdAllData[ticker]?.[0];
@@ -447,18 +460,27 @@ export default function MarketsContent() {
       }}>
         {/* Left: Chart */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <MarketIndexChart
-            key={ticker}
-            symbol={ticker}
-            title={`Chỉ số ${indexName}`}
-            eodData={eodData}
-            intradayData={intradayData}
-            isLoading={isLoading}
-            error={error}
-            timeRange={timeRange}
-            onTimeRangeChange={setTimeRange}
-            onLoadMore={loadMoreHistory}
-          />
+          {error ? (
+            <ErrorState
+              size="small"
+              title="Không tải được dữ liệu"
+              message={error}
+              onRetry={handleRetry}
+            />
+          ) : (
+            <MarketIndexChart
+              key={ticker}
+              symbol={ticker}
+              title={`Chỉ số ${indexName}`}
+              eodData={eodData}
+              intradayData={intradayData}
+              isLoading={isLoading}
+              error={error}
+              timeRange={timeRange}
+              onTimeRangeChange={setTimeRange}
+              onLoadMore={loadMoreHistory}
+            />
+          )}
         </Box>
 
         {/* Right: Index Table (10 indexes) */}

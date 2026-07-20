@@ -25,6 +25,7 @@ import type { StockData } from '../../home/components/marketSection/MarketVolati
 import { transformTrendData, type RawTrendData, type TrendChartData } from '../../markets/components/TinHieuSecion/MarketTrendChart';
 import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
 import { ADVANCED_AND_ABOVE, BASIC_AND_ABOVE } from '@/components/auth/features';
+import ErrorState from 'components/states/ErrorState';
 
 const MarketIndexChart = dynamic(
     () => import('../../home/components/marketSection/MarketIndexChart').then(mod => ({ default: mod.default })),
@@ -250,7 +251,9 @@ export default function SectorDetailContent() {
 
     // Loading state
     const [isLoading, setIsLoading] = useState<boolean>(true);
-    const [error] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    // Đếm số lần bấm "Thử lại" — thay đổi giá trị này để chạy lại effect fetch lịch sử.
+    const [retryTick, setRetryTick] = useState(0);
 
     // Dynamic industry list from today data
     const industryList = useMemo(() => {
@@ -291,6 +294,7 @@ export default function SectorDetailContent() {
         setHistoryData([]);
         setLoadedBars(0);
         setHasMoreHistory(true);
+        setError(null);
 
         apiClient<RawMarketData[]>({
             url: '/api/v1/sse/rest/home_hist_index',
@@ -309,10 +313,19 @@ export default function SectorDetailContent() {
             .catch(() => {
                 if (cancelled) return;
                 setHistoryLoading(false);
+                setIsLoading(false);
+                setError('Đã có sự cố khi tải dữ liệu biểu đồ. Vui lòng thử lại.');
             });
 
         return () => { cancelled = true; };
-    }, [ticker]);
+    }, [ticker, retryTick]);
+
+    // Bấm "Thử lại" khi tải lịch sử lỗi → xóa lỗi, hiện loading, chạy lại fetch.
+    const handleRetry = useCallback(() => {
+        setError(null);
+        setIsLoading(true);
+        setRetryTick((t) => t + 1);
+    }, []);
 
     const loadMoreHistory = useCallback(() => {
         if (isLoadingMoreRef.current || !hasMoreHistory) return;
@@ -802,18 +815,27 @@ export default function SectorDetailContent() {
             }}>
                 {/* Left: Chart */}
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <MarketIndexChart
-                        key={ticker}
-                        symbol={ticker}
-                        title={`Chỉ số ngành ${indexName}`}
-                        eodData={eodData}
-                        intradayData={intradayData}
-                        isLoading={isLoading}
-                        error={error}
-                        timeRange={timeRange}
-                        onTimeRangeChange={setTimeRange}
-                        onLoadMore={loadMoreHistory}
-                    />
+                    {error ? (
+                        <ErrorState
+                            size="small"
+                            title="Không tải được dữ liệu"
+                            message={error}
+                            onRetry={handleRetry}
+                        />
+                    ) : (
+                        <MarketIndexChart
+                            key={ticker}
+                            symbol={ticker}
+                            title={`Chỉ số ngành ${indexName}`}
+                            eodData={eodData}
+                            intradayData={intradayData}
+                            isLoading={isLoading}
+                            error={error}
+                            timeRange={timeRange}
+                            onTimeRangeChange={setTimeRange}
+                            onLoadMore={loadMoreHistory}
+                        />
+                    )}
 
                     {/* FinRatios Section - same width as chart */}
                     <FinRatiosSection

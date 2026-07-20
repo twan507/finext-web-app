@@ -23,6 +23,7 @@ import type { RawTrendData, TrendChartData, TrendTimeRange } from '../../markets
 import { transformTrendData } from '../../markets/components/TinHieuSecion/MarketTrendChart';
 import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
 import { ADVANCED_AND_ABOVE } from '@/components/auth/features';
+import ErrorState from 'components/states/ErrorState';
 import SubChartSkeleton from 'components/common/SubChartSkeleton';
 import ChartSectionTitle from 'components/common/ChartSectionTitle';
 import { useMarketUpdateTime } from 'hooks/useMarketUpdateTime';
@@ -194,6 +195,8 @@ export default function GroupDetailContent() {
     // Loading & Error states
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    // Đếm số lần bấm "Thử lại" — thay đổi giá trị này để chạy lại effect fetch lịch sử.
+    const [retryTick, setRetryTick] = useState(0);
 
     // ========== REST - History Data (lazy load) ==========
     const baseChunk = 90;
@@ -212,6 +215,7 @@ export default function GroupDetailContent() {
         setHistoryData([]);
         setLoadedBars(0);
         setHasMoreHistory(true);
+        setError(null);
 
         apiClient<RawMarketData[]>({
             url: '/api/v1/sse/rest/home_hist_index',
@@ -230,10 +234,19 @@ export default function GroupDetailContent() {
             .catch(() => {
                 if (cancelled) return;
                 setHistoryLoading(false);
+                setIsLoading(false);
+                setError('Đã có sự cố khi tải dữ liệu biểu đồ. Vui lòng thử lại.');
             });
 
         return () => { cancelled = true; };
-    }, [ticker]);
+    }, [ticker, retryTick]);
+
+    // Bấm "Thử lại" khi tải lịch sử lỗi → xóa lỗi, hiện loading, chạy lại fetch.
+    const handleRetry = useCallback(() => {
+        setError(null);
+        setIsLoading(true);
+        setRetryTick((t) => t + 1);
+    }, []);
 
     const loadMoreHistory = useCallback(() => {
         if (isLoadingMoreRef.current || !hasMoreHistory) return;
@@ -776,18 +789,27 @@ export default function GroupDetailContent() {
             }}>
                 {/* Left: Chart */}
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <MarketIndexChart
-                        key={ticker}
-                        symbol={ticker}
-                        title={`Chỉ số ${indexName}`}
-                        eodData={eodData}
-                        intradayData={intradayData}
-                        isLoading={isLoading}
-                        error={error}
-                        timeRange={timeRange}
-                        onTimeRangeChange={setTimeRange}
-                        onLoadMore={loadMoreHistory}
-                    />
+                    {error ? (
+                        <ErrorState
+                            size="small"
+                            title="Không tải được dữ liệu"
+                            message={error}
+                            onRetry={handleRetry}
+                        />
+                    ) : (
+                        <MarketIndexChart
+                            key={ticker}
+                            symbol={ticker}
+                            title={`Chỉ số ${indexName}`}
+                            eodData={eodData}
+                            intradayData={intradayData}
+                            isLoading={isLoading}
+                            error={error}
+                            timeRange={timeRange}
+                            onTimeRangeChange={setTimeRange}
+                            onLoadMore={loadMoreHistory}
+                        />
+                    )}
                 </Box>
 
                 {/* Right: Index Detail Panel */}
