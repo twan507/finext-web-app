@@ -287,3 +287,258 @@ async def test_JSON_cong_ghi_chu_luon_vua_TRAN_da_cho():
         assert len(content) <= limit, (
             f"limit={limit}: JSON+ghi chú dài {len(content)} ký tự — _cap_text sẽ xé giữa JSON"
         )
+
+
+# --- Bóc stage bị M3 bọc thành {"$text": "<chuỗi JSON>"} (bug production, doc eval) ---
+# M3 đôi khi gửi mỗi stage aggregate dưới dạng {"$text": "<chuỗi JSON của stage>"} hoặc gửi thẳng
+# chuỗi JSON. $text KHÔNG BAO GIỜ là stage hợp lệ ở cấp cao nhất của pipeline Mongo nên bóc ra
+# parse lại là an toàn tuyệt đối. Tool phải chuẩn hoá trước khi tới gateway/validator.
+
+
+class _CaptureAggGateway:
+    """Gateway giả GHI LẠI pipeline nó nhận — soi xem tool đã bóc {"$text": ...} chưa."""
+
+    def __init__(self) -> None:
+        self.pipeline: Any = None
+
+    async def aggregate(self, ctx: GatewayContext, collection: str, pipeline: Any) -> GatewayResult:
+        self.pipeline = pipeline
+        return GatewayResult(ok=True, data=[{"ok": 1}], meta={"ms": 0})
+
+
+async def test_boc_stage_text_ba_tang_thanh_dict_that():
+    # Nguyên văn biến thể 1 từ production: 3 stage đều bị bọc {"$text": "<chuỗi JSON>"}, gồm cả $limit.
+    gateway = _CaptureAggGateway()
+    pipeline = [
+        {"$text": '{"$project": {"industry_name": 1, "week_score": "$money_flow_score.week_score"}}'},
+        {"$text": '{"$sort": {"week_score": -1}}'},
+        {"$text": '{"$limit": 24}'},
+    ]
+    _, meta = await execute_tool(
+        gateway,  # type: ignore[arg-type]
+        CTX,
+        _call("db_aggregate", {"collection": "industry_snapshot", "pipeline": pipeline}),
+    )
+    assert meta["ok"] is True
+    assert gateway.pipeline == [
+        {"$project": {"industry_name": 1, "week_score": "$money_flow_score.week_score"}},
+        {"$sort": {"week_score": -1}},
+        {"$limit": 24},
+    ]
+
+
+async def test_boc_stage_text_co_tab_va_khoang_trang_dau_chuoi():
+    # Biến thể có "\t" / khoảng trắng đầu chuỗi vẫn phải parse được (strip trước khi json.loads).
+    gateway = _CaptureAggGateway()
+    pipeline = [{"$text": '\t{"$limit": 24}'}, {"$text": ' {"$sort": {"week_score": -1}}'}]
+    await execute_tool(
+        gateway,  # type: ignore[arg-type]
+        CTX,
+        _call("db_aggregate", {"collection": "industry_snapshot", "pipeline": pipeline}),
+    )
+    assert gateway.pipeline == [{"$limit": 24}, {"$sort": {"week_score": -1}}]
+
+
+async def test_boc_stage_la_chuoi_json_tran():
+    # Stage gửi thẳng dưới dạng chuỗi JSON (không bọc $text) cũng phải được parse thành dict.
+    gateway = _CaptureAggGateway()
+    pipeline = ['{"$sort": {"week_score": -1}}', '{"$limit": 24}']
+    await execute_tool(
+        gateway,  # type: ignore[arg-type]
+        CTX,
+        _call("db_aggregate", {"collection": "industry_snapshot", "pipeline": pipeline}),
+    )
+    assert gateway.pipeline == [{"$sort": {"week_score": -1}}, {"$limit": 24}]
+
+
+async def test_pipeline_hop_le_binh_thuong_truyen_qua_nguyen_ven():
+    # Pipeline dict thật KHÔNG được sửa đổi khi đi qua tool.
+    gateway = _CaptureAggGateway()
+    pipeline = [{"$sort": {"week_score": -1}}, {"$limit": 24}]
+    await execute_tool(
+        gateway,  # type: ignore[arg-type]
+        CTX,
+        _call("db_aggregate", {"collection": "industry_snapshot", "pipeline": pipeline}),
+    )
+    assert gateway.pipeline == [{"$sort": {"week_score": -1}}, {"$limit": 24}]
+
+
+async def test_boc_stage_text_khong_phai_json_giu_nguyen():
+    # {"$text": "không phải json"} parse hỏng → giữ nguyên để validator báo lỗi như cũ, KHÔNG raise.
+    gateway = _CaptureAggGateway()
+    pipeline = [{"$text": "không phải json"}]
+    await execute_tool(
+        gateway,  # type: ignore[arg-type]
+        CTX,
+        _call("db_aggregate", {"collection": "industry_snapshot", "pipeline": pipeline}),
+    )
+    assert gateway.pipeline == [{"$text": "không phải json"}]
+
+
+# --- Ép kiểu THEO VỊ TRÍ: M3 bọc SỐ thành CHUỖI / bẻ MẢNG thành DICT (bug production eval hôm nay) ---
+# M3 gửi số dưới dạng chuỗi ("25", "-1") và bẻ đối số mảng của $slice/$arrayElemAt thành dict ở đúng
+# những vị trí mà chuỗi số KHÔNG BAO GIỜ hợp lệ. Ép tại chỗ để validator/Mongo không từ chối câm — mỗi
+# câu trước đây đốt 2-7 vòng rồi cầu dao ép bỏ cuộc. KHÔNG đụng so-sánh-bằng / tham chiếu '$field'.
+
+
+class _CaptureFindGateway:
+    """Gateway giả GHI LẠI tham số find nhận — soi xem tool đã ép kiểu đúng vị trí chưa."""
+
+    def __init__(self) -> None:
+        self.filter: Any = None
+        self.projection: Any = None
+        self.sort: Any = None
+        self.limit: Any = None
+
+    async def find(
+        self,
+        ctx: GatewayContext,
+        collection: str,
+        filter: Any = None,
+        projection: Any = None,
+        sort: Any = None,
+        limit: Any = None,
+    ) -> GatewayResult:
+        self.filter, self.projection, self.sort, self.limit = filter, projection, sort, limit
+        return GatewayResult(ok=True, data=[{"ok": 1}], meta={"ms": 0})
+
+
+async def _run_find(gateway: Any, args: dict[str, Any]) -> None:
+    await execute_tool(gateway, CTX, _call("db_find", args))
+
+
+async def _run_agg(gateway: Any, pipeline: Any) -> None:
+    await execute_tool(gateway, CTX, _call("db_aggregate", {"collection": "c", "pipeline": pipeline}))
+
+
+# ---- db_find: từng vị trí ----
+
+
+async def test_find_limit_chuoi_so_thanh_int():
+    # {"$limit": "25"} → ý là 25. limit của db_find không bao giờ là chuỗi.
+    gw = _CaptureFindGateway()
+    await _run_find(gw, {"collection": "c", "projection": {"x": 1}, "limit": "25"})
+    assert gw.limit == 25 and isinstance(gw.limit, int)
+
+
+async def test_find_sort_huong_chuoi_so_thanh_int():
+    # "sort": [["created_at", "-1"]] → ý là -1.
+    gw = _CaptureFindGateway()
+    await _run_find(gw, {"collection": "c", "projection": {"x": 1}, "sort": [["created_at", "-1"]]})
+    assert gw.sort == [["created_at", -1]]
+
+
+async def test_find_projection_0_1_chuoi_thanh_int():
+    # "projection": {"title": "1", "sapo": "1"} → ý là 1.
+    gw = _CaptureFindGateway()
+    await _run_find(gw, {"collection": "c", "projection": {"title": "1", "sapo": "1"}})
+    assert gw.projection == {"title": 1, "sapo": 1}
+
+
+async def test_find_filter_gt_chuoi_so_thanh_number():
+    # {"$match": {"price.volume": {"$gt": "50000"}}} → ý là 50000 (áp cả cho filter db_find).
+    gw = _CaptureFindGateway()
+    await _run_find(gw, {"collection": "c", "projection": {"x": 1}, "filter": {"price.volume": {"$gt": "50000"}}})
+    assert gw.filter == {"price.volume": {"$gt": 50000}}
+
+
+async def test_find_projection_slice_dict_mangle_thanh_int():
+    # "projection": {"financial_statements.quarterly": {"$slice": {"-2": ""}}} → ý là {"$slice": -2}.
+    gw = _CaptureFindGateway()
+    await _run_find(gw, {"collection": "c", "projection": {"financial_statements.quarterly": {"$slice": {"-2": ""}}}})
+    assert gw.projection == {"financial_statements.quarterly": {"$slice": -2}}
+
+
+# ---- db_aggregate: từng stage (SAU _repair_stage) ----
+
+
+async def test_agg_limit_chuoi_so_thanh_int():
+    # {"$limit": "25"} → ý là 25.
+    gw = _CaptureAggGateway()
+    await _run_agg(gw, [{"$limit": "25"}])
+    assert gw.pipeline == [{"$limit": 25}]
+
+
+async def test_agg_sort_huong_chuoi_so_thanh_int():
+    # {"$sort": {"week_score": "-1"}} → ý là -1.
+    gw = _CaptureAggGateway()
+    await _run_agg(gw, [{"$sort": {"week_score": "-1"}}])
+    assert gw.pipeline == [{"$sort": {"week_score": -1}}]
+
+
+async def test_agg_project_0_1_chuoi_thanh_int():
+    # {"$project": {"industry_name": "1"}} → ý là 1.
+    gw = _CaptureAggGateway()
+    await _run_agg(gw, [{"$project": {"industry_name": "1"}}])
+    assert gw.pipeline == [{"$project": {"industry_name": 1}}]
+
+
+async def test_agg_match_gt_chuoi_so_thanh_number():
+    # {"$match": {"price.volume": {"$gt": "50000"}}} → ý là 50000.
+    gw = _CaptureAggGateway()
+    await _run_agg(gw, [{"$match": {"price.volume": {"$gt": "50000"}}}])
+    assert gw.pipeline == [{"$match": {"price.volume": {"$gt": 50000}}}]
+
+
+async def test_agg_match_gt_thap_phan_thanh_float():
+    # Ngưỡng thập phân "50000.5" → 50000.5 (float), không phải int.
+    gw = _CaptureAggGateway()
+    await _run_agg(gw, [{"$match": {"$or": [{"a": {"$gte": "1.5"}}, {"b": {"$lte": "2"}}]}}])
+    assert gw.pipeline == [{"$match": {"$or": [{"a": {"$gte": 1.5}}, {"b": {"$lte": 2}}]}}]
+
+
+async def test_agg_slice_dict_mangle_thanh_mang():
+    # {"$slice": {"item": "$...quarterly", "-5": ""}} → {"$slice": ["$...quarterly", -5]}.
+    gw = _CaptureAggGateway()
+    await _run_agg(gw, [{"$slice": {"item": "$financial_statements.quarterly", "-5": ""}}])
+    assert gw.pipeline == [{"$slice": ["$financial_statements.quarterly", -5]}]
+
+
+async def test_agg_arrayelemat_dict_mangle_thanh_mang():
+    # {"$arrayElemAt": {"item": "$...quarterly", "-1": ""}} → {"$arrayElemAt": ["$...quarterly", -1]}.
+    gw = _CaptureAggGateway()
+    await _run_agg(gw, [{"$arrayElemAt": {"item": "$financial_statements.quarterly", "-1": ""}}])
+    assert gw.pipeline == [{"$arrayElemAt": ["$financial_statements.quarterly", -1]}]
+
+
+async def test_agg_project_key_mangle_ca_cap_nhet_vao_key():
+    # {"$project": {"ticker": 1, "recent_4q: { \"$slice\": [ \"$...quarterly\", -4 ] }": ""}}
+    # → cả cặp key:value bị nhét vào KEY, value rỗng. Khôi phục về cặp thật.
+    gw = _CaptureAggGateway()
+    mangled_key = 'recent_4q: { "$slice": [ "$financial_statements.quarterly", -4 ] }'
+    await _run_agg(gw, [{"$project": {"ticker": 1, mangled_key: ""}}])
+    assert gw.pipeline == [
+        {"$project": {"ticker": 1, "recent_4q": {"$slice": ["$financial_statements.quarterly", -4]}}}
+    ]
+
+
+# ---- Test âm: đầu vào HỢP LỆ phải đi qua NGUYÊN VẸN, không bị coerce bừa ----
+
+
+async def test_find_khong_dung_so_sanh_bang_va_tham_chieu_field():
+    # {"ticker": "HPG"} (so sánh bằng) và "$money_flow_score.week_score" (tham chiếu) KHÔNG được đụng.
+    gw = _CaptureFindGateway()
+    await _run_find(
+        gw,
+        {
+            "collection": "c",
+            "filter": {"ticker": "HPG"},
+            "projection": {"week_score": "$money_flow_score.week_score"},
+        },
+    )
+    assert gw.filter == {"ticker": "HPG"}
+    assert gw.projection == {"week_score": "$money_flow_score.week_score"}
+
+
+async def test_agg_slice_mang_hop_le_di_qua_nguyen_ven():
+    # {"$slice": ["$arr", -4]} đã đúng → đi qua nguyên vẹn.
+    gw = _CaptureAggGateway()
+    await _run_agg(gw, [{"$project": {"recent": {"$slice": ["$arr", -4]}}}])
+    assert gw.pipeline == [{"$project": {"recent": {"$slice": ["$arr", -4]}}}]
+
+
+async def test_agg_match_text_dict_khong_bi_dung():
+    # $text với value DICT (không phải chuỗi) là toán tử tìm kiếm hợp lệ trong $match — không đụng.
+    gw = _CaptureAggGateway()
+    await _run_agg(gw, [{"$match": {"$text": {"$search": "abc"}}}])
+    assert gw.pipeline == [{"$match": {"$text": {"$search": "abc"}}}]
