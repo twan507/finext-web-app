@@ -32,6 +32,10 @@ from app.core.config import (
 logger = logging.getLogger(__name__)
 
 MAX_ITERS = 10  # nới từ 8: dư chỗ cho retry + câu phân tích nhiều nguồn
+MAX_FAILED_TOOL_ROUNDS = 2  # 2 vòng liên tiếp mà MỌI tool call đều fail → dừng thử, trả lời trung thực
+# Trần token một lượt trả lời (in+out cộng mọi vòng). Đo thật: lượt thường ~130k, bão retry >640k;
+# lượt nhiều nguồn hợp lệ nhất từng thấy 532k — trần 600k không chạm câu trả lời tốt nào đã đo.
+MAX_TURN_TOKENS = 600_000
 MAX_EMPTY_RETRY = 3  # quota CHUNG cho nudge lượt-cuối: rỗng/preamble + grounding (bịa số chưa gọi tool)
 # Trần token/lượt trả lời. Trần cứng v4-flash/pro = 384K; default 64K cho câu phân tích dài, dư đầu cho thinking sau.
 MAX_OUTPUT_TOKENS = int(LLM_MAX_OUTPUT_TOKENS) if LLM_MAX_OUTPUT_TOKENS else 64000
@@ -60,6 +64,10 @@ _FORCE_ANSWER_NUDGE = (
     "Đã đủ dữ liệu để trả lời. Hãy trả lời NGAY câu hỏi của khách dựa trên dữ liệu đã lấy được ở trên, "
     "trình bày gọn, không gọi thêm tool, không mô tả tiến trình. " + _NO_META
 )
+_GIVE_UP_NUDGE = (
+    "Các truy vấn dữ liệu liên tục thất bại, đừng thử thêm. Hãy trả lời NGAY: nói trung thực phần dữ liệu "
+    "nào chưa tra cứu được, kèm những gì bạn biết chắc; TUYỆT ĐỐI không bịa số, không gọi thêm tool. " + _NO_META
+)
 _GROUND_NUDGE = (
     "Bạn đưa số liệu/bảng nhưng CHƯA gọi tool nào để lấy dữ liệu thật. Hãy GỌI TOOL "
     "(db_find/db_aggregate/db_stats) lấy số thật từ hệ thống rồi trả lời lại. " + _NO_META
@@ -80,14 +88,33 @@ _PREAMBLE_ONLY_RE = re.compile(
     r"^\s*(tôi sẽ|mình sẽ|để (?:tôi|mình)|bắt đầu (?:bằng|với)|trước tiên|trước hết|đầu tiên|hãy để tôi|let me|i'?ll)\b",
     re.IGNORECASE,
 )
+# Độc thoại KẾ HOẠCH lọt ra làm câu trả lời (eval hôm nay Q2: "User đang hỏi về rủi ro của rổ Mạo Hiểm
+# (AGGRESSIVE)... Cần đọc AGGRESSIVE + market_phase..."): model nghĩ thành lời, 0 tool, khách đọc cả tên nội bộ.
+# CHỈ soi phần MỞ ĐẦU — câu trả lời thật không bao giờ mở đầu bằng việc thuật lại "User/Khách... đang/vừa hỏi".
+# `.` không nuốt xuống dòng nên tự giới hạn ở DÒNG ĐẦU; cho tối đa ~80 ký tự giữa hai cụm.
+_PLAN_MONOLOGUE_RE = re.compile(
+    r"^\s*(?:user|khách|người dùng).{0,80}?(?:đang|vừa)\s+hỏi",
+    re.IGNORECASE,
+)
+# Câu cụt "hai chấm" (eval 2026-07-20 lượt 9: "Top cổ phiếu... (đã lọc thanh khoản tối thiểu):"): một dòng
+# tiêu đề hứa danh sách rồi hết → khách nhận câu rỗng. Câu trả lời thật không bao giờ vừa NGẮN vừa kết thúc bằng ':'.
+_COLON_CUT_MAX_LEN = 300
 
 
 def _needs_retry(answer: str) -> bool:
-    """Lượt cuối coi như CHƯA trả lời nếu: rỗng, hoặc là câu dẫn 'Tôi sẽ...' ngắn (chưa có nội dung thật)."""
+    """Lượt cuối coi như CHƯA trả lời (mọi ca đều có bằng chứng production):
+    - rỗng; hoặc câu dẫn 'Tôi sẽ...' ngắn (chưa có nội dung thật);
+    - độc thoại kế hoạch lọt ra ('User/Khách... đang/vừa hỏi' ở đầu — eval Q2);
+    - câu cụt: ≤300 ký tự và kết thúc bằng ':' (tiêu đề hứa danh sách rồi hết — eval lượt 9).
+    """
     a = answer.strip()
     if not a:
         return True
-    return bool(_PREAMBLE_ONLY_RE.match(a) and len(a) < 300)
+    if _PREAMBLE_ONLY_RE.match(a) and len(a) < 300:
+        return True
+    if _PLAN_MONOLOGUE_RE.match(a):
+        return True
+    return len(a) <= _COLON_CUT_MAX_LEN and a.endswith(":")
 
 
 # Bảng markdown có ô số → dấu hiệu CHẮC CHẮN câu trả lời DỮ LIỆU (từ tool) cần grounding.
@@ -346,7 +373,9 @@ def _cap_text(content: str, max_chars: int) -> str:
 
 async def _run_tools(
     gateway: GatewayProtocol, ctx: GatewayContext, calls: list[ToolCall], emit: Emit, failed_sig: set[str]
-) -> list[dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], bool]:
+    """Chạy các tool call song song. Trả (messages, all_failed) — all_failed=True khi có ≥1 lời gọi
+    mà MỌI lời gọi đều fail (dùng cho cầu dao MAX_FAILED_TOOL_ROUNDS: bão tool-fail thì dừng thử)."""
     for call in calls:
         await emit("tool_start", {"name": call.name, "label": label_for(call)})
 
@@ -363,15 +392,19 @@ async def _run_tools(
     results = await asyncio.gather(*(_run_one(call) for call in calls))
 
     messages: list[dict[str, Any]] = []
+    any_ok = False
     for call, (content, meta) in zip(calls, results, strict=True):
         await emit("tool_end", {"name": call.name, "ok": meta["ok"], "ms": meta["ms"]})
-        if not meta["ok"]:
+        if meta["ok"]:
+            any_ok = True
+        else:
             failed_sig.add(_call_signature(call))
         # shrink_result đã lo phần JSON có cấu trúc; _cap_text chỉ chặn các đường văn bản
         # (read_kb, watchlist) và cắt theo ranh giới dòng.
         content = _cap_text(content, per_call)
         messages.append({"role": "tool", "tool_call_id": call.id, "content": content})
-    return messages
+    all_failed = bool(calls) and not any_ok
+    return messages, all_failed
 
 
 def _assistant_tool_message(calls: list[ToolCall], reasoning_content: str | None = None) -> dict[str, Any]:
@@ -514,16 +547,29 @@ async def run_agent(
     usage_total: dict[str, int] = {}
     failed_sig: set[str] = set()
     empty_retry = 0
+    failed_rounds = 0  # số vòng LIÊN TIẾP mà mọi tool call đều fail — cầu dao MAX_FAILED_TOOL_ROUNDS
+    force_nudged = False  # nudge ép chỉ được chèn ĐÚNG 1 lần (force nay có thể kéo dài nhiều vòng)
     tools_ran = 0  # tổng tool call đã thực thi — để phát hiện câu 'dữ liệu' chưa gọi tool nào (bịa số)
     grounded_nums: set[int] = set()  # số THẬT trích từ tool_result — để đối chiếu claim GIÁ ở câu cuối
 
     for i in range(MAX_ITERS):
-        force = i == MAX_ITERS - 1  # vòng cuối: cấm tool, ép trả lời
+        spent = usage_total.get("in", 0) + usage_total.get("out", 0)
+        starved = failed_rounds >= MAX_FAILED_TOOL_ROUNDS  # tool fail sạch liên tiếp — thử thêm chỉ đốt tiền
+        force = i == MAX_ITERS - 1 or starved or spent >= MAX_TURN_TOKENS  # vòng ép: cấm tool, buộc trả lời
         tools = [] if force else TOOL_SCHEMAS
-        if force:
+        if force and not force_nudged:
             # LỖI 1: vòng ép PHẢI kèm nudge để M3 trả lời best-effort với dữ liệu đang có (kể cả khi
-            # phần lớn tool đã fail). Thiếu nudge → M3 trả RỖNG → rơi xuống emit error.
-            working.append({"role": "user", "content": _FORCE_ANSWER_NUDGE})
+            # phần lớn tool đã fail). Thiếu nudge → M3 trả RỖNG → rơi xuống emit error. Chèn ĐÚNG 1 lần.
+            force_nudged = True
+            if starved:
+                working.append({"role": "user", "content": _GIVE_UP_NUDGE})
+            else:
+                working.append({"role": "user", "content": _FORCE_ANSWER_NUDGE})
+            if i < MAX_ITERS - 1:  # ép SỚM (cầu dao) chứ không phải chạm trần vòng — ghi log để đo
+                logger.warning(
+                    "loop give-up: failed_rounds=%d spent=%d iter=%d request_id=%s",
+                    failed_rounds, spent, i, ctx.request_id,
+                )
         pending, reasoning, final_text, truncated, status = await _drive_turn(
             adapter, system, working, tools, usage_total
         )
@@ -534,7 +580,8 @@ async def run_agent(
 
         if status == "tools" and pending and not force:
             working.append(_assistant_tool_message(pending, reasoning))
-            tool_messages = await _run_tools(gateway, ctx, pending, emit, failed_sig)
+            tool_messages, all_failed = await _run_tools(gateway, ctx, pending, emit, failed_sig)
+            failed_rounds = failed_rounds + 1 if all_failed else 0  # đếm bão tool-fail liên tiếp
             for msg in tool_messages:  # nạp số THẬT từ kết quả tool VỪA THÊM (chỉ role=="tool")
                 _register_grounded(msg["content"], grounded_nums)
             working.extend(tool_messages)

@@ -8,6 +8,7 @@ from app.agent.gateway.fixture import FixtureGateway
 from app.agent.gateway.policy import Policy
 from app.agent.gateway.types import GatewayContext
 from app.agent.loop import (
+    MAX_FAILED_TOOL_ROUNDS,
     MAX_ITERS,
     _last_assistant_text,
     _rebrief_overlap,
@@ -262,12 +263,14 @@ async def test_repeated_failed_query_blocked_and_not_re_executed():
     # Chỉ chạm gateway.find ĐÚNG 1 lần (vòng đầu); các vòng sau bị chặn trước khi execute.
     assert gateway.find_calls == 1
     # Model nhận feedback chống-lặp trong tool message vòng cuối.
-    # (Vòng force nay chèn _FORCE_ANSWER_NUDGE ở cuối working nên tìm tool message gần nhất, không dùng [-1].)
+    # (Vòng force nay chèn nudge ở cuối working nên tìm tool message gần nhất, không dùng [-1].)
     last_tool_msg = next(m for m in reversed(adapter.calls[-1]) if m["role"] == "tool")
     assert "Đừng lặp lại" in last_tool_msg["content"]
-    # Vẫn kết thúc bằng error (MAX_ITERS), không treo.
+    # Vẫn kết thúc bằng error, không treo. Cầu dao tool-fail-storm dừng SỚM (2 vòng fail + 1 vòng ép),
+    # KHÔNG còn đốt hết MAX_ITERS như trước — đây chính là mục tiêu của bản sửa.
     assert emitted[-1][0] == "error"
-    assert len(adapter.calls) == MAX_ITERS
+    assert len(adapter.calls) == MAX_FAILED_TOOL_ROUNDS + 1
+    assert len(adapter.calls) < MAX_ITERS
 
 
 async def test_distinct_failed_queries_each_execute_once():
@@ -904,10 +907,231 @@ async def test_moi_tool_song_song_deu_nhan_du_lieu_that():
     async def emit(event_type: str, payload: dict[str, Any]) -> None:
         return None
 
-    messages = await _run_tools(_BulkGateway(), CTX, calls, emit, set())
+    messages, all_failed = await _run_tools(_BulkGateway(), CTX, calls, emit, set())
 
     assert len(messages) == 4
+    assert all_failed is False  # mọi lời gọi đều thành công → không phải bão fail
     for msg in messages:
         body = msg["content"].split("\n\n[GHI CHÚ NỘI BỘ")[0].split("…[đã cắt")[0]
         docs = _json.loads(body)  # hành vi cũ: tool cuối hàng không có JSON để parse
         assert docs and docs[0]["ticker"] == "M000", "tool nào cũng phải nhận DỮ LIỆU THẬT"
+
+
+# ── Cầu dao ÉP TRẢ LỜI: bão tool-fail (MAX_FAILED_TOOL_ROUNDS) + trần token (MAX_TURN_TOKENS) ──────
+
+
+def _count_nudge(messages: list[dict[str, Any]], nudge: str) -> int:
+    """Đếm số message user chứa đúng chuỗi nudge — để khẳng định nudge ép chỉ chèn 1 lần."""
+    return sum(1 for m in messages if isinstance(m.get("content"), str) and nudge in m["content"])
+
+
+class _AllFailGateway:
+    """Mọi lời gọi đều fail (ok=False) — tái hiện bão db_aggregate hỏng liên tiếp trên production."""
+
+    async def find(self, *a: Any, **k: Any) -> Any:
+        from app.agent.gateway.types import GatewayResult
+        return GatewayResult(ok=False, error="boom", meta={"ms": 0})
+
+    async def aggregate(self, *a: Any, **k: Any) -> Any:
+        from app.agent.gateway.types import GatewayResult
+        return GatewayResult(ok=False, error="boom", meta={"ms": 0})
+
+    async def stats(self, *a: Any, **k: Any) -> Any:
+        from app.agent.gateway.types import GatewayResult
+        return GatewayResult(ok=False, error="boom", meta={"ms": 0})
+
+
+class _UsageToolAdapter:
+    """tools != [] → gọi tool (thành công) + báo usage LỚN; tools == [] → trả text. Ghi lại `tools` mỗi vòng."""
+
+    def __init__(self, tool_call: ToolCall, final_text: str, usage: dict[str, int]) -> None:
+        self._tool_call = tool_call
+        self._final_text = final_text
+        self._usage = usage
+        self.calls: list[list[dict[str, Any]]] = []
+        self.tools_seen: list[list[dict[str, Any]]] = []
+
+    async def stream_chat(
+        self, system: list[SystemBlock], messages: list[dict[str, Any]], tools: list[dict[str, Any]], max_tokens: int
+    ) -> AsyncIterator[AgentEvent]:
+        self.calls.append(messages)
+        self.tools_seen.append(tools)
+        if tools:
+            yield ToolCallsEvent(calls=[self._tool_call], usage=self._usage)
+        else:
+            yield TokenEvent(text=self._final_text)
+            yield DoneEvent(usage={})
+
+
+class _FailThenOkGateway:
+    """find: lời gọi ĐẦU fail, các lời gọi sau ok — để test cầu dao KHÔNG kích hoạt oan (fail 1 vòng rồi ổn)."""
+
+    def __init__(self) -> None:
+        self.n = 0
+
+    async def find(self, ctx: Any, collection: str, filter: Any = None, projection: Any = None,
+                   sort: Any = None, limit: Any = None) -> Any:
+        from app.agent.gateway.types import GatewayResult
+        self.n += 1
+        if self.n == 1:
+            return GatewayResult(ok=False, error="boom", meta={"collection": collection, "ms": 0})
+        return GatewayResult(ok=True, data=[{"ticker": "FPT", "close": 68}], meta={"collection": collection, "ms": 0})
+
+    async def aggregate(self, *a: Any, **k: Any) -> Any:
+        from app.agent.gateway.types import GatewayResult
+        return GatewayResult(ok=False, error="n/a", meta={})
+
+    async def stats(self, *a: Any, **k: Any) -> Any:
+        from app.agent.gateway.types import GatewayResult
+        return GatewayResult(ok=False, error="n/a", meta={})
+
+
+async def test_tool_fail_storm_stops_early_and_answers_honestly():
+    # Bão tool-fail: adapter gọi tool khi còn được phép, gateway luôn fail → sau MAX_FAILED_TOOL_ROUNDS
+    # vòng fail sạch, cầu dao ép trả lời (tools=[]) → khách nhận câu THẬT, KHÔNG lặp tới 10 vòng.
+    from app.agent.loop import _FORCE_ANSWER_NUDGE, _GIVE_UP_NUDGE
+    tool_call = ToolCall(
+        id="c1", name="db_find",
+        arguments={"collection": "stock_snapshot", "filter": {"ticker": "FPT"}, "projection": {"close": 1}},
+    )
+    adapter = _UsageToolAdapter(tool_call, "Chưa tra được dữ liệu, mình trả lời phần chắc chắn.", usage={})
+
+    emitted: list[tuple[str, dict[str, Any]]] = []
+
+    async def emit(event_type: str, payload: dict[str, Any]) -> None:
+        emitted.append((event_type, payload))
+
+    await run_agent(
+        adapter=adapter, gateway=_AllFailGateway(), ctx=CTX, system=SYSTEM,
+        messages=[{"role": "user", "content": "phân tích ngành thép"}], emit=emit,
+    )
+    # (a) khách nhận CÂU TRẢ LỜI, không phải error.
+    answer = "".join(e[1]["text"] for e in emitted if e[0] == "token")
+    assert "Chưa tra được dữ liệu" in answer
+    assert emitted[-1][0] == "done"
+    assert all(e[0] != "error" for e in emitted)
+    # (b) dừng SỚM: 2 vòng fail + 1 vòng ép = 3 ≤ 4 (KHÔNG chạm MAX_ITERS=10).
+    assert len(adapter.calls) <= 4
+    assert adapter.tools_seen[-1] == []  # vòng cuối là vòng ép (cấm tool)
+    # (c) _GIVE_UP_NUDGE chèn ĐÚNG 1 lần; đường bão-fail KHÔNG dùng _FORCE_ANSWER_NUDGE.
+    assert _count_nudge(adapter.calls[-1], _GIVE_UP_NUDGE) == 1
+    assert _count_nudge(adapter.calls[-1], _FORCE_ANSWER_NUDGE) == 0
+
+
+async def test_token_ceiling_forces_answer():
+    # Trần token: mỗi vòng gọi tool THÀNH CÔNG nhưng báo usage lớn (350k in + 500 out) → sau 2 vòng
+    # vượt 600k → vòng 3 phải là vòng ép (tools == []).
+    from app.agent.loop import _FORCE_ANSWER_NUDGE, _GIVE_UP_NUDGE
+    tool_call = ToolCall(
+        id="c1", name="db_find",
+        arguments={"collection": "stock_snapshot", "filter": {"ticker": "FPT"}, "projection": {"close": 1}},
+    )
+    adapter = _UsageToolAdapter(tool_call, "Kết luận dựa trên dữ liệu đã tra cứu.", usage={"in": 350_000, "out": 500})
+
+    emitted: list[tuple[str, dict[str, Any]]] = []
+
+    async def emit(event_type: str, payload: dict[str, Any]) -> None:
+        emitted.append((event_type, payload))
+
+    await run_agent(
+        adapter=adapter, gateway=_PriceGateway(), ctx=CTX, system=SYSTEM,
+        messages=[{"role": "user", "content": "phân tích FPT"}], emit=emit,
+    )
+    answer = "".join(e[1]["text"] for e in emitted if e[0] == "token")
+    assert "Kết luận dựa trên dữ liệu" in answer
+    assert emitted[-1][0] == "done"
+    assert all(e[0] != "error" for e in emitted)
+    # 2 vòng tool (usage lớn) rồi vòng 3 ép; tools param của vòng 3 phải rỗng.
+    assert len(adapter.calls) == 3
+    assert adapter.tools_seen[0] and adapter.tools_seen[1]  # 2 vòng đầu CÓ tool
+    assert adapter.tools_seen[2] == []                       # vòng 3 bị ép (cấm tool)
+    # Trần-token dùng _FORCE_ANSWER_NUDGE (đủ dữ liệu, không phải bão fail) — KHÔNG dùng _GIVE_UP_NUDGE.
+    assert _count_nudge(adapter.calls[-1], _FORCE_ANSWER_NUDGE) == 1
+    assert _count_nudge(adapter.calls[-1], _GIVE_UP_NUDGE) == 0
+
+
+async def test_transient_tool_fail_does_not_trip_breaker():
+    # KHÔNG kích hoạt oan: fail 1 vòng rồi THÀNH CÔNG vòng sau, usage nhỏ → chạy đường bình thường,
+    # _GIVE_UP_NUDGE KHÔNG xuất hiện.
+    from app.agent.loop import _GIVE_UP_NUDGE
+    call_a = ToolCall(id="a", name="db_find",
+                      arguments={"collection": "stock_snapshot", "filter": {"ticker": "AAA"}, "projection": {"close": 1}})
+    call_b = ToolCall(id="b", name="db_find",
+                      arguments={"collection": "stock_snapshot", "filter": {"ticker": "FPT"}, "projection": {"close": 1}})
+    adapter = ScriptedAdapter(
+        [
+            [ToolCallsEvent(calls=[call_a])],                                          # vòng 1: fail (n=1)
+            [ToolCallsEvent(calls=[call_b])],                                          # vòng 2: ok (n=2) → reset
+            [TokenEvent(text="Định giá HPG đang ở vùng hợp lý."), DoneEvent(usage={"in": 5, "out": 5})],
+        ]
+    )
+
+    emitted: list[tuple[str, dict[str, Any]]] = []
+
+    async def emit(event_type: str, payload: dict[str, Any]) -> None:
+        emitted.append((event_type, payload))
+
+    await run_agent(
+        adapter=adapter, gateway=_FailThenOkGateway(), ctx=CTX, system=SYSTEM,
+        messages=[{"role": "user", "content": "định giá HPG"}], emit=emit,
+    )
+    answer = "".join(e[1]["text"] for e in emitted if e[0] == "token")
+    assert "Định giá HPG đang ở vùng hợp lý." in answer
+    assert emitted[-1][0] == "done"
+    assert all(e[0] != "error" for e in emitted)
+    assert len(adapter.calls) == 3  # tool-fail + tool-ok + final, KHÔNG ép sớm
+    assert _count_nudge(adapter.calls[-1], _GIVE_UP_NUDGE) == 0  # cầu dao không kích hoạt oan
+
+
+# ── _needs_retry: cắt 2 dạng câu hỏng đã lọt tới khách (độc thoại kế hoạch + câu cụt hai chấm) ─────
+
+
+def test_needs_retry_plan_monologue_leaked_as_answer():
+    # Ca 1 (eval hôm nay, Q2 nguyên văn): model nghĩ thành lời, 0 tool → khách đọc cả tên nội bộ.
+    from app.agent.loop import _needs_retry
+    q2 = (
+        "User đang hỏi về rủi ro của rổ Mạo Hiểm (AGGRESSIVE) — tab đang mở. Cần đọc AGGRESSIVE + "
+        "market_phase + phase_trading (sổ lệnh rổ) để đánh giá rủi ro thật."
+    )
+    assert _needs_retry(q2) is True
+
+
+def test_needs_retry_plan_monologue_short_variant():
+    from app.agent.loop import _needs_retry
+    assert _needs_retry("Khách đang hỏi về HPG. Cần lấy dữ liệu.") is True
+
+
+def test_needs_retry_colon_cut_headline():
+    # Ca 2 (eval 2026-07-20 lượt 9, nguyên văn TOÀN BỘ câu trả lời): tiêu đề hứa danh sách rồi hết.
+    from app.agent.loop import _needs_retry
+    cut = "Top cổ phiếu có điểm dòng tiền ngày cao nhất (đã lọc thanh khoản tối thiểu):"
+    assert _needs_retry(cut) is True
+
+
+def test_needs_retry_short_valid_answer_not_flagged():
+    # Câu THẬT ngắn hợp lệ (không mở đầu 'User hỏi', không kết thúc ':') → KHÔNG retry.
+    from app.agent.loop import _needs_retry
+    assert _needs_retry("VNINDEX hôm nay tăng nhẹ, thanh khoản cải thiện.") is False
+
+
+def test_needs_retry_long_answer_with_midcolon_not_flagged():
+    # Câu THẬT dài có dấu hai chấm GIỮA CHỪNG (>300 ký tự, kết thúc bằng dấu chấm) → KHÔNG retry.
+    from app.agent.loop import _needs_retry
+    long_ans = (
+        "Ba điểm đáng chú ý: thứ nhất, thanh khoản toàn thị trường cải thiện rõ rệt so với tuần trước "
+        "khi dòng tiền quay lại nhóm ngân hàng và chứng khoán. Thứ hai, khối ngoại mua ròng nhẹ ở một số "
+        "mã vốn hoá lớn, cho thấy tâm lý nhà đầu tư ổn định hơn. Thứ ba, nhóm bất động sản vẫn phân hoá "
+        "mạnh, nhà đầu tư nên chọn lọc kỹ thay vì mua dàn trải."
+    )
+    assert len(long_ans) > 300
+    assert _needs_retry(long_ans) is False
+
+
+def test_needs_retry_user_mention_midsentence_not_flagged():
+    # Câu THẬT nhắc tới người dùng ở GIỮA bài nhưng mở đầu bằng nội dung thật → KHÔNG retry.
+    from app.agent.loop import _needs_retry
+    ans = (
+        "Chiến lược tích luỹ cổ phiếu cơ bản tốt sẽ phù hợp khi người dùng đang hỏi về mục tiêu dài hạn "
+        "và chấp nhận biến động ngắn hạn."
+    )
+    assert _needs_retry(ans) is False
