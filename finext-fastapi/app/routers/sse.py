@@ -13,6 +13,7 @@ import asyncio
 import logging
 import json
 import math
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, Optional, Set
@@ -32,6 +33,17 @@ SSE_POLL_INTERVAL = 3.0          # giây giữa các lần poll DB
 SSE_SUBSCRIBER_QUEUE_SIZE = 8    # buffer cho mỗi subscriber, slow consumer sẽ bị drop
 SSE_CLIENT_TIMEOUT = 10.0        # giây giữa các lần check disconnect
 SSE_ERROR_BACKOFF = 5.0          # giây nghỉ khi query lỗi
+
+# --- Hardening: chống bùng nổ tải (DoS) ---
+# SSE để public (dữ liệu thị trường ai cũng xem) nhưng phải chịu tải an toàn.
+# Mỗi cặp (keyword, ticker) sinh 1 background poller poll Mongo mỗi 3s → phải chặn
+# kẻ xấu mở N kết nối ticker tuỳ ý làm bùng nổ poller đập Mongo standalone + phình RAM.
+MAX_POLLERS = 200                # trần tổng số poller đồng thời (mỗi entry = 1 poller)
+MAX_SUBSCRIBERS_PER_ENTRY = 1000 # trần subscriber cho 1 ticker "nóng" → bound RAM
+MAX_TICKER_LENGTH = 64           # độ dài tối đa của tham số ticker (kể cả comma list)
+MAX_TICKER_TOKENS = 30           # số mã tối đa trong 1 comma-separated ticker
+# Ticker hợp lệ = chữ + số (mã CK/chỉ số/ngành VN), độ dài mỗi mã tối đa 20.
+_TICKER_TOKEN_RE = re.compile(r"^[A-Za-z0-9]{1,20}$")
 
 
 # --- Helper để chuyển đổi BSON sang JSON ---
@@ -85,6 +97,25 @@ def _cache_key(keyword: str, ticker: Optional[str]) -> str:
     return f"{keyword}|{ticker or ''}"
 
 
+def _validate_ticker(ticker: Optional[str]) -> None:
+    """
+    Validate FORMAT của ticker (không round-trip DB).
+    None/rỗng hợp lệ (nhiều keyword không cần ticker). Hỗ trợ comma-separated list.
+    Ticker sai format → HTTPException 400, KHÔNG tạo poller.
+    """
+    if not ticker:
+        return
+    if len(ticker) > MAX_TICKER_LENGTH:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ticker không hợp lệ")
+    tokens = [t.strip() for t in ticker.split(",")]
+    non_empty = [t for t in tokens if t]
+    if not non_empty or len(non_empty) > MAX_TICKER_TOKENS:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ticker không hợp lệ")
+    for tok in non_empty:
+        if not _TICKER_TOKEN_RE.match(tok):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ticker không hợp lệ")
+
+
 async def _poller(cache_key: str, keyword: str, ticker: Optional[str]):
     """Background task: poll DB và broadcast tới mọi subscriber của 1 cache entry."""
     logger.info(f"SSE poller started: {cache_key}")
@@ -120,7 +151,8 @@ async def _poller(cache_key: str, keyword: str, ticker: Optional[str]):
                 break
             except Exception as e:
                 logger.error(f"SSE poller query error ({cache_key}): {e}", exc_info=True)
-                err_payload = f"data: {json.dumps({'error': f'Database query failed: {str(e)}', 'type': 'query_error'})}\n\n"
+                # KHÔNG lộ chi tiết exception ra client — chỉ log nội bộ.
+                err_payload = f"data: {json.dumps({'error': 'Database query failed', 'type': 'query_error'})}\n\n"
                 for q in list(entry.subscribers):
                     try:
                         q.put_nowait(err_payload)
@@ -150,8 +182,23 @@ async def _subscribe(keyword: str, ticker: Optional[str]) -> tuple[str, asyncio.
     async with _cache_lock:
         entry = _cache.get(key)
         if entry is None:
+            # Tạo entry mới = tạo poller mới → chặn nếu đã chạm trần tổng poller.
+            if len(_cache) >= MAX_POLLERS:
+                logger.warning(f"SSE poller cap reached ({MAX_POLLERS}), rejecting: {key}")
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Hệ thống dữ liệu realtime đang quá tải, vui lòng thử lại sau.",
+                )
             entry = _CacheEntry()
             _cache[key] = entry
+
+        # Chặn 1 ticker "nóng" ngốn RAM vô hạn — không thêm subscriber khi vượt trần.
+        if len(entry.subscribers) >= MAX_SUBSCRIBERS_PER_ENTRY:
+            logger.warning(f"SSE subscriber cap reached ({MAX_SUBSCRIBERS_PER_ENTRY}), rejecting: {key}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Hệ thống dữ liệu realtime đang quá tải, vui lòng thử lại sau.",
+            )
 
         entry.subscribers.add(queue)
 
@@ -170,23 +217,28 @@ async def _subscribe(keyword: str, ticker: Optional[str]) -> tuple[str, asyncio.
 
 
 async def _unsubscribe(cache_key: str, queue: asyncio.Queue):
-    """Huỷ subscriber. Nếu không còn subscriber nào, cancel poller."""
+    """Huỷ subscriber. Nếu không còn subscriber nào, cancel poller + dọn entry."""
     async with _cache_lock:
         entry = _cache.get(cache_key)
         if entry is None:
             return
         entry.subscribers.discard(queue)
-        if not entry.subscribers and entry.task and not entry.task.done():
-            entry.task.cancel()
+        if not entry.subscribers:
+            if entry.task and not entry.task.done():
+                entry.task.cancel()
+            # Dọn entry ngay để giải phóng slot poller — không phụ thuộc hoàn toàn vào
+            # finally của poller (poller có thể bị cancel trước khi kịp chạy finally → rò slot).
+            _cache.pop(cache_key, None)
 
 
 # --- SSE Event Generator (per-client) ---
-async def sse_event_generator(request: Request, keyword: str, ticker: Optional[str] = None):
+async def sse_event_generator(request: Request, cache_key: str, queue: asyncio.Queue):
     """
-    Per-client generator: subscribe vào shared cache, yield payload từ queue.
+    Per-client generator: yield payload từ queue đã subscribe sẵn.
+    Subscribe (kèm validate + cap) được thực hiện ở endpoint TRƯỚC khi stream mở,
+    để lỗi 400/503 trở thành HTTP response thật thay vì lỗi giữa dòng stream.
     DB không được poll trực tiếp ở đây — poller chung lo phần đó.
     """
-    cache_key, queue = await _subscribe(keyword, ticker)
     logger.info(f"SSE client subscribed: {cache_key}")
 
     try:
@@ -204,8 +256,9 @@ async def sse_event_generator(request: Request, keyword: str, ticker: Optional[s
         logger.info(f"SSE client cancelled: {cache_key}")
     except Exception as e:
         logger.error(f"SSE client error ({cache_key}): {e}", exc_info=True)
+        # KHÔNG lộ chi tiết exception ra client — chỉ log nội bộ.
         try:
-            yield f"data: {json.dumps({'error': str(e), 'type': 'stream_error'})}\n\n"
+            yield f"data: {json.dumps({'error': 'Stream error', 'type': 'stream_error'})}\n\n"
         except Exception:
             pass
     finally:
@@ -236,10 +289,17 @@ async def sse_stream_endpoint(
             status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid keyword '{keyword}'. Available: {', '.join(available_keywords)}"
         )
 
+    # Validate ticker FORMAT trước → ticker sai KHÔNG tạo poller (trả 400).
+    _validate_ticker(ticker)
+
     logger.info(f"Client connecting to SSE stream - keyword: {keyword}, ticker: {ticker}")
 
+    # Subscribe TRƯỚC khi mở stream: cap poller/subscriber sẽ trả 503 như HTTP response
+    # thật (thay vì lỗi giữa dòng stream nếu subscribe nằm trong generator).
+    cache_key, queue = await _subscribe(keyword, ticker)
+
     return StreamingResponse(
-        sse_event_generator(request, keyword, ticker),
+        sse_event_generator(request, cache_key, queue),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -343,6 +403,10 @@ async def rest_query_endpoint(
         return JSONResponse(
             content=StandardApiResponse(status=200, message="Truy vấn dữ liệu thành công", data=serialized_data).model_dump()
         )
+    except HTTPException:
+        # Lỗi validate đã có status/detail rõ ràng (VD: projection JSON sai) — giữ nguyên.
+        raise
     except Exception as e:
         logger.error(f"REST query error (keyword: {keyword}): {e}", exc_info=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Query failed: {str(e)}")
+        # KHÔNG lộ chi tiết exception ra client — chỉ log nội bộ.
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Đã xảy ra lỗi khi truy vấn dữ liệu.")
