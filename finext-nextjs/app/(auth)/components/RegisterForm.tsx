@@ -13,6 +13,7 @@ import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
 import Link from '@mui/material/Link';
+import NextLink from 'next/link';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
@@ -654,7 +655,7 @@ export default function RegisterForm() {
                 )}
 
                 <Typography variant="body2" sx={{ display: 'block', textAlign: 'center', mt: 2 }}>
-                    Đã có tài khoản? <Link href="/login" tabIndex={-1}>Đăng nhập</Link>
+                    Đã có tài khoản? <Link component={NextLink} href="/login" tabIndex={-1}>Đăng nhập</Link>
                 </Typography>
             </Box>
             )}

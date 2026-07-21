@@ -1,13 +1,12 @@
 "use client";
 
 import React from "react";
-import { Box, Typography } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
-import { Icon } from '@iconify/react';
+import { Box } from "@mui/material";
+import { useTheme, alpha } from "@mui/material/styles";
 import Gallery, { Slide } from "./components/Gallery";
 import ThemeToggleButton from "@/components/themeToggle/ThemeToggleButton";
 import PwaTitleBar from "@/components/layout/PwaTitleBar";
-import { layoutTokens, zIndex, borderRadius, fontWeight, getResponsiveFontSize } from "theme/tokens";
+import { layoutTokens, zIndex, borderRadius, easings } from "theme/tokens";
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -36,7 +35,13 @@ const gallerySlides: Slide[] = [
 
 // ── Shared slide frame: fixed height, transparent bg, items rendered directly ──
 const SLIDE_HEIGHT = layoutTokens.authGalleryHeight; // 320px — same for all slides
+const CHART_H = SLIDE_HEIGHT; // chiều cao render — đồ hoạ chiếm trọn khung
+const VB_H = 220;             // chiều cao hệ toạ độ viewBox, kéo giãn để lấp CHART_H
 
+const accentOf = (isDark: boolean) => (isDark ? '#8C5AFF' : '#6B46C1');
+
+// Cả ba slide là ẩn dụ thị giác thuần tuý: không tên mã, không giá trị, không %.
+// Chữ nghĩa mô tả tính năng đã do overline/headline/description trong Gallery đảm nhiệm.
 function SlideFrame({ children }: { children: React.ReactNode }) {
   return (
     <Box sx={{
@@ -51,186 +56,243 @@ function SlideFrame({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ── Slide 1 Visual: Market Analysis Feature Cards ──
-const featureCards = [
-  { icon: 'fluent-color:poll-16', label: 'Biến động' },
-  { icon: 'fluent-color:data-area-20', label: 'Dòng tiền' },
-  { icon: 'fluent-color:book-star-24', label: 'Định giá' },
-  { icon: 'fluent-color:arrow-trending-lines-24', label: 'Phân tích KT' },
+// ── Slide 1 Visual: đường biểu đồ minh hoạ, tự vẽ khi slide xuất hiện ──
+// KHÔNG gắn với chỉ số hay mã nào có thật — thuần hình khối, không nhãn, không giá trị.
+// Toạ độ tĩnh, không sinh ngẫu nhiên → SSR và client luôn khớp.
+// Có nhịp lên xuống để đường cong trông tự nhiên, không phải zigzag đều tăm tắp.
+const INDEX_POINTS: ReadonlyArray<readonly [number, number]> = [
+  [0, 172], [25, 168], [50, 175], [74, 163], [99, 157], [124, 166],
+  [149, 152], [174, 145], [198, 151], [223, 138], [248, 131], [273, 142],
+  [298, 127], [322, 117], [347, 125], [372, 109], [397, 102], [422, 113],
+  [446, 98], [471, 87], [496, 96], [521, 77], [546, 65], [570, 73],
+  [595, 51], [620, 38],
 ];
+
+/**
+ * Nội suy Catmull-Rom thành chuỗi cubic bezier — cho đường cong mượt đi qua
+ * đúng mọi điểm dữ liệu, thay vì gấp khúc như polyline.
+ */
+function toSmoothPath(points: ReadonlyArray<readonly [number, number]>): string {
+  if (points.length < 2) return '';
+  const TENSION = 0.18;
+  let d = `M${points[0][0]},${points[0][1]}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const prev = points[i - 1] ?? points[i];
+    const curr = points[i];
+    const next = points[i + 1];
+    const after = points[i + 2] ?? next;
+    const c1x = curr[0] + (next[0] - prev[0]) * TENSION;
+    const c1y = curr[1] + (next[1] - prev[1]) * TENSION;
+    const c2x = next[0] - (after[0] - curr[0]) * TENSION;
+    const c2y = next[1] - (after[1] - curr[1]) * TENSION;
+    d += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${next[0]},${next[1]}`;
+  }
+  return d;
+}
+
+const INDEX_LINE_PATH = toSmoothPath(INDEX_POINTS);
+const INDEX_LAST = INDEX_POINTS[INDEX_POINTS.length - 1];
+// Kéo phần tô phẳng tới mép phải viewBox để không hở một rẻo ở góc trên phải.
+const INDEX_AREA_PATH = `${INDEX_LINE_PATH} L628,${INDEX_LAST[1]} L628,${VB_H} L0,${VB_H} Z`;
+
+// Dải biên độ bao quanh đường — gợi ý "có lớp phân tích" mà không cần nhãn hay số.
+const BAND_OFFSET = (i: number) => 11 + (i % 5) * 2.5;
+const BAND_PATH = (() => {
+  const upper = INDEX_POINTS.map(([x, y], i) => [x, y - BAND_OFFSET(i)] as const);
+  const lower = INDEX_POINTS.map(([x, y], i) => [x, y + BAND_OFFSET(i)] as const);
+  // slice(1) bỏ chữ 'M' của path dưới để nối tiếp thành một vùng khép kín
+  return `${toSmoothPath(upper)} L${toSmoothPath([...lower].reverse()).slice(1)} Z`;
+})();
 
 function MarketVisual() {
+  const theme = useTheme();
+  const accent = accentOf(theme.palette.mode === 'dark');
+  const gridColor = theme.palette.mode === 'dark'
+    ? 'rgba(180,169,206,0.14)'
+    : 'rgba(60,45,100,0.14)';
+
   return (
     <SlideFrame>
-      <Box sx={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(2, 1fr)',
-        gap: 1.5,
-      }}>
-        {featureCards.map((card) => (
-          <Box
-            key={card.label}
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 1,
-              py: 2.5,
-              px: 1.5,
-              height: '150px',
-              borderRadius: `${borderRadius.md}px`,
-              background: 'linear-gradient(135deg, rgba(139,92,246,0.25), rgba(59,130,246,0.2))',
-              border: '1px solid rgba(255,255,255,0.08)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-            }}
-          >
-            <Icon icon={card.icon} width={50} height={50} />
-            <Typography sx={(theme) => ({
-              fontSize: getResponsiveFontSize('sm'),
-              fontWeight: fontWeight.semibold,
-              color: theme.palette.text.primary,
-              textAlign: 'center',
-            })}>
-              {card.label}
-            </Typography>
-          </Box>
-        ))}
+      <Box
+        sx={{
+          height: CHART_H,
+          '@keyframes drawLine': { to: { strokeDashoffset: 0 } },
+          '@keyframes bandIn': { from: { opacity: 0 }, to: { opacity: 1 } },
+          '& .fx-band': {
+            animation: `bandIn 900ms ${easings.easeOutQuart} 500ms both`,
+          },
+          '@keyframes pulseDot': {
+            '0%, 100%': { opacity: 1, r: 4 },
+            '50%': { opacity: 0.5, r: 6.5 },
+          },
+          '& .fx-line': {
+            strokeDasharray: 1400,
+            strokeDashoffset: 1400,
+            animation: `drawLine 1500ms ${easings.easeOutQuart} forwards`,
+          },
+          '& .fx-dot': { animation: 'pulseDot 2400ms ease-in-out infinite' },
+          '@media (prefers-reduced-motion: reduce)': {
+            '& .fx-line': { animation: 'none', strokeDashoffset: 0 },
+            '& .fx-dot': { animation: 'none' },
+            '& .fx-band': { animation: 'none' },
+          },
+        }}
+      >
+        <svg
+          width="100%"
+          height="100%"
+          viewBox={`0 -8 628 ${VB_H + 8}`}
+          preserveAspectRatio="none"
+          role="img"
+          aria-label="Đồ hoạ minh hoạ biểu đồ phân tích kỹ thuật"
+        >
+          <defs>
+            <linearGradient id="finextIndexFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={accent} stopOpacity="0.28" />
+              <stop offset="100%" stopColor={accent} stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {[55, 110, 165].map((y) => (
+            <line
+              key={y}
+              x1="0"
+              y1={y}
+              x2="628"
+              y2={y}
+              stroke={gridColor}
+              strokeWidth="1"
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+          <path d={INDEX_AREA_PATH} fill="url(#finextIndexFill)" />
+          <path className="fx-band" d={BAND_PATH} fill={accent} fillOpacity="0.13" />
+          <path
+            className="fx-line"
+            d={INDEX_LINE_PATH}
+            fill="none"
+            stroke={accent}
+            strokeWidth="2"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+          <circle className="fx-dot" cx={INDEX_LAST[0]} cy={INDEX_LAST[1]} r="4" fill={accent} />
+        </svg>
       </Box>
     </SlideFrame>
   );
 }
 
-// ── Slide 2 Visual: Stock Screening Stats ──
-const statCards = [
-  { value: '1,600+', label: 'Mã cổ phiếu', icon: 'mdi:chart-box-outline' },
-  { value: '50+', label: 'Chỉ báo phân tích', icon: 'mdi:filter-variant' },
-  { value: 'Realtime', label: 'Cập nhật liên tục', icon: 'mdi:lightning-bolt-outline' },
-];
+// ── Slide 2 Visual: toàn sàn thu hẹp còn nhóm đạt điều kiện ──
+const DOT_COLS = 44;
+const DOT_ROWS = 13;
+// Vị trí cố định, rải đều trong lưới — không random để SSR khớp client.
+const SURVIVORS = new Set([84, 137, 203, 259, 318, 372, 431, 486, 540]);
 
 function StockScreeningVisual() {
+  const theme = useTheme();
+  const accent = accentOf(theme.palette.mode === 'dark');
+  const gapX = 620 / DOT_COLS;
+  const gapY = CHART_H / DOT_ROWS;
+
+  const dots = [];
+  for (let i = 0; i < DOT_COLS * DOT_ROWS; i++) {
+    const col = i % DOT_COLS;
+    const row = Math.floor(i / DOT_COLS);
+    const survives = SURVIVORS.has(i);
+    dots.push(
+      <circle
+        key={i}
+        cx={(col * gapX + gapX / 2).toFixed(1)}
+        cy={(row * gapY + gapY / 2).toFixed(1)}
+        r={survives ? 4 : 1.6}
+        fill={survives ? accent : theme.palette.text.disabled}
+        opacity={survives ? 1 : 0.22}
+        className={survives ? 'fx-keep' : undefined}
+        style={survives ? { animationDelay: `${(i % 9) * 180}ms` } : undefined}
+      />
+    );
+  }
+
   return (
     <SlideFrame>
-
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {statCards.map((stat) => (
-          <Box
-            key={stat.label}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              py: 1.75,
-              px: 2,
-              height: '95px',
-              borderRadius: `${borderRadius.md}px`,
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-            }}
-          >
-            <Box sx={{
-              width: 40,
-              height: 40,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #7c3aed, #3b82f6)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}>
-              <Icon icon={stat.icon} width={20} height={20} color="#fff" />
-            </Box>
-            <Box>
-              <Typography sx={(theme) => ({
-                fontSize: getResponsiveFontSize('lg'),
-                fontWeight: fontWeight.bold,
-                color: theme.palette.text.primary,
-                lineHeight: 1.2,
-              })}>
-                {stat.value}
-              </Typography>
-              <Typography sx={(theme) => ({
-                fontSize: getResponsiveFontSize('xs'),
-                color: theme.palette.text.secondary,
-              })}>
-                {stat.label}
-              </Typography>
-            </Box>
-          </Box>
-        ))}
+      <Box
+        sx={{
+          height: CHART_H,
+          '@keyframes keepPulse': {
+            '0%, 100%': { opacity: 1, r: 4 },
+            '50%': { opacity: 0.55, r: 6 },
+          },
+          '& .fx-keep': { animation: 'keepPulse 2600ms ease-in-out infinite' },
+          '@media (prefers-reduced-motion: reduce)': {
+            '& .fx-keep': { animation: 'none' },
+          },
+        }}
+      >
+        <svg
+          width="100%"
+          height={CHART_H}
+          viewBox={`0 0 620 ${CHART_H}`}
+          preserveAspectRatio="xMidYMid meet"
+          role="img"
+          aria-label="Đồ hoạ minh hoạ việc lọc từ số lượng lớn xuống nhóm nhỏ"
+        >
+          {dots}
+        </svg>
       </Box>
     </SlideFrame>
   );
 }
 
-// ── Slide 3 Visual: Industry Sectors ──
-const sectorItems = [
-  { name: 'Ngân hàng', ticker: 'NGANHANG', change: '+1.8%', up: true },
-  { name: 'Bất động sản', ticker: 'BDS', change: '-0.6%', up: false },
-  { name: 'Công nghệ', ticker: 'CONGNGHE', change: '+2.4%', up: true },
-  { name: 'Chứng khoán', ticker: 'CHUNGKHOAN', change: '+1.2%', up: true },
+// ── Slide 3 Visual: khảm ô kiểu bản đồ thị trường ──
+// Không tên ngành, không %, chỉ khác kích thước và sắc độ — thuần hình khối,
+// không ngụ ý bất kỳ ngành nào đang tăng hay giảm.
+// span: bề ngang ô (tổng mỗi hàng = 13) · tone: 1 tăng, -1 giảm · level: sắc độ 0..1
+const mosaicTiles = [
+  { id: 'a', span: 5, tone: 1, level: 0.75 },
+  { id: 'b', span: 4, tone: -1, level: 0.30 },
+  { id: 'c', span: 4, tone: 1, level: 1.00 },
+  { id: 'd', span: 3, tone: 1, level: 0.52 },
+  { id: 'e', span: 3, tone: 1, level: 0.34 },
+  { id: 'f', span: 3, tone: -1, level: 0.18 },
+  { id: 'g', span: 4, tone: 1, level: 0.44 },
 ];
 
 function SectorVisual() {
   return (
     <SlideFrame>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-        {sectorItems.map((sector) => (
+      <Box
+        role="img"
+        aria-label="Đồ hoạ minh hoạ bản đồ nhóm ngành"
+        sx={{
+          height: CHART_H,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(13, 1fr)',
+          gridAutoRows: '1fr',
+          gap: 1,
+          '@keyframes tileRise': {
+            from: { opacity: 0, transform: 'translateY(12px)' },
+            to: { opacity: 1, transform: 'none' },
+          },
+          '@media (prefers-reduced-motion: reduce)': {
+            '& > *': { animation: 'none !important', opacity: 1 },
+          },
+        }}
+      >
+        {mosaicTiles.map((tile, i) => (
           <Box
-            key={sector.ticker}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              py: 1.5,
-              px: 2,
-              height: '70px',
+            key={tile.id}
+            sx={(theme) => ({
+              gridColumn: `span ${tile.span}`,
               borderRadius: `${borderRadius.md}px`,
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Box sx={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                flexShrink: 0,
-                background: sector.up ? '#25b770' : '#e14040',
-                boxShadow: sector.up
-                  ? '0 0 8px rgba(37,183,112,0.5)'
-                  : '0 0 8px rgba(225,64,64,0.5)',
-              }} />
-              <Box>
-                <Typography sx={(theme) => ({
-                  fontSize: getResponsiveFontSize('sm'),
-                  fontWeight: fontWeight.semibold,
-                  color: theme.palette.text.primary,
-                  lineHeight: 1.3,
-                })}>
-                  {sector.name}
-                </Typography>
-                <Typography sx={(theme) => ({
-                  fontSize: getResponsiveFontSize('xxs'),
-                  color: theme.palette.text.disabled,
-                })}>
-                  {sector.ticker}
-                </Typography>
-              </Box>
-            </Box>
-            <Typography sx={{
-              fontSize: getResponsiveFontSize('sm'),
-              fontWeight: fontWeight.bold,
-              color: sector.up ? '#25b770' : '#e14040',
-            }}>
-              {sector.change}
-            </Typography>
-          </Box>
+              backgroundColor: alpha(
+                tile.tone > 0 ? theme.palette.trend.up : theme.palette.trend.down,
+                0.12 + tile.level * 0.30,
+              ),
+              opacity: 0,
+              animation: `tileRise 600ms ${easings.easeOutQuart} ${i * 70}ms forwards`,
+            })}
+          />
         ))}
       </Box>
     </SlideFrame>

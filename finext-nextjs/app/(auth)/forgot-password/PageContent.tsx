@@ -12,6 +12,7 @@ import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Link from '@mui/material/Link';
+import NextLink from 'next/link';
 import IconButton from '@mui/material/IconButton';
 import Visibility from '@mui/icons-material/VisibilityOutlined';
 import VisibilityOff from '@mui/icons-material/VisibilityOffOutlined';
@@ -368,7 +369,7 @@ export default function PageContent() {
                         </Button>
 
                         <Typography variant="body2" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
-                            Nhớ mật khẩu? <Link href="/login" tabIndex={-1}>Đăng nhập</Link>
+                            Nhớ mật khẩu? <Link component={NextLink} href="/login" tabIndex={-1}>Đăng nhập</Link>
                         </Typography>
                     </Box>
                 )}

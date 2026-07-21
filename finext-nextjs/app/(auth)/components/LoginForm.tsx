@@ -14,6 +14,7 @@ import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
 import Link from '@mui/material/Link';
+import NextLink from 'next/link';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
@@ -579,7 +580,7 @@ function SignInFormContent() {
                     sx={{ mt: 0.5, mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                 >
                     <FormControlLabel control={<Checkbox size="small" tabIndex={-1} disabled={showVerifyPanel} />} label="Duy trì đăng nhập" />
-                    <Link href="/forgot-password" underline="hover" tabIndex={-1} sx={{ fontSize: getResponsiveFontSize('sm'), mt: 0.6, pointerEvents: showVerifyPanel ? 'none' : 'auto', opacity: showVerifyPanel ? 0.5 : 1 }}>
+                    <Link component={NextLink} href="/forgot-password" underline="hover" tabIndex={-1} sx={{ fontSize: getResponsiveFontSize('sm'), mt: 0.6, pointerEvents: showVerifyPanel ? 'none' : 'auto', opacity: showVerifyPanel ? 0.5 : 1 }}>
                         Quên mật khẩu?
                     </Link>
                 </Box>
@@ -618,7 +619,7 @@ function SignInFormContent() {
                 )}
 
                 <Typography variant="body2" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
-                    Bạn chưa có tài khoản? <Link href="/register" tabIndex={-1}>Đăng ký</Link>
+                    Bạn chưa có tài khoản? <Link component={NextLink} href="/register" tabIndex={-1}>Đăng ký</Link>
                 </Typography>
             </Box>
         </Box>

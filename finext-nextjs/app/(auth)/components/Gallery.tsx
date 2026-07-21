@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Typography } from '@mui/material';
-import { layoutTokens, shadows, durations, easings, fontWeight } from 'theme/tokens';
+import { layoutTokens, durations, easings, fontWeight, borderRadius } from 'theme/tokens';
 
 export interface Slide {
     overline: string;
@@ -22,63 +22,70 @@ export default function Gallery({
     autoPlayInterval = 5000
 }: GalleryProps) {
     const [currentSlide, setCurrentSlide] = useState(0);
-    const [animationStyle, setAnimationStyle] = useState({
-        opacity: 1,
-        transform: 'translateX(0px)',
-    });
 
-    const triggerSlideChange = useCallback((nextIndex: number) => {
-        if (nextIndex === currentSlide) return;
-
-        // Bắt đầu hiệu ứng trượt ra (biến mất sang trái)
-        setAnimationStyle({
-            opacity: 0,
-            transform: 'translateX(-40px)',
-        });
-
-        // Đợi hiệu ứng kết thúc rồi mới đổi nội dung
-        setTimeout(() => {
-            setCurrentSlide(nextIndex);
-            // Đặt sẵn nội dung mới ở bên phải (vẫn đang ẩn)
-            setAnimationStyle({
-                opacity: 0,
-                transform: 'translateX(40px)',
-            });
-
-            // Dùng một timeout nhỏ để đảm bảo trình duyệt đã render xong trạng thái trên
-            setTimeout(() => {
-                // Bắt đầu hiệu ứng trượt vào (xuất hiện từ phải sang)
-                setAnimationStyle({
-                    opacity: 1,
-                    transform: 'translateX(0px)',
-                });
-            }, 20);
-        }, 400); // khớp với transition duration
-    }, [currentSlide]);
-
+    // Một timer duy nhất, dọn sạch mỗi lần đổi slide và khi unmount.
+    // Bấm dot làm effect chạy lại → timer được reset, không thể desync.
     useEffect(() => {
-        const timer = setInterval(() => {
-            const nextIndex = (currentSlide + 1) % slides.length;
-            triggerSlideChange(nextIndex);
+        const timer = setTimeout(() => {
+            setCurrentSlide((c) => (c + 1) % slides.length);
         }, autoPlayInterval);
-        return () => clearInterval(timer);
-    }, [currentSlide, triggerSlideChange, slides.length, autoPlayInterval]);
+        return () => clearTimeout(timer);
+    }, [currentSlide, slides.length, autoPlayInterval]);
+
+    const goToSlide = useCallback((index: number) => {
+        setCurrentSlide(index);
+    }, []);
 
     const slide = slides[currentSlide];
     const currentVisual = chartComponents?.[currentSlide];
 
     return (
-        <Box sx={{ maxWidth: layoutTokens.authGalleryMaxWidth, position: 'relative' }}>
+        <Box
+            sx={(theme) => {
+                const isDark = theme.palette.mode === 'dark';
+                return {
+                    maxWidth: layoutTokens.authGalleryMaxWidth,
+                    position: 'relative',
+                    p: 4,
+                    borderRadius: `${borderRadius.lg}px`,
+                    // Dark: panel TỐI hơn nền để cắt quầng aurora phía sau — phủ sáng lên
+                    // vùng vốn đã rực thì không tạo ra tách bạch nào.
+                    // Light: panel sáng hơn nền, theo đúng logic ngược lại.
+                    backgroundColor: isDark
+                        ? 'rgba(11,7,24,0.58)'
+                        : 'rgba(255,255,255,0.50)',
+                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.14)' : 'rgba(60,45,100,0.10)'}`,
+                    boxShadow: isDark
+                        // viền sáng mảnh ở cạnh trên cho cảm giác nổi khối
+                        ? 'inset 0 1px 0 rgba(255,255,255,0.07), 0 28px 70px -24px rgba(0,0,0,0.75)'
+                        : '0 24px 60px -28px rgba(60,45,120,0.35)',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                };
+            }}
+        >
+            {/* key={currentSlide} remount nội dung → animation vẽ lại từ đầu mỗi slide */}
             <Box
+                key={currentSlide}
                 sx={{
-                    transition: `opacity ${durations.slower} ${easings.easeInOut}, transform ${durations.slower} ${easings.easeInOut}`,
-                    ...animationStyle,
+                    '@keyframes slideEnter': {
+                        from: { opacity: 0, transform: 'translateY(10px)' },
+                        to: { opacity: 1, transform: 'none' },
+                    },
+                    animation: `slideEnter ${durations.slower} ${easings.easeOutQuart} both`,
+                    '@media (prefers-reduced-motion: reduce)': {
+                        animation: 'none',
+                    },
                 }}
             >
-                <Box sx={{ ml: 1 }}>
+                <Box>
                     <Typography
                         variant="overline"
-                        sx={{ fontWeight: 'bold', opacity: 0.7 }}
+                        sx={(theme) => ({
+                            fontWeight: fontWeight.semibold,
+                            letterSpacing: '0.16em',
+                            color: theme.palette.mode === 'dark' ? '#8C5AFF' : '#6B46C1',
+                        })}
                     >
                         {slide.overline}
                     </Typography>
@@ -86,95 +93,87 @@ export default function Gallery({
                         variant="h1"
                         sx={(theme) => ({
                             mb: 1,
-                            background: theme.palette.mode === 'dark'
-                                ? 'linear-gradient(135deg, #FFFFFF 0%, #E0E7FF 25%, #C4B5FD 50%, #A78BFA 75%, #8B5CF6 100%)'
-                                : 'linear-gradient(135deg, #1F2937 0%, #4C1D95 25%, #6B46C1 50%, #7C3AED 75%, #8B5CF6 100%)',
-                            backgroundClip: 'text',
-                            WebkitBackgroundClip: 'text',
-                            color: 'transparent',
-                            WebkitTextFillColor: 'transparent',
+                            color: theme.palette.text.primary,
                             fontWeight: fontWeight.bold,
-                            letterSpacing: '-0.02em',
-                            textShadow: theme.palette.mode === 'dark'
-                                ? '0 2px 8px rgba(139, 92, 246, 0.3)'
-                                : '0 2px 8px rgba(107, 70, 193, 0.2)',
+                            letterSpacing: '-0.025em',
+                            textWrap: 'balance',
                         })}
                     >
                         {slide.headline}
                     </Typography>
-                    <Typography variant="body2" sx={{ minHeight: '3.75rem', mb: -1 }}>
+                    <Typography
+                        variant="body2"
+                        sx={(theme) => ({
+                            minHeight: '3.75rem',
+                            mb: 1,
+                            color: theme.palette.text.secondary,
+                            // Trải hết bề ngang panel và căn đều hai biên như Word.
+                            // Dòng cuối vẫn tự căn trái — đúng hành vi chuẩn của justify.
+                            textAlign: 'justify',
+                        })}
+                    >
                         {slide.description}
                     </Typography>
                 </Box>
 
-                {/* Slide Visual Component */}
-                {currentVisual || (
-                    <Box
-                        sx={{
-                            position: 'relative',
-                            width: { md: '100%' },
-                            height: { md: layoutTokens.authGalleryHeight },
-                            borderRadius: 2,
-                            background: 'linear-gradient(180deg, rgba(10,8,20,0.86) 0%, rgba(12,10,28,0.92) 100%)',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            boxShadow: shadows.xxl,
-                            overflow: 'hidden',
-                        }}
-                    >
-                        <Box
-                            sx={{
-                                position: 'absolute',
-                                inset: 0,
-                                background:
-                                    'radial-gradient(circle at 20% 60%, rgba(140,90,255,0.18), transparent 40%), radial-gradient(circle at 70% 30%, rgba(80,140,255,0.16), transparent 45%)',
-                            }}
-                        />
-                    </Box>
-                )}
+                {currentVisual}
             </Box>
 
-            {/* Các nút điều khiển được đặt bên ngoài để không bị ảnh hưởng bởi animation */}
-            <Box sx={{ display: 'flex', gap: 1.8, mt: 2, pl: 0.5 }}>
-                {slides.map((_, i) => (
-                    <Box
-                        key={i}
-                        sx={(theme) => ({
-                            width: i === currentSlide ? layoutTokens.dotSize.large : layoutTokens.dotSize.small,
-                            height: layoutTokens.dotSize.small,
-                            borderRadius: 999,
-                            backgroundColor: i === currentSlide
-                                ? theme.palette.mode === 'dark'
-                                    ? '#8C5AFF'
-                                    : '#6B46C1'
-                                : theme.palette.mode === 'dark'
-                                    ? 'rgba(140,90,255,0.6)'
-                                    : 'rgba(80,60,140,0.3)',
-                            cursor: 'pointer',
-                            transition: `all ${durations.slow} ${easings.smooth}`,
-                            position: 'relative',
-                            '&:hover': {
-                                backgroundColor: i === currentSlide
-                                    ? theme.palette.mode === 'dark'
-                                        ? '#9966FF'
-                                        : '#7C3AED'
-                                    : theme.palette.mode === 'dark'
-                                        ? 'rgba(140,90,255,0.4)'
-                                        : 'rgba(80,60,140,0.5)',
-                                transform: 'scale(1.1)',
-                            },
-                            '&::before': i === currentSlide ? {
-                                content: '""',
-                                position: 'absolute',
-                                inset: -3,
-                                borderRadius: 999,
-                                background: 'linear-gradient(45deg, rgba(140,90,255,0.4), rgba(124,58,237,0.3))',
-                                zIndex: -1,
-                                opacity: 0.7,
-                            } : {},
-                        })}
-                        onClick={() => triggerSlideChange(i)}
-                    />
-                ))}
+            {/* Thanh chỉ báo đặt ngoài vùng animation để không nhấp nháy theo slide */}
+            <Box sx={{ display: 'flex', gap: 1, mt: 2.5, alignItems: 'center' }}>
+                {slides.map((_, i) => {
+                    const isActive = i === currentSlide;
+                    return (
+                        <Box
+                            key={i}
+                            component="button"
+                            type="button"
+                            aria-label={`Chuyển đến slide ${i + 1}`}
+                            aria-current={isActive}
+                            onClick={() => goToSlide(i)}
+                            sx={(theme) => {
+                                const accent = theme.palette.mode === 'dark' ? '#8C5AFF' : '#6B46C1';
+                                return {
+                                    position: 'relative',
+                                    overflow: 'hidden',
+                                    height: 3,
+                                    width: isActive ? 46 : 26,
+                                    p: 0,
+                                    border: 'none',
+                                    borderRadius: 999,
+                                    cursor: 'pointer',
+                                    backgroundColor: theme.palette.mode === 'dark'
+                                        ? 'rgba(140,90,255,0.28)'
+                                        : 'rgba(107,70,193,0.24)',
+                                    transition: `width ${durations.slow} ${easings.easeOutQuart}, opacity ${durations.normal} ${easings.smooth}`,
+                                    opacity: isActive ? 1 : 0.55,
+                                    '&:hover': { opacity: 0.85 },
+                                    '&:focus-visible': {
+                                        outline: `2px solid ${accent}`,
+                                        outlineOffset: '3px',
+                                    },
+                                    // Vạch chạy thể hiện thời gian còn lại của slide
+                                    '&::after': isActive ? {
+                                        content: '""',
+                                        position: 'absolute',
+                                        inset: 0,
+                                        backgroundColor: accent,
+                                        transformOrigin: 'left',
+                                        animation: `dotFill ${autoPlayInterval}ms ${easings.linear} forwards`,
+                                    } : {},
+                                    '@keyframes dotFill': {
+                                        from: { transform: 'scaleX(0)' },
+                                        to: { transform: 'scaleX(1)' },
+                                    },
+                                    '@media (prefers-reduced-motion: reduce)': {
+                                        transition: 'none',
+                                        '&::after': isActive ? { animation: 'none', transform: 'scaleX(1)' } : {},
+                                    },
+                                };
+                            }}
+                        />
+                    );
+                })}
             </Box>
         </Box>
     );
