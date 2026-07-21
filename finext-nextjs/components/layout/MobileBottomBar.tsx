@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Box, alpha, useTheme, IconButton as MuiIconButton } from '@mui/material';
 import {
     ArrowBack as ArrowBackIcon,
@@ -19,6 +19,7 @@ const SCROLL_THRESHOLD = 10;
 export default function MobileBottomBar() {
     const theme = useTheme();
     const router = useRouter();
+    const pathname = usePathname();
     const [visible, setVisible] = useState(true);
     const lastScrollY = useRef(0);
     const ticking = useRef(false);
@@ -44,6 +45,9 @@ export default function MobileBottomBar() {
         window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
     }, [handleScroll]);
+
+    // Ẩn hẳn thanh điều hướng dưới khi đang ở trang chat (tránh nó trồi/thụt gây khó chịu khi chat).
+    if (pathname?.startsWith('/chat')) return null;
 
     const bgColor = theme.palette.component.appBar.background;
     const borderColor = alpha(theme.palette.divider, 0.12);

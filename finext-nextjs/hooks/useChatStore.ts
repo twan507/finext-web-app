@@ -71,7 +71,7 @@ const THINKING_KEY = 'finext-chat-thinking';
 const IDLE_MS = 45000;
 const FLUSH_MS = 80;
 type HistoryTurn = { role: 'user' | 'assistant'; content: string };
-const capHistory = (h: HistoryTurn[]): HistoryTurn[] => h.slice(-20).map((t) => ({ role: t.role, content: t.content.slice(0, 8000) }));
+const capHistory = (h: HistoryTurn[]): HistoryTurn[] => h.slice(-20).map((t) => ({ role: t.role, content: t.content.slice(0, 16000) }));
 
 function uid(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);

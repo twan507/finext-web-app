@@ -44,7 +44,7 @@ MAX_OUTPUT_TOKENS = int(LLM_MAX_OUTPUT_TOKENS) if LLM_MAX_OUTPUT_TOKENS else 640
 MAX_TOTAL_TOOL_CHARS = 40_000
 _TEXT_CUT_NOTE = "\n\n…[đã cắt bớt phần cuối do quá dài — hãy đọc mục cần thiết bằng lời gọi hẹp hơn]"
 STREAM_CHUNK = 8  # ký tự/đoạn khi nhả lại câu đã sanitize — cắt ở khoảng trắng (nhỏ hơn = mượt hơn).
-STREAM_CHUNK_DELAY_S = 0.09  # nhịp giữa các đoạn (~89 ký tự/giây — chậm & tự nhiên hơn, tránh "phọt một đống" sau khi nghĩ lâu).
+STREAM_CHUNK_DELAY_S = 0.045  # nhịp giữa các đoạn (~178 ký tự/giây — nhả chữ nhanh gấp đôi, vẫn mượt hơn đổ một lần).
 
 _REPEAT_FEEDBACK = (
     "Query này đã được thử ở trên và bị lỗi. Đừng lặp lại y hệt — hãy đổi cách: thu hẹp phạm vi, "
