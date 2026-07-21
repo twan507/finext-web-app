@@ -19,6 +19,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
             title: `Báo cáo ${typeName} | Finext`,
             description: `Tổng hợp ${typeName.toLowerCase()} từ Finext.`,
         },
+        alternates: { canonical: `/reports/type/${type}` },
     };
 }
 

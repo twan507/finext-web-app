@@ -9,6 +9,7 @@ export const metadata: Metadata = {
     title: 'Tổng quan tính năng | Finext',
     description: 'Hướng dẫn sử dụng các tính năng của Finext: tổng quan thị trường, sàng lọc cổ phiếu, biểu đồ kỹ thuật và đọc báo cáo phân tích.',
   },
+  alternates: { canonical: '/guides/overview' },
 };
 
 export default function GuidesOverviewPage() {

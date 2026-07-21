@@ -19,6 +19,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
             title: `Tin tức ${typeName} | Finext`,
             description: `Cập nhật tin tức ${typeName.toLowerCase()} từ Finext.`,
         },
+        alternates: { canonical: `/news/type/${type}` },
     };
 }
 

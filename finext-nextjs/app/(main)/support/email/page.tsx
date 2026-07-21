@@ -8,6 +8,7 @@ export const metadata: Metadata = {
     title: 'Gửi yêu cầu qua Email | Finext',
     description: 'Gửi câu hỏi hoặc yêu cầu hỗ trợ đến đội ngũ Finext.',
   },
+  alternates: { canonical: '/support/email' },
 };
 
 export default function EmailSupportPage() {

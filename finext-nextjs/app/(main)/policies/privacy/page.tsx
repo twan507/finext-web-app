@@ -8,6 +8,7 @@ export const metadata: Metadata = {
     title: 'Chính sách bảo mật | Finext',
     description: 'Chính sách bảo vệ thông tin cá nhân và dữ liệu người dùng trên nền tảng Finext.',
   },
+  alternates: { canonical: '/policies/privacy' },
 };
 
 export default function PrivacyPolicyPage() {

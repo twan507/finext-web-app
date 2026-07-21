@@ -10,6 +10,7 @@ export const metadata: Metadata = {
         title: 'Báo cáo tổng hợp | Finext',
         description: 'Tổng hợp báo cáo phân tích thị trường, doanh nghiệp, ngành và chiến lược — cập nhật hằng ngày, hỗ trợ nhà đầu tư ra quyết định.',
     },
+    alternates: { canonical: '/reports' },
 };
 
 export default function ReportsPage() {

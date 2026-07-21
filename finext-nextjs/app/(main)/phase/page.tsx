@@ -10,6 +10,7 @@ export const metadata: Metadata = {
     title: 'Giai đoạn thị trường | Finext',
     description: 'Đèn tín hiệu giai đoạn thị trường, tỷ trọng nắm giữ gợi ý và hiệu suất danh mục.',
   },
+  alternates: { canonical: '/phase' },
 };
 
 export default function MarketPhasePage() {

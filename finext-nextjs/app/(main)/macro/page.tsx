@@ -21,6 +21,7 @@ export const metadata: Metadata = {
         description:
             'Dữ liệu và phân tích kinh tế vĩ mô: GDP, lạm phát, lãi suất, tỷ giá. Biểu đồ trực quan cập nhật từ các nguồn uy tín.',
     },
+    alternates: { canonical: '/macro' },
 };
 
 export default function MacroPage() {

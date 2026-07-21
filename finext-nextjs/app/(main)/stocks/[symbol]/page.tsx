@@ -15,6 +15,7 @@ export async function generateMetadata({ params }: StockDetailPageProps): Promis
             title: `Cổ phiếu ${upper} | Finext`,
             description: `Phân tích chi tiết cổ phiếu ${upper}: biểu đồ giá, chỉ số tài chính, tin tức và dữ liệu tham khảo.`,
         },
+        alternates: { canonical: `/stocks/${symbol.toLowerCase()}` },
     };
 }
 

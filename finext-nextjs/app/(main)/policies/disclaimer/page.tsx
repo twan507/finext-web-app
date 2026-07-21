@@ -8,6 +8,7 @@ export const metadata: Metadata = {
     title: 'Tuyên bố trách nhiệm | Finext',
     description: 'Thông tin miễn trừ trách nhiệm về nội dung và phân tích tham khảo trên Finext.',
   },
+  alternates: { canonical: '/policies/disclaimer' },
 };
 
 export default function DisclaimerPage() {

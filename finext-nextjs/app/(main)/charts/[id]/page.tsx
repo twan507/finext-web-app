@@ -16,6 +16,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             title: `Biểu đồ ${ticker} | Finext`,
             description: `Xem biểu đồ và phân tích kỹ thuật cho ${ticker}.`,
         },
+        alternates: { canonical: `/charts/${id}` },
     };
 }
 

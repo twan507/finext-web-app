@@ -8,6 +8,7 @@ export const metadata: Metadata = {
     title: 'Ủng hộ Finext | Support Us',
     description: 'Ủng hộ dự án Finext — đồng hành cùng đội ngũ phát triển và nhận quyền truy cập tính năng nâng cao.',
   },
+  alternates: { canonical: '/plans' },
 };
 
 export default function PlansPage() {

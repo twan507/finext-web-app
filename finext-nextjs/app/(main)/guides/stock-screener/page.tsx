@@ -9,6 +9,7 @@ export const metadata: Metadata = {
     title: 'Hướng dẫn bộ lọc cổ phiếu | Finext',
     description: 'Hướng dẫn từng bước cách sử dụng bộ lọc cổ phiếu trên Finext: thiết lập tiêu chí, kết hợp điều kiện và lưu bộ lọc để tìm cơ hội đầu tư.',
   },
+  alternates: { canonical: '/guides/stock-screener' },
 };
 
 export default function GuidesStockScreenerPage() {

@@ -50,10 +50,58 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             description,
             images: article.image ? [article.image] : undefined,
         },
+        alternates: { canonical: `/news/${articleId}` },
     };
 }
 
 export default async function NewsDetailPage({ params }: Props) {
     const { articleId } = await params;
-    return <PageContent articleId={articleId} />;
+    // fetch được Next.js dedupe (revalidate 300) nên không phát sinh call thừa so với generateMetadata
+    const article = await fetchArticleBySlug(articleId);
+    const pageUrl = `https://finext.vn/news/${articleId}`;
+
+    // JSON-LD NewsArticle + BreadcrumbList — chỉ render khi có dữ liệu bài viết
+    const jsonLd = article
+        ? {
+              '@context': 'https://schema.org',
+              '@graph': [
+                  {
+                      '@type': 'NewsArticle',
+                      headline: article.title,
+                      description: article.sapo || undefined,
+                      image: article.image ? [article.image] : ['https://finext.vn/finext-panel.png'],
+                      datePublished: article.created_at || undefined,
+                      dateModified: article.created_at || undefined,
+                      inLanguage: 'vi',
+                      mainEntityOfPage: { '@type': 'WebPage', '@id': pageUrl },
+                      author: { '@type': 'Organization', name: 'Finext', url: 'https://finext.vn' },
+                      publisher: {
+                          '@type': 'Organization',
+                          name: 'Finext',
+                          logo: { '@type': 'ImageObject', url: 'https://finext.vn/icons/icon-512x512.png' },
+                      },
+                  },
+                  {
+                      '@type': 'BreadcrumbList',
+                      itemListElement: [
+                          { '@type': 'ListItem', position: 1, name: 'Trang chủ', item: 'https://finext.vn' },
+                          { '@type': 'ListItem', position: 2, name: 'Tin tức', item: 'https://finext.vn/news' },
+                          { '@type': 'ListItem', position: 3, name: article.title, item: pageUrl },
+                      ],
+                  },
+              ],
+          }
+        : null;
+
+    return (
+        <>
+            {jsonLd && (
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+                />
+            )}
+            <PageContent articleId={articleId} />
+        </>
+    );
 }

@@ -10,6 +10,7 @@ export const metadata: Metadata = {
     title: 'Bộ lọc thông minh | Finext',
     description: 'Sàng lọc cổ phiếu Việt Nam theo hàng chục tiêu chí: phân tích kỹ thuật, cơ bản, thanh khoản và tăng trưởng — tìm cơ hội đầu tư hiệu quả.',
   },
+  alternates: { canonical: '/stocks' },
 };
 
 export default function StocksPage() {

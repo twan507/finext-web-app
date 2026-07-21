@@ -51,10 +51,58 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             title: report.title,
             description,
         },
+        alternates: { canonical: `/reports/${reportId}` },
     };
 }
 
 export default async function ReportDetailPage({ params }: Props) {
     const { reportId } = await params;
-    return <PageContent reportId={reportId} />;
+    // fetch được Next.js dedupe (revalidate 300) nên không phát sinh call thừa so với generateMetadata
+    const report = await fetchReportBySlug(reportId);
+    const pageUrl = `https://finext.vn/reports/${reportId}`;
+
+    // JSON-LD NewsArticle + BreadcrumbList — chỉ render khi có dữ liệu báo cáo
+    const jsonLd = report
+        ? {
+              '@context': 'https://schema.org',
+              '@graph': [
+                  {
+                      '@type': 'NewsArticle',
+                      headline: report.title,
+                      description: report.sapo || undefined,
+                      image: ['https://finext.vn/finext-panel.png'],
+                      datePublished: report.created_at || undefined,
+                      dateModified: report.created_at || undefined,
+                      inLanguage: 'vi',
+                      mainEntityOfPage: { '@type': 'WebPage', '@id': pageUrl },
+                      author: { '@type': 'Organization', name: 'Finext', url: 'https://finext.vn' },
+                      publisher: {
+                          '@type': 'Organization',
+                          name: 'Finext',
+                          logo: { '@type': 'ImageObject', url: 'https://finext.vn/icons/icon-512x512.png' },
+                      },
+                  },
+                  {
+                      '@type': 'BreadcrumbList',
+                      itemListElement: [
+                          { '@type': 'ListItem', position: 1, name: 'Trang chủ', item: 'https://finext.vn' },
+                          { '@type': 'ListItem', position: 2, name: 'Báo cáo', item: 'https://finext.vn/reports' },
+                          { '@type': 'ListItem', position: 3, name: report.title, item: pageUrl },
+                      ],
+                  },
+              ],
+          }
+        : null;
+
+    return (
+        <>
+            {jsonLd && (
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+                />
+            )}
+            <PageContent reportId={reportId} />
+        </>
+    );
 }

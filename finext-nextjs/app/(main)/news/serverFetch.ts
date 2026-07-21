@@ -29,14 +29,14 @@ interface ArticleData {
 }
 
 /**
- * Fetch 1 bài viết theo slug — dùng cho generateMetadata (server-side only).
+ * Fetch 1 bài viết theo slug — dùng cho generateMetadata + JSON-LD (server-side only).
  * Cache 5 phút (revalidate: 300) để không gọi API lặp lại cho cùng bài viết.
- * Chỉ lấy title + sapo cho metadata, exclude content fields nặng.
+ * Chỉ lấy title + sapo + image + created_at cho metadata/structured data, exclude content nặng.
  * Timeout 3 giây để không block page render.
  */
 export async function fetchArticleBySlug(slug: string): Promise<NewsArticle | null> {
     try {
-        const url = `${INTERNAL_API_URL}/api/v1/sse/rest/news_article?article_slug=${encodeURIComponent(slug)}&projection=${encodeURIComponent('{"title":1,"sapo":1,"image":1}')}`;
+        const url = `${INTERNAL_API_URL}/api/v1/sse/rest/news_article?article_slug=${encodeURIComponent(slug)}&projection=${encodeURIComponent('{"title":1,"sapo":1,"image":1,"created_at":1}')}`;
 
         // Timeout 3 giây — nếu API chậm, trả fallback metadata thay vì block page
         const controller = new AbortController();

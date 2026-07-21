@@ -225,6 +225,7 @@ export default function PlansPageContent() {
                 </Box>
 
                 <Typography
+                    component="h1"
                     sx={{
                         fontSize: getResponsiveFontSize('h2'),
                         fontWeight: fontWeight.bold,

@@ -7,6 +7,7 @@ export const metadata: Metadata = {
         title: 'Biểu đồ kỹ thuật | Finext',
         description: 'Xem biểu đồ và phân tích kỹ thuật cổ phiếu trên Finext.',
     },
+    alternates: { canonical: '/charts' },
 };
 
 export default function ChartsLayout({ children }: { children: React.ReactNode }) {
