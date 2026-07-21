@@ -33,7 +33,7 @@ const plans = [
         icon: 'mdi:sprout',
         color: '#25b770',
         description: 'Truy cập miễn phí các công cụ phân tích cốt lõi — dành cho mọi người dùng Finext.',
-        features: ['Dữ liệu thị trường realtime', 'Bảng giá & chỉ số tổng quan', 'Phân tích ngành & nhóm ngành', 'Cộng đồng nhà đầu tư Finext'],
+        features: ['Dữ liệu thị trường thời gian thực', 'Bảng giá & chỉ số tổng quan', 'Phân tích ngành & nhóm ngành', 'Cộng đồng nhà đầu tư Finext'],
     },
     {
         id: 'PATRON',
@@ -49,7 +49,7 @@ const plans = [
 const benefits = [
     {
         icon: 'fluent-color:data-area-20',
-        title: 'Dữ liệu thị trường realtime',
+        title: 'Dữ liệu thị trường thời gian thực',
         description: 'Theo dõi biến động chỉ số, dòng tiền, giao dịch nước ngoài và tự doanh cập nhật liên tục trong phiên.',
     },
     {
@@ -60,7 +60,7 @@ const benefits = [
     {
         icon: 'fluent-color:poll-16',
         title: 'Sàng lọc cổ phiếu thông minh',
-        description: 'Khám phá cơ hội đầu tư trên hơn 1,600 mã cổ phiếu với bộ lọc kết hợp phân tích cơ bản và kỹ thuật.',
+        description: 'Khám phá cơ hội đầu tư trên hơn 1.600 mã cổ phiếu với bộ lọc kết hợp phân tích cơ bản và kỹ thuật.',
     },
     {
         icon: 'fluent-color:book-star-24',
@@ -225,6 +225,7 @@ export default function PlansPageContent() {
                 </Box>
 
                 <Typography
+                    component="h1"
                     sx={{
                         fontSize: getResponsiveFontSize('h2'),
                         fontWeight: fontWeight.bold,

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { Box, Collapse, Typography, useTheme } from '@mui/material';
+import { alpha, Box, Collapse, Typography, useTheme } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { getResponsiveFontSize, fontWeight, getGlassCard } from 'theme/tokens';
 
@@ -73,20 +73,33 @@ export function Figure({ src, alt, width = 1600, height = 100, caption, sx, natu
 // ============================================================================
 // InfoBox — card kiểu "info" dùng để bọc đoạn mô tả trong sub-accordion
 // (hiện trước Figure để user đọc nội dung trước khi xem ảnh)
+// icon: cho phép truyền icon theo ngữ cảnh (mặc định theo variant)
+// variant: đổi màu nhấn để tránh cảm giác đơn sắc (info/tip/warning/note)
 // ============================================================================
+
+export type InfoBoxVariant = 'info' | 'tip' | 'warning' | 'note';
 
 interface InfoBoxProps {
   children: React.ReactNode;
+  icon?: string;
+  variant?: InfoBoxVariant;
 }
 
-export function InfoBox({ children }: InfoBoxProps) {
+export function InfoBox({ children, icon, variant = 'info' }: InfoBoxProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const meta = {
+    info: { color: theme.palette.primary.main, icon: 'mdi:information-outline' },
+    tip: { color: theme.palette.success.main, icon: 'mdi:lightbulb-on-outline' },
+    warning: { color: theme.palette.warning.main, icon: 'mdi:alert-outline' },
+    note: { color: theme.palette.info.main, icon: 'mdi:bookmark-outline' },
+  }[variant];
   return (
     <Box
       sx={{
         ...getGlassCard(isDark),
         borderRadius: 1.5,
+        borderLeft: `3px solid ${alpha(meta.color, 0.75)}`,
         p: 2,
         mt: 1,
         mb: 2,
@@ -96,10 +109,10 @@ export function InfoBox({ children }: InfoBoxProps) {
       }}
     >
       <Icon
-        icon="mdi:information-outline"
+        icon={icon ?? meta.icon}
         width={20}
         height={20}
-        style={{ color: theme.palette.primary.main, flexShrink: 0, marginTop: 2 }}
+        style={{ color: meta.color, flexShrink: 0, marginTop: 2 }}
       />
       <Typography component="div" sx={{ ...bodyTextSx, flex: 1 }}>
         {children}
@@ -389,43 +402,6 @@ export function TimelineItem({ label, title, children, image }: TimelineItemProp
         </Typography>
         {image && <Box sx={{ mt: 1.5 }}>{image}</Box>}
       </Box>
-    </Box>
-  );
-}
-
-// ============================================================================
-// SectionBlock — section với background tuỳ chọn (plain / glass)
-// ============================================================================
-
-interface SectionBlockProps {
-  variant?: 'plain' | 'glass';
-  title?: string;
-  children: React.ReactNode;
-}
-
-export function SectionBlock({ variant = 'plain', title, children }: SectionBlockProps) {
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
-  return (
-    <Box
-      sx={{
-        ...(variant === 'glass' ? getGlassCard(isDark) : {}),
-        borderRadius: variant === 'glass' ? 1.5 : 0,
-        p: variant === 'glass' ? { xs: 2, md: 3 } : 0,
-        my: 2,
-      }}
-    >
-      {title && (
-        <Typography
-          sx={{
-            ...subHeadingSx,
-            mt: 0,
-          }}
-        >
-          {title}
-        </Typography>
-      )}
-      {children}
     </Box>
   );
 }

@@ -97,7 +97,7 @@ export default function DisclaimerContent() {
           }}
         >
           Finext là nền tảng cung cấp công cụ phân tích và dữ liệu chứng khoán mang tính chất
-          tham khảo. Finext <strong>không phải</strong> là công ty chứng khoán, tổ chức trao đổi đầu
+          tham khảo. Finext <strong>không phải</strong> là công ty chứng khoán, tổ chức tư vấn đầu
           tư, hoặc quỹ quản lý tài sản. Mọi thông tin trên nền tảng không cấu thành lời khuyên
           đầu tư hay khuyến nghị giao dịch.
         </Typography>
@@ -112,8 +112,8 @@ export default function DisclaimerContent() {
         <ul>
           <li>Đưa ra khuyến nghị mua, bán, hoặc nắm giữ bất kỳ chứng khoán cụ thể nào</li>
           <li>Cam kết hoặc đảm bảo bất kỳ kết quả đầu tư hay mức lợi nhuận nào</li>
-          <li>Cung cấp dịch vụ trao đổi đầu tư cá nhân</li>
-          <li>Thay thế vai trò của các tổ chức trao đổi tài chính được cấp phép</li>
+          <li>Cung cấp dịch vụ tư vấn đầu tư cá nhân</li>
+          <li>Thay thế vai trò của các tổ chức tư vấn tài chính được cấp phép</li>
         </ul>
       </Section>
 
@@ -157,7 +157,7 @@ export default function DisclaimerContent() {
       </Section>
 
       <Section title="5. Nội dung giáo dục">
-        Các tài liệu trong mục Finext Learning (phân tích kỹ thuật, phân tích cơ bản, phân tích
+        Các tài liệu trong mục Hướng dẫn sử dụng (phân tích kỹ thuật, phân tích cơ bản, phân tích
         dòng tiền) được cung cấp nhằm mục đích giáo dục và nâng cao kiến thức tài chính:
         <ul>
           <li>Không phải là hướng dẫn giao dịch cụ thể hay chiến lược đầu tư được khuyến nghị</li>
@@ -182,7 +182,7 @@ export default function DisclaimerContent() {
         Chúng tôi khuyến nghị bạn:
         <ul>
           <li>Tự trang bị kiến thức tài chính và hiểu rõ mức độ chấp nhận rủi ro của bản thân</li>
-          <li>Tham khảo ý kiến từ tổ chức trao đổi đầu tư được cấp phép trước khi đưa ra quyết
+          <li>Tham khảo ý kiến từ tổ chức tư vấn đầu tư được cấp phép trước khi đưa ra quyết
             định quan trọng</li>
           <li>Không đầu tư bằng tiền bạn không sẵn sàng chấp nhận mất</li>
           <li>Đa dạng hóa danh mục đầu tư để giảm thiểu rủi ro</li>
@@ -193,7 +193,7 @@ export default function DisclaimerContent() {
       <Section title="8. Liên hệ">
         Nếu bạn có thắc mắc về tuyên bố trách nhiệm này, vui lòng liên hệ:
         <ul>
-          <li><strong>Nền tảng:</strong> Finext — Your Next FInancial Step</li>
+          <li><strong>Nền tảng:</strong> Finext — Your Next Financial Step</li>
           <li><strong>Email:</strong> finext.vn@gmail.com</li>
         </ul>
       </Section>

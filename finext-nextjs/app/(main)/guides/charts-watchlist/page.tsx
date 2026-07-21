@@ -9,6 +9,7 @@ export const metadata: Metadata = {
     title: 'Hướng dẫn biểu đồ & danh sách theo dõi | Finext',
     description: 'Hướng dẫn đọc biểu đồ kỹ thuật, sử dụng công cụ vẽ, chỉ báo phân tích và quản lý danh sách theo dõi cổ phiếu yêu thích trên Finext.',
   },
+  alternates: { canonical: '/guides/charts-watchlist' },
 };
 
 export default function GuidesChartsWatchlistPage() {

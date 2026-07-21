@@ -64,9 +64,8 @@ export const metadata: Metadata = {
   creator: 'Finext',
   publisher: 'Finext',
   metadataBase: new URL('https://finext.vn'),
-  alternates: {
-    canonical: 'https://finext.vn',
-  },
+  // KHÔNG đặt alternates.canonical ở root: field này được kế thừa xuống mọi route con,
+  // khiến mọi trang trỏ canonical về trang chủ. Mỗi trang tự khai canonical riêng.
   // Apple Touch Icon for iOS "Add to Home Screen"
   icons: {
     icon: '/icons/icon-192x192.png',

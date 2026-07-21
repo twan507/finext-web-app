@@ -31,6 +31,7 @@ export async function generateMetadata({
             title: `Nhóm ${displayName} | Finext`,
             description: `Phân tích chi tiết biểu đồ chỉ số và dòng tiền nhóm cổ phiếu ${displayName} (${upper}).`,
         },
+        alternates: { canonical: `/groups/${groupId.toLowerCase()}` },
     };
 }
 

@@ -82,7 +82,7 @@ export default function AuthGateOverlay({ compact = false }: AuthGateOverlayProp
                     />
 
                     <Typography sx={{ fontSize: compact ? '1rem' : { xs: '1.2rem', sm: '1.4rem' }, fontWeight: 800, color: 'text.primary', mb: 1 }}>
-                        Tính năng dành riêng cho hội viên Patron
+                        Tính năng yêu cầu gói hội viên phù hợp
                     </Typography>
 
                     <Typography sx={{ fontSize: compact ? '0.75rem' : '0.85rem', color: 'text.secondary', mb: 1.5 }}>
@@ -112,7 +112,7 @@ export default function AuthGateOverlay({ compact = false }: AuthGateOverlayProp
                             '&:active': { transform: 'translateY(0)' },
                         }}
                     >
-                        {'Trở thành Patron'}
+                        {'Nâng cấp gói hội viên'}
                     </Button>
 
                     {!compact && (

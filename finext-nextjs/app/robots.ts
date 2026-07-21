@@ -10,7 +10,10 @@ export default function robots(): MetadataRoute.Robots {
                 allow: '/',
                 disallow: [
                     '/api/',
+                    // Chặn cả URL gốc lẫn URL con: Disallow '/admin/' KHÔNG chặn chính '/admin'
+                    '/admin',
                     '/admin/',
+                    '/profile',
                     '/profile/',
                     '/auth/',
                     '/_next/',
@@ -33,15 +36,20 @@ export default function robots(): MetadataRoute.Robots {
                     '/groups',
                     '/reports',
                     '/charts',
+                    '/phase',
+                    '/plans',
                     '/guides/',
                     '/policies/',
                     '/support/',
                 ],
                 disallow: [
                     '/api/',
+                    // Chặn cả URL gốc lẫn URL con
+                    '/admin',
                     '/admin/',
-                    '/auth/',
+                    '/profile',
                     '/profile/',
+                    '/auth/',
                     '/watchlist/',
                     '/_next/',
                     // Compliance pivot 2026-05-07: blocked routes

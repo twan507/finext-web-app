@@ -9,6 +9,7 @@ export const metadata: Metadata = {
         title: 'Tin tức thị trường | Finext',
         description: 'Tin tức chứng khoán, tài chính và doanh nghiệp Việt Nam: thông tin doanh nghiệp, kết quả kinh doanh và phân tích chuyên sâu — cập nhật liên tục.',
     },
+    alternates: { canonical: '/news' },
 };
 
 export default function NewsPage() {

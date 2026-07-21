@@ -13,8 +13,9 @@ export const metadata: Metadata = {
     title: 'Ngành nghề | Finext',
     description: 'Sức mạnh và dòng tiền của các nhóm ngành trên thị trường chứng khoán Việt Nam: ngân hàng, bất động sản, thép, dầu khí, công nghệ và nhiều ngành khác.',
   },
+  alternates: { canonical: '/sectors' },
 };
 
-export default function GroupsPage() {
+export default function SectorsPage() {
   return <PageContent />;
 }

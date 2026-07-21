@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     title: 'Thị trường | Finext',
     description: 'Tổng quan thị trường chứng khoán Việt Nam: VN-Index, VN30, dòng tiền, biến động và định giá thị trường — cập nhật theo thời gian thực.',
   },
+  alternates: { canonical: '/markets' },
 };
 
 export default function MarketsPage() {

@@ -8,6 +8,7 @@ export const metadata: Metadata = {
     title: 'Chính sách nội dung | Finext',
     description: 'Quy định về nội dung được đăng tải và chia sẻ trên nền tảng Finext.',
   },
+  alternates: { canonical: '/policies/content' },
 };
 
 export default function ContentPolicyPage() {

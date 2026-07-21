@@ -21,6 +21,7 @@ export const metadata: Metadata = {
         description:
             'Cập nhật liên tục diễn biến các thị trường chứng khoán quốc tế: Mỹ, Châu Á, Châu Âu. Biểu đồ, chỉ số và phân tích xu hướng toàn cầu.',
     },
+    alternates: { canonical: '/international' },
 };
 
 export default function InternationalPage() {

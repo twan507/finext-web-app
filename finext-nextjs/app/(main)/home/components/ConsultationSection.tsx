@@ -62,7 +62,7 @@ export default function ConsultationSection() {
                                 maxWidth: '600px'
                             }}
                         >
-                            Trở thành thành viên cộng đồng nhà đầu tư Chuyên Nghiệp
+                            Trở thành thành viên cộng đồng nhà đầu tư chuyên nghiệp
                         </Typography>
                         <Typography
                             variant="body1"

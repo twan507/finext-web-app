@@ -9,6 +9,7 @@ export const metadata: Metadata = {
     title: 'Nhóm cổ phiếu | Finext',
     description: 'Phân loại cổ phiếu theo nhóm vốn hóa, thanh khoản và đặc điểm thị trường. Hỗ trợ nhà đầu tư xây dựng danh mục phù hợp.',
   },
+  alternates: { canonical: '/groups' },
 };
 
 export default function GroupsPage() {

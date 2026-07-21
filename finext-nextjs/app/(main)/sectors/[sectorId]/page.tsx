@@ -49,6 +49,7 @@ export async function generateMetadata({ params }: SectorDetailPageProps): Promi
             title: `Ngành ${displayName} | Finext`,
             description: `Phân tích chi tiết ngành ${displayName}: dòng tiền, sức mạnh nhóm ngành và cổ phiếu tiêu biểu.`,
         },
+        alternates: { canonical: `/sectors/${sectorId.toLowerCase()}` },
     };
 }
 

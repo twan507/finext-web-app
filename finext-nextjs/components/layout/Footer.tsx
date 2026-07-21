@@ -308,7 +308,7 @@ const Footer: React.FC = () => {
               color: theme.palette.text.secondary,
             }}
           >
-            © {currentYear} Finext. All rights reserved.
+            © {currentYear} Finext. Bảo lưu mọi quyền.
           </Typography>
         </Box>
       </Box>

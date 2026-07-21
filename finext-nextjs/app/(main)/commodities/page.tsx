@@ -22,6 +22,7 @@ export const metadata: Metadata = {
         description:
             'Giá vàng, dầu thô, nông sản, kim loại cập nhật liên tục. Biểu đồ trực quan và phân tích xu hướng thị trường hàng hóa.',
     },
+    alternates: { canonical: '/commodities' },
 };
 
 export default function CommoditiesPage() {

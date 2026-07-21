@@ -8,6 +8,7 @@ export const metadata: Metadata = {
     title: 'Trò chuyện trực tiếp | Finext',
     description: 'Chat trực tiếp với đội ngũ hỗ trợ của Finext.',
   },
+  alternates: { canonical: '/support/live-chat' },
 };
 
 export default function LiveChatPage() {

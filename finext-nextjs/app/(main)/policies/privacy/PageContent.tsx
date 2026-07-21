@@ -81,11 +81,11 @@ export default function PrivacyPolicyContent() {
           <li>Họ tên, địa chỉ email khi đăng ký tài khoản</li>
           <li>Mật khẩu (được mã hóa và lưu trữ an toàn)</li>
           <li>Thông tin hồ sơ cá nhân bạn tự cập nhật</li>
-          <li>Thông tin tài khoản Google nếu bạn chọn đăng nhập bằng Google OAuth</li>
+          <li>Thông tin tài khoản Google nếu bạn chọn đăng nhập bằng tài khoản Google</li>
         </ul>
         <strong>2.2. Thông tin thu thập tự động:</strong>
         <ul>
-          <li>Dữ liệu phiên đăng nhập (session) và token xác thực</li>
+          <li>Dữ liệu phiên đăng nhập giúp duy trì trạng thái đăng nhập an toàn của bạn</li>
           <li>Danh mục cổ phiếu theo dõi (watchlist) và tùy chọn hiển thị</li>
           <li>Thông tin gói đăng ký và lịch sử giao dịch trên nền tảng</li>
           <li>Thông tin thiết bị, trình duyệt, địa chỉ IP và hành vi sử dụng</li>
@@ -108,11 +108,13 @@ export default function PrivacyPolicyContent() {
       <Section title="4. Bảo mật dữ liệu">
         Chúng tôi áp dụng các biện pháp bảo mật tiêu chuẩn ngành để bảo vệ dữ liệu của bạn:
         <ul>
-          <li>Mật khẩu được mã hóa bằng thuật toán băm một chiều (bcrypt), không lưu trữ dạng
-            thuần văn bản</li>
-          <li>Xác thực bằng JWT (JSON Web Token) với cơ chế refresh token an toàn</li>
-          <li>Truyền tải dữ liệu qua giao thức HTTPS được mã hóa TLS</li>
-          <li>Hạn chế quyền truy cập dữ liệu theo nguyên tắc tối thiểu (least privilege)</li>
+          <li>Mật khẩu của bạn được mã hóa một chiều trước khi lưu trữ — chúng tôi không lưu và
+            không thể xem được mật khẩu gốc của bạn</li>
+          <li>Cơ chế đăng nhập an toàn, tự động gia hạn phiên làm việc mà bạn không phải nhập lại
+            mật khẩu thường xuyên</li>
+          <li>Toàn bộ dữ liệu trao đổi giữa thiết bị của bạn và Finext đều được mã hóa trên
+            đường truyền</li>
+          <li>Quyền truy cập dữ liệu nội bộ được giới hạn ở mức tối thiểu cần thiết</li>
           <li>Giám sát phiên đăng nhập và hỗ trợ người dùng quản lý các phiên hoạt động</li>
         </ul>
         Mặc dù chúng tôi nỗ lực tối đa, không có hệ thống nào đảm bảo an toàn tuyệt đối 100%.
@@ -124,8 +126,8 @@ export default function PrivacyPolicyContent() {
         thứ ba vì mục đích thương mại. Chúng tôi chỉ chia sẻ thông tin trong các trường hợp sau:
         <ul>
           <li>
-            <strong>Nhà cung cấp dịch vụ:</strong> Google (xác thực OAuth) — chỉ nhận thông tin
-            cần thiết để xác minh danh tính
+            <strong>Nhà cung cấp dịch vụ:</strong> Google (khi bạn đăng nhập bằng tài khoản
+            Google) — chỉ nhận thông tin cần thiết để xác minh danh tính
           </li>
           <li>
             <strong>Yêu cầu pháp lý:</strong> Khi được cơ quan có thẩm quyền yêu cầu theo quy
@@ -206,7 +208,7 @@ export default function PrivacyPolicyContent() {
       <Section title="11. Liên hệ">
         Nếu bạn có câu hỏi hoặc thắc mắc về chính sách bảo mật, vui lòng liên hệ:
         <ul>
-          <li><strong>Nền tảng:</strong> Finext — Your Next FInancial Step</li>
+          <li><strong>Nền tảng:</strong> Finext — Your Next Financial Step</li>
           <li><strong>Email:</strong> finext.vn@gmail.com</li>
         </ul>
       </Section>

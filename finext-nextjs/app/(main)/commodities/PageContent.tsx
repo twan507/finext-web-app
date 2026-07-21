@@ -104,6 +104,18 @@ export default function CommoditiesContent() {
 
     return (
         <Box sx={{ py: 3 }}>
+            {/* SEO: H1 ẩn (visually-hidden) — trang dùng breadcrumb + sub-nav, không có tiêu đề hiển thị.
+                Dùng '1px' chuỗi vì MUI sx hiểu width:1 = 100% gây overflow. */}
+            <Box
+                component="h1"
+                sx={{
+                    position: 'absolute', width: '1px', height: '1px', padding: 0,
+                    margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)',
+                    whiteSpace: 'nowrap', border: 0, left: 0, top: 0,
+                }}
+            >
+                Thị trường hàng hóa
+            </Box>
             <NewsBreadcrumb
                 items={[]}
                 sectionLabel="Thị trường hàng hóa"
