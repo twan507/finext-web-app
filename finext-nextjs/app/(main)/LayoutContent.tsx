@@ -51,10 +51,10 @@ interface NavItem {
 
 const navigationStructure: NavItem[] = [
   { text: 'Giai đoạn thị trường', href: '/phase', icon: <MarketPhaseNavIcon />, special: true },
-  { text: 'Finext AI', href: '/chat', icon: <AutoAwesomeOutlined /> },
   { text: 'Biểu đồ kĩ thuật', href: '/charts', icon: <CandlestickChartOutlined /> },
   { text: 'Danh sách theo dõi', href: '/watchlist', icon: <StarBorderPurple500Outlined /> },
   { text: 'Bộ lọc thông minh', href: '/stocks', icon: <FilterAltOutlined />, exactMatch: true },
+  { text: 'Finext AI', href: '/chat', icon: <AutoAwesomeOutlined /> },
 ];
 
 // Top navigation tabs (like in Simplize)
@@ -83,7 +83,6 @@ const topNavTabs: TopNavTab[] = [
       { label: 'Biến động', href: '/markets?tab=volatility', icon: 'fluent-color:poll-16' },
       { label: 'Dòng tiền', href: '/markets?tab=cashflow', icon: 'fluent-color:data-area-20' },
       { label: 'Định giá', href: '/markets?tab=valuation', icon: 'fluent-color:book-star-24' },
-      // TODO: remove - { label: 'Tín hiệu', href: '/markets?tab=signal', icon: 'fluent-color:gauge-32' },
       { label: 'Kỹ thuật', href: '/markets?tab=ptkt', icon: 'fluent-color:arrow-trending-lines-24' },
       { label: 'Nước ngoài', href: '/markets?tab=foreign', icon: 'fluent-color:globe-24' },
       { label: 'Tự doanh', href: '/markets?tab=proprietary', icon: 'fluent-color:building-people-24' },

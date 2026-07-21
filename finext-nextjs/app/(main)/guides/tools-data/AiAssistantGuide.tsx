@@ -9,7 +9,7 @@ import GuideFlowChart from '../components/charts/GuideFlowChart';
 
 export default function AiAssistantGuide() {
   return (
-    <GuideAccordion title="Trợ lý Finext AI" icon="mdi:robot-outline">
+    <GuideAccordion title="Trợ lý Finext AI" icon="ic:round-auto-awesome">
       <Typography sx={bodyTextSx} paragraph>
         Finext AI là trợ lý trò chuyện giúp bạn hỏi đáp về thị trường, cổ phiếu và nhóm
         ngành bằng tiếng Việt tự nhiên. Thay vì tự mở nhiều bảng để tra cứu, bạn chỉ cần

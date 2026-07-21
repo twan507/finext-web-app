@@ -83,7 +83,7 @@ export default function OverviewContent() {
               đang chiếm ưu thế là tích lũy, phân phối hay trung lập — cơ sở quan trọng
               để đánh giá chất lượng diễn biến điểm số.
             </InfoBox>
-            <GuidePolarChart variant="breadth" />
+            <GuidePolarChart />
           </GuideSubAccordion>
 
           <GuideSubAccordion title="Nhóm ngành" icon="mdi:view-grid-outline" lazyMount>

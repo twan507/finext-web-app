@@ -9,7 +9,7 @@ import {
   FeatureGrid,
   FeatureGridItem,
 } from '../components/GuideLayoutBlocks';
-import GuidePolarChart from '../components/charts/GuidePolarChart';
+import GuideScreenerGauge from '../components/charts/GuideScreenerGauge';
 import { spacing } from 'theme/tokens';
 
 export default function StockScreenerContent() {
@@ -53,7 +53,7 @@ export default function StockScreenerContent() {
             vài nghìn là lỏng, dưới một trăm là chặt, chỉ còn vài mã là nên xem lại đã quá
             khắt khe hay chưa.
           </InfoBox>
-          <GuidePolarChart variant="screener" />
+          <GuideScreenerGauge />
           <Figure
             src="/guides/stock-screener/overview.png"
             alt="Tổng quan trang bộ lọc cổ phiếu"

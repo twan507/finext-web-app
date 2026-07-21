@@ -71,10 +71,10 @@ export const DEMO_BREADTH = {
   labels: ['Tăng giá', 'Giảm giá', 'Đứng giá']
 } as const;
 
-// Bộ lọc thu hẹp thị trường: số mã khớp vs chưa khớp
+// Bộ lọc thu hẹp thị trường: số mã khớp trên tổng số mã niêm yết (minh hoạ)
 export const DEMO_SCREENER_MATCH = {
-  series: [47, 953],
-  labels: ['Khớp bộ lọc', 'Chưa khớp']
+  matched: 47,
+  total: 1000
 } as const;
 
 // ---------------------------------------------------------------------------
