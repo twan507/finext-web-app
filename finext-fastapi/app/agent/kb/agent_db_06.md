@@ -39,6 +39,8 @@ gán 1 trong 4 trạng thái + tỷ lệ nắm giữ gợi ý:
 tín hiệu tham khảo, KHÔNG phải sizing), `comments` (4 đoạn diễn giải sinh sẵn — dùng làm nền trả lời),
 `history_60`. Lịch sử dài hơn (vd "2022 hệ làm gì?") → `market_phase_history` filter theo `date`.
 
+> **Exposure hạ sâu bất thường** (thấp hơn hẳn khung của trạng thái đang hiện — tín hiệu giảm mới chớm, chưa xác nhận): diễn đạt là **bối cảnh thị trường xấu / rủi ro cao, hệ chủ động giảm tỷ trọng phòng ngừa** — TUYỆT ĐỐI không nêu cơ chế/gate/"chế độ thận trọng"/công thức.
+
 ## 2. Bảy chỉ số quyết định phase (`market_phase.indicators`)
 
 Mỗi chỉ số có `label_vi` (tên nói với khách), `value`, `threshold_note` (ngưỡng đã công bố trên UI — được phép
@@ -53,8 +55,8 @@ lên/xuống. **CẤM:** công thức tính, trọng số, cách kết hợp ra 
 | `breadth_aux` | Tín hiệu xu hướng suy yếu | trigger giảm độc lập thứ hai | dưới **−0.30** |
 | `conf_dir` | Độ tin cậy xu hướng | mức tin cậy của tín hiệu hướng (0..1) | ≥**0.30** đủ cho TĂNG · ≥**0.20** đủ cho GIẢM (giảm cố ý dễ kích hoạt hơn — thiên về bảo vệ) |
 | `conf_flat` | Độ tin cậy Sideway | mức tin cậy trạng thái đi ngang (0..1) | ≥**0.45** mới xác nhận SIDEWAY |
-| `corr60` | Mức độ lan tỏa dòng tiền | thị trường tăng/giảm có đồng thuận thanh khoản không | dưới **0.35** = dòng dẫn dắt hẹp → hệ vào chế độ thận trọng với tín hiệu giảm (chống báo động giả khi chỉ vài trụ kéo) |
-| `px_ret20_pct` | Quán tính biến động giá | lợi suất 20 phiên gần nhất (điểm %) | trên **−10** = chưa rơi vào nhịp sập nhanh; dưới −10 thì chế độ thận trọng TẮT để bảo vệ kịp |
+| `corr60` | Đồng pha xu hướng – thanh khoản | cấu trúc xu hướng và cường độ thanh khoản có ĐỒNG NHỊP không (~60 phiên) | **≥0.35** = cùng nhịp · **<0.35** = rời nhịp · **<0** = ngược nhịp |
+| `px_ret20_pct` | Quán tính biến động giá | lợi suất 20 phiên gần nhất (điểm %) | trên **−10** = chưa rơi vào nhịp sập nhanh; dưới **−10** = đã vào nhịp sập nhanh |
 | *(kèm)* `market_intensity` | Cường độ thị trường | gauge −1..+1 "đang lên/xuống sâu tới đâu"; điều tiết mức nắm giữ trong TRANSITION | không có ngưỡng công bố |
 
 Mạch kể gợi ý (khớp bố cục web, không bắt buộc): kết luận pha (từ `comments.market`) → điều kiện đổi trạng thái

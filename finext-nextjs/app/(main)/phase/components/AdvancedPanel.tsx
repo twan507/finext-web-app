@@ -34,6 +34,8 @@ interface Ind {
   dangerText?: string;
   posText?: string;
   negText?: string;
+  midText?: string; // tầng giữa (chỉ khi có midValue): pos ≥ midValue | mid [0, midValue) | neg < 0
+  midValue?: number;
 }
 
 // 7 chỉ số (schema phase_daily 12 cột), liệt kê liền mạch: Hướng → Tin cậy → Gate.
@@ -44,8 +46,8 @@ const INDICATORS: Ind[] = [
   { commentKey: 'do_tin_cay_xu_huong', label: 'Độ tin cậy xu hướng', viz: 'segments', key: 'conf_dir', left: 'thấp', right: 'cao' },
   { commentKey: 'do_tin_cay_sideway', label: 'Độ tin cậy Sideway', viz: 'segments', key: 'conf_flat', left: 'thấp', right: 'cao' },
   {
-    commentKey: 'muc_do_lan_toa_dong_tien',
-    label: 'Mức độ lan tỏa dòng tiền',
+    commentKey: 'dong_pha_xu_huong_thanh_khoan',
+    label: 'Đồng pha xu hướng – thanh khoản',
     viz: 'stat',
     key: 'corr60',
     statMin: -1,
@@ -54,8 +56,10 @@ const INDICATORS: Ind[] = [
     left: '−1',
     refLabel: '0',
     right: '+1',
-    posText: 'Đồng pha',
-    negText: 'Phân hóa',
+    posText: 'Cùng nhịp',
+    midText: 'Rời nhịp',
+    negText: 'Ngược nhịp',
+    midValue: 0.35,
   },
   {
     commentKey: 'quan_tinh_bien_dong_gia',
@@ -108,7 +112,21 @@ export default function AdvancedPanel({ daily, indicators }: AdvancedPanelProps)
       statusColor = markerColor;
     } else {
       markerColor = numberColor;
-      statusText = has ? ((v as number) >= 0 ? ind.posText : ind.negText) : undefined;
+      if (has) {
+        const val = v as number;
+        statusText =
+          ind.midText != null && ind.midValue != null
+            ? val >= ind.midValue
+              ? ind.posText
+              : val >= 0
+                ? ind.midText
+                : ind.negText
+            : val >= 0
+              ? ind.posText
+              : ind.negText;
+      } else {
+        statusText = undefined;
+      }
       statusColor = theme.palette.text.secondary;
     }
     const status = statusText ? { text: statusText, color: statusColor } : undefined;

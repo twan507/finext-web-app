@@ -111,10 +111,13 @@ stock_db (Mongo, READ-ONLY, khác user_db)  →  REST keyword ONE-SHOT GET /api/
 | 3 | `tin_hieu_xu_huong_suy_yeu` | `breadth_aux` | DivergingBullet ±1 |
 | 4 | `do_tin_cay_xu_huong` | `conf_dir` | Segments10 (0..1, tím) |
 | 5 | `do_tin_cay_sideway` | `conf_flat` (**MỚI**) | Segments10 (0..1, tím) |
-| 6 | `muc_do_lan_toa_dong_tien` | `corr60` | StatBar diverging (fill tâm 0→marker) |
+| 6 | `dong_pha_xu_huong_thanh_khoan` | `corr60` | StatBar diverging (fill tâm 0→marker) |
 | 7 | `quan_tinh_bien_dong_gia` | `px_ret20` | StatBar circuit-breaker (**%**) |
 
 **`px_ret20` (StatBar breaker):** KHÔNG chuẩn hoá — bộ ngắt mạch giá ngưỡng kinh tế thật. Thước −20%…+20%, **vùng đỏ [đầu→−10%] + vùng xanh [+10%→max]**, giữa trống; marker màu **nội suy theo dải đỏ→xanh** tại vị trí; hiển thị **% thô** (`×100`). `corr60` (StatBar diverging): thước −1..+1, fill tâm 0→marker. Cả 2 có **chip trạng thái màu theo marker, căn giữa marker** (clamp ở mép).
+
+> **v3.4.2 — đổi ý nghĩa chỉ số #6:** `indicator_key` `muc_do_lan_toa_dong_tien` → **`dong_pha_xu_huong_thanh_khoan`**, nhãn "Mức độ lan tỏa dòng tiền" → **"Đồng pha xu hướng – thanh khoản"**. Ý nghĩa mới = đo mức ĐỒNG NHỊP giữa cấu trúc xu hướng và cường độ thanh khoản (~60 phiên), KHÔNG đo dòng tiền vào/ra. Đọc: **≥0.35 cùng nhịp · <0.35 rời nhịp · <0 ngược nhịp**. Cột `phase_daily.corr60` **giữ nguyên** tên + giá trị (chart/viz không đổi). DB đã backfill (chỉ còn key mới) — data cũ đã hết.
+> **v3.4.2 — field mới `phase_daily.suppressed`** (bool): phiên tín hiệu giảm hội đủ nhưng chưa xác nhận → `market_exposure` bị hạ sâu (vd 0.30 thay vì 0.70; vẫn thang 0–2.0, nhãn trạng thái KHÔNG đổi). Đã thêm vào projection `phase_daily.py`. FE/agent chỉ diễn đạt **"bối cảnh rủi ro cao"**, KHÔNG lộ cơ chế/gate/công thức.
 
 Diễn giải mỗi dòng = chấm màu + tên + giá trị + comment nguyên văn → comment dài-ngắn không gây lệch layout.
 

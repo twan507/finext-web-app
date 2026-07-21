@@ -12,6 +12,7 @@ _PROJECTION = {
     "date": 1,
     "phase_label": 1,
     "market_exposure": 1,
+    "suppressed": 1,  # v3.4.2: phiên tín hiệu giảm chưa xác nhận → exposure bị hạ sâu
     # HƯỚNG
     "breadth_slow": 1,
     "breadth_blend": 1,
