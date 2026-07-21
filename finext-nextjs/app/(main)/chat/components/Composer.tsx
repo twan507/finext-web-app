@@ -22,6 +22,13 @@ const DISCLAIMER = 'Thông tin tham khảo, không phải khuyến nghị đầu
 const DISCLAIMER_COMPACT = 'Tham khảo, không phải khuyến nghị đầu tư.';
 const PLACEHOLDER_COMPACT = 'Hỏi Finext AI về trang này…';
 
+// Giới hạn độ dài 1 tin nhắn — PHẢI khớp backend ChatStreamRequest.message max_length (finext-fastapi/app/schemas/chat.py).
+// Chặn ngay ở đây để user không gửi rồi mới nhận lỗi 422.
+export const MAX_MESSAGE_LENGTH = 16000;
+// Hiện bộ đếm ký tự khi vượt ~80% để user biết trước; số format kiểu VN (16.000).
+const MESSAGE_COUNTER_THRESHOLD = MAX_MESSAGE_LENGTH * 0.8;
+const fmtCount = (n: number) => n.toLocaleString('vi-VN');
+
 const Composer = forwardRef<HTMLDivElement, ComposerProps>(function Composer(
   { disabled, streaming, onSend, onStop, thinking, onToggleThinking, centered = false, compact = false },
   ref,
@@ -53,9 +60,14 @@ const Composer = forwardRef<HTMLDivElement, ComposerProps>(function Composer(
     />
   );
 
+  // Đếm theo chuỗi đã trim vì đó chính là payload gửi lên (submit gửi text.trim()) → khớp validate backend.
+  const messageLength = text.trim().length;
+  const overLimit = messageLength > MAX_MESSAGE_LENGTH;
+  const showCounter = messageLength > MESSAGE_COUNTER_THRESHOLD;
+
   const submit = () => {
     const t = text.trim();
-    if (!t || disabled) return;
+    if (!t || disabled || t.length > MAX_MESSAGE_LENGTH) return; // chặn khi vượt trần: không gửi rồi mới nhận 422
     onSend(t);
     setText('');
   };
@@ -167,7 +179,7 @@ const Composer = forwardRef<HTMLDivElement, ComposerProps>(function Composer(
                 <IconButton
                   aria-label="Gửi"
                   onClick={submit}
-                  disabled={disabled || text.trim() === ''}
+                  disabled={disabled || text.trim() === '' || overLimit}
                   sx={{
                     flexShrink: 0,
                     bgcolor: 'primary.main',
@@ -182,6 +194,17 @@ const Composer = forwardRef<HTMLDivElement, ComposerProps>(function Composer(
             </Box>
           </Box>
         </Box>
+        {/* Cảnh báo/bộ đếm ký tự: hiện ở CẢ centered lẫn bottom (user có thể dán bài dài ngay màn hình chào). */}
+        {showCounter && (
+          <Typography
+            role={overLimit ? 'alert' : undefined}
+            sx={{ fontSize: getResponsiveFontSize('xxs'), color: overLimit ? 'error.main' : 'text.disabled', textAlign: 'right', mt: 0.75, px: 0.5 }}
+          >
+            {overLimit
+              ? `Tin nhắn quá dài — tối đa ${fmtCount(MAX_MESSAGE_LENGTH)} ký tự (hiện đang ${fmtCount(messageLength)}).`
+              : `${fmtCount(messageLength)} / ${fmtCount(MAX_MESSAGE_LENGTH)} ký tự`}
+          </Typography>
+        )}
         {/* Disclaimer chỉ hiện khi ĐÃ chat (composer về đáy), không hiện ở màn hình chào giữa. */}
         {!centered && (
           <Typography sx={{ fontSize: getResponsiveFontSize('xxs'), color: 'text.disabled', textAlign: 'center', mt: 0.75 }}>
