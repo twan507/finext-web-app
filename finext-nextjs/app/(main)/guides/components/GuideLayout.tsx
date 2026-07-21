@@ -14,6 +14,7 @@ const GUIDE_TABS: { label: string; href: string }[] = [
   { label: 'Tổng quan tính năng', href: '/guides/overview' },
   { label: 'Biểu đồ và Watchlist', href: '/guides/charts-watchlist' },
   { label: 'Bộ lọc cổ phiếu', href: '/guides/stock-screener' },
+  { label: 'Công cụ và dữ liệu', href: '/guides/tools-data' },
 ];
 
 interface GuideLayoutProps {
