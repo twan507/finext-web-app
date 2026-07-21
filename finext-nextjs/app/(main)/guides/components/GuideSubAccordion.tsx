@@ -10,6 +10,8 @@ interface GuideSubAccordionProps {
   title: string;
   icon?: string;
   defaultExpanded?: boolean;
+  /** Khi true: nội dung chỉ được mount khi mở (dùng cho mục chứa biểu đồ nặng) */
+  lazyMount?: boolean;
   children: React.ReactNode;
 }
 
@@ -17,12 +19,13 @@ interface GuideSubAccordionProps {
  * Nested toggle bar: cùng style với GuideAccordion nhưng nhỏ hơn 1 cấp,
  * dùng cho các sub-section bên trong 1 GuideAccordion.
  */
-export default function GuideSubAccordion({ title, icon, defaultExpanded = false, children }: GuideSubAccordionProps) {
+export default function GuideSubAccordion({ title, icon, defaultExpanded = false, lazyMount = false, children }: GuideSubAccordionProps) {
   const theme = useTheme();
 
   return (
     <Accordion
       defaultExpanded={defaultExpanded}
+      {...(lazyMount ? { slotProps: { transition: { unmountOnExit: true } } } : {})}
       disableGutters
       square
       sx={{

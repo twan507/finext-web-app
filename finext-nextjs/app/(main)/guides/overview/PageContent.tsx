@@ -13,6 +13,10 @@ import {
   TimelineItem,
   InfoBox,
 } from '../components/GuideBlocks';
+import { GuideHero } from '../components/GuideLayoutBlocks';
+import GuideHeatmapChart from '../components/charts/GuideHeatmapChart';
+import GuidePolarChart from '../components/charts/GuidePolarChart';
+import GuideFlowChart from '../components/charts/GuideFlowChart';
 import { spacing } from 'theme/tokens';
 
 // Box wrapper giúp stack FeatureCards hoặc sections dọc đều nhau
@@ -21,12 +25,24 @@ const stackSx = { display: 'flex', flexDirection: 'column', gap: 2, my: 2 } as c
 export default function OverviewContent() {
   return (
     <Box sx={{ py: spacing.xs }}>
+      <GuideHero
+        icon="mdi:compass-outline"
+        title="Tổng quan tính năng"
+        subtitle="Một vòng nhanh qua toàn bộ Finext: xem thị trường trong một khung nhìn, đào sâu theo ngành và theo mã, sàng lọc cơ hội và đọc báo cáo phân tích. Mở từng mục bên dưới để xem hướng dẫn kèm biểu đồ minh hoạ."
+        highlights={[
+          { icon: 'mdi:home-variant', label: 'Trang chủ' },
+          { icon: 'mdi:chart-box-outline', label: 'Thị trường' },
+          { icon: 'mdi:chart-line', label: 'Phân tích cổ phiếu' },
+          { icon: 'mdi:file-document-outline', label: 'Báo cáo' },
+        ]}
+      />
       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
 
         {/* ========================================================================
             ACCORDION 1: TRANG CHỦ
         ======================================================================== */}
-        <GuideAccordion title="Trang chủ" icon="mdi:home-variant">
+        <GuideAccordion title="Trang chủ" icon="mdi:home-variant" defaultExpanded>
+
           <Typography sx={bodyTextSx} paragraph>
             Trang chủ tổng hợp toàn bộ diễn biến thị trường trong một khung nhìn duy nhất:
             chỉ số chính, dòng tiền theo ngành, cổ phiếu dẫn dắt, tin tức nổi bật. Mọi số
@@ -35,7 +51,7 @@ export default function OverviewContent() {
           </Typography>
 
           <GuideSubAccordion title="Chỉ số nhanh" icon="mdi:view-dashboard-outline">
-            <InfoBox>
+            <InfoBox icon="mdi:view-dashboard-outline">
               Sáu thẻ tóm tắt các chỉ số chính — VNINDEX, VN30, HNX, UPCoM và hai chỉ số
               bổ sung — mỗi thẻ hiển thị điểm số hiện tại, biên độ và biểu đồ trong phiên.
               Chạm vào thẻ bất kỳ để chuyển biểu đồ lớn ngay bên dưới sang chỉ số đó mà
@@ -48,7 +64,7 @@ export default function OverviewContent() {
           </GuideSubAccordion>
 
           <GuideSubAccordion title="Thị trường" icon="mdi:chart-line">
-            <InfoBox>
+            <InfoBox icon="mdi:chart-line">
               Biểu đồ đầy đủ của chỉ số đang chọn đặt song song với bảng liệt kê các chỉ
               số còn lại. Chuyển qua lại giữa ba nhóm — chỉ số sàn chính, chỉ số phái
               sinh, và chỉ số do Finext tự xây dựng. Bấm vào mã bất kỳ trong bảng, biểu
@@ -60,34 +76,28 @@ export default function OverviewContent() {
             />
           </GuideSubAccordion>
 
-          <GuideSubAccordion title="Diễn biến thị trường" icon="mdi:chart-bar">
-            <InfoBox>
+          <GuideSubAccordion title="Diễn biến thị trường" icon="mdi:chart-arc" lazyMount>
+            <InfoBox icon="mdi:chart-arc">
               Độ rộng thị trường trong phiên (số mã tăng so với số mã giảm) đặt cạnh dòng
               tiền khối ngoại mua - bán ròng. Hai chỉ báo đọc song song cho biết tâm lý
               đang chiếm ưu thế là tích lũy, phân phối hay trung lập — cơ sở quan trọng
               để đánh giá chất lượng diễn biến điểm số.
             </InfoBox>
-            <Figure
-              src="/guides/overview/home-volatility.png"
-              alt="Diễn biến thị trường"
-            />
+            <GuidePolarChart variant="breadth" />
           </GuideSubAccordion>
 
-          <GuideSubAccordion title="Nhóm ngành" icon="mdi:view-grid-outline">
-            <InfoBox>
+          <GuideSubAccordion title="Nhóm ngành" icon="mdi:view-grid-outline" lazyMount>
+            <InfoBox icon="mdi:view-grid-outline">
               Bản đồ 24 ngành xếp dạng lưới, mỗi ô tương ứng một ngành và trực quan hóa
               mức biến động giá cùng cường độ dòng tiền trong phiên. Xác định trong vài
               giây ngành nào đang dẫn dắt, ngành nào bị phân phối — thay vì rà qua nhiều
               cột của bảng điện tử truyền thống.
             </InfoBox>
-            <Figure
-              src="/guides/overview/home-industry.png"
-              alt="Nhóm ngành"
-            />
+            <GuideHeatmapChart />
           </GuideSubAccordion>
 
           <GuideSubAccordion title="Cổ phiếu nổi bật theo ngành" icon="mdi:star-outline">
-            <InfoBox>
+            <InfoBox icon="mdi:star-outline" variant="tip">
               Tập hợp các mã dẫn dắt trong những ngành có dòng tiền mạnh nhất phiên, được
               lọc sẵn theo biến động giá và cường độ thanh khoản. Thay vì mở từng ngành
               soi từng mã, xem tại đây là đủ để khoanh vùng danh mục theo dõi cho phiên
@@ -100,7 +110,7 @@ export default function OverviewContent() {
           </GuideSubAccordion>
 
           <GuideSubAccordion title="Tin tức" icon="mdi:newspaper-variant-outline">
-            <InfoBox>
+            <InfoBox icon="mdi:newspaper-variant-outline" variant="note">
               Luồng tin mới nhất tổng hợp từ các nguồn tài chính chính thống, hiển thị
               ngay trên trang chủ để nắm bối cảnh phiên. Bấm vào tiêu đề để đọc toàn văn.
               Muốn lọc theo chủ đề, theo mã cổ phiếu hoặc xem kho tin đầy đủ, mở mục Tin
@@ -125,7 +135,7 @@ export default function OverviewContent() {
           </Typography>
 
           <GuideSubAccordion title="Biểu đồ chỉ số" icon="mdi:chart-line">
-            <InfoBox>
+            <InfoBox icon="mdi:chart-line">
               Bên trái là biểu đồ chỉ số đang chọn với đầy đủ khung thời gian từ trong
               phiên đến đa năm. Bên phải là bảng các chỉ số sàn chính và chỉ số Finext tự
               xây dựng. Bấm vào mã bất kỳ trong bảng, biểu đồ bên trái đồng bộ ngay lập
@@ -138,7 +148,7 @@ export default function OverviewContent() {
           </GuideSubAccordion>
 
           <GuideSubAccordion title="Biến động" icon="mdi:chart-bar">
-            <InfoBox>
+            <InfoBox icon="mdi:chart-bar">
               Phân rã biến động của chỉ số xuống từng thành phần cấu thành: nhóm ngành
               đóng góp điểm tăng hoặc kéo điểm giảm, top mã biến động mạnh nhất phiên,
               độ rộng thị trường theo tỷ lệ tăng so với giảm. Công cụ để tách điểm số bề
@@ -150,21 +160,18 @@ export default function OverviewContent() {
             />
           </GuideSubAccordion>
 
-          <GuideSubAccordion title="Dòng tiền" icon="mdi:cash-multiple">
-            <InfoBox>
+          <GuideSubAccordion title="Dòng tiền" icon="mdi:cash-multiple" lazyMount>
+            <InfoBox icon="mdi:cash-multiple">
               Bức tranh dòng tiền theo hai chiều: theo ngành (ngành nào đang thu hút vốn,
               ngành nào bị rút ra) và theo nhóm vốn hóa (LargeCap, MidCap, SmallCap). Dòng
               tiền thường đi trước giá — nhận diện sớm nhóm đang được ưu tiên giúp định
               hình ý tưởng giao dịch trước khi xu hướng trở nên rõ ràng.
             </InfoBox>
-            <Figure
-              src="/guides/overview/markets-tab-dong-tien.png"
-              alt="Phần Dòng tiền"
-            />
+            <GuideFlowChart />
           </GuideSubAccordion>
 
           <GuideSubAccordion title="Định giá" icon="mdi:calculator-variant">
-            <InfoBox>
+            <InfoBox icon="mdi:calculator-variant">
               Các tỷ số P/E, P/B, EPS ở cấp toàn thị trường và từng ngành, đặt cạnh vùng
               trung bình lịch sử của chính chỉ số đó. So sánh ngang giữa các ngành và dọc
               theo thời gian để nhận diện nhóm đang chiết khấu hay vượt giá trị hợp lý —
@@ -177,7 +184,7 @@ export default function OverviewContent() {
           </GuideSubAccordion>
 
           <GuideSubAccordion title="Kỹ thuật" icon="mdi:chart-timeline-variant">
-            <InfoBox>
+            <InfoBox icon="mdi:chart-timeline-variant" variant="note">
               Bộ tín hiệu kỹ thuật ở cấp thị trường: trạng thái xu hướng theo nhiều khung
               thời gian, các vùng hỗ trợ và kháng cự trọng yếu, tín hiệu mẫu hình đang
               hình thành. Giúp xác định đâu là vùng rủi ro cần phòng thủ và đâu là vùng
@@ -190,7 +197,7 @@ export default function OverviewContent() {
           </GuideSubAccordion>
 
           <GuideSubAccordion title="Nước ngoài và Tự doanh" icon="mdi:earth">
-            <InfoBox>
+            <InfoBox icon="mdi:earth">
               Hai phần có cùng cấu trúc: giá trị mua - bán ròng theo ngày, top mã được
               giao dịch mạnh nhất, và xu hướng qua nhiều phiên gần đây. Khối ngoại phản
               ánh dòng vốn quốc tế đổ vào hay rút ra khỏi Việt Nam; tự doanh phản ánh
@@ -216,7 +223,7 @@ export default function OverviewContent() {
           </Typography>
 
           <GuideSubAccordion title="Bảng tổng quan các nhóm cổ phiếu" icon="mdi:table">
-            <InfoBox>
+            <InfoBox icon="mdi:table">
               Bảng gom tám rổ Finext (FNXINDEX, FNX100, Vượt trội, Ổn định, Sự kiện,
               LargeCap, MidCap, SmallCap) với giá trị chỉ số, biến động theo ngày, tuần,
               tháng, quý, năm và điểm dòng tiền. Sắp xếp và so sánh nhanh để biết rổ nào
@@ -311,7 +318,7 @@ export default function OverviewContent() {
           </Typography>
 
           <GuideSubAccordion title="Bảng tổng quan các ngành" icon="mdi:table">
-            <InfoBox>
+            <InfoBox icon="mdi:table">
               Liệt kê đầy đủ 24 ngành với chỉ số giá ngành, biến động theo ngày, tuần,
               tháng, quý, năm, điểm dòng tiền phiên, điểm dòng tiền năm phiên và chỉ số
               thanh khoản. Mặc định sắp xếp theo điểm dòng tiền phiên giảm dần — ngành
@@ -324,7 +331,7 @@ export default function OverviewContent() {
           </GuideSubAccordion>
 
           <GuideSubAccordion title="Biểu đồ biến động dòng tiền ngành" icon="mdi:chart-multiple">
-            <InfoBox>
+            <InfoBox icon="mdi:chart-multiple" variant="note">
               Khu vực này gồm bốn biểu đồ đặt cạnh nhau cho góc nhìn đa chiều: Dòng tiền
               trong phiên theo từng ngành, Chỉ số thanh khoản quy đổi phần trăm, Phân bổ
               dòng tiền (tỷ lệ mã vào - ra - đứng giá trong ngành), và Dòng tiền tuần qua
@@ -337,11 +344,19 @@ export default function OverviewContent() {
           </GuideSubAccordion>
 
           <GuideSubAccordion title="Bảng tổng hợp định giá ngành" icon="mdi:calculator-variant">
-            <InfoBox>
+            <InfoBox icon="mdi:calculator-variant">
               Tập hợp đầy đủ các chỉ số định giá theo ngành: Vốn hóa, P/E, P/B, P/S, EPS,
               BVPS, PEG, EV/EBITDA. Đặt cạnh nhau để so sánh mặt bằng định giá giữa các
               ngành — nhận diện ngành nào đang giao dịch ở vùng đắt so với phần còn lại
               của thị trường, ngành nào đang chiết khấu. Yêu cầu gói hội viên phù hợp.
+            </InfoBox>
+            <InfoBox icon="mdi:book-open-variant" variant="tip">
+              Hiểu nhanh vài thước đo nâng cao: <strong>BVPS</strong> là giá trị sổ sách
+              ứng với mỗi cổ phiếu; <strong>PEG</strong> lấy P/E chia cho tốc độ tăng
+              trưởng lợi nhuận — giúp so sánh cổ phiếu tăng trưởng nhanh với cổ phiếu tăng
+              chậm một cách công bằng hơn; <strong>EV/EBITDA</strong> so sánh giá trị toàn
+              doanh nghiệp với lợi nhuận trước lãi vay, thuế và khấu hao, hữu ích khi các
+              doanh nghiệp có mức vay nợ rất khác nhau.
             </InfoBox>
             <Figure
               src="/guides/overview/sectors-valuation.png"
@@ -500,27 +515,13 @@ export default function OverviewContent() {
         ======================================================================== */}
         <GuideAccordion title="Tin tức" icon="mdi:newspaper-variant-outline">
           <Typography sx={bodyTextSx} paragraph>
-            Trang Tin tức tập hợp các bài viết về tài chính và chứng khoán từ nhiều nguồn
-            chính thống — Cổng thông tin Chính phủ, các trang chuyên về chứng khoán, các
-            báo kinh tế lớn. Lọc theo loại tin hoặc theo mã cổ phiếu; bấm tiêu đề để đọc
-            toàn văn trong trang riêng mà không phải rời ứng dụng.
+            Trang Tin tức tập hợp các bài viết về chứng khoán và doanh nghiệp trong nước
+            từ nhiều nguồn chính thống — Cổng thông tin Chính phủ, các trang chuyên về
+            chứng khoán, các báo kinh tế lớn. Lọc theo loại tin hoặc theo mã cổ phiếu;
+            bấm tiêu đề để đọc toàn văn trong trang riêng mà không phải rời ứng dụng.
           </Typography>
 
           <Box sx={stackSx}>
-            <FeatureCard title="Tài chính quốc tế" icon="mdi:earth">
-              Tin và sự kiện tài chính toàn cầu có khả năng ảnh hưởng đến Việt Nam: chính
-              sách của Cục Dự trữ Liên bang Mỹ, diễn biến chứng khoán Mỹ, giá dầu, biến
-              động tỷ giá các đồng tiền chủ chốt. Giúp nắm bối cảnh bên ngoài trước khi
-              đánh giá dòng tiền vào thị trường trong nước.
-            </FeatureCard>
-
-            <FeatureCard title="Vĩ mô trong nước" icon="mdi:domain">
-              Tin kinh tế Việt Nam: chính sách tiền tệ, lãi suất, tỷ giá, tăng trưởng
-              GDP, lạm phát, cán cân xuất nhập khẩu. Đây là các yếu tố nền chi phối xu
-              hướng trung và dài hạn của thị trường chứng khoán — thường có tác động
-              trước khi truyền vào giá.
-            </FeatureCard>
-
             <FeatureCard title="Doanh nghiệp niêm yết" icon="mdi:office-building">
               Tin và phân tích về các công ty niêm yết: kết quả kinh doanh, phát hành cổ
               phiếu, chia cổ tức, thay đổi nhân sự cấp cao. Nguồn thông tin chính khi cần
@@ -535,6 +536,13 @@ export default function OverviewContent() {
               nhạy chính sách.
             </FeatureCard>
           </Box>
+
+          <Callout icon="mdi:earth" title="Tài chính quốc tế và Kinh tế vĩ mô nay có mục riêng">
+            Hai chủ đề này trước đây nằm chung trong Tin tức, nay đã được tách thành các
+            mục riêng trên menu để theo dõi thuận tiện hơn: một mục dành cho tin tài chính
+            toàn cầu (chính sách lãi suất quốc tế, chứng khoán Mỹ, giá dầu, tỷ giá) và một
+            mục cho kinh tế vĩ mô trong nước (lãi suất, tỷ giá, tăng trưởng GDP, lạm phát).
+          </Callout>
 
           <Callout icon="mdi:magnify" title="Lọc theo mã cổ phiếu">
             Ô tìm kiếm ở góc trên phải cho phép gõ mã chứng khoán; trang sẽ chỉ hiển thị
