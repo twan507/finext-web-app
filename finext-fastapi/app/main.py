@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.utils.response_wrapper import StandardApiResponse
+from .core.config import ENVIRONMENT
 from .core.scheduler import start_scheduler, shutdown_scheduler
 
 from .core.database import close_mongo_connection, connect_to_mongo, get_database
@@ -66,14 +67,33 @@ async def lifespan(app: FastAPI):
     await close_mongo_connection()
 
 
+def resolve_docs_urls(environment: str) -> dict[str, str | None]:
+    """Tính docs_url/redoc_url/openapi_url theo môi trường.
+
+    Chỉ MỞ trang tài liệu API khi môi trường là "development". Mọi giá trị khác
+    (production, thiếu biến, giá trị lạ) đều TẮT (None) để fail-safe: không lộ
+    cấu trúc API ra public ở prod.
+    """
+    is_development = environment.strip().lower() == "development"
+    if is_development:
+        return {
+            "openapi_url": "/api/v1/openapi.json",
+            "docs_url": "/api/v1/docs",
+            "redoc_url": "/api/v1/redoc",
+        }
+    return {"openapi_url": None, "docs_url": None, "redoc_url": None}
+
+
+_docs_urls = resolve_docs_urls(ENVIRONMENT)
+
 app = FastAPI(
     title="Finext FastAPI",
     description="API cho ứng dụng Finext, tích hợp MongoDB.",
     version="0.1.0",
     lifespan=lifespan,
-    openapi_url="/api/v1/openapi.json",
-    docs_url="/api/v1/docs",
-    redoc_url="/api/v1/redoc",
+    openapi_url=_docs_urls["openapi_url"],
+    docs_url=_docs_urls["docs_url"],
+    redoc_url=_docs_urls["redoc_url"],
     redirect_slashes=False,
 )
 

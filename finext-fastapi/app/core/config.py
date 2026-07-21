@@ -54,6 +54,10 @@ def validate_critical_env_vars():
 # Thực hiện validation
 ENV_VALIDATION_SUCCESS = validate_critical_env_vars()
 
+# Môi trường chạy: "development" | "production". Default "production" để FAIL-SAFE —
+# thiếu biến thì coi như prod và TẮT trang tài liệu API (docs/redoc/openapi).
+ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
+
 # MongoDB
 MONGODB_CONNECTION_STRING = os.getenv("MONGODB_CONNECTION_STRING")
 
