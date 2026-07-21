@@ -2,7 +2,9 @@ import asyncio
 import json
 import logging
 import uuid
+from collections import deque
 from collections.abc import AsyncIterator
+from dataclasses import dataclass, field
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -33,6 +35,29 @@ router = APIRouter()  # Prefix và tags thêm ở main.py
 HEARTBEAT_SECONDS = 10.0
 
 STREAM_END = None
+
+
+# ── Registry chạy nền + hàng đợi per-user (in-memory, module-level, có lock) ─────────────────────
+# Mỗi user tối đa 1 turn chạy ĐỒNG THỜI; câu gửi thêm khi đang bận → xếp hàng FIFO tối đa 3.
+# In-memory: server restart mất turn đang chạy + đang chờ (câu đã xong vẫn ở DB) — chấp nhận (spec).
+MAX_QUEUE_PER_USER = 3
+
+
+@dataclass
+class _QueuedTurn:
+    body: ChatStreamRequest
+    conversation_id: str
+    is_new: bool
+
+
+@dataclass
+class _UserRunner:
+    current: asyncio.Task[None] | None = None
+    queue: deque[_QueuedTurn] = field(default_factory=deque)
+
+
+_runners: dict[str, _UserRunner] = {}
+_runners_lock = asyncio.Lock()
 
 
 def _messages_from(body: ChatStreamRequest) -> list[dict[str, str]]:
@@ -179,24 +204,118 @@ async def _produce(
     await queue.put(STREAM_END)
 
 
+def _forward(sink: asyncio.Queue | None, frame: Any) -> None:
+    """Đẩy frame cho relay live (nếu có) — KHÔNG chặn: relay chậm/đã rời → sink đầy → drop.
+    Turn nền (dequeue) không có relay (sink=None) → bỏ qua. Persistence KHÔNG phụ thuộc frame này
+    (collector trong _produce đã thu chữ TRƯỚC khi frame vào queue)."""
+    if sink is None:
+        return
+    try:
+        sink.put_nowait(frame)
+    except asyncio.QueueFull:
+        pass
+
+
+async def _run_turn(
+    user_id: str,
+    sink: asyncio.Queue | None,
+    frame_queue: asyncio.Queue,
+    body: ChatStreamRequest,
+    ctx: GatewayContext,
+    conversation_id: str,
+    is_new: bool,
+) -> None:
+    """Chạy 1 turn tới HẾT (detached, thuộc registry). Bơm frame từ _produce sang relay live (nếu còn),
+    LUÔN drain frame_queue để _produce không kẹt khi FE đã ngắt. Xong/lỗi → dequeue turn kế (FIFO)."""
+    produce_task = asyncio.create_task(_produce(frame_queue, body, ctx, conversation_id, is_new))
+    try:
+        while True:
+            frame = await frame_queue.get()
+            _forward(sink, frame)
+            if frame is STREAM_END:
+                break
+        await produce_task  # _persist_answer đã chạy TRƯỚC STREAM_END — chỉ chờ _produce trả về
+    except asyncio.CancelledError:
+        produce_task.cancel()  # chỉ khi shutdown huỷ task nền — KHÔNG do FE ngắt
+        raise
+    except Exception:
+        logger.exception("Turn nền lỗi user_id=%s conversation_id=%s", user_id, conversation_id)
+        if not produce_task.done():
+            produce_task.cancel()
+    await _advance_queue(user_id)  # lỗi vẫn dequeue (không kẹt); bị cancel thì đã raise ở trên nên bỏ qua
+
+
+async def _admit_turn(
+    user_id: str, body: ChatStreamRequest, conversation_id: str, is_new: bool
+) -> tuple[asyncio.Queue, str, asyncio.Task[None]] | None:
+    """Dưới lock: RẢNH → chạy turn detached, trả (sink, request_id, task) cho relay live.
+    BẬN + còn chỗ → xếp hàng, trả None (FE nhận 'queued' rồi poll DB). BẬN + đầy (3) → 429."""
+    async with _runners_lock:
+        runner = _runners.get(user_id)
+        if runner is None:
+            runner = _UserRunner()
+            _runners[user_id] = runner
+        if runner.current is None:
+            sink: asyncio.Queue = asyncio.Queue(maxsize=64)
+            frame_queue: asyncio.Queue = asyncio.Queue(maxsize=64)
+            request_id = str(uuid.uuid4())
+            ctx = GatewayContext(request_id=request_id, user_id=user_id)
+            runner.current = asyncio.create_task(
+                _run_turn(user_id, sink, frame_queue, body, ctx, conversation_id, is_new)
+            )
+            return sink, request_id, runner.current
+        if len(runner.queue) >= MAX_QUEUE_PER_USER:
+            raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Đang bận, thử lại sau.")
+        runner.queue.append(_QueuedTurn(body=body, conversation_id=conversation_id, is_new=is_new))
+        return None
+
+
+async def _advance_queue(user_id: str) -> None:
+    """Turn vừa xong: dưới lock pop turn kế (FIFO) → chạy tiếp (sink=None vì user đã rời, FE đọc DB).
+    Hàng đợi rỗng + không còn turn → xoá runner (dọn registry)."""
+    async with _runners_lock:
+        runner = _runners.get(user_id)
+        if runner is None:
+            return
+        if runner.queue:
+            qt = runner.queue.popleft()
+            frame_queue: asyncio.Queue = asyncio.Queue(maxsize=64)
+            ctx = GatewayContext(request_id=str(uuid.uuid4()), user_id=user_id)
+            runner.current = asyncio.create_task(
+                _run_turn(user_id, None, frame_queue, qt.body, ctx, qt.conversation_id, qt.is_new)
+            )
+        else:
+            runner.current = None
+            _runners.pop(user_id, None)
+
+
+_QUEUED_MSG = "Mình đang trả lời câu trước, câu này sẽ được xử lý ngay sau đó nhé."
+
+
+async def _queued_stream(conversation_id: str) -> AsyncIterator[str]:
+    """User đang bận (1 turn chạy): báo 'queued' rồi ĐÓNG stream — FE hiện 'đang suy nghĩ' + poll DB."""
+    yield sse_frame("meta", {"conversation_id": conversation_id, "message_id": str(uuid.uuid4()), "as_of": None})
+    yield sse_frame("queued", {"conversation_id": conversation_id, "message": _QUEUED_MSG})
+
+
 async def _event_stream(
-    request: Request, body: ChatStreamRequest, user_id: str, conversation_id: str, is_new: bool
+    request: Request,
+    sink: asyncio.Queue,
+    user_id: str,
+    conversation_id: str,
+    request_id: str,
+    task: asyncio.Task[None],
 ) -> AsyncIterator[str]:
-    request_id = str(uuid.uuid4())
-    ctx = GatewayContext(request_id=request_id, user_id=user_id)
-
-    queue: asyncio.Queue = asyncio.Queue(maxsize=64)
-    task = asyncio.create_task(_produce(queue, body, ctx, conversation_id, is_new))
-
+    """Relay live SSE cho turn đang chạy: đọc frame từ sink tới disconnect/STREAM_END. KHÔNG sở hữu
+    turn task (thuộc registry) — FE ngắt thì thôi relay, turn vẫn chạy nền tới hết + persist."""
     # meta.as_of = null ở v1: briefing đọc trong task nền, không chặn frame đầu (doc 02 §5.2)
     yield sse_frame("meta", {"conversation_id": conversation_id, "message_id": request_id, "as_of": None})
-
     try:
         while True:
             if await request.is_disconnected():
                 break
             try:
-                frame = await asyncio.wait_for(queue.get(), timeout=HEARTBEAT_SECONDS)
+                frame = await asyncio.wait_for(sink.get(), timeout=HEARTBEAT_SECONDS)
             except asyncio.TimeoutError:
                 yield ": hb\n\n"
                 continue
@@ -204,9 +323,9 @@ async def _event_stream(
                 break
             yield frame
     finally:
-        if not task.done():
-            task.cancel()  # user đóng tab → hủy LLM call, ngừng trả tiền token
-        logger.info("chat stream kết thúc request_id=%s user_id=%s", request_id, user_id)
+        # chat-background-queue: KHÔNG task.cancel() khi FE ngắt — turn chạy nền tới hết + _persist_answer
+        # ghi DB (trước đây cancel ở đây làm MẤT câu trả lời dở khi user đóng tab). task giữ ref ở registry.
+        logger.info("chat relay kết thúc request_id=%s user_id=%s", request_id, user_id)
 
 
 @router.post("/stream", summary="[User] Chat với Finext AI (SSE)", tags=["chat"])
@@ -225,10 +344,16 @@ async def chat_stream(
     # is_new: FE không gửi conversation_id = bắt đầu hội thoại mới → sẽ đặt tiêu đề AI ở cuối lượt.
     is_new = not (body.conversation_id and body.conversation_id.strip())
     conversation_id = await crud_chat.start_turn(db, user_id, body.conversation_id, body.message)
+    headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+    # Registry per-user: RẢNH → chạy turn nền + relay live; BẬN → xếp hàng ('queued') hoặc 429 nếu đầy.
+    admission = await _admit_turn(user_id, body, conversation_id, is_new)
+    if admission is None:
+        return StreamingResponse(_queued_stream(conversation_id), media_type="text/event-stream", headers=headers)
+    sink, request_id, task = admission
     return StreamingResponse(
-        _event_stream(request, body, user_id, conversation_id, is_new),
+        _event_stream(request, sink, user_id, conversation_id, request_id, task),
         media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        headers=headers,
     )
 
 
