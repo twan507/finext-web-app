@@ -1040,7 +1040,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               display: 'flex',
               flexDirection: 'column',
               minHeight: `calc(100dvh - ${layoutTokens.appBarHeight}px - env(titlebar-area-height, 0px))`,
-              pb: { xs: '56px', md: 0 },
+              pb: 0, // MobileBottomBar ẩn ở /chat → không chừa 56px, để composer sát đáy
             }}
           >
             {children}
