@@ -23,6 +23,7 @@ export interface PhaseDaily {
   market_intensity: number; // -1..+1
   sub_signal?: string | null;
   fnx_close: number;
+  suppressed?: boolean; // backend đánh dấu bối cảnh rủi ro → FE bật cảnh báo (KHÔNG lộ cơ chế ra UI)
 }
 
 export interface PhaseComment {

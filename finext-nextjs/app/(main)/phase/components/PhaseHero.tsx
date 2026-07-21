@@ -43,8 +43,18 @@ export default function PhaseHero({ daily, streak, prevPhaseEn, history = [] }: 
   // Tooltip nền glass (đồng bộ ngôn ngữ card), thay nền đục mặc định của MUI.
   const glassTooltipSx = { ...getGlassCard(isDark), color: theme.palette.text.primary, px: 1.25, py: 0.75, borderRadius: `${borderRadius.md}px` };
 
-  const pct = Math.round(Math.min(daily.market_exposure ?? 0, 1) * 100);
-  const onSeg = Math.round(pct / 10);
+  // market_exposure thang 0–2.0 (×100 = %). Bỏ cap Math.min cũ để hiển thị % THẬT (>100 = dùng margin).
+  const exposure = daily.market_exposure ?? 0;
+  const pct = Math.round(exposure * 100);
+  const onSeg = Math.round(Math.min(pct, 100) / 10); // thanh 10 đoạn giả định [0,100], không tràn khi >100%
+  const cashPct = Math.max(0, 100 - pct);
+  const marginPct = Math.max(0, pct - 100);
+  // Cảnh báo rủi ro: backend đánh dấu bối cảnh xấu (suppressed) HOẶC tỷ trọng gợi ý ≤ 55%.
+  const highRisk = daily.suppressed === true || exposure <= 0.55;
+  const exposureColor = highRisk ? theme.palette.trend.down : primary;
+  const segFill = highRisk
+    ? `linear-gradient(90deg, ${exposureColor}, ${alpha(exposureColor, 0.7)})`
+    : `linear-gradient(90deg, ${primary}, ${theme.palette.primary.light})`;
   const intensity = daily.market_intensity ?? 0;
   const markerPct = Math.max(0, Math.min(100, ((intensity + 1) / 2) * 100));
   const intensityColor =
@@ -108,7 +118,7 @@ export default function PhaseHero({ daily, streak, prevPhaseEn, history = [] }: 
         {/* ── Trạng thái thị trường ── */}
         <Box sx={{ ...cellSx, borderBottom: { xs: divider, md: 'none' }, borderRight: { md: divider } }}>
           <Typography sx={eyebrow}>Trạng thái thị trường</Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
             <Box
               sx={{
                 width: 52,
@@ -143,6 +153,36 @@ export default function PhaseHero({ daily, streak, prevPhaseEn, history = [] }: 
                 {meta.en}
               </Typography>
               <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary', mt: 0.5 }}>{meta.vn}</Typography>
+            </Box>
+            {/* Tỷ trọng gợi ý NỔI BẬT ngay cạnh nhãn + cảnh báo rủi ro (≤55% hoặc bối cảnh xấu). */}
+            <Box
+              sx={{
+                ml: { md: 'auto' },
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.9,
+                px: 1.5,
+                py: 0.75,
+                borderRadius: 999,
+                color: exposureColor,
+                bgcolor: alpha(exposureColor, 0.12),
+                border: `1px solid ${alpha(exposureColor, 0.4)}`,
+                boxShadow: highRisk && isDark ? `0 0 16px ${alpha(exposureColor, 0.45)}` : 'none',
+              }}
+            >
+              <Typography component="span" sx={{ fontSize: '1.5rem', fontWeight: fontWeight.extrabold, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+                {pct}%
+              </Typography>
+              <Box component="span" sx={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
+                <Typography component="span" sx={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: fontWeight.semibold, opacity: 0.85 }}>
+                  Tỷ trọng
+                </Typography>
+                {highRisk ? (
+                  <Typography component="span" sx={{ fontSize: '0.74rem', fontWeight: fontWeight.bold, whiteSpace: 'nowrap' }}>
+                    ⚠ Rủi ro cao
+                  </Typography>
+                ) : null}
+              </Box>
             </Box>
           </Box>
 
@@ -212,7 +252,7 @@ export default function PhaseHero({ daily, streak, prevPhaseEn, history = [] }: 
               fontWeight: fontWeight.extrabold,
               lineHeight: 0.95,
               fontVariantNumeric: 'tabular-nums',
-              background: `linear-gradient(180deg, ${theme.palette.text.primary}, ${primary})`,
+              background: `linear-gradient(180deg, ${theme.palette.text.primary}, ${exposureColor})`,
               WebkitBackgroundClip: 'text',
               backgroundClip: 'text',
               color: 'transparent',
@@ -231,21 +271,30 @@ export default function PhaseHero({ daily, streak, prevPhaseEn, history = [] }: 
                   flex: 1,
                   height: 9,
                   borderRadius: '3px',
-                  background:
-                    i < onSeg
-                      ? `linear-gradient(90deg, ${primary}, ${theme.palette.primary.light})`
-                      : theme.palette.component.chart.gridLine,
-                  boxShadow: i < onSeg && isDark ? `0 0 10px ${alpha(primary, 0.55)}` : 'none',
+                  background: i < onSeg ? segFill : theme.palette.component.chart.gridLine,
+                  boxShadow: i < onSeg && isDark ? `0 0 10px ${alpha(exposureColor, 0.55)}` : 'none',
                 }}
               />
             ))}
           </Box>
           <Typography sx={{ fontSize: getResponsiveFontSize('xs'), color: 'text.secondary' }}>
-            Còn lại{' '}
-            <Box component="span" sx={{ color: 'text.primary', fontWeight: fontWeight.semibold }}>
-              {100 - pct}%
-            </Box>{' '}
-            tiền mặt
+            {marginPct > 0 ? (
+              <>
+                Dùng thêm{' '}
+                <Box component="span" sx={{ color: 'text.primary', fontWeight: fontWeight.semibold }}>
+                  {marginPct}%
+                </Box>{' '}
+                đòn bẩy
+              </>
+            ) : (
+              <>
+                Còn lại{' '}
+                <Box component="span" sx={{ color: 'text.primary', fontWeight: fontWeight.semibold }}>
+                  {cashPct}%
+                </Box>{' '}
+                tiền mặt
+              </>
+            )}
           </Typography>
         </Box>
 
