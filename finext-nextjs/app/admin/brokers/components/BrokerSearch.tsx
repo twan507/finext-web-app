@@ -32,14 +32,12 @@ interface BrokerSearchProps {
     brokers: BrokerPublic[];
     onFilteredBrokers: (filteredBrokers: BrokerPublic[], isFiltering: boolean) => void;
     loading?: boolean;
-    userEmails?: Map<string, string>;
 }
 
 const BrokerSearch: React.FC<BrokerSearchProps> = ({
     brokers,
     onFilteredBrokers,
-    loading = false,
-    userEmails = new Map()
+    loading = false
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [showFilters, setShowFilters] = useState(false);
@@ -51,14 +49,13 @@ const BrokerSearch: React.FC<BrokerSearchProps> = ({
         const basicFields = [
             broker.broker_code,
             broker.user_id,
-            broker.user_email,  // Include user email if available
-            userEmails.get(broker.user_id), // Include fetched email
+            broker.user_email,  // Email đã được backend populate trong list response
             broker.id
         ].filter(field => field); // Remove null/undefined values
 
         // Type fields for system users
         const typeFields = [];
-        const brokerEmail = userEmails.get(broker.user_id) || broker.user_email || '';
+        const brokerEmail = broker.user_email || '';
         if (isSystemUser(brokerEmail)) {
             typeFields.push('system', 'hệ thống', 'he thong', 'system user', 'người dùng hệ thống');
         }
@@ -111,7 +108,7 @@ const BrokerSearch: React.FC<BrokerSearchProps> = ({
             return brokers;
         }
         return brokers.filter(broker => searchInBroker(broker, searchTerm));
-    }, [brokers, searchTerm, userEmails]);
+    }, [brokers, searchTerm]);
 
     // Update parent component when filtered brokers change
     React.useEffect(() => {

@@ -90,8 +90,6 @@ export default function BrokersPage() {
     const [editCodeError, setEditCodeError] = useState<string | null>(null);// View and sorting state
     const [expandedView, setExpandedView] = useState(false);
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
-    const [userEmails, setUserEmails] = useState<Map<string, string>>(new Map());
-    const [emailsLoading, setEmailsLoading] = useState(false);
 
     // Column configuration for sortable table
     const columnConfigs: ColumnConfig[] = useMemo(() => [
@@ -107,7 +105,7 @@ export default function BrokersPage() {
             label: 'Email người dùng',
             sortable: true,
             sortType: 'string',
-            accessor: (broker: BrokerPublic) => userEmails.get(broker.user_id) || broker.user_email || broker.user_id,
+            accessor: (broker: BrokerPublic) => broker.user_email || broker.user_id,
             minWidth: 'auto',
         },
         {
@@ -164,7 +162,7 @@ export default function BrokersPage() {
             minWidth: 'auto',
             align: 'center' as const
         }
-    ], [expandedView, userEmails]); const fetchBrokers = useCallback(async () => {
+    ], [expandedView]); const fetchBrokers = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
@@ -192,59 +190,11 @@ export default function BrokersPage() {
         }
     }, []);
 
-    const fetchUserEmails = useCallback(async (userIds: string[]) => {
-        if (userIds.length === 0) return;
-
-        setEmailsLoading(true);
-        const emailsMap = new Map<string, string>();
-
-        try {
-            // Fetch user details for each user_id to get their email
-            const emailPromises = userIds.map(async (userId) => {
-                try {
-                    const response = await apiClient<{
-                        id: string;
-                        email: string;
-                        full_name: string;
-                    }>({
-                        url: `/api/v1/users/${userId}`,
-                        method: 'GET',
-                    });
-
-                    if (response.status === 200 && response.data) {
-                        return { userId, email: response.data.email };
-                    }
-                } catch (err) {
-                    console.warn(`Failed to load email for user ${userId}`);
-                }
-                return null;
-            });
-
-            const results = await Promise.all(emailPromises);
-
-            results.forEach(result => {
-                if (result) {
-                    emailsMap.set(result.userId, result.email);
-                }
-            });
-
-            setUserEmails(emailsMap);
-        } catch (err: any) {
-            console.error('Failed to load user emails:', err.message);
-        } finally {
-            setEmailsLoading(false);
-        }
-    }, []); useEffect(() => {
+    useEffect(() => {
         fetchBrokers();
     }, [fetchBrokers]);
 
-    // Fetch user emails when brokers change
-    useEffect(() => {
-        const userIds = brokers.map(broker => broker.user_id);
-        if (userIds.length > 0) {
-            fetchUserEmails(userIds);
-        }
-    }, [brokers, fetchUserEmails]);    // Update filtered brokers when brokers change and not actively filtering
+    // Update filtered brokers when brokers change and not actively filtering
     useEffect(() => {
         if (!isFiltering) {
             setFilteredBrokers(brokers);
@@ -299,7 +249,7 @@ export default function BrokersPage() {
             setBrokers(prev => prev.map(b => b.id === broker.id ? { ...b, is_active: originalStatus, updated_at: broker.updated_at } : b));
         }
     }; const handleOpenActionDialog = (broker: BrokerPublic, action: 'revoke' | 'grant') => {
-        const brokerEmail = userEmails.get(broker.user_id) || broker.user_email || '';
+        const brokerEmail = broker.user_email || '';
 
         // Check if broker is a system user
         if (isSystemUser(brokerEmail)) {
@@ -322,7 +272,7 @@ export default function BrokersPage() {
 
         // For revoke action, validate email confirmation
         if (actionType === 'revoke') {
-            const brokerEmail = userEmails.get(brokerToAction.user_id) || brokerToAction.user_email;
+            const brokerEmail = brokerToAction.user_email;
             if (!confirmEmail.trim()) {
                 setError('Vui lòng nhập email để xác nhận.');
                 return;
@@ -533,7 +483,6 @@ export default function BrokersPage() {
                 brokers={brokers}
                 onFilteredBrokers={handleFilteredBrokers}
                 loading={loading}
-                userEmails={userEmails}
             />
             <Paper sx={{
                 width: '100%',
@@ -589,11 +538,10 @@ export default function BrokersPage() {
                                                 <Typography
                                                     variant="body2"
                                                     sx={{
-                                                        fontSize: getResponsiveFontSize('sm'),
-                                                        opacity: emailsLoading ? 0.7 : 1
+                                                        fontSize: getResponsiveFontSize('sm')
                                                     }}
                                                 >
-                                                    {userEmails.get(broker.user_id) || broker.user_email || broker.user_id}
+                                                    {broker.user_email || broker.user_id}
                                                 </Typography>
                                             </TableCell>
                                             <TableCell sx={{
@@ -686,7 +634,7 @@ export default function BrokersPage() {
                                                         </IconButton>
                                                     </Tooltip>
                                                     {(() => {
-                                                        const brokerEmail = userEmails.get(broker.user_id) || broker.user_email || '';
+                                                        const brokerEmail = broker.user_email || '';
                                                         const isSystemBroker = isSystemUser(brokerEmail);
 
                                                         if (broker.is_active) {
@@ -782,7 +730,7 @@ export default function BrokersPage() {
                             Mã môi giới: {brokerToAction?.broker_code}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                            {userEmails.get(brokerToAction?.user_id || '') || brokerToAction?.user_email || 'Đang tải...'}
+                            {brokerToAction?.user_email || brokerToAction?.user_id}
                         </Typography>
                     </Box>
 
@@ -864,7 +812,7 @@ export default function BrokersPage() {
                                 variant="outlined"
                                 value={confirmEmail}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmEmail(e.target.value)}
-                                placeholder={userEmails.get(brokerToAction?.user_id || '') || brokerToAction?.user_email || ''}
+                                placeholder={brokerToAction?.user_email || ''}
                                 helperText="Email phải khớp chính xác với email của môi giới (không phân biệt chữ hoa thường)"
                                 disabled={actionLoading}
                                 error={!!error && (error.includes('email') || error.includes('Email'))}
@@ -916,7 +864,7 @@ export default function BrokersPage() {
                         Đổi mã broker
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                        {userEmails.get(brokerToEditCode?.user_id || '') || brokerToEditCode?.user_id}
+                        {brokerToEditCode?.user_email || brokerToEditCode?.user_id}
                     </Typography>
                 </DialogTitle>
                 <DialogContent>

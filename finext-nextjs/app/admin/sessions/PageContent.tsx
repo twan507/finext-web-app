@@ -58,16 +58,14 @@ const SessionsPage: React.FC = () => {
 
     // View and sorting state
     const [expandedView, setExpandedView] = useState(false);
-    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
-    const [userEmails, setUserEmails] = useState<Map<string, string>>(new Map());
-    const [emailsLoading, setEmailsLoading] = useState(false);    // Column configuration for sortable table
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);    // Column configuration for sortable table
     const columnConfigs: ColumnConfig[] = useMemo(() => [
         {
             id: 'user_email',
             label: 'Người dùng',
             sortable: true,
             sortType: 'string',
-            accessor: (session: SessionPublicAdmin) => userEmails.get(session.user_id) || session.user_email || session.user_id,
+            accessor: (session: SessionPublicAdmin) => session.user_email || session.user_id,
             minWidth: expandedView ? 250 : 200,
         },
         {
@@ -142,51 +140,7 @@ const SessionsPage: React.FC = () => {
             sortType: 'string',
             accessor: () => '', minWidth: expandedView ? 100 : 60,
             align: 'center' as const
-        }], [expandedView, userEmails]);
-
-    const fetchUserEmails = useCallback(async (userIds: string[]) => {
-        if (userIds.length === 0) return;
-
-        setEmailsLoading(true);
-        const emailsMap = new Map<string, string>();
-
-        try {
-            // Fetch user details for each user_id to get their email
-            const emailPromises = userIds.map(async (userId) => {
-                try {
-                    const response = await apiClient<{
-                        id: string;
-                        email: string;
-                        full_name: string;
-                    }>({
-                        url: `/api/v1/users/${userId}`,
-                        method: 'GET',
-                    });
-
-                    if (response.status === 200 && response.data) {
-                        return { userId, email: response.data.email };
-                    }
-                } catch (err) {
-                    console.warn(`Failed to load email for user ${userId}`);
-                }
-                return null;
-            });
-
-            const results = await Promise.all(emailPromises);
-
-            results.forEach(result => {
-                if (result) {
-                    emailsMap.set(result.userId, result.email);
-                }
-            });
-
-            setUserEmails(emailsMap);
-        } catch (err: any) {
-            console.error('Failed to load user emails:', err.message);
-        } finally {
-            setEmailsLoading(false);
-        }
-    }, []);
+        }], [expandedView]);
 
     const fetchSessions = useCallback(async () => {
         setLoading(true);
@@ -237,14 +191,6 @@ const SessionsPage: React.FC = () => {
     useEffect(() => {
         fetchSessions();
     }, [fetchSessions]);
-
-    // Fetch user emails when sessions change
-    useEffect(() => {
-        const userIds = sessions.map(session => session.user_id);
-        if (userIds.length > 0) {
-            fetchUserEmails(userIds);
-        }
-    }, [sessions, fetchUserEmails]);
 
     // Update filtered sessions when sessions change and not actively filtering
     useEffect(() => {
@@ -472,7 +418,7 @@ const SessionsPage: React.FC = () => {
                                                 ...getResponsiveDisplayStyle(columnConfigs[0], expandedView),
                                                 whiteSpace: expandedView ? 'normal' : 'nowrap',
                                                 minWidth: columnConfigs[0].minWidth,
-                                            }}>                                                <Tooltip title={userEmails.get(session.user_id) || session.user_email || session.user_id}>
+                                            }}>                                                <Tooltip title={session.user_email || session.user_id}>
                                                     <Typography sx={{
                                                         fontSize: getResponsiveFontSize('sm'),
                                                         maxWidth: expandedView ? 'none' : 200,
@@ -480,7 +426,7 @@ const SessionsPage: React.FC = () => {
                                                         textOverflow: 'ellipsis',
                                                         whiteSpace: expandedView ? 'normal' : 'nowrap'
                                                     }}>
-                                                        {userEmails.get(session.user_id) || session.user_email || session.user_id}
+                                                        {session.user_email || session.user_id}
                                                     </Typography>
                                                 </Tooltip>
                                             </TableCell>

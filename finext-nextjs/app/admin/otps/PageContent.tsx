@@ -56,8 +56,6 @@ const OtpsPage: React.FC = () => {
     // View and sorting state
     const [expandedView, setExpandedView] = useState(false);
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
-    const [userEmails, setUserEmails] = useState<Map<string, string>>(new Map());
-    const [emailsLoading, setEmailsLoading] = useState(false);
 
     // Auto-refresh state for countdown
     const [refreshTick, setRefreshTick] = useState(0);
@@ -69,7 +67,7 @@ const OtpsPage: React.FC = () => {
             label: 'Người dùng',
             sortable: true,
             sortType: 'string',
-            accessor: (otp: OtpPublicAdmin) => userEmails.get(otp.user_id) || otp.user_email || otp.user_id,
+            accessor: (otp: OtpPublicAdmin) => otp.user_email || otp.user_id,
             minWidth: expandedView ? 250 : 200,
         },
         {
@@ -153,51 +151,7 @@ const OtpsPage: React.FC = () => {
             minWidth: expandedView ? 100 : 60,
             align: 'center' as const
         }
-    ], [expandedView, userEmails]);
-
-    const fetchUserEmails = useCallback(async (userIds: string[]) => {
-        if (userIds.length === 0) return;
-
-        setEmailsLoading(true);
-        const emailsMap = new Map<string, string>();
-
-        try {
-            // Fetch user details for each user_id to get their email
-            const emailPromises = userIds.map(async (userId) => {
-                try {
-                    const response = await apiClient<{
-                        id: string;
-                        email: string;
-                        full_name: string;
-                    }>({
-                        url: `/api/v1/users/${userId}`,
-                        method: 'GET',
-                    });
-
-                    if (response.status === 200 && response.data) {
-                        return { userId, email: response.data.email };
-                    }
-                } catch (err) {
-                    console.warn(`Failed to load email for user ${userId}`);
-                }
-                return null;
-            });
-
-            const results = await Promise.all(emailPromises);
-
-            results.forEach(result => {
-                if (result) {
-                    emailsMap.set(result.userId, result.email);
-                }
-            });
-
-            setUserEmails(emailsMap);
-        } catch (err: any) {
-            console.error('Failed to load user emails:', err.message);
-        } finally {
-            setEmailsLoading(false);
-        }
-    }, []);
+    ], [expandedView]);
 
     const fetchOtps = useCallback(async () => {
         setLoading(true);
@@ -245,14 +199,6 @@ const OtpsPage: React.FC = () => {
     useEffect(() => {
         fetchOtps();
     }, [fetchOtps]);
-
-    // Fetch user emails when OTPs change
-    useEffect(() => {
-        const userIds = otps.map(otp => otp.user_id);
-        if (userIds.length > 0) {
-            fetchUserEmails(userIds);
-        }
-    }, [otps, fetchUserEmails]);
 
     // Update filtered OTPs when OTPs change and not actively filtering
     useEffect(() => {
@@ -514,7 +460,7 @@ const OtpsPage: React.FC = () => {
                                                 whiteSpace: expandedView ? 'normal' : 'nowrap',
                                                 minWidth: columnConfigs[0].minWidth,
                                             }}>
-                                                <Tooltip title={userEmails.get(otp.user_id) || otp.user_email || otp.user_id}>
+                                                <Tooltip title={otp.user_email || otp.user_id}>
                                                     <Typography sx={{
                                                         fontSize: getResponsiveFontSize('sm'),
                                                         maxWidth: expandedView ? 'none' : 200,
@@ -522,7 +468,7 @@ const OtpsPage: React.FC = () => {
                                                         textOverflow: 'ellipsis',
                                                         whiteSpace: expandedView ? 'normal' : 'nowrap'
                                                     }}>
-                                                        {userEmails.get(otp.user_id) || otp.user_email || otp.user_id}
+                                                        {otp.user_email || otp.user_id}
                                                     </Typography>
                                                 </Tooltip>
                                             </TableCell>
@@ -674,7 +620,7 @@ const OtpsPage: React.FC = () => {
                     {otpToDelete && (
                         <Box sx={{ mt: 2, p: 2, backgroundColor: 'action.hover', borderRadius: 1 }}>
                             <Typography variant="body2">
-                                <strong>Người dùng:</strong> {userEmails.get(otpToDelete.user_id) || otpToDelete.user_email || otpToDelete.user_id}
+                                <strong>Người dùng:</strong> {otpToDelete.user_email || otpToDelete.user_id}
                             </Typography>
                             <Typography variant="body2">
                                 <strong>Loại:</strong> {getOtpTypeDisplay(otpToDelete.otp_type)}

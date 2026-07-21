@@ -17,6 +17,7 @@ from app.schemas.common import PaginatedResponse  # Import schema phân trang
 
 # <<<< KẾT THÚC PHẦN CẬP NHẬT IMPORT >>>>
 from app.schemas.users import UserInDB
+import app.crud.users as crud_users
 from app.crud.sessions import get_sessions_by_user_id, delete_session_by_id, get_all_sessions  # get_all_sessions đã được cập nhật
 from app.utils.response_wrapper import StandardApiResponse, api_response_wrapper
 from app.utils.types import PyObjectId
@@ -68,6 +69,10 @@ async def read_all_system_sessions(
     )
 
     items = [SessionPublic.model_validate(s) for s in all_sessions_docs]
+    # Populate email trong 1 query duy nhất (chống N+1: trước đây FE gọi /users/{id} cho mỗi dòng).
+    emails_map = await crud_users.get_emails_by_user_ids(db, [str(item.user_id) for item in items])
+    for item in items:
+        item.user_email = emails_map.get(str(item.user_id))
     return PaginatedResponse[SessionPublic](items=items, total=total_count)
 
 

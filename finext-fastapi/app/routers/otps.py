@@ -200,6 +200,10 @@ async def admin_read_all_otps(
     # cần tạo OtpAdminPublic từ OtpInDB hoặc trả về OtpInDB trực tiếp (cần sửa response_model).
     # Hiện tại, chúng ta trả về OtpPublic.
     items = [OtpPublic.model_validate(o) for o in otps_docs]
+    # Populate email trong 1 query duy nhất (chống N+1: trước đây FE gọi /users/{id} cho mỗi dòng).
+    emails_map = await crud_users.get_emails_by_user_ids(db, [str(item.user_id) for item in items])
+    for item in items:
+        item.user_email = emails_map.get(str(item.user_id))
     return PaginatedResponse[OtpPublic](items=items, total=total)
 
 

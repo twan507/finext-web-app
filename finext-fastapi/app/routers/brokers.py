@@ -204,6 +204,10 @@ async def list_all_brokers(
     )
 
     items = [BrokerPublic.model_validate(b) for b in brokers_docs]
+    # Populate email trong 1 query duy nhất (chống N+1: trước đây FE gọi /users/{id} cho mỗi dòng).
+    emails_map = await crud_users.get_emails_by_user_ids(db, [str(item.user_id) for item in items])
+    for item in items:
+        item.user_email = emails_map.get(str(item.user_id))
     return PaginatedResponse[BrokerPublic](items=items, total=total_count)
 
 

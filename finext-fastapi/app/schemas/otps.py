@@ -45,6 +45,8 @@ class OtpPublic(BaseModel):  # What might be returned (e.g., just expiry and typ
     otp_type: OtpTypeEnum
     expires_at: datetime
     created_at: datetime
+    # Được populate ở admin list endpoint (/admin/all) để chống N+1 gọi /users/{id} theo từng dòng.
+    user_email: Optional[str] = None
     # Không trả về attempts hay hashed_otp_code
 
     model_config = ConfigDict(from_attributes=True, use_enum_values=True, populate_by_name=True)

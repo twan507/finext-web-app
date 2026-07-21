@@ -1,7 +1,7 @@
 # finext-fastapi/app/crud/users.py
 import asyncio
 import logging
-from typing import Optional, List, Tuple # Thêm Tuple
+from typing import Optional, List, Tuple, Dict # Thêm Tuple
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
@@ -62,6 +62,27 @@ async def get_user_by_id_db(db: AsyncIOMotorDatabase, user_id: str) -> Optional[
             user_doc["subscription_id"] = str(user_doc["subscription_id"])
         return UserInDB(**user_doc)
     return None
+
+async def get_emails_by_user_ids(db: AsyncIOMotorDatabase, user_ids: List[str]) -> Dict[str, str]:
+    """Lấy map {user_id_str: email} cho danh sách user_id trong MỘT query duy nhất (chống N+1).
+
+    Chỉ project trường email (không lộ hashed_password, roles, ...). Bỏ qua id không hợp lệ và trùng lặp.
+    Dùng cho các màn admin (brokers/sessions/otps) cần hiển thị email theo user_id.
+    """
+    object_ids = []
+    seen: set[str] = set()
+    for uid in user_ids:
+        if uid and uid not in seen and ObjectId.is_valid(uid):
+            seen.add(uid)
+            object_ids.append(ObjectId(uid))
+
+    if not object_ids:
+        return {}
+
+    cursor = db[USERS_COLLECTION].find({"_id": {"$in": object_ids}}, {"email": 1})
+    docs = await cursor.to_list(length=len(object_ids))
+    return {str(doc["_id"]): doc["email"] for doc in docs if doc.get("email")}
+
 
 async def create_user_db(
     db: AsyncIOMotorDatabase,

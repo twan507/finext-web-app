@@ -75,7 +75,7 @@ class BrokerInDB(BrokerBase):
 
 class BrokerPublic(BrokerBase):
     id: PyObjectId = Field(alias="_id")
-    # user_email: Optional[EmailStr] = Field(None, description="Email của người dùng Đối tác, nếu được populate.") # Cân nhắc thêm nếu cần
+    user_email: Optional[str] = Field(default=None, description="Email của người dùng Đối tác (được populate ở list endpoint để chống N+1).")
     created_at: datetime
     updated_at: datetime
 

@@ -31,4 +31,5 @@ class SessionInDB(BaseModel):
 
 
 class SessionPublic(SessionInDB):
-    pass
+    # Được populate ở admin list endpoint (/all) để chống N+1 gọi /users/{id} theo từng dòng.
+    user_email: Optional[str] = None
