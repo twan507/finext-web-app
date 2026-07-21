@@ -158,7 +158,7 @@ Trích đúng, không rút gọn quá mức; tối thiểu phải nêu #1 #3 #4 
   khoảng-cách-tới-ngưỡng, không phải khuyến nghị lẻ.
 - **"2022 hệ làm gì mà không chết?"** → `market_phase_history` filter 2022: kể chuỗi chuyển pha + exposure về 0,
   ghép số FROZEN (+8.6/+35.3/+16.6 vs −49%) + disclaimer.
-- **"Hệ tính phase kiểu gì?"** → mức được nói: mô hình đo độ rộng thị trường đa khung + thanh khoản đồng pha
+- **"Hệ tính phase kiểu gì?"** → mức được nói: mô hình đo XU HƯỚNG thị trường đa khung + thanh khoản đồng pha
   trên rổ FNXINDEX, 7 chỉ số công bố ở mục 2 — công thức/trọng số là tài sản nội bộ, không chia sẻ.
 
 ## 7. Known gaps của tầng phase/danh mục

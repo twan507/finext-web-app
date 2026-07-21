@@ -17,9 +17,9 @@ _INTERNAL_NAMES = (
 
 # Token CÓ NGHĨA với khách → map §9 (cả trần lẫn trong backtick).
 _PHRASE_MAP = {
-    "w_trend": "độ rộng xu hướng tuần", "m_trend": "độ rộng xu hướng tháng",
-    "q_trend": "độ rộng xu hướng quý", "d_trend": "độ rộng xu hướng ngày",
-    "y_trend": "độ rộng xu hướng năm",
+    "w_trend": "xu hướng tuần", "m_trend": "xu hướng tháng",
+    "q_trend": "xu hướng quý", "d_trend": "xu hướng ngày",
+    "y_trend": "xu hướng năm",
     "day_score": "điểm dòng tiền ngày", "week_score": "điểm dòng tiền tuần",
     "month_score": "điểm dòng tiền tháng",
     "industry_rank": "phân vị xếp hạng trong ngành", "rank_pct": "phân vị xếp hạng thị trường",

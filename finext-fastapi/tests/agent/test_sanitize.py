@@ -35,7 +35,8 @@ def test_score_tokens_mapped_backtick_and_bare():
     assert "điểm dòng tiền tuần" in sanitize_answer("Dòng tiền: `week_score` -14.7")
     assert "week_score" not in sanitize_answer("Dòng tiền: `week_score` -14.7")
     assert "điểm dòng tiền ngày" in sanitize_answer("nếu 2-3 phiên tới day_score tiếp tục âm")
-    assert "độ rộng xu hướng tuần" in sanitize_answer("khi w_trend vượt 0,30")
+    out = sanitize_answer("khi w_trend vượt 0,30")
+    assert "xu hướng tuần" in out and "độ rộng" not in out  # trend theo khung = "xu hướng", KHÔNG "độ rộng"
 
 
 def test_score_token_keeps_number():
@@ -94,7 +95,7 @@ def test_muc_grade_mapped():
 
 # --- token M3 mới: y_trend, industry_rank ---
 def test_y_trend_and_industry_rank_mapped():
-    assert "độ rộng xu hướng năm" in sanitize_answer("khung năm `y_trend` 0,18")
+    assert "xu hướng năm" in sanitize_answer("khung năm `y_trend` 0,18")
     assert "y_trend" not in sanitize_answer("khung năm `y_trend` 0,18")
     out = sanitize_answer("industry_rank 57% trong ngành")
     assert "industry_rank" not in out and "phân vị xếp hạng trong ngành" in out

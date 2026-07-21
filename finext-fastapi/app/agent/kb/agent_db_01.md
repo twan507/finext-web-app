@@ -80,7 +80,7 @@ Khung chu kỳ: w = 5 phiên, m = 20, q = 60, y = 240.
 
 - `w_trend = 0.35` → 35% mã đang có giá trên trend line tuần (midpoint của range tuần)
 - Bounded [0, 1]
-- Ý nghĩa: breadth indicator mean-reversion — ngưỡng > 0.8 quá mua, < 0.2 quá bán
+- Ý nghĩa: chỉ báo XU HƯỚNG mean-reversion — ngưỡng > 0.8 quá mua, < 0.2 quá bán
 
 Tính ở 3 cấp: thị trường (`market_snapshot.trend`), ngành (`industry_snapshot.trend`), nhóm (`group_snapshot.trend`). **Không có** ở cấp mã — mã dùng `technical_zone` thay thế.
 
