@@ -3,10 +3,10 @@ from app.core import config
 
 def test_chat_quota_defaults_present_and_positive():
     """Trần quota tính bằng ĐƠN VỊ QUY ĐỔI theo chi phí (xem billable_units), không phải token thô.
-    Số đo thật: một lượt chat ≈ 130.000 đơn vị → trần 5h hiện tại ≈ 8 lượt."""
+    Số đo thật: một lượt chat ≈ 130.000 đơn vị → trần 5h hiện tại ≈ 32 lượt."""
     assert config.CHAT_MAX_CONVERSATIONS == 50
-    assert config.AGENT_TOKENS_5H == 1_000_000
-    assert config.AGENT_TOKENS_WEEK == 10_000_000
+    assert config.AGENT_TOKENS_5H == 4_000_000
+    assert config.AGENT_TOKENS_WEEK == 40_000_000
     assert config.AGENT_ADVANCED_MULT == 5
     assert config.AGENT_SESSION_HOURS == 5
     assert config.AGENT_WEEK_DAYS == 7

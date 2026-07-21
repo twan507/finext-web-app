@@ -167,9 +167,9 @@ LLM_PRICE_INPUT = float(os.getenv("LLM_PRICE_INPUT") or 0.30)
 LLM_PRICE_CACHED = float(os.getenv("LLM_PRICE_CACHED") or 0.06)
 LLM_PRICE_OUTPUT = float(os.getenv("LLM_PRICE_OUTPUT") or 1.20)
 # --- Quota per-license: cửa sổ 5h (anchored) + weekly. Đơn vị = ĐƠN VỊ QUY ĐỔI (không phải token thô) ---
-AGENT_TOKENS_5H = int(os.getenv("AGENT_TOKENS_5H") or 1_000_000)  # trần/5h (standard) ≈ 8 lượt
-AGENT_TOKENS_WEEK = int(os.getenv("AGENT_TOKENS_WEEK") or 10_000_000)  # trần/tuần (standard) ≈ 76 lượt
-AGENT_ADVANCED_MULT = int(os.getenv("AGENT_ADVANCED_MULT") or 5)  # advanced = ×5 standard
+AGENT_TOKENS_5H = int(os.getenv("AGENT_TOKENS_5H") or 4_000_000)  # trần/5h (standard) ≈ 32 lượt
+AGENT_TOKENS_WEEK = int(os.getenv("AGENT_TOKENS_WEEK") or 40_000_000)  # trần/tuần (standard) ≈ 304 lượt
+AGENT_ADVANCED_MULT = int(os.getenv("AGENT_ADVANCED_MULT") or 5)  # advanced (paid) = ×5 standard → x4 base là cả free lẫn paid đều x4
 AGENT_SESSION_HOURS = int(os.getenv("AGENT_SESSION_HOURS") or 5)  # độ dài cửa sổ session
 AGENT_WEEK_DAYS = int(os.getenv("AGENT_WEEK_DAYS") or 7)
 AGENT_ADVANCED_LICENSES = set((os.getenv("AGENT_ADVANCED_LICENSES") or "PATRON,PARTNER").upper().replace(" ", "").split(","))
