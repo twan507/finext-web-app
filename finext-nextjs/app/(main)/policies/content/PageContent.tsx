@@ -72,7 +72,7 @@ export default function ContentPolicyContent() {
           <li>Báo cáo phân tích thị trường và tin tức chứng khoán</li>
           <li>Dữ liệu phân tích nhóm ngành, phân tích kỹ thuật và phân tích cơ bản</li>
           <li>Biểu đồ, chỉ số tài chính và bộ lọc cổ phiếu</li>
-          <li>Nội dung giáo dục trong mục Finext Learning</li>
+          <li>Nội dung giáo dục trong mục Hướng dẫn sử dụng</li>
         </ul>
       </Section>
 
@@ -100,9 +100,9 @@ export default function ContentPolicyContent() {
             tạc thông tin tài chính</li>
           <li><strong>Khách quan:</strong> Trình bày đa chiều, không thiên vị hay cố ý dẫn dắt
             người đọc theo một hướng đầu tư cụ thể</li>
-          <li><strong>Rõ ràng:</strong> Phân biệt giữa thông tin thực tế (fact) và quan điểm phân
-            tích (opinion)</li>
-          <li><strong>Hợp pháp:</strong> Tuân thủ quy định của Ủy ban Chứng khoán Nhà nước (SSC)
+          <li><strong>Rõ ràng:</strong> Phân biệt rõ giữa thông tin dữ kiện và quan điểm nhận
+            định</li>
+          <li><strong>Hợp pháp:</strong> Tuân thủ quy định của Ủy ban Chứng khoán Nhà nước
             và pháp luật Việt Nam về thông tin trên thị trường chứng khoán</li>
         </ul>
       </Section>
@@ -157,7 +157,7 @@ export default function ContentPolicyContent() {
       <Section title="8. Liên hệ">
         Mọi thắc mắc về chính sách nội dung, vui lòng liên hệ:
         <ul>
-          <li><strong>Nền tảng:</strong> Finext — Your Next FInancial Step</li>
+          <li><strong>Nền tảng:</strong> Finext — Your Next Financial Step</li>
           <li><strong>Email:</strong> finext.vn@gmail.com</li>
         </ul>
       </Section>

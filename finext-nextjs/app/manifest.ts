@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
         name: 'Finext',
         short_name: 'Finext',
         description:
-            'Your Next FInancial Step cho nhà đầu tư Việt Nam',
+            'Your Next Financial Step cho nhà đầu tư Việt Nam',
         start_url: '/',
         display: 'standalone',
         display_override: ['window-controls-overlay', 'standalone'],
