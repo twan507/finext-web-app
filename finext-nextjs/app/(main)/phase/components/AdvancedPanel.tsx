@@ -1,10 +1,10 @@
 'use client';
 
-import { Box, useTheme } from '@mui/material';
+import { Box, useTheme, type Theme } from '@mui/material';
 import type { PhaseDaily, PhaseCommentIndicator } from '../types';
 import { getPhaseMeta } from '../phaseMeta';
 import AmbientCard from './AmbientCard';
-import { DivergingBullet, Segments10, StatBar, IndicatorBlock, NoteItem, divColor, fmtDiv } from './IndicatorViz';
+import { DivergingBullet, Segments10, StatBar, IndicatorBlock, NoteItem, divColor, fmtDiv, lerpColor } from './IndicatorViz';
 
 interface AdvancedPanelProps {
   daily: PhaseDaily;
@@ -29,9 +29,7 @@ interface Ind {
   refLabel?: string;
   refValue2?: number; // ngưỡng trên (vd +0.10) → vùng xanh
   refLabel2?: string;
-  breaker?: boolean; // true = circuit-breaker (vùng nguy hiểm dưới ngưỡng)
-  safeText?: string;
-  dangerText?: string;
+  breaker?: boolean; // true = giữ thang nền/ngưỡng (đỏ ≤ −10% · xanh ≥ +10%) + marker gradient
   posText?: string;
   negText?: string;
   midText?: string; // tầng giữa (chỉ khi có midValue): pos ≥ midValue | mid [0, midValue) | neg < 0
@@ -56,9 +54,9 @@ const INDICATORS: Ind[] = [
     left: '−1',
     refLabel: '0',
     right: '+1',
-    posText: 'Cùng nhịp',
-    midText: 'Rời nhịp',
-    negText: 'Ngược nhịp',
+    posText: 'Cùng pha',
+    midText: 'Rời pha',
+    negText: 'Ngược pha',
     midValue: 0.35,
   },
   {
@@ -76,10 +74,21 @@ const INDICATORS: Ind[] = [
     left: '−20%',
     right: '+20%',
     breaker: true,
-    safeText: 'Chưa sập nhanh',
-    dangerText: 'Đã sập nhanh',
   },
 ];
+
+// Thang mốc px_ret20 (momentum ~20 phiên): tên badge + màu theo dải đỏ→trung tính→xanh.
+// Âm càng sâu → đỏ càng đậm; quanh 0 → trung tính (ref vàng); dương → xanh đậm dần.
+// Giữ −10% là mốc "Sập nhanh" (trùng đường ngưỡng đỏ trên thanh).
+function pxRet20Tier(theme: Theme, v: number): { text: string; color: string } {
+  const { up, down, ref } = theme.palette.trend;
+  if (v >= 0.1) return { text: 'Tăng mạnh', color: up };
+  if (v >= 0.03) return { text: 'Tăng', color: lerpColor(ref, up, 0.55) };
+  if (v > -0.03) return { text: 'Đi ngang', color: ref };
+  if (v > -0.06) return { text: 'Suy yếu', color: lerpColor(ref, down, 0.55) };
+  if (v > -0.1) return { text: 'Giảm sâu', color: lerpColor(ref, down, 0.85) };
+  return { text: 'Sập nhanh', color: down };
+}
 
 /** Panel "Chỉ số nâng cao" — 1 card, 2 cột: viz (trái) · diễn giải (phải), 7 chỉ số liền mạch. */
 export default function AdvancedPanel({ daily, indicators }: AdvancedPanelProps) {
@@ -106,9 +115,10 @@ export default function AdvancedPanel({ daily, indicators }: AdvancedPanelProps)
     let statusText: string | undefined;
     let statusColor: string;
     if (ind.breaker) {
-      const tripped = has && (v as number) <= refValue;
-      markerColor = !has ? theme.palette.text.disabled : tripped ? theme.palette.trend.down : theme.palette.trend.up;
-      statusText = has ? (tripped ? ind.dangerText : ind.safeText) : undefined;
+      // Nhiều mốc theo giá trị (thay nhị phân); màu badge/chấm diễn giải đi theo dải gradient.
+      const tier = has ? pxRet20Tier(theme, v as number) : undefined;
+      markerColor = tier ? tier.color : theme.palette.text.disabled;
+      statusText = tier?.text;
       statusColor = markerColor;
     } else {
       markerColor = numberColor;
@@ -127,7 +137,8 @@ export default function AdvancedPanel({ daily, indicators }: AdvancedPanelProps)
       } else {
         statusText = undefined;
       }
-      statusColor = theme.palette.text.secondary;
+      // Badge dùng status.color (trước đây lấy mColor = numberColor); giữ nguyên màu theo dấu.
+      statusColor = numberColor;
     }
     const status = statusText ? { text: statusText, color: statusColor } : undefined;
     return { valueText, numberColor, markerColor, status, markerPct, refPct, refPct2 };

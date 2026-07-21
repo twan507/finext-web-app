@@ -7,7 +7,7 @@ import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 
 // ── Helpers dùng chung ──────────────────────────────────────────────
 // Nội suy tuyến tính giữa 2 màu (RGB).
-function lerpColor(a: string, b: string, t: number): string {
+export function lerpColor(a: string, b: string, t: number): string {
   const ca = decomposeColor(a).values;
   const cb = decomposeColor(b).values;
   const v = [0, 1, 2].map((i) => Math.round(ca[i] + (cb[i] - ca[i]) * t)) as [number, number, number];
@@ -198,9 +198,9 @@ export function StatBar({
               px: 1,
               py: 0.4,
               borderRadius: 999,
-              color: mColor,
-              bgcolor: alpha(mColor, 0.12),
-              border: `1px solid ${alpha(mColor, 0.35)}`,
+              color: status.color,
+              bgcolor: alpha(status.color, 0.12),
+              border: `1px solid ${alpha(status.color, 0.35)}`,
             }}
           >
             {status.text}

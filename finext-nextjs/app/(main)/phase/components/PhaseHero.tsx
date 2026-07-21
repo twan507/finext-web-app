@@ -154,36 +154,6 @@ export default function PhaseHero({ daily, streak, prevPhaseEn, history = [] }: 
               </Typography>
               <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary', mt: 0.5 }}>{meta.vn}</Typography>
             </Box>
-            {/* Tỷ trọng gợi ý NỔI BẬT ngay cạnh nhãn + cảnh báo rủi ro (≤55% hoặc bối cảnh xấu). */}
-            <Box
-              sx={{
-                ml: { md: 'auto' },
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 0.9,
-                px: 1.5,
-                py: 0.75,
-                borderRadius: 999,
-                color: exposureColor,
-                bgcolor: alpha(exposureColor, 0.12),
-                border: `1px solid ${alpha(exposureColor, 0.4)}`,
-                boxShadow: highRisk && isDark ? `0 0 16px ${alpha(exposureColor, 0.45)}` : 'none',
-              }}
-            >
-              <Typography component="span" sx={{ fontSize: '1.5rem', fontWeight: fontWeight.extrabold, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-                {pct}%
-              </Typography>
-              <Box component="span" sx={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
-                <Typography component="span" sx={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: fontWeight.semibold, opacity: 0.85 }}>
-                  Tỷ trọng
-                </Typography>
-                {highRisk ? (
-                  <Typography component="span" sx={{ fontSize: '0.74rem', fontWeight: fontWeight.bold, whiteSpace: 'nowrap' }}>
-                    ⚠ Rủi ro cao
-                  </Typography>
-                ) : null}
-              </Box>
-            </Box>
           </Box>
 
           {/* Dải lịch sử pha 10 phiên gần nhất (cũ → mới) */}
@@ -246,23 +216,31 @@ export default function PhaseHero({ daily, streak, prevPhaseEn, history = [] }: 
         {/* ── Tỷ trọng nắm giữ gợi ý ── */}
         <Box sx={{ ...cellSx, borderBottom: { xs: divider, md: 'none' }, borderRight: { md: divider } }}>
           <Typography sx={eyebrow}>Tỷ trọng nắm giữ gợi ý</Typography>
-          <Typography
-            sx={{
-              fontSize: '3.2rem',
-              fontWeight: fontWeight.extrabold,
-              lineHeight: 0.95,
-              fontVariantNumeric: 'tabular-nums',
-              background: `linear-gradient(180deg, ${theme.palette.text.primary}, ${exposureColor})`,
-              WebkitBackgroundClip: 'text',
-              backgroundClip: 'text',
-              color: 'transparent',
-            }}
-          >
-            {pct}
-            <Box component="span" sx={{ fontSize: '1.2rem', fontWeight: fontWeight.bold, color: 'text.secondary' }}>
-              %
-            </Box>
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, flexWrap: 'wrap' }}>
+            <Typography
+              sx={{
+                fontSize: '3.2rem',
+                fontWeight: fontWeight.extrabold,
+                lineHeight: 0.95,
+                fontVariantNumeric: 'tabular-nums',
+                background: `linear-gradient(180deg, ${theme.palette.text.primary}, ${exposureColor})`,
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                color: 'transparent',
+              }}
+            >
+              {pct}
+              <Box component="span" sx={{ fontSize: '1.2rem', fontWeight: fontWeight.bold, color: 'text.secondary' }}>
+                %
+              </Box>
+            </Typography>
+            {/* Cảnh báo rủi ro NHỎ sát số (chỉ khi highRisk); màu đỏ theo exposureColor. */}
+            {highRisk ? (
+              <Typography component="span" sx={{ fontSize: '0.9rem', fontWeight: fontWeight.bold, color: exposureColor, whiteSpace: 'nowrap' }}>
+                Rủi ro cao
+              </Typography>
+            ) : null}
+          </Box>
           <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}>
             {Array.from({ length: 10 }).map((_, i) => (
               <Box
