@@ -49,7 +49,7 @@ export default function SignInModal({ open, onClose, onSuccess }: SignInModalPro
                 }
             }}
         >
-            <SignInForm inModal />
+            <SignInForm />
         </Dialog>
     );
 }

@@ -6,22 +6,24 @@ import { apiClient } from 'services/apiClient';
 
 // MUI
 import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
 import Link from '@mui/material/Link';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import IconButton from '@mui/material/IconButton';
+import Visibility from '@mui/icons-material/VisibilityOutlined';
+import VisibilityOff from '@mui/icons-material/VisibilityOffOutlined';
 
 // Google OAuth
 import { useGoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 
-import AuthCard from './AuthCard';
-import AuthField from './AuthField';
-import AuthAlert from './AuthAlert';
-import PasswordStrengthBar from './PasswordStrengthBar';
-import { iconSize, layoutTokens, getResponsiveFontSize, fontWeight, getGlowButton } from 'theme/tokens';
+import BrandLogo from '@/components/layout/BrandLogo';
+import { iconSize, layoutTokens, getResponsiveFontSize, borderRadius, fontWeight, getGlowButton } from 'theme/tokens';
 
 interface MessageResponse {
     message: string;
@@ -164,7 +166,6 @@ export default function RegisterForm() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
-    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [agreeTerms, setAgreeTerms] = useState(false);
@@ -196,48 +197,48 @@ export default function RegisterForm() {
     const handleClickShowPassword = () => setShowPassword((show) => !show);
     const handleClickShowConfirmPassword = () => setShowConfirmPassword((show) => !show);
 
-    // Xóa lỗi của 1 field khi user gõ lại (phản hồi tức thì, không dồn all-at-once).
-    const clearFieldError = (key: string) => {
-        setFieldErrors((prev) => {
-            if (!prev[key]) return prev;
-            const next = { ...prev };
-            delete next[key];
-            return next;
-        });
+    const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.preventDefault();
     };
 
-    // Validate cấp field: gom lỗi theo từng ô thay vì 1 chuỗi lỗi gộp.
     const validateForm = () => {
-        const errs: Record<string, string> = {};
         if (!fullName.trim()) {
-            errs.fullName = 'Vui lòng nhập họ và tên.';
+            setError('Vui lòng nhập họ và tên.');
+            return false;
         }
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!email.trim() || !emailRegex.test(email.trim())) {
-            errs.email = 'Địa chỉ email không hợp lệ.';
+            setError('Địa chỉ email không hợp lệ.');
+            return false;
         }
         if (phoneNumber.trim()) {
             const phoneRegex = /^(0|\+84)[3-9]\d{8}$/;
             if (!phoneRegex.test(phoneNumber.trim())) {
-                errs.phoneNumber = 'Số điện thoại không hợp lệ (VD: 0912345678 hoặc +84912345678).';
+                setError('Số điện thoại không hợp lệ (VD: 0912345678 hoặc +84912345678).');
+                return false;
             }
         }
         if (!password || password.length < 8) {
-            errs.password = 'Mật khẩu phải có ít nhất 8 ký tự.';
-        } else if (!/[a-zA-Z]/.test(password) || !/\d/.test(password)) {
-            errs.password = 'Mật khẩu phải chứa ít nhất 1 chữ cái và 1 chữ số.';
+            setError('Mật khẩu phải có ít nhất 8 ký tự.');
+            return false;
+        }
+        if (!/[a-zA-Z]/.test(password) || !/\d/.test(password)) {
+            setError('Mật khẩu phải chứa ít nhất 1 chữ cái và 1 chữ số.');
+            return false;
         }
         if (password !== confirmPassword) {
-            errs.confirmPassword = 'Mật khẩu xác nhận không khớp.';
+            setError('Mật khẩu xác nhận không khớp.');
+            return false;
         }
         if (referralCode.trim() && !/^[A-Za-z0-9]{4}$/.test(referralCode.trim())) {
-            errs.referralCode = 'Mã giới thiệu phải gồm đúng 4 ký tự chữ hoặc số.';
+            setError('Mã giới thiệu phải gồm đúng 4 ký tự chữ hoặc số.');
+            return false;
         }
         if (!agreeTerms) {
-            errs.terms = 'Vui lòng đồng ý với điều khoản sử dụng.';
+            setError('Vui lòng đồng ý với điều khoản sử dụng.');
+            return false;
         }
-        setFieldErrors(errs);
-        return Object.keys(errs).length === 0;
+        return true;
     };
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -314,18 +315,88 @@ export default function RegisterForm() {
     // };
 
     return (
-        <AuthCard title="Tạo tài khoản mới!" hideLogoOnMobile>
+        <Box
+            sx={(t) => ({
+                width: '100%',
+                maxWidth: layoutTokens.authFormMaxWidth,
+                p: { xs: 2.5, md: 3 },
+                borderRadius: 3,
+                bgcolor: t.palette.mode === 'dark'
+                    ? 'rgba(15, 10, 35, 0.4)'
+                    : 'rgba(255, 255, 255, 0.05)',
+                backdropFilter: 'blur(20px) saturate(150%)',
+                WebkitBackdropFilter: 'blur(20px) saturate(150%)',
+                boxShadow: t.palette.mode === 'dark'
+                    ? [
+                        '0 8px 32px rgba(0, 0, 0, 0.6)',
+                        '0 2px 8px rgba(139, 92, 246, 0.1)',
+                        'inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+                    ].join(', ')
+                    : [
+                        '0 8px 32px rgba(107, 70, 193, 0.15)',
+                        '0 4px 16px rgba(0, 0, 0, 0.1)',
+                        'inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+                    ].join(', '),
+                border: t.palette.mode === 'dark'
+                    ? '1px solid rgba(255, 255, 255, 0.1)'
+                    : '1px solid rgba(107, 70, 193, 0.15)',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: t.palette.mode === 'dark'
+                        ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(124, 58, 237, 0.02) 100%)'
+                        : 'linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 100%)',
+                    pointerEvents: 'none',
+                    zIndex: -1,
+                },
+            })}
+        >
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1.5 }}>
+                <BrandLogo
+                    href="/"
+                    imageSize={iconSize.brandImage}
+                    textSize={getResponsiveFontSize('h4')}
+                    gap={layoutTokens.dotSize.small}
+                    useColorOverlay={true}
+                />
+            </Box>
+
+            <Typography
+                sx={(theme) => ({
+                    textAlign: 'center',
+                    mb: 1,
+                    fontSize: getResponsiveFontSize('md'),
+                    background: theme.palette.mode === 'dark'
+                        ? 'linear-gradient(135deg, #FFFFFF 0%, #E0E7FF 25%, #C4B5FD 50%, #A78BFA 75%, #8B5CF6 100%)'
+                        : 'linear-gradient(135deg, #1F2937 0%, #4C1D95 25%, #6B46C1 50%, #7C3AED 75%, #8B5CF6 100%)',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    color: 'transparent',
+                    WebkitTextFillColor: 'transparent',
+                    fontWeight: fontWeight.semibold,
+                    letterSpacing: '0.5px',
+                })}
+            >
+                Tạo tài khoản mới!
+            </Typography>
+
             {showOtpStep ? (
                 /* Compliance pivot 2026-05-07: bỏ OTP step, hiện success message.
                    Admin sẽ kích hoạt tài khoản thủ công trong vòng 1 giờ. */
                 <Box sx={{ width: '100%' }}>
-                    <AuthAlert open severity="success">
+                    <Alert severity="success" sx={{ mb: 2 }}>
                         <strong>Yêu cầu tạo tài khoản thành công!</strong>
                         <br />
                         Chúng tôi đã gửi email xác nhận đến <strong>{registeredEmail}</strong>.
                         <br />
                         Đội ngũ Finext sẽ xét duyệt yêu cầu trong vòng <strong>1 giờ</strong>. Tài khoản sẽ được kích hoạt nếu đáp ứng đủ điều kiện.
-                    </AuthAlert>
+                    </Alert>
                     <Button
                         fullWidth
                         variant="contained"
@@ -340,106 +411,170 @@ export default function RegisterForm() {
                 </Box>
             ) : (
             <Box component="form" onSubmit={handleSubmit} noValidate sx={{ width: '100%' }}>
-                <AuthAlert open={!!error} severity="error">
-                    {error}
-                </AuthAlert>
-                <AuthAlert open={!!successMessage} severity="success">
-                    {successMessage}
-                </AuthAlert>
+                {error && (
+                    <Alert severity="error" sx={{ width: '100%', mb: 1.5 }}>
+                        {error}
+                    </Alert>
+                )}
+                {successMessage && (
+                    <Alert severity="success" sx={{ width: '100%', mb: 1.5 }}>
+                        {successMessage}
+                    </Alert>
+                )}
 
-                <AuthField
+                <TextField
                     margin="dense"
                     required
+                    fullWidth
                     id="fullName"
                     label="Họ và tên"
                     name="fullName"
                     autoComplete="name"
                     autoFocus
                     value={fullName}
-                    onChange={(e) => { setFullName(e.target.value); clearFieldError('fullName'); }}
+                    onChange={(e) => setFullName(e.target.value)}
                     disabled={loading || googleLoading || !!successMessage}
                     size="small"
-                    error={!!fieldErrors.fullName}
-                    helperText={fieldErrors.fullName}
                 />
 
-                <AuthField
+                <TextField
                     margin="dense"
                     required
+                    fullWidth
                     id="email"
                     label="Email"
                     name="email"
                     autoComplete="email"
                     value={email}
-                    onChange={(e) => { setEmail(e.target.value); clearFieldError('email'); }}
+                    onChange={(e) => setEmail(e.target.value)}
                     disabled={loading || googleLoading || !!successMessage}
                     size="small"
-                    error={!!fieldErrors.email}
-                    helperText={fieldErrors.email}
                 />
 
-                <AuthField
+                <TextField
                     margin="dense"
+                    fullWidth
                     id="phoneNumber"
                     label="Số điện thoại (không bắt buộc)"
                     name="phoneNumber"
                     autoComplete="tel"
                     value={phoneNumber}
-                    onChange={(e) => { setPhoneNumber(e.target.value); clearFieldError('phoneNumber'); }}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
                     disabled={loading || googleLoading || !!successMessage}
                     size="small"
-                    error={!!fieldErrors.phoneNumber}
-                    helperText={fieldErrors.phoneNumber}
                 />
 
-                <AuthField
-                    margin="dense"
-                    required
-                    name="password"
-                    label="Mật khẩu (tối thiểu 8 ký tự)"
-                    id="password"
-                    autoComplete="new-password"
-                    value={password}
-                    onChange={(e) => { setPassword(e.target.value); clearFieldError('password'); }}
-                    disabled={loading || googleLoading || !!successMessage}
-                    size="small"
-                    passwordToggle
-                    showPassword={showPassword}
-                    onTogglePassword={handleClickShowPassword}
-                    error={!!fieldErrors.password}
-                    helperText={fieldErrors.password}
-                />
-                <PasswordStrengthBar password={password} />
+                <Box sx={{ position: 'relative' }}>
+                    <TextField
+                        margin="dense"
+                        required
+                        fullWidth
+                        name="password"
+                        label="Mật khẩu (tối thiểu 8 ký tự)"
+                        type={showPassword ? 'text' : 'password'}
+                        id="password"
+                        autoComplete="new-password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        disabled={loading || googleLoading || !!successMessage}
+                        size="small"
+                    // helperText="Tối thiểu 8 ký tự"
+                    />
+                    <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={handleClickShowPassword}
+                        onMouseDown={handleMouseDownPassword}
+                        disabled={loading || googleLoading || !!successMessage}
+                        tabIndex={-1}
+                        sx={{
+                            position: 'absolute',
+                            right: 6,
+                            top: '27px',
+                            transform: 'translateY(-50%)',
+                            p: 0.25,
+                            minWidth: '24px',
+                            height: '24px',
+                            zIndex: 1,
+                        }}
+                    >
+                        {showPassword ? (
+                            <Visibility
+                                fontSize='small'
+                                sx={(theme) => ({
+                                    color: theme.palette.text.secondary
+                                })}
+                            />
+                        ) : (
+                            <VisibilityOff
+                                fontSize='small'
+                                sx={(theme) => ({
+                                    color: theme.palette.text.secondary
+                                })}
+                            />
+                        )}
+                    </IconButton>
+                </Box>
 
-                <AuthField
-                    margin="dense"
-                    required
-                    name="confirmPassword"
-                    label="Xác nhận mật khẩu"
-                    id="confirmPassword"
-                    autoComplete="new-password"
-                    value={confirmPassword}
-                    onChange={(e) => { setConfirmPassword(e.target.value); clearFieldError('confirmPassword'); }}
-                    disabled={loading || googleLoading || !!successMessage}
-                    size="small"
-                    passwordToggle
-                    showPassword={showConfirmPassword}
-                    onTogglePassword={handleClickShowConfirmPassword}
-                    error={!!fieldErrors.confirmPassword}
-                    helperText={fieldErrors.confirmPassword}
-                />
+                <Box sx={{ position: 'relative' }}>
+                    <TextField
+                        margin="dense"
+                        required
+                        fullWidth
+                        name="confirmPassword"
+                        label="Xác nhận mật khẩu"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        id="confirmPassword"
+                        autoComplete="new-password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        disabled={loading || googleLoading || !!successMessage}
+                        size="small"
+                    />
+                    <IconButton
+                        aria-label="toggle confirm password visibility"
+                        onClick={handleClickShowConfirmPassword}
+                        onMouseDown={handleMouseDownPassword}
+                        disabled={loading || googleLoading || !!successMessage}
+                        tabIndex={-1}
+                        sx={{
+                            position: 'absolute',
+                            right: 6,
+                            top: '27px',
+                            transform: 'translateY(-50%)',
+                            p: 0.25,
+                            minWidth: '24px',
+                            height: '24px',
+                            zIndex: 1,
+                        }}
+                    >
+                        {showConfirmPassword ? (
+                            <Visibility
+                                fontSize='small'
+                                sx={(theme) => ({
+                                    color: theme.palette.text.secondary
+                                })}
+                            />
+                        ) : (
+                            <VisibilityOff
+                                fontSize='small'
+                                sx={(theme) => ({
+                                    color: theme.palette.text.secondary
+                                })}
+                            />
+                        )}
+                    </IconButton>
+                </Box>
 
-                <AuthField
+                <TextField
                     margin="dense"
+                    fullWidth
                     id="referralCode"
                     label="Mã giới thiệu (không bắt buộc)"
                     name="referralCode"
                     value={referralCode}
-                    onChange={(e) => { setReferralCode(e.target.value); clearFieldError('referralCode'); }}
+                    onChange={(e) => setReferralCode(e.target.value)}
                     disabled={loading || googleLoading || !!successMessage}
                     size="small"
-                    error={!!fieldErrors.referralCode}
-                    helperText={fieldErrors.referralCode}
                 />
 
                 <FormControlLabel
@@ -447,7 +582,7 @@ export default function RegisterForm() {
                         <Checkbox
                             size="small"
                             checked={agreeTerms}
-                            onChange={(e) => { setAgreeTerms(e.target.checked); clearFieldError('terms'); }}
+                            onChange={(e) => setAgreeTerms(e.target.checked)}
                             disabled={loading || googleLoading || !!successMessage}
                             tabIndex={-1}
                         />
@@ -457,20 +592,8 @@ export default function RegisterForm() {
                             Tôi đã đọc và đồng ý với <Link href="/policies/content" underline="hover" tabIndex={-1}>Chính sách nội dung</Link> <br></br> và <Link href="policies/privacy" underline="hover" tabIndex={-1}>Chính sách bảo mật</Link>
                         </Typography>
                     }
-                    sx={{ mt: 1.5, mb: fieldErrors.terms ? 0.5 : 2, alignItems: 'flex-start' }}
+                    sx={{ mt: 2, mb: 2, alignItems: 'flex-start' }}
                 />
-                {fieldErrors.terms && (
-                    <Typography
-                        sx={(theme) => ({
-                            mb: 1.5,
-                            ml: 0.5,
-                            fontSize: getResponsiveFontSize('xs'),
-                            color: theme.palette.error.main,
-                        })}
-                    >
-                        {fieldErrors.terms}
-                    </Typography>
-                )}
 
                 <Button
                     type="submit"
@@ -514,6 +637,6 @@ export default function RegisterForm() {
                 </Typography>
             </Box>
             )}
-        </AuthCard>
+        </Box>
     );
 }

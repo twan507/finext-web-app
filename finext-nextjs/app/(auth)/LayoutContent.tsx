@@ -5,8 +5,6 @@ import { Box, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { Icon } from '@iconify/react';
 import Gallery, { Slide } from "./components/Gallery";
-import AuroraBackground from "./components/AuroraBackground";
-import MobileBrandPanel from "./components/MobileBrandPanel";
 import ThemeToggleButton from "@/components/themeToggle/ThemeToggleButton";
 import PwaTitleBar from "@/components/layout/PwaTitleBar";
 import { layoutTokens, zIndex, borderRadius, fontWeight, getResponsiveFontSize } from "theme/tokens";
@@ -72,7 +70,7 @@ function MarketVisual() {
         {featureCards.map((card) => (
           <Box
             key={card.label}
-            sx={(theme) => ({
+            sx={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -82,15 +80,11 @@ function MarketVisual() {
               px: 1.5,
               height: '150px',
               borderRadius: `${borderRadius.md}px`,
-              background: theme.palette.mode === 'dark'
-                ? 'linear-gradient(135deg, rgba(139,92,246,0.25), rgba(59,130,246,0.2))'
-                : 'linear-gradient(135deg, rgba(139,92,246,0.18), rgba(59,130,246,0.14))',
-              border: theme.palette.mode === 'dark'
-                ? '1px solid rgba(255,255,255,0.08)'
-                : '1px solid rgba(107,70,193,0.18)',
+              background: 'linear-gradient(135deg, rgba(139,92,246,0.25), rgba(59,130,246,0.2))',
+              border: '1px solid rgba(255,255,255,0.08)',
               backdropFilter: 'blur(8px)',
               WebkitBackdropFilter: 'blur(8px)',
-            })}
+            }}
           >
             <Icon icon={card.icon} width={50} height={50} />
             <Typography sx={(theme) => ({
@@ -123,7 +117,7 @@ function StockScreeningVisual() {
         {statCards.map((stat) => (
           <Box
             key={stat.label}
-            sx={(theme) => ({
+            sx={{
               display: 'flex',
               alignItems: 'center',
               gap: 2,
@@ -131,15 +125,11 @@ function StockScreeningVisual() {
               px: 2,
               height: '95px',
               borderRadius: `${borderRadius.md}px`,
-              background: theme.palette.mode === 'dark'
-                ? 'rgba(255,255,255,0.05)'
-                : 'rgba(255,255,255,0.55)',
-              border: theme.palette.mode === 'dark'
-                ? '1px solid rgba(255,255,255,0.08)'
-                : '1px solid rgba(107,70,193,0.15)',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)',
               backdropFilter: 'blur(8px)',
               WebkitBackdropFilter: 'blur(8px)',
-            })}
+            }}
           >
             <Box sx={{
               width: 40,
@@ -191,7 +181,7 @@ function SectorVisual() {
         {sectorItems.map((sector) => (
           <Box
             key={sector.ticker}
-            sx={(theme) => ({
+            sx={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -199,15 +189,11 @@ function SectorVisual() {
               px: 2,
               height: '70px',
               borderRadius: `${borderRadius.md}px`,
-              background: theme.palette.mode === 'dark'
-                ? 'rgba(255,255,255,0.05)'
-                : 'rgba(255,255,255,0.55)',
-              border: theme.palette.mode === 'dark'
-                ? '1px solid rgba(255,255,255,0.08)'
-                : '1px solid rgba(107,70,193,0.15)',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)',
               backdropFilter: 'blur(8px)',
               WebkitBackdropFilter: 'blur(8px)',
-            })}
+            }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <Box sx={{
@@ -258,15 +244,18 @@ export default function LayoutContent({ children }: AuthLayoutProps) {
   const centerX = "42%";
   const centerY = "52%";
 
-  // Glow tĩnh (::before) đã được thay bằng AuroraBackground động. Chỉ giữ base + vignette (::after).
   const layers = isDark
     ? {
       base: "linear-gradient(180deg, #0B0718 0%, #120A28 40%, #160D33 100%)",
+      before: `radial-gradient(circle at ${centerX} ${centerY}, rgba(178,130,255,0.70) 0%, rgba(158,110,255,0.46) 12%, rgba(118,80,230,0.28) 22%, rgba(82,50,190,0.16) 30%, rgba(52,30,130,0.10) 38%, rgba(32,20,90,0.06) 44%, rgba(22,14,60,0.03) 50%, rgba(14,9,36,0.00) 58%)`,
       after: `radial-gradient(circle at ${centerX} ${centerY}, rgba(0,0,0,0) 45%, rgba(8,5,16,0.30) 70%, rgba(6,4,12,0.55) 100%), radial-gradient(circle at ${centerX} ${centerY}, rgba(110,70,220,0.10) 0%, rgba(110,70,220,0.00) 60%)`,
+      blurPx: 36,
     }
     : {
       base: "linear-gradient(180deg, #ECE9FF 0%, #E5E0FF 40%, #DCD6FF 100%)",
+      before: `radial-gradient(circle at ${centerX} ${centerY}, rgba(150, 90, 245, 0.55) 0%, rgba(130, 75, 230, 0.34) 14%, rgba(110, 65, 210, 0.22) 24%, rgba(90, 55, 185, 0.14) 34%, rgba(70, 45, 160, 0.10) 42%, rgba(60, 40, 140, 0.06) 50%, rgba(50, 35, 120, 0.04) 58%, rgba(50, 35, 120, 0.00) 66%)`,
       after: `radial-gradient(circle at ${centerX} ${centerY}, rgba(0,0,0,0) 55%, rgba(0,0,0,0.10) 85%, rgba(0,0,0,0.16) 100%), radial-gradient(circle at ${centerX} ${centerY}, rgba(100,60,200,0.10) 0%, rgba(100,60,200,0.00) 60%)`,
+      blurPx: 28,
     };
 
   const galleryVisuals = [
@@ -286,6 +275,15 @@ export default function LayoutContent({ children }: AuthLayoutProps) {
         overflow: "hidden",
         background: layers.base,
         paddingTop: 'env(titlebar-area-height, 0px)',
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          inset: "-15%",
+          pointerEvents: "none",
+          background: layers.before,
+          filter: `blur(${layers.blurPx}px)`,
+          zIndex: 1,
+        },
         "&::after": {
           content: '""',
           position: "absolute",
@@ -296,9 +294,6 @@ export default function LayoutContent({ children }: AuthLayoutProps) {
         },
       }}
     >
-      {/* Nền aurora động (glow tím trôi nhẹ, tắt khi prefers-reduced-motion) */}
-      <AuroraBackground />
-
       {/* Theme Toggle Button */}
       <Box sx={{ position: 'fixed', top: 16, right: 16, zIndex: zIndex.dropdown }}>
         <ThemeToggleButton />
@@ -327,14 +322,11 @@ export default function LayoutContent({ children }: AuthLayoutProps) {
         <Box
           sx={{
             display: 'flex',
-            flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
-            gap: { xs: 3, lg: 0 },
-            py: { xs: 5, lg: 0 },
+            py: { xs: 6, lg: 0 },
           }}
         >
-          <MobileBrandPanel />
           {children}
         </Box>
       </Box>

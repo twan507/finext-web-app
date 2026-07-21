@@ -7,22 +7,25 @@ import { useAuth } from '@/components/auth/AuthProvider';
 
 // MUI
 import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
 import Link from '@mui/material/Link';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import IconButton from '@mui/material/IconButton';
+import Visibility from '@mui/icons-material/VisibilityOutlined';
+import VisibilityOff from '@mui/icons-material/VisibilityOffOutlined';
 
 // Google OAuth - Import thêm GoogleOAuthProvider
 import { useGoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 
-import AuthCard from './AuthCard';
-import AuthField from './AuthField';
-import AuthAlert from './AuthAlert';
+import BrandLogo from '@/components/layout/BrandLogo';
 import { LoginResponse, UserSchema } from 'services/core/types';
-import { iconSize, layoutTokens, getResponsiveFontSize, fontWeight, getGlowButton } from 'theme/tokens';
+import { iconSize, layoutTokens, getResponsiveFontSize, borderRadius, fontWeight, getGlowButton } from 'theme/tokens';
 import { sanitizeInternalPath } from 'utils/urlSafety';
 
 interface UserInfoFromAuth extends UserSchema { }
@@ -156,7 +159,7 @@ function GoogleLoginComponent({
 }
 
 
-function SignInFormContent({ inModal = false }: { inModal?: boolean }) {
+function SignInFormContent() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -217,6 +220,10 @@ function SignInFormContent({ inModal = false }: { inModal?: boolean }) {
     const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
     const handleClickShowPassword = () => setShowPassword((show) => !show);
+
+    const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.preventDefault();
+    };
 
     // Hàm redirect sau khi đăng nhập thành công
     const redirectAfterLogin = useCallback(() => {
@@ -376,21 +383,100 @@ function SignInFormContent({ inModal = false }: { inModal?: boolean }) {
     }
 
     return (
-        <AuthCard title="Đăng nhập ngay!" hideLogoOnMobile={!inModal}>
+        <Box
+            sx={(t) => ({
+                width: '100%',
+                maxWidth: layoutTokens.authFormMaxWidth,
+                p: { xs: 2.5, md: 3 },
+                borderRadius: 3,
+                // ... (Giữ nguyên các styles glassmorphism)
+                bgcolor: t.palette.mode === 'dark'
+                    ? 'rgba(15, 10, 35, 0.4)'
+                    : 'rgba(255, 255, 255, 0.05)',
+                backdropFilter: 'blur(20px) saturate(150%)',
+                WebkitBackdropFilter: 'blur(20px) saturate(150%)',
+                boxShadow: t.palette.mode === 'dark'
+                    ? [
+                        '0 8px 32px rgba(0, 0, 0, 0.6)',
+                        '0 2px 8px rgba(139, 92, 246, 0.1)',
+                        'inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+                    ].join(', ')
+                    : [
+                        '0 8px 32px rgba(107, 70, 193, 0.15)',
+                        '0 4px 16px rgba(0, 0, 0, 0.1)',
+                        'inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+                    ].join(', '),
+                border: t.palette.mode === 'dark'
+                    ? '1px solid rgba(255, 255, 255, 0.1)'
+                    : '1px solid rgba(107, 70, 193, 0.15)',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: t.palette.mode === 'dark'
+                        ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(124, 58, 237, 0.02) 100%)'
+                        : 'linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 100%)',
+                    pointerEvents: 'none',
+                    zIndex: -1,
+                },
+            })}
+        >
+            {/* ... (Giữ nguyên BrandLogo và Typography) */}
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1.5 }}>
+                <BrandLogo
+                    href="/"
+                    imageSize={iconSize.brandImage}
+                    textSize={getResponsiveFontSize('h4')}
+                    gap={layoutTokens.dotSize.small}
+                    useColorOverlay={true}
+                />
+            </Box>
+
+            <Typography
+                sx={(theme) => ({
+                    textAlign: 'center',
+                    mb: 1,
+                    fontSize: getResponsiveFontSize('md'),
+                    background: theme.palette.mode === 'dark'
+                        ? 'linear-gradient(135deg, #FFFFFF 0%, #E0E7FF 25%, #C4B5FD 50%, #A78BFA 75%, #8B5CF6 100%)'
+                        : 'linear-gradient(135deg, #1F2937 0%, #4C1D95 25%, #6B46C1 50%, #7C3AED 75%, #8B5CF6 100%)',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    color: 'transparent',
+                    WebkitTextFillColor: 'transparent',
+                    fontWeight: fontWeight.semibold,
+                    letterSpacing: '0.5px',
+                })}
+            >
+                Đăng nhập ngay!
+            </Typography>
+
             <Box component="form" onSubmit={showVerifyPanel ? handleVerifyEmail : handleTraditionalSubmit} noValidate sx={{ width: '100%' }}>
-                <AuthAlert open={!!successMessage} severity="success">
-                    {successMessage}
-                </AuthAlert>
-                <AuthAlert open={showVerifyWarning} severity="warning">
-                    <strong>{verifyEmail}</strong> chưa được xác thực. Nhập mã xác thực bên dưới.
-                </AuthAlert>
-                <AuthAlert open={!!verifyError} severity="error">
-                    {verifyError}
-                </AuthAlert>
+                {successMessage && (
+                    <Alert severity="success" sx={{ width: '100%', mb: 1.5 }}>
+                        {successMessage}
+                    </Alert>
+                )}
+                {showVerifyWarning && (
+                    <Alert severity="warning" sx={{ mb: 1.5 }}>
+                        <strong>{verifyEmail}</strong> chưa được xác thực. Nhập mã xác thực bên dưới.
+                    </Alert>
+                )}
+                {verifyError && (
+                    <Alert severity="error" sx={{ mb: 1.5 }}>
+                        {verifyError}
+                    </Alert>
+                )}
                 {showVerifyPanel ? (
                     <Box sx={{ mb: 1.5 }}>
-                        <AuthField
+                        <TextField
                             label="Mã xác thực (6 chữ số)"
+                            fullWidth
                             value={verifyOtpCode}
                             onChange={(e) => setVerifyOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleVerifyEmail(); } }}
@@ -423,14 +509,17 @@ function SignInFormContent({ inModal = false }: { inModal?: boolean }) {
                         </Box>
                     </Box>
                 ) : (
-                    <AuthAlert open={!!error} severity="error">
-                        {error}
-                    </AuthAlert>
+                    error && (
+                        <Alert severity="error" sx={{ width: '100%', mb: 1.5 }}>
+                            {error}
+                        </Alert>
+                    )
                 )}
 
-                <AuthField
+                <TextField
                     margin="dense"
                     required
+                    fullWidth
                     id="email"
                     label="Email"
                     name="email"
@@ -439,23 +528,46 @@ function SignInFormContent({ inModal = false }: { inModal?: boolean }) {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={loading || googleLoading || !!successMessage || showVerifyPanel}
-                    size="medium"
+                    size="small"
                 />
-                <AuthField
-                    margin="dense"
-                    required
-                    name="password"
-                    label="Mật khẩu"
-                    id="password"
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={loading || googleLoading || !!successMessage || showVerifyPanel}
-                    size="medium"
-                    passwordToggle
-                    showPassword={showPassword}
-                    onTogglePassword={handleClickShowPassword}
-                />
+                <Box sx={{ position: 'relative' }}>
+                    <TextField
+                        margin="dense"
+                        required
+                        fullWidth
+                        name="password"
+                        label="Mật khẩu"
+                        type={showPassword ? 'text' : 'password'}
+                        id="password"
+                        autoComplete="current-password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        disabled={loading || googleLoading || !!successMessage || showVerifyPanel}
+                        size="small"
+                    />
+                    <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={handleClickShowPassword}
+                        onMouseDown={handleMouseDownPassword}
+                        disabled={loading || googleLoading || !!successMessage || showVerifyPanel}
+                        tabIndex={-1}
+                        sx={{
+                            position: 'absolute',
+                            right: 6,
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            marginTop: '4px',
+                            p: 0.25,
+                            minWidth: '24px',
+                            height: '24px',
+                            zIndex: 1,
+                        }}
+                    >
+                        {showPassword ?
+                            <Visibility fontSize='small' sx={(theme) => ({ color: theme.palette.text.secondary })} /> :
+                            <VisibilityOff fontSize='small' sx={(theme) => ({ color: theme.palette.text.secondary })} />}
+                    </IconButton>
+                </Box>
 
                 <Box
                     sx={{ mt: 0.5, mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
@@ -508,19 +620,19 @@ function SignInFormContent({ inModal = false }: { inModal?: boolean }) {
                     Bạn chưa có tài khoản? <Link href="/register" tabIndex={-1}>Đăng ký</Link>
                 </Typography>
             </Box>
-        </AuthCard>
+        </Box>
     );
 }
 
 // Wrap SignInFormContent với Suspense vì nó sử dụng useSearchParams
-export default function SignInForm({ inModal = false }: { inModal?: boolean }) {
+export default function SignInForm() {
     return (
         <Suspense fallback={
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
                 <CircularProgress />
             </Box>
         }>
-            <SignInFormContent inModal={inModal} />
+            <SignInFormContent />
         </Suspense>
     );
 }
