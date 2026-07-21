@@ -289,6 +289,14 @@ async def _advance_queue(user_id: str) -> None:
             _runners.pop(user_id, None)
 
 
+async def _is_queue_full(user_id: str) -> bool:
+    """Peek nhanh (KHÔNG giữ chỗ): user đang bận và hàng đợi đã đầy → chặn sớm ở endpoint TRƯỚC
+    start_turn, tránh để lại user-msg mồ côi trong DB. _admit_turn vẫn 429 authoritative (race hiếm)."""
+    async with _runners_lock:
+        runner = _runners.get(user_id)
+        return runner is not None and runner.current is not None and len(runner.queue) >= MAX_QUEUE_PER_USER
+
+
 _QUEUED_MSG = "Mình đang trả lời câu trước, câu này sẽ được xử lý ngay sau đó nhé."
 
 
@@ -340,6 +348,9 @@ async def chat_stream(
     decision = await crud_chat.check_quota(db, user_id)
     if not decision.ok:
         raise HTTPException(status_code=decision.status_code, detail=decision.message)
+    # Hàng đợi đã đầy → 429 SỚM (trước khi persist) để không để lại user-msg mồ côi trong DB.
+    if await _is_queue_full(user_id):
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Đang bận, thử lại sau.")
     # Lưu user-msg + tạo/nối hội thoại → conversation_id thật để trả về meta.
     # is_new: FE không gửi conversation_id = bắt đầu hội thoại mới → sẽ đặt tiêu đề AI ở cuối lượt.
     is_new = not (body.conversation_id and body.conversation_id.strip())
