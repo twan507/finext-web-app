@@ -19,7 +19,7 @@
 | Backend (FastAPI): structure, endpoints, RBAC, license/feature, auth flow, SSE | [`03-backend.md`](03-backend.md) |
 | Frontend (Next.js): routes, mô tả từng trang, modules, state stores, conventions | [`04-frontend.md`](04-frontend.md) |
 | Tính năng nổi bật + mô hình bảo mật (JWT, OTP, OAuth, CORS, rate-limit) | [`05-features-security.md`](05-features-security.md) |
-| Compliance pivot 2026-05-07 — gì bị disable, blocked routes, cách rollback | [`06-compliance-pivot.md`](06-compliance-pivot.md) |
+| Compliance pivot 2026-05-07 + rollback auth 2026-07-21 — gì còn disable, blocked routes | [`06-compliance-pivot.md`](06-compliance-pivot.md) |
 | Setup dev/prod, quy ước code, session protocol, specs/plans index | [`07-dev-guide.md`](07-dev-guide.md) |
 | Page "Giai đoạn thị trường" (`/phase`): trạng thái, kiến trúc, lịch sử chỉnh sửa | [`08-market-phase.md`](08-market-phase.md) |
 
@@ -58,10 +58,10 @@ Nginx (SSL) → [ Next.js :3000 ] ◄── [ FastAPI :8000 ] → MongoDB (Atlas
 - **SSE realtime** với polling fallback
 - 3 route groups: `(auth)`, `(main)`, `admin/`
 
-### Tình trạng sau pivot 2026-05-07
-- ❌ Google OAuth UI disabled (code wrap `{false && ...}`, vẫn còn)
-- ❌ OTP register flow disabled — chuyển sang admin manual approval
-- ❌ Routes 403: `/open-account`, `/profile/subscriptions`, `/auth/google/callback`
+### Tình trạng sau pivot 2026-05-07 *(cập nhật 2026-07-21)*
+- ✅ Google OAuth **đã bật lại** (2026-07-21)
+- ✅ Đăng ký **OTP tự xác thực đã bật lại** (2026-07-21) — không cần admin duyệt tay
+- ❌ Routes 403: `/open-account`, `/profile/subscriptions`
 - ❌ News detail render summary + link external, không re-publish full HTML
 - ✅ Tier gating bypassed — mọi user logged-in xem được toàn bộ content
 - ✅ CTA "Gia nhập cộng đồng" → Zalo group

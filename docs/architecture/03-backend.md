@@ -204,20 +204,22 @@ Trong `lifespan` của `main.py`:
 - **Refresh token** — lưu trong DB collection `sessions`, TTL theo `REFRESH_TOKEN_EXPIRE_DAYS` (cấu hình theo môi trường), cho phép admin/user logout từ xa.
 - **Device binding**: `sessions.device_info` lưu User-Agent raw để hiển thị ở `/profile/login-sessions` và `/admin/sessions`. **Không** dùng để strict-compare khi refresh (đã bỏ từ 2026-05) — tránh logout giả khi browser auto-update đổi UA. Logout từ xa vẫn dùng được vì refresh xác thực bằng `session_id` trong DB.
 
-### Đăng ký (sau compliance pivot)
-- ❌ Không còn OTP self-verify.
-- ✅ DNS MX check (`email-validator` + `dnspython`) trước khi tạo user → catch domain không tồn tại.
-- ✅ Gửi mail "yêu cầu đã ghi nhận" (`registration_received.html`) **SYNC**, fail → rollback delete user.
-- ✅ User `is_active=False`, chờ admin manual approve.
+### Đăng ký (OTP self-verify — khôi phục 2026-07-21)
+- ✅ DNS MX check (`email-validator` + `dnspython`) trước khi tạo user → catch domain không tồn tại. *(Giữ lại từ pivot — không liên quan compliance.)*
+- ✅ User tạo với `is_active=False` → sinh OTP `email_verification` (TTL 5 phút) → gửi mail qua `BackgroundTasks`.
+- ✅ Không tạo được OTP record → rollback delete user (tránh user "mồ côi" không thể active).
+- ✅ User nhập mã ở `POST /api/v1/otps/verify` → tự động set `is_active=True`. **Không cần admin duyệt.**
+- Mail `registration_received.html` đã bỏ (mail OTP thay thế); template vẫn giữ trong repo.
 
-### Admin activation
-- Endpoint `PUT /api/v1/users/{id}` detect transition `is_active False → True` → MX check + gửi mail "tài khoản đã kích hoạt" (`account_activated.html`) SYNC → fail → rollback DB.
+### Admin activation (vẫn dùng được)
+- Endpoint `PUT /api/v1/users/{id}` detect transition `is_active False → True` → MX check + gửi mail "tài khoản đã kích hoạt" (`account_activated.html`) SYNC → fail → rollback DB. Giờ là đường phụ, không còn bắt buộc.
 
 ### Passwordless login
 - Endpoint `POST /api/v1/auth/login/otp` — user nhập email → gửi OTP qua mail (template `pwdless_login.html`) → verify → cấp JWT. Dùng cho forgot-password flow.
 
 ### Google OAuth
-- ⚠️ **Disabled UI** sau pivot. Backend code vẫn còn (route `/auth/google/callback` bị 403 qua `BLOCKED_ROUTES` ở frontend middleware).
+- ✅ **Đã bật lại 2026-07-21.** Backend chưa từng bị tắt; frontend gỡ `{false &&}` ở Login/RegisterForm và bỏ `/auth/google/callback` khỏi `BLOCKED_ROUTES`.
+- Login Google với user đang `is_active=False` sẽ tự activate ([`crud/users.py`](../../finext-fastapi/app/crud/users.py) `get_or_create_user_from_google_sub_email`) — hành vi mong muốn theo mô hình self-verify.
 
 Chi tiết thay đổi auth flow: [`06-compliance-pivot.md`](06-compliance-pivot.md#auth-flow-be--fe).
 

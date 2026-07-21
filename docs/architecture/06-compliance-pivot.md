@@ -2,7 +2,7 @@
 
 > Chuyển Finext từ pre-launch (đăng ký công khai OTP, gói trả phí, news re-publish) sang chế độ tham chiếu cá nhân, tuân thủ pháp luật chứng khoán Việt Nam.
 
-**Status:** ✅ DONE (chính). Vẫn còn vài điều chỉnh nhỏ sau ngày 2026-05-07.
+**Status:** ⚠️ **ĐÃ ROLLBACK MỘT PHẦN** ngày 2026-07-21 — xem [§6.7](#67-rollback-một-phần-2026-07-21). Phần auth (Google OAuth + đăng ký OTP tự xác thực) đã bật lại; các phần còn lại vẫn giữ nguyên trạng thái tắt.
 
 **Kế hoạch chi tiết:** [`../superpowers/plans/2026-05-07-finext-compliance-pivot.md`](../superpowers/plans/2026-05-07-finext-compliance-pivot.md)
 
@@ -35,7 +35,7 @@
 File: [`finext-nextjs/lib/blocked-routes.ts`](../../finext-nextjs/lib/blocked-routes.ts) — danh sách centralized, `middleware.ts` đọc và return 403 cho:
 - `/open-account`
 - `/profile/subscriptions`
-- `/auth/google/callback`
+- ~~`/auth/google/callback`~~ — đã gỡ 2026-07-21
 
 ### SEO
 
@@ -75,11 +75,11 @@ Tác động: `/charts/[id]`, `/groups`, `/markets`, `/sectors`, `/stocks`, etc.
 
 | # | Tính năng | Cách tắt | File chính |
 |---|-----------|---------|-----------|
-| 1 | OTP register flow (BE) | Function `register_user()` rewrite, imports OTP-related giữ với `# noqa: F401` | [`app/routers/auth.py`](../../finext-fastapi/app/routers/auth.py) |
-| 2 | OTP step trong RegisterForm | State + handlers + JSX block commented | [`app/(auth)/components/RegisterForm.tsx`](../../finext-nextjs/app/(auth)/components/RegisterForm.tsx) |
-| 3 | "User is inactive" auto OTP | Branch logic đổi sang error message | [`app/(auth)/components/LoginForm.tsx`](../../finext-nextjs/app/(auth)/components/LoginForm.tsx) |
-| 4 | Google login button | Wrap `{false && (<>Divider + Provider</>)}` | `LoginForm.tsx` |
-| 5 | Google register button | Wrap `{false && (<>Divider + Provider</>)}` | `RegisterForm.tsx` |
+| ~~1~~ | ~~OTP register flow (BE)~~ | ✅ **Đã bật lại 2026-07-21** | [`app/routers/auth.py`](../../finext-fastapi/app/routers/auth.py) |
+| ~~2~~ | ~~OTP step trong RegisterForm~~ | ✅ **Đã bật lại 2026-07-21** | [`app/(auth)/components/RegisterForm.tsx`](../../finext-nextjs/app/(auth)/components/RegisterForm.tsx) |
+| ~~3~~ | ~~"User is inactive" auto OTP~~ | ✅ **Đã bật lại 2026-07-21** | [`app/(auth)/components/LoginForm.tsx`](../../finext-nextjs/app/(auth)/components/LoginForm.tsx) |
+| ~~4~~ | ~~Google login button~~ | ✅ **Đã bật lại 2026-07-21** | `LoginForm.tsx` |
+| ~~5~~ | ~~Google register button~~ | ✅ **Đã bật lại 2026-07-21** | `RegisterForm.tsx` |
 | 6 | JSON-LD entry "Mở tài khoản" | Block 3 dòng comment | [`app/layout.tsx`](../../finext-nextjs/app/layout.tsx) |
 | 7 | ConsultationSection `Link` import | Comment line | `home/components/ConsultationSection.tsx` |
 | 8 | Sidebar profile "Gói đăng ký" | Comment menu item + import | `(main)/profile/LayoutContent.tsx` |
@@ -123,10 +123,45 @@ Tác động: `/charts/[id]`, `/groups`, `/markets`, `/sectors`, `/stocks`, etc.
 
 ## 6.6 Cách Rollback (Nếu Cần)
 
-1. **Bật lại OTP register:** uncomment block trong `RegisterForm.tsx` + revert `register_user()` ở `auth.py` (xem git history commit `bfac978`).
-2. **Bật lại Google OAuth:** đổi `{false && (...)}` → `{(...)}` ở Login/RegisterForm. Remove `/auth/google/callback` khỏi `BLOCKED_ROUTES`.
-3. **Mở lại `/open-account`, `/profile/subscriptions`:** xóa khỏi `BLOCKED_ROUTES`.
-4. **Bật tier gating:** xóa `FEATURES.BASIC` khỏi đầu list `ADVANCED_AND_ABOVE`.
-5. **Bật full news content:** đổi `{false && (...)}` → `{(...)}` block `dangerouslySetInnerHTML`.
+1. ~~**Bật lại OTP register**~~ — ✅ đã làm 2026-07-21, xem §6.7.
+2. ~~**Bật lại Google OAuth**~~ — ✅ đã làm 2026-07-21, xem §6.7.
+3. **Mở lại `/open-account`, `/profile/subscriptions`:** xóa khỏi `BLOCKED_ROUTES`. *(chưa làm)*
+4. **Bật tier gating:** xóa `FEATURES.BASIC` khỏi đầu list `ADVANCED_AND_ABOVE`. *(chưa làm)*
+5. **Bật full news content:** đổi `{false && (...)}` → `{(...)}` block `dangerouslySetInnerHTML`. *(chưa làm)*
 
 Tham khảo plan đầy đủ cho path khôi phục: [`2026-05-07-finext-compliance-pivot.md`](../superpowers/plans/2026-05-07-finext-compliance-pivot.md).
+
+---
+
+## 6.7 Rollback Một Phần (2026-07-21)
+
+> Owner yêu cầu mở lại **đăng nhập Google** và **đăng ký tự xác thực bằng OTP** (bỏ khâu admin duyệt tay).
+> Phạm vi giới hạn ở auth — mục 3, 4, 5 của §6.6 **cố ý không đụng tới**.
+
+### Đã thay đổi
+
+| Khu vực | File | Nội dung |
+|---|---|---|
+| Google login | [`LoginForm.tsx`](../../finext-nextjs/app/(auth)/components/LoginForm.tsx) | Gỡ wrapper `{false && (<>…</>)}` quanh Divider + `GoogleOAuthProvider` |
+| Google register | [`RegisterForm.tsx`](../../finext-nextjs/app/(auth)/components/RegisterForm.tsx) | Như trên |
+| Route 403 | [`blocked-routes.ts`](../../finext-nextjs/lib/blocked-routes.ts) | Xóa entry `/auth/google/callback` |
+| Register BE | [`auth.py`](../../finext-fastapi/app/routers/auth.py) | `register_user()` → sinh OTP `email_verification` + gửi mail qua `BackgroundTasks`; thêm lại param `background_tasks: BackgroundTasks`; gỡ hết `# noqa: F401` trên các import OTP |
+| OTP step FE | [`RegisterForm.tsx`](../../finext-nextjs/app/(auth)/components/RegisterForm.tsx) | Uncomment state `otpCode`/`otpLoading`/`resendCooldown`, `handleVerifyOtp`, `handleResendOtp`, JSX ô nhập 6 số + nút "Gửi lại mã" |
+| Login inactive | [`LoginForm.tsx`](../../finext-nextjs/app/(auth)/components/LoginForm.tsx) | Nhánh `User is inactive` quay lại tự gọi `/otps/request` + mở `showVerifyPanel` thay vì hiện message chờ admin |
+
+### Quyết định thiết kế
+
+1. **Giữ DNS MX check** trong `register_user()` — đây là thứ pivot thêm vào nhưng có giá trị độc lập (chặn email gõ sai domain trước khi tạo user). Không liên quan compliance nên không revert.
+2. **Bỏ mail `registration_received`** — mail OTP đã thay thế vai trò xác nhận; giữ cả hai thì user nhận 2 mail cùng lúc. Template và hàm `send_registration_received_email()` **vẫn còn trong repo**, chỉ không còn được gọi.
+3. **Khôi phục nhánh inactive ở LoginForm** dù owner ban đầu không liệt kê — bắt buộc phải đi kèm, vì message "Đội ngũ Finext sẽ xác nhận trong 1 giờ" trở thành sai sự thật khi không còn ai duyệt tay.
+
+### Ghi chú
+
+- Backend Google OAuth **chưa từng bị tắt** — endpoint `POST /api/v1/auth/google/callback` vẫn public suốt thời gian pivot. Trước 2026-07-21 đây là lỗ hổng bypass admin approval; sau rollback thì thành hành vi mong muốn.
+- Luồng OTP ở [`routers/otps.py`](../../finext-fastapi/app/routers/otps.py) không cần sửa gì: dòng 55 vốn đã có carve-out cho user inactive xin OTP loại `email_verification`, và `POST /otps/verify` tự set `is_active=True`.
+- Rate-limit sẵn có: OTP TTL 5 phút, tối đa 10 lần thử, cooldown gửi lại 60s (`crud/otps.py`) — khớp với cooldown 60s ở FE.
+- **Cần kiểm tra khi deploy:** biến `NEXT_PUBLIC_GOOGLE_CLIENT_ID` phải có giá trị thật trên prod, nếu trống nút Google render ở trạng thái disabled.
+
+### Verify
+
+`npx tsc --noEmit` sạch · `pytest tests/` 652 passed.

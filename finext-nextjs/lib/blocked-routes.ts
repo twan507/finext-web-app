@@ -14,7 +14,6 @@ export const BLOCKED_ROUTES: readonly string[] = [
   // Disconnected pages (compliance pivot 2026-05-07)
   '/open-account',
   '/profile/subscriptions',
-  '/auth/google/callback',
 ] as const;
 
 /**

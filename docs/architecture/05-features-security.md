@@ -39,8 +39,8 @@
 |--------|---------|
 | **JWT access + refresh** | Access TTL 60 phút, refresh lưu trong DB collection `sessions` → cho phép logout từ xa hoặc từ admin. |
 | **Bcrypt** | Hash mật khẩu, work factor mặc định. |
-| **OTP qua email** | Dùng cho register (đã disable), reset password, passwordless login. Template `pwdless_login.html`. |
-| **Google OAuth 2.0** | Hợp nhất với account thường qua `google_id`. **UI hiện disabled** sau pivot 2026-05-07. |
+| **OTP qua email** | Dùng cho register (self-verify), reset password, passwordless login. Template `pwdless_login.html`. |
+| **Google OAuth 2.0** | Hợp nhất với account thường qua `google_id`. UI đã bật lại 2026-07-21. |
 | **DNS MX check** | `email-validator` + `dnspython` — catch domain không tồn tại trước khi tạo user hoặc gửi mail kích hoạt. |
 
 ### 5.3.2 Authorization
