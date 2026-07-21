@@ -28,20 +28,6 @@ interface ConversationSidebarProps {
   onRename: (id: string, title: string) => void;
 }
 
-const DAY_MS = 86400000;
-const BUCKETS = ['Hôm nay', 'Hôm qua', '7 ngày trước', 'Cũ hơn'] as const;
-type Bucket = (typeof BUCKETS)[number];
-
-// So mốc ngày địa phương: đầu ngày hôm nay / hôm qua / 7 ngày trước.
-function bucketOf(createdAt: number): Bucket {
-  const now = new Date();
-  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  if (createdAt >= startToday) return 'Hôm nay';
-  if (createdAt >= startToday - DAY_MS) return 'Hôm qua';
-  if (createdAt >= startToday - 7 * DAY_MS) return '7 ngày trước';
-  return 'Cũ hơn';
-}
-
 // Ghim NGHIÊNG sẵn kiểu ChatGPT (MUI không có pin nghiêng) — pin thin-stroke (Lucide), vẽ nghiêng trong SVG.
 const TILT = 'rotate(38 12 12)';
 const STROKE_SX = { fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' } as const;
@@ -145,13 +131,13 @@ export default function ConversationSidebar({ conversations, activeId, collapsed
   }
 
   // CHỈ hiện hội thoại đã lưu (serverId != null) — chat mới chưa gửi gì thì ẩn (owner: chưa nói gì thì đừng hiện).
-  // Ghim → nhóm "Đã ghim" riêng ở ĐẦU; còn lại nhóm theo ngày. Giữ thứ tự newest-first từ store.
+  // Chỉ 2 nhóm: "Đã ghim" ở ĐẦU + "Gần đây" (mọi hội thoại chưa ghim). Giữ thứ tự newest-first từ store.
   const visible = conversations.filter((c) => c.serverId);
   const pinnedItems = visible.filter((c) => c.pinned);
   const unpinned = visible.filter((c) => !c.pinned);
   const groups: { label: string; items: Conversation[] }[] = [
     ...(pinnedItems.length ? [{ label: 'Đã ghim', items: pinnedItems }] : []),
-    ...BUCKETS.map((label) => ({ label: label as string, items: unpinned.filter((c) => bucketOf(c.createdAt) === label) })).filter((g) => g.items.length > 0),
+    ...(unpinned.length ? [{ label: 'Gần đây', items: unpinned }] : []),
   ];
 
   return (
