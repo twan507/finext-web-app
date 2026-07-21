@@ -7,6 +7,10 @@ import { getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import type { ChatMessage } from '../../../../hooks/useChatStore';
 import MessageBubble from './MessageBubble';
 
+// Bong bóng "đang suy nghĩ" khi turn chạy nền (FE chỉ đọc DB): TÁI DÙNG chính TypingIndicator của
+// MessageBubble — assistant + streaming + parts rỗng → render "Đang suy nghĩ" + chấm nhảy như lúc chờ ban đầu.
+const AWAITING_BUBBLE: ChatMessage = { id: '__awaiting__', role: 'assistant', content: '', parts: [], status: 'streaming' };
+
 // Khối assistant: chip tool xếp trên → bong bóng → hàng action (Sao chép, và Thử lại khi lỗi).
 function AssistantBlock({ message, onRetry, onFeedback, errorText, isLast }: { message: ChatMessage; onRetry: () => void; onFeedback: (serverId: string, rating: 1 | -1) => void; errorText?: string | null; isLast: boolean }) {
   const [copied, setCopied] = useState(false);
@@ -82,7 +86,7 @@ function AssistantBlock({ message, onRetry, onFeedback, errorText, isLast }: { m
 }
 
 // scrollMode: 'window' = cuộn theo trang (mặc định, trang /chat) · 'container' = cuộn trong khung riêng (bubble chat).
-export default function MessageList({ messages, onRetry, onFeedback, error, scrollMode = 'window' }: { messages: ChatMessage[]; onRetry: () => void; onFeedback: (serverId: string, rating: 1 | -1) => void; error: string | null; scrollMode?: 'window' | 'container' }) {
+export default function MessageList({ messages, onRetry, onFeedback, error, scrollMode = 'window', pending = false }: { messages: ChatMessage[]; onRetry: () => void; onFeedback: (serverId: string, rating: 1 | -1) => void; error: string | null; scrollMode?: 'window' | 'container'; pending?: boolean }) {
   const pinnedRef = useRef(true);
   const scrollBoxRef = useRef<HTMLDivElement | null>(null);
   const lastIdx = messages.length - 1;
@@ -121,7 +125,7 @@ export default function MessageList({ messages, onRetry, onFeedback, error, scro
 
   useEffect(() => {
     if (pinnedRef.current) scrollToBottom();
-  }, [messages, scrollToBottom]);
+  }, [messages, pending, scrollToBottom]);
 
   return (
     // Ở 'container', chính Box này là khung cuộn (cần cha là flex column có chiều cao chặn). Ở 'window' không đặt thuộc tính cuộn nào — bố cục y hệt trước.
@@ -133,6 +137,8 @@ export default function MessageList({ messages, onRetry, onFeedback, error, scro
           const errorText = showErr ? (error ?? 'Không lấy được phản hồi. Bạn thử lại nhé.') : null;
           return <AssistantBlock key={m.id} message={m} onRetry={onRetry} onFeedback={onFeedback} errorText={errorText} isLast={idx === lastIdx} />;
         })}
+        {/* Turn chạy nền (mở lại /chat/{id} khi tin cuối = user, hoặc câu vừa bị xếp hàng): hiện "đang suy nghĩ". */}
+        {pending && <MessageBubble message={AWAITING_BUBBLE} />}
     </Box>
   );
 }

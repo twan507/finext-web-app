@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { streamChat, type ChatEvent } from '../services/chatClient';
+import { BUSY_NOTICE, MAX_POLLS, POLL_MS, isTurnPending } from './chatBackgroundQueue';
 import {
   deleteConversationApi,
   fetchConversationDetail,
@@ -53,6 +54,7 @@ export interface UseChatStoreReturn {
   thinking: boolean;
   historyLoading: boolean;
   msgLoading: boolean;
+  awaitingReply: boolean; // hội thoại đang mở có turn chạy nền (chờ reply từ DB) → hiện "đang suy nghĩ" + poll
   toggleThinking: () => void;
   send: (text: string) => void;
   stop: () => void;
@@ -118,6 +120,7 @@ export default function useChatStore(
   const [quotaWarn, setQuotaWarn] = useState<{ message: string; detail: boolean } | null>(null);
   const [historyLoading, setHistoryLoading] = useState(true); // tải danh sách hội thoại lúc mount
   const [msgLoading, setMsgLoading] = useState(false); // tải messages 1 hội thoại khi mở
+  const [awaitingConvId, setAwaitingConvId] = useState<string | null>(null); // id hội thoại đang chờ turn nền (poll DB)
   // "Suy nghĩ sâu": init false (SSR-safe), hydrate từ localStorage sau mount để tránh mismatch.
   const [thinking, setThinking] = useState(false);
 
@@ -151,6 +154,7 @@ export default function useChatStore(
   }, []);
 
   const messages = conversations.find((c) => c.id === activeId)?.messages ?? [];
+  const awaitingReply = awaitingConvId === activeId; // hội thoại đang mở đang chờ turn nền trả lời
 
   useEffect(() => {
     try {
@@ -230,6 +234,7 @@ export default function useChatStore(
       setError(null);
       setLimitNotice(null);
       setQuotaWarn(null); // nhắc hạn mức của lượt trước tự ẩn khi user gửi lượt mới
+      setAwaitingConvId(null); // gửi lượt mới → huỷ chờ nền của lượt trước (nếu có); nếu bị xếp hàng sẽ bật lại ở 'queued'
       setPhase('waiting');
       setConversations((prev) =>
         prev.map((c) =>
@@ -301,6 +306,14 @@ export default function useChatStore(
             // Nhắc sớm (50%/75%) — chỉ hiện thanh nhẹ, không đụng tới câu trả lời đang stream.
             if (ev.message) setQuotaWarn({ message: ev.message, detail: true });
             break;
+          case 'queued':
+            // BE đang bận với câu trước → câu này đã xếp hàng (KHÔNG lỗi). Bỏ bong bóng assistant rỗng,
+            // chuyển sang chờ nền: hiện "đang suy nghĩ" + poll DB tới khi có trả lời (như lúc mở lại /chat/{id}).
+            setConversations((prev) =>
+              prev.map((c) => (c.id === convIdRef.current ? { ...c, messages: c.messages.filter((m) => m.id !== assistantIdRef.current) } : c)),
+            );
+            setAwaitingConvId(convIdRef.current);
+            break;
           case 'done':
             flush(true);
             patchAssistant((m) => ({ ...m, status: 'done' }));
@@ -332,7 +345,9 @@ export default function useChatStore(
             prev.map((c) => (c.id === convId ? { ...c, messages: c.messages.filter((m) => m.id !== assistantId) } : c)),
           );
           const msg = (err as { message?: string } | null)?.message;
-          setLimitNotice({ message: msg || 'Bạn đã đạt giới hạn sử dụng.', detail: status === 429 });
+          // 429 "đang bận" (hàng đợi đầy) khác 429 hạn mức: bận thì KHÔNG gắn link "Xem chi tiết" hạn mức.
+          const busy = status === 429 && msg === BUSY_NOTICE;
+          setLimitNotice({ message: msg || 'Bạn đã đạt giới hạn sử dụng.', detail: status === 429 && !busy });
         } else {
           patchAssistant((m) => (m.status === 'streaming' ? { ...m, status: 'interrupted' } : m));
           const aborted = controller.signal.aborted;
@@ -411,6 +426,7 @@ export default function useChatStore(
     setError(null);
     setPhase('idle');
     setAsOf(null);
+    setAwaitingConvId(null); // rời hội thoại đang mở → dừng chờ nền của nó
   }, [clearIdle]);
 
   const selectConversation = useCallback(
@@ -424,6 +440,7 @@ export default function useChatStore(
       setQuotaWarn(null);
       setPhase('idle');
       setAsOf(null);
+      setAwaitingConvId(null); // rời hội thoại trước → dừng chờ nền của nó; bật lại bên dưới nếu hội thoại mới đang chờ
       // Hội thoại cũ (có serverId) chưa tải messages → lazy-load từ backend.
       const conv = conversationsRef.current.find((c) => c.id === id);
       if (conv && conv.serverId && !conv.loaded) {
@@ -435,6 +452,8 @@ export default function useChatStore(
             setConversations((prev) =>
               prev.map((c) => (c.id === id ? { ...c, loaded: true, title: detail.title, messages: detail.messages.map(toChatMessage) } : c)),
             );
+            // Tin cuối = user (chưa có assistant) → turn đang chạy nền → hiện "đang suy nghĩ" + poll.
+            if (isTurnPending(detail.messages)) setAwaitingConvId(id);
           })
           .catch(() => {
             // lỗi tải → để trống; user chọn lại để thử lại
@@ -442,6 +461,9 @@ export default function useChatStore(
           .finally(() => {
             if (msgLoadIdRef.current === id) setMsgLoading(false);
           });
+      } else if (conv && conv.serverId && conv.loaded && isTurnPending(conv.messages)) {
+        // Hội thoại đã tải sẵn nhưng đang chờ turn nền (mở lại từ cache) → tiếp tục poll.
+        setAwaitingConvId(id);
       }
     },
     [clearIdle],
@@ -457,6 +479,47 @@ export default function useChatStore(
       selectConversation(conv.id);
     }
   }, [conversations, selectConversation]);
+
+  // Poll DB khi hội thoại đang chờ turn nền: đọc lại messages mỗi POLL_MS tới khi có assistant reply.
+  // DỪNG khi: có reply / rời hội thoại (awaitingConvId đổi) / unmount (cleanup) / quá MAX_POLLS (turn nền lỗi,
+  // không ghi được DB) → bỏ cuộc để không poll vô hạn. Chỉ chạy khi thực sự có turn đang chờ.
+  useEffect(() => {
+    if (!awaitingConvId) return;
+    const conv = conversationsRef.current.find((c) => c.id === awaitingConvId);
+    const serverId = conv?.serverId;
+    if (!serverId) {
+      setAwaitingConvId(null);
+      return;
+    }
+    let stopped = false;
+    let attempts = 0;
+    const timer = setInterval(() => {
+      if (stopped) return;
+      if (attempts >= MAX_POLLS) {
+        setAwaitingConvId(null); // bỏ cuộc — cleanup sẽ xoá interval
+        return;
+      }
+      attempts += 1;
+      void fetchConversationDetail(serverId)
+        .then((detail) => {
+          if (stopped || !detail) return;
+          // Reply đã ghi DB (tin cuối không còn là user) → nạp messages mới + dừng poll.
+          if (!isTurnPending(detail.messages) && detail.messages.length > 0) {
+            setConversations((prev) =>
+              prev.map((c) => (c.id === awaitingConvId ? { ...c, loaded: true, title: detail.title, messages: detail.messages.map(toChatMessage) } : c)),
+            );
+            setAwaitingConvId(null);
+          }
+        })
+        .catch(() => {
+          // lỗi mạng 1 nhịp → bỏ qua, thử lại nhịp sau (vẫn trong giới hạn MAX_POLLS)
+        });
+    }, POLL_MS);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+    };
+  }, [awaitingConvId]);
 
   const togglePin = useCallback((id: string) => {
     const conv = conversationsRef.current.find((c) => c.id === id);
@@ -501,6 +564,7 @@ export default function useChatStore(
       setError(null);
       setPhase('idle');
       setAsOf(null);
+      setAwaitingConvId(null); // hội thoại đang chờ nền bị xoá → dừng poll
     } else {
       setConversations(remaining.length ? remaining : [newConv()]);
     }
@@ -518,6 +582,7 @@ export default function useChatStore(
     thinking,
     historyLoading,
     msgLoading,
+    awaitingReply,
     toggleThinking,
     send,
     stop,

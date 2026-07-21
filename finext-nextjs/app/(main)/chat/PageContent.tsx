@@ -204,7 +204,7 @@ function ChatApp({ initialConversationId }: { initialConversationId?: string }) 
           <>
             {/* Vùng tin nhắn flex:1 → đẩy composer xuống ĐÁY khi nội dung ngắn; nội dung dài thì cuộn window. */}
             <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-              <MessageList key={store.activeId} messages={store.messages} onRetry={store.retry} onFeedback={store.sendFeedback} error={store.error} />
+              <MessageList key={store.activeId} messages={store.messages} onRetry={store.retry} onFeedback={store.sendFeedback} error={store.error} pending={store.awaitingReply} />
             </Box>
             {/* Chặn (429/503) ưu tiên hơn nhắc sớm — không hiện hai thanh cùng lúc. */}
             {store.limitNotice ? <LimitNotice notice={store.limitNotice} /> : store.quotaWarn ? <LimitNotice notice={store.quotaWarn} severity="info" /> : null}
