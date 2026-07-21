@@ -6,20 +6,17 @@ import { apiClient } from 'services/apiClient';
 
 // MUI
 import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Link from '@mui/material/Link';
-import IconButton from '@mui/material/IconButton';
-import Visibility from '@mui/icons-material/VisibilityOutlined';
-import VisibilityOff from '@mui/icons-material/VisibilityOffOutlined';
 import ArrowBack from '@mui/icons-material/ArrowBackIosNew';
 import AccessTime from '@mui/icons-material/AccessTime';
 
-import BrandLogo from '@/components/layout/BrandLogo';
-import { iconSize, layoutTokens, getResponsiveFontSize, borderRadius, fontWeight } from 'theme/tokens';
+import AuthCard from '../components/AuthCard';
+import AuthField from '../components/AuthField';
+import AuthAlert from '../components/AuthAlert';
+import { iconSize, fontWeight, getGlowButton } from 'theme/tokens';
 
 interface OtpRequestResponse {
     message: string;
@@ -84,10 +81,6 @@ export default function PageContent() {
 
     const handleClickShowNewPassword = () => setShowNewPassword((show) => !show);
     const handleClickShowConfirmPassword = () => setShowConfirmPassword((show) => !show);
-
-    const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
-        event.preventDefault();
-    };
 
     const validateEmail = (email: string) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -232,78 +225,7 @@ export default function PageContent() {
 
     return (
         <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-            <Box
-                sx={(t) => ({
-                    width: '100%',
-                    maxWidth: layoutTokens.authFormMaxWidth,
-                    p: { xs: 2.5, md: 3 },
-                    borderRadius: 3,
-                    bgcolor: t.palette.mode === 'dark'
-                        ? 'rgba(15, 10, 35, 0.4)'
-                        : 'rgba(255, 255, 255, 0.05)',
-                    backdropFilter: 'blur(20px) saturate(150%)',
-                    WebkitBackdropFilter: 'blur(20px) saturate(150%)',
-                    boxShadow: t.palette.mode === 'dark'
-                        ? [
-                            '0 8px 32px rgba(0, 0, 0, 0.6)',
-                            '0 2px 8px rgba(139, 92, 246, 0.1)',
-                            'inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-                        ].join(', ')
-                        : [
-                            '0 8px 32px rgba(107, 70, 193, 0.15)',
-                            '0 4px 16px rgba(0, 0, 0, 0.1)',
-                            'inset 0 1px 0 rgba(255, 255, 255, 0.4)',
-                        ].join(', '),
-                    border: t.palette.mode === 'dark'
-                        ? '1px solid rgba(255, 255, 255, 0.1)'
-                        : '1px solid rgba(107, 70, 193, 0.15)',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: t.palette.mode === 'dark'
-                            ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(124, 58, 237, 0.02) 100%)'
-                            : 'linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 100%)',
-                        pointerEvents: 'none',
-                        zIndex: -1,
-                    },
-                })}
-            >
-                {/* Logo và Title */}
-                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1.5 }}>
-                    <BrandLogo
-                        href="/"
-                        imageSize={iconSize.brandImage}
-                        textSize={getResponsiveFontSize('h4')}
-                        gap={layoutTokens.dotSize.small}
-                        useColorOverlay={true}
-                    />
-                </Box>
-
-                <Typography
-                    sx={(theme) => ({
-                        textAlign: 'center',
-                        mb: 1,
-                        fontSize: getResponsiveFontSize('md'),
-                        background: theme.palette.mode === 'dark'
-                            ? 'linear-gradient(135deg, #FFFFFF 0%, #E0E7FF 25%, #C4B5FD 50%, #A78BFA 75%, #8B5CF6 100%)'
-                            : 'linear-gradient(135deg, #1F2937 0%, #4C1D95 25%, #6B46C1 50%, #7C3AED 75%, #8B5CF6 100%)',
-                        backgroundClip: 'text',
-                        WebkitBackgroundClip: 'text',
-                        color: 'transparent',
-                        WebkitTextFillColor: 'transparent',
-                        fontWeight: fontWeight.semibold,
-                        letterSpacing: '0.5px',
-                    })}
-                >
-                    {step === 'email' ? 'Quên mật khẩu?' : 'Đặt lại mật khẩu'}
-                </Typography>
-
+            <AuthCard title={step === 'email' ? 'Quên mật khẩu?' : 'Đặt lại mật khẩu'} hideLogoOnMobile>
                 {/* Back button for reset step */}
                 {step === 'reset' && (
                     <Box sx={{ mb: 2 }}>
@@ -321,31 +243,26 @@ export default function PageContent() {
                 {/* Step 1: Email Input */}
                 {step === 'email' && (
                     <Box component="form" onSubmit={handleRequestOtp} noValidate sx={{ width: '100%' }}>
-                        {error && (
-                            <Alert severity="error" sx={{ width: '100%', mb: 1.5 }}>
-                                {error}
-                            </Alert>
-                        )}
-                        {successMessage && (
-                            <Alert severity="success" sx={{ width: '100%', mb: 1.5 }}>
-                                {successMessage === 'otp_sent' ? (
-                                    <>Mã OTP đã được gửi đến email <strong>{email}</strong>. Vui lòng kiểm tra hộp thư.</>
-                                ) : successMessage === 'otp_resent' ? (
-                                    <>Mã OTP mới đã được gửi đến email <strong>{email}</strong>.</>
-                                ) : (
-                                    successMessage
-                                )}
-                            </Alert>
-                        )}
+                        <AuthAlert open={!!error} severity="error">
+                            {error}
+                        </AuthAlert>
+                        <AuthAlert open={!!successMessage} severity="success">
+                            {successMessage === 'otp_sent' ? (
+                                <>Mã OTP đã được gửi đến email <strong>{email}</strong>. Vui lòng kiểm tra hộp thư.</>
+                            ) : successMessage === 'otp_resent' ? (
+                                <>Mã OTP mới đã được gửi đến email <strong>{email}</strong>.</>
+                            ) : (
+                                successMessage
+                            )}
+                        </AuthAlert>
 
                         <Typography variant="body2" sx={{ mb: 2, textAlign: 'center', color: 'text.secondary' }}>
                             Nhập email để nhận mã xác thực đặt lại mật khẩu.
                         </Typography>
 
-                        <TextField
+                        <AuthField
                             margin="dense"
                             required
-                            fullWidth
                             id="email"
                             label="Email"
                             name="email"
@@ -354,14 +271,14 @@ export default function PageContent() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             disabled={loading}
-                            size="small"
+                            size="medium"
                         />
 
                         <Button
                             type="submit"
                             fullWidth
                             variant="contained"
-                            sx={{ mt: 2, mb: 1.5, py: 1, borderRadius: 2 }}
+                            sx={(t) => ({ mt: 2, mb: 1.5, py: 1, borderRadius: 2, ...getGlowButton(t.palette.mode === 'dark') })}
                             disabled={loading}
                         >
                             {loading ? <CircularProgress size={iconSize.progressMedium} color="inherit" /> : 'Gửi mã OTP'}
@@ -376,27 +293,22 @@ export default function PageContent() {
                 {/* Step 2: OTP and New Password */}
                 {step === 'reset' && (
                     <Box component="form" onSubmit={handleResetPassword} noValidate sx={{ width: '100%' }}>
-                        {error && (
-                            <Alert severity="error" sx={{ width: '100%', mb: 1.5 }}>
-                                {error}
-                            </Alert>
-                        )}
-                        {successMessage && (
-                            <Alert severity="success" sx={{ width: '100%', mb: 1.5 }}>
-                                {successMessage === 'otp_sent' ? (
-                                    <>Mã OTP đã được gửi đến email <strong>{email}</strong>.</>
-                                ) : successMessage === 'otp_resent' ? (
-                                    <>Mã OTP mới đã được gửi đến email <strong>{email}</strong>.</>
-                                ) : (
-                                    successMessage
-                                )}
-                            </Alert>
-                        )}
+                        <AuthAlert open={!!error} severity="error">
+                            {error}
+                        </AuthAlert>
+                        <AuthAlert open={!!successMessage} severity="success">
+                            {successMessage === 'otp_sent' ? (
+                                <>Mã OTP đã được gửi đến email <strong>{email}</strong>.</>
+                            ) : successMessage === 'otp_resent' ? (
+                                <>Mã OTP mới đã được gửi đến email <strong>{email}</strong>.</>
+                            ) : (
+                                successMessage
+                            )}
+                        </AuthAlert>
 
-                        <TextField
+                        <AuthField
                             margin="dense"
                             required
-                            fullWidth
                             id="otpCode"
                             label="Mã OTP"
                             name="otpCode"
@@ -405,87 +317,41 @@ export default function PageContent() {
                             value={otpCode}
                             onChange={(e) => setOtpCode(e.target.value)}
                             disabled={loading}
-                            size="small"
+                            size="medium"
                             inputProps={{ maxLength: 6 }}
                         />
 
-                        <Box sx={{ position: 'relative' }}>
-                            <TextField
-                                margin="dense"
-                                required
-                                fullWidth
-                                name="newPassword"
-                                label="Mật khẩu mới"
-                                type={showNewPassword ? 'text' : 'password'}
-                                id="newPassword"
-                                autoComplete="new-password"
-                                value={newPassword}
-                                onChange={(e) => setNewPassword(e.target.value)}
-                                disabled={loading}
-                                size="small"
-                            />
-                            <IconButton
-                                aria-label="toggle password visibility"
-                                onClick={handleClickShowNewPassword}
-                                onMouseDown={handleMouseDownPassword}
-                                disabled={loading}
-                                tabIndex={-1}
-                                sx={{
-                                    position: 'absolute',
-                                    right: 6,
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    marginTop: '4px',
-                                    p: 0.25,
-                                    minWidth: '24px',
-                                    height: '24px',
-                                    zIndex: 1,
-                                }}
-                            >
-                                {showNewPassword ?
-                                    <Visibility fontSize='small' sx={(theme) => ({ color: theme.palette.text.secondary })} /> :
-                                    <VisibilityOff fontSize='small' sx={(theme) => ({ color: theme.palette.text.secondary })} />}
-                            </IconButton>
-                        </Box>
+                        <AuthField
+                            margin="dense"
+                            required
+                            name="newPassword"
+                            label="Mật khẩu mới"
+                            id="newPassword"
+                            autoComplete="new-password"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            disabled={loading}
+                            size="medium"
+                            passwordToggle
+                            showPassword={showNewPassword}
+                            onTogglePassword={handleClickShowNewPassword}
+                        />
 
-                        <Box sx={{ position: 'relative' }}>
-                            <TextField
-                                margin="dense"
-                                required
-                                fullWidth
-                                name="confirmPassword"
-                                label="Xác nhận mật khẩu mới"
-                                type={showConfirmPassword ? 'text' : 'password'}
-                                id="confirmPassword"
-                                autoComplete="new-password"
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                disabled={loading}
-                                size="small"
-                            />
-                            <IconButton
-                                aria-label="toggle password visibility"
-                                onClick={handleClickShowConfirmPassword}
-                                onMouseDown={handleMouseDownPassword}
-                                disabled={loading}
-                                tabIndex={-1}
-                                sx={{
-                                    position: 'absolute',
-                                    right: 6,
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    marginTop: '4px',
-                                    p: 0.25,
-                                    minWidth: '24px',
-                                    height: '24px',
-                                    zIndex: 1,
-                                }}
-                            >
-                                {showConfirmPassword ?
-                                    <Visibility fontSize='small' sx={(theme) => ({ color: theme.palette.text.secondary })} /> :
-                                    <VisibilityOff fontSize='small' sx={(theme) => ({ color: theme.palette.text.secondary })} />}
-                            </IconButton>
-                        </Box>
+                        <AuthField
+                            margin="dense"
+                            required
+                            name="confirmPassword"
+                            label="Xác nhận mật khẩu mới"
+                            id="confirmPassword"
+                            autoComplete="new-password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            disabled={loading}
+                            size="medium"
+                            passwordToggle
+                            showPassword={showConfirmPassword}
+                            onTogglePassword={handleClickShowConfirmPassword}
+                        />
 
                         {/* OTP Validity Countdown - Moved here before submit button */}
                         {otpValidityCountdown > 0 && (
@@ -504,17 +370,15 @@ export default function PageContent() {
                             </Box>
                         )}
 
-                        {otpValidityCountdown === 0 && step === 'reset' && (
-                            <Alert severity="warning" sx={{ width: '100%', mt: 1, mb: 1 }}>
-                                Mã OTP đã hết hạn. Vui lòng gửi lại mã mới.
-                            </Alert>
-                        )}
+                        <AuthAlert open={otpValidityCountdown === 0 && step === 'reset'} severity="warning">
+                            Mã OTP đã hết hạn. Vui lòng gửi lại mã mới.
+                        </AuthAlert>
 
                         <Button
                             type="submit"
                             fullWidth
                             variant="contained"
-                            sx={{ mt: 2, mb: 1.5, py: 1, borderRadius: 2 }}
+                            sx={(t) => ({ mt: 2, mb: 1.5, py: 1, borderRadius: 2, ...getGlowButton(t.palette.mode === 'dark') })}
                             disabled={loading}
                         >
                             {loading ? <CircularProgress size={iconSize.progressMedium} color="inherit" /> : 'Đặt lại mật khẩu'}
@@ -539,7 +403,7 @@ export default function PageContent() {
                         </Typography>
                     </Box>
                 )}
-            </Box>
+            </AuthCard>
         </Box>
     );
 }
