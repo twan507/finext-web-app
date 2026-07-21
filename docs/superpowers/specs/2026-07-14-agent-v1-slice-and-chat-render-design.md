@@ -1,5 +1,7 @@
 # Agent v1 — Quyết định thực thi: lát cắt dọc, DeepSeek, render giàu trong chat
 
+> **HISTORICAL — IMPLEMENTED / EVOLVED:** Lát cắt agent/chat đã được triển khai và mở rộng; provider/model, tool surface và render hiện do code/config tại HEAD quyết định.
+
 > **Ngày:** 2026-07-14 · **Trạng thái:** owner đã duyệt trong phiên brainstorm.
 > **Vai trò:** bổ sung (không thay thế) bộ [`docs/finext_agent/00→09`](../../finext_agent/00-web-roadmap.md) — ghi các quyết định
 > chốt trước khi code. Chỗ nào file này khác doc cũ → file này thắng; `00` §5/§6a/§6b và `04` §5-7 đã sửa theo cùng commit.

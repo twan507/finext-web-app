@@ -1,97 +1,152 @@
 # Finext Web Application
 
-Full-stack web application với FastAPI backend và Next.js frontend.
+Finext là web application full-stack phân tích và sàng lọc chứng khoán Việt Nam. Repository chứa frontend Next.js, backend FastAPI, cấu hình Nginx và Docker Compose production.
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/twan507/finext-web-app)
+## Tài Liệu
 
-## AI Skills
+- [Architecture index](docs/architecture/README.md) — bản đồ tài liệu và tổng quan hệ thống.
+- [Backend](docs/architecture/03-backend.md) · [Frontend](docs/architecture/04-frontend.md) · [Bảo mật](docs/architecture/05-features-security.md).
+- [Compliance/auth hiện tại](docs/architecture/06-compliance-pivot.md).
+- [Trang Giai đoạn thị trường](docs/architecture/08-market-phase.md).
+- [Finext AI roadmap](docs/finext_agent/00-web-roadmap.md).
+- [Cách đọc specs/plans lịch sử](docs/superpowers/README.md).
 
-Cài đặt các skills cho AI coding assistant:
-
-```bash
-# Vercel Agent Skills
-npx skills add vercel-labs/agent-skills
-
-# UI Pro CLI
-npm install -g uipro-cli
-uipro init --ai antigravity
-```
+Các file trong `docs/superpowers/specs/`, `docs/superpowers/plans/` và `.superpowers/sdd/` là hồ sơ thiết kế/triển khai theo thời điểm. Khi có khác biệt, ưu tiên code hiện tại, sau đó đến tài liệu kiến trúc mới nhất.
 
 ## Tech Stack
 
-| Component | Technology |
-|-----------|------------|
-| **Backend** | FastAPI, Python 3.13+, UV, MongoDB, JWT |
-| **Frontend** | Next.js 15, TypeScript, Material UI |
-| **Infrastructure** | Docker, Nginx |
+| Layer | Technology |
+|-------|------------|
+| **Backend** | FastAPI 0.115+, Python 3.13+, Pydantic v2, Motor/PyMongo, JWT, APScheduler, UV |
+| **Frontend** | Next.js 15.5, React 19, TypeScript 5.7 strict, MUI 7, TanStack Query |
+| **Realtime** | SSE + REST/polling trên MongoDB standalone |
+| **Data** | MongoDB: `user_db`, `stock_db`, `ref_db`, `agent_db` |
+| **Infrastructure** | Docker Compose, Nginx, TLS, Next.js standalone output |
+
+## Cấu Trúc Repository
+
+```text
+finext-web-app/
+├── finext-fastapi/       # FastAPI, MongoDB access, auth/RBAC, Finext AI
+│   ├── app/
+│   │   ├── routers/      # HTTP/SSE endpoints
+│   │   ├── schemas/      # Pydantic request/response DTOs
+│   │   ├── crud/         # Business logic và Mongo queries
+│   │   ├── auth/         # JWT, current-user và permission dependencies
+│   │   ├── agent/        # Agent loop, adapters, gateway, tools, runtime KB
+│   │   └── core/         # Config, database, scheduler, seeding
+│   └── tests/
+├── finext-nextjs/        # Next.js App Router frontend
+│   ├── app/              # (auth), (main), admin và auth callback
+│   ├── components/
+│   ├── services/         # API, SSE, chat và session clients
+│   ├── hooks/
+│   └── theme/
+├── docs/                 # Architecture, Finext AI, specs và plans
+├── nginx/                # Reverse proxy, TLS, cache và rate limits
+├── docker-compose.yml
+└── CLAUDE.md             # Quy ước làm việc trong repository
+```
 
 ## Yêu Cầu
 
-- Python 3.13+ & [UV](https://docs.astral.sh/uv/getting-started/installation/)
-- Node.js & npm
-- MongoDB
-- Docker (optional)
+- Python 3.13+ và [UV](https://docs.astral.sh/uv/getting-started/installation/)
+- Node.js và npm
+- MongoDB có các database/collection cần thiết
+- Docker + Docker Compose nếu chạy production stack
 
-## Quick Start
+## Development
 
 ### Backend
 
 ```bash
 cd finext-fastapi
-uv sync                                                           # Cài dependencies
-uv run uvicorn app.main:app --reload --env-file .env.development  # Chạy server
+uv sync
+uv run uvicorn app.main:app --reload --env-file .env.development
 ```
 
-Hoặc sử dụng script `main.py`:
+- API: `http://127.0.0.1:8000/api/v1`
+- Swagger: `http://127.0.0.1:8000/api/v1/docs`
+- Swagger/ReDoc/OpenAPI chỉ bật khi `ENVIRONMENT=development`.
+
+Launcher hỗ trợ một số thao tác UV:
 
 ```bash
-python main.py          # Chạy server (mặc định)
+python main.py          # Chạy server
 python main.py venv     # Tạo môi trường ảo
-python main.py install  # Cài dependencies (uv sync)
-python main.py lock     # Tạo/cập nhật lockfile
+python main.py install  # uv sync
+python main.py lock     # uv lock
 ```
-
-→ API: http://127.0.0.1:8000 | Docs: http://127.0.0.1:8000/api/v1/docs
 
 ### Frontend
 
 ```bash
 cd finext-nextjs
-npm install      # Cài dependencies
-npm run dev      # Chạy server
+npm install
+npm run dev
 ```
 
-→ App: http://localhost:3000
+App: `http://localhost:3000`
 
-## Quản Lý Dependencies
-
-### Backend (UV)
+## Kiểm Tra
 
 ```bash
-uv add <package>              # Thêm package
-uv add --group dev <package>  # Thêm dev dependency
-uv lock                       # Cập nhật lockfile
-uv sync                       # Đồng bộ môi trường
+cd finext-fastapi
+uv run pytest
+
+cd ../finext-nextjs
+npx tsc --noEmit
+npm test
 ```
 
-### Frontend (npm)
+Không chạy `next build` đồng thời với một dev server đang dùng cùng thư mục `.next`. Frontend hiện dùng `node --test` cho unit tests TypeScript; Playwright đã có dependency nhưng repository chưa có suite/config E2E.
 
-```bash
-npm install <package>         # Thêm package
-npm install -D <package>      # Thêm dev dependency
-```
-
-## Docker (Production)
-
-```bash
-# Build & Run
-docker compose --env-file .env.production up -d --build
-
-```
-
-## Environment Files
+## Environment
 
 | Môi trường | Backend | Frontend |
 |------------|---------|----------|
-| Development | `finext-fastapi/.env.development` | `finext-nextjs/.env` |
-| Production | `.env.production` (root) | `.env.production` (root) |
+| Development | `finext-fastapi/.env.development` | `finext-nextjs/.env` nếu cần override client env |
+| Production | `.env.production` ở root | `.env.production` ở root qua Docker Compose/build args |
+
+Tên biến backend được định nghĩa trong `finext-fastapi/app/core/config.py`. Các biến bắt buộc chính gồm `MONGODB_CONNECTION_STRING`, `SECRET_KEY`, `ADMIN_EMAIL`; frontend dùng `NEXT_PUBLIC_API_URL` và `NEXT_PUBLIC_GOOGLE_CLIENT_ID`. Không commit file `.env*` hoặc giá trị secret.
+
+Trong production, browser gọi `/api/v1/*` cùng origin qua Nginx; server-side Next.js gọi FastAPI qua `INTERNAL_API_URL=http://fastapi:8000`.
+
+## Production
+
+```bash
+docker compose --env-file .env.production up -d --build
+docker compose logs -f
+docker compose down
+```
+
+Compose chạy ba service `nginx`, `fastapi` và `nextjs`. MongoDB không nằm trong Compose. Nginx là service duy nhất expose port host; FastAPI và Next.js chỉ nằm trong network `web-proxy`.
+
+## Quản Lý Dependencies
+
+### Backend
+
+```bash
+uv add <package>
+uv add --group dev <package>
+uv lock
+uv sync
+```
+
+### Frontend
+
+```bash
+npm install <package>
+npm install -D <package>
+```
+
+Không thêm dependency mới nếu chưa thống nhất phạm vi và lý do sử dụng.
+
+## Optional AI Tooling
+
+```bash
+npx skills add vercel-labs/agent-skills
+
+npm install -g uipro-cli
+uipro init --ai antigravity
+```

@@ -1,5 +1,7 @@
 # DeepSeek V4 Thinking Mode + Anti-Truncation — Design (Phần 2)
 
+> **HISTORICAL — IMPLEMENTED, DEFAULT OFF:** Wire support và reasoning pass-back đã được triển khai, nhưng đo A/B cho thấy thinking làm K-hygiene xấu hơn; LLM_THINKING hiện mặc định disabled.
+
 > **Ngày:** 2026-07-15 · **Trạng thái:** design đã duyệt với owner, chờ writing-plans.
 > **Bối cảnh:** Phần 2 của roadmap [[reference_deepseek_v4_api]]. Migrate v4-flash (Phần 1) xong, app an toàn sau 24/07.
 > Đo K-hygiene non-thinking cho thấy **vẫn lộ ký hiệu thô + tiêu chí/ngưỡng hệ thống** (bí mật SP) → cần thinking.

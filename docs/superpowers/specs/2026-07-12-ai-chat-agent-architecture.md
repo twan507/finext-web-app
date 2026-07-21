@@ -1,5 +1,7 @@
 # Spec — Kiến Trúc AI Chat Agent (Finext AI)
 
+> **HISTORICAL — IMPLEMENTED VÀ ĐÃ TIẾN HÓA:** Finext AI hiện đã có gateway, agent loop, persistence/quota, trang /chat, chat bubble và eval. Tool surface/runtime hiện tại trong code và **docs/finext_agent/00-web-roadmap.md** ghi đè các mục “chưa code” bên dưới.
+
 > **Điều kiện tiên quyết:** `agent_db` đã tối ưu xong theo [`2026-07-12-agent-db-optimization.md`](2026-07-12-agent-db-optimization.md) (checklist §8 bên đó pass hết).
 > **Trạng thái:** 📋 Thiết kế — chưa code. Viết dựa trên khảo sát code thật (`apiClient.ts`, `sse.py`, `nginx.conf`, `database.py`, `main.py`) ngày 2026-07-12.
 > **✅ Đã chốt (owner, 2026-07-12):** mirror `market_phase` vào `agent_db` · watchlist trong v1 · `is_processed` = cờ nội bộ, tool news bỏ qua. Chi tiết §11.
@@ -53,7 +55,7 @@
 
 Luồng 1 lượt chat: FE POST → auth + quota check (fail thì JSON lỗi thường, `apiClient` refresh-token flow chạy như mọi API) → lưu user message → agent task chạy: build context (system prompt tĩnh + `briefing_core` + history) → gọi LLM stream → token đẩy vào queue → nếu model xin tool: emit `tool_start`, chạy tool (asyncio.gather nếu nhiều tool song song), emit `tool_end`, vòng lại → `done` (kèm usage) → lưu assistant message.
 
-**Điểm ăn tiền của thiết kế:** generator response chỉ làm 1 việc là drain queue với `asyncio.wait_for(timeout=10)` → timeout thì yield `: hb\n\n` — **giống hệt pattern `sse_event_generator` trong [`sse.py`](../../finext-fastapi/app/routers/sse.py)** đã chạy ổn trong production, chỉ khác queue là per-request thay vì shared. Ít phát minh mới = ít bug mới.
+**Điểm ăn tiền của thiết kế:** generator response chỉ làm 1 việc là drain queue với `asyncio.wait_for(timeout=10)` → timeout thì yield `: hb\n\n` — **giống hệt pattern `sse_event_generator` trong [`sse.py`](../../../finext-fastapi/app/routers/sse.py)** đã chạy ổn trong production, chỉ khác queue là per-request thay vì shared. Ít phát minh mới = ít bug mới.
 
 ---
 

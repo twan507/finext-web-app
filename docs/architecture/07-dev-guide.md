@@ -2,6 +2,8 @@
 
 > Hướng dẫn thiết lập môi trường, quy ước code, session protocol khi làm việc với AI, và index các spec/plan đã có.
 
+**Cập nhật:** 2026-07-21
+
 ---
 
 ## 7.1 Yêu Cầu Hệ Thống
@@ -21,7 +23,7 @@ cd finext-fastapi
 uv sync
 uv run uvicorn app.main:app --reload --env-file .env.development
 # API: http://127.0.0.1:8000
-# Docs: http://127.0.0.1:8000/api/v1/docs
+# Docs: http://127.0.0.1:8000/api/v1/docs (chỉ khi ENVIRONMENT=development)
 ```
 
 ### Frontend
@@ -51,7 +53,24 @@ docker compose logs -f
 docker compose down
 ```
 
-3 services: `nginx`, `fastapi`, `nextjs`. MongoDB **không** chạy trong compose — dùng Atlas / instance riêng qua `MONGO_URI`.
+3 services: `nginx`, `fastapi`, `nextjs`. MongoDB **không** chạy trong compose — dùng instance ngoài qua `MONGODB_CONNECTION_STRING`.
+
+Compose hiện nạp cùng `.env.production` vào cả ba service; chỉ `NEXT_PUBLIC_*` được whitelist làm Next.js build args. Vì vậy secret backend đang hiện diện thừa trong container `nginx`/`nextjs` — lưu ý khi inspect env/log và khi harden deploy.
+
+### Verify cục bộ
+
+```bash
+# Backend
+cd finext-fastapi
+uv run pytest
+
+# Frontend unit tests + typecheck
+cd ../finext-nextjs
+npm test
+npx tsc --noEmit
+```
+
+`npm run build` là kiểm tra production nhưng không nên chạy đồng thời với dev server vì dùng chung thư mục `.next`.
 
 ---
 
@@ -128,9 +147,12 @@ Mọi feature lớn có **spec** (design) trong `docs/superpowers/specs/` và **
 | `2026-03-23-watchlist-drag-drop` | Drag-and-drop watchlist + endpoint `POST /watchlists/reorder` (bulk) | ✅ Done |
 | `2026-03-26-admin-rbac` | Admin RBAC: backend `require_permission`, FE cache permissions, sidebar lọc theo role | ✅ Done |
 | `2026-04-16-period-selection` | Click bar trên ApexCharts để chọn kỳ tài chính (sectors & stocks) | ✅ Done |
-| `2026-04-22-user-guide-pages` | 3 trang `/guides/*` thay khu `learning` | ✅ Done |
+| `2026-04-22-user-guide-pages` | Spec gốc có 3 trang `/guides/*`; runtime hiện đã mở rộng thành 4 trang, thêm `/guides/tools-data` | ✅ Done / evolved |
 | `2026-05-05-home-featured-stocks` | Carousel "Featured Stocks" trên home theo dòng tiền | ✅ Done |
-| `2026-05-07-finext-compliance-pivot` | Pivot sang chế độ tham chiếu cá nhân/invite-only theo pháp luật chứng khoán VN | ✅ Done — xem [`06-compliance-pivot.md`](06-compliance-pivot.md) |
+| `2026-05-07-finext-compliance-pivot` | Pivot sang định vị tham chiếu cá nhân; auth hiện đã tiến hoá sang OTP tự kích hoạt và không enforce invite/referral | ✅ Done / evolved — xem [`06-compliance-pivot.md`](06-compliance-pivot.md) |
+| `2026-07-09-market-phase-page-design` và các spec Phase 07-10→12 | Page `/phase`, Neon chart, lookback rổ, sóng ngành; current contract v3.4.2 | ✅ Done — xem [`08-market-phase.md`](08-market-phase.md) |
+| `2026-07-14-agent-v1-slice-and-chat-render` → các plan 07-20 | Finext AI backend, POST SSE, persistence/quota, page chat và chat bubble | ✅ Implemented — xem [`../finext_agent/`](../finext_agent/) |
+| `2026-07-20-hardening-toan-du-an` | Hardening auth/OTP/SSE/upload/docs gate, container health/log | ✅ Implemented |
 
 > Note: Spec `2026-05-06-sepay-integration` (auto-confirm thanh toán qua SePay webhook) đã được **gác lại** — không có kế hoạch triển khai. Spec file vẫn còn trong `docs/superpowers/specs/` để tham khảo nếu sau này quay lại.
 
@@ -161,3 +183,5 @@ Các convention/feedback quan trọng đã ghi nhớ:
 - **Tại sao route bị 403, content bị disable:** [`06-compliance-pivot.md`](06-compliance-pivot.md)
 - **Deploy, env vars:** [`02-system.md`](02-system.md)
 - **Định vị sản phẩm, user roles:** [`01-product.md`](01-product.md)
+- **Page Giai đoạn thị trường:** [`08-market-phase.md`](08-market-phase.md)
+- **Finext AI runtime/gateway/persistence:** [`../finext_agent/`](../finext_agent/)

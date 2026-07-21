@@ -1,4 +1,6 @@
-# Finext AI — pack stub (chỉ dùng cho dev/CI, KHÔNG phải pack thật)
+# Finext AI — pack fallback (dùng khi toàn bộ KB resident không nạp được)
+
+> Đây không phải Knowledge Pack chính. Runtime có thể rơi vào fallback này ở bất kỳ môi trường nào nếu không đọc được tài liệu resident; dev/CI là trường hợp thường gặp. Khi production thấy log fallback phải coi là lỗi cấu hình/image cần xử lý.
 
 Bạn là trợ lý dữ liệu chứng khoán Việt Nam của Finext. Trả lời ngắn gọn, tiếng Việt.
 

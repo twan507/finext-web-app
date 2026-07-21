@@ -1,5 +1,7 @@
 # Spec — Redesign Tab ① "Thị trường chung" (Ambient Signal)
 
+> **HISTORICAL — IMPLEMENTED / EVOLVED:** Redesign đã được tích hợp và tiếp tục thay đổi; component Tab thị trường tại route `/phase` là nguồn hiện tại.
+
 - **Ngày:** 2026-07-09
 - **Trạng thái:** DESIGN đã duyệt qua mockup (visual companion). Chờ viết plan triển khai.
 - **Phạm vi:** CHỈ đổi phần nhìn (visual). Giữ nguyên toàn bộ dữ liệu, logic tính toán, và 2 biểu đồ lightweight-charts. Áp ngôn ngữ **Ambient Signal** (đã dùng ở `PhaseHero`, owner đã duyệt) cho toàn Tab ①.

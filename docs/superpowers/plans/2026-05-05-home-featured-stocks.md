@@ -1,5 +1,7 @@
 # Home — Featured Stocks Section Implementation Plan
 
+> **HISTORICAL — COMPLETED:** Featured stocks đã được triển khai; không dùng checklist này như trạng thái hiện hành.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Thêm section "Cổ phiếu nổi bật" trên trang chủ với 2 slide carousel (Top dòng tiền vào / ra mạnh), reuse `GroupStockTable` từ `/groups/[groupId]`.

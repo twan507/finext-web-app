@@ -1,5 +1,7 @@
 # db_stats — Tool tính toán an toàn + nới cap + chống lặp query — Design
 
+> **HISTORICAL — IMPLEMENTED:** Tool db_stats hiện có trong agent tool surface; code tại app/agent/tools/db_stats.py và gateway stats modules là nguồn hiện tại.
+
 > **Trạng thái:** PLANNED (chưa build) — owner duyệt hướng 2026-07-16, viết spec trước, build sau.
 > **Ngày:** 2026-07-16. Nhánh (dự kiến): nhánh mới tách từ main (KHÔNG gộp vào feat/chat-fe-v1).
 > **Vì sao:** câu cần TÍNH TOÁN trên chuỗi lịch sử dài (vd "PE/PB thị trường so với đáy các cú sập lịch sử") hiện FAIL → MAX_ITERS. Root cause (đã chẩn đoán, có evidence scratchpad/diag_maxiters.py):

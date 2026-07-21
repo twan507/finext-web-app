@@ -1,5 +1,7 @@
 # Spec — Reorder tab rổ + "Vận hành danh mục" với lookback 20 phiên (2026-07-10)
 
+> **HISTORICAL — IMPLEMENTED / EVOLVED:** Lookback 20 phiên và bố cục vận hành danh mục đã có trong `BasketTab`/`SessionStrip`; code `/phase` hiện tại là nguồn thật.
+
 > Tab rổ PAID (Phòng Thủ/Mạo Hiểm/Sóng Ngành): đảo thứ tự phần trên + thêm thanh chọn phiên (20 ô) để xem lại snapshot 3 bảng trong quá khứ. Chốt với owner qua chat.
 
 ## 1. Thứ tự mới trong `BasketTab`

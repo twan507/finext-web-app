@@ -1,5 +1,7 @@
 # Home — Featured Stocks Section Design
 
+> **HISTORICAL — IMPLEMENTED:** Featured stocks đã có trên trang chủ; `FeaturedStocksSection` và wiring hiện tại là nguồn thật.
+
 **Date:** 2026-05-05
 **Status:** Approved (brainstorming) — pending implementation plan
 **Owner:** finext.vn@gmail.com

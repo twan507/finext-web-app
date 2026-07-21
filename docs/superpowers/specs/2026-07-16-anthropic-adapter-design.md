@@ -1,5 +1,7 @@
 # Anthropic-compat Adapter — Design
 
+> **HISTORICAL — IMPLEMENTED:** AnthropicCompatAdapter đã có trong runtime và được chọn bằng LLM_API_STYLE. Provider/model production vẫn là cấu hình env; tài liệu này không khẳng định adapter đang active.
+
 > **Trạng thái:** PLANNED — owner chốt build (2026-07-16) sau khi A/B thấy M3 mạnh; M3 "happiest on Anthropic SDK".
 > **Vì sao:** (1) chạy M3 ở mode tối ưu/khuyến nghị (Anthropic); (2) portability — 1 adapter chạy được M3 + DeepSeek-Claude-mode + Claude thật; (3) nền cho các tool tính toán/phân tích sau. Bậc-2 hygiene fix nhỏ (industry_rank/y_trend + preamble) **hoãn**: làm xong adapter → re-survey → fix tổng thể 1 lượt.
 

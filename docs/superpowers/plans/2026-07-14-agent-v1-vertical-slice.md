@@ -1,5 +1,7 @@
 # Agent v1 — Lát Cắt Dọc (Gateway → SSE → DeepSeek → Cắm Thật) Implementation Plan
 
+> **HISTORICAL — COMPLETED / EVOLVED:** Lát cắt agent v1 đã hoàn thành và runtime đã mở rộng; không dùng provider/tool/checklist trong plan làm trạng thái hiện hành.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Người dùng đã đăng nhập hỏi *"FPT giá bao nhiêu?"* trên `POST /api/v1/chat/stream` → agent (DeepSeek) tự viết query → gateway kiểm luật → đọc `agent_db` thật trên Mongo → trả lời stream về, **số khớp UI Finext**.

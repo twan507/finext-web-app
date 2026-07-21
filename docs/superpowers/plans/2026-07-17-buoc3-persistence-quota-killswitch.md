@@ -1,5 +1,7 @@
 # Bước 3 — Persistence · Quota · Kill-switch Budget (Implementation Plan)
 
+> **HISTORICAL — COMPLETED / EVOLVED:** Persistence, quota và budget guard đã được triển khai; contract/quota mặc định hiện tại nằm trong router, CRUD và config chat tại HEAD.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Lưu hội thoại vào `user_db`, chặn quota 60 msg/user/ngày (429), và kill-switch token budget GLOBAL fail-closed ("AI tạm nghỉ") — go-live blocker chống cháy tiền token.

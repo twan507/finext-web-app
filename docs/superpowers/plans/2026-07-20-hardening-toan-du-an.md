@@ -1,5 +1,7 @@
 # Kế hoạch hardening toàn dự án finext-web-app (2026-07-20)
 
+> **HISTORICAL — COMPLETED / INTEGRATED:** Các thay đổi hardening đã được tích hợp vào code hiện tại; branch, số lỗi và nền test bên dưới chỉ là snapshot ngày 2026-07-20.
+
 Branch: `review/hardening-2026-07-20` (KHÔNG commit lên main).
 Mục tiêu owner: sửa toàn bộ lỗ hổng → hệ thống mượt, chịu tải tối đa, không hở bảo mật.
 Phạm vi: LOẠI TRỪ Finext AI (agent/chat).

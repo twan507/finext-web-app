@@ -1,5 +1,7 @@
 # User Guide Pages — Design Spec
 
+> **HISTORICAL — IMPLEMENTED / EVOLVED:** Cụm `/guides/*` đã được triển khai và mở rộng; route/component hiện có tại HEAD ghi đè phạm vi draft bên dưới.
+
 **Date:** 2026-04-22
 **Status:** Draft (awaiting user review)
 **Scope:** Frontend only (`finext-nextjs/`)

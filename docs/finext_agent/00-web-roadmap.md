@@ -4,7 +4,7 @@
 > Mỗi file = một bước. Mỗi bước ghi rõ: cần gì · đã có gì · chưa có gì · phương án A/B · rủi ro + cách xử lý · điều kiện hoàn thành.
 > **KHÔNG cover Claude app** (owner tự làm, chỉ chia sẻ chung tầng gateway + knowledge pack).
 > **Nguồn sự thật tầng dữ liệu:** [`agent_db_v2.md`](agent_db_v2.md) (as-built chính thức, 2026-07-12 — thay thế agent_db_plan cũ đã loại bỏ) — bộ doc này tham chiếu, không lặp lại, không đảo quyết định đã chốt.
-> **Cập nhật:** 2026-07-12. Giá API + thông tin MCP đã verify bằng web search cùng ngày.
+> **Cập nhật hiện trạng runtime:** 2026-07-21 (đối chiếu `main`/HEAD `445c4bb`). Các đoạn có ngày 2026-07-12→20 bên dưới là nhật ký quyết định/eval tại thời điểm đó, không phải cấu hình hiện hành nếu có một snapshot mới hơn ghi đè.
 
 ---
 
@@ -18,14 +18,14 @@ Cơ chế cụ thể để đạt được điều đó (chi tiết ở các fil
 
 | # | Cơ chế | Ở đâu |
 |---|--------|-------|
-| 1 | Model **tự viết query** qua 2 tool generic (`db_find` / `db_aggregate`) — web không có tool nào pin vào collection cụ thể | [`02-backend-agent-runtime.md`](02-backend-agent-runtime.md) |
-| 2 | Mọi luật về collection (whitelist, filter bắt buộc, cap) nằm trong **policy file declarative** của gateway — đổi DB chỉ sửa config, không sửa code web | [`01-gateway-data-access.md`](01-gateway-data-access.md) |
-| 3 | Kiến thức schema nằm trong **Knowledge Pack** (file versioned theo git) — server chỉ *ghép* pack vào system prompt, không hiểu nội dung | [`02-backend-agent-runtime.md`](02-backend-agent-runtime.md) §5 |
+| 1 | Model tự tra cứu qua 3 tool dữ liệu generic (`db_find` / `db_aggregate` / `db_stats`) và nạp tài liệu sâu bằng `read_kb`; không có tool production nào pin vào một collection cụ thể | [`02-backend-agent-runtime.md`](02-backend-agent-runtime.md) |
+| 2 | Luật collection nằm trong policy declarative — đổi DB thường sửa policy + pack, không sửa loop/tool schema; vì hai file nằm trong image nên vẫn phải deploy FastAPI lại | [`01-gateway-data-access.md`](01-gateway-data-access.md) |
+| 3 | Kiến thức schema nằm trong **Knowledge Pack** versioned ngay trong repo (`system_prompt`, `agent_db_01→07`); server ghép 3 tài liệu resident và cho model nạp phần còn lại qua `read_kb` | [`02-backend-agent-runtime.md`](02-backend-agent-runtime.md) §5 |
 | 4 | Điểm chạm schema duy nhất của web = đọc `data_briefing {type:"core"}` + field `as_of` — có fallback: thiếu doc này agent vẫn chạy (bỏ briefing, ghi chú staleness) | [`02-backend-agent-runtime.md`](02-backend-agent-runtime.md) §5.2 |
-| 5 | FE hiển thị tool chip theo **nhãn generic** ("Đang tra cứu dữ liệu…" + tên collection nếu map được) — không phụ thuộc danh sách tool cố định | [`04-frontend-assistant.md`](04-frontend-assistant.md) §4 |
-| 6 | `schema_version` trong DB + version trong pack — lệch version thì agent tự cảnh báo, không sai lặng lẽ | agent_db_v2 §7.2 (P2) |
+| 5 | Backend gửi **cụm danh từ tự nhiên** theo collection (fallback "dữ liệu", không lộ tên nội bộ); FE ghép động từ theo tool (**Đọc/Tổng hợp/Thống kê/Tham khảo**, tool lạ fallback "Đọc") | [`04-frontend-assistant.md`](04-frontend-assistant.md) §4 |
+| 6 | `schema_version`/pack-version guard vẫn là P2, **chưa được runtime enforce**; hiện phải đồng bộ DB+policy+pack bằng quy trình deploy/smoke | agent_db_v2 §7.2 |
 
-Hệ quả cho lộ trình: **DB thật ĐÃ SẴN SÀNG** (v2 as-built, verify pass — xem §3), nhưng nguyên tắc DB-agnostic vẫn giữ nguyên giá trị: fixture mode dùng cho test/CI không cần Mongo, và mọi lần owner sửa `agent_db` sau này web không phải deploy lại.
+Hệ quả cho lộ trình: **DB v2 đã có bản as-built** (xem §3), nhưng cutover production vẫn cần owner xác nhận. Runtime loop/tool schema không phải đổi khi schema dữ liệu đổi; nếu policy hoặc Knowledge Pack đổi thì vẫn phải rebuild/redeploy image FastAPI vì hai tài sản này được bundle trong repo.
 
 ---
 
@@ -33,7 +33,7 @@ Hệ quả cho lộ trình: **DB thật ĐÃ SẴN SÀNG** (v2 as-built, verify 
 
 ```
 ┌─ Browser ─────────────────────────────────────────────────────────────────┐
-│  /assistant (Next.js) — useChatStore + chatClient (SSE-over-POST parser)  │
+│  /chat + /chat/[id] (Next.js) — useChatStore + chatClient (POST SSE)     │
 └──────────────┬────────────────────────────────────────────────────────────┘
                │ POST /api/v1/chat/stream  (JWT Bearer)
                ▼
@@ -45,10 +45,9 @@ Hệ quả cho lộ trình: **DB thật ĐÃ SẴN SÀNG** (v2 as-built, verify 
 │  routers/chat.py     auth + quota + StreamingResponse (mỏng)              │
 │      ▼                                                                    │
 │  agent/loop.py       vòng lặp LLM ↔ tools (max iters, budget)             │
-│      ├─ tools: db_find / db_aggregate ──► GATEWAY CORE (library,          │
-│      │                                    in-process — policy file)       │
-│      ├─ tool:  get_my_watchlist ────────► user_db (user_id từ JWT)        │
-│      └─ adapters/ OpenAICompatAdapter tự code trên httpx (seam duy nhất) │
+│      ├─ db_find / db_aggregate / db_stats ─► GATEWAY CORE in-process      │
+│      ├─ read_kb ──────────────────────────► app/agent/kb (whitelist)       │
+│      └─ adapters: OpenAICompat / AnthropicCompat (chọn bằng env)          │
 │      ▼                                                                    │
 │  system prompt = [pack files (git)] + [briefing_core (đọc từ agent_db)]   │
 └──────────────┬───────────────────────────────┬────────────────────────────┘
@@ -57,7 +56,7 @@ Hệ quả cho lộ trình: **DB thật ĐÃ SẴN SÀNG** (v2 as-built, verify 
         qua gateway core)                chat_messages, chat_quota)
 ```
 
-Gateway core là **thư viện Python dùng chung**: web import in-process; Claude app dùng qua wrapper MCP (stdio/HTTP) bọc cùng core — một nguồn luật, hai cách đóng gói (phương án + fallback ở file 01).
+Gateway core hiện là **thư viện Python in-process** cho web. Một wrapper MCP (stdio/HTTP) có thể bọc cùng core cho app khác trong tương lai, nhưng wrapper đó không tồn tại trong repo này (phương án ở file 01).
 
 ---
 
@@ -68,7 +67,8 @@ Gateway core là **thư viện Python dùng chung**: web import in-process; Clau
   fnx05 v2 + agent_db 33 collections + Knowledge Pack v2 — as-built: agent_db_v2.md
   (verify 45 tiêu chí + probe 61/61 PASS × 5 vòng trên agent_db_test;
    CÒN LẠI: cutover production theo runbook v2 §7.1 — điều kiện của bước 6;
-   history_finratios_* (2026-07-14) CHƯA vào pack/policy/probe — v2 §7.2)
+   history_finratios_* đã vào pack + policy web; probe pipeline cho 2 collection mới
+   vẫn là việc owner cần xác nhận — v2 §7.2)
         ▼
 [Bước 1] Gateway — tầng truy cập dữ liệu            → 01-gateway-data-access.md
         ▼
@@ -77,7 +77,7 @@ Gateway core là **thư viện Python dùng chung**: web import in-process; Clau
 [Bước 3] Persistence + quota + mô hình chi phí      → 03-persistence-quota-cost.md
         │    └─ thiết kế DB chi tiết + bộ nhớ cá nhân hoá → 08-database-design-memory.md
         ▼
-[Bước 4] Frontend /assistant                        → 04-frontend-assistant.md
+[Bước 4] Frontend /chat                            → 04-frontend-assistant.md
         ▼
 [Bước 5] Deploy, nginx, vận hành                    → 05-deployment-nginx-ops.md
         ▼
@@ -103,6 +103,8 @@ Thứ tự code thực tế có thể xen kẽ (FE làm song song backend từ k
 >
 > **Cập nhật 2026-07-20 (tối) — SỬA GỐC CẮT DỮ LIỆU + DIỆT QUIRK M3 + 2 VÒNG EVAL (ĐÃ PUSH `main`, HEAD `4a47211`):** (1) **`shrink.py` mới** — nơi duy nhất được phép bỏ dữ liệu: bỏ trọn phần tử, **giữ kỳ MỚI bỏ kỳ CŨ**, ghi chú nêu tên phần đã bỏ + cấm model tự điền số; trần kết quả tool 12k→**24k**, ngân sách tổng 30k→**40k** chia đều TRƯỚC khi chạy. (2) **Tự sửa quirk truy vấn M3 ở tầng tool**: bóc `{"$text": "<chuỗi JSON>"}`, coerce số-bọc-chuỗi theo vị trí (`$limit:"25"`, `$sort:"-1"`, `$gt:"50000"`, projection `"1"`), unmangle mảng-bẻ-dict (`{"$slice":{"item":X,"-5":""}}`). (3) **Hai cầu dao chặn bão retry**: 2 vòng toàn-fail hoặc 600k token → ép trả lời trung thực. (4) Aggregate cũng có **note field-vắng** như find; `_needs_retry` bắt **độc thoại kế hoạch** + **câu cụt hai chấm**; KB `agent_db_02` hạ `$slice` về `-52`; bỏ nhãn ngữ cảnh trang chèn trùng 2 lần (FE). **Eval:** §7 11/14 → §8 6/14 (phiên M3 xấu, lộ lớp quirk mới) → **§9 12/14, 0 bịa số, token −47,5%**. Câu HPG từng bịa số nay ĐẠT (kỳ 2026_1, số khớp DB). Hai câu còn hỏng chốt chấp nhận: Q11 variance (từ chối trung thực) · Q14 nhớ nhầm schema (hỏng sạch, không bão). **Guard "sổ số liệu" kiểu bỏ-câu đã BÁC BỎ bằng đo** (báo nhầm 20,8% số / 72% câu — đừng làm lại). Backend **507 pytest PASS**.
 >
+> **Snapshot runtime/config repo 2026-07-21 (hiện hành):** file `.env.production` trong workspace cấu hình `MiniMax-M3` tại `https://api.minimax.io/v1` (không phải default của code hay bằng chứng container đang deploy); wire mặc định code là `LLM_API_STYLE=openai`, `LLM_THINKING=disabled`, nhưng UI có công tắc gửi `thinking=true` cho từng lượt. Runtime có cả `OpenAICompatAdapter` và `AnthropicCompatAdapter`. `TOOL_SCHEMAS` hiện chỉ gồm **`db_find`, `db_aggregate`, `db_stats`, `read_kb`**; `get_my_watchlist` còn code handler nhưng **đã gỡ khỏi surface model**. Quota đã tăng x4 so snapshot 20/07: standard **4.000.000 đơn vị/5h + 40.000.000/tuần**, advanced ×5, MANAGER/ADMIN unlimited; đơn vị quy đổi theo giá input/cache/output. Cầu dao global mặc định **tắt** (`AGENT_DAILY_TOKEN_BUDGET=0`).
+>
 > ~~**CÒN LẠI để go-live (cũ 2026-07-17):** Bước 3 · Bước 5 · Bước 6 · item 9~~ — Bước 3 + item 9 ĐÃ XONG. Bước 6 (eval) đã chạy 2026-07-20.
 >
 > **LOẠI khỏi phạm vi (owner 2026-07-16): web search** — giữ agent đóng miền trong dữ liệu Finext, KHÔNG thêm dịch vụ trả phí bên thứ 3 (MiniMax web_search chỉ chạy MCP subprocess cục bộ, không hợp backend server-side). Mọi chỉ dẫn `web_search` trong pack đã gỡ (`system_prompt` mục 7 + `agent_db_03`/`agent_db_04`).
@@ -126,36 +128,36 @@ Thứ tự code thực tế có thể xen kẽ (FE làm song song backend từ k
 | Motor async + `httpx` async đã trong deps backend | `pyproject.toml` | Bước 1/2 — adapter tự parse không cần dep mới |
 | Spec kiến trúc runtime cũ (SSE contract 6 event, quota, persistence…) | [`2026-07-12-ai-chat-agent-architecture.md`](../superpowers/specs/2026-07-12-ai-chat-agent-architecture.md) | Nguyên liệu — phần còn dùng được đã hấp thụ vào bộ doc này |
 | **`agent_db` v2 as-built HOÀN CHỈNH**: 33 collections (31 + `history_finratios_*` 2026-07-14), index sống qua mọi vòng ghi, %-points, briefing core ~320 tok, phase mirror ×6, verify 45 + probe 61/61 PASS (chưa phủ 2 collection mới) | [`agent_db_v2.md`](agent_db_v2.md) | Nguồn sự thật tầng dữ liệu |
-| **Knowledge Pack v2 HOÀN CHỈNH** (`system_prompt.md` + `agent_db_01→06`, đồng bộ cùng thế hệ với DB v2) | **TRONG repo** (`finext-fastapi/app/agent/kb/`) — nguồn sự thật DUY NHẤT, sửa trực tiếp + commit (KHÔNG còn bản canonical ngoài repo) | Bước 2 §5 — server ghép vào system prompt. ⚠ pack và DB phải CÙNG THẾ HỆ (v2 §7.1.3: lệch = agent đọc sai đơn vị ×100) |
+| **Knowledge Pack v2** (`system_prompt.md` + `agent_db_01→07`) | **TRONG repo** (`finext-fastapi/app/agent/kb/`) — `system_prompt`+01+02 resident; 03→07 đọc theo nhu cầu bằng `read_kb` | Bước 2 §5 — pack và DB phải cùng thế hệ |
 
-### 4.2 Chưa có (phải làm — mỗi mục trỏ tới file có phương án)
+### 4.2 Hiện trạng triển khai / phần còn lại
 
 | # | Hạng mục | Ai làm | File |
 |---|----------|--------|------|
-| 0 | ~~`agent_db` chuẩn hoá~~ ✅ XONG (as-built v2) — **còn lại: cutover production** (probe expect → chạy fnx05 → check --prod, kèm up pack cùng lúc) | owner (ngoài repo web) | agent_db_v2 §7.1 |
-| 1 | Gateway core (policy file + validate + execute + log) | dev | 01 |
-| 2 | `routers/chat.py` + `agent/` package (loop, adapters, tools, prompt assembly) | dev | 02 |
-| 3 | `crud/chat.py` + `schemas/chat.py` + indexes `user_db` + quota | dev | 03 |
-| 4 | ✅ **XONG (2026-07-16)** — FE: `chatClient.ts` + `useChatStore` + page `/chat` + components + redesign ring + UI polish (V1 slice client-held multi-turn) | dev | 04 |
-| 5 | Nginx location `/api/v1/chat/` + env vars `LLM_*`/`AGENT_*` | dev | 05 |
-| 6 | Bộ eval smoke + quy trình go-live/rollback | dev + owner | 07 |
-| 7 | ✅ **ĐÃ CHỐT (2026-07-16): MiniMax-M3** (wire OpenAI-compat) qua eval A/B vs DeepSeek-v4-pro; đổi bằng env, `AnthropicCompatAdapter` giữ dự phòng | owner + dev eval | 02 §6, 03 §3, 07 §5 |
-| 8 | Collection `user_db` mới: chat ×3 + `agent_user_profile` (+`agent_memory_notes` v1.5) | dev | 08 |
-| 9 | Consent modal NĐ 13/2023 + cập nhật `/policies/privacy` + feedback 👍👎 | dev + owner | 09 §2-3 |
+| 0 | `agent_db` v2 as-built; web policy v2 và KB đã phủ 33 collection. **Cutover/probe production vẫn là việc owner ngoài repo web, chưa thể suy ra từ HEAD.** | owner | agent_db_v2 §7.1-7.2 |
+| 1 | ✅ Gateway library in-process: policy/validator/executor/fixture/stats/log đã có | dev | 01 |
+| 2 | ✅ `routers/chat.py` + loop + 2 adapter + 4-tool surface + prompt assembly/SSE đã có | dev | 02 |
+| 3 | ✅ Persistence, indexes, quota per-license, cảnh báo 50/75%, trang quota đã có. Còn nợ job dọn quota 90 ngày. | dev | 03, 08 |
+| 4 | ✅ `/chat`, `/chat/[id]`, lịch sử/ghim/đổi tên/xoá/feedback, widget, thinking toggle và chat bubble theo ngữ cảnh đã có | dev | 04 |
+| 5 | ✅ Nginx `/api/v1/chat/` và config code đã có; **còn xác nhận deploy/curl production và alert ops** | owner + dev | 05 |
+| 6 | ✅ Eval thật 2026-07-20 đã ghi lại; **owner vẫn quyết định vòng mở người dùng/production acceptance** | owner + dev | 07, eval-smoke |
+| 7 | ✅ Repo `.env.production` hiện cấu hình **MiniMax-M3/OpenAI-compatible**; adapter Anthropic-compatible đã có. Deploy live cần xác nhận riêng. | owner + dev | 02 §6 |
+| 8 | ✅ 3 collection chat; ❌ `agent_user_profile` và `agent_memory_notes` vẫn chỉ là thiết kế tương lai | dev | 08 |
+| 9 | ✅ Privacy policy đã có mục Finext AI và feedback 👍👎 đã có. Consent popup riêng **đã bỏ có chủ đích** vì user đồng ý policy khi tạo tài khoản. | dev + owner | 04, 09 |
 
 ---
 
-## 5. Các Quyết Định Lớn Còn Mở (mỗi cái có phương án sẵn trong file tương ứng)
+## 5. Các Quyết Định Lớn — hiện trạng và đường nâng cấp
 
 | # | Quyết định | Khuyến nghị | Fallback | File |
 |---|-----------|-------------|----------|------|
-| 1 | Gateway: library in-process hay MCP process riêng? | **Library-first** (0 RAM mới, 0 hop) + MCP wrapper cho Claude app | MCP server riêng qua Streamable HTTP nếu owner muốn 1 service duy nhất cho cả 2 runtime | 01 |
-| 2 | Provider/model | ✅ ĐÃ CHỐT (owner): **không khoá vendor** — 1 adapter chuẩn OpenAI-compat phủ hầu hết provider (OpenAI/OpenRouter/DeepSeek/Groq/vLLM/Gemini-compat…); model cụ thể chọn bằng eval + giá, đổi bằng env | thêm adapter native riêng CHỈ khi cần tính năng độc quyền của 1 nhà (explicit cache control…) | 02 §6, 03 §3 |
+| 1 | Gateway: library in-process hay MCP process riêng? | **As-built: library in-process** (0 RAM mới, 0 hop) | MCP wrapper/service là nâng cấp tương lai; chưa có trong repo | 01 |
+| 2 | Provider/model | Snapshot repo: MiniMax-M3 qua OpenAI-compatible; code không có default model/base/key và chọn wire bằng `LLM_API_STYLE` | đổi provider/model phải chạy lại eval; cả hai adapter đã hiện hữu | 02 §6, 03 §3 |
 | 3 | SDK hay tự code | ✅ ĐÃ CHỐT (owner): **tự code adapter bằng `httpx` sẵn có, không dùng SDK nhà cung cấp** — 0 dependency mới, 0 vendor lock | dùng SDK open-source nếu tự parse phát sinh bug dai dẳng (tiêu chí: >2 bug parse/tháng sau go-live) | 02 §6 |
-| 4 | Render chat | ✅ ĐÃ CHỐT (owner 2026-07-14): markdown+bảng (`react-markdown`+`remark-gfm` — dep đã duyệt) + widget `finext-widget` JSON → whitelist component (stat_tiles/bar_list/grouped_bars CSS thuần · line = apexcharts sẵn có); KHÔNG BAO GIỜ mount HTML từ model | — | 04 §5 + [spec 07-14](../superpowers/specs/2026-07-14-agent-v1-slice-and-chat-render-design.md) |
+| 4 | Render chat | Markdown/GFM + fence `finext-widget`; FE whitelist **12 template ECharts/KPI** (`line`, `area`, `bar`, `bar_h`, `grouped_bar`, `pie`, `heatmap`, `scatter`, `treemap`, `radar`, `gauge`, `kpi`). Không mount raw HTML. | JSON/template lỗi → khối fallback xám | 04 §5 |
 | 5 | Tên route + nav label | **`/chat`** · "Finext AI" (owner đổi `/assistant`→`/chat` 2026-07-15) | — | 04 §2 |
-| 6 | Số quota cụ thể | 60 msg/user/ngày, budget token global theo giá model | điều chỉnh sau 2 tuần chạy nhóm nhỏ | 03 §4 |
-| 7 | Bộ nhớ cá nhân hoá | **Tầng 1** (profile user tự khai) ngay v1; **Tầng 2** (trích xuất sau lượt) v1.5 sau go-live | không bao giờ làm tool `memory_write` trong hội thoại (phá read-only) | 08 §4 |
+| 6 | Số quota cụ thể | Đơn vị quy đổi theo chi phí: standard 4M/5h + 40M/tuần; advanced ×5; MANAGER/ADMIN unlimited; global daily mặc định tắt | chỉnh bằng env | 03 §4 |
+| 7 | Bộ nhớ cá nhân hoá | Chưa implement profile/memory; chỉ lưu history chat. Không có `memory_write`. | nếu làm sau này, giữ server-controlled path | 08 §4 |
 
 ---
 
@@ -164,15 +166,17 @@ Thứ tự code thực tế có thể xen kẽ (FE làm song song backend từ k
 | Rủi ro | Xác suất | Tác động | Phương án xử lý |
 |--------|----------|----------|-----------------|
 | `agent_db` đổi schema sau khi web đã chạy | **Chắc chắn xảy ra** | Thấp — NẾU giữ đúng nguyên tắc §1 | Mọi PR web có chạm schema phải bị reject trừ policy file + pack. Điểm chạm duy nhất (`briefing_core.as_of`) có fallback. |
-| Pack và DB **lệch thế hệ** khi một trong hai được cập nhật (v2 §7.3: triệu chứng = agent nói số % lệch 100 lần) | Trung bình (mỗi lần owner nâng cấp) | Cao — sai lặng lẽ số liệu | Quy trình 1 commit chung + version log lúc startup (bước 5); web dev/test vẫn dùng "pack stub" trong CI, không phụ thuộc bản pack thật |
+| Pack và DB **lệch thế hệ** khi một trong hai được cập nhật (v2 §7.3: triệu chứng = agent nói số % lệch 100 lần) | Trung bình (mỗi lần owner nâng cấp) | Cao — sai lặng lẽ số liệu | Pack thật nằm trong repo/image; context chỉ fallback stub nếu không có resident nào. Deploy DB+pack cùng thế hệ và chạy smoke. |
 | Ước token/chi phí lệch theo model — tokenizer mỗi nhà mỗi khác (VD Sonnet 5 +~30% so đời trước), caching mỗi nhà mỗi kiểu | Cao | Chi phí/lượt lệch tới ~2-4× giữa provider | Đo lại pack bằng tokenizer/count-tokens của ĐÚNG model đã chọn trước khi chốt budget; so provider bằng "giá có cache" chứ không phải giá niêm yết (file 03 §3) |
-| Chi phí token vượt dự kiến khi user thật dùng | Trung bình | Tiền | 3 lớp: quota/user + global kill-switch fail-closed + prompt caching (bắt buộc bật). Chi tiết file 03 |
-| VPS 8GB không chịu thêm tải | Thấp (thiết kế 0 process mới, LLM là outbound I/O) | Cao nếu xảy ra | Semaphore giới hạn stream đồng thời; nếu vẫn căng → Option nâng RAM hoặc tách gateway ra VPS phụ (file 05) |
+| Chi phí token vượt dự kiến khi user thật dùng | Trung bình | Tiền | Quota per-license 5h/tuần đang bật; global kill-switch chỉ hoạt động khi env >0 (mặc định đang tắt); theo dõi usage/cache thật. Chi tiết file 03 |
+| VPS 8GB không chịu thêm tải | Thấp (thiết kế 0 process mới, LLM là outbound I/O) | Cao nếu xảy ra | Hiện chưa có semaphore per-user; theo dõi concurrency/latency và bổ sung limit trước, chỉ cân nhắc nâng RAM hoặc tách service khi có số đo (file 02/05) |
 | Pháp lý: agent "được khuyến nghị" + sau này thu phí | Thấp ở giai đoạn nội bộ | Rất cao nếu bán | Đứng đầu checklist trước khi bật payment: tham vấn luật sư (agent_db_v2 §7.2 "Pháp lý"). Web v1 giữ disclaimer + subordination |
 
 ---
 
-## 6a. Kickoff — Cách Bắt Đầu Session Code (cho AI session sau)
+## 6a. Kickoff lịch sử — các session này đã hoàn thành
+
+> Phần này là kế hoạch triển khai ban đầu, giữ lại để truy vết. **Không dùng như checklist hiện hành.** Khi sửa runtime, đọc code ở `app/agent/`, `routers/chat.py`, `crud/chat.py`, `services/chat*.ts` và `hooks/useChatStore.ts` trước; các checklist as-built nằm trong file 01-05.
 
 **Nguyên tắc đọc doc (tiết kiệm context, khớp session protocol của CLAUDE.md):** mỗi session CHỈ đọc file 00 này + file của bước đang làm (+ `agent_db_v2.md` nếu bước đó chạm dữ liệu). KHÔNG đọc cả 10 file mỗi session.
 
@@ -189,15 +193,15 @@ Thứ tự code thực tế có thể xen kẽ (FE làm song song backend từ k
 | 7 | 00 + 05 + 06 | Env, pack sync, log hygiene, alert budget | checklist 05 §8 + 06 §4 |
 | 8 | 00 + 07 | Eval + go-live vòng 1 | file 07 |
 
-**Quyết định treo duy nhất phải chốt trước session 1:** Gateway **Option A (library in-process — khuyến nghị)** hay B (process riêng) — file 01 §3. Nếu owner không nói gì, AI mặc định làm A (B nâng cấp được sau, interface không đổi).
+**Kết quả:** Gateway đã chọn **Option A (library in-process)**; không có MCP process/container riêng trong web runtime.
 
-**Mặc định được phép tự quyết không cần hỏi:** route `/assistant` + label "Finext AI" · pack sync = copy vào image (05 §4-A) · quota 60/ngày · mọi con số env ở 05 §3. **Phải hỏi owner:** bất kỳ dependency mới nào (kể cả lib MCP) — quy ước dự án. *Đã duyệt 2026-07-14:* `react-markdown` + `remark-gfm` (spec 07-14 §D5).
+**Giá trị hiện hành thay cho mặc định cũ:** route `/chat` · label "Finext AI" · pack nằm trong `app/agent/kb` và được copy cùng image · quota theo đơn vị quy đổi 5h/tuần (03 §4), không còn quota 60 message/ngày. Quy ước hỏi owner trước dependency mới vẫn giữ.
 
-**Cần từ owner trước session 3 (không chặn session 1-2):** ✅ ĐÃ CÓ 2026-07-14 — provider v1 = DeepSeek, owner tự điền vào `.env.production`: `LLM_BASE_URL=https://api.deepseek.com/v1` · `LLM_MODEL=deepseek-chat` · `LLM_API_KEY` (spec 07-14 §D2; dev/test vẫn chạy bằng echo adapter + fixture).
+**Lịch sử provider:** DeepSeek là lựa chọn lát cắt ngày 2026-07-14; cấu hình production hiện tại đã thay bằng **MiniMax-M3**. Không khôi phục các giá trị DeepSeek cũ nếu chưa chạy lại eval.
 
 ## 6b. NGOÀI Phạm Vi V1 (chốt để khỏi trôi scope — mỗi mục đều có lý do/đường nâng cấp trong file tương ứng)
 
-❌ Tool GHI bất kỳ (kể cả `memory_write` trong hội thoại — 08 §4.0) · ❌ **web search** (LOẠI HẲN — owner 2026-07-16: giữ đóng miền Finext, không dịch vụ trả phí bên thứ 3) · ❌ widget `candle` + chart series dài kiểu spec-chứa-query (chart CƠ BẢN đã VÀO v1 — spec 07-14 §D4/§D8) · ✅ tool tính toán `db_stats` (min/đỉnh/đáy/percentile/drawdown trên chuỗi dài — **ĐÃ LÀM 2026-07-16** merge `613c8bf`, kéo lên sớm chữa MAX_ITERS thay vì chờ log usage) · ❌ sandbox chạy code model viết (spec 07-14 §D6) · ❌ multi-agent · ❌ semantic search/embedding (Mongo standalone không vector — 08 §4.3) · ❌ resumable stream (09 §8) · ❌ tier gating theo license (điểm cắm để sẵn — 03 §4) · ❌ answer-cache câu phổ biến (09 §7) · ❌ observability chuyên dụng Langfuse (09 §8) · ❌ auto-summarize history dài (09 §8) · ❌ thêm giá vốn vào watchlists (08 §4.1 known-gap).
+❌ Tool GHI bất kỳ (kể cả `memory_write`) · ❌ **web search** · ❌ widget tham chiếu/resolver của doc 10 (đang gác) · ❌ sandbox chạy code model viết · ❌ semantic search/embedding · ❌ resumable stream · ❌ answer-cache · ❌ Langfuse/LangSmith · ❌ auto-summarize history dài · ❌ profile/memory cá nhân hoá · ❌ tích hợp watchlist vào tool surface. ✅ Đã có `db_stats`, quota tier theo license và 12 template widget ECharts/KPI.
 
 ## 7. Điều Kiện Go-Live Tổng (chi tiết ở file 07)
 
@@ -205,6 +209,6 @@ Thứ tự code thực tế có thể xen kẽ (FE làm song song backend từ k
 2. Gateway chạy với policy thật, log query đầy đủ, test chặn COLLSCAN/cap hoạt động.
 3. `tsc --noEmit` = 0 lỗi FE; pytest backend pass (adapter parse, loop max-iters, quota 429).
 4. Eval smoke 12+ câu pass bằng mắt owner (bộ câu ở file 07 — kế thừa và mở rộng từ spec cũ).
-5. Kill-switch budget đã test thật (set budget thấp → chat trả "AI tạm nghỉ").
-6. Consent modal + privacy policy cập nhật (NĐ 13/2023) + feedback 👍👎 có mặt từ ngày đầu (file 09 §2-3).
+5. Nếu owner bật `AGENT_DAILY_TOKEN_BUDGET` (>0), phải test mức thấp → request tiếp theo bị 503; mặc định hiện tại 0 nghĩa là tắt.
+6. Privacy policy mục Finext AI + feedback 👍👎 có mặt; consent riêng được xử lý ở bước đăng ký, không có modal `/chat`.
 7. Mở theo 3 vòng: owner → 2-3 NĐT thân → cả nhóm.

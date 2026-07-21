@@ -1,5 +1,7 @@
 # SePay Auto-Payment Integration Implementation Plan
 
+> **CANCELLED / KHÔNG ĐƯỢC DÙNG LÀM WORK ORDER:** Kế hoạch này không được triển khai. Luồng hiện tại vẫn xác nhận thanh toán thủ công.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Tích hợp SePay webhook để tự động xác nhận thanh toán cho `transactions` collection, song song với flow admin manual confirm hiện có. Frontend bổ sung trang `/checkout/[orderId]` hiển thị QR động VietQR.

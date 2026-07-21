@@ -1,5 +1,7 @@
 # Tích hợp Knowledge Pack thật — Implementation Plan
 
+> **HISTORICAL — COMPLETED / EVOLVED:** Knowledge Pack và `read_kb` đã được triển khai; pack/policy/runtime tại HEAD ghi đè checklist, đường dẫn nguồn và số test trong plan.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Thay pack stub bằng Knowledge Pack thật (system_prompt + agent_db_01→06), mở policy 33 collection, thêm tool `read_kb` để agent đọc KB chuyên sâu theo nhu cầu — agent tư vấn đầy đủ (giá/dòng tiền/BCTC/tin/vĩ mô/phase/lịch sử) trên schema thật.

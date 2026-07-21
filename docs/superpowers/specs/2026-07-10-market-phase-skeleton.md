@@ -1,5 +1,7 @@
 # Spec — Skeleton loading cho page market-phase (Header + Tab ①, 2026-07-10)
 
+> **HISTORICAL — IMPLEMENTED:** Skeleton đã được triển khai trong `MarketPhaseSkeleton`; route hiện tại là `/phase`.
+
 > Khi mở page chưa có data, hiện **khung skeleton bám sát layout** từng section (thay vì spinner + vùng nội dung trống). Phạm vi: shared header (hero) + Tab ① "Phân tích thị trường" (FREE). PAID basket tabs KHÔNG trong phạm vi.
 
 ## 1. Cách tiếp cận

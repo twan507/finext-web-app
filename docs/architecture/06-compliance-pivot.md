@@ -4,13 +4,25 @@
 
 **Status:** ⚠️ **ĐÃ ROLLBACK MỘT PHẦN** ngày 2026-07-21 — xem [§6.7](#67-rollback-một-phần-2026-07-21). Phần auth (Google OAuth + đăng ký OTP tự xác thực) đã bật lại; các phần còn lại vẫn giữ nguyên trạng thái tắt.
 
+**Source of truth hiện tại (2026-07-21):**
+
+| Hạng mục | Trạng thái runtime |
+|---|---|
+| Đăng ký email | OTP 6 số, user tự xác thực; không chờ admin duyệt |
+| Google login/register + `/auth/google/callback` | Bật |
+| Route 403 | Chỉ `/open-account` và `/profile/subscriptions` |
+| Full news HTML | Tắt; chỉ summary + link nguồn |
+| `ADVANCED_AND_ABOVE` | Có BASIC (bypass tier cũ); Phase có guard strict riêng cho ba tab danh mục |
+
 **Kế hoạch chi tiết:** [`../superpowers/plans/2026-05-07-finext-compliance-pivot.md`](../superpowers/plans/2026-05-07-finext-compliance-pivot.md)
 
 ---
 
-## 6.1 Thay Đổi Đã Áp Dụng
+## 6.1 Lịch Sử Pivot Gốc (2026-05-07)
 
-### Auth Flow (BE + FE)
+> Phần này ghi lại trạng thái **đã từng áp dụng** từ 2026-05-07 đến trước rollback auth 2026-07-21. Các mô tả admin approval/ẩn Google dưới đây không còn là runtime hiện tại.
+
+### Auth Flow tại thời điểm pivot (BE + FE)
 
 #### Register flow rewrite
 - BE: bỏ OTP self-verify, thay bằng **admin manual approval**.
@@ -69,9 +81,9 @@ Tác động: `/charts/[id]`, `/groups`, `/markets`, `/sectors`, `/stocks`, etc.
 
 ---
 
-## 6.2 Tính Năng Đã Code Nhưng Đang TẮT
+## 6.2 Inventory Toggle Sau Pivot
 
-> ⚠️ Các block code dưới đây đang bị **disable** nhưng **KHÔNG xóa** — sẵn sàng bật lại nếu rollback.
+> Các hàng gạch ngang 1–5 là **lịch sử và đã bật lại**. Hàng 6–12 phản ánh những phần vẫn bị ẩn/bypass/403 trong code hiện tại.
 
 | # | Tính năng | Cách tắt | File chính |
 |---|-----------|---------|-----------|

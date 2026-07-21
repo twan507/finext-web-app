@@ -1,4 +1,7 @@
 # Period Selection Feature — Design Spec
+
+> **HISTORICAL — IMPLEMENTED / EVOLVED:** Chọn kỳ trên biểu đồ tài chính đã được triển khai cho cổ phiếu và ngành; các component tài chính tại HEAD là nguồn hiện tại.
+
 Date: 2026-04-16
 
 ## Summary

@@ -1,5 +1,7 @@
 # Answer Correction Layer (Bậc 2) Implementation Plan
 
+> **HISTORICAL — COMPLETED:** Answer sanitizer đã được triển khai. Dùng app/agent/sanitize.py và test hiện tại thay cho các snippet/số test trong plan.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Thêm lớp hậu xử lý deterministic dọn residual K-hygiene (mã nội bộ lộ + câu kể tiến trình) trước khi trả khách, không đổi số/nội dung.

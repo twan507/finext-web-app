@@ -1,5 +1,7 @@
 # Cắt dữ liệu tool trung thực — Implementation Plan
 
+> **HISTORICAL — COMPLETED:** Cơ chế cắt tool result đã được triển khai; code/test `shrink`, registry và loop tại HEAD ghi đè checklist này.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Kết quả tool không bao giờ bị cắt mất phần mới nhất một cách âm thầm — cắt phải bỏ trọn phần tử, giữ kỳ mới, và nói rõ cho model biết đã bỏ cái gì.

@@ -1,5 +1,7 @@
 # DeepSeek V4 migration + reasoning/model-selector — Design & Roadmap
 
+> **HISTORICAL PROVIDER EVAL:** Migration và đo A/B đã hoàn thành. Runtime hiện không khóa DeepSeek: provider/model chọn qua env và hỗ trợ OpenAI-compatible/Anthropic-compatible adapters. Thinking mặc định disabled theo kết quả đo.
+
 > **Ngày:** 2026-07-15 · **Trạng thái:** brainstorm với owner xong trong phiên; chờ triển khai (owner sẽ compact rồi chạy tiếp).
 > **Bối cảnh:** Agent v1 + Knowledge Pack đã xong ([[project_agent_v1_slice]], branch `feat/agent-v1-slice`, 190 test).
 > Đang chạy `deepseek-chat` (V3) — output lộ ký hiệu (`VSI`, "bottom 3"), tuân K-hygiene chưa hoàn hảo.

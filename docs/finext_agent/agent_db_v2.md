@@ -2,11 +2,11 @@
 
 > **Vai trò file:** tài liệu CHÍNH phía owner về `agent_db` sau đợt nâng cấp v2 (2026-07-12): kiến trúc, cơ chế
 > pipeline, quy ước dữ liệu, inventory collection/index, công cụ validate, runbook cutover, và roadmap còn lại.
-> **Phía AGENT đọc bộ khác:** `system_prompt.md` (luật resident) + `agent_db_01→06` (KB) — file này KHÔNG up cho agent.
+> **Phía AGENT đọc bộ khác:** `system_prompt.md` + `agent_db_01→07` trong `finext-fastapi/app/agent/kb/` — file này KHÔNG nạp cho agent.
 > Thay thế `00_optimization_plan.md` (work-order v2 — đã hoàn thành nhiệm vụ và xoá 2026-07-12; xem git history).
 >
-> **Changelog 2026-07-14:** +2 collection lịch sử định giá (31 → **33**) — `history_finratios_stock`,
-> `history_finratios_industry`. Chi tiết §4.1; đơn vị §3; việc-còn-lại (pack + policy + probe) §7.2.
+> **Changelog 2026-07-14:** +2 collection lịch sử định giá (31 → **33**) — `history_finratios_stock`, `history_finratios_industry`. Chi tiết §4.1 và đơn vị §3.
+> **Đối chiếu web runtime 2026-07-21:** pack + gateway policy v2 đã phủ hai collection này; policy ép filter/`$slice`, cấm aggregate, cap 200KB và whitelist field `db_stats`. Probe/verify pipeline bổ sung cho hai collection vẫn là việc owner cần xác nhận ngoài repo web.
 
 ## 1. Tổng quan
 
@@ -164,24 +164,15 @@ tương ứng bổ sung khi cần (§7.2).
 **7.1 Cutover production (một lần):**
 1. Commit các file đã đổi (fnx05 + 8 docs + probes/).
 2. `python probes/agent_db/probe_validate.py expect` → chạy fnx05 (tay hoặc để app theo lịch) → `... check --prod`.
-3. Up pack lên Claude app **CÙNG LÚC**: `system_prompt.md` → custom instructions; `agent_db_01→06` → project files.
-   ⚠ Pack cũ + DB mới (hoặc ngược lại) = agent đọc sai đơn vị 100 lần.
+3. Deploy web pack **cùng thế hệ DB**: `app/agent/kb/system_prompt.md` + `agent_db_01→07` đi cùng image FastAPI. Nếu còn vận hành Claude app riêng, đồng bộ bộ tương ứng theo quy trình của app đó.
+   ⚠ Pack cũ + DB mới (hoặc ngược lại) = agent có thể đọc sai đơn vị 100 lần.
 4. Kiểm phiên chat đầu: hỏi "thị trường đang pha nào" (phải đọc từ `market_phase`), "FPT tuần này ±bao nhiêu %"
    (số phải khớp UI Finext).
 
 **7.2 Việc còn lại (không chặn dùng nội bộ):**
-- **Đưa `history_finratios_*` vào pack + policy + probe (CHẶN việc agent dùng 2 collection này):**
-  - *Pack* (`agent_db_01/02`, `system_prompt` mục 4): đơn vị **tỷ đồng** cho `marketcap/revenue_ttm/profit_ttm`
-    (khác BCTC = đồng), ratio = **số lần**, cadence **TUẦN** (`$slice:-52` = 1 năm), `"Toàn bộ thị trường"` không
-    phải một ngành, ratio ngành cap-weighted, field omit theo `type`, look-ahead 1–2 tháng, 2020 không có ratio.
-    Chưa dạy ⇒ agent sẽ chia vốn hoá cho 10⁹ và đọc `$slice:-60` như 60 phiên.
-  - *Policy gateway*: 2 dòng `size: large` + ép filter khoá + `$slice` + bắt buộc projection (`history_*` đã có
-    luật này theo prefix — xác nhận whitelist có tên mới, vì deny-by-default).
-  - *Probe/verify*: thêm assertion — series ASC + cadence tuần, `pe ≈ marketcap/profit_ttm` (spot-check 5 mã),
-    ratio ngành khớp cap-weighted từ mã thành phần, điểm 2020 chỉ có `marketcap`, unique index sống qua vòng ghi.
-- **Gateway MCP** (trước khi mở cho nhóm NĐT) — contract: whitelist collection · bắt buộc projection · explain→từ chối
-  COLLSCAN trên collection lớn · `history_*`/`*_itd` ép khoá+`$slice` · cap ~50KB/response · cấm `$lookup/$out/$merge/$where/$function` ·
-  `maxTimeMS` 5s · log toàn bộ · điểm cắm tier (v1 allow-all). Dùng chung Claude app (MCP) + web Finext (service).
+- ✅ **Pack + policy cho `history_finratios_*` đã hoàn tất trong web repo:** schema/đơn vị/cadence/look-ahead có trong KB; policy v2 có hai entry `size:large`, require key+series slice, `max_slice:520`, `max_response_kb:200`, `allow_aggregate:false`, `stats_fields` cho ratio.
+- ⏳ **Probe/verify pipeline cho hai collection:** tài liệu 2026-07-12 chỉ xác nhận 45 + 61/61 trên 31 collection; cần owner ghi bằng chứng bổ sung nếu đã chạy.
+- ✅ **Gateway web đã có** dưới dạng library in-process (không phải MCP service): whitelist/projection/operator guards/maxTimeMS/cap/log/fixture/stats. `GATEWAY_EXPLAIN_MODE` default off, bật on mới reject COLLSCAN. MCP wrapper dùng chung cho app ngoài web **chưa có trong repo này**.
 - **Finstats curated** ≤8KB/mã: bỏ `en_name`, key ngắn + suffix (`_ty`/`_pct` điểm %), ~15 chỉ tiêu/type
   (SXKD/NGANHANG/CHUNGKHOAN/BAOHIEM — owner chốt danh sách), 8 quý + 5 năm; thay thẳng collection cũ + sửa pack
   (`01` cảnh báo thập phân, `02` §4.5/§6, `04` §D0, `system_prompt` mục 4).

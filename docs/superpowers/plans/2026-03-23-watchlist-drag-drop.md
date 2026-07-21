@@ -1,5 +1,7 @@
 # Watchlist Drag & Drop Reorder — Implementation Plan
 
+> **HISTORICAL — COMPLETED / EVOLVED:** Reorder watchlist đã được triển khai; không dùng checklist này như work order hiện hành.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add drag-and-drop reordering of watchlist cards across a multi-column grid layout, backed by a bulk reorder API endpoint.

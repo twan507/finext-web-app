@@ -1,5 +1,7 @@
 # Admin RBAC Implementation Plan
 
+> **HISTORICAL — COMPLETED / EVOLVED:** RBAC đã được triển khai và tiếp tục mở rộng; code/test tại HEAD ghi đè checklist này.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Chuẩn hóa admin layout và các page theo role (Admin/Manager/Broker) bằng cách thêm permissions array vào session, filter navigation, disable buttons không có quyền, và tùy biến broker dashboard.

@@ -1,21 +1,69 @@
 # Project Context
 
-Web app: Python backend + TypeScript/Node.js frontend.
+Finext là web application full-stack phân tích và sàng lọc chứng khoán Việt Nam.
 
 ## Stack
-- Backend: Python (FastAPI / Django — update as needed)
-- Frontend: TypeScript / Node.js
-- DB: [specify: PostgreSQL / MongoDB / etc.]
-- Infra: [specify: Docker / K8s / etc.]
+
+- Backend: Python 3.13+, FastAPI 0.115+, Pydantic v2, Motor/PyMongo, UV.
+- Frontend: Next.js 15.5 App Router, React 19, TypeScript 5.7 strict, MUI 7.
+- Database: MongoDB standalone. Các vùng dữ liệu chính là `user_db`, `stock_db`, `ref_db` và `agent_db`.
+- Realtime: SSE trên polling MongoDB; Mongo standalone không có change streams.
+- Infrastructure: Docker Compose với `nginx`, `fastapi`, `nextjs`; MongoDB chạy ngoài Compose.
+- AI runtime: Finext AI nằm trong backend hiện có, dùng provider adapter + policy-gated read-only gateway; không có container agent riêng.
 
 ## Project Structure
-```
+
+```text
 /
-├── backend/        # Python
-├── frontend/       # TypeScript
-├── shared/         # shared types / contracts
-└── tests/
+├── finext-fastapi/
+│   ├── app/
+│   │   ├── routers/       # HTTP/SSE endpoints
+│   │   ├── schemas/       # Pydantic DTOs
+│   │   ├── crud/          # Business logic và Mongo queries
+│   │   ├── auth/          # JWT, current user, RBAC dependencies
+│   │   ├── core/          # Config, database, scheduler, seeding
+│   │   └── agent/         # Loop, adapters, gateway, tools, runtime KB
+│   └── tests/
+├── finext-nextjs/
+│   ├── app/               # (auth), (main), admin, auth/google
+│   ├── components/
+│   ├── services/
+│   ├── hooks/
+│   └── theme/
+├── docs/
+│   ├── architecture/      # Tài liệu hiện hành
+│   ├── finext_agent/      # Thiết kế/trạng thái Finext AI
+│   └── superpowers/       # Specs/plans có ngày, giữ như lịch sử
+├── nginx/
+├── docker-compose.yml
+└── readme.md
 ```
+
+## Source Of Truth
+
+Khi tài liệu mâu thuẫn:
+
+1. Ưu tiên code và config hiện tại.
+2. Sau đó dùng `docs/architecture/` và phần cập nhật mới nhất trong `docs/finext_agent/00-web-roadmap.md`.
+3. `docs/superpowers/specs/`, `docs/superpowers/plans/` và `.superpowers/sdd/` là hồ sơ theo thời điểm; không suy ra trạng thái hiện tại chỉ từ một plan cũ.
+4. Các file `finext-fastapi/app/agent/kb/*.md` là runtime Knowledge Pack, tức một phần hành vi production chứ không chỉ là tài liệu tham khảo.
+
+Trạng thái auth hiện tại: Google OAuth và đăng ký tự xác thực OTP đang bật. Routes bị block chỉ còn `/open-account` và `/profile/subscriptions`.
+
+## Verification Baseline
+
+```bash
+# Backend
+cd finext-fastapi
+uv run pytest
+
+# Frontend
+cd finext-nextjs
+npx tsc --noEmit
+npm test
+```
+
+Không chạy `next build` đồng thời với dev server đang dùng cùng thư mục `.next`. Repository chưa có CI workflow hay Playwright E2E suite/config hoàn chỉnh; không được báo “CI xanh” nếu chỉ chạy kiểm tra local.
 
 ---
 

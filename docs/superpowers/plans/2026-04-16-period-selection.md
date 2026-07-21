@@ -1,5 +1,7 @@
 # Period Selection Feature Implementation Plan
 
+> **HISTORICAL — COMPLETED / EVOLVED:** Chọn kỳ tài chính đã được triển khai; component tại HEAD ghi đè các snippet/checklist bên dưới.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Allow users to click chart bars to select a reporting period; the Value and Delta columns in the metric rows below update to reflect the selected period, defaulting to the latest period on load.

@@ -1,5 +1,7 @@
 # DeepSeek V4 migration (GẤP) — Implementation Plan
 
+> **HISTORICAL — COMPLETED:** Đây là kế hoạch migration theo provider tại thời điểm 2026-07-15. Runtime hiện chọn model/provider bằng env; không dùng deadline hoặc model trong file này làm trạng thái hiện hành.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:subagent-driven-development. Steps use `- [ ]`.
 > **ƯU TIÊN TUYỆT ĐỐI:** `deepseek-chat` khai tử 24/07/2026 15:59 UTC — app CHẾT sau hạn nếu không migrate.
 

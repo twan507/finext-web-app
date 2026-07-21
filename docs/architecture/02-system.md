@@ -2,6 +2,8 @@
 
 > Topology hệ thống, Docker compose, network, thư mục gốc và quy ước env.
 
+**Cập nhật:** 2026-07-21
+
 ---
 
 ## 2.1 Topology
@@ -18,8 +20,8 @@
       └───────────────────────┘   └─────────┬──────────────┘
                                             │
                                   ┌─────────▼──────────┐
-                                  │     MongoDB        │
-                                  │  (motor async)     │
+                                  │ MongoDB standalone │
+                                  │ user/stock/agent DB│
                                   └────────────────────┘
 ```
 
@@ -36,14 +38,18 @@ File: [`docker-compose.yml`](../../docker-compose.yml)
 | Service | Image/Build | Resources | Port |
 |---------|-------------|-----------|------|
 | `nginx` | nginx:latest + custom config | 256M RAM | 80, 443 (host) |
-| `fastapi` | Build từ `finext-fastapi/Dockerfile` | 1.5G RAM, 1.5 CPU | 8000 (internal) |
-| `nextjs` | Build từ `finext-nextjs/Dockerfile` | 1.5G RAM, 2 CPU | 3000 (internal) |
+| `fastapi` | Build từ [`finext-fastapi/dockerfile`](../../finext-fastapi/dockerfile) | 1.5G RAM, 1.5 CPU | 8000 (internal) |
+| `nextjs` | Build từ [`finext-nextjs/dockerfile`](../../finext-nextjs/dockerfile) | 1.5G RAM, 2 CPU | 3000 (internal) |
 
 **Budget RAM VPS 8GB** *(2026-06-02)*: MongoDB standalone (~1.5-2G) + MSSQL standalone (1.5G) + OS (~1G) → web app share ~3.3G (`nginx 256M + fastapi 1.5G + nextjs 1.5G`).
 
 **SSL:** Certificates trong `ssl/` (chain hợp lệ). Nginx terminate TLS, proxy HTTP đến container nội bộ.
 
-**Mongo:** **Standalone** trên host (không phải replica set, không trong compose). Kết nối qua `MONGO_URI` env. ⚠️ Không có change streams → mọi realtime phải dùng polling (xem `03-backend.md#sse`).
+**Mongo:** **Standalone** bên ngoài compose (host/instance ngoài). Kết nối qua `MONGODB_CONNECTION_STRING`. Backend khởi tạo `user_db`, `stock_db`, `agent_db`; `ref_db` được lấy lazy khi cần. Không có change streams trong topology production hiện tại → market realtime dùng polling (xem [`03-backend.md`](03-backend.md#39-sse-server-sent-events)).
+
+Compose hiện gắn cùng `.env.production` bằng `env_file` vào cả ba service. Các biến `NEXT_PUBLIC_*` được whitelist riêng làm build args cho Next.js, nhưng secret backend vẫn hiện diện thừa trong container `nginx` và `nextjs` ở runtime. Đây là rủi ro vận hành hiện hữu cần lưu ý; tài liệu chỉ phản ánh code, chưa thay đổi Compose.
+
+**Vận hành container:** cả ba service dùng log rotation `json-file` (`10m × 3`); `fastapi` và `nextjs` có healthcheck HTTP, còn `nginx` phụ thuộc hai service này.
 
 ---
 
@@ -77,15 +83,29 @@ finext-web-app/
 
 | Biến | Mục đích |
 |------|---------|
-| `MONGO_URI` | Connection string MongoDB |
-| `JWT_SECRET`, `JWT_ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `REFRESH_TOKEN_EXPIRE_DAYS` | JWT config |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google OAuth (đang bật — FE cần `NEXT_PUBLIC_GOOGLE_CLIENT_ID` khớp) |
-| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL` | Cloudflare R2 storage |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `MAIL_FROM`, `MAIL_FROM_NAME` | Email outbound |
+| `ENVIRONMENT` | `development` bật OpenAPI/Swagger/ReDoc; mọi giá trị khác (và mặc định) tắt docs fail-safe |
+| `MONGODB_CONNECTION_STRING` | Connection string MongoDB; một trong ba biến backend kiểm tra khi khởi động |
+| `SECRET_KEY` | Ký JWT. `ALGORITHM=HS256`, access TTL 60 phút và refresh TTL 7 ngày hiện hard-code trong `config.py` |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | Google OAuth backend |
+| `ADMIN_EMAIL`, `ADMIN_PWD`, `MANAGER_EMAIL`, `BROKER_EMAIL_1..2`, `USER_EMAIL_1..3` | Seed user và danh sách account được bảo vệ (`ADMIN_EMAIL` là biến critical) |
+| `COOKIE_SAMESITE`, `COOKIE_SECURE`, `COOKIE_DOMAIN` | Cookie refresh token |
+| `R2_ENDPOINT_URL`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL_BASE` | Cloudflare R2 / S3-compatible storage |
+| `MAIL_SERVER`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_STARTTLS`, `MAIL_SSL_TLS`, `MAIL_FROM`, `MAIL_FROM_NAME` | Email outbound |
 | `FRONTEND_URL` | Domain frontend (dùng trong email link) |
 | `NEXT_PUBLIC_API_URL` | URL public của FastAPI (client browser gọi) |
 | `INTERNAL_API_URL` | URL nội bộ Docker DNS (SSR fetch) |
-| `CORS_ORIGINS` | Whitelist domain frontend (`finext.vn`, `twan.io.vn`, localhost dev) |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Google client ID được nhúng lúc build frontend |
+| `NEXT_PUBLIC_SYSTEM_LICENSE_KEYS`, `NEXT_PUBLIC_BASIC_FEATURE`, `NEXT_PUBLIC_SYSTEM_FEATURES`, `NEXT_PUBLIC_SYSTEM_USERS` | Build-time config bảo vệ dữ liệu hệ thống ở frontend |
+| `NEXT_PUBLIC_BASE_URL` | Base URL cho `robots.ts` và `sitemap.ts` (fallback `https://finext.vn`) |
+| `DOMAIN_NAME` | Nginx template hostname/TLS server name |
+
+Nhóm Finext AI trong [`app/core/config.py`](../../finext-fastapi/app/core/config.py):
+
+- Provider/runtime: `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, `LLM_TEMPERATURE`, `LLM_MAX_OUTPUT_TOKENS`, `LLM_THINKING`, `LLM_REASONING_EFFORT`, `LLM_API_STYLE`.
+- Gateway: `AGENT_GATEWAY`, `GATEWAY_EXPLAIN_MODE`. `AGENT_PACK_DIR` vẫn được khai báo trong config nhưng runtime context hiện đọc knowledge pack bundled tại `app/agent/kb`, nên biến này là legacy/unused.
+- Quota/cost: `AGENT_DAILY_TOKEN_BUDGET`, `CHAT_MAX_CONVERSATIONS`, `LLM_PRICE_INPUT`, `LLM_PRICE_CACHED`, `LLM_PRICE_OUTPUT`, `AGENT_TOKENS_5H`, `AGENT_TOKENS_WEEK`, `AGENT_ADVANCED_MULT`, `AGENT_SESSION_HOURS`, `AGENT_WEEK_DAYS`, `AGENT_ADVANCED_LICENSES`, `AGENT_UNLIMITED_LICENSES`.
+
+> Không có biến `MONGO_URI`, `JWT_SECRET`, `JWT_ALGORITHM`, `SMTP_HOST`, `R2_ACCOUNT_ID`, `R2_PUBLIC_URL` hay `CORS_ORIGINS` trong config hiện tại. CORS origin đang hard-code trong `app/main.py`.
 
 ---
 
@@ -93,8 +113,10 @@ finext-web-app/
 
 - **Nginx** là điểm duy nhất expose ra internet (80/443).
 - `fastapi` và `nextjs` chỉ giao tiếp trong network nội bộ.
-- CORS whitelist ở backend ([`finext-fastapi/app/main.py`](../../finext-fastapi/app/main.py)): `localhost:3000`, `127.0.0.1:3000`, `finext.vn`, `twan.io.vn`.
-- **Gzip ở nginx** *(2026-06-02)* — gzip block trong [`nginx.conf`](../../nginx/nginx.conf), tắt riêng cho SSE (`gzip off` trong `location /api/v1/sse/`) để không vỡ streaming. Trước đây gzip ở `GZipMiddleware` của FastAPI, đã chuyển sang nginx để giảm CPU worker Python.
+- CORS whitelist hard-code ở backend ([`finext-fastapi/app/main.py`](../../finext-fastapi/app/main.py)): HTTP localhost/127.0.0.1:3000; HTTPS localhost/127.0.0.1; `finext.vn`; `twan.io.vn`.
+- **Gzip ở nginx** *(2026-06-02)* — gzip block trong [`nginx.conf`](../../nginx/nginx.conf), tắt riêng cho market SSE và chat SSE để không vỡ streaming. Trước đây gzip ở `GZipMiddleware` của FastAPI, đã chuyển sang nginx để giảm CPU worker Python.
+- Nginx tắt buffering cho `/api/v1/sse/` và `/api/v1/chat/`, đặt read timeout 10 phút; giới hạn auth 20 request/phút/IP, OTP 6 request/phút/IP. Trần 30 kết nối/IP chỉ áp cho location market SSE `/api/v1/sse/`; chat stream hiện chưa có `limit_conn` tương đương.
+- Giới hạn body mặc định 1MB; riêng upload 6MB. Nginx cũng đặt security headers và phục vụ HTTP/2.
 
 ## 2.5b Hiệu Năng — Cache & Keepalive *(2026-06-02)*
 

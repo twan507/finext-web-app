@@ -1,5 +1,7 @@
 # Finext Compliance Pivot — Final Implementation Record
 
+> **HISTORICAL — PARTIALLY SUPERSEDED 2026-07-21:** Google OAuth và đăng ký tự xác thực OTP đã được bật lại. Các phần block open-account/subscriptions, tắt full-news và global tier bypass vẫn giữ. Trạng thái hiện tại nằm ở **docs/architecture/06-compliance-pivot.md**.
+
 > **Status:** ✅ DONE (2026-05-07)
 > **Note:** File này là **bản FINAL phản ánh đúng những gì đã chốt và đã code** trong session làm việc 2026-05-07.
 > Plan ban đầu nhiều chỗ sai/over-engineered — đã được điều chỉnh theo feedback liên tục của user.

@@ -1,5 +1,7 @@
 # Chat Page Redesign — Implementation Plan (`/chat` ring + UI/UX)
 
+> **HISTORICAL — COMPLETED / EVOLVED:** Redesign đã hoàn thành; lịch sử hội thoại hiện còn được persist server-side, nên code `/chat` tại HEAD ghi đè phạm vi phiên bên dưới.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement task-by-task. Steps use checkbox (`- [ ]`).
 
 **Goal:** Biến `/chat` thành khung "ring" kiểu ChatGPT/Claude (panel lịch sử + khu chat, thoát 1400px, full-height) trong appbar+rail Finext, + làm lại render bảng/typography.

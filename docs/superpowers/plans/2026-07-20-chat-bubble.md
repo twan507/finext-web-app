@@ -1,5 +1,7 @@
 # Chat Bubble theo ngữ cảnh trang — Implementation Plan
 
+> **HISTORICAL — COMPLETED / EVOLVED:** Chat bubble theo ngữ cảnh đã được triển khai; frontend/backend và test tại HEAD ghi đè checklist này.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Thêm bong bóng chat nổi trên 14 trang sản phẩm, cho user hỏi đáp với Finext AI về đúng nội dung trang đang xem, hội thoại lưu vào lịch sử chat chung.

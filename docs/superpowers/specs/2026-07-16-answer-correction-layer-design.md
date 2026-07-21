@@ -1,5 +1,7 @@
 # Answer Correction Layer (Bậc 2) — Design
 
+> **HISTORICAL — IMPLEMENTED:** Lớp sanitize deterministic đã được tích hợp vào agent loop. Code app/agent/sanitize.py và app/agent/loop.py là nguồn hiện tại.
+
 > **Trạng thái:** PHA A XONG → quyết định đã CHỐT (xem §5). Sẵn sàng viết plan + code Pha B.
 > **Ngày:** 2026-07-16. Nhánh: `feat/chat-fe-v1`.
 > **Vì sao:** prompt-only đạt ~95% K-hygiene, KHÔNG 100% — DeepSeek biến thiên, lâu lâu vẫn lọt (câu mở đầu kể tiến trình "Tôi sẽ tra cứu… Đọc `core`…", ký hiệu trong backtick, `VSI`). Sau 2 vòng thêm rule vẫn lai rai → cần **lớp hậu xử lý deterministic** làm rào chắn chắc chắn trước khi trả khách. Owner chốt làm (2026-07-16).

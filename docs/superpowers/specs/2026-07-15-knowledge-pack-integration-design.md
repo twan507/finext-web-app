@@ -1,5 +1,7 @@
 # Tích hợp Knowledge Pack thật vào agent — Design
 
+> **HISTORICAL — IMPLEMENTED / EVOLVED:** Knowledge Pack hiện được bundle trong `app/agent/kb`, nạp qua `context.py` và tool `read_kb`; runtime tại HEAD là nguồn thật.
+
 > **Ngày:** 2026-07-15 · **Trạng thái:** owner đã duyệt các quyết định lớn trong phiên brainstorm.
 > **Bối cảnh:** Agent v1 lát cắt dọc đã xong ([[project_agent_v1_slice]], branch `feat/agent-v1-slice`) đang chạy bằng
 > **pack stub** ~1k token. Owner cung cấp Knowledge Pack THẬT (7 file) ở `d:/twan_projects/notebook-runner/projects/finext/ai_agent/agent_db/`:

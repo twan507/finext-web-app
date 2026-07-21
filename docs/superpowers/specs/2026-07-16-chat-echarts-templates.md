@@ -1,5 +1,7 @@
 # Chat charts v2 — ECharts template registry (LLM fill-data) — Spec/Contract
 
+> **HISTORICAL — IMPLEMENTED / EVOLVED:** Registry ECharts và renderer whitelist đã được triển khai; `components/chart/` cùng `WidgetRenderer` tại HEAD là contract hiện tại.
+
 > **Chốt (owner 2026-07-16):** thay `finext-widget` (4 loại + apexcharts) bằng **template dựng sẵn render bằng ECharts**; LLM CHỈ điền số vào khuôn mỏng (an toàn, ít lỗi, đa dạng). Owner duyệt mockup 12 loại × 3 biến thể (artifact 13a46c46). Engine = ECharts (LLM cách ly khỏi config lib). Nhánh: `feat/chart-echarts`.
 
 ## Nguyên tắc

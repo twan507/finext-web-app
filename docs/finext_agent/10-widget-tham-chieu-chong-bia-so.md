@@ -10,6 +10,8 @@
 >
 > **Trạng thái cũ (đã lỗi thời):** ĐÃ CHỐT LÀM BẢN ĐẦY ĐỦ (owner, 2026-07-20). Chưa bắt đầu.
 > **Nguồn phát hiện:** [`eval-smoke-2026-07-20.md`](eval-smoke-2026-07-20.md) — 14 lượt hỏi thật.
+>
+> **Cách đọc phần còn lại:** §1-6 là giả thuyết/đề xuất **đã bị bác bỏ bởi số đo sau đó**, giữ lại như decision log. Runtime hiện vẫn dùng widget model điền số + guard/shrink; không có resolver tham chiếu backend. Không biến các câu "đã chốt" trong thân bài thành trạng thái hiện hành.
 
 ## 1. Vấn đề
 
@@ -108,7 +110,7 @@ Owner đã cân nhắc bản rút gọn (chỉ áp cho số liệu báo cáo tà
 | Mức | Việc |
 |---|---|
 | ~~Chặn cửa~~ | ~~Projection chuỗi trả dữ liệu giả âm thầm~~ — **ĐÃ SỬA** 2026-07-20, xem `_check_projection_values` trong `gateway/validator.py` |
-| Nên sửa | Câu trả lời cụt lọt tới khách (một dòng kết thúc bằng dấu hai chấm, 0 tool, `_needs_retry()` trả False) |
+| ~~Nên sửa~~ | ✅ `_needs_retry()` hiện bắt câu ≤300 ký tự kết thúc bằng dấu hai chấm |
 | Nên sửa | Lạc đề ở trang quốc tế (0 tool, trả lời về VNINDEX dù có sẵn S&P 500 / Nikkei) |
-| Nhỏ | Nhãn `[NGỮ CẢNH TRANG…]` bị chèn TRÙNG hai lần — frontend `chatPageContext.ts` thêm một lần, backend `routers/chat.py` thêm lần nữa. Phí ~90 token mỗi lượt |
+| ~~Nhỏ~~ | ✅ FE không chèn header; backend là nơi duy nhất bọc `[NGỮ CẢNH TRANG…]` |
 | Đã biết, owner chốt không đuổi theo | Lộ thuật ngữ nội bộ ra câu trả lời (7/14 lượt): "điểm dòng tiền tuần", "NN/TD", "LSLNH" |

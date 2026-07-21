@@ -4,9 +4,9 @@
 > Tổ chức theo nhiều file để tiết kiệm context khi AI làm việc.
 
 **Website:** [finext.vn](https://finext.vn) · **Repository:** [twan507/finext-web-app](https://github.com/twan507/finext-web-app)
-**Stack:** Next.js 15 + FastAPI 0.115 (uvicorn workers=2) + MongoDB standalone · **Deploy:** Docker Compose (nginx + fastapi + nextjs)
+**Stack:** Next.js 15.5 + FastAPI ≥0.115.12 (Uvicorn workers=2) + MongoDB standalone · **Deploy:** Docker Compose (nginx + fastapi + nextjs)
 **Status:** Production. Đã pivot sang chế độ tham chiếu cá nhân từ 2026-05-07.
-**Cập nhật:** 2026-06-02 (perf overhaul: SSE shared cache, multi-worker, nginx static cache + keepalive + gzip)
+**Cập nhật:** 2026-07-21 (auth OTP/Google, Finext AI, page Phase v3.4.2, route/env/SSE contract)
 
 ---
 
@@ -28,14 +28,14 @@
 ## 1-Page Overview
 
 ### Sản phẩm
-**Finext** = nền tảng phân tích & sàng lọc cổ phiếu cho NĐT Việt Nam: dữ liệu thị trường realtime, biểu đồ kỹ thuật chuyên sâu, screener đa tiêu chí, watchlist drag-and-drop, hệ thống thuê bao phân tầng.
+**Finext** = nền tảng phân tích & sàng lọc cổ phiếu cho NĐT Việt Nam: dữ liệu thị trường realtime, biểu đồ kỹ thuật chuyên sâu, screener đa tiêu chí, watchlist drag-and-drop, page Giai đoạn thị trường và trợ lý Finext AI.
 
-**4 roles:** `user` < `broker` < `manager` < `admin`. Phân quyền matrix role × ~50 permissions trong 6 categories.
+**4 roles:** `user` < `broker` < `manager` < `admin`. Seed hiện có 44 permission trong 6 categories.
 
 ### Kiến trúc
 
 ```
-Nginx (SSL) → [ Next.js :3000 ] ◄── [ FastAPI :8000 ] → MongoDB (Atlas/external)
+Nginx (SSL) → [ Next.js :3000 ] ◄── [ FastAPI :8000 ] → MongoDB (external)
 ```
 
 3 Docker services trong network `web-proxy`. Frontend SSR fetch backend qua Docker DNS (`INTERNAL_API_URL`). Client-side gọi public domain (`NEXT_PUBLIC_API_URL`).
@@ -44,26 +44,29 @@ Nginx (SSL) → [ Next.js :3000 ] ◄── [ FastAPI :8000 ] → MongoDB (Atlas
 
 ### Backend (`finext-fastapi`)
 - **FastAPI 0.115+**, Python 3.13, UV package manager, **Uvicorn 2 workers** *(2026-06-02)*
-- **17 routers** prefix `/api/v1` — tất cả trả `StandardApiResponse[T]`
+- **18 routers** dưới prefix `/api/v1`, gồm router `chat`; REST business API dùng `StandardApiResponse[T]`, còn SSE trả stream
 - **Motor** async cho MongoDB **standalone** (`maxPoolSize=50, minPoolSize=5`)
-- **SSE polling** với shared in-process cache (1 poller / (keyword,ticker) / worker, broadcast qua `asyncio.Queue`)
+- **49 SSE keywords**; stream tại `GET /api/v1/sse/stream?keyword=...&ticker=...`, shared in-process cache (1 poller / `(keyword,ticker)` / worker)
 - **JWT + Refresh** auth, sessions trong DB cho remote logout
 - **APScheduler** gated bằng `fcntl` lock — chỉ 1 worker chạy cron
 - **5 license keys** mặc định (BASIC, PATRON, PARTNER, MANAGER, ADMIN) seed lúc khởi động
+- **3 database khởi tạo sẵn:** `user_db`, `stock_db`, `agent_db`; `ref_db` được mở lazy khi query `index_map`
+- **Finext AI:** POST SSE, hội thoại/quota trong `user_db`, tool gateway đọc dữ liệu allowlist từ `agent_db`
 
 ### Frontend (`finext-nextjs`)
 - **Next.js 15.5** App Router + Turbopack, **React 19**, **TypeScript 5.7 strict**
 - **MUI 7.1** + Emotion · **lightweight-charts 5** + **ApexCharts** cho biểu đồ
 - **TanStack Query** + custom `apiClient` (refresh flow tự động)
-- **SSE realtime** với polling fallback
+- **SSE realtime**; `pollingClient.ts` dùng cho các flow gọi polling riêng, không tự động fallback từ SSE
 - 3 route groups: `(auth)`, `(main)`, `admin/`
+- Route hiện hành đáng chú ý: `/phase`, `/chat`, `/chat/[id]`, `/guides/tools-data`, `/profile/ai-usage`
 
 ### Tình trạng sau pivot 2026-05-07 *(cập nhật 2026-07-21)*
 - ✅ Google OAuth **đã bật lại** (2026-07-21)
 - ✅ Đăng ký **OTP tự xác thực đã bật lại** (2026-07-21) — không cần admin duyệt tay
 - ❌ Routes 403: `/open-account`, `/profile/subscriptions`
 - ❌ News detail render summary + link external, không re-publish full HTML
-- ✅ Tier gating bypassed — mọi user logged-in xem được toàn bộ content
+- ✅ `ADVANCED_AND_ABOVE` vẫn include BASIC cho các khu vực cũ; ba tab danh mục `/phase` dùng `ADVANCED_AND_ABOVE_STRICT` riêng
 - ✅ CTA "Gia nhập cộng đồng" → Zalo group
 
 ---

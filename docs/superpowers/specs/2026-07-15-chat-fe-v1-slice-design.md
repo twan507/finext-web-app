@@ -1,5 +1,7 @@
 # Chat FE V1 Slice — Design (`/chat`)
 
+> **HISTORICAL — IMPLEMENTED:** Slice này đã được triển khai và sau đó mở rộng thêm persistence, URL hội thoại, quota, feedback, thinking toggle và chat bubble. Code trang /chat và **docs/finext_agent/04-frontend-assistant.md** là nguồn hiện tại.
+
 > **Trạng thái:** design đã chốt hướng (owner: "làm thế nào tối ưu nhất"), chờ review spec trước khi lên plan.
 > **Ngày:** 2026-07-15.
 > **Đây là gì:** lát cắt V1 của **Bước 4** ([`04-frontend-assistant.md`](../../finext_agent/04-frontend-assistant.md)) — làm mặt tiền chat **trước** Bước 3 (persistence/quota), tận dụng contract stream đã đóng băng.

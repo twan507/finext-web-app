@@ -1,5 +1,7 @@
 # User Guide Pages Implementation Plan
 
+> **HISTORICAL — COMPLETED / EVOLVED:** Guide pages đã được triển khai và mở rộng; route/component `/guides/*` hiện tại là nguồn thật.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 > **⚠ Refactor note (2026-04-22, mid-execution):** Sau checkpoint A, user feedback dẫn đến đổi kiến trúc:

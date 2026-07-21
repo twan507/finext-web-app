@@ -1,5 +1,7 @@
 # Chat FE V1 Slice — Implementation Plan (`/chat`)
 
+> **HISTORICAL — COMPLETED / EVOLVED:** Chat FE đã được triển khai rồi mở rộng với persistence, URL hội thoại, quota và bubble; code `/chat` tại HEAD là nguồn thật.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax.
 
 **Goal:** Chat hội thoại "Finext AI" chạy được trên web tại `/chat` — gõ câu hỏi → stream câu trả lời (tool chip + markdown + bảng + widget) → hỏi tiếp trong phiên; dừng/thử lại được.

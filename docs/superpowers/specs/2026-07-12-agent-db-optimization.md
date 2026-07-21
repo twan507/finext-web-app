@@ -1,5 +1,7 @@
 # Spec — Tối Ưu `agent_db` Cho AI Chat Agent
 
+> **SUPERSEDED BY AS-BUILT:** Thiết kế DB v2 đã được phản ánh trong policy gateway và runtime KB. Dùng **docs/finext_agent/agent_db_v2.md** làm nguồn hiện tại; trạng thái cutover/probe dữ liệu production vẫn phải xác nhận theo runbook, còn checklist “chờ owner” bên dưới là lịch sử.
+
 > **Mục đích file này:** work-order để owner tối ưu `agent_db` (pipeline phía owner) TRƯỚC khi code agent.
 > Doc kiến trúc runtime (viết sau khi DB xong): [`2026-07-12-ai-chat-agent-architecture.md`](2026-07-12-ai-chat-agent-architecture.md)
 >

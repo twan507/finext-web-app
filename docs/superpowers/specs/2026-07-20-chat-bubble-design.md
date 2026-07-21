@@ -1,5 +1,7 @@
 # Thiết kế: Chat Bubble theo ngữ cảnh trang
 
+> **HISTORICAL — IMPLEMENTED / EVOLVED:** Chat bubble, page context và bàn giao hội thoại đã được triển khai; frontend `components/chatBubble` và router chat tại HEAD là nguồn thật.
+
 **Ngày:** 2026-07-20 · **Trạng thái:** đã chốt với owner, sẵn sàng lập plan
 
 ## 1. Mục tiêu

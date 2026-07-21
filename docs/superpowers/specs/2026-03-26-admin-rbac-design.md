@@ -1,5 +1,7 @@
 # Admin Role-Based Access Control — Design Spec
 
+> **HISTORICAL — IMPLEMENTED / EVOLVED:** RBAC đã được tích hợp xuyên backend/frontend; `app/auth/access.py`, auth session và các trang admin tại HEAD là nguồn hiện tại.
+
 **Date:** 2026-03-26
 **Status:** Approved
 

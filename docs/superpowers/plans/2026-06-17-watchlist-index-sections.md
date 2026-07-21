@@ -1,5 +1,7 @@
 # Watchlist Index Sections — Implementation Plan
 
+> **HISTORICAL — COMPLETED:** Các section chỉ số watchlist đã được triển khai; code hiện tại ghi đè checklist và số liệu trong plan.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Thêm 2 section thẻ chỉ số (12 thị trường + 24 ngành) phía trên section watchlist trên trang `/watchlist`, cả 3 section collapse được.

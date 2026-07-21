@@ -1,5 +1,7 @@
 # Cắt dữ liệu tool trung thực — thiết kế
 
+> **HISTORICAL — IMPLEMENTED:** Thu gọn theo cấu trúc và tín hiệu cắt đã được tích hợp; `app/agent/tools/shrink.py`, registry và loop tại HEAD là nguồn hiện tại.
+
 > **Ngày:** 2026-07-20 · **Trạng thái:** đã chốt với owner, sẵn sàng viết plan
 > **Thay thế cho:** `docs/finext_agent/10-widget-tham-chieu-chong-bia-so.md` (xem §9 — vì sao doc 10 bị gác lại)
 

@@ -1,5 +1,7 @@
 # Spec — Page "Giai đoạn thị trường" (4 tab)
 
+> **HISTORICAL — IMPLEMENTED / EVOLVED:** Trang bốn tab đã được triển khai; route hiện tại là `/phase`, nên mọi `/market-phase` bên dưới chỉ là tên lịch sử.
+
 - **Ngày:** 2026-07-09
 - **Trạng thái:** DESIGN đã duyệt (functional + UI). Chờ viết plan triển khai.
 - **Nguồn thiết kế sản phẩm:** `notebook-runner/projects/finext/docs/phase_calculation/06_product_plan.md` (§9), `07_customer_numbers.md`, `08_serving_layer.md`.

@@ -1,5 +1,7 @@
 # DeepSeek V4 Thinking Mode + Anti-Truncation — Implementation Plan (Phần 2)
 
+> **HISTORICAL — COMPLETED, FEATURE DEFAULT OFF:** Support thinking/reasoning pass-back đã được triển khai; LLM_THINKING mặc định disabled theo kết quả A/B.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:subagent-driven-development. Steps use `- [ ]`.
 
 **Goal:** Bật thinking mode DeepSeek V4 tường minh + pass-back `reasoning_content` đúng luật (lượt-có-tool, tránh 400) + chống cắt output giữa chừng, rồi đo A/B K-hygiene non-thinking vs thinking.

@@ -1,5 +1,7 @@
 # Spec — Section "Top lệnh lãi nhất 3 danh mục" (Tab ①, 2026-07-10)
 
+> **HISTORICAL — IMPLEMENTED:** `TopTradesSection` đã được nối vào Tab thị trường với timeframe dùng chung; route hiện tại là `/phase`.
+
 > Thêm section cuối Tab ① (`market` — "Phân tích thị trường") của page `/market-phase`: 3 cột = 3 danh mục, mỗi cột bảng **top 10 lệnh lãi nhất** trong timeframe đang chọn. Data `phase_trading`.
 
 ## 1. Yêu cầu (đã chốt qua brainstorm)

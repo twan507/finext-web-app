@@ -1,5 +1,7 @@
 # Spec — Redesign PhaseFnxChart "Neon Regime" (2026-07-10)
 
+> **HISTORICAL — IMPLEMENTED / EVOLVED:** Redesign đã được tích hợp; `PhaseFnxChart` và primitive hiện tại tại route `/phase` là nguồn thật.
+
 > Redesign thuần visual cho `PhaseFnxChart` (biểu đồ giai đoạn thị trường, tâm điểm page `/market-phase`).
 > Chốt qua 3 vòng mockup visual-companion (owner duyệt bản `neon-regime-combined-v2.html` trong `.superpowers/brainstorm/1441-1783646875/content/`).
 > Data/props/hành vi giữ nguyên — chỉ đổi cách vẽ.

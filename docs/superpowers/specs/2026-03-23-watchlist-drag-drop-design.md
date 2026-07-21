@@ -1,5 +1,7 @@
 # Watchlist Drag & Drop Reorder
 
+> **HISTORICAL — IMPLEMENTED / EVOLVED:** Reorder watchlist đã hoạt động ở backend và UI; endpoint, schema và component tại HEAD là nguồn hiện tại.
+
 ## Overview
 
 Add drag-and-drop reordering for watchlists on the watchlist page. Users can freely drag watchlist cards between columns and within columns to rearrange their layout. A new bulk reorder backend endpoint ensures atomic coordinate updates.

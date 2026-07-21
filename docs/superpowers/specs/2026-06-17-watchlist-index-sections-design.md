@@ -1,5 +1,7 @@
 # Watchlist — thêm 2 section chỉ số (thị trường + ngành)
 
+> **HISTORICAL — IMPLEMENTED:** Các section chỉ số/collapse đã có trên `/watchlist`; component và data wiring tại HEAD là nguồn hiện tại.
+
 **Ngày:** 2026-06-17
 **Trang:** `/watchlist` (`app/(main)/watchlist/`)
 
