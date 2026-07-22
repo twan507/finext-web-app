@@ -73,8 +73,10 @@ async def get_collection_records(
             logger.debug(f"Successfully fetched {len(docs_list)} records from '{collection_name}'")
             return docs_list
         except ExecutionTimeout as e:
-            last_exception = e
-            logger.warning(f"Query timeout for '{collection_name}' (attempt {attempt + 1}/{MAX_RETRIES}): {e}")
+            # KHÔNG retry: timeout nghĩa là query quá nặng so với tải hiện tại.
+            # Chạy lại 3 lần chỉ nhân 3 tải lên Mongo đúng lúc Mongo đang ngộp.
+            logger.warning(f"Query timeout for '{collection_name}' (bỏ retry): {e}")
+            raise RuntimeError(f"Query timeout for '{collection_name}': {e}") from e
         except PyMongoError as e:
             last_exception = e
             logger.error(f"MongoDB error for '{collection_name}' (attempt {attempt + 1}/{MAX_RETRIES}): {e}")
