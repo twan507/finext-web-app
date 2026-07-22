@@ -6,6 +6,16 @@ user, nên KHÔNG bao giờ gọi LLM theo request của người dùng.
 import json
 import logging
 import re
+from typing import Any
+
+from app.agent.adapters.base import SystemBlock
+from app.agent.loop import _complete, build_adapter
+from app.core.config import AGENT_DAILY_TOKEN_BUDGET, LLM_MODEL
+from app.crud.chat import DAY_DUR, GLOBAL_QUOTA_KEY, QUOTA, _bump_window, _now, _window_used, billable_units
+from app.crud.chat_suggestions import save_suggestions
+from app.crud.sse.home_today_stock import home_today_stock
+from app.crud.sse.news_daily import news_daily
+from app.crud.sse.phase_signal import phase_signal
 
 logger = logging.getLogger(__name__)
 
@@ -100,3 +110,88 @@ def build_snapshot(phase_rows: list[dict], stock_rows: list[dict], news_rows: li
         "headlines": headlines,
         "tickers": tickers,
     }
+
+
+_SYS = (
+    "Bạn soạn câu hỏi gợi ý cho người dùng ứng dụng phân tích chứng khoán Việt Nam.\n"
+    "Trả về DUY NHẤT một JSON array gồm đúng 5 chuỗi tiếng Việt, không kèm giải thích.\n"
+    "Mỗi chuỗi là một câu hỏi hoàn chỉnh, 8-80 ký tự, kết thúc bằng dấu hỏi.\n"
+    "Cơ cấu: 2 câu về bức tranh chung, 2 câu về ngành/mã đang biến động, "
+    "1 câu giúp người dùng khám phá tính năng (pha thị trường, bộ lọc).\n"
+    "BẮT BUỘC:\n"
+    "- Chỉ nhắc mã và ngành có trong dữ liệu được cung cấp.\n"
+    "- TUYỆT ĐỐI KHÔNG đưa con số vào câu hỏi (không phần trăm, không điểm số, không giá).\n"
+    "- KHÔNG đưa ra khuyến nghị mua/bán, không hỏi 'có nên'."
+)
+
+
+async def _load_sources(db: Any) -> tuple[list[dict], list[dict], list[dict]]:
+    """Đọc 3 nguồn thô. Tách riêng để test monkeypatch được mà không cần Mongo thật.
+
+    phase_signal/home_today_stock trả list; news_daily trả {"items", "pagination"}.
+    """
+    phase_rows = await phase_signal()
+    stock_rows = await home_today_stock()
+    news_page = await news_daily(page=1, limit=5, sort_by="created_at", sort_order="desc")
+    return list(phase_rows or []), list(stock_rows or []), list((news_page or {}).get("items") or [])
+
+
+def _user_prompt(snapshot: dict) -> str:
+    return (
+        "Dữ liệu thị trường hiện tại:\n"
+        f"- Pha thị trường: {snapshot.get('phase') or 'không rõ'}\n"
+        f"- Mã tăng mạnh: {', '.join(g['ticker'] for g in snapshot['gainers']) or 'không có'}\n"
+        f"- Mã giảm mạnh: {', '.join(l['ticker'] for l in snapshot['losers']) or 'không có'}\n"
+        f"- Ngành đang biến động: {', '.join(snapshot['industries']) or 'không có'}\n"
+        f"- Tin mới: {' | '.join(snapshot['headlines']) or 'không có'}\n\n"
+        "Soạn 5 câu hỏi gợi ý theo đúng yêu cầu."
+    )
+
+
+async def _global_budget_exhausted(db: Any) -> bool:
+    """Cầu dao chi phí: trần <= 0 nghĩa là TẮT (khớp check_quota trong crud/chat.py)."""
+    if AGENT_DAILY_TOKEN_BUDGET <= 0:
+        return False
+    doc = await db[QUOTA].find_one({"user_id": GLOBAL_QUOTA_KEY}) or {}
+    used, _ = _window_used(doc.get("g_start"), doc.get("g_tokens"), _now(), DAY_DUR)
+    return used >= AGENT_DAILY_TOKEN_BUDGET
+
+
+async def generate_and_store(db: Any) -> bool:
+    """Sinh 1 bộ gợi ý mới và lưu nếu hợp lệ. Trả True nếu đã publish.
+
+    Never-raise: lỗi ở đây không được ảnh hưởng gì tới hệ thống; bỏ nhịp, 30 phút sau
+    tự thử lại. Token KHÔNG tính vào quota user nào — chỉ cộng bộ đếm global.
+    """
+    try:
+        if await _global_budget_exhausted(db):
+            logger.warning("Bỏ nhịp sinh gợi ý: ngân sách LLM global đã cạn.")
+            return False
+
+        phase_rows, stock_rows, news_rows = await _load_sources(db)
+        snapshot = build_snapshot(phase_rows, stock_rows, news_rows)
+
+        usage: dict[str, int] = {}
+        raw = await _complete(
+            build_adapter(thinking="disabled"),
+            [SystemBlock(text=_SYS, cache_hint=False)],
+            [{"role": "user", "content": _user_prompt(snapshot)}],
+            usage,
+        )
+
+        tokens = billable_units(usage)
+        if tokens > 0:
+            await _bump_window(db, GLOBAL_QUOTA_KEY, "g_start", "g_tokens", _now(), DAY_DUR, tokens)
+
+        questions = validate_suggestions(raw, set(snapshot["tickers"]))
+        if questions is None:
+            logger.warning("Gợi ý sinh ra không hợp lệ — giữ nguyên bộ cũ. Raw: %r", raw[:300])
+            return False
+
+        # context lưu kèm để soi lại khi tinh chỉnh prompt
+        await save_suggestions(db, questions, snapshot, LLM_MODEL or "", usage)
+        logger.info("Đã publish bộ gợi ý mới (%d token quy đổi).", tokens)
+        return True
+    except Exception:
+        logger.exception("Sinh gợi ý thất bại — bỏ nhịp")
+        return False
