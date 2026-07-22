@@ -234,3 +234,39 @@ async def test_quota_status_shape(monkeypatch):
     assert st["session"]["used"] == 1000
     assert st["session"]["limit"] == crud.AGENT_TOKENS_5H
     assert st["weekly"] is not None
+
+
+async def test_record_usage_khong_mat_token_khi_hai_luot_xen_ke():
+    """Hai lượt kết thúc xen kẽ phải cộng đủ token, không lượt nào bị ghi đè.
+
+    Trước đây record_usage là read-compute-$set: cả hai lượt đọc cùng mốc cũ rồi ghi
+    đè nhau → mất token của một lượt, kể cả trên bộ đếm ngân sách global. Test ép
+    nhường event loop ĐÚNG giữa lúc đọc và lúc ghi — chỗ mà lost update xảy ra.
+
+    Cửa sổ được seed sẵn (đang mở) vì đó là trạng thái thường trực; lúc cold-start
+    cả hai bản đều còn một race biên hẹp do phải $set để mở cửa sổ mới.
+    """
+    import asyncio
+
+    db = FakeDB()
+    await db[crud.QUOTA].insert_one(
+        {"user_id": USER, "s5_start": crud._now(), "s5_tokens": 100, "wk_start": crud._now(), "wk_tokens": 100}
+    )
+    coll = db[crud.QUOTA]
+    orig_update_one = coll.update_one
+
+    async def yielding_update_one(*a, **kw):
+        await asyncio.sleep(0)  # nhường loop sau khi đã đọc, trước khi ghi
+        return await orig_update_one(*a, **kw)
+
+    coll.update_one = yielding_update_one
+
+    # Mỗi lượt: 100 in ×1 + 50 out ×4 = 300 đơn vị.
+    await asyncio.gather(
+        crud.record_usage(db, USER, {"in": 100, "out": 50}),
+        crud.record_usage(db, USER, {"in": 100, "out": 50}),
+    )
+
+    doc = await coll.find_one({"user_id": USER})
+    assert doc["s5_tokens"] == 700, "100 seed + 300 + 300; ghi đè sẽ chỉ ra 400"
+    assert doc["wk_tokens"] == 700
