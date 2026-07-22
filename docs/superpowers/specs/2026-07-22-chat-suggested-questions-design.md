@@ -67,24 +67,25 @@ CronTrigger(day_of_week="mon-fri", hour="8-15", minute="0,30")
 
 Dùng lại fetcher trong `app/crud/sse/`, **không viết query mới**:
 
-| Keyword | Dùng để |
-|---|---|
-| `home_today_index` | Chỉ số phiên hôm nay → câu toàn cảnh |
-| `home_today_stock` | Mã biến động mạnh → câu điểm nóng |
-| `phase_industry` | Nhóm ngành đang dẫn dắt |
-| `phase_signal` | Trạng thái pha thị trường → câu khám phá tính năng |
-| `news_daily` (5 tin mới nhất, chỉ `title`) | Chủ đề đang nóng |
+Chỉ dùng 3 nguồn, đều đã xác minh tên field trong code (không đoán):
 
-Snapshot được rút gọn trước khi đưa vào prompt để giữ prompt nhỏ và rẻ:
+| Keyword | Field dùng | Cho ra |
+|---|---|---|
+| `phase_signal` | `date`, `final_phase` | Trạng thái pha phiên mới nhất → câu toàn cảnh + câu khám phá tính năng |
+| `home_today_stock` | `ticker`, `pct_change`, `industry_name` | Mã biến động mạnh **và** ngành đang nóng → câu điểm nóng |
+| `news_daily` | `title` | Chủ đề đang được nói tới |
 
-- `home_today_index`: giữ toàn bộ (ít dòng).
-- `home_today_stock`: 10 mã tăng mạnh nhất + 10 mã giảm mạnh nhất, chỉ `ticker` và
-  chiều biến động (không đưa giá/điểm vào — xem §4.3).
-- `phase_industry`: 5 ngành mạnh nhất phiên gần nhất, chỉ tên ngành.
-- `phase_signal`: chỉ trạng thái pha của phiên mới nhất.
+Ngành nóng suy ra từ `industry_name` của chính các mã biến động mạnh — bớt một query và
+đảm bảo ngành luôn nhất quán với mã được nhắc.
+
+Snapshot rút gọn trước khi vào prompt để prompt nhỏ và rẻ:
+
+- `phase_signal`: chỉ `final_phase` của `date` lớn nhất.
+- `home_today_stock`: 10 mã `pct_change` cao nhất + 10 mã thấp nhất; chỉ giữ `ticker`,
+  `industry_name` và **chiều** biến động (tăng/giảm) — KHÔNG đưa giá trị số vào, xem §4.3.
 - `news_daily`: 5 `title` mới nhất.
 
-Danh sách mã trong snapshot cũng chính là allowlist để validate ở §4.4 bước 5.
+Tập `ticker` trong snapshot chính là allowlist để validate ở §4.4 bước 5.
 
 ### 4.3 Ràng buộc sinh
 
