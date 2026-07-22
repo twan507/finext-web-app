@@ -4,113 +4,19 @@ import { ApiErrorResponse, IRequest, StandardApiResponse, LoginResponse } from '
 import { getAccessToken, updateAccessToken, clearSession } from './core/session';
 import { API_BASE_URL } from './core/config';
 
-// ========== Cache Types & Storage ==========
-interface CacheEntry<T = any> {
-    data: T;
-    timestamp: number;
-    url: string;
-}
-
-// Cache storage cho REST API
-const apiCache = new Map<string, CacheEntry>();
-
-// Cache constants
-const DEFAULT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-// ========== Cache Helper Functions ==========
-
-/**
- * Tạo cache key từ URL và query params
- */
-function getCacheKey(url: string, queryParams?: Record<string, any>): string {
-    const paramStr = queryParams && Object.keys(queryParams).length > 0
-        ? `_${queryString.stringify(queryParams)}`
-        : '';
-    return `api_${url}${paramStr}`;
-}
-
-/**
- * Lấy dữ liệu từ cache (nếu có và chưa hết hạn)
- */
-export function getFromCache<T = any>(
-    url: string,
-    queryParams?: Record<string, any>,
-    ttl: number = DEFAULT_CACHE_TTL
-): T | null {
-    const cacheKey = getCacheKey(url, queryParams);
-    const entry = apiCache.get(cacheKey);
-
-    if (!entry) return null;
-
-    const now = Date.now();
-    if (now - entry.timestamp > ttl) {
-        // Cache đã hết hạn
-        apiCache.delete(cacheKey);
-        return null;
-    }
-
-    return entry.data as T;
-}
-
-/**
- * Lưu dữ liệu vào cache
- */
-export function setToCache<T = any>(
-    url: string,
-    data: T,
-    queryParams?: Record<string, any>
-): void {
-    const cacheKey = getCacheKey(url, queryParams);
-    apiCache.set(cacheKey, {
-        data,
-        timestamp: Date.now(),
-        url
-    });
-}
-
-/**
- * Xóa cache cho một URL cụ thể hoặc toàn bộ
- */
-export function clearApiCache(url?: string): void {
-    if (url) {
-        // Xóa tất cả cache entries có URL này
-        const entries = Array.from(apiCache.entries());
-        entries.forEach(([key, entry]) => {
-            if (entry.url === url || key.startsWith(`api_${url}`)) {
-                apiCache.delete(key);
-            }
-        });
-    } else {
-        // Xóa toàn bộ cache
-        apiCache.clear();
-    }
-}
-
-/**
- * Lấy thông tin debug về cache
- */
-export function getApiCacheDebugInfo(): {
-    cacheEntries: number;
-    keys: string[];
-} {
-    return {
-        cacheEntries: apiCache.size,
-        keys: Array.from(apiCache.keys())
-    };
-}
-
-// ========== Cache Eviction ==========
-// Tự động dọn cache entries hết TTL mỗi 5 phút, tránh memory leak khi để trang mở lâu
-if (typeof window !== 'undefined') {
-    setInterval(() => {
-        const now = Date.now();
-        apiCache.forEach((entry, key) => {
-            if (now - entry.timestamp > DEFAULT_CACHE_TTL) {
-                apiCache.delete(key);
-            }
-        });
-    }, DEFAULT_CACHE_TTL);
-}
+// ========== Cache ==========
+// Đã tách sang ./core/apiCache để module cache tự chứa (unit test được).
+// Re-export giữ nguyên API cũ cho các import hiện có.
+export {
+    getFromCache,
+    hasFreshCache,
+    setToCache,
+    clearApiCache,
+    clearApiCacheWhere,
+    getApiCacheDebugInfo,
+    DEFAULT_CACHE_TTL,
+} from './core/apiCache';
+import { getFromCache, setToCache, clearApiCache, clearApiCacheWhere, DEFAULT_CACHE_TTL } from './core/apiCache';
 
 // ========== Token Refresh Logic ==========
 let isRefreshing = false;
@@ -280,12 +186,7 @@ export const apiClient = async <TResponseData = any>(
             // When any admin resource is mutated, clear ALL admin-related caches
             // (dashboard stats, transactions list, subscriptions, etc.)
             if (url.includes('/admin/')) {
-                const entries = Array.from(apiCache.keys());
-                entries.forEach((key) => {
-                    if (key.includes('/admin/')) {
-                        apiCache.delete(key);
-                    }
-                });
+                clearApiCacheWhere((key) => key.includes('/admin/'));
             }
         }
 

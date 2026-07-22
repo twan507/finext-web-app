@@ -124,7 +124,12 @@ export function usePollingClient<T = any>(
                 requireAuth: false,
                 useCache: useCache,
                 cacheTtl: cacheTtl,
-                skipCache: false // Cho phép đọc từ cache
+                // LUÔN đi mạng. State đã được seed từ cache ở useState initializer phía
+                // trên (vế "stale" của stale-while-revalidate), nên đây là vế "revalidate".
+                // Trước đây để false: mỗi nhịp poll đọc lại chính cache đó, nên interval
+                // 10s mà cacheTtl 5 phút = 29/30 nhịp không đi mạng, dữ liệu đứng yên
+                // tới 5 phút dù UI trông như đang cập nhật liên tục.
+                skipCache: true
             });
 
             if (isMountedRef.current) {
