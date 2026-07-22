@@ -59,7 +59,7 @@ export default function FinextAiPromoPopup() {
   const reduceMotion = { '@media (prefers-reduced-motion: reduce)': { animation: 'none' } } as const;
 
   return (
-    <Box sx={{ position: 'fixed', inset: 0, zIndex: theme.zIndex.modal + 1, display: 'flex', alignItems: { xs: 'flex-end', sm: 'center' }, justifyContent: 'center', p: 2 }}>
+    <Box sx={{ position: 'fixed', inset: 0, zIndex: theme.zIndex.modal + 1, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
       <Box
         onClick={handleClose}
         sx={{
@@ -100,7 +100,9 @@ export default function FinextAiPromoPopup() {
               ...getGlassCard(isDark),
               position: 'relative',
               width: '100%',
-              maxHeight: 'calc(100dvh - 24px)',
+              // Trừ đúng padding 2 đầu của khung ngoài (p: 2 = 16px × 2) — căn giữa mà card cao hơn
+              // khoảng trống thì tràn ĐỀU hai phía, cắt mất cả đầu lẫn chân nội dung.
+              maxHeight: 'calc(100dvh - 32px)',
               p: { xs: 2.5, sm: 4 },
               borderRadius: '20px',
               overflow: 'hidden',
