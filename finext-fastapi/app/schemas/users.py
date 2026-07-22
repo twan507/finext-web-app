@@ -111,6 +111,10 @@ class UserInDB(UserBase):  # Kế thừa từ UserBase đã có google_id
     created_at: datetime
     updated_at: datetime
     is_active: bool
+    # is_active gộp 2 nghĩa: "chưa xác thực email" và "bị admin khoá". Cờ này tách
+    # nghĩa thứ hai ra để user bị khoá không thể tự mở lại bằng OTP hoặc Google.
+    # Chỉ endpoint admin update mới được ghi. Mặc định False cho document cũ.
+    suspended_by_admin: bool = False
     # referral_code đã có từ UserBase
     # avatar_url đã có từ UserBase
     # google_id đã có từ UserBase

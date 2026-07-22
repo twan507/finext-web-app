@@ -102,13 +102,19 @@ async def create_user_db(
         raise ValueError("Mật khẩu là bắt buộc khi tạo người dùng theo cách này.")
     hashed_password = await asyncio.to_thread(get_password_hash, user_create_data.password)
 
-    user_document_to_insert = user_create_data.model_dump(exclude={"password"})
+    user_document_to_insert = user_create_data.model_dump(exclude={"password", "google_id"})
     user_document_to_insert["hashed_password"] = hashed_password
     user_document_to_insert["is_active"] = set_active_on_create # Sẽ là False nếu cần OTP
     user_document_to_insert["created_at"] = datetime.now(timezone.utc)
     user_document_to_insert["updated_at"] = datetime.now(timezone.utc)
     user_document_to_insert["subscription_id"] = None 
-    user_document_to_insert["google_id"] = user_create_data.google_id # Thêm google_id nếu có từ UserCreate
+    # KHÔNG nhận google_id từ input. Đường tạo user này là register public và admin
+    # create — cả hai đều không xác thực được rằng caller sở hữu Google sub đó.
+    # Nếu lưu, attacker đăng ký trước một email chưa tồn tại kèm Google sub của mình
+    # rồi login Google sẽ được trao account mang email đó (pre-account squatting).
+    # google_id chỉ được set trong get_or_create_user_from_google_sub_email sau khi
+    # token Google đã được xác thực.
+    user_document_to_insert["google_id"] = None
 
     if user_create_data.referral_code:
         is_valid_ref_code = await crud_brokers.is_broker_code_valid_and_active(db, user_create_data.referral_code)
@@ -149,8 +155,22 @@ async def create_user_db(
 
 async def get_or_create_user_from_google_sub_email(db: AsyncIOMotorDatabase, google_user_data: GoogleUserSchema) -> Optional[UserInDB]:
     user_by_google_id = await get_user_by_google_id_db(db, google_id=google_user_data.id)
+    if user_by_google_id and user_by_google_id.email != google_user_data.email:
+        # Mọi đường liên kết hợp lệ đều gán google_id lên đúng account có email trùng,
+        # nên lệch email ở đây nghĩa là dữ liệu đã bị squat từ trước khi vá, hoặc user
+        # đã đổi email trên Google. Không tự động trao account — bắt buộc qua hỗ trợ.
+        logger.error(
+            f"Google ID {google_user_data.id} đang trỏ tới account có email khác "
+            f"(DB: {user_by_google_id.email}, Google: {google_user_data.email}). Từ chối đăng nhập."
+        )
+        raise ValueError(
+            "Liên kết Google của tài khoản này không hợp lệ. Vui lòng liên hệ hỗ trợ để được xử lý."
+        )
     if user_by_google_id:
         logger.info(f"Tìm thấy user bằng Google ID: {google_user_data.id} cho email {google_user_data.email}. Đăng nhập lại.")
+        if user_by_google_id.suspended_by_admin:
+            logger.warning(f"Từ chối đăng nhập Google cho tài khoản đã bị khoá: {user_by_google_id.email}")
+            raise ValueError("Tài khoản đã bị khóa. Vui lòng liên hệ hỗ trợ.")
         if google_user_data.verified_email and not user_by_google_id.is_active:
             await db[USERS_COLLECTION].update_one(
                 {"_id": ObjectId(user_by_google_id.id)},
@@ -163,6 +183,9 @@ async def get_or_create_user_from_google_sub_email(db: AsyncIOMotorDatabase, goo
     user_by_email = await get_user_by_email_db(db, email=google_user_data.email)
 
     if user_by_email:
+        if user_by_email.suspended_by_admin:
+            logger.warning(f"Từ chối liên kết/đăng nhập Google cho tài khoản đã bị khoá: {user_by_email.email}")
+            raise ValueError("Tài khoản đã bị khóa. Vui lòng liên hệ hỗ trợ.")
         if user_by_email.google_id:
             if user_by_email.google_id == google_user_data.id:
                 logger.info(f"User với email {google_user_data.email} đã có google_id khớp. Đăng nhập lại.")

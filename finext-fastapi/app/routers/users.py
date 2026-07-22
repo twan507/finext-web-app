@@ -150,6 +150,13 @@ async def update_user_info_endpoint(
     is_activation_transition = (
         update_dict_for_crud.get("is_active") is True and target_user.is_active is False
     )
+    # Đánh dấu khoá do admin để user không tự mở lại được bằng OTP/Google.
+    # Chỉ set ở đây — rollback activation phía dưới cố ý KHÔNG set cờ này vì đó là
+    # hoàn tác một lần kích hoạt hỏng, không phải hành vi kỷ luật.
+    if update_dict_for_crud.get("is_active") is False and target_user.is_active is True:
+        update_dict_for_crud["suspended_by_admin"] = True
+    elif is_activation_transition:
+        update_dict_for_crud["suspended_by_admin"] = False
     if is_activation_transition:
         try:
             await asyncio.to_thread(validate_email, target_user.email, check_deliverability=True)
