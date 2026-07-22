@@ -32,6 +32,9 @@ async def connect_to_mongo():
             minPoolSize=5,
             maxIdleTimeMS=30000,
             connectTimeoutMS=10000,
+            # Mặc định PyMongo là chờ vô hạn khi pool cạn. Khi Mongo chậm, request
+            # thứ 51 sẽ treo thay vì fail nhanh → xếp hàng dồn và kéo sập cả worker.
+            waitQueueTimeoutMS=5000,
         )
         await mongodb.client.admin.command("ping")
         db_names_to_connect = ["user_db", "stock_db", "agent_db"]
@@ -43,9 +46,27 @@ async def connect_to_mongo():
 
         logger.info("Đã kết nối thành công tới MongoDB và các Databases.")
 
-        if "user_db" in mongodb.dbs and mongodb.dbs["user_db"] is not None:
-            db = mongodb.dbs["user_db"]
+        active_dbs = [name for name, db_instance in mongodb.dbs.items() if db_instance is not None]
+        if active_dbs:
+            logger.info(f"Kết nối các Databases: {', '.join(active_dbs)}")
+        else:
+            logger.warning("Không có database nào được kết nối thành công.")
 
+    except (ConnectionFailure, ConfigurationError, Exception) as e:
+        logger.error(f"Không thể kết nối tới MongoDB: {e}", exc_info=True)
+        if mongodb.client:
+            mongodb.client.close()
+        mongodb.client = None
+        mongodb.dbs = {}
+        return
+
+    # Tạo index tách khỏi try kết nối: một index lỗi (vd duplicate key có sẵn trong
+    # dữ liệu) không được phép làm rụng cả connection. Trước đây nó rơi vào except
+    # chung rồi set mongodb.client = None → app chạy tiếp với DB rỗng mà container
+    # vẫn báo healthy, tức hỏng toàn phần và im lặng.
+    if "user_db" in mongodb.dbs and mongodb.dbs["user_db"] is not None:
+        db = mongodb.dbs["user_db"]
+        try:
             # users collection indexes
             await db.users.create_index("email", unique=True)
             await db.users.create_index("subscription_id")
@@ -115,19 +136,8 @@ async def connect_to_mongo():
             await db.chat_quota.create_index("user_id", unique=True)
 
             logger.info("Đã đảm bảo các indexes cần thiết cho các Collections")
-
-        active_dbs = [name for name, db_instance in mongodb.dbs.items() if db_instance is not None]
-        if active_dbs:
-            logger.info(f"Kết nối các Databases: {', '.join(active_dbs)}")
-        else:
-            logger.warning("Không có database nào được kết nối thành công.")
-
-    except (ConnectionFailure, ConfigurationError, Exception) as e:
-        logger.error(f"Không thể kết nối tới MongoDB: {e}", exc_info=True)
-        if mongodb.client:
-            mongodb.client.close()
-        mongodb.client = None
-        mongodb.dbs = {}
+        except Exception as e:
+            logger.error(f"Lỗi khi tạo index (giữ nguyên kết nối DB): {e}", exc_info=True)
 
 
 async def close_mongo_connection():

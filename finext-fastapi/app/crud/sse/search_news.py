@@ -4,6 +4,7 @@ Keyword: search_news
 Tìm kiếm tin tức theo keyword (regex trên title) + tickers array.
 Dùng cho REST endpoint, trả về tối đa 5 kết quả với dữ liệu tối giản.
 """
+import re
 from typing import Any, Dict, Optional
 
 from app.core.database import get_database
@@ -35,10 +36,13 @@ async def search_news(
     find_query: Dict[str, Any] = {}
 
     if search:
-        # Case-insensitive match trên title HOẶC tickers chứa search term
+        # Case-insensitive match trên title HOẶC tickers chứa search term.
+        # re.escape: endpoint là public/không auth, chuỗi thô đi thẳng vào $regex
+        # cho phép catastrophic backtracking (PCRE2 có backtracking).
+        safe_search = re.escape(search)
         find_query["$or"] = [
-            {"title": {"$regex": search, "$options": "i"}},
-            {"tickers": {"$regex": f"^{search}", "$options": "i"}},
+            {"title": {"$regex": safe_search, "$options": "i"}},
+            {"tickers": {"$regex": f"^{safe_search}", "$options": "i"}},
         ]
 
     if ticker:

@@ -1,7 +1,8 @@
 # ./finext-nextjs/Dockerfile
 
 # Stage 1: Base image
-FROM node:23-alpine AS base
+# Node 24 = Active LTS. Node 23 là bản lẻ, EOL 01/06/2025 — không còn nhận vá bảo mật.
+FROM node:24-alpine AS base
 
 # Stage 2: Cài đặt dependencies
 FROM base AS deps

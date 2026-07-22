@@ -4,6 +4,9 @@ from typing import Any, Dict, Optional
 from app.core.database import get_database
 from app.crud.sse._helpers import STOCK_DB, OPERATION_TIMEOUT_MS
 
+# Field được phép sort. Frontend chỉ dùng created_at (reports/types.ts REPORT_SORT_FIELD).
+_SORTABLE_FIELDS = {"created_at", "updated_at"}
+
 
 async def news_report(
     ticker: Optional[str] = None,
@@ -61,7 +64,9 @@ async def news_report(
     skip = (page - 1) * limit
 
     # Xử lý sort - mặc định theo created_at giảm dần (tin mới nhất trước)
-    sort_field = sort_by or "created_at"
+    # Allowlist: endpoint public, sort trên field bất kỳ = sort không index,
+    # đốt CPU/RAM mỗi request. Field ngoài danh sách rơi về mặc định.
+    sort_field = sort_by if sort_by in _SORTABLE_FIELDS else "created_at"
     sort_direction = -1 if (sort_order or "desc") == "desc" else 1
 
     # Sử dụng projection truyền vào hoặc mặc định

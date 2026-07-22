@@ -37,6 +37,7 @@ from app.crud.sessions import (
     find_and_delete_oldest_session,
     create_session,
     delete_session_by_access_jti,
+    delete_session_by_id,
     delete_sessions_for_user_except_jti,
     get_session_by_refresh_jti,
     update_session_jtis,
@@ -54,6 +55,7 @@ from app.schemas.emails import MessageResponse  # Giữ lại nếu cần
 from bson import ObjectId
 from app.utils.response_wrapper import api_response_wrapper, StandardApiResponse
 from app.utils.security import verify_password
+from app.utils.client_ip import get_client_ip
 from app.utils.google_auth import get_google_user_info_from_token
 from app.core.config import (
     SECRET_KEY,
@@ -66,6 +68,7 @@ from app.core.config import (
     OTP_EXPIRE_MINUTES,
     GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET,
+    SESSION_ABSOLUTE_MAX_DAYS,
     # GOOGLE_REDIRECT_URI, # Không cần thiết ở đây nếu frontend gửi redirect_uri
 )
 from app.utils.otp_utils import generate_otp_code
@@ -76,21 +79,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _get_client_ip(request: Request) -> str:
-    """Lấy IP thực của client khi đứng sau nginx/proxy.
-
-    Ưu tiên X-Forwarded-For (chuỗi IP, IP đầu tiên là client gốc), rồi đến
-    X-Real-IP do nginx set. Fallback sang request.client.host nếu không có
-    proxy. Trả "Unknown" nếu không xác định được.
-    """
-    xff = request.headers.get("x-forwarded-for")
-    if xff:
-        # X-Forwarded-For: "client_ip, proxy1, proxy2" — lấy IP đầu tiên
-        return xff.split(",")[0].strip()
-    real_ip = request.headers.get("x-real-ip")
-    if real_ip:
-        return real_ip.strip()
-    return request.client.host if request.client else "Unknown"
+_get_client_ip = get_client_ip
 
 
 def _is_private_ip(ip: str) -> bool:
@@ -368,6 +357,16 @@ async def refresh_access_token(
     if not session:
         logger.warning(f"Refresh token JTI {refresh_jti} not found in sessions")
         return _build_401_with_cookie_clear("Invalid refresh token session")
+
+    # Trần tuổi TUYỆT ĐỐI: refresh chỉ trượt trong SESSION_ABSOLUTE_MAX_DAYS tính từ lúc
+    # login (session.created_at). Quá hạn → buộc đăng nhập lại, không cho session sống mãi.
+    created_at = session.created_at
+    if created_at.tzinfo is None:  # Mongo trả datetime naive (giá trị vẫn UTC)
+        created_at = created_at.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) - created_at > timedelta(days=SESSION_ABSOLUTE_MAX_DAYS):
+        logger.info(f"Session {session.id} quá trần tuổi tuyệt đối ({SESSION_ABSOLUTE_MAX_DAYS} ngày), buộc đăng nhập lại.")
+        await delete_session_by_id(db, str(session.id))
+        return _build_401_with_cookie_clear("Session expired. Please log in again.")
 
     # Validate user
     user = await get_user_by_id_db(db, user_id=user_id)

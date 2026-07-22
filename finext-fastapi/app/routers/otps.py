@@ -55,6 +55,12 @@ async def request_otp(
     if not user.is_active and request_data.otp_type != OtpTypeEnum.EMAIL_VERIFICATION:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tài khoản người dùng này chưa được kích hoạt hoặc đã bị khóa.")
 
+    # Ngoại lệ EMAIL_VERIFICATION ở trên là dành cho user chưa xác thực email. User bị
+    # admin vô hiệu hóa không được mượn đường đó để tự kích hoạt lại.
+    if user.deactivated_by_admin:
+        logger.warning(f"OTP request bị từ chối cho tài khoản đã bị vô hiệu hóa: {user.email}")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ hỗ trợ.")
+
     # Chống email bombing: từ chối nếu vừa gửi OTP cùng loại trong cửa sổ cooldown.
     if await crud_otps.has_recent_otp(db, str(user.id), request_data.otp_type):
         logger.warning(f"OTP request throttled (cooldown) for {user.email}, type {request_data.otp_type.value}")
@@ -103,7 +109,7 @@ async def request_otp(
         # This is a critical failure: email sent, but OTP record failed to save.
         logger.critical(
             f"CRITICAL: OTP email sent to {user.email} for {request_data.otp_type.value}, "
-            f"but failed to save OTP record to DB. OTP_CODE (raw, for recovery): {raw_otp_code}"
+            f"but failed to save OTP record to DB. User cần yêu cầu gửi lại mã."
         )
         # Inform the user that a severe error occurred, as they received an OTP that won't work.
         raise HTTPException(
@@ -134,6 +140,11 @@ async def verify_otp(
 
     if is_valid:
         if request_data.otp_type == OtpTypeEnum.EMAIL_VERIFICATION:
+            # Defense in depth: chặn tự kích hoạt kể cả khi OTP hợp lệ được cấp
+            # trước lúc admin vô hiệu hóa tài khoản.
+            if not user.is_active and user.deactivated_by_admin:
+                logger.warning(f"Từ chối tự kích hoạt qua OTP cho tài khoản đã bị vô hiệu hóa: {user.email}")
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ hỗ trợ.")
             if not user.is_active:
                 user_object_id = getattr(user, "id", None)  # Get the ObjectId version if available
                 if not user_object_id:  # Fallback if 'id' is not ObjectId (e.g. it's a string already)

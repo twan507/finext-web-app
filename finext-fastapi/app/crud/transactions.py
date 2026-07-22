@@ -465,7 +465,18 @@ async def confirm_transaction_payment_db(
     if not transaction:
         raise ValueError(f"Giao dịch với ID {transaction_id_str} không tồn tại.")
 
-    if transaction.payment_status != PaymentStatusEnum.PENDING:
+    # Resume: nếu lần trước đã claim SUCCEEDED nhưng side-effect lỗi giữa chừng (VD tạo sub
+    # ném lỗi), giao dịch kẹt SUCCEEDED không có sub và không retry được. Chỉ cho resume khi
+    # NEW_PURCHASE và target_subscription_id còn None — marker này chỉ tồn tại khi tạo sub
+    # CHƯA hoàn tất (target_subscription_id được set ở :527 SAU khi tạo sub). Chạy lại an
+    # toàn vì create_subscription_db (subscriptions.py:322-333) tự chặn tạo sub trùng khi
+    # user đã có sub active non-BASIC → không cấp quyền lợi lần hai.
+    is_resumable = (
+        transaction.payment_status == PaymentStatusEnum.SUCCEEDED
+        and transaction.transaction_type == TransactionTypeEnum.NEW_PURCHASE
+        and transaction.target_subscription_id is None
+    )
+    if transaction.payment_status != PaymentStatusEnum.PENDING and not is_resumable:
         raise ValueError(f"Giao dịch không ở trạng thái chờ xử lý. Trạng thái hiện tại: {transaction.payment_status}")
 
     dt_now = datetime.now(timezone.utc)
@@ -501,15 +512,18 @@ async def confirm_transaction_payment_db(
         raise ValueError(f"Không tìm thấy license (ID: {transaction.license_id}) của giao dịch {transaction.id}")
 
     # ---- CHIẾM QUYỀN NGUYÊN TỬ (idempotent): chỉ 1 luồng chuyển PENDING -> SUCCEEDED ----
-    claim_result = await db[TRANSACTIONS_COLLECTION].update_one(
-        {"_id": ObjectId(transaction_id_str), "payment_status": PaymentStatusEnum.PENDING.value},
-        {"$set": update_fields_for_transaction},
-    )
-    if claim_result.modified_count == 0:
-        raise ValueError(
-            f"Giao dịch {transaction_id_str} đã được xử lý hoặc không còn ở trạng thái chờ; "
-            f"bỏ qua để không cấp quyền lợi lần hai."
+    # Khi resume, giao dịch đã SUCCEEDED từ lần trước → KHÔNG claim lại và KHÔNG áp lại
+    # update_fields (amount/notes/discount đã ghi lần đầu), chỉ chạy lại side-effect còn thiếu.
+    if not is_resumable:
+        claim_result = await db[TRANSACTIONS_COLLECTION].update_one(
+            {"_id": ObjectId(transaction_id_str), "payment_status": PaymentStatusEnum.PENDING.value},
+            {"$set": update_fields_for_transaction},
         )
+        if claim_result.modified_count == 0:
+            raise ValueError(
+                f"Giao dịch {transaction_id_str} đã được xử lý hoặc không còn ở trạng thái chờ; "
+                f"bỏ qua để không cấp quyền lợi lần hai."
+            )
 
     # ---- Đã chiếm quyền: các side-effect dưới đây chỉ chạy ĐÚNG MỘT LẦN ----
     newly_created_or_updated_sub_id: Optional[ObjectId] = None
@@ -618,10 +632,16 @@ async def cancel_transaction_db(
         "payment_status": PaymentStatusEnum.CANCELED.value,
         "updated_at": dt_now,
     }
-    updated_result = await db[TRANSACTIONS_COLLECTION].update_one({"_id": ObjectId(transaction_id_str)}, {"$set": update_fields})
-    if updated_result.matched_count > 0:
+    # CAS: filter phải gồm payment_status. Kiểm tra ở trên chỉ là đọc, có cửa sổ race
+    # với confirm (vốn đã claim nguyên tử) — nếu không có điều kiện này, cancel có thể
+    # ghi đè CANCELED lên một giao dịch vừa SUCCEEDED và đã cấp subscription.
+    updated_result = await db[TRANSACTIONS_COLLECTION].update_one(
+        {"_id": ObjectId(transaction_id_str), "payment_status": PaymentStatusEnum.PENDING.value},
+        {"$set": update_fields},
+    )
+    if updated_result.modified_count > 0:
         return await get_transaction_by_id(db, transaction_id_str)
-    return None  # Hoặc raise lỗi nếu không tìm thấy khi update
+    raise ValueError(f"Giao dịch {transaction_id_str} không còn ở trạng thái chờ xử lý; có thể đã được xử lý đồng thời.")
 
 
 async def calculate_transaction_price_with_overrides(

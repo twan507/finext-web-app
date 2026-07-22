@@ -65,7 +65,11 @@ MONGODB_CONNECTION_STRING = os.getenv("MONGODB_CONNECTION_STRING")
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60  # Đơn vị phút
-REFRESH_TOKEN_EXPIRE_DAYS = 7  # Đơn vị ngày
+REFRESH_TOKEN_EXPIRE_DAYS = 7  # Đơn vị ngày (cửa sổ trượt: mỗi lần refresh gia hạn thêm 7 ngày)
+# Trần tuổi TUYỆT ĐỐI của một session, tính từ lúc login. Refresh chỉ trượt trong trần này;
+# quá hạn thì buộc đăng nhập lại dù đang hoạt động. Chặn session sống vĩnh viễn qua refresh.
+# Là knob UX/bảo mật: tăng nếu muốn user ít phải đăng nhập lại, giảm nếu muốn siết hơn.
+SESSION_ABSOLUTE_MAX_DAYS = int(os.getenv("SESSION_ABSOLUTE_MAX_DAYS") or 30)
 
 # --- GOOGLE OAUTH ---
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")

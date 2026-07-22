@@ -159,3 +159,27 @@ async def test_has_recent_otp_scoped_per_type() -> None:
 async def test_has_recent_otp_invalid_user_id() -> None:
     db = FakeDB()
     assert await crud_otps.has_recent_otp(db, "not-an-objectid", OtpTypeEnum.RESET_PASSWORD) is False
+
+
+# --- SEC-05(a): CAS chống double-consume ---------------------------------
+
+
+async def test_otp_dung_khong_bi_double_consume_khi_verify_song_song() -> None:
+    """Hai request cùng mã ĐÚNG chạy song song: chỉ MỘT được True.
+
+    Nếu filter update chỉ có _id (không có verified_at=None), cả hai đều
+    modified_count>0 và cùng trả True → 1 OTP cấp 2 session.
+    """
+    import asyncio
+
+    db = FakeDB()
+    uid = str(ObjectId())
+    _insert_otp(db, uid, plain_code="424242", otp_type=OtpTypeEnum.RESET_PASSWORD)
+
+    results = await asyncio.gather(
+        crud_otps.verify_and_use_otp(db, uid, OtpTypeEnum.RESET_PASSWORD, "424242"),
+        crud_otps.verify_and_use_otp(db, uid, OtpTypeEnum.RESET_PASSWORD, "424242"),
+    )
+
+    assert results.count(True) == 1, "đúng một lần verify được chấp nhận"
+    assert results.count(False) == 1

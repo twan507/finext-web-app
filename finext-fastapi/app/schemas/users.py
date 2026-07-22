@@ -111,6 +111,10 @@ class UserInDB(UserBase):  # Kế thừa từ UserBase đã có google_id
     created_at: datetime
     updated_at: datetime
     is_active: bool
+    # is_active gộp 2 nghĩa: "chưa xác thực email" và "bị admin vô hiệu hóa". Cờ này
+    # tách nghĩa thứ hai ra để user bị vô hiệu hóa không tự kích hoạt lại được bằng OTP
+    # hoặc Google. Chỉ endpoint admin update mới ghi. Mặc định False cho document cũ.
+    deactivated_by_admin: bool = False
     # referral_code đã có từ UserBase
     # avatar_url đã có từ UserBase
     # google_id đã có từ UserBase

@@ -370,6 +370,13 @@ async def rest_query_endpoint(
         if projection:
             try:
                 parsed_projection = json.loads(projection)
+                # JSON hợp lệ nhưng không phải object (vd `[]`, `123`, `"abc"`) trước
+                # đây gây TypeError ở dòng dưới → lọt xuống except Exception → 500.
+                if not isinstance(parsed_projection, dict):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Projection must be a JSON object",
+                    )
                 # Luôn exclude _id
                 parsed_projection["_id"] = 0
             except json.JSONDecodeError:

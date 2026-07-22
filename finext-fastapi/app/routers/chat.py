@@ -204,16 +204,31 @@ async def _produce(
     await queue.put(STREAM_END)
 
 
-def _forward(sink: asyncio.Queue | None, frame: Any) -> None:
+def _forward(sink: asyncio.Queue | None, frame: Any, *, critical: bool = False) -> None:
     """Đẩy frame cho relay live (nếu có) — KHÔNG chặn: relay chậm/đã rời → sink đầy → drop.
     Turn nền (dequeue) không có relay (sink=None) → bỏ qua. Persistence KHÔNG phụ thuộc frame này
-    (collector trong _produce đã thu chữ TRƯỚC khi frame vào queue)."""
+    (collector trong _produce đã thu chữ TRƯỚC khi frame vào queue).
+
+    critical=True dành cho frame kết thúc: nó KHÔNG được rơi. Nếu STREAM_END bị drop,
+    relay không bao giờ biết turn đã xong và sẽ heartbeat tới khi proxy cắt (600s), còn
+    người dùng thấy câu trả lời cụt. Sink đầy thì bỏ frame cũ nhất để nhường chỗ — mất
+    một mẩu token hiển thị vẫn hơn treo cả connection. Mỗi turn chỉ có một producer nên
+    một lần nhường chỗ là đủ."""
     if sink is None:
         return
     try:
         sink.put_nowait(frame)
     except asyncio.QueueFull:
-        pass
+        if not critical:
+            return
+        try:
+            sink.get_nowait()
+        except asyncio.QueueEmpty:
+            pass
+        try:
+            sink.put_nowait(frame)
+        except asyncio.QueueFull:
+            logger.warning("Không đẩy được frame kết thúc cho relay: sink vẫn đầy")
 
 
 async def _run_turn(
@@ -231,7 +246,7 @@ async def _run_turn(
     try:
         while True:
             frame = await frame_queue.get()
-            _forward(sink, frame)
+            _forward(sink, frame, critical=frame is STREAM_END)
             if frame is STREAM_END:
                 break
         await produce_task  # _persist_answer đã chạy TRƯỚC STREAM_END — chỉ chờ _produce trả về

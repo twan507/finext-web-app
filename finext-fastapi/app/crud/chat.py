@@ -276,14 +276,6 @@ async def check_quota(db: Any, user_id: str) -> QuotaDecision:
     return QuotaDecision(True)
 
 
-def _accumulate(start: Any, used: Any, now: datetime, dur: timedelta, add: int) -> tuple[datetime, int]:
-    """Cộng token vào cửa sổ anchored: hết hạn/chưa có → mở cửa sổ mới (start=now); còn hạn → cộng dồn."""
-    start = _as_utc(start)
-    if not start or now >= start + dur:
-        return now, add
-    return start, int(used or 0) + add
-
-
 def billable_units(usage: dict[str, int]) -> int:
     """usage của 1 lượt → ĐƠN VỊ QUY ĐỔI THEO CHI PHÍ (1 đơn vị = 1 token input giá thường).
 
@@ -339,6 +331,31 @@ async def _quota_warning(
     return None
 
 
+async def _bump_window(db: Any, key: str, start_f: str, tok_f: str, now: datetime, dur: timedelta, tok: int) -> int:
+    """Cộng tok vào một cửa sổ anchored bằng thao tác NGUYÊN TỬ, trả về tổng sau khi cộng.
+
+    Trước đây là read-compute-$set: hai lượt kết thúc gần nhau (cùng worker interleave
+    tại await, hoặc khác worker) sẽ ghi đè nhau và làm mất token của một lượt. Với cầu
+    dao ngân sách global thì đó là đếm thiếu đúng thứ đang bảo vệ chi phí.
+
+    $inc chỉ áp khi cửa sổ còn hạn (start > now - dur). Không khớp nghĩa là cửa sổ đã
+    hết hạn hoặc chưa có doc → mở cửa sổ mới.
+    """
+    res = await db[QUOTA].update_one(
+        {"user_id": key, start_f: {"$gt": now - dur}},
+        {"$inc": {tok_f: tok}},
+    )
+    if res.modified_count == 0:
+        await db[QUOTA].update_one(
+            {"user_id": key},
+            {"$set": {start_f: now, tok_f: tok}},
+            upsert=True,
+        )
+        return tok
+    doc = await db[QUOTA].find_one({"user_id": key}) or {}
+    return int(doc.get(tok_f) or 0)
+
+
 async def record_usage(db: Any, user_id: str, usage: dict[str, int]) -> dict[str, Any] | None:
     """Sau done: cộng ĐƠN VỊ QUY ĐỔI (billable_units) vào cửa sổ 5h + weekly của user + global 24h.
     Mọi trần (AGENT_TOKENS_5H/WEEK, AGENT_DAILY_TOKEN_BUDGET) đều hiểu theo cùng đơn vị này.
@@ -352,20 +369,9 @@ async def record_usage(db: Any, user_id: str, usage: dict[str, int]) -> dict[str
     # Mức đã dùng TRƯỚC lượt này (cửa sổ hết hạn → 0), đọc từ chính doc cũ vừa lấy — không truy vấn thêm.
     used5_before, _ = _window_used(doc.get("s5_start"), doc.get("s5_tokens"), now, SESSION_DUR)
     usedw_before, _ = _window_used(doc.get("wk_start"), doc.get("wk_tokens"), now, WEEK_DUR)
-    s5_start, s5_tokens = _accumulate(doc.get("s5_start"), doc.get("s5_tokens"), now, SESSION_DUR, tok)
-    wk_start, wk_tokens = _accumulate(doc.get("wk_start"), doc.get("wk_tokens"), now, WEEK_DUR, tok)
-    await db[QUOTA].update_one(
-        {"user_id": str(user_id)},
-        {"$set": {"s5_start": s5_start, "s5_tokens": s5_tokens, "wk_start": wk_start, "wk_tokens": wk_tokens}},
-        upsert=True,
-    )
-    g = await db[QUOTA].find_one({"user_id": GLOBAL_QUOTA_KEY}) or {}
-    g_start, g_tokens = _accumulate(g.get("g_start"), g.get("g_tokens"), now, DAY_DUR, tok)
-    await db[QUOTA].update_one(
-        {"user_id": GLOBAL_QUOTA_KEY},
-        {"$set": {"g_start": g_start, "g_tokens": g_tokens}},
-        upsert=True,
-    )
+    s5_tokens = await _bump_window(db, str(user_id), "s5_start", "s5_tokens", now, SESSION_DUR, tok)
+    wk_tokens = await _bump_window(db, str(user_id), "wk_start", "wk_tokens", now, WEEK_DUR, tok)
+    await _bump_window(db, GLOBAL_QUOTA_KEY, "g_start", "g_tokens", now, DAY_DUR, tok)
     return await _quota_warning(db, user_id, (used5_before, s5_tokens), (usedw_before, wk_tokens))
 
 

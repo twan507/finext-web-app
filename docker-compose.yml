@@ -5,7 +5,9 @@ services:
   # 1. NGINX - Giữ nguyên vì Nginx cực nhẹ
   # ==========================================
   nginx:
-    image: "nginx:latest"
+    # Pin thay vì `latest`: giữ nguyên biến thể debian đang chạy, chỉ cố định phiên bản
+    # để build/deploy tái lập được. Nâng có chủ đích, không để tag tự trôi.
+    image: "nginx:1.31.3"
     restart: always
     ports:
       - "80:80"
@@ -34,8 +36,11 @@ services:
     depends_on:
       - fastapi
       - nextjs
-    env_file:
-      - .env.production
+    # SEC-07: nginx chỉ cần DOMAIN_NAME (xem envsubst trong command bên dưới). Trước đây
+    # nạp cả .env.production nên container này giữ luôn Mongo URI, SECRET_KEY, SMTP, R2,
+    # OAuth và LLM key mà không dùng đến một cái nào.
+    environment:
+      - DOMAIN_NAME=${DOMAIN_NAME}
     command: /bin/sh -c "cat /etc/nginx/ssl/domain.pem > /etc/nginx/ssl/fullchain.pem && echo '' >> /etc/nginx/ssl/fullchain.pem && cat /etc/nginx/ssl/Chain_RootCA_Bundle.crt >> /etc/nginx/ssl/fullchain.pem && envsubst '$$DOMAIN_NAME' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
 
   # ==========================================
@@ -64,10 +69,12 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    # Healthcheck qua endpoint public 200 (app.main:152 @app.get("/api/v1")) bằng python stdlib
-    # (python có sẵn trong image, không cần curl/wget). Chạy bằng user non-root cũng OK.
+    # Healthcheck qua /api/v1/health: endpoint này trả 503 khi mất kết nối Mongo (kể cả
+    # do lỗi index làm rụng client), nên container báo unhealthy thật thay vì 200 giả.
+    # 503 làm urlopen raise HTTPError, connection-refused raise URLError — cả hai không
+    # bắt nên python thoát khác 0 → unhealthy. Chỉ 200 mới sys.exit(0).
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1', timeout=5).status == 200 else 1)"]
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=5).status == 200 else 1)"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -96,6 +103,9 @@ services:
       # Runtime-only env var (không phải NEXT_PUBLIC_) — chỉ dùng trên server.
       # Server-side fetch gọi API qua Docker internal network thay vì public URL.
       - INTERNAL_API_URL=http://fastapi:8000
+      # Dùng ở app/sitemap.ts và app/robots.ts. Cả hai đã có fallback 'https://finext.vn',
+      # nhưng truyền tường minh để không phụ thuộc vào giá trị mặc định trong code.
+      - NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL:-https://finext.vn}
     # mem_limit/cpus (V1-compatible) mirror deploy.resources (V2/swarm). ~1.5G = 1536M.
     mem_limit: 1536M
     cpus: 2.0
@@ -121,8 +131,11 @@ services:
       start_period: 40s
     networks:
       - web-proxy
-    env_file:
-      - .env.production
+    # SEC-07: KHÔNG nạp .env.production. Biến NEXT_PUBLIC_* đã được nhúng lúc build qua
+    # `args` ở trên; biến runtime duy nhất cần thiết nằm trong `environment`. Đã kiểm kê
+    # toàn bộ process.env trong finext-nextjs: chỉ có NODE_ENV, INTERNAL_API_URL,
+    # NEXT_PUBLIC_BASE_URL và các NEXT_PUBLIC_* đã bake. Process Node render HTML từ input
+    # người dùng nên là container không nên cầm SECRET_KEY hay Mongo URI.
     depends_on:
       - fastapi
 

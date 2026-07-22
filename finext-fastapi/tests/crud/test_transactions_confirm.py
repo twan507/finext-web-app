@@ -1,5 +1,5 @@
 """Test S1 — confirm thanh toán: idempotent/atomic (C1) + cơ sở giảm giá nhất quán (C2)."""
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from bson import ObjectId
@@ -141,16 +141,69 @@ async def test_confirm_claims_transaction_before_side_effects():
     assert seen["status_at_side_effect"] == "succeeded"
 
 
-async def test_confirm_rejects_when_already_succeeded_no_side_effect():
+async def test_confirm_rejects_when_already_completed_no_side_effect():
+    """Giao dịch đã HOÀN TẤT (SUCCEEDED + target_subscription_id đã set) → reject, không
+    cấp quyền lợi lần hai. target_subscription_id set là marker của trạng thái đã xong."""
     db = FakeDB()
     uid = _seed_user(db)
     lid = _seed_license(db)
-    txid = _seed_pending_new_purchase(db, uid, lid, payment_status="succeeded")
+    txid = _seed_pending_new_purchase(
+        db, uid, lid, payment_status="succeeded", target_subscription_id=ObjectId()
+    )
 
     with pytest.raises(ValueError):
         await crud_tx.confirm_transaction_payment_db(db, str(txid), TransactionPaymentConfirmationRequest())
 
     assert len(db["subscriptions"].docs) == 0
+
+
+async def test_confirm_resumes_incomplete_new_purchase():
+    """REL-01: giao dịch kẹt SUCCEEDED nhưng target_subscription_id còn None (side-effect
+    lần trước lỗi) phải chạy lại được và tạo sub — thay vì kẹt vĩnh viễn."""
+    db = FakeDB()
+    uid = _seed_user(db)
+    lid = _seed_license(db)
+    txid = _seed_pending_new_purchase(
+        db, uid, lid, payment_status="succeeded", target_subscription_id=None
+    )
+
+    result = await crud_tx.confirm_transaction_payment_db(db, str(txid), TransactionPaymentConfirmationRequest())
+
+    assert result is not None
+    assert result.payment_status == "succeeded"
+    assert len(db["subscriptions"].docs) == 1
+    tx_doc = await db["transactions"].find_one({"_id": txid})
+    assert tx_doc["target_subscription_id"] is not None
+
+
+async def test_confirm_resume_khong_cap_doi_khi_da_co_sub():
+    """REL-01 safety: nếu lần trước ĐÃ tạo sub (nhưng update target_sub lỗi), resume KHÔNG
+    được tạo sub thứ hai. create_subscription_db chặn khi user đã có sub active non-BASIC."""
+    db = FakeDB()
+    uid = _seed_user(db)
+    lid = _seed_license(db, key="PRO")
+    # Sub active non-BASIC đã tồn tại (kết quả của lần confirm trước đã tạo được sub).
+    db["subscriptions"].docs.append(
+        {
+            "_id": ObjectId(),
+            "user_id": uid,
+            "license_key": "PRO",
+            "is_active": True,
+            "expiry_date": _now() + timedelta(days=30),
+            "start_date": _now(),
+            "created_at": _now(),
+            "updated_at": _now(),
+        }
+    )
+    txid = _seed_pending_new_purchase(
+        db, uid, lid, key="PRO", payment_status="succeeded", target_subscription_id=None
+    )
+
+    with pytest.raises((ValueError, Exception)):
+        await crud_tx.confirm_transaction_payment_db(db, str(txid), TransactionPaymentConfirmationRequest())
+
+    # Vẫn đúng 1 sub — không cấp đôi quyền lợi.
+    assert len(db["subscriptions"].docs) == 1
 
 
 # ---------------- C2: cơ sở giảm giá nhất quán ----------------
