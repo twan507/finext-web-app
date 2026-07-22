@@ -215,3 +215,40 @@ async def test_r2_upload_offloaded_to_threadpool(monkeypatch) -> None:
 
     assert url == "https://cdn.example.com/images/x.jpg"
     assert seen["tid"] != loop_tid  # boto3 blocking đã đẩy sang worker thread
+
+
+# --------------------------------------------------------------------------- #
+# 5. SEC-09: xoá bù object R2 khi ghi Mongo thất bại (không để orphan)
+# --------------------------------------------------------------------------- #
+async def test_r2_object_bi_xoa_bu_khi_ghi_db_that_bai(monkeypatch) -> None:
+    deleted: list[str] = []
+
+    async def _fake_upload(file_object: Any, object_name: str, acl: str = "public-read") -> str:
+        return "https://cdn.example.com/" + object_name
+
+    async def _fake_delete(object_name: str) -> bool:
+        deleted.append(object_name)
+        return True
+
+    def _fake_compress(image_bytes: bytes, content_type: str, target_size: int = uploads.TARGET_COMPRESSED_SIZE):
+        return b"jpegbytes", "image/jpeg"
+
+    monkeypatch.setattr(uploads, "upload_file_to_r2", _fake_upload)
+    monkeypatch.setattr(uploads, "delete_file_from_r2", _fake_delete)
+    monkeypatch.setattr(uploads, "compress_image", _fake_compress)
+
+    class _FailingUploads:
+        async def insert_one(self, doc: dict) -> Any:
+            raise RuntimeError("mongo down")
+
+    class _FakeDB:
+        uploads = _FailingUploads()
+
+    f = _FakeUploadFile(b"x" * 128, content_type="image/png", size=128)
+    resp = await uploads.upload_image(
+        current_user=_new_user(), upload_key=UploadKey.OTHERS, db=_FakeDB(), file=f
+    )
+
+    assert resp.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert len(deleted) == 1, "object R2 phải được xoá bù khi insert Mongo thất bại"
+    assert deleted[0].startswith("images/")

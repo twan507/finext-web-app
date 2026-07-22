@@ -138,3 +138,24 @@ async def upload_file_to_r2(
             detail="An unexpected error occurred while uploading the file."
         )
 
+
+def _blocking_delete_object(s3: BaseClient, object_name: str) -> None:
+    """Phần I/O blocking của boto3 delete_object, chạy trong threadpool."""
+    s3.delete_object(Bucket=config.R2_BUCKET_NAME, Key=object_name)
+
+
+async def delete_file_from_r2(object_name: str) -> bool:
+    """Xoá một object khỏi R2. Best-effort — dùng cho compensation khi bước sau thất bại.
+
+    KHÔNG raise: caller đang ở đường xử lý lỗi, không được để lỗi dọn dẹp che lỗi gốc.
+    Trả True nếu xoá được, False nếu không (đã log để soát orphan thủ công).
+    """
+    try:
+        s3 = get_s3_client()
+        await run_in_threadpool(_blocking_delete_object, s3, object_name)
+        logger.info(f"Đã xoá object R2 {object_name} (compensation).")
+        return True
+    except Exception as e:
+        logger.error(f"Không xoá được object R2 {object_name} khi compensation: {e}. Cần dọn thủ công.")
+        return False
+

@@ -11,7 +11,7 @@ from app.core.database import get_database
 from app.auth.dependencies import get_current_active_user
 from app.schemas.users import UserInDB  # For dependency type annotation
 from app.schemas.uploads import UploadCreate, UploadInDB, UploadPublic, UploadKey
-from app.utils.storage import upload_file_to_r2
+from app.utils.storage import upload_file_to_r2, delete_file_from_r2
 from app.auth.access import require_permission
 from app.utils.response_wrapper import StandardApiResponse, api_response_wrapper
 import app.crud.users as crud_users  # IMPORT USER CRUD
@@ -158,23 +158,30 @@ async def upload_image(
         compressed_file_obj = io.BytesIO(compressed_image_bytes)
         public_url = await upload_file_to_r2(file_object=compressed_file_obj, object_name=object_name, acl="public-read")
 
-        upload_data = UploadCreate(
-            user_id=current_user.id, upload_key=upload_key, file_url=public_url, size=compressed_size, object_name=object_name
-        )
-        upload_in_db = UploadInDB(**upload_data.model_dump())
-        upload_dict = upload_in_db.model_dump(by_alias=True, exclude={"id"})
-        upload_dict["user_id"] = ObjectId(current_user.id)
-        result = await db.uploads.insert_one(upload_dict)
-        created_upload_doc = await db.uploads.find_one({"_id": result.inserted_id})
+        # Object đã lên R2 công khai TRƯỚC khi ghi Mongo. Nếu bước ghi DB thất bại, xoá bù
+        # object để không để lại orphan (tốn storage + dữ liệu cá nhân sót lại). delete là
+        # best-effort, không raise; lỗi gốc vẫn được ném ra cho client.
+        try:
+            upload_data = UploadCreate(
+                user_id=current_user.id, upload_key=upload_key, file_url=public_url, size=compressed_size, object_name=object_name
+            )
+            upload_in_db = UploadInDB(**upload_data.model_dump())
+            upload_dict = upload_in_db.model_dump(by_alias=True, exclude={"id"})
+            upload_dict["user_id"] = ObjectId(current_user.id)
+            result = await db.uploads.insert_one(upload_dict)
+            created_upload_doc = await db.uploads.find_one({"_id": result.inserted_id})
 
-        if not created_upload_doc:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to retrieve uploaded file information")
+            if not created_upload_doc:
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to retrieve uploaded file information")
 
-        # Update user's avatar_url if upload_key is AVATARS
-        if upload_key == UploadKey.AVATARS:
-            avatar_updated = await crud_users.set_user_avatar(db, user_id=current_user.id, avatar_url=public_url)
-            if not avatar_updated:
-                logger.warning(f"Image uploaded to R2 for user {current_user.id} but failed to update user's avatar_url in DB.")
+            # Update user's avatar_url if upload_key is AVATARS
+            if upload_key == UploadKey.AVATARS:
+                avatar_updated = await crud_users.set_user_avatar(db, user_id=current_user.id, avatar_url=public_url)
+                if not avatar_updated:
+                    logger.warning(f"Image uploaded to R2 for user {current_user.id} but failed to update user's avatar_url in DB.")
+        except Exception:
+            await delete_file_from_r2(object_name)
+            raise
 
         response_data = UploadPublic(**created_upload_doc)
         return response_data
