@@ -134,6 +134,9 @@ async def connect_to_mongo():
             await db.chat_messages.create_index([("conversation_id", 1), ("created_at", 1)])
             await db.chat_messages.create_index([("user_id", 1), ("created_at", -1)])  # rate-limit đếm msg/phút
             await db.chat_quota.create_index("user_id", unique=True)
+            # chat_suggestions: đọc bản mới nhất + TTL tự dọn (crud/chat_suggestions.py)
+            await db.chat_suggestions.create_index([("generated_at", -1)])
+            await db.chat_suggestions.create_index("expires_at", expireAfterSeconds=0)
 
             logger.info("Đã đảm bảo các indexes cần thiết cho các Collections")
         except Exception as e:
