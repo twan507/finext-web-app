@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, memo } from 'react';
+import { Fragment, memo, useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Box, Skeleton, Typography, alpha, useTheme } from '@mui/material';
@@ -111,7 +111,14 @@ function AssistantText({ text, streaming }: { text: string; streaming: boolean }
   );
 }
 
-// 3 chấm nhảy kiểu "đang gõ" (typing). Dùng cho lúc suy nghĩ ban đầu + lúc chờ câu trả lời sau tra cứu.
+// Số dòng tra cứu tối đa hiện cùng lúc. Quá 5 dòng thì khối cao lấn cả câu trả lời, mà dòng cũ
+// cũng hết giá trị — người dùng đang chờ nên chỉ quan tâm việc mới nhất.
+const MAX_TOOL_ROWS = 5;
+
+// Giãn cách giữa hai dòng tra cứu liên tiếp khi nhả ra màn hình. 1s vẫn đọc ra như hiện cùng lúc.
+const TOOL_REVEAL_MS = 3000;
+
+// 3 chấm nhảy kiểu "đang gõ" (typing). Dùng cho lúc suy nghĩ ban đầu ("Đang suy nghĩ").
 function TypingDots() {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -148,8 +155,33 @@ function MessageBubbleBase({ message }: { message: ChatMessage }) {
   const theme = useTheme();
   const isUser = message.role === 'user';
   const streaming = message.status === 'streaming';
-  // Đã có chữ trả lời chưa? Có rồi → tắt hiệu ứng chờ (chính câu trả lời đang nhả là tín hiệu model làm việc).
-  const hasAnswerText = message.parts.some((p) => p.kind === 'text' && p.text.trim() !== '');
+
+  // Vị trí các dòng tra cứu ĐANG hiện: dòng nào đã có chữ trả lời phía sau thì coi như xong, ẩn đi.
+  const visibleTools = streaming
+    ? message.parts.reduce<number[]>((acc, p, i) => {
+        if (p.kind !== 'tool') return acc;
+        const answered = message.parts.some((q, j) => j > i && q.kind === 'text' && q.text.trim() !== '');
+        if (!answered) acc.push(i);
+        return acc;
+      }, [])
+    : [];
+  // Backend chạy các tool của một vòng SONG SONG nên tool_start về gần như cùng lúc, đổ ập 4-5
+  // dòng một lúc. Nhả dần từng dòng cho mắt kịp đọc. Chỉ ảnh hưởng khối tra cứu — câu trả lời
+  // vẫn hiện ngay khi có, không chờ hàng đợi này.
+  const [revealed, setRevealed] = useState(0);
+  const pendingTools = visibleTools.length;
+  useEffect(() => {
+    if (revealed >= pendingTools) return;
+    // Dòng đầu hiện ngay để không có quãng trống sau "Đang suy nghĩ"; các dòng sau giãn đều.
+    const timer = window.setTimeout(() => setRevealed((r) => r + 1), revealed === 0 ? 0 : TOOL_REVEAL_MS);
+    return () => window.clearTimeout(timer);
+  }, [revealed, pendingTools]);
+
+  // Giữ 5 dòng MỚI NHẤT chứ không phải 5 dòng đầu: khối này là màn hình theo dõi trực tiếp và
+  // biến mất ngay khi câu trả lời bắt đầu, nên việc ĐANG chạy đáng giữ hơn việc đã xong.
+  const revealedTools = visibleTools.slice(0, revealed);
+  const shownTools = revealedTools.slice(-MAX_TOOL_ROWS);
+  const overflowed = revealedTools.length > shownTools.length;
   return (
     <Box sx={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', mb: 2 }}>
       <Box
@@ -171,16 +203,23 @@ function MessageBubbleBase({ message }: { message: ChatMessage }) {
               // Render theo THỨ TỰ thời gian: text → dòng tra cứu → text.
               message.parts.map((part, i) => {
                 if (part.kind === 'text') return <AssistantText key={i} text={part.text} streaming={streaming} />;
-                // Dòng tra cứu: ẩn NGAY khi đã có đoạn văn bản SAU nó (model bắt đầu nhả câu trả lời) — hoặc khi xong.
-                const answered = message.parts.some((p, j) => j > i && p.kind === 'text' && p.text.trim() !== '');
-                // Nối timeline: còn dòng tra cứu khác phía sau → vẽ đường nối xuống.
-                const moreTools = message.parts.some((p, j) => j > i && p.kind === 'tool');
-                return streaming && !answered ? <ToolChip key={i} tool={part} connected={moreTools} /> : <Fragment key={i} />;
+                // Dòng tra cứu nằm ngoài cửa sổ 5 dòng (hoặc đã có câu trả lời) thì không vẽ.
+                const pos = shownTools.indexOf(i);
+                if (pos === -1) return <Fragment key={i} />;
+                return (
+                  <ToolChip
+                    key={i}
+                    tool={part}
+                    // Dòng cuối KHÔNG có đường nối — đoạn kẻ thò xuống chỗ trống trông thừa.
+                    // Tín hiệu "vẫn đang làm" do chữ mô tả của dòng tiêu điểm đảm nhiệm (xem ToolChip).
+                    connected={pos < shownTools.length - 1}
+                    // Tiêu điểm là dòng đang chạy, hoặc dòng mới nhất nếu vòng tool đã xong hết —
+                    // luôn có đúng một dòng sáng, các dòng còn lại lùi lại.
+                    active={part.running || pos === shownTools.length - 1}
+                    fading={overflowed && pos === 0}
+                  />
+                );
               })
-            )}
-            {/* Chấm typing chờ câu trả lời (sau khi đã có dòng tra cứu) — TẮT ngay khi chữ bắt đầu hiện. */}
-            {streaming && message.parts.length > 0 && !hasAnswerText && (
-              <Box sx={{ py: 0.75 }}><TypingDots /></Box>
             )}
           </>
         )}
