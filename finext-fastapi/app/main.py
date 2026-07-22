@@ -14,7 +14,7 @@ from app.utils.response_wrapper import StandardApiResponse
 from .core.config import ENVIRONMENT
 from .core.scheduler import start_scheduler, shutdown_scheduler
 
-from .core.database import close_mongo_connection, connect_to_mongo, get_database
+from .core.database import close_mongo_connection, connect_to_mongo, get_database, mongodb
 from .core.seeding import seed_initial_data
 from .routers import (
     auth,
@@ -178,6 +178,21 @@ app.include_router(dashboard.router, prefix="/api/v1/admin/dashboard", tags=["da
 @app.get("/api/v1/")
 async def read_api_v1_root():
     return {"message": "Đây là gốc API v1 của Finext FastAPI!"}
+
+
+@app.get("/api/v1/health")
+async def health_check():
+    """Readiness thật cho container healthcheck.
+
+    Startup cố ý fail-open (không raise khi Mongo chết) để không crash-loop với
+    restart:always khi Mongo tạm gián đoạn. Nhưng healthcheck cần phản ánh trung
+    thực: nếu mất kết nối DB (kể cả do lỗi index làm rụng client), trả 503 để
+    `docker ps` báo unhealthy thay vì 200 giả. Chỉ kiểm cờ in-memory — KHÔNG ping
+    Mongo ở đây để tránh healthcheck timeout gây flap.
+    """
+    if mongodb.client is None or not mongodb.dbs:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="database unavailable")
+    return {"status": "ok"}
 
 
 @app.get("/")

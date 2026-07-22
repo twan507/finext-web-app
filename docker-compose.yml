@@ -69,10 +69,12 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    # Healthcheck qua endpoint public 200 (app.main:152 @app.get("/api/v1")) bằng python stdlib
-    # (python có sẵn trong image, không cần curl/wget). Chạy bằng user non-root cũng OK.
+    # Healthcheck qua /api/v1/health: endpoint này trả 503 khi mất kết nối Mongo (kể cả
+    # do lỗi index làm rụng client), nên container báo unhealthy thật thay vì 200 giả.
+    # 503 làm urlopen raise HTTPError, connection-refused raise URLError — cả hai không
+    # bắt nên python thoát khác 0 → unhealthy. Chỉ 200 mới sys.exit(0).
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1', timeout=5).status == 200 else 1)"]
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=5).status == 200 else 1)"]
       interval: 30s
       timeout: 5s
       retries: 3
