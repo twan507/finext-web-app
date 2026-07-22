@@ -39,21 +39,21 @@ const Composer = forwardRef<HTMLDivElement, ComposerProps>(function Composer(
   // Mobile: placeholder NGẮN để không wrap 2 dòng; desktop: đầy đủ.
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'), { noSsr: true });
   const placeholder = compact ? PLACEHOLDER_COMPACT : isMobile ? 'Hỏi Finext AI…' : 'Hỏi Finext AI về thị trường, cổ phiếu, nhóm ngành…';
-  // Quầng gradient màu chủ đề kiểu Gemini: centered rõ hơn, bottom subtle; dark đậm hơn light. (Owner: tăng cường độ.)
-  const glowAlpha = centered ? (isDark ? 0.34 : 0.2) : isDark ? 0.24 : 0.14;
+  // Quầng gradient neo theo chính khung chat; centered gọn hơn để không phủ lời chào/gợi ý.
+  const glowAlpha = centered ? (isDark ? 0.24 : 0.13) : isDark ? 0.24 : 0.14;
   const glow = (
     <Box
       aria-hidden
       sx={{
         position: 'absolute',
         left: '50%',
-        top: '50%',
+        top: centered ? '58%' : '50%',
         transform: 'translate(-50%, -50%)',
-        width: centered ? '150%' : '128%',
-        height: centered ? '320%' : '190%',
+        width: '128%',
+        height: centered ? '210%' : '190%',
         borderRadius: '50%',
-        background: `radial-gradient(ellipse at center, ${alpha(theme.palette.primary.main, glowAlpha)} 0%, transparent 70%)`,
-        filter: `blur(${centered ? 34 : 22}px)`,
+        background: `radial-gradient(ellipse at center, ${alpha(theme.palette.primary.main, glowAlpha)} 0%, transparent ${centered ? 72 : 70}%)`,
+        filter: `blur(${centered ? 30 : 22}px)`,
         pointerEvents: 'none',
         zIndex: 0,
       }}
@@ -85,7 +85,7 @@ const Composer = forwardRef<HTMLDivElement, ComposerProps>(function Composer(
       ref={ref}
       sx={
         centered
-          ? { width: '100%', px: { xs: 2, md: 3 } } // GIỮA màn hình: glow do PageContent lo (trùm cả lời chào)
+          ? { width: '100%', px: { xs: 2, md: 3 }, boxSizing: 'border-box' }
           : compact
             // Trong bubble: ô nhập là phần tử anh em của vùng tin nhắn (không đè lên), nên KHÔNG cần
             // dải nền đặc để che chữ cuộn qua — bỏ đi để thấy được lớp kính của khung chat.
@@ -95,7 +95,7 @@ const Composer = forwardRef<HTMLDivElement, ComposerProps>(function Composer(
     >
       <Box sx={{ maxWidth: 760, mx: 'auto', width: '100%' }}>
         <Box sx={{ position: 'relative' }}>
-          {!centered && glow /* bottom state: glow nội bộ; centered: glow chung ở PageContent trùm cả lời chào */}
+          {glow}
           {/* Khung chat kiểu DeepSeek: input TRÊN (full-width), hàng nút DƯỚI trong khung (trái = Suy nghĩ sâu, phải = gửi/dừng). */}
           <Box
             sx={{
