@@ -32,7 +32,7 @@ export default function SuggestedQuestions({
                         width: '100%',
                         minHeight: 44,
                         justifyContent: 'flex-start',
-                        px: 1.5,
+                        px: 2.5,
                         py: 0.9,
                         borderRadius: 2,
                         textAlign: 'left',
