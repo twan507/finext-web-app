@@ -273,6 +273,10 @@ export default function ChatBubble() {
 
   const isDark = theme.palette.mode === 'dark';
   const glow = getGlowButton(isDark);
+  // Hào quang RGB "thở" quanh nút: neo bằng tím thương hiệu, điểm xuyết xanh dương / xanh ngọc /
+  // hồng tím để đa sắc mà tím vẫn áp đảo (sang, không chói kiểu đèn gaming). Cùng ngôn ngữ với
+  // khung Aurora của "Giai đoạn thị trường" (conic gradient + breathing).
+  const auraGradient = `conic-gradient(from 0deg, ${theme.palette.primary.main}, #5b8def, #35d0c8, ${theme.palette.primary.main}, #d96bf5, ${theme.palette.primary.main})`;
   const iconSx = {
     position: 'absolute' as const,
     inset: 0,
@@ -290,6 +294,33 @@ export default function ChatBubble() {
 
   return (
     <>
+      {/* Vòng hào quang RGB nằm DƯỚI nút (z thấp hơn) → chỉ phần blur toả ra rìa mới thấy, mặt nút
+          giữ nguyên gradient tím. Ẩn khi cửa sổ chat mở (đồng bộ với lúc nút thu nhỏ, tan đi). */}
+      {!visible && (
+        <Box
+          aria-hidden
+          sx={{
+            ...fabPosition(barOffset),
+            position: 'fixed',
+            zIndex: theme.zIndex.modal - 1,
+            width: FAB_SIZE,
+            height: FAB_SIZE,
+            borderRadius: '50%',
+            pointerEvents: 'none',
+            background: auraGradient,
+            filter: 'blur(11px)',
+            // Trồi/thụt cùng thanh điều hướng đáy mobile như chính nút tròn.
+            transition: BAR_SYNC_TRANSITION,
+            // Thở nhẹ (opacity) + xoay chậm để màu luân chuyển — quãng dài, biên độ thấp nên không loè loẹt.
+            animation: 'finextAuraBreathe 3.6s ease-in-out infinite, finextAuraSpin 9s linear infinite',
+            '@keyframes finextAuraBreathe': { '0%, 100%': { opacity: 0.35 }, '50%': { opacity: 0.7 } },
+            '@keyframes finextAuraSpin': { to: { transform: 'rotate(360deg)' } },
+            // Reduced-motion: tắt animation, chỉ giữ một quầng sáng tĩnh rất nhẹ.
+            '@media (prefers-reduced-motion: reduce)': { animation: 'none', opacity: 0.4 },
+          }}
+        />
+      )}
+
       {/* Không bọc Tooltip: chính BubbleTeaser đóng vai lời mời khi hover — nên nút phải tự mô tả bằng aria-label. */}
       <Fab
         color="primary"

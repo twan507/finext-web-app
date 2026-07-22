@@ -24,7 +24,6 @@ import {
   ExpandLess as ExpandLessIcon,
   ArrowBack as ArrowBackIcon,
   Refresh as RefreshIcon,
-  AutoAwesomeOutlined,
 } from '@mui/icons-material';
 
 import UserAvatar from '../../components/layout/UserAvatar';
@@ -39,6 +38,7 @@ import PwaTitleBar from '@/components/layout/PwaTitleBar';
 import MobileBottomBar from '@/components/layout/MobileBottomBar';
 import ChatBubble from '@/components/chatBubble/ChatBubble';
 import MarketPhaseNavIcon from './MarketPhaseNavIcon';
+import FinextAiNavIcon from './FinextAiNavIcon';
 
 interface NavItem {
   text: string;
@@ -54,7 +54,7 @@ const navigationStructure: NavItem[] = [
   { text: 'Biểu đồ kĩ thuật', href: '/charts', icon: <CandlestickChartOutlined /> },
   { text: 'Danh sách theo dõi', href: '/watchlist', icon: <StarBorderPurple500Outlined /> },
   { text: 'Bộ lọc thông minh', href: '/stocks', icon: <FilterAltOutlined />, exactMatch: true },
-  { text: 'Finext AI', href: '/chat', icon: <AutoAwesomeOutlined /> },
+  { text: 'Finext AI', href: '/chat', icon: <FinextAiNavIcon /> },
 ];
 
 // Top navigation tabs (like in Simplize)
