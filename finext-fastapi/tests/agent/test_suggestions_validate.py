@@ -79,3 +79,26 @@ def test_set_hop_le_di_qua_va_duoc_strip():
     assert out is not None
     assert len(out) == 5
     assert out[0] == "Thị trường hôm nay diễn biến ra sao?"
+
+
+# --- Vớt output bị cắt cụt --------------------------------------------------
+
+
+def test_vot_duoc_mang_thieu_dau_dong():
+    """Model quên ']' (hoặc stream bị cắt) — 5 câu HOÀN CHỈNH vẫn phải dùng được.
+
+    Đã gặp thật khi chạy MiniMax-M3: cả bộ bị vứt vì thiếu đúng một ký tự.
+    """
+    raw = json.dumps(_ok_five(), ensure_ascii=False).rstrip("]")
+    assert validate_suggestions(raw, TICKERS) is not None
+
+
+def test_khong_vot_cau_dang_viet_do():
+    """Câu thứ 5 bị cắt giữa chừng → chỉ còn 4 chuỗi hoàn chỉnh → loại cả bộ."""
+    raw = json.dumps(_ok_five(), ensure_ascii=False)
+    cut = raw.rfind('", "') + 4  # cắt ngay sau dấu mở của câu thứ 5
+    assert validate_suggestions(raw[:cut] + "Thị trường hôm nay", TICKERS) is None
+
+
+def test_khong_vot_khi_khong_co_dau_mo_mang():
+    assert validate_suggestions('"chỉ là một chuỗi rời?"', TICKERS) is None

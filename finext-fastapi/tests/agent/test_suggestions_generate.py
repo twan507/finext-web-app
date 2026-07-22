@@ -17,9 +17,9 @@ GOOD = [
 def _patch_sources(monkeypatch, stock_rows=None):
     async def _fake_sources(db):
         return (
-            [{"date": "2026-07-22", "final_phase": "Tăng giá"}],
-            stock_rows if stock_rows is not None else [{"ticker": "HPG", "pct_change": 5.0, "industry_name": "Thép"}],
-            [{"title": "Tin A"}],
+            [{"date": "2026-07-22", "phase_label": "uptrend"}],
+            [{"date": "2026-07-22", "market_cmt": "Phiên hôm nay giảm sâu."}],
+            stock_rows if stock_rows is not None else [{"ticker": "HPG", "pct_change": 5.0, "industry_name": "Thép", "top100": 1}],
         )
 
     monkeypatch.setattr(sug, "_load_sources", _fake_sources)

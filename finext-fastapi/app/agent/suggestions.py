@@ -14,8 +14,8 @@ from app.core.config import AGENT_DAILY_TOKEN_BUDGET, LLM_MODEL
 from app.crud.chat import DAY_DUR, GLOBAL_QUOTA_KEY, QUOTA, _bump_window, _now, _window_used, billable_units
 from app.crud.chat_suggestions import save_suggestions
 from app.crud.sse.home_today_stock import home_today_stock
-from app.crud.sse.news_daily import news_daily
-from app.crud.sse.phase_signal import phase_signal
+from app.crud.sse.phase_comment import phase_comment
+from app.crud.sse.phase_daily import phase_daily
 
 logger = logging.getLogger(__name__)
 
@@ -38,17 +38,46 @@ _TICKER_RE = re.compile(r"\b[A-Z]{3}\b")
 _NON_TICKER = {"GDP", "CPI", "FED", "ETF", "IPO", "ROE", "ROA", "EPS", "PMI", "USD", "VND", "FDI"}
 
 
+# Chuỗi JSON HOÀN CHỈNH (có cả cặp nháy đóng), cho phép ký tự escape bên trong.
+_JSON_STR_RE = re.compile(r'"((?:[^"\\]|\\.)*)"')
+
+
+def _parse_items(raw: str) -> list | None:
+    """Đọc mảng từ output thô. Trả None nếu không lấy được gì dùng được.
+
+    Model đôi khi trả mảng THIẾU dấu ']' đóng (quên, hoặc stream bị cắt — adapter có cờ
+    DoneEvent.truncated nhưng _complete không dùng tới). Khi đó json.loads hỏng và cả bộ
+    gợi ý bị vứt, im lặng giữ bộ cũ.
+
+    Vớt lại bằng cách CHỈ lấy các chuỗi hoàn chỉnh: một câu đang viết dở chưa có nháy
+    đóng nên không khớp pattern và bị bỏ — không bao giờ vớt nhầm nội dung cụt.
+    """
+    try:
+        items = json.loads(raw)
+        if isinstance(items, list):
+            return items
+    except (json.JSONDecodeError, TypeError):
+        pass
+
+    start = raw.find("[")
+    if start < 0:
+        return None
+    found = _JSON_STR_RE.findall(raw[start:])
+    if not found:
+        return None
+    try:
+        return [json.loads(f'"{s}"') for s in found]
+    except json.JSONDecodeError:
+        return None
+
+
 def validate_suggestions(raw: str, allowed_tickers: set[str]) -> list[str] | None:
     """Kiểm tra output thô của LLM. Trả list 5 câu đã strip, hoặc None nếu không dùng được.
 
     Trượt bất kỳ luật nào là loại CẢ SET — thà giữ set cũ còn hơn publish nửa vời.
     """
-    try:
-        items = json.loads(raw)
-    except (json.JSONDecodeError, TypeError):
-        return None
-
-    if not isinstance(items, list) or len(items) != COUNT:
+    items = _parse_items(raw)
+    if items is None or len(items) != COUNT:
         return None
 
     out: list[str] = []
@@ -75,22 +104,61 @@ def validate_suggestions(raw: str, allowed_tickers: set[str]) -> list[str] | Non
 
 
 TOP_N = 10
-HEADLINE_N = 5
 # Cỡ rổ dự phòng khi dữ liệu thiếu cờ top100 — lấy theo thanh khoản để vẫn ra mã quen mặt.
 POPULAR_POOL_SIZE = 100
 
 
-def build_snapshot(phase_rows: list[dict], stock_rows: list[dict], news_rows: list[dict]) -> dict:
+# phase_label trong DB là tiếng Anh; đưa sang prompt bằng tiếng Việt để LLM viết tự nhiên.
+_PHASE_VI = {
+    "uptrend": "xu hướng tăng",
+    "downtrend": "xu hướng giảm",
+    "sideway": "đi ngang",
+    "transition": "chuyển tiếp",
+}
+# Chẩn đoán phiên dài ~800 ký tự/trường; cắt để prompt không phình.
+MARKET_CMT_MAX = 700
+
+
+def _trim_at_sentence(text: str, limit: int) -> str:
+    """Cắt ở ranh giới CÂU gần nhất, không cắt giữa từ.
+
+    Cắt mù để lại đuôi cụt kiểu 'Giá đang nghiêng hẳn về phía tiê' — model phải đoán
+    nốt hoặc bị nhiễu. Không tìm được dấu câu nào thì lùi về khoảng trắng gần nhất.
+    """
+    if len(text) <= limit:
+        return text
+    head = text[:limit]
+    cut = max(head.rfind(". "), head.rfind("! "), head.rfind("? "))
+    if cut > limit // 2:
+        return head[: cut + 1]
+    space = head.rfind(" ")
+    return head[:space] if space > 0 else head
+
+
+def build_snapshot(
+    phase_rows: list[dict],
+    comment_rows: list[dict],
+    stock_rows: list[dict],
+) -> dict:
     """Rút gọn dữ liệu thô thành snapshot nhỏ cho prompt.
 
     Hàm THUẦN (nhận sẵn dữ liệu) để test được không cần DB.
     Cố ý KHÔNG giữ giá trị số: prompt chỉ được biết CHIỀU biến động, tránh LLM chép số
     vào câu hỏi rồi lệch khi hiển thị ở nhịp sau.
     """
+    # phase_daily sort theo date TĂNG dần → phần tử cuối là phiên hiện tại.
     phase = None
     if phase_rows:
-        latest = max(phase_rows, key=lambda r: r.get("date") or "")
-        phase = latest.get("final_phase")
+        label = (phase_rows[-1] or {}).get("phase_label")
+        phase = _PHASE_VI.get(label, label)
+
+    # Chẩn đoán phiên do hệ thống viết sẵn — nguồn "bám sát diễn biến" chính. Không có nó
+    # thì LLM chỉ thấy danh sách mã trần trụi và đặt câu chung chung.
+    market_cmt = None
+    if comment_rows:
+        raw_cmt = (comment_rows[0] or {}).get("market_cmt")
+        if isinstance(raw_cmt, str) and raw_cmt.strip():
+            market_cmt = _trim_at_sentence(raw_cmt.strip(), MARKET_CMT_MAX)
 
     usable = [
         r for r in stock_rows
@@ -112,56 +180,89 @@ def build_snapshot(phase_rows: list[dict], stock_rows: list[dict], news_rows: li
     losers = [{"ticker": r["ticker"], "industry_name": r["industry_name"]} for r in ranked[::-1][:TOP_N]]
 
     presented = gainers + losers
-    industries = sorted({r["industry_name"] for r in presented})
+    # Tách ngành theo CHIỀU. Gộp chung một danh sách thì model không biết ngành nào đang
+    # tăng, ngành nào đang giảm → dễ hỏi "Bất động sản dẫn dắt?" trong khi VIC/VHM/VRE
+    # đang giảm sâu.
+    industries_up = sorted({g["industry_name"] for g in gainers})
+    industries_down = sorted({x["industry_name"] for x in losers})
     # Allowlist validate = ĐÚNG những mã đã đưa vào prompt. Trước đây là toàn bộ ~1600 mã
     # nên LLM nhắc mã lạ nào cũng lọt; giờ nhắc ngoài danh sách đã trình bày là bị loại.
     tickers = sorted({r["ticker"] for r in presented})
-    headlines = [r["title"] for r in news_rows[:HEADLINE_N] if r.get("title")]
 
     return {
         "phase": phase,
+        "market_cmt": market_cmt,
         "gainers": gainers,
         "losers": losers,
-        "industries": industries,
-        "headlines": headlines,
+        "industries_up": industries_up,
+        "industries_down": industries_down,
         "tickers": tickers,
     }
 
 
 _SYS = (
-    "Bạn soạn câu hỏi gợi ý cho người dùng ứng dụng phân tích chứng khoán Việt Nam.\n"
+    "Bạn soạn sẵn các câu hỏi để NGƯỜI DÙNG bấm vào và GỬI CHO trợ lý AI của một ứng dụng "
+    "phân tích chứng khoán Việt Nam.\n\n"
+    "QUAN TRỌNG NHẤT: mỗi câu phải là câu NGƯỜI DÙNG HỎI TRỢ LÝ, viết ở giọng người dùng. "
+    "Tuyệt đối không hỏi ngược lại người dùng.\n"
+    "  SAI:  'Bạn muốn dùng bộ lọc nào để tìm mã tăng mạnh?'\n"
+    "  ĐÚNG: 'Lọc giúp tôi các mã đang tăng mạnh trong phiên?'\n"
+    "  SAI:  'Bạn quan tâm nhóm ngành nào?'\n"
+    "  ĐÚNG: 'Nhóm ngành nào đang dẫn dắt thị trường?'\n\n"
     "Trả về DUY NHẤT một JSON array gồm đúng 5 chuỗi tiếng Việt, không kèm giải thích.\n"
-    "Mỗi chuỗi là một câu hỏi hoàn chỉnh, 8-80 ký tự, kết thúc bằng dấu hỏi.\n"
-    "Cơ cấu: 2 câu về bức tranh chung, 2 câu về ngành/mã đang biến động, "
-    "1 câu giúp người dùng khám phá tính năng (pha thị trường, bộ lọc).\n"
+    "Mỗi chuỗi 8-80 ký tự, kết thúc bằng dấu hỏi.\n\n"
+    "Cơ cấu 5 câu:\n"
+    "1-2. Bám vào CHẨN ĐOÁN PHIÊN được cung cấp — hỏi về điều đang thực sự diễn ra "
+    "(trạng thái thị trường, vì sao như vậy, điều gì đáng chú ý).\n"
+    "3-4. Về nhóm ngành hoặc mã cụ thể trong danh sách được cung cấp.\n"
+    "5.   Nhờ trợ lý làm một việc cụ thể (lọc mã, so sánh, giải thích chỉ báo).\n\n"
     "BẮT BUỘC:\n"
-    "- Chỉ nhắc mã và ngành có trong dữ liệu được cung cấp.\n"
-    "- TUYỆT ĐỐI KHÔNG đưa con số vào câu hỏi (không phần trăm, không điểm số, không giá).\n"
-    "- KHÔNG đưa ra khuyến nghị mua/bán, không hỏi 'có nên'."
+    "- Chỉ nhắc mã và ngành CÓ TRONG dữ liệu được cung cấp.\n"
+    "- TUYỆT ĐỐI KHÔNG đưa con số vào câu hỏi (không phần trăm, không điểm số, không giá) "
+    "vì gợi ý hiển thị trễ so với lúc sinh, số sẽ sai. CHẨN ĐOÁN PHIÊN bên dưới CÓ chứa "
+    "số — hãy diễn đạt lại bằng lời và bỏ hết số, tuyệt đối không chép sang câu hỏi.\n"
+    "- Ngành tăng và ngành giảm được liệt kê RIÊNG. Không hỏi ngành đang giảm như thể nó "
+    "đang dẫn dắt, và ngược lại.\n"
+    "- KHÔNG khuyến nghị mua/bán, không hỏi 'có nên'.\n"
+    "- Mỗi câu một ý, tự nhiên như người thật gõ vào ô chat."
 )
 
 
 async def _load_sources(db: Any) -> tuple[list[dict], list[dict], list[dict]]:
     """Đọc 3 nguồn thô. Tách riêng để test monkeypatch được mà không cần Mongo thật.
 
-    phase_signal/home_today_stock trả list; news_daily trả {"items", "pagination"}.
+    phase_daily trả list sort theo date TĂNG dần → phần tử CUỐI là phiên hiện tại.
+    phase_comment đã sort giảm dần + limit 1 (chẩn đoán phiên mới nhất); có thể rỗng vì
+    bảng comment tới trễ vài phút so với bảng số.
+
+    KHÔNG dùng phase_signal: collection đó RỖNG trong DB thật (kiểm 22/07/2026), nên bản
+    đầu luôn có phase=None và gợi ý mất hẳn bối cảnh phiên.
+
+    KHÔNG dùng news_daily: tiêu đề tin chứa mã NGOÀI allowlist (VCA, NTP, FPT...) nên
+    model dễ nhắc tới rồi cả bộ bị validate loại, im lặng giữ bộ cũ. Cơ cấu 5 câu cũng
+    không dùng tới tin — đưa vào chỉ tốn token và tạo bẫy.
     """
-    phase_rows = await phase_signal()
+    phase_rows = await phase_daily()
+    comment_rows = await phase_comment()
     stock_rows = await home_today_stock()
-    news_page = await news_daily(page=1, limit=5, sort_by="created_at", sort_order="desc")
-    return list(phase_rows or []), list(stock_rows or []), list((news_page or {}).get("items") or [])
+    return list(phase_rows or []), list(comment_rows or []), list(stock_rows or [])
 
 
 def _user_prompt(snapshot: dict) -> str:
-    return (
-        "Dữ liệu thị trường hiện tại:\n"
-        f"- Pha thị trường: {snapshot.get('phase') or 'không rõ'}\n"
-        f"- Mã tăng mạnh: {', '.join(g['ticker'] for g in snapshot['gainers']) or 'không có'}\n"
-        f"- Mã giảm mạnh: {', '.join(l['ticker'] for l in snapshot['losers']) or 'không có'}\n"
-        f"- Ngành đang biến động: {', '.join(snapshot['industries']) or 'không có'}\n"
-        f"- Tin mới: {' | '.join(snapshot['headlines']) or 'không có'}\n\n"
-        "Soạn 5 câu hỏi gợi ý theo đúng yêu cầu."
-    )
+    parts = [f"Trạng thái thị trường: {snapshot.get('phase') or 'không rõ'}"]
+    if snapshot.get("market_cmt"):
+        parts.append(
+            "\nCHẨN ĐOÁN PHIÊN (hệ thống viết sẵn — dùng làm bối cảnh chính cho câu 1-2):\n"
+            f"{snapshot['market_cmt']}"
+        )
+    parts += [
+        f"\nMã tăng mạnh: {', '.join(g['ticker'] for g in snapshot['gainers']) or 'không có'}",
+        f"Mã giảm mạnh: {', '.join(x['ticker'] for x in snapshot['losers']) or 'không có'}",
+        f"Ngành của các mã ĐANG TĂNG: {', '.join(snapshot['industries_up']) or 'không có'}",
+        f"Ngành của các mã ĐANG GIẢM: {', '.join(snapshot['industries_down']) or 'không có'}",
+        "\nSoạn 5 câu hỏi gợi ý theo đúng yêu cầu.",
+    ]
+    return "\n".join(parts)
 
 
 async def _global_budget_exhausted(db: Any) -> bool:
@@ -184,8 +285,8 @@ async def generate_and_store(db: Any) -> bool:
             logger.warning("Bỏ nhịp sinh gợi ý: ngân sách LLM global đã cạn.")
             return False
 
-        phase_rows, stock_rows, news_rows = await _load_sources(db)
-        snapshot = build_snapshot(phase_rows, stock_rows, news_rows)
+        phase_rows, comment_rows, stock_rows = await _load_sources(db)
+        snapshot = build_snapshot(phase_rows, comment_rows, stock_rows)
 
         usage: dict[str, int] = {}
         raw = await _complete(
