@@ -12,12 +12,15 @@ interface StandardApiResponse<T> {
 /**
  * 5 câu hỏi gợi ý hiện tại. Backend luôn trả về bộ dùng được (có fallback tĩnh),
  * nên chỉ cần xử lý đúng trường hợp gọi hỏng → trả mảng rỗng, UI ẩn khu vực gợi ý.
- * revalidate 300s: cron sinh mỗi 30 phút nên user thấy bộ mới trong vòng 5 phút.
+ * no-store: backend bốc NGẪU NHIÊN 5 câu từ kho ~10 câu mỗi lần gọi, nên cache lại sẽ
+ * đóng băng đúng một tổ hợp và mất hẳn cảm giác mới. Payload chỉ vài trăm byte đi qua
+ * mạng nội bộ Docker nên bỏ cache gần như không tốn gì, đổi lại mỗi lượt vào là một
+ * tổ hợp khác. Vẫn render phía server nên gợi ý có sẵn trong HTML lần paint đầu.
  */
 export async function fetchChatSuggestions(): Promise<string[]> {
     try {
         const res = await fetch(`${INTERNAL_API_URL}/api/v1/sse/rest/chat_suggestions`, {
-            next: { revalidate: 300 },
+            cache: 'no-store',
             signal: AbortSignal.timeout(3000),
         });
         if (!res.ok) return [];

@@ -12,7 +12,7 @@ from app.agent.adapters.base import SystemBlock
 from app.agent.loop import _complete, build_adapter
 from app.core.config import AGENT_DAILY_TOKEN_BUDGET, LLM_MODEL
 from app.crud.chat import DAY_DUR, GLOBAL_QUOTA_KEY, QUOTA, _bump_window, _now, _window_used, billable_units
-from app.crud.chat_suggestions import save_suggestions
+from app.crud.chat_suggestions import DISPLAY_COUNT, save_suggestions
 from app.crud.sse.home_today_stock import home_today_stock
 from app.crud.sse.phase_comment import phase_comment
 from app.crud.sse.phase_daily import phase_daily
@@ -22,7 +22,11 @@ logger = logging.getLogger(__name__)
 # Câu hỏi phải là câu hoàn chỉnh, đủ ngắn để hiển thị một dòng.
 MIN_LEN = 8
 MAX_LEN = 80
+# Số câu MỖI VÒNG. Không xin nhiều hơn trong một lượt: model dừng quanh 170-220 token
+# output nên xin 10 câu một lượt là chắc chắn bị cắt (đo thực tế 22/07/2026).
 COUNT = 5
+# Số vòng sinh mỗi nhịp cron → kho ~10 câu, user vào bốc ngẫu nhiên DISPLAY_COUNT câu.
+ROUNDS = 2
 
 # Giọng khuyến nghị — cấm theo lập trường compliance của dự án.
 # LƯU Ý: không cấm riêng "mua"/"bán" vì "khối ngoại mua ròng" là mô tả hợp lệ.
@@ -262,7 +266,8 @@ async def _load_sources(db: Any) -> tuple[list[dict], list[dict], list[dict]]:
     return list(phase_rows or []), list(comment_rows or []), list(stock_rows or [])
 
 
-def _user_prompt(snapshot: dict) -> str:
+def _user_prompt(snapshot: dict, already: list[str] | None = None) -> str:
+    """`already`: câu đã soạn ở vòng trước — vòng sau phải ra ý KHÁC, không trùng."""
     parts = [f"Trạng thái thị trường: {snapshot.get('phase') or 'không rõ'}"]
     if snapshot.get("market_cmt"):
         parts.append(
@@ -274,8 +279,13 @@ def _user_prompt(snapshot: dict) -> str:
         f"Mã giảm mạnh: {', '.join(x['ticker'] for x in snapshot['losers']) or 'không có'}",
         f"Ngành của các mã ĐANG TĂNG: {', '.join(snapshot['industries_up']) or 'không có'}",
         f"Ngành của các mã ĐANG GIẢM: {', '.join(snapshot['industries_down']) or 'không có'}",
-        "\nSoạn 5 câu hỏi gợi ý theo đúng yêu cầu.",
     ]
+    if already:
+        parts.append(
+            "\nĐÃ CÓ SẴN các câu sau — soạn 5 câu KHÁC HẲN về ý, đừng hỏi lại cùng nội dung:\n"
+            + "\n".join(f"- {q}" for q in already)
+        )
+    parts.append("\nSoạn 5 câu hỏi gợi ý theo đúng yêu cầu.")
     return "\n".join(parts)
 
 
@@ -302,26 +312,42 @@ async def generate_and_store(db: Any) -> bool:
         phase_rows, comment_rows, stock_rows = await _load_sources(db)
         snapshot = build_snapshot(phase_rows, comment_rows, stock_rows)
 
+        adapter = build_adapter(thinking="disabled")
+        allowed = set(snapshot["tickers"])
         usage: dict[str, int] = {}
-        raw = await _complete(
-            build_adapter(thinking="disabled"),
-            [SystemBlock(text=_SYS, cache_hint=False)],
-            [{"role": "user", "content": _user_prompt(snapshot)}],
-            usage,
-        )
+        collected: list[str] = []
+
+        # Sinh nhiều VÒNG thay vì xin hết trong một lượt: model dừng quanh 170-220 token
+        # output (đo 22/07/2026, xem _parse_items) nên 10 câu một lượt chắc chắn bị cắt.
+        # Vòng sau được biết vòng trước đã hỏi gì để ra ý khác.
+        for round_no in range(ROUNDS):
+            raw = await _complete(
+                adapter,
+                [SystemBlock(text=_SYS, cache_hint=False)],
+                [{"role": "user", "content": _user_prompt(snapshot, already=collected)}],
+                usage,
+            )
+            batch = validate_suggestions(raw, allowed)
+            if batch is None:
+                logger.warning("Vòng %d không hợp lệ — bỏ qua. Raw: %r", round_no + 1, raw[:200])
+                continue
+            # Trùng câu giữa hai vòng thì bỏ, giữ nguyên thứ tự xuất hiện.
+            seen = {q.lower() for q in collected}
+            collected += [q for q in batch if q.lower() not in seen]
 
         tokens = billable_units(usage)
         if tokens > 0:
             await _bump_window(db, GLOBAL_QUOTA_KEY, "g_start", "g_tokens", _now(), DAY_DUR, tokens)
 
-        questions = validate_suggestions(raw, set(snapshot["tickers"]))
-        if questions is None:
-            logger.warning("Gợi ý sinh ra không hợp lệ — giữ nguyên bộ cũ. Raw: %r", raw[:300])
+        # Đủ để bốc ngẫu nhiên là publish. Vòng 2 trượt vẫn còn 5 câu dùng được — thà
+        # kho nhỏ hơn dự kiến còn hơn giữ bộ cũ đã lỗi thời.
+        if len(collected) < DISPLAY_COUNT:
+            logger.warning("Chỉ gom được %d câu hợp lệ (<%d) — giữ nguyên bộ cũ.", len(collected), DISPLAY_COUNT)
             return False
 
         # context lưu kèm để soi lại khi tinh chỉnh prompt
-        await save_suggestions(db, questions, snapshot, LLM_MODEL or "", usage)
-        logger.info("Đã publish bộ gợi ý mới (%d token quy đổi).", tokens)
+        await save_suggestions(db, collected, snapshot, LLM_MODEL or "", usage)
+        logger.info("Đã publish %d câu gợi ý (%d token quy đổi).", len(collected), tokens)
         return True
     except Exception:
         logger.exception("Sinh gợi ý thất bại — bỏ nhịp")

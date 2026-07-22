@@ -11,10 +11,15 @@ thị trường chung, không nhạy cảm.
 from typing import Any, Dict
 
 from app.core.database import get_database
-from app.crud.chat_suggestions import get_latest_suggestions
+from app.crud.chat_suggestions import sample_suggestions
 
 
 async def chat_suggestions(**kwargs) -> Dict[str, Any]:
-    """Trả {"questions": [5 câu]}. Luôn có dữ liệu — rơi về hằng số tĩnh nếu chưa sinh."""
+    """Trả {"questions": [5 câu]} bốc NGẪU NHIÊN từ kho ~10 câu của nhịp sinh mới nhất.
+
+    Bốc ở backend (không phải frontend) để tránh hydration mismatch: server render sao thì
+    client thấy đúng vậy, không có cảnh nhấp nháy đổi câu sau khi mount.
+    Luôn có dữ liệu — rơi về hằng số tĩnh nếu chưa sinh được bộ nào.
+    """
     db = get_database("user_db")
-    return {"questions": await get_latest_suggestions(db)}
+    return {"questions": await sample_suggestions(db)}

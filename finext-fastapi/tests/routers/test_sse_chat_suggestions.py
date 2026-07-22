@@ -15,15 +15,18 @@ async def test_tra_fallback_khi_chua_co_du_lieu(monkeypatch):
 
     out = await chat_suggestions()
 
-    assert out == {"questions": crud_sug.FALLBACK_SUGGESTIONS}
+    # Endpoint BỐC NGẪU NHIÊN nên chỉ khẳng định: đúng số câu và đều lấy từ fallback.
+    assert len(out["questions"]) == crud_sug.DISPLAY_COUNT
+    assert set(out["questions"]) <= set(crud_sug.FALLBACK_SUGGESTIONS)
 
 
 async def test_tra_bo_moi_nhat_khi_da_co(monkeypatch):
     db = FakeDB()
     monkeypatch.setattr("app.crud.sse.chat_suggestions.get_database", lambda name: db)
-    qs = ["A?", "B?", "C?", "D?", "E?"]
+    qs = [f"Câu {i}?" for i in range(10)]
     await crud_sug.save_suggestions(db, qs, {}, "m", {})
 
     out = await chat_suggestions()
 
-    assert out == {"questions": qs}
+    assert len(out["questions"]) == crud_sug.DISPLAY_COUNT
+    assert set(out["questions"]) <= set(qs), "chỉ được bốc từ kho vừa lưu"
