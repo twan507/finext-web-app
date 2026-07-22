@@ -21,7 +21,9 @@ logger = logging.getLogger(__name__)
 
 # Câu hỏi phải là câu hoàn chỉnh, đủ ngắn để hiển thị một dòng.
 MIN_LEN = 8
-MAX_LEN = 80
+# Prompt xin tối đa 50 ký tự nhưng model hay vượt (đo: xin 50 ra tới 69). Chốt chặn cứng ở
+# 65 để câu lê thê không lọt ra UI — nới hơn mức prompt xin một chút vì trượt là mất CẢ vòng.
+MAX_LEN = 65
 # Số câu MỖI VÒNG. Không xin nhiều hơn trong một lượt: model dừng quanh 170-220 token
 # output nên xin 10 câu một lượt là chắc chắn bị cắt (đo thực tế 22/07/2026).
 COUNT = 5
@@ -31,6 +33,12 @@ ROUNDS = 2
 # Giọng khuyến nghị — cấm theo lập trường compliance của dự án.
 # LƯU Ý: không cấm riêng "mua"/"bán" vì "khối ngoại mua ròng" là mô tả hợp lệ.
 _ADVICE_PATTERNS = ("có nên", "khuyến nghị", "nên mua", "nên bán", "giá mục tiêu", "target giá")
+
+# Hỏi MỐC THỜI GIAN thì trợ lý không dự báo được, nó rơi về mô tả cơ chế đổi pha nội bộ và
+# trả lời đầy thuật ngữ (đo 22/07/2026: "còn bao lâu nữa..." ra 2167 token đặc jargon).
+# Prompt đã dặn nhưng model lách bằng từ đồng nghĩa ("kéo dài bao lâu nữa") — chặn ở code.
+# Hỏi CHIỀU hướng sắp tới ("sắp hồi chưa") vẫn cho phép: trợ lý trả lời tốt.
+_TIMING_PATTERNS = ("bao lâu", "khi nào", "bao giờ", "mấy phiên nữa")
 
 # Số từ 3 chữ số trở lên = điểm số/giá → dễ lệch khi gợi ý sinh lúc 10h hiện lúc 11h.
 _BIG_NUMBER_RE = re.compile(r"\d{3,}")
@@ -110,6 +118,8 @@ def validate_suggestions(raw: str, allowed_tickers: set[str]) -> list[str] | Non
             return None
         low = q.lower()
         if any(p in low for p in _ADVICE_PATTERNS):
+            return None
+        if any(p in low for p in _TIMING_PATTERNS):
             return None
         for token in _TICKER_RE.findall(q):
             if token in _NON_TICKER:
@@ -220,29 +230,47 @@ def build_snapshot(
 _SYS = (
     "Bạn soạn sẵn các câu hỏi để NGƯỜI DÙNG bấm vào và GỬI CHO trợ lý AI của một ứng dụng "
     "phân tích chứng khoán Việt Nam.\n\n"
-    "QUAN TRỌNG NHẤT: mỗi câu phải là câu NGƯỜI DÙNG HỎI TRỢ LÝ, viết ở giọng người dùng. "
-    "Tuyệt đối không hỏi ngược lại người dùng.\n"
-    "  SAI:  'Bạn muốn dùng bộ lọc nào để tìm mã tăng mạnh?'\n"
-    "  ĐÚNG: 'Lọc giúp tôi các mã đang tăng mạnh trong phiên?'\n"
+    "NGƯỜI HỎI LÀ AI: một nhà đầu tư phổ thông, KHÔNG rành thuật ngữ, chưa quen ứng dụng. "
+    "Họ vừa mở app, thấy thị trường đang biến động và muốn hiểu chuyện gì đang xảy ra bằng "
+    "lời lẽ đời thường. Viết đúng như họ sẽ tự gõ vào ô chat.\n\n"
+    "QUY TẮC 1 — VIẾT NHƯ NGƯỜI THƯỜNG, KHÔNG NHƯ CHUYÊN GIA.\n"
+    "Chỉ dùng từ ngữ báo chí phổ thông. Từ nào chỉ dân trong nghề mới hiểu thì không được dùng.\n"
+    "  SAI:  'Vì sao thị trường chưa đổi pha giảm?'\n"
+    "  ĐÚNG: 'Thị trường sắp bước vào đợt giảm dài phải không?'\n"
+    "  SAI:  'Họ SHS, ORS có chạy theo nhóm chứng khoán?'\n"
+    "  ĐÚNG: 'SHS và ORS hôm nay tăng là nhờ đâu?'\n\n"
+    "QUY TẮC 2 — LÀ CÂU NGƯỜI DÙNG HỎI TRỢ LÝ, không phải trợ lý hỏi ngược người dùng.\n"
     "  SAI:  'Bạn quan tâm nhóm ngành nào?'\n"
-    "  ĐÚNG: 'Nhóm ngành nào đang dẫn dắt thị trường?'\n\n"
+    "  ĐÚNG: 'Nhóm ngành nào đang tăng tốt nhất hôm nay?'\n\n"
+    "QUY TẮC 3 — NGẮN VÀ ĐÚNG NGỮ PHÁP. Đọc lại từng câu trước khi trả về: câu phải xuôi "
+    "tiếng Việt và không lê thê.\n"
+    "  SAI:  'Nhóm bất động sản dân dụng đang được mạnh đến mức nào?'  (sai ngữ pháp)\n"
+    "  ĐÚNG: 'Nhóm bất động sản đang mạnh tới đâu?'\n"
+    "  SAI:  'Nhóm công ty chứng khoán hôm nay có phải là điểm sáng hiếm hoi không?'  (dài dòng)\n"
+    "  ĐÚNG: 'Nhóm chứng khoán hôm nay có khá hơn không?'\n\n"
+    "Các ví dụ SAI/ĐÚNG ở trên chỉ để bạn thấy GIỌNG VĂN cần có. TUYỆT ĐỐI KHÔNG chép lại "
+    "nguyên văn câu ví dụ nào — 5 câu phải là câu MỚI, bám vào dữ liệu phiên hôm nay.\n\n"
     "ĐỊNH DẠNG TRẢ VỀ: đúng 5 dòng, MỖI DÒNG MỘT CÂU HỎI tiếng Việt.\n"
     "Không đánh số, không gạch đầu dòng, không nháy, không giải thích, không dòng thừa.\n"
-    "NGẮN GỌN: mỗi câu TỐI ĐA 45 ký tự, kết thúc bằng dấu hỏi. Viết cô đọng, bỏ chữ thừa.\n\n"
-    "Cơ cấu 5 câu:\n"
-    "1-2. Bám vào CHẨN ĐOÁN PHIÊN được cung cấp — hỏi về điều đang thực sự diễn ra "
-    "(trạng thái thị trường, vì sao như vậy, điều gì đáng chú ý).\n"
-    "3-4. Về nhóm ngành hoặc mã cụ thể trong danh sách được cung cấp.\n"
-    "5.   Nhờ trợ lý làm một việc cụ thể (lọc mã, so sánh, giải thích chỉ báo).\n\n"
+    "Mỗi câu là MỘT CÂU HOÀN CHỈNH, đủ chữ nối để đọc trôi, TỐI ĐA 50 ký tự, "
+    "kết thúc bằng dấu hỏi.\n\n"
+    "5 câu phải KHÁC KIỂU nhau, mỗi câu một kiểu:\n"
+    "1. Chuyện gì đang xảy ra với thị trường hôm nay.\n"
+    "2. Vì sao lại như vậy, hoặc sắp tới sẽ ra sao.\n"
+    "3. Về một NHÓM NGÀNH có trong danh sách.\n"
+    "4. Về một hoặc hai MÃ CỤ THỂ có trong danh sách.\n"
+    "5. Nhờ trợ lý làm giúp một việc ('Lọc giúp tôi...', 'So sánh giúp tôi...').\n\n"
     "BẮT BUỘC:\n"
     "- Chỉ nhắc mã và ngành CÓ TRONG dữ liệu được cung cấp.\n"
+    "- KHÔNG bịa tên chỉ báo hay thuật ngữ không có trong dữ liệu. Hỏi về thứ không tồn tại "
+    "thì trợ lý sẽ trả lời lạc đề.\n"
     "- TUYỆT ĐỐI KHÔNG đưa con số vào câu hỏi (không phần trăm, không điểm số, không giá) "
-    "vì gợi ý hiển thị trễ so với lúc sinh, số sẽ sai. CHẨN ĐOÁN PHIÊN bên dưới CÓ chứa "
-    "số — hãy diễn đạt lại bằng lời và bỏ hết số, tuyệt đối không chép sang câu hỏi.\n"
+    "vì gợi ý hiển thị trễ so với lúc sinh, số sẽ sai.\n"
     "- Ngành tăng và ngành giảm được liệt kê RIÊNG. Không hỏi ngành đang giảm như thể nó "
     "đang dẫn dắt, và ngược lại.\n"
-    "- KHÔNG khuyến nghị mua/bán, không hỏi 'có nên'.\n"
-    "- Mỗi câu một ý, tự nhiên như người thật gõ vào ô chat."
+    "- KHÔNG hỏi thời điểm ('khi nào', 'còn bao lâu nữa', 'bao giờ'): trợ lý không dự báo "
+    "được mốc thời gian, câu trả lời sẽ đầy thuật ngữ khó hiểu.\n"
+    "- KHÔNG khuyến nghị mua/bán, không hỏi 'có nên'."
 )
 
 
@@ -271,7 +299,9 @@ def _user_prompt(snapshot: dict, already: list[str] | None = None) -> str:
     parts = [f"Trạng thái thị trường: {snapshot.get('phase') or 'không rõ'}"]
     if snapshot.get("market_cmt"):
         parts.append(
-            "\nCHẨN ĐOÁN PHIÊN (hệ thống viết sẵn — dùng làm bối cảnh chính cho câu 1-2):\n"
+            "\nCHẨN ĐOÁN PHIÊN — hệ thống viết cho DÂN CHUYÊN. Đọc để BIẾT chuyện gì đang xảy ra, "
+            "rồi hỏi lại bằng lời của người CHƯA đọc nó. Tuyệt đối không chép từ ngữ và con số "
+            "trong đây sang câu hỏi:\n"
             f"{snapshot['market_cmt']}"
         )
     parts += [
