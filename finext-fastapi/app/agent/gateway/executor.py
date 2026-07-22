@@ -3,6 +3,7 @@
 import json
 import logging
 import math
+import sys
 import time
 from typing import Any
 
@@ -90,8 +91,18 @@ class MongoGateway:
         return "COLLSCAN" in json.dumps(winning)
 
     def _mongo_error(self, ctx: GatewayContext, collection: str) -> GatewayResult:
-        """V2: quy mọi lỗi Motor/pymongo về GatewayResult — không log filter, không 500 trần."""
-        logger.warning("gateway mongo error request_id=%s collection=%s", ctx.request_id, collection)
+        """V2: quy mọi lỗi Motor/pymongo về GatewayResult — không log filter, không 500 trần.
+
+        Ghi KIỂU + thông điệp exception (không ghi filter, giữ nguyên chủ ý không lộ query):
+        thiếu nó thì cảnh báo này không chẩn đoán được, phải dựng lại monkeypatch mới biết
+        vì sao (đo 22/07/2026 — nguyên nhân thật là model tự viết pipeline/projection sai,
+        Mongo từ chối, không phải collection hỏng).
+        """
+        exc = sys.exc_info()[1]
+        logger.warning(
+            "gateway mongo error request_id=%s collection=%s exc=%s: %s",
+            ctx.request_id, collection, type(exc).__name__, exc,
+        )
         return GatewayResult(ok=False, error=_MONGO_ERROR_MSG, meta={"collection": collection, "error": True})
 
     def _ok_result(
