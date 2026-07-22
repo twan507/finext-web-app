@@ -131,10 +131,15 @@ async def custom_http_exception_handler(request: Request, exc: HTTPException):
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    # Pydantic v2 nhét khóa 'input' vào mỗi lỗi — với /auth/register hay /otps/verify,
+    # input chính là password/OTP thô. Log lược bỏ 'input' để secret không rơi vào file
+    # log/log aggregator. Response giữ nguyên (chỉ trả lại cho client đã gửi, FE dùng để
+    # hiển thị lỗi field).
+    safe_errors = [{"loc": e.get("loc"), "type": e.get("type"), "msg": e.get("msg")} for e in exc.errors()]
     try:
-        loggable_error_details = json.dumps(jsonable_encoder(exc.errors()), ensure_ascii=False)
+        loggable_error_details = json.dumps(jsonable_encoder(safe_errors), ensure_ascii=False)
     except Exception:
-        loggable_error_details = str(exc.errors())
+        loggable_error_details = str(safe_errors)
 
     logger.warning(f"RequestValidationError: Path: {request.url.path}, Details: {loggable_error_details}")
 

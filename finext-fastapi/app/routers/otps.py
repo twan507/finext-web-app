@@ -109,7 +109,7 @@ async def request_otp(
         # This is a critical failure: email sent, but OTP record failed to save.
         logger.critical(
             f"CRITICAL: OTP email sent to {user.email} for {request_data.otp_type.value}, "
-            f"but failed to save OTP record to DB. OTP_CODE (raw, for recovery): {raw_otp_code}"
+            f"but failed to save OTP record to DB. User cần yêu cầu gửi lại mã."
         )
         # Inform the user that a severe error occurred, as they received an OTP that won't work.
         raise HTTPException(

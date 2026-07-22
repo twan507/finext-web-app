@@ -1,4 +1,5 @@
 # finext-fastapi/app/crud/otps.py
+import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Tuple  # Đảm bảo Tuple được import nếu bạn dùng nó ở đâu đó
@@ -30,10 +31,10 @@ async def create_otp_record(db: AsyncIOMotorDatabase, otp_data: OtpCreateInterna
         logger.error(f"Định dạng user_id không hợp lệ khi tạo OTP: {otp_data.user_id}")
         return None
 
-    # <<<< SỬA LỖI TRUY CẬP ATTRIBUTE >>>>
-    # Sử dụng otp_data.otp_code thay vì plain_otp_code
-    hashed_code = hash_otp_code(otp_data.otp_code)
-    # <<<< KẾT THÚC SỬA LỖI TRUY CẬP ATTRIBUTE >>>>
+    # bcrypt là CPU-bound đồng bộ (~200-400ms/lần với cost 12). Gọi thẳng trong async
+    # path sẽ block event loop, kẹt cả SSE polling lẫn mọi request khác trên worker.
+    # Password đã dùng to_thread ở crud/users.py; OTP làm cho nhất quán.
+    hashed_code = await asyncio.to_thread(hash_otp_code, otp_data.otp_code)
 
     # expires_at đã được tính toán và truyền vào qua otp_data.expires_at
     # created_at cũng được truyền vào qua otp_data.created_at
@@ -151,9 +152,12 @@ async def verify_and_use_otp(db: AsyncIOMotorDatabase, user_id: PyObjectId, otp_
                     logger.warning(f"OTP cho user {user_id}, type {otp_type.value} đã hết hạn lúc {expires_at}.")
         return False
 
-    if verify_otp_code(plain_otp_code, valid_otp_record.hashed_otp_code):
+    if await asyncio.to_thread(verify_otp_code, plain_otp_code, valid_otp_record.hashed_otp_code):
+        # CAS: thêm verified_at=None vào filter. find_valid_otp lọc verified_at=None lúc
+        # ĐỌC, nhưng nếu không có điều kiện này thì hai request cùng mã đúng chạy song song
+        # đều modified_count>0 → cùng trả True (double-consume: 1 OTP cấp 2 session).
         update_result = await db[OTP_COLLECTION].update_one(
-            {"_id": ObjectId(valid_otp_record.id)},
+            {"_id": ObjectId(valid_otp_record.id), "verified_at": None},
             {"$set": {"verified_at": datetime.now(timezone.utc), "updated_at": datetime.now(timezone.utc)}, "$inc": {"attempts": 1}},
         )
         if update_result.modified_count > 0:
