@@ -62,3 +62,41 @@ def validate_suggestions(raw: str, allowed_tickers: set[str]) -> list[str] | Non
                 return None
         out.append(q)
     return out
+
+
+TOP_N = 10
+HEADLINE_N = 5
+
+
+def build_snapshot(phase_rows: list[dict], stock_rows: list[dict], news_rows: list[dict]) -> dict:
+    """Rút gọn dữ liệu thô thành snapshot nhỏ cho prompt.
+
+    Hàm THUẦN (nhận sẵn dữ liệu) để test được không cần DB.
+    Cố ý KHÔNG giữ giá trị số: prompt chỉ được biết CHIỀU biến động, tránh LLM chép số
+    vào câu hỏi rồi lệch khi hiển thị ở nhịp sau.
+    """
+    phase = None
+    if phase_rows:
+        latest = max(phase_rows, key=lambda r: r.get("date") or "")
+        phase = latest.get("final_phase")
+
+    usable = [
+        r for r in stock_rows
+        if r.get("ticker") and isinstance(r.get("pct_change"), (int, float)) and r.get("industry_name")
+    ]
+    ranked = sorted(usable, key=lambda r: r["pct_change"], reverse=True)
+    gainers = [{"ticker": r["ticker"], "industry_name": r["industry_name"]} for r in ranked[:TOP_N]]
+    losers = [{"ticker": r["ticker"], "industry_name": r["industry_name"]} for r in ranked[::-1][:TOP_N]]
+
+    industries = sorted({r["industry_name"] for r in ranked[:TOP_N] + ranked[-TOP_N:]})
+    tickers = sorted({r["ticker"] for r in usable})
+    headlines = [r["title"] for r in news_rows[:HEADLINE_N] if r.get("title")]
+
+    return {
+        "phase": phase,
+        "gainers": gainers,
+        "losers": losers,
+        "industries": industries,
+        "headlines": headlines,
+        "tickers": tickers,
+    }
