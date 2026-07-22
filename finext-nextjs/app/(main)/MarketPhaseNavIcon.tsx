@@ -22,12 +22,17 @@ interface MarketPhaseNavIconProps {
   size?: number;
 }
 
-const CONIC = 'conic-gradient(from 0deg, #6d28d9, #a78bfa, #ede9fe, #a78bfa, #6d28d9)';
+// Dải conic cho vành xoay + hào quang, chọn theo theme. Light mode dùng tím ĐẬM hơn (bỏ stop gần
+// trắng #ede9fe vốn bị bợt trên nền trắng) để vòng xoay rõ nét và bám tím thương hiệu #8b5cf6;
+// dark giữ NGUYÊN dải sáng cũ cho glow nổi trên nền tối.
+const CONIC_DARK = 'conic-gradient(from 0deg, #6d28d9, #a78bfa, #ede9fe, #a78bfa, #6d28d9)';
+const CONIC_LIGHT = 'conic-gradient(from 0deg, #4c1d95, #7c3aed, #a78bfa, #7c3aed, #4c1d95)';
 
 export default function MarketPhaseNavIcon({ aura = false, size = 34 }: MarketPhaseNavIconProps) {
   const theme = useTheme();
   const needle = theme.palette.text.primary;
   const bg = theme.palette.background.default;
+  const conic = theme.palette.mode === 'dark' ? CONIC_DARK : CONIC_LIGHT;
   // Nền nút: opacity giảm đều từ tâm (50%) ra rìa (10%) → tan mượt vào vành conic (bỏ vòng đen cứng).
   const coreBg = `radial-gradient(circle, ${alpha(bg, 1)}, ${alpha(bg, 0.5)})`;
   // Mọi kích thước con TỈ LỆ theo size → khung 60 vẫn cùng dáng khung 34 (ở size=34 ra đúng số cũ: 7 / 2 / 24 / 2).
@@ -57,7 +62,7 @@ export default function MarketPhaseNavIcon({ aura = false, size = 34 }: MarketPh
           position: 'absolute',
           inset: 0,
           borderRadius: '50%',
-          background: CONIC,
+          background: conic,
           filter: `blur(${blur}px)`,
           zIndex: 0,
           transition: 'filter .25s ease',
@@ -78,7 +83,7 @@ export default function MarketPhaseNavIcon({ aura = false, size = 34 }: MarketPh
             content: '""',
             position: 'absolute',
             inset: 0,
-            background: CONIC,
+            background: conic,
             animation: 'mpSpin 4.5s linear infinite',
           },
         }}

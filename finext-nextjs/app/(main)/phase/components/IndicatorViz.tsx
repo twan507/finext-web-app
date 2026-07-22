@@ -13,11 +13,16 @@ export function lerpColor(a: string, b: string, t: number): string {
   const v = [0, 1, 2].map((i) => Math.round(ca[i] + (cb[i] - ca[i]) * t)) as [number, number, number];
   return recomposeColor({ type: 'rgb', values: v });
 }
-// Màu của dải gradient đỏ→trung tính→xanh tại vị trí pct (0..100).
-function gradientColorAt(theme: Theme, pct: number): string {
-  const p = Math.max(0, Math.min(100, pct));
+// Màu viền dot thanh breaker (px_ret20) — thang bậc màu ĐẶC owner chốt 22/07: âm nặng (≤ mốc −)
+// đỏ đậm · âm nhẹ đỏ nhạt · dương nhẹ xanh nhạt · dương cao (≥ mốc +) xanh đậm · đúng tâm 0 trung
+// tính. Dùng màu đặc (không alpha) để viền dot luôn rõ trên CẢ light lẫn dark, không tàng hình.
+function breakerMarkerColor(theme: Theme, markerPct: number, refPct: number, refPct2?: number): string {
   const { down, ref, up } = theme.palette.trend;
-  return p <= 50 ? lerpColor(down, ref, p / 50) : lerpColor(ref, up, (p - 50) / 50);
+  if (markerPct <= refPct) return down; // v ≤ −10%: đỏ đậm thuần
+  if (markerPct < 50) return lerpColor(down, '#ffffff', 0.4); // −10% < v < 0: đỏ nhạt (bản sáng của down)
+  if (markerPct === 50) return ref; // v = 0 (hiếm): trung tính
+  if (refPct2 != null && markerPct >= refPct2) return up; // v ≥ +10%: xanh đậm thuần
+  return lerpColor(up, '#ffffff', 0.4); // 0 < v < +10%: xanh nhạt (bản sáng của up)
 }
 export function divColor(theme: Theme, v: number | null | undefined): string {
   if (typeof v !== 'number' || isNaN(v)) return theme.palette.text.disabled;
@@ -157,8 +162,9 @@ export function StatBar({
   const pos = markerPct >= refPct;
   const fillLeft = Math.min(refPct, markerPct);
   const fillWidth = Math.abs(markerPct - refPct);
-  // Thanh gradient (breaker): marker lấy màu theo vị trí trên dải; còn lại giữ màu truyền vào.
-  const mColor = breaker ? gradientColorAt(theme, markerPct) : color;
+  // Thanh gradient (breaker): viền dot theo thang bậc màu đặc (đỏ/xanh đậm-nhạt theo vị trí);
+  // nhánh thường giữ nguyên màu truyền vào.
+  const mColor = breaker ? breakerMarkerColor(theme, markerPct, refPct, refPct2) : color;
 
   // Chip căn giữa theo marker; chạm mép thì clamp sát mép (đo bề rộng chip thật).
   const barRef = useRef<HTMLDivElement>(null);
