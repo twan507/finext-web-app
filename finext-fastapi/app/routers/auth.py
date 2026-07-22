@@ -37,6 +37,7 @@ from app.crud.sessions import (
     find_and_delete_oldest_session,
     create_session,
     delete_session_by_access_jti,
+    delete_session_by_id,
     delete_sessions_for_user_except_jti,
     get_session_by_refresh_jti,
     update_session_jtis,
@@ -67,6 +68,7 @@ from app.core.config import (
     OTP_EXPIRE_MINUTES,
     GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET,
+    SESSION_ABSOLUTE_MAX_DAYS,
     # GOOGLE_REDIRECT_URI, # Không cần thiết ở đây nếu frontend gửi redirect_uri
 )
 from app.utils.otp_utils import generate_otp_code
@@ -355,6 +357,16 @@ async def refresh_access_token(
     if not session:
         logger.warning(f"Refresh token JTI {refresh_jti} not found in sessions")
         return _build_401_with_cookie_clear("Invalid refresh token session")
+
+    # Trần tuổi TUYỆT ĐỐI: refresh chỉ trượt trong SESSION_ABSOLUTE_MAX_DAYS tính từ lúc
+    # login (session.created_at). Quá hạn → buộc đăng nhập lại, không cho session sống mãi.
+    created_at = session.created_at
+    if created_at.tzinfo is None:  # Mongo trả datetime naive (giá trị vẫn UTC)
+        created_at = created_at.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) - created_at > timedelta(days=SESSION_ABSOLUTE_MAX_DAYS):
+        logger.info(f"Session {session.id} quá trần tuổi tuyệt đối ({SESSION_ABSOLUTE_MAX_DAYS} ngày), buộc đăng nhập lại.")
+        await delete_session_by_id(db, str(session.id))
+        return _build_401_with_cookie_clear("Session expired. Please log in again.")
 
     # Validate user
     user = await get_user_by_id_db(db, user_id=user_id)
