@@ -5,7 +5,9 @@ services:
   # 1. NGINX - Giữ nguyên vì Nginx cực nhẹ
   # ==========================================
   nginx:
-    image: "nginx:latest"
+    # Pin thay vì `latest`: giữ nguyên biến thể debian đang chạy, chỉ cố định phiên bản
+    # để build/deploy tái lập được. Nâng có chủ đích, không để tag tự trôi.
+    image: "nginx:1.31.3"
     restart: always
     ports:
       - "80:80"
