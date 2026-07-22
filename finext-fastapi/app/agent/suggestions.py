@@ -41,6 +41,14 @@ _NON_TICKER = {"GDP", "CPI", "FED", "ETF", "IPO", "ROE", "ROA", "EPS", "PMI", "U
 # Chuỗi JSON HOÀN CHỈNH (có cả cặp nháy đóng), cho phép ký tự escape bên trong.
 _JSON_STR_RE = re.compile(r'"((?:[^"\\]|\\.)*)"')
 
+# Tiền tố model hay thêm dù đã dặn không: "1. ", "- ", "* ", "1) ".
+_BULLET_RE = re.compile(r'^\s*(?:[-*•]|\d+[.)])\s*')
+
+
+def _strip_bullet(line: str) -> str:
+    """Bỏ đánh số/gạch đầu dòng và dấu nháy bao ngoài."""
+    return _BULLET_RE.sub("", line).strip().strip('"').strip("'").strip()
+
 
 def _parse_items(raw: str) -> list | None:
     """Đọc mảng từ output thô. Trả None nếu không lấy được gì dùng được.
@@ -60,15 +68,20 @@ def _parse_items(raw: str) -> list | None:
         pass
 
     start = raw.find("[")
-    if start < 0:
-        return None
-    found = _JSON_STR_RE.findall(raw[start:])
-    if not found:
-        return None
-    try:
-        return [json.loads(f'"{s}"') for s in found]
-    except json.JSONDecodeError:
-        return None
+    if start >= 0:
+        found = _JSON_STR_RE.findall(raw[start:])
+        if found:
+            try:
+                return [json.loads(f'"{s}"') for s in found]
+            except json.JSONDecodeError:
+                pass
+
+    # Format chính là MỖI DÒNG MỘT CÂU (xem _SYS) vì MiniMax-M3 thường không đóng mảng
+    # JSON — đo thực tế 22/07/2026: mọi max_tokens đều thiếu ']' dù finish_reason=stop.
+    # Dòng không phải câu hỏi (lời dẫn, ```) bị loại vì không kết thúc bằng '?'.
+    lines = [_strip_bullet(ln) for ln in raw.splitlines()]
+    questions = [ln for ln in lines if ln.endswith("?")]
+    return questions or None
 
 
 def validate_suggestions(raw: str, allowed_tickers: set[str]) -> list[str] | None:
@@ -209,8 +222,9 @@ _SYS = (
     "  ĐÚNG: 'Lọc giúp tôi các mã đang tăng mạnh trong phiên?'\n"
     "  SAI:  'Bạn quan tâm nhóm ngành nào?'\n"
     "  ĐÚNG: 'Nhóm ngành nào đang dẫn dắt thị trường?'\n\n"
-    "Trả về DUY NHẤT một JSON array gồm đúng 5 chuỗi tiếng Việt, không kèm giải thích.\n"
-    "Mỗi chuỗi 8-80 ký tự, kết thúc bằng dấu hỏi.\n\n"
+    "ĐỊNH DẠNG TRẢ VỀ: đúng 5 dòng, MỖI DÒNG MỘT CÂU HỎI tiếng Việt.\n"
+    "Không đánh số, không gạch đầu dòng, không nháy, không giải thích, không dòng thừa.\n"
+    "NGẮN GỌN: mỗi câu TỐI ĐA 45 ký tự, kết thúc bằng dấu hỏi. Viết cô đọng, bỏ chữ thừa.\n\n"
     "Cơ cấu 5 câu:\n"
     "1-2. Bám vào CHẨN ĐOÁN PHIÊN được cung cấp — hỏi về điều đang thực sự diễn ra "
     "(trạng thái thị trường, vì sao như vậy, điều gì đáng chú ý).\n"

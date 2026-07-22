@@ -102,3 +102,24 @@ def test_khong_vot_cau_dang_viet_do():
 
 def test_khong_vot_khi_khong_co_dau_mo_mang():
     assert validate_suggestions('"chỉ là một chuỗi rời?"', TICKERS) is None
+
+
+# --- Format mỗi dòng một câu (format chính) ---------------------------------
+
+
+def test_doc_duoc_format_moi_dong_mot_cau():
+    """Format chính: 5 dòng, không JSON. M3 không đóng nổi mảng JSON nên đổi sang dòng."""
+    raw = "\n".join(_ok_five())
+    out = validate_suggestions(raw, TICKERS)
+    assert out == _ok_five()
+
+
+def test_bo_danh_so_va_gach_dau_dong():
+    raw = "\n".join(f"{i}. {q}" for i, q in enumerate(_ok_five(), 1))
+    assert validate_suggestions(raw, TICKERS) == _ok_five()
+
+
+def test_bo_dong_dan_khong_phai_cau_hoi():
+    """Lời dẫn/``` không kết thúc bằng '?' nên bị loại, không tính vào 5 câu."""
+    raw = "Đây là 5 câu hỏi gợi ý:\n" + "\n".join(_ok_five()) + "\n"
+    assert validate_suggestions(raw, TICKERS) == _ok_five()
