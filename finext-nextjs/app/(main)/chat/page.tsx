@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import PageContent from './PageContent';
+import { fetchChatSuggestions } from './serverFetch';
 
 export const metadata: Metadata = {
   title: 'Finext AI',
@@ -8,10 +9,11 @@ export const metadata: Metadata = {
   openGraph: { title: 'Finext AI | Finext', description: 'Trợ lý AI phân tích thị trường chứng khoán Việt Nam.' },
 };
 
-export default function ChatPage() {
+export default async function ChatPage() {
+  const suggestions = await fetchChatSuggestions();
   return (
     <Suspense>
-      <PageContent />
+      <PageContent suggestions={suggestions} />
     </Suspense>
   );
 }

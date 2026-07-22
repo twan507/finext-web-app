@@ -13,6 +13,7 @@ import Composer from './components/Composer';
 import ChatGreeting from './components/EmptyState';
 import AsOfChip from './components/AsOfChip';
 import ChatSkeleton from './components/ChatSkeleton';
+import SuggestedQuestions from './components/SuggestedQuestions';
 
 // Chiều cao khả kiến dưới appbar (appbar là sticky top). Dùng cho panel lịch sử sticky + empty state.
 const VIEWPORT = `calc(100dvh - ${layoutTokens.appBarHeight}px - env(titlebar-area-height, 0px))`;
@@ -54,7 +55,7 @@ function LimitNotice({ notice, severity = 'warning' }: { notice: { message: stri
     );
 }
 
-function ChatApp({ initialConversationId }: { initialConversationId?: string }) {
+function ChatApp({ initialConversationId, suggestions = [] }: { initialConversationId?: string; suggestions?: string[] }) {
   // Consent: KHÔNG cần pop-up — người dùng đã đồng ý khi tạo tài khoản (điều khoản + /policies/privacy).
   const store = useChatStore(initialConversationId);
   const { session } = useAuth();
@@ -237,6 +238,13 @@ function ChatApp({ initialConversationId }: { initialConversationId?: string }) 
                 <Box sx={{ width: '100%' }}>
                   <Composer ref={setComposerNode} centered disabled={streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} />
                 </Box>
+                <Box sx={{ width: '100%' }}>
+                  <SuggestedQuestions
+                    questions={suggestions}
+                    disabled={streaming}
+                    onPick={(q) => store.send(q)}
+                  />
+                </Box>
               </Box>
             </Box>
             <Box sx={{ flexGrow: 3 }} />
@@ -247,11 +255,11 @@ function ChatApp({ initialConversationId }: { initialConversationId?: string }) 
   );
 }
 
-export default function PageContent({ initialConversationId }: { initialConversationId?: string }) {
+export default function PageContent({ initialConversationId, suggestions }: { initialConversationId?: string; suggestions?: string[] }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
       <OptionalAuthWrapper requireAuth fillHeight loadingFallback={<ChatSkeleton />}>
-        <ChatApp initialConversationId={initialConversationId} />
+        <ChatApp initialConversationId={initialConversationId} suggestions={suggestions} />
       </OptionalAuthWrapper>
     </Box>
   );
