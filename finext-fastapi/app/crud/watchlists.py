@@ -1,5 +1,6 @@
 # app/crud/watchlists.py
 import logging
+import re
 from typing import List, Optional, Tuple  # Thêm Tuple
 from datetime import datetime, timezone
 
@@ -234,7 +235,8 @@ async def get_all_watchlists_admin(
     if user_id_filter and ObjectId.is_valid(user_id_filter):
         query["user_id"] = ObjectId(user_id_filter)
     if name_filter:
-        query["name"] = {"$regex": name_filter, "$options": "i"}  # Tìm kiếm tên không phân biệt hoa thường
+        # re.escape: tránh metacharacter gây catastrophic backtracking
+        query["name"] = {"$regex": re.escape(name_filter), "$options": "i"}  # Tìm kiếm tên không phân biệt hoa thường
 
     total_count = await db[WATCHLIST_COLLECTION].count_documents(query)
     watchlists_cursor = (
