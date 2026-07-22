@@ -2,6 +2,7 @@
 
     uv run python scripts/ask_agent.py "câu hỏi 1" "câu hỏi 2"
     uv run python scripts/ask_agent.py --from-db     # audit đúng kho gợi ý đang publish
+    uv run python scripts/ask_agent.py --chain "câu 1" "còn nhóm đó thì sao?"  # đa lượt: các câu là LƯỢT LIÊN TIẾP của 1 hội thoại
 """
 import asyncio
 import sys
@@ -14,7 +15,8 @@ from app.core.database import close_mongo_connection, connect_to_mongo, get_data
 from app.crud.chat_suggestions import get_latest_suggestions
 
 
-async def ask(question: str) -> tuple[str, list[str], dict]:
+async def ask(messages: list[dict]) -> tuple[str, list[str], dict]:
+    # Mỗi lượt vẫn build gateway + system MỚI; chỉ messages là tích luỹ (user/assistant xen kẽ).
     gateway = build_gateway()
     ctx = GatewayContext(request_id=f"audit-{int(time.time() * 1000)}", user_id="audit-script")
     system, _ = await build_system_blocks(gateway, ctx)
@@ -38,7 +40,7 @@ async def ask(question: str) -> tuple[str, list[str], dict]:
         gateway=gateway,
         ctx=ctx,
         system=system,
-        messages=[{"role": "user", "content": question}],
+        messages=messages,
         emit=emit,
     )
     return "".join(parts), tools, usage
@@ -46,16 +48,24 @@ async def ask(question: str) -> tuple[str, list[str], dict]:
 
 async def main() -> None:
     await connect_to_mongo()
-    args = [a for a in sys.argv[1:] if a != "--from-db"]
+    chain = "--chain" in sys.argv  # các positional args là lượt liên tiếp của 1 hội thoại
+    args = [a for a in sys.argv[1:] if a not in ("--from-db", "--chain")]
     if "--from-db" in sys.argv:
         args = await get_latest_suggestions(get_database("user_db"))
 
+    messages: list[dict] = []  # ở chế độ --chain: tích luỹ qua các lượt; mặc định: reset mỗi câu
     for i, q in enumerate(args, 1):
+        if not chain:
+            messages = []
+        messages.append({"role": "user", "content": q})
         t0 = time.monotonic()
-        answer, tools, usage = await ask(q)
+        answer, tools, usage = await ask(messages)
         print(f"\n{'=' * 78}\n[{i}] HỎI: {q}\n{'=' * 78}")
         print(f"(tool: {tools or 'KHÔNG GỌI TOOL NÀO'} | {time.monotonic() - t0:.1f}s | usage={usage})\n")
         print(answer or "[RỖNG]")
+        if chain:
+            # Nối câu trả lời vào messages để lượt sau có ngữ cảnh (tham chiếu "nó", "nhóm đó"...).
+            messages.append({"role": "assistant", "content": answer})
 
     await close_mongo_connection()
 

@@ -1,9 +1,14 @@
 from typing import Any
 
 import pytest
-from pymongo.errors import PyMongoError
+from pymongo.errors import OperationFailure, PyMongoError
 
-from app.agent.gateway.executor import MongoGateway
+from app.agent.gateway.executor import (
+    MongoGateway,
+    _coerce_in_scalars,
+    _drop_shadowed_paths,
+    _fix_find_style_slice,
+)
 from app.agent.gateway.policy import Policy
 from app.agent.gateway.types import GatewayContext
 
@@ -32,9 +37,11 @@ class FakeCollection:
         self._docs = docs
         self._plan = plan
         self.last_projection: dict[str, Any] | None = None
+        self.last_filter: dict[str, Any] | None = None
 
     def find(self, filter: dict[str, Any], projection: dict[str, Any] | None = None) -> FakeCursor:
         self.last_projection = projection
+        self.last_filter = filter
         return FakeCursor(self._docs)
 
     def aggregate(self, pipeline: list[dict[str, Any]], **kwargs: Any) -> FakeCursor:
@@ -205,6 +212,50 @@ async def test_aggregate_mongo_error_returns_gateway_result():
     )
     assert result.ok is False
     assert result.error is not None and "thu hẹp" in result.error
+
+
+class OpFailCursor:
+    def limit(self, n: int) -> "OpFailCursor":
+        return self
+
+    def sort(self, spec: Any) -> "OpFailCursor":
+        return self
+
+    def max_time_ms(self, ms: int) -> "OpFailCursor":
+        return self
+
+    async def to_list(self, length: int | None = None) -> list[dict[str, Any]]:
+        raise OperationFailure("Path collision at series.date remaining portion date", 31249)
+
+
+class OpFailCollection:
+    def find(self, filter: dict[str, Any], projection: dict[str, Any] | None = None) -> OpFailCursor:
+        return OpFailCursor()
+
+    def aggregate(self, pipeline: list[dict[str, Any]], **kwargs: Any) -> OpFailCursor:
+        return OpFailCursor()
+
+
+class OpFailDB:
+    def __getitem__(self, name: str) -> OpFailCollection:
+        return OpFailCollection()
+
+    async def command(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        return {"queryPlanner": {"winningPlan": {}}}
+
+
+async def test_find_operation_failure_teaches_real_errmsg_not_generic():
+    # OperationFailure (vd 'Path collision' code 31249 khi model chiếu cả cha lẫn con) phải trả errmsg THẬT
+    # để model tự sửa; thông điệp cứng "thu hẹp" là SAI và khiến model lặp query hỏng y hệt.
+    gateway = MongoGateway(OpFailDB(), Policy.load())
+    result = await gateway.find(
+        CTX, "stock_snapshot", filter={"ticker": "FPT"}, projection={"ticker": 1}, limit=1
+    )
+    assert result.ok is False
+    assert result.error is not None
+    assert "Mongo từ chối" in result.error
+    assert "Path collision" in result.error  # errmsg thật của Mongo, không phải thông điệp cứng
+    assert "thu hẹp" not in result.error
 
 
 class RejectedPlanDB:
@@ -491,3 +542,97 @@ async def test_aggregate_project_expression_key_present_no_false_note():
     )
     assert result.ok is True
     assert result.meta.get("note") is None
+
+
+# --- _drop_shadowed_paths (fix: M3 chiếu CẢ cha lẫn con → Mongo 'Path collision' code 31249) ---
+
+
+def test_drop_shadowed_paths_drops_scalar_child_under_scalar_parent():
+    # {"series": 1, "series.date": 1}: cha=1 đã bao gồm con → bỏ con để Mongo không lỗi collision.
+    assert _drop_shadowed_paths({"series": 1, "series.date": 1}) == {"series": 1}
+
+
+def test_drop_shadowed_paths_keeps_slice_parent_with_child():
+    # Cha là expression $slice → {"series": {"$slice": -20}, "series.date": 1} hợp lệ Mongo, giữ NGUYÊN cả hai.
+    proj = {"series": {"$slice": -20}, "series.date": 1}
+    assert _drop_shadowed_paths(proj) == proj
+
+
+def test_drop_shadowed_paths_keeps_unrelated_paths():
+    # Không cặp cha-con dotted nào → giữ nguyên.
+    proj = {"ticker": 1, "price": 1}
+    assert _drop_shadowed_paths(proj) == proj
+
+
+def test_drop_shadowed_paths_drops_deep_dotted_child():
+    # Con dotted sâu "a.b.c" nằm dưới cha scalar "a" → bỏ con.
+    assert _drop_shadowed_paths({"a": 1, "a.b.c": 1}) == {"a": 1}
+
+
+# --- _coerce_in_scalars (fix: M3 đưa scalar vào $in/$nin → Mongo '$in needs an array'; đo 22/07/2026) ---
+
+
+def test_coerce_in_scalars_wraps_scalar_in_array():
+    # {"$in": "VNM"} (scalar) → ["VNM"]: Mongo đòi mảng, M3 hay quên bọc.
+    assert _coerce_in_scalars({"ticker": {"$in": "VNM"}}) == {"ticker": {"$in": ["VNM"]}}
+
+
+def test_coerce_in_scalars_keeps_existing_list():
+    # $in đã là mảng → giữ nguyên, không đụng.
+    node = {"ticker": {"$in": ["VNM", "HPG"]}}
+    assert _coerce_in_scalars(node) == node
+
+
+def test_coerce_in_scalars_wraps_nin_scalar():
+    assert _coerce_in_scalars({"sector": {"$nin": "Banks"}}) == {"sector": {"$nin": ["Banks"]}}
+
+
+def test_coerce_in_scalars_reaches_nested_match_in_pipeline():
+    # $match nằm sâu trong pipeline (không ở stage đầu) → đệ quy cả pipeline mới phủ được.
+    pipeline = [{"$sort": {"x": 1}}, {"$match": {"ticker": {"$in": "VNM"}}}]
+    assert _coerce_in_scalars(pipeline) == [
+        {"$sort": {"x": 1}},
+        {"$match": {"ticker": {"$in": ["VNM"]}}},
+    ]
+
+
+def test_coerce_in_scalars_leaves_non_container_untouched():
+    # Node không phải dict/list → trả nguyên trạng.
+    assert _coerce_in_scalars("VNM") == "VNM"
+    assert _coerce_in_scalars(42) == 42
+
+
+# --- _fix_find_style_slice (fix: M3 bê $slice cú pháp find vào $project aggregate → 'Invalid $slice syntax') ---
+
+
+def test_fix_find_style_slice_rewrites_scalar_slice():
+    # {"$slice": 10} (cú pháp find) → {"$slice": ["$series", 10]} (expression aggregate).
+    assert _fix_find_style_slice({"series": {"$slice": 10}}) == {"series": {"$slice": ["$series", 10]}}
+
+
+def test_fix_find_style_slice_keeps_correct_aggregate_form():
+    # Đã đúng dạng ["$series", 10] → giữ nguyên.
+    proj = {"series": {"$slice": ["$series", 10]}}
+    assert _fix_find_style_slice(proj) == proj
+
+
+def test_fix_find_style_slice_keeps_plain_inclusion():
+    # value 1 (inclusion thường) không phải dict $slice → giữ nguyên.
+    proj = {"industry_name": 1, "week_score": 1}
+    assert _fix_find_style_slice(proj) == proj
+
+
+def test_fix_find_style_slice_rewrites_negative_slice():
+    # $slice âm (lấy N phần tử cuối) cũng phải coerce.
+    assert _fix_find_style_slice({"series": {"$slice": -20}}) == {"series": {"$slice": ["$series", -20]}}
+
+
+async def test_find_coerces_in_scalar_to_array_before_mongo():
+    # Integration mức gateway: M3 gửi {"$in": "VNM"} → gateway phải bọc ["VNM"] TRƯỚC khi chạm Mongo.
+    collection = FakeCollection([{"ticker": "VNM", "price": 60.0}])
+    gateway = MongoGateway(FakeDB(collection), Policy.load())
+    result = await gateway.find(
+        CTX, "stock_snapshot", filter={"ticker": {"$in": "VNM"}}, projection={"ticker": 1, "price": 1}, limit=1
+    )
+    assert result.ok is True
+    assert collection.last_filter == {"ticker": {"$in": ["VNM"]}}

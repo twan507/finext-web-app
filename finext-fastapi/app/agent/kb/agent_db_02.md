@@ -280,6 +280,8 @@ Collection chỉ có 1 doc, không cần filter.
 
 ### 3.1. Top tăng/giảm trong 1 ngành — tự aggregate từ `stock_snapshot`
 
+> ⚠ Các pipeline mẫu ở mục này (3.1 & 3.2) có filter thanh khoản; kết quả rỗng nghĩa là "không có mã đạt ngưỡng thanh khoản" — phải KHAI ngưỡng khi trả lời, KHÔNG nói "không có mã nào".
+
 > Collection `stock_highlight` (pre-compute) đã bị loại bỏ khỏi schema. Top tăng/giảm trong ngành tự aggregate từ `stock_snapshot` filter theo `industry`.
 
 Top 10 tăng mạnh nhất trong 1 ngành (volume + thanh khoản lọc tối thiểu):

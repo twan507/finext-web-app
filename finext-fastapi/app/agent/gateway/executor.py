@@ -7,7 +7,7 @@ import sys
 import time
 from typing import Any
 
-from pymongo.errors import PyMongoError
+from pymongo.errors import OperationFailure, PyMongoError
 
 from .policy import Policy
 from .stats_compute import (
@@ -67,6 +67,59 @@ def _projection_field_hint(
     )
 
 
+def _drop_shadowed_paths(projection: dict[str, Any]) -> dict[str, Any]:
+    """Bỏ key con dotted bị cha SCALAR che → tránh Mongo lỗi 'Path collision' (code 31249).
+
+    M3 hay chiếu CẢ cha lẫn con (vd {"series": 1, "series.date": 1}); cha=1 vốn đã bao gồm con nên
+    bỏ con không đổi ngữ nghĩa. CHỈ bỏ khi CẢ cha lẫn con là truthy scalar (1/True); cha $slice/
+    expression ({"series": {"$slice": -20}}) hay cha value 0 là hợp lệ Mongo → giữ nguyên.
+    """
+    scalar_parents = {k for k, v in projection.items() if v in (1, True)}
+    result: dict[str, Any] = {}
+    for key, val in projection.items():
+        if val in (1, True) and any(key.startswith(f"{p}.") for p in scalar_parents if p != key):
+            continue  # key là con của một cha scalar truthy → bỏ để Mongo không collision
+        result[key] = val
+    return result
+
+
+def _coerce_in_scalars(node: Any) -> Any:
+    """Bọc scalar trong $in/$nin thành mảng 1 phần tử — quirk M3 đo 22/07/2026.
+
+    M3 hay đưa scalar vào $in/$nin ({"ticker": {"$in": "VNM"}}) → Mongo lỗi '$in needs an array'. Đệ quy
+    dict/list; CHỈ đụng value của key $in/$nin không phải list/tuple → bọc [value] (đúng ý hiển nhiên, không
+    đổi ngữ nghĩa query hợp lệ nào); giữ nguyên phần còn lại.
+    """
+    if isinstance(node, dict):
+        return {
+            k: ([v] if k in ("$in", "$nin") and not isinstance(v, (list, tuple)) else _coerce_in_scalars(v))
+            for k, v in node.items()
+        }
+    if isinstance(node, list):
+        return [_coerce_in_scalars(item) for item in node]
+    return node
+
+
+def _fix_find_style_slice(project: dict[str, Any]) -> dict[str, Any]:
+    """Sửa $slice cú pháp FIND lọt vào $project của AGGREGATE — quirk M3 đo 22/07/2026.
+
+    M3 bê {"series": {"$slice": 10}} (đúng cho find) sang aggregate $project → Mongo lỗi 'Invalid $slice
+    syntax'; aggregate đòi expression {"$slice": ["$series", n]}. CHỈ viết lại khi value là dict đúng một key
+    $slice với n là int (hoặc [int]); dạng đúng ["$field", n] hay mọi trường hợp khác giữ nguyên.
+    """
+    result: dict[str, Any] = {}
+    for field, val in project.items():
+        n: int | None = None
+        if isinstance(val, dict) and list(val.keys()) == ["$slice"]:
+            raw = val["$slice"]
+            if isinstance(raw, int) and not isinstance(raw, bool):
+                n = raw
+            elif isinstance(raw, list) and len(raw) == 1 and isinstance(raw[0], int) and not isinstance(raw[0], bool):
+                n = raw[0]
+        result[field] = {"$slice": [f"${field}", n]} if n is not None else val
+    return result
+
+
 def _strip_id(docs: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Bỏ khoá _id khỏi mỗi doc — không lộ ObjectId cho model.
 
@@ -103,6 +156,16 @@ class MongoGateway:
             "gateway mongo error request_id=%s collection=%s exc=%s: %s",
             ctx.request_id, collection, type(exc).__name__, exc,
         )
+        if isinstance(exc, OperationFailure):
+            # Mongo TỪ CHỐI query (vd model chiếu cả cha lẫn con → 'Path collision'): thông điệp cứng
+            # "thu hẹp phạm vi" là SAI, khiến model lặp query hỏng y hệt. Trả errmsg thật để model tự sửa
+            # (chỉ errmsg của Mongo, KHÔNG lộ filter/pipeline).
+            errmsg = str((exc.details or {}).get("errmsg") or exc)[:200]
+            return GatewayResult(
+                ok=False,
+                error=f"Mongo từ chối truy vấn: {errmsg}. Hãy sửa query theo thông báo trên, đừng lặp lại y hệt.",
+                meta={"collection": collection, "error": True},
+            )
         return GatewayResult(ok=False, error=_MONGO_ERROR_MSG, meta={"collection": collection, "error": True})
 
     def _ok_result(
@@ -171,7 +234,10 @@ class MongoGateway:
             return GatewayResult(ok=False, error=exc.message, meta={"collection": collection, "rejected": True})
 
         query_filter = filter or {}
-        query_projection = {**(projection or {}), "_id": 0}
+        # Dọn cha+con scalar trùng (vd {"series":1,"series.date":1}) trước khi build — Mongo cấm collision.
+        query_projection = {**_drop_shadowed_paths(projection or {}), "_id": 0}
+        # Bọc scalar trong $in/$nin thành mảng — quirk M3 đo 22/07/2026 ({"$in": "VNM"} → ["VNM"]).
+        query_filter = _coerce_in_scalars(query_filter)
         started = time.perf_counter()
         try:
             rejection = await self._reject_collscan(ctx, collection, query_filter, query_projection)
@@ -201,6 +267,14 @@ class MongoGateway:
             logger.info("gateway rejected request_id=%s collection=%s", ctx.request_id, collection)
             return GatewayResult(ok=False, error=exc.message, meta={"collection": collection, "rejected": True})
 
+        # Bọc scalar trong $in/$nin ở MỌI stage — quirk M3 đo 22/07/2026 ({"$in": "VNM"} → ["VNM"]); đệ quy cả
+        # pipeline an toàn vì chỉ đụng key $in/$nin ($match có thể nằm ở bất kỳ vị trí nào).
+        pipeline = [_coerce_in_scalars(stage) for stage in pipeline]
+        for stage in pipeline:
+            # Dọn cha+con scalar trùng trong MỌI $project (vd {"s":1,"s.d":1}) — Mongo cấm 'Path collision'; và
+            # sửa $slice cú pháp find lọt vào $project ({"$slice": 10} → {"$slice": ["$field", 10]}) — quirk M3.
+            if "$project" in stage and isinstance(stage["$project"], dict):
+                stage["$project"] = _fix_find_style_slice(_drop_shadowed_paths(stage["$project"]))
         started = time.perf_counter()
         try:
             cursor = self._db[collection].aggregate(pipeline, maxTimeMS=self._policy.defaults.max_time_ms)
