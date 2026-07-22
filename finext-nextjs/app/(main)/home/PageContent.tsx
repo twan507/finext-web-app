@@ -51,6 +51,7 @@ import { apiClient } from 'services/apiClient';
 import { ISseRequest } from 'services/core/types';
 import { sseClient } from 'services/sseClient';
 import MarketVolatility from './components/marketSection/MarketVolatility';
+import FinextAiPromoPopup from './components/FinextAiPromoPopup';
 
 // Danh sách các index cho mini charts
 const MINI_CHART_INDEXES = [
@@ -568,6 +569,8 @@ export default function HomeContent() {
                 <NewsSection />
             </Box>
 
+            {/* Popup quảng bá Finext AI — chỉ trang chủ, mỗi tab hiện 1 lần (tự kiểm tra cờ sau mount). */}
+            <FinextAiPromoPopup />
         </Box>
     );
 }

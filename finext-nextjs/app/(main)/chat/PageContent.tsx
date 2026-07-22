@@ -14,6 +14,7 @@ import ChatGreeting from './components/EmptyState';
 import AsOfChip from './components/AsOfChip';
 import ChatSkeleton from './components/ChatSkeleton';
 import SuggestedQuestions from './components/SuggestedQuestions';
+import { clearChatHandoff, readChatHandoff } from 'services/chatHandoff';
 
 // Chiều cao khả kiến dưới appbar (appbar là sticky top). Dùng cho panel lịch sử sticky + empty state.
 const VIEWPORT = `calc(100dvh - ${layoutTokens.appBarHeight}px - env(titlebar-area-height, 0px))`;
@@ -76,6 +77,20 @@ function ChatApp({ initialConversationId, suggestions = [] }: { initialConversat
   };
   const streaming = store.phase !== 'idle';
   const hasMessages = store.messages.length > 0;
+
+  // Bàn giao từ popup quảng bá Finext AI (trang chủ): nếu user đã gõ câu hỏi vào popup rồi được đưa
+  // sang đây thì tự gửi giúp. CHỈ gửi khi đã đăng nhập; là khách thì chỉ xoá bản nháp để sau khi đăng
+  // nhập KHÔNG bị gửi bất ngờ. Chạy đúng một lần lúc mở trang (ChatApp chỉ mount sau khi auth đã xong,
+  // nên `session` ở đây đã chốt). Xoá TRƯỚC khi gửi để double-invoke của StrictMode không gửi lặp.
+  const storeRef = useRef(store);
+  storeRef.current = store;
+  useEffect(() => {
+    const draft = readChatHandoff();
+    if (!draft) return;
+    clearChatHandoff();
+    if (session) storeRef.current.send(draft);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // URL riêng mỗi hội thoại: /chat/{serverId} khi đã lưu, /chat khi chat mới. replaceState → KHÔNG điều hướng
   // lại, KHÔNG remount, KHÔNG giật UI người dùng đang thao tác.

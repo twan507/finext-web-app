@@ -16,6 +16,8 @@ interface ComposerProps {
   centered?: boolean; // true = khối nổi ở GIỮA (empty state), không dính đáy; false = dính đáy viewport khi đã chat.
   /** true = khung hẹp (bubble ~380px): dùng chữ ngắn để không wrap. Trang /chat KHÔNG truyền → giữ nguyên chữ đầy đủ. */
   compact?: boolean;
+  /** Cỡ quầng sáng sau khung (chỉ đổi ở mode centered): 'full' = mặc định /chat; 'soft' = thu gọn cho card popup. */
+  glowSize?: 'full' | 'soft';
 }
 
 const DISCLAIMER = 'Thông tin tham khảo, không phải khuyến nghị đầu tư. AI có thể nhầm lẫn — kiểm tra số liệu quan trọng.';
@@ -30,7 +32,7 @@ const MESSAGE_COUNTER_THRESHOLD = MAX_MESSAGE_LENGTH * 0.8;
 const fmtCount = (n: number) => n.toLocaleString('vi-VN');
 
 const Composer = forwardRef<HTMLDivElement, ComposerProps>(function Composer(
-  { disabled, streaming, onSend, onStop, thinking, onToggleThinking, centered = false, compact = false },
+  { disabled, streaming, onSend, onStop, thinking, onToggleThinking, centered = false, compact = false, glowSize = 'full' },
   ref,
 ) {
   const theme = useTheme();
@@ -41,19 +43,21 @@ const Composer = forwardRef<HTMLDivElement, ComposerProps>(function Composer(
   const placeholder = compact ? PLACEHOLDER_COMPACT : isMobile ? 'Hỏi Finext AI…' : 'Hỏi Finext AI về thị trường, cổ phiếu, nhóm ngành…';
   // Quầng gradient neo theo chính khung chat; centered gọn hơn để không phủ lời chào/gợi ý.
   const glowAlpha = centered ? (isDark ? 0.24 : 0.13) : isDark ? 0.24 : 0.14;
+  // 'soft' (popup): thu quầng lại để nằm GỌN trong card, không tràn mép rồi bị cắt như cỡ 'full' toàn trang.
+  const softGlow = centered && glowSize === 'soft';
   const glow = (
     <Box
       aria-hidden
       sx={{
         position: 'absolute',
         left: '50%',
-        top: centered ? '58%' : '50%',
+        top: softGlow ? '50%' : centered ? '58%' : '50%',
         transform: 'translate(-50%, -50%)',
-        width: centered ? '225%' : '128%',
-        height: centered ? '405%' : '190%',
+        width: softGlow ? '130%' : centered ? '225%' : '128%',
+        height: softGlow ? '185%' : centered ? '405%' : '190%',
         borderRadius: '50%',
-        background: `radial-gradient(ellipse at center, ${alpha(theme.palette.primary.main, glowAlpha)} 0%, transparent ${centered ? 72 : 70}%)`,
-        filter: `blur(${centered ? 60 : 22}px)`,
+        background: `radial-gradient(ellipse at center, ${alpha(theme.palette.primary.main, glowAlpha)} 0%, transparent ${softGlow ? 70 : centered ? 72 : 70}%)`,
+        filter: `blur(${softGlow ? 26 : centered ? 60 : 22}px)`,
         pointerEvents: 'none',
         zIndex: 0,
       }}
