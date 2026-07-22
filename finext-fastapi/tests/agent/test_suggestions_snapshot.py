@@ -2,8 +2,15 @@
 from app.agent.suggestions import build_snapshot
 
 
-def _stock(ticker: str, pct: float, industry: str) -> dict:
-    return {"ticker": ticker, "pct_change": pct, "industry_name": industry}
+def _stock(ticker: str, pct: float, industry: str, top100: int = 1, trading_value: float = 1e9) -> dict:
+    """Mặc định top100=1 vì hầu hết test ở đây kiểm logic xếp hạng, không kiểm bộ lọc."""
+    return {
+        "ticker": ticker,
+        "pct_change": pct,
+        "industry_name": industry,
+        "top100": top100,
+        "trading_value": trading_value,
+    }
 
 
 def test_lay_final_phase_cua_phien_moi_nhat():
@@ -55,3 +62,45 @@ def test_bo_qua_ban_ghi_thieu_field():
     rows = [{"ticker": "HPG"}, _stock("FPT", 3.0, "Công nghệ")]
     snap = build_snapshot([], rows, [])
     assert snap["tickers"] == ["FPT"]
+
+
+# --- Lọc mã phổ biến (FNX100) ---------------------------------------------
+
+
+def test_loai_ma_ngoai_top100():
+    """Mã penny ngoài FNX100 không được xuất hiện dù biến động mạnh nhất."""
+    rows = [
+        _stock("HPG", 3.0, "Thép"),
+        _stock("DGT", 14.9, "Xây dựng", top100=0),  # tăng mạnh nhất nhưng lạ
+    ]
+    snap = build_snapshot([], rows, [])
+    assert [g["ticker"] for g in snap["gainers"]] == ["HPG"]
+    assert "DGT" not in snap["tickers"]
+
+
+def test_allowlist_chi_gom_ma_duoc_trinh_bay():
+    """Siết guard: LLM chỉ được nhắc mã thực sự đưa vào prompt, không phải toàn sàn."""
+    rows = [_stock(f"T{i:02d}", i - 15.0, "Thép") for i in range(30)]
+    snap = build_snapshot([], rows, [])
+    presented = {g["ticker"] for g in snap["gainers"]} | {l["ticker"] for l in snap["losers"]}
+    assert set(snap["tickers"]) == presented
+
+
+def test_fallback_thanh_khoan_khi_khong_co_ma_top100():
+    """Dữ liệu thiếu cờ top100 → không được trả rỗng, rơi về top thanh khoản."""
+    rows = [
+        _stock("AAA", 5.0, "Thép", top100=0, trading_value=9e9),
+        _stock("BBB", 4.0, "Thép", top100=0, trading_value=1e9),
+    ]
+    snap = build_snapshot([], rows, [])
+    assert snap["gainers"], "không được rỗng khi thiếu cờ top100"
+    assert "AAA" in snap["tickers"]
+
+
+def test_fallback_uu_tien_thanh_khoan_cao():
+    """Khi phải fallback, mã thanh khoản thấp bị loại trước."""
+    rows = [_stock(f"T{i:02d}", 1.0, "Thép", top100=0, trading_value=float(i)) for i in range(200)]
+    snap = build_snapshot([], rows, [])
+    # T00 thanh khoản thấp nhất → không lọt vào rổ 100 mã thanh khoản nhất.
+    assert "T00" not in snap["tickers"]
+    assert "T199" in snap["tickers"]

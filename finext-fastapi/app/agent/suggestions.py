@@ -76,6 +76,8 @@ def validate_suggestions(raw: str, allowed_tickers: set[str]) -> list[str] | Non
 
 TOP_N = 10
 HEADLINE_N = 5
+# Cỡ rổ dự phòng khi dữ liệu thiếu cờ top100 — lấy theo thanh khoản để vẫn ra mã quen mặt.
+POPULAR_POOL_SIZE = 100
 
 
 def build_snapshot(phase_rows: list[dict], stock_rows: list[dict], news_rows: list[dict]) -> dict:
@@ -94,12 +96,26 @@ def build_snapshot(phase_rows: list[dict], stock_rows: list[dict], news_rows: li
         r for r in stock_rows
         if r.get("ticker") and isinstance(r.get("pct_change"), (int, float)) and r.get("industry_name")
     ]
-    ranked = sorted(usable, key=lambda r: r["pct_change"], reverse=True)
+
+    # CHỈ lấy mã phổ biến. Xếp hạng thuần theo pct_change trên toàn sàn sẽ luôn cho ra
+    # penny UPCOM/HNX thanh khoản thấp (vài nghìn cp khớp là ±10%) — user không nhận ra
+    # mã thì gợi ý mất giá trị. top100 chính là nhóm FNX100 app đang hiển thị ở /groups,
+    # nên dùng lại định nghĩa sẵn có thay vì tự đặt ngưỡng mới.
+    popular = [r for r in usable if r.get("top100") == 1]
+    if not popular:
+        # Dữ liệu thiếu cờ top100 (pipeline đổi/chưa kịp cập nhật) → không để tính năng
+        # chết, rơi về rổ thanh khoản cao nhất phiên.
+        popular = sorted(usable, key=lambda r: r.get("trading_value") or 0, reverse=True)[:POPULAR_POOL_SIZE]
+
+    ranked = sorted(popular, key=lambda r: r["pct_change"], reverse=True)
     gainers = [{"ticker": r["ticker"], "industry_name": r["industry_name"]} for r in ranked[:TOP_N]]
     losers = [{"ticker": r["ticker"], "industry_name": r["industry_name"]} for r in ranked[::-1][:TOP_N]]
 
-    industries = sorted({r["industry_name"] for r in ranked[:TOP_N] + ranked[-TOP_N:]})
-    tickers = sorted({r["ticker"] for r in usable})
+    presented = gainers + losers
+    industries = sorted({r["industry_name"] for r in presented})
+    # Allowlist validate = ĐÚNG những mã đã đưa vào prompt. Trước đây là toàn bộ ~1600 mã
+    # nên LLM nhắc mã lạ nào cũng lọt; giờ nhắc ngoài danh sách đã trình bày là bị loại.
+    tickers = sorted({r["ticker"] for r in presented})
     headlines = [r["title"] for r in news_rows[:HEADLINE_N] if r.get("title")]
 
     return {
