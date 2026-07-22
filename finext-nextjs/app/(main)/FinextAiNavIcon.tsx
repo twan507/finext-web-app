@@ -44,21 +44,23 @@ export default function FinextAiNavIcon({ sx }: { sx?: SxProps<Theme> }) {
           height: '1em',
           fontSize: '1.5rem', // mặc định = cỡ icon MUI medium; cloneElement có thể ghi đè qua sx
           // Glow theo em để tự tỉ lệ với cỡ icon (24px rail / 16px breadcrumb cùng một tương quan).
+          // Glow chồng 2 lớp: quầng gần (0.22em) cho lõi sáng đậm + quầng xa (0.5em) lan toả rộng —
+          // dày hơn hẳn một lớp đơn dù cùng bán kính. Sàn pha dịu nâng cao để lúc "nghỉ" vẫn rực.
           '@keyframes fnxAiBreathe': {
             '0%, 100%': {
-              opacity: 0.68,
-              filter: `saturate(0.9) brightness(0.98) drop-shadow(0 0 0.1em ${alpha(glow, 0.3)})`,
+              opacity: 0.82,
+              filter: `saturate(1.05) brightness(1.06) drop-shadow(0 0 0.16em ${alpha(glow, 0.5)}) drop-shadow(0 0 0.34em ${alpha(glow, 0.28)})`,
             },
             '50%': {
               opacity: 1,
-              filter: `saturate(1.3) brightness(1.08) drop-shadow(0 0 0.3em ${alpha(glow, 0.75)})`,
+              filter: `saturate(1.5) brightness(1.22) drop-shadow(0 0 0.22em ${alpha(glow, 0.95)}) drop-shadow(0 0 0.5em ${alpha(glow, 0.6)})`,
             },
           },
           animation: 'fnxAiBreathe 3.2s ease-in-out infinite',
           '@media (prefers-reduced-motion: reduce)': {
             animation: 'none',
             opacity: 1,
-            filter: `drop-shadow(0 0 0.18em ${alpha(glow, 0.45)})`,
+            filter: `brightness(1.12) drop-shadow(0 0 0.2em ${alpha(glow, 0.65)}) drop-shadow(0 0 0.42em ${alpha(glow, 0.4)})`,
           },
         },
         ...(Array.isArray(sx) ? sx : [sx]),
