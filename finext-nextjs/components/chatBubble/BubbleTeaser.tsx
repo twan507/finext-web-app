@@ -3,7 +3,8 @@
 import { Box, ButtonBase, IconButton, Typography, useTheme } from '@mui/material';
 import { AutoAwesomeRounded, CloseRounded } from '@mui/icons-material';
 import { easings, fontWeight, getGlassCard, getGlassEdgeLight, getGlassHighlight, getResponsiveFontSize } from 'theme/tokens';
-import { teaserPosition } from './layout';
+import { BAR_SYNC_TRANSITION, teaserPosition } from './layout';
+import { useMobileBarOffset } from '@/components/layout/mobileBarStore';
 
 interface BubbleTeaserProps {
   /** Câu mời bám theo trang đang xem; cha bốc lại mỗi lượt hiện để không lặp câu. */
@@ -25,6 +26,8 @@ interface BubbleTeaserProps {
 export default function BubbleTeaser({ message, visible, onHoverChange, onDismiss, onOpen }: BubbleTeaserProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  // Bám theo nút tròn, nên cũng phải trồi/thụt cùng thanh điều hướng đáy mobile.
+  const barOffset = useMobileBarOffset();
 
   if (!visible || !message) return null;
 
@@ -34,7 +37,8 @@ export default function BubbleTeaser({ message, visible, onHoverChange, onDismis
       onMouseLeave={() => onHoverChange(false)}
       sx={{
         ...getGlassCard(isDark),
-        ...teaserPosition,
+        ...teaserPosition(barOffset),
+        transition: BAR_SYNC_TRANSITION,
         // position:'fixed' đã tự tạo containing block cho hai lớp giả bên dưới.
         position: 'fixed',
         zIndex: theme.zIndex.modal,

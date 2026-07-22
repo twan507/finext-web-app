@@ -14,7 +14,8 @@ import BubbleMessages from './BubbleMessages';
 import BubbleTeaser from './BubbleTeaser';
 import useTeaserCycle, { NUDGE_MS } from './useTeaserCycle';
 import { pickOne, pickSome } from './pick';
-import { FAB_SIZE, fabPosition, panelPosition } from './layout';
+import { BAR_SYNC_TRANSITION, FAB_SIZE, fabPosition, panelPosition } from './layout';
+import { useMobileBarOffset } from '@/components/layout/mobileBarStore';
 
 const TITLE = 'Finext AI';
 
@@ -26,9 +27,10 @@ const TITLE = 'Finext AI';
 function usePanelSx(visible: boolean) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const barOffset = useMobileBarOffset();
   return {
     ...getGlassCard(isDark),
-    ...panelPosition,
+    ...panelPosition(barOffset),
     display: visible ? 'flex' : 'none',
     flexDirection: 'column',
     // position:'fixed' đã tự tạo containing block cho hai lớp giả → KHÔNG đặt lại 'relative'
@@ -227,6 +229,8 @@ export default function ChatBubble() {
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hoveredRef = useRef(false); // bản đọc-ngay của `hovered`, để biết ĐANG vào hay chỉ lướt qua
   const [hoverTurn, setHoverTurn] = useState(0); // mỗi lần hover mới là một lượt hiện mới
+  // Khoảng chừa cho thanh điều hướng đáy mobile — 0 khi thanh đã thụt xuống hoặc route không có thanh.
+  const barOffset = useMobileBarOffset();
 
   // Nguồn sự thật duy nhất cho việc ẩn/hiện: /chat, /profile/*, tin tức, báo cáo… tự động không có bubble.
   const bubbleOn = hasBubble(pathname);
@@ -299,14 +303,15 @@ export default function ChatBubble() {
         onBlur={() => setHover(false)}
         sx={{
           ...glow,
-          ...fabPosition,
+          ...fabPosition(barOffset),
           position: 'fixed',
           zIndex: theme.zIndex.modal,
           width: FAB_SIZE,
           height: FAB_SIZE,
           color: '#fff',
           background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.light} 100%)`,
-          transition: `transform 260ms ${easings.springOut}, opacity 200ms ${easings.smooth}, box-shadow 260ms ${easings.smooth}`,
+          // BAR_SYNC_TRANSITION: trồi/thụt cùng nhịp với thanh điều hướng đáy mobile.
+          transition: `transform 260ms ${easings.springOut}, opacity 200ms ${easings.smooth}, box-shadow 260ms ${easings.smooth}, ${BAR_SYNC_TRANSITION}`,
           // Nhún ĐÚNG MỘT NHỊP mỗi lần tới chu kỳ (JS bật/tắt), đồng thời với lúc bong bóng tự hiện.
           animation: cycle.nudging ? `finextFabNudge ${NUDGE_MS}ms ease-in-out` : 'none',
           // Mở cửa sổ: nút thu nhỏ rồi tan đi (thay vì biến mất đột ngột), icon morph sang dấu X.

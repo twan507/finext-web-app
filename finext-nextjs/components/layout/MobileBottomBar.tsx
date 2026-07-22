@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Box, alpha, useTheme, IconButton as MuiIconButton } from '@mui/material';
 import {
@@ -10,44 +10,21 @@ import {
     FilterAltOutlined,
 } from '@mui/icons-material';
 import MarketPhaseNavIcon from '@/app/(main)/MarketPhaseNavIcon';
+import { MOBILE_BAR_HEIGHT, isMobileBarRoute, useMobileBarVisible } from './mobileBarStore';
 
-const BAR_HEIGHT = 56;
+const BAR_HEIGHT = MOBILE_BAR_HEIGHT;
 const FAB_SIZE = 54;
 const FAB_BOTTOM = 12; // khoảng hở từ đáy bar lên FAB — càng nhỏ thì FAB càng tụt sát viền dưới
-const SCROLL_THRESHOLD = 10;
 
 export default function MobileBottomBar() {
     const theme = useTheme();
     const router = useRouter();
     const pathname = usePathname();
-    const [visible, setVisible] = useState(true);
-    const lastScrollY = useRef(0);
-    const ticking = useRef(false);
+    // Dùng chung store với bong bóng Finext AI để hai thứ trồi/thụt cùng nhịp.
+    const visible = useMobileBarVisible();
 
-    const handleScroll = useCallback(() => {
-        if (ticking.current) return;
-        ticking.current = true;
-
-        requestAnimationFrame(() => {
-            const currentScrollY = window.scrollY;
-            const delta = currentScrollY - lastScrollY.current;
-
-            if (Math.abs(delta) > SCROLL_THRESHOLD) {
-                setVisible(delta < 0 || currentScrollY < 10);
-                lastScrollY.current = currentScrollY;
-            }
-
-            ticking.current = false;
-        });
-    }, []);
-
-    useEffect(() => {
-        window.addEventListener('scroll', handleScroll, { passive: true });
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, [handleScroll]);
-
-    // Ẩn hẳn thanh điều hướng dưới khi đang ở trang chat (tránh nó trồi/thụt gây khó chịu khi chat).
-    if (pathname?.startsWith('/chat')) return null;
+    // Quy tắc route nằm trong mobileBarStore để bong bóng Finext AI dùng chung, không lặp điều kiện.
+    if (!isMobileBarRoute(pathname)) return null;
 
     const bgColor = theme.palette.component.appBar.background;
     const borderColor = alpha(theme.palette.divider, 0.12);
