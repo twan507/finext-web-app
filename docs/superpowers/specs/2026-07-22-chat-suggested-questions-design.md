@@ -87,6 +87,13 @@ Snapshot rút gọn trước khi vào prompt để prompt nhỏ và rẻ:
 
 Tập `ticker` trong snapshot chính là allowlist để validate ở §4.4 bước 5.
 
+> **Cập nhật 22/07/2026 sau khi chạy thật.** Bản đầu xếp hạng thuần theo `pct_change`
+> trên toàn sàn nên gợi ý toàn mã lạ (DGT, HDA, PVO, HHG, SD3, HU4) — top biến động theo
+> % gần như luôn là penny UPCOM/HNX thanh khoản thấp. Đã lọc `top100 == 1` (nhóm FNX100
+> app đang hiển thị ở `/groups`) TRƯỚC khi xếp hạng; thiếu cờ đó thì rơi về 100 mã thanh
+> khoản cao nhất phiên. Đồng thời siết allowlist validate từ ~1600 mã toàn sàn xuống
+> ĐÚNG các mã đã đưa vào prompt.
+
 ### 4.3 Ràng buộc sinh
 
 Prompt yêu cầu trả về **JSON array đúng 5 chuỗi**, tiếng Việt, và:

@@ -13,6 +13,7 @@ import Composer from './components/Composer';
 import ChatGreeting from './components/EmptyState';
 import AsOfChip from './components/AsOfChip';
 import ChatSkeleton from './components/ChatSkeleton';
+import SuggestedQuestions from './components/SuggestedQuestions';
 
 // Chiều cao khả kiến dưới appbar (appbar là sticky top). Dùng cho panel lịch sử sticky + empty state.
 const VIEWPORT = `calc(100dvh - ${layoutTokens.appBarHeight}px - env(titlebar-area-height, 0px))`;
@@ -54,7 +55,7 @@ function LimitNotice({ notice, severity = 'warning' }: { notice: { message: stri
     );
 }
 
-function ChatApp({ initialConversationId }: { initialConversationId?: string }) {
+function ChatApp({ initialConversationId, suggestions = [] }: { initialConversationId?: string; suggestions?: string[] }) {
   // Consent: KHÔNG cần pop-up — người dùng đã đồng ý khi tạo tài khoản (điều khoản + /policies/privacy).
   const store = useChatStore(initialConversationId);
   const { session } = useAuth();
@@ -212,31 +213,24 @@ function ChatApp({ initialConversationId }: { initialConversationId?: string }) 
           </>
         ) : (
           // Chưa có tin nhắn: lời chào + composer NỔI (kiểu ChatGPT/Claude), đặt ở ~40% chiều cao (spacer 2:3) — hơi cao hơn giữa. Gửi câu đầu → composer về đáy.
-          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', px: 2, overflow: 'hidden' }}>
+          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', px: 2, overflowX: 'hidden', overflowY: 'auto' }}>
             <Box sx={{ flexGrow: 2 }} />
-            {/* Lời chào + Composer + GLOW CHUNG: quầng gradient nằm DƯỚI chữ, trùm cả lời chào lẫn ô nhập (không cắt ngang). */}
-            <Box sx={{ position: 'relative', width: '100%', maxWidth: 760 }}>
-              <Box
-                aria-hidden
-                sx={(t) => ({
-                  position: 'absolute',
-                  left: '50%',
-                  top: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  width: '135%',
-                  height: '260%',
-                  borderRadius: '50%',
-                  background: `radial-gradient(ellipse at center, ${alpha(t.palette.primary.main, t.palette.mode === 'dark' ? 0.3 : 0.17)} 0%, transparent 68%)`,
-                  filter: 'blur(46px)',
-                  pointerEvents: 'none',
-                  zIndex: 0,
-                })}
-              />
-              <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            {/* Lời chào + Composer + gợi ý; quầng gradient được neo riêng trong Composer. */}
+            <Box sx={{ width: '100%', maxWidth: 760 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: { xs: 2.5, sm: 3 } }}>
                 <ChatGreeting name={session?.user?.full_name} />
                 <Box sx={{ width: '100%' }}>
                   <Composer ref={setComposerNode} centered disabled={streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} />
                 </Box>
+                {suggestions.length > 0 && (
+                  <Box sx={{ width: '100%', px: { xs: 2, md: 3 }, boxSizing: 'border-box' }}>
+                    <SuggestedQuestions
+                      questions={suggestions}
+                      disabled={streaming}
+                      onPick={(q) => store.send(q)}
+                    />
+                  </Box>
+                )}
               </Box>
             </Box>
             <Box sx={{ flexGrow: 3 }} />
@@ -247,11 +241,11 @@ function ChatApp({ initialConversationId }: { initialConversationId?: string }) 
   );
 }
 
-export default function PageContent({ initialConversationId }: { initialConversationId?: string }) {
+export default function PageContent({ initialConversationId, suggestions }: { initialConversationId?: string; suggestions?: string[] }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
       <OptionalAuthWrapper requireAuth fillHeight loadingFallback={<ChatSkeleton />}>
-        <ChatApp initialConversationId={initialConversationId} />
+        <ChatApp initialConversationId={initialConversationId} suggestions={suggestions} />
       </OptionalAuthWrapper>
     </Box>
   );
