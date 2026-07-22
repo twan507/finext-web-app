@@ -29,6 +29,12 @@ UPLOAD_READ_CHUNK_SIZE = 64 * 1024  # 64 KB
 
 # Chỉ cho phép các loại file ảnh
 ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+# Format Pillow được phép decode, khớp ALLOWED_IMAGE_TYPES. Chặn decoder ngoài danh sách
+# (PSD, TIFF...) vì Pillow nhận diện theo magic bytes chứ không theo content_type client khai.
+ALLOWED_DECODE_FORMATS = ["JPEG", "PNG", "GIF", "WEBP"]
+# Trần số điểm ảnh sau khi decode. Ảnh nén nhỏ vẫn có thể bung thành raster rất lớn;
+# compress_image chạy tới 13 lượt LANCZOS nên cần chặn trước khi vào vòng nén.
+MAX_IMAGE_PIXELS = 40_000_000  # 40 MP
 
 
 async def _read_upload_limited(file: UploadFile, max_bytes: int) -> bytes:
@@ -59,7 +65,9 @@ def compress_image(image_bytes: bytes, content_type: str, target_size: int = TAR
     Nén ảnh để đạt kích thước mục tiêu.
     """
     try:
-        image = Image.open(io.BytesIO(image_bytes))
+        image = Image.open(io.BytesIO(image_bytes), formats=ALLOWED_DECODE_FORMATS)
+        if image.size[0] * image.size[1] > MAX_IMAGE_PIXELS:
+            raise ValueError(f"Ảnh vượt trần {MAX_IMAGE_PIXELS} điểm ảnh: {image.size[0]}x{image.size[1]}")
         if image.mode in ("RGBA", "LA", "P"):
             background = Image.new("RGB", image.size, (255, 255, 255))
             if image.mode == "P":

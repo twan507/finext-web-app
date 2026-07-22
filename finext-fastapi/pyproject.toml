@@ -34,10 +34,10 @@ dependencies = [
     
     # Utils
     "APScheduler>=3.11.0",
-    "python-multipart>=0.0.20",
+    "python-multipart>=0.0.30",
     "python-dotenv>=1.1.0",
     "pandas>=2.2.3",
-    "pillow>=11.2.1",
+    "pillow>=12.1.1",
     "Jinja2>=3.1.6",
     "PyYAML>=6.0.2",
     "cryptography>=45.0.2",
