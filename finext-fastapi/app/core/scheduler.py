@@ -7,6 +7,7 @@ from apscheduler.triggers.cron import CronTrigger
 from motor.motor_asyncio import AsyncIOMotorDatabase # Cần thiết
 
 from app.core.database import get_database
+from app.agent.suggestions import generate_and_store
 # IMPORT CÁC HÀM TASK TỪ CRUD
 from app.crud.subscriptions import run_deactivate_expired_subscriptions_task, send_expiry_reminders_task
 from app.crud.promotions import run_deactivate_expired_promotions_task
@@ -69,6 +70,11 @@ async def run_daily_maintenance_tasks():
         
     logger.info("Daily maintenance tasks finished.")
 
+async def run_refresh_chat_suggestions():
+    """Làm mới câu hỏi gợi ý màn hình chat (30 phút/lần trong giờ giao dịch)."""
+    db_user: AsyncIOMotorDatabase = get_database("user_db")
+    await generate_and_store(db_user)  # never-raise, tự log
+
 def add_jobs_to_scheduler():
     try:
         scheduler.add_job(
@@ -78,6 +84,17 @@ def add_jobs_to_scheduler():
             name="Daily system maintenance",
             replace_existing=True,
             misfire_grace_time=600 # 10 phút
+        )
+        scheduler.add_job(
+            run_refresh_chat_suggestions,
+            # Giờ giao dịch VN, scheduler đã set timezone="Asia/Ho_Chi_Minh".
+            trigger=CronTrigger(
+                day_of_week="mon-fri", hour="8-15", minute="0,30", timezone=scheduler.timezone
+            ),
+            id="refresh_chat_suggestions_job",
+            name="Refresh chat suggested questions",
+            replace_existing=True,
+            misfire_grace_time=300,  # lỡ nhịp quá 5 phút thì bỏ, chờ nhịp sau
         )
         
     except Exception as e:

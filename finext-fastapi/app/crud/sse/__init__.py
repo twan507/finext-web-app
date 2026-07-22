@@ -61,6 +61,7 @@ from app.crud.sse.market_update_time import market_update_time
 # Other Ticker (Commodities, World, Crypto)
 from app.crud.sse.latest_other_ticker import latest_other_ticker
 from app.crud.sse.other_ticker import other_ticker
+from app.crud.sse.chat_suggestions import chat_suggestions as fetch_chat_suggestions
 
 logger = logging.getLogger(__name__)
 
@@ -134,6 +135,8 @@ SSE_QUERY_REGISTRY: Dict[str, Any] = {
     # Other Ticker
     "latest_other_ticker": latest_other_ticker,
     "other_ticker": other_ticker,
+    # Chat — câu hỏi gợi ý (đọc user_db, do app tự sinh)
+    "chat_suggestions": fetch_chat_suggestions,
 }
 
 
