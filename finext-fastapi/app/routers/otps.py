@@ -56,10 +56,10 @@ async def request_otp(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tài khoản người dùng này chưa được kích hoạt hoặc đã bị khóa.")
 
     # Ngoại lệ EMAIL_VERIFICATION ở trên là dành cho user chưa xác thực email. User bị
-    # admin khoá không được mượn đường đó để tự mở khoá lại.
-    if user.suspended_by_admin:
-        logger.warning(f"OTP request bị từ chối cho tài khoản đã bị khoá: {user.email}")
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tài khoản đã bị khóa. Vui lòng liên hệ hỗ trợ.")
+    # admin vô hiệu hóa không được mượn đường đó để tự kích hoạt lại.
+    if user.deactivated_by_admin:
+        logger.warning(f"OTP request bị từ chối cho tài khoản đã bị vô hiệu hóa: {user.email}")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ hỗ trợ.")
 
     # Chống email bombing: từ chối nếu vừa gửi OTP cùng loại trong cửa sổ cooldown.
     if await crud_otps.has_recent_otp(db, str(user.id), request_data.otp_type):
@@ -141,10 +141,10 @@ async def verify_otp(
     if is_valid:
         if request_data.otp_type == OtpTypeEnum.EMAIL_VERIFICATION:
             # Defense in depth: chặn tự kích hoạt kể cả khi OTP hợp lệ được cấp
-            # trước lúc admin khoá tài khoản.
-            if not user.is_active and user.suspended_by_admin:
-                logger.warning(f"Từ chối tự kích hoạt qua OTP cho tài khoản đã bị khoá: {user.email}")
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tài khoản đã bị khóa. Vui lòng liên hệ hỗ trợ.")
+            # trước lúc admin vô hiệu hóa tài khoản.
+            if not user.is_active and user.deactivated_by_admin:
+                logger.warning(f"Từ chối tự kích hoạt qua OTP cho tài khoản đã bị vô hiệu hóa: {user.email}")
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ hỗ trợ.")
             if not user.is_active:
                 user_object_id = getattr(user, "id", None)  # Get the ObjectId version if available
                 if not user_object_id:  # Fallback if 'id' is not ObjectId (e.g. it's a string already)

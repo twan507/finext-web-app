@@ -1,5 +1,5 @@
-"""Test SEC-01/SEC-04 — google_id không nhận từ input, và tài khoản bị admin khoá
-không thể tự kích hoạt lại qua Google.
+"""Test SEC-01/SEC-04 — google_id không nhận từ input, và tài khoản bị admin vô hiệu
+hóa không thể tự kích hoạt lại qua Google.
 """
 from datetime import datetime, timezone
 
@@ -33,7 +33,7 @@ def _seed_user(db: FakeDB, email: str, **over) -> ObjectId:
         "hashed_password": "x",
         "google_id": None,
         "is_active": True,
-        "suspended_by_admin": False,
+        "deactivated_by_admin": False,
         "created_at": _now(),
         "updated_at": _now(),
     }
@@ -80,12 +80,12 @@ async def test_google_sub_tro_toi_email_khac_bi_tu_choi():
 
 
 @pytest.mark.asyncio
-async def test_tai_khoan_bi_khoa_khong_tu_kich_hoat_qua_google_id():
-    """SEC-04: user bị admin khoá, login bằng Google đã liên kết → từ chối."""
+async def test_tai_khoan_vo_hieu_hoa_khong_tu_kich_hoat_qua_google_id():
+    """SEC-04: user bị admin vô hiệu hóa, login bằng Google đã liên kết → từ chối."""
     db = FakeDB()
-    _seed_user(db, "banned@example.com", google_id="sub-999", is_active=False, suspended_by_admin=True)
+    _seed_user(db, "banned@example.com", google_id="sub-999", is_active=False, deactivated_by_admin=True)
 
-    with pytest.raises(ValueError, match="bị khóa"):
+    with pytest.raises(ValueError, match="vô hiệu hóa"):
         await crud_users.get_or_create_user_from_google_sub_email(
             db,
             GoogleUserSchema(id="sub-999", email="banned@example.com", verified_email=True),
@@ -94,12 +94,12 @@ async def test_tai_khoan_bi_khoa_khong_tu_kich_hoat_qua_google_id():
 
 
 @pytest.mark.asyncio
-async def test_tai_khoan_bi_khoa_khong_tu_kich_hoat_qua_lien_ket_email():
-    """SEC-04: user bị khoá, chưa có google_id, login Google cùng email → từ chối."""
+async def test_tai_khoan_vo_hieu_hoa_khong_tu_kich_hoat_qua_lien_ket_email():
+    """SEC-04: user bị vô hiệu hóa, chưa có google_id, login Google cùng email → từ chối."""
     db = FakeDB()
-    _seed_user(db, "banned2@example.com", is_active=False, suspended_by_admin=True)
+    _seed_user(db, "banned2@example.com", is_active=False, deactivated_by_admin=True)
 
-    with pytest.raises(ValueError, match="bị khóa"):
+    with pytest.raises(ValueError, match="vô hiệu hóa"):
         await crud_users.get_or_create_user_from_google_sub_email(
             db,
             GoogleUserSchema(id="sub-new", email="banned2@example.com", verified_email=True),
@@ -110,9 +110,9 @@ async def test_tai_khoan_bi_khoa_khong_tu_kich_hoat_qua_lien_ket_email():
 
 @pytest.mark.asyncio
 async def test_user_pending_van_kich_hoat_duoc_qua_google():
-    """Không chặn nhầm: user chưa xác thực email (không bị khoá) vẫn activate được."""
+    """Không chặn nhầm: user chưa xác thực email (không bị vô hiệu hóa) vẫn activate được."""
     db = FakeDB()
-    _seed_user(db, "pending@example.com", is_active=False, suspended_by_admin=False)
+    _seed_user(db, "pending@example.com", is_active=False, deactivated_by_admin=False)
 
     result = await crud_users.get_or_create_user_from_google_sub_email(
         db,

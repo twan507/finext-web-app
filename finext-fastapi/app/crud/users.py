@@ -168,9 +168,9 @@ async def get_or_create_user_from_google_sub_email(db: AsyncIOMotorDatabase, goo
         )
     if user_by_google_id:
         logger.info(f"Tìm thấy user bằng Google ID: {google_user_data.id} cho email {google_user_data.email}. Đăng nhập lại.")
-        if user_by_google_id.suspended_by_admin:
-            logger.warning(f"Từ chối đăng nhập Google cho tài khoản đã bị khoá: {user_by_google_id.email}")
-            raise ValueError("Tài khoản đã bị khóa. Vui lòng liên hệ hỗ trợ.")
+        if user_by_google_id.deactivated_by_admin:
+            logger.warning(f"Từ chối đăng nhập Google cho tài khoản đã bị vô hiệu hóa: {user_by_google_id.email}")
+            raise ValueError("Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ hỗ trợ.")
         if google_user_data.verified_email and not user_by_google_id.is_active:
             await db[USERS_COLLECTION].update_one(
                 {"_id": ObjectId(user_by_google_id.id)},
@@ -183,9 +183,9 @@ async def get_or_create_user_from_google_sub_email(db: AsyncIOMotorDatabase, goo
     user_by_email = await get_user_by_email_db(db, email=google_user_data.email)
 
     if user_by_email:
-        if user_by_email.suspended_by_admin:
-            logger.warning(f"Từ chối liên kết/đăng nhập Google cho tài khoản đã bị khoá: {user_by_email.email}")
-            raise ValueError("Tài khoản đã bị khóa. Vui lòng liên hệ hỗ trợ.")
+        if user_by_email.deactivated_by_admin:
+            logger.warning(f"Từ chối liên kết/đăng nhập Google cho tài khoản đã bị vô hiệu hóa: {user_by_email.email}")
+            raise ValueError("Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ hỗ trợ.")
         if user_by_email.google_id:
             if user_by_email.google_id == google_user_data.id:
                 logger.info(f"User với email {google_user_data.email} đã có google_id khớp. Đăng nhập lại.")
