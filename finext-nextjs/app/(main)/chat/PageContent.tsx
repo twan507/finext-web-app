@@ -250,7 +250,7 @@ function ChatApp({ initialConversationId }: { initialConversationId?: string }) 
 export default function PageContent({ initialConversationId }: { initialConversationId?: string }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-      <OptionalAuthWrapper requireAuth loadingFallback={<ChatSkeleton />}>
+      <OptionalAuthWrapper requireAuth fillHeight loadingFallback={<ChatSkeleton />}>
         <ChatApp initialConversationId={initialConversationId} />
       </OptionalAuthWrapper>
     </Box>

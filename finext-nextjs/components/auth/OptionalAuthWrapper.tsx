@@ -27,6 +27,14 @@ interface OptionalAuthWrapperProps {
      */
     compact?: boolean;
     /**
+     * Cho trang lấp đầy viewport, KHÔNG scroll (vd /chat).
+     * Wrapper trở thành flex item co giãn (flex:1) để phủ hết chiều cao cha; nếu không,
+     * nó co lại theo nội dung và overlay (inset:0) chỉ phủ một dải ngắn ở trên → khối
+     * đăng nhập bị dính lên đầu trang. Kèm theo đó, gate căn giữa bằng flex thay vì
+     * scroll-tracking (không có gì để scroll, và giữ đúng vị trí khi zoom).
+     */
+    fillHeight?: boolean;
+    /**
      * Skeleton tuỳ biến hiển thị trong lúc auth đang loading (thay cho DefaultAuthSkeleton generic).
      * Cho phép page hiện đúng khung của mình ngay từ lần paint đầu.
      */
@@ -46,6 +54,7 @@ export function OptionalAuthWrapper({
     requireAuth = false,
     requiredFeatures,
     compact = false,
+    fillHeight = false,
     loadingFallback,
 }: OptionalAuthWrapperProps) {
     const { loading, session, features } = useAuth();
@@ -67,12 +76,24 @@ export function OptionalAuthWrapper({
     const needsGate = !session || !hasRequiredFeature;
 
     if (needsGate) {
+        // compact và fillHeight đều cần wrapper co giãn theo cha (flex item), khác nhau ở
+        // cỡ nội dung của gate: compact thu nhỏ cho side panel, fillHeight giữ cỡ đầy đủ.
+        const stretch = compact || fillHeight;
         return (
-            <Box sx={{ position: 'relative', overflow: 'hidden', ...(compact ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' } : {}) }}>
-                <Box sx={{ p: compact ? 0 : { xs: 3, md: 3 }, ...(compact ? { flex: 1 } : {}) }}>
+            <Box sx={{ position: 'relative', overflow: 'hidden', ...(stretch ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' } : {}) }}>
+                <Box
+                    sx={{
+                        p: stretch ? 0 : { xs: 3, md: 3 },
+                        // compact: giữ NGUYÊN như trước (chỉ flex:1) để không đụng side panel đang chạy.
+                        ...(compact ? { flex: 1 } : {}),
+                        // fillHeight: thêm display:flex + minHeight:0 để children dùng flex:1
+                        // (vd ChatApp `display:flex; flex:1`) lấp đầy được chiều cao.
+                        ...(!compact && fillHeight ? { flex: 1, minHeight: 0, display: 'flex' } : {}),
+                    }}
+                >
                     {children}
                 </Box>
-                <AuthGateOverlay compact={compact} />
+                <AuthGateOverlay compact={compact} centered={fillHeight} />
             </Box>
         );
     }

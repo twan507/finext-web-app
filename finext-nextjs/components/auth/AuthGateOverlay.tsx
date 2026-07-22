@@ -15,9 +15,16 @@ type ModalState = 'pinned-top' | 'fixed-center' | 'pinned-bottom';
 interface AuthGateOverlayProps {
     /** Compact mode: simple flex-center, no scroll tracking. For side panels. */
     compact?: boolean;
+    /**
+     * Căn giữa tuyệt đối trong container, GIỮ NGUYÊN cỡ nội dung đầy đủ.
+     * Dùng cho trang lấp đầy viewport và không scroll (vd /chat): scroll-tracking
+     * vô nghĩa ở đó vì không có gì để scroll, và vì không dùng toạ độ pixel nên
+     * khối vẫn nằm giữa khi zoom.
+     */
+    centered?: boolean;
 }
 
-export default function AuthGateOverlay({ compact = false }: AuthGateOverlayProps) {
+export default function AuthGateOverlay({ compact = false, centered = false }: AuthGateOverlayProps) {
     const theme = useTheme();
     const router = useRouter();
     const { session } = useAuth();
@@ -45,8 +52,11 @@ export default function AuthGateOverlay({ compact = false }: AuthGateOverlayProp
         else setModalState('fixed-center');
     }, []);
 
+    // Cả compact lẫn centered đều căn giữa bằng flex → không cần đo scroll.
+    const useFlexCenter = compact || centered;
+
     useEffect(() => {
-        if (compact) return; // compact mode: no scroll tracking
+        if (useFlexCenter) return; // flex-center: no scroll tracking
         calcState();
         window.addEventListener('scroll', calcState, { passive: true });
         window.addEventListener('resize', calcState, { passive: true });
@@ -54,13 +64,13 @@ export default function AuthGateOverlay({ compact = false }: AuthGateOverlayProp
             window.removeEventListener('scroll', calcState);
             window.removeEventListener('resize', calcState);
         };
-    }, [calcState, compact]);
+    }, [calcState, useFlexCenter]);
 
     const isLoggedIn = !!session;
 
     // ─── Positioning ───
-    const positionSx = compact
-        ? {} // compact: no extra positioning, parent handles centering
+    const positionSx = useFlexCenter
+        ? {} // flex-center: no extra positioning, parent handles centering
         : modalState === 'fixed-center'
             ? { position: 'fixed' as const, top: '50%', left: containerLeft + containerWidth / 2, transform: 'translate(-50%, -50%)', zIndex: 1100 }
             : modalState === 'pinned-bottom'
@@ -197,7 +207,7 @@ export default function AuthGateOverlay({ compact = false }: AuthGateOverlayProp
     };
 
     return (
-        <Box ref={compact ? undefined : containerRef} sx={{ position: 'absolute', inset: 0, zIndex: 10 }}>
+        <Box ref={useFlexCenter ? undefined : containerRef} sx={{ position: 'absolute', inset: 0, zIndex: 10 }}>
             {/* Backdrop blur */}
             <Box
                 sx={{
@@ -210,8 +220,8 @@ export default function AuthGateOverlay({ compact = false }: AuthGateOverlayProp
                 }}
             />
 
-            {compact ? (
-                /* ── Compact: simple flex-center ── */
+            {useFlexCenter ? (
+                /* ── Flex-center: căn giữa container, không phụ thuộc scroll/zoom ── */
                 <Box sx={{
                     position: 'absolute',
                     inset: 0,
@@ -219,7 +229,8 @@ export default function AuthGateOverlay({ compact = false }: AuthGateOverlayProp
                     alignItems: 'center',
                     justifyContent: 'center',
                 }}>
-                    <Box sx={{ textAlign: 'center', px: 2, maxWidth: 280 }}>
+                    {/* maxWidth theo CỠ NỘI DUNG (compact) chứ không theo cách định vị */}
+                    <Box sx={{ textAlign: 'center', px: 2, maxWidth: compact ? 280 : 540 }}>
                         {renderContent()}
                     </Box>
                 </Box>
