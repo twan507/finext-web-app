@@ -8,6 +8,7 @@ from typing import Dict
 from fastapi import APIRouter, HTTPException, Request
 
 from app.utils.email_utils import send_email_async
+from app.utils.client_ip import get_client_ip
 from app.utils.response_wrapper import StandardApiResponse, api_response_wrapper
 from app.schemas.emails import MessageResponse, ConsultationRequest, OpenAccountRequest, PlanInquiryRequest
 from app.core.config import MAIL_FROM
@@ -24,7 +25,9 @@ _rate_limit_store: Dict[str, float] = {}
 
 def _check_rate_limit(request: Request) -> None:
     """Kiểm tra rate limit theo IP. Raise HTTPException 429 nếu quá giới hạn."""
-    client_ip = request.client.host if request.client else "unknown"
+    # request.client.host đã bị uvicorn ghi đè bằng XFF[0] do client gửi
+    # (--forwarded-allow-ips "*"), nên đổi XFF mỗi request là vô hiệu hoá limiter này.
+    client_ip = get_client_ip(request)
     now = time.time()
 
     # Dọn entries cũ hơn 5 phút để tránh memory leak

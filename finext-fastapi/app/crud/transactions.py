@@ -618,10 +618,16 @@ async def cancel_transaction_db(
         "payment_status": PaymentStatusEnum.CANCELED.value,
         "updated_at": dt_now,
     }
-    updated_result = await db[TRANSACTIONS_COLLECTION].update_one({"_id": ObjectId(transaction_id_str)}, {"$set": update_fields})
-    if updated_result.matched_count > 0:
+    # CAS: filter phải gồm payment_status. Kiểm tra ở trên chỉ là đọc, có cửa sổ race
+    # với confirm (vốn đã claim nguyên tử) — nếu không có điều kiện này, cancel có thể
+    # ghi đè CANCELED lên một giao dịch vừa SUCCEEDED và đã cấp subscription.
+    updated_result = await db[TRANSACTIONS_COLLECTION].update_one(
+        {"_id": ObjectId(transaction_id_str), "payment_status": PaymentStatusEnum.PENDING.value},
+        {"$set": update_fields},
+    )
+    if updated_result.modified_count > 0:
         return await get_transaction_by_id(db, transaction_id_str)
-    return None  # Hoặc raise lỗi nếu không tìm thấy khi update
+    raise ValueError(f"Giao dịch {transaction_id_str} không còn ở trạng thái chờ xử lý; có thể đã được xử lý đồng thời.")
 
 
 async def calculate_transaction_price_with_overrides(

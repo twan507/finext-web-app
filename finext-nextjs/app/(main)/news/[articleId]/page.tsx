@@ -2,6 +2,7 @@
 import type { Metadata } from 'next';
 import PageContent from './PageContent';
 import { fetchArticleBySlug } from '../serverFetch';
+import { serializeJsonLd } from '@/utils/jsonLd';
 
 interface Props {
     params: Promise<{ articleId: string }>;
@@ -98,7 +99,7 @@ export default async function NewsDetailPage({ params }: Props) {
             {jsonLd && (
                 <script
                     type="application/ld+json"
-                    dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+                    dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
                 />
             )}
             <PageContent articleId={articleId} />

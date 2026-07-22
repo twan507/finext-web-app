@@ -54,6 +54,7 @@ from app.schemas.emails import MessageResponse  # Giữ lại nếu cần
 from bson import ObjectId
 from app.utils.response_wrapper import api_response_wrapper, StandardApiResponse
 from app.utils.security import verify_password
+from app.utils.client_ip import get_client_ip
 from app.utils.google_auth import get_google_user_info_from_token
 from app.core.config import (
     SECRET_KEY,
@@ -76,21 +77,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _get_client_ip(request: Request) -> str:
-    """Lấy IP thực của client khi đứng sau nginx/proxy.
-
-    Ưu tiên X-Forwarded-For (chuỗi IP, IP đầu tiên là client gốc), rồi đến
-    X-Real-IP do nginx set. Fallback sang request.client.host nếu không có
-    proxy. Trả "Unknown" nếu không xác định được.
-    """
-    xff = request.headers.get("x-forwarded-for")
-    if xff:
-        # X-Forwarded-For: "client_ip, proxy1, proxy2" — lấy IP đầu tiên
-        return xff.split(",")[0].strip()
-    real_ip = request.headers.get("x-real-ip")
-    if real_ip:
-        return real_ip.strip()
-    return request.client.host if request.client else "Unknown"
+_get_client_ip = get_client_ip
 
 
 def _is_private_ip(ip: str) -> bool:
