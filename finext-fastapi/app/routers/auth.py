@@ -14,7 +14,7 @@ from jose import jwt, JWTError
 from email_validator import validate_email, EmailNotValidError
 
 from app.auth.dependencies import get_current_active_user, verify_active_session
-from app.auth.access import get_user_permissions
+from app.auth.access import get_user_permissions, get_user_feature_keys
 from app.auth.jwt_handler import (
     create_access_token,
     create_refresh_token,
@@ -42,8 +42,6 @@ from app.crud.sessions import (
     get_session_by_refresh_jti,
     update_session_jtis,
 )
-import app.crud.licenses as crud_licenses  # Giữ lại nếu cần
-import app.crud.subscriptions as crud_subscriptions  # Giữ lại nếu cần
 from app.crud.otps import verify_and_use_otp as crud_verify_otp, create_otp_record as crud_create_otp_record
 from app.schemas.sessions import SessionCreate
 
@@ -237,45 +235,9 @@ async def read_my_features(
     current_user: UserInDB = Depends(get_current_active_user),
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
-    subscription_id = current_user.subscription_id
-    if not subscription_id:
-        logger.info(f"User {current_user.email} has no active subscription ID.")
-        return []  # Trả về mảng rỗng nếu không có subscription_id
-
-    # Đảm bảo subscription_id là PyObjectId (str) trước khi truyền vào CRUD
-    sub_id_str = str(subscription_id) if isinstance(subscription_id, ObjectId) else subscription_id
-
-    subscription = await crud_subscriptions.get_subscription_by_id_db(db, sub_id_str)  # type: ignore
-    if not subscription:
-        logger.warning(f"User {current_user.email}'s subscription ID ({sub_id_str}) not found. Clearing from user doc.")
-        # Xóa subscription_id không hợp lệ khỏi user
-        await db.users.update_one(
-            {"_id": ObjectId(current_user.id)}, {"$set": {"subscription_id": None, "updated_at": datetime.now(timezone.utc)}}
-        )
-        return []
-
-    now = datetime.now(timezone.utc)
-    # Đảm bảo expiry_date là timezone-aware
-    expiry_date = subscription.expiry_date
-    if expiry_date.tzinfo is None:
-        expiry_date = expiry_date.replace(tzinfo=timezone.utc)
-
-    if not subscription.is_active or expiry_date < now:
-        logger.info(f"User {current_user.email}'s subscription ({sub_id_str}) is not active or has expired.")
-        # Cân nhắc: nếu sub hết hạn/inactive, có thể xóa subscription_id khỏi user ở đây không?
-        # Hoặc để một background task xử lý việc này. Hiện tại chỉ trả về list rỗng.
-        return []
-
-    # Đảm bảo license_id là PyObjectId (str)
-    license_id_str = str(subscription.license_id) if isinstance(subscription.license_id, ObjectId) else subscription.license_id
-
-    license_data = await crud_licenses.get_license_by_id(db, license_id=license_id_str)  # type: ignore
-    if not license_data:
-        logger.warning(f"User {current_user.email}'s license (ID: {license_id_str}) from subscription ({sub_id_str}) not found in DB.")
-        return []
-
-    feature_keys = license_data.feature_keys
-    logger.info(f"User {current_user.email} has access to features: {feature_keys} via sub {sub_id_str}")
+    # Dùng chung helper với gate advanced (chat mode=portfolio) — nguồn sự thật duy nhất.
+    feature_keys = await get_user_feature_keys(db, current_user)
+    logger.info(f"User {current_user.email} has access to features: {feature_keys}")
     return feature_keys
 
 

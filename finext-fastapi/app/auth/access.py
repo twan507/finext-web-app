@@ -1,5 +1,6 @@
 # finext-fastapi/app/auth/access.py
 import logging
+from datetime import datetime, timezone
 from typing import Set, Optional, List
 
 from fastapi import Depends, HTTPException, status, Request
@@ -12,9 +13,37 @@ from app.core.database import get_database
 from app.utils.types import PyObjectId
 import app.crud.brokers as crud_brokers
 import app.crud.watchlists as crud_watchlists
+import app.crud.subscriptions as crud_subscriptions
+import app.crud.licenses as crud_licenses
 # import app.crud.otps as crud_otps # Sẽ cần nếu có logic kiểm tra OTP ownership phức tạp ở đây
 
 logger = logging.getLogger(__name__)
+
+
+async def get_user_feature_keys(db: AsyncIOMotorDatabase, user: UserInDB) -> List[str]:
+    """Feature keys user đang có, theo subscription CÒN HIỆU LỰC → license.feature_keys.
+
+    Trả [] khi: không có subscription / subscription không tồn tại / inactive / hết hạn /
+    license không tìm thấy. Dùng chung cho GET /me/features và gate advanced của mode=portfolio.
+    """
+    subscription_id = getattr(user, "subscription_id", None)
+    if not subscription_id:
+        return []
+    sub_id_str = str(subscription_id) if isinstance(subscription_id, ObjectId) else subscription_id
+    subscription = await crud_subscriptions.get_subscription_by_id_db(db, sub_id_str)
+    if not subscription:
+        return []
+    now = datetime.now(timezone.utc)
+    expiry_date = subscription.expiry_date
+    if expiry_date.tzinfo is None:
+        expiry_date = expiry_date.replace(tzinfo=timezone.utc)
+    if not subscription.is_active or expiry_date < now:
+        return []
+    license_id_str = str(subscription.license_id) if isinstance(subscription.license_id, ObjectId) else subscription.license_id
+    license_data = await crud_licenses.get_license_by_id(db, license_id=license_id_str)
+    if not license_data:
+        return []
+    return license_data.feature_keys
 
 
 async def get_user_permissions(
