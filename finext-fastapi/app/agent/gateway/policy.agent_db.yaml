@@ -38,15 +38,18 @@ collections:
   # Group (6 doc)
   group_snapshot:    { size: small }
   group_recent:      { size: small }
-  # Market (1 doc mỗi)
-  market_snapshot:   { size: small }
-  market_recent:     { size: small }
+  # Market (khoá index — 8 chỉ số: VNINDEX/FNXINDEX/FNX100/VN30/HNX30/HNXINDEX/UPINDEX/VNXALL)
+  market_snapshot:   { size: small, key: index }
+  market_recent:     { size: small, key: index, require_filter: [index] }
   market_nntd:       { size: small }
   market_itd:        { size: small, require_series_slice: true, allow_aggregate: false, max_slice: 30 }
   # History giá (mảng nghìn phiên — luật chặt)
   history_stock:     { size: large, key: ticker, require_filter: [ticker], require_series_slice: true, allow_aggregate: false, max_slice: 500 }
   history_industry:  { size: large, key: industry_name, require_filter: [industry_name], require_series_slice: true, allow_aggregate: false, max_slice: 500 }
-  history_index:     { size: large, require_series_slice: true, allow_aggregate: false, max_slice: 500 }
+  history_index:     { size: large, key: index, require_filter: [index], require_series_slice: true, allow_aggregate: false, max_slice: 500 }
+  # Khối ngoại/Tự doanh lịch sử dài (series {date, nn, td} — nghìn phiên)
+  history_nntd_index: { size: large, key: index, require_series_slice: true, allow_aggregate: false, max_slice: 500 }
+  history_nntd_stock: { size: large, key: ticker, require_filter: [ticker], require_series_slice: true, allow_aggregate: false, max_slice: 500 }
   # History định giá (điểm TUẦN, ~340 điểm)
   history_finratios_stock:    { size: large, key: ticker, require_filter: [ticker], require_series_slice: true, allow_aggregate: false, max_slice: 520, max_response_kb: 200, stats_fields: [series.pe, series.pb, series.ps, series.pcf, series.ev_ebitda, series.peg] }
   history_finratios_industry: { size: large, key: industry_name, require_filter: [industry_name], require_series_slice: true, allow_aggregate: false, max_slice: 520, max_response_kb: 200, stats_fields: [series.pe, series.pb, series.ps, series.pcf, series.ev_ebitda, series.peg] }

@@ -70,8 +70,9 @@ v1 KHÔNG có web search (mục 7) — mọi số liệu/tin đều từ `agent_
 | `stock_info` / `stock_snapshot` / `stock_recent` / `stock_finstats` / `stock_nntd` / `stock_itd` | hồ sơ / phiên mới nhất / 20 phiên / BCTC / khối ngoại-tự doanh / intraday theo mã | `ticker` | `stock_finstats` LỚN — luôn projection; `stock_itd` luôn `$slice` ≤ 30 |
 | `industry_info` / `industry_snapshot` / `industry_recent` / `industry_finstats` | 24 ngành (kiến thức ngành / chỉ số / 20 phiên / BCTC ngành) | `industry_name` | Phân tích trên đủ 24 ngành (mục 10) |
 | `group_snapshot` / `group_recent` | 6 nhóm vốn hoá + dòng tiền | `group_name` | — |
-| `market_snapshot` / `market_recent` / `market_nntd` / `market_itd` | VNINDEX + breadth/trend (tính trên rổ FNXINDEX) + NN/TD toàn thị trường | — | breadth/trend KHÔNG phải toàn sàn HOSE |
-| `history_stock` / `history_industry` / `history_index` | lịch sử giá dài hạn | `ticker`/`industry_name` | **Luôn filter khoá + `$slice`/date-range trên `series`** — doc rất lớn |
+| `market_snapshot` / `market_recent` | **8 chỉ số** (VNINDEX·FNXINDEX·FNX100·VN30·HNX30·HNXINDEX·UPINDEX·VNXALL) + breadth/trend (rổ FNXINDEX) | `index` (mặc định VNINDEX) | **FNXINDEX=chỉ số nền hệ pha (~13xx), MA lấy Ở ĐÂY** — KHÔNG mượn MA VNINDEX, KHÔNG lấy từ `market_phase` |
+| `market_nntd` / `market_itd` | NN/TD toàn thị trường (latest/week/month) / intraday VNINDEX | — | breadth/trend KHÔNG phải toàn sàn HOSE |
+| `history_stock` / `history_industry` / `history_index` / `history_nntd_index` / `history_nntd_stock` | lịch sử giá dài hạn (index filter `index`) / NN-TD lịch sử toàn TT / NN-TD lịch sử theo mã | `ticker`/`industry_name`/`index` | **Luôn filter khoá + `$slice`/date-range trên `series`** — doc rất lớn |
 | `history_finratios_stock` / `history_finratios_industry` | lịch sử ĐỊNH GIÁ (P/E, P/B, EPS, vốn hoá, sở hữu) — điểm **theo TUẦN**, có doc `"Toàn bộ thị trường"` | `ticker`/`industry_name` | Dùng khi cần so định giá với quá khứ · P/E ngành là cap-weighted · **`$slice` bắt buộc** |
 | `news_today_feed` / `news_today_content` / `news_history_feed` / `news_history_content` | tin hôm nay + 30 ngày (feed → content qua slug) | `article_slug`/`report_slug` | feed lịch sử trộn tin + báo cáo — filter `type` |
 | `other_data` | 70 chỉ số vĩ mô / hàng hoá / quốc tế | `name`, `group`+`category` | `value` đọc kèm `unit` |

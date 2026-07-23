@@ -565,11 +565,19 @@ Giá trị `group_type`: `"Nhóm vốn hoá"` hoặc `"Nhóm dòng tiền"`.
 
 ## D. Khối thị trường
 
-**Lưu ý chung:** tất cả collection khối này chỉ đại diện cho VNINDEX. HNX và UPCOM không được track trong DB này.
+**Lưu ý chung — 8 CHỈ SỐ, keyed by `index`:** `market_snapshot`/`market_recent`/`history_index` giữ **8 chỉ số**:
+`VNINDEX` · `FNXINDEX` · `FNX100` · `VN30` · `HNX30` · `HNXINDEX` · `UPINDEX` · `VNXALL` — mỗi chỉ số 1 doc,
+**cùng schema** (đủ price + `technical_indicator` gồm `ma`/fibonacci/pivot/volume_profile + zone). **PHẢI filter
+`{index: "..."}`**; user không nói rõ "chỉ số nào" → mặc định `VNINDEX`.
 
-### `market_snapshot` — VNINDEX phiên mới nhất
+> ⚠ **FNXINDEX = chỉ số nền của hệ pha** (đúng đường user thấy trên biểu đồ `/phase`, ~13xx — KHÁC VNINDEX ~16xx).
+> Giá + MA/technicals của FNXINDEX lấy ở ĐÂY (`market_snapshot`/`market_recent` filter `index=FNXINDEX`).
+> `market_phase` CHỈ có `fnx_close` + 7 chỉ báo pha, **KHÔNG có MA** — đừng lấy MA từ đó, và TUYỆT ĐỐI không
+> mượn MA của VNINDEX gán cho FNXINDEX (hai chỉ số lệch ~300 điểm).
 
-**Số lượng:** 1 doc
+### `market_snapshot` — Chỉ số phiên mới nhất (8 chỉ số)
+
+**Số lượng:** 8 doc (1/chỉ số, keyed by `index`)
 **Cập nhật:** realtime + EOD
 
 ```json
@@ -596,9 +604,9 @@ Giá trị `group_type`: `"Nhóm vốn hoá"` hoặc `"Nhóm dòng tiền"`.
 
 ---
 
-### `market_recent` — VNINDEX chuỗi 20 phiên
+### `market_recent` — Chỉ số chuỗi 20 phiên (8 chỉ số)
 
-**Số lượng:** 1 doc
+**Số lượng:** 8 doc (1/chỉ số) — **PHẢI filter `{index: ...}`**
 **Cập nhật:** realtime + EOD
 
 ```json
@@ -644,6 +652,8 @@ Giá trị `group_type`: `"Nhóm vốn hoá"` hoặc `"Nhóm dòng tiền"`.
 
 **Đơn vị:** tỷ đồng. Được tổng hợp từ VNINDEX + HNX + UPCOM (toàn thị trường).
 **Không có** field định danh ticker/index (1 doc duy nhất = toàn thị trường).
+**Chuỗi lịch sử NN/TD** (nhiều phiên, không chỉ latest/week/month): dùng `history_nntd_index` (toàn thị trường)
+hoặc `history_nntd_stock` (theo mã) — xem khối History bên dưới.
 
 ---
 
@@ -702,9 +712,9 @@ Khối này có **2 nhóm khác nhau**, đừng lẫn:
 
 ### `history_index` — Lịch sử chỉ số thị trường
 
-**Số lượng:** 1 doc (hiện tại chỉ `VNINDEX`)
+**Số lượng:** 8 doc (1/chỉ số — cùng bộ 8 chỉ số như `market_snapshot`) — **PHẢI filter `{index: ...}` + `$slice`**
 **Cập nhật:** EOD (append phiên mới)
-**Dùng khi:** chart VNINDEX nhiều năm, phân tích chu kỳ thị trường, so sánh giai đoạn, backtest macro.
+**Dùng khi:** chart 1 chỉ số nhiều năm (VNINDEX, FNXINDEX...), phân tích chu kỳ, so sánh giai đoạn, backtest macro.
 
 ```json
 {
@@ -720,6 +730,31 @@ Khối này có **2 nhóm khác nhau**, đừng lẫn:
 ```
 
 **Lưu ý:** `volume` index thường là `0` hoặc bị omit (index là tính toán). Dùng `close` để chart trend dài hạn.
+
+---
+
+### `history_nntd_index` — Lịch sử khối ngoại/tự doanh TOÀN THỊ TRƯỜNG
+
+**Số lượng:** 1 doc (`index: "MARKET"` — toàn thị trường, không tách theo chỉ số) — **`$slice`/date-range bắt buộc**
+**Cập nhật:** EOD (append phiên mới; ~1.600+ phiên)
+**Dùng khi:** xu hướng mua/bán ròng NN hoặc TD qua NHIỀU phiên (khác `market_nntd` chỉ có latest/week/month).
+
+```json
+{
+  "index": "MARKET",
+  "series": [
+    { "date": "YYYY-MM-DD",
+      "nn": { "buy_value": 91.44, "sell_value": -116, "net_value": -24.56 },   // khối ngoại, tỷ đồng
+      "td": { "buy_value": 0, "sell_value": 0, "net_value": 0 } }               // tự doanh, tỷ đồng
+  ]
+}
+```
+
+### `history_nntd_stock` — Lịch sử khối ngoại/tự doanh THEO MÃ
+
+**Số lượng:** ~679 doc (1/ticker) — **PHẢI filter `{ticker: ...}` + `$slice`**
+**Cập nhật:** EOD
+**Dùng khi:** dòng NN/TD của MỘT mã qua nhiều phiên. Item series y hệt `history_nntd_index` (`{date, nn, td}`, tỷ đồng).
 
 ---
 
@@ -1203,9 +1238,11 @@ Market-level:
   market_itd (standalone)
 
 History (lịch sử dài hạn — query on-demand):
-  history_index    (VNINDEX toàn bộ lịch sử)
-  history_industry (24 ngành lịch sử)
-  history_stock    (~500 mã lịch sử)
+  history_index      (8 chỉ số lịch sử — filter index)
+  history_industry   (24 ngành lịch sử)
+  history_stock      (~500 mã lịch sử)
+  history_nntd_index (NN/TD toàn thị trường lịch sử)
+  history_nntd_stock (NN/TD theo mã lịch sử)
 
 Phase & danh mục (Section I — chi tiết agent_db_06):
   market_phase          (1 doc: pha + 7 chỉ số + comment + 60 phiên)
