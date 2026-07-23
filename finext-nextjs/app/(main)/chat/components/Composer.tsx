@@ -18,6 +18,9 @@ interface ComposerProps {
   compact?: boolean;
   /** Cỡ quầng sáng sau khung (chỉ đổi ở mode centered): 'full' = mặc định /chat; 'soft' = thu gọn cho card popup. */
   glowSize?: 'full' | 'soft';
+  /** Override chữ mờ ô nhập (mode không-compact). Không truyền → chữ chat thường. `placeholderMobile` là bản ngắn tránh wrap. */
+  placeholder?: string;
+  placeholderMobile?: string;
 }
 
 const DISCLAIMER = 'Thông tin tham khảo, không phải khuyến nghị đầu tư. AI có thể nhầm lẫn — kiểm tra số liệu quan trọng.';
@@ -32,7 +35,7 @@ const MESSAGE_COUNTER_THRESHOLD = MAX_MESSAGE_LENGTH * 0.8;
 const fmtCount = (n: number) => n.toLocaleString('vi-VN');
 
 const Composer = forwardRef<HTMLDivElement, ComposerProps>(function Composer(
-  { disabled, streaming, onSend, onStop, thinking, onToggleThinking, centered = false, compact = false, glowSize = 'full' },
+  { disabled, streaming, onSend, onStop, thinking, onToggleThinking, centered = false, compact = false, glowSize = 'full', placeholder: placeholderProp, placeholderMobile },
   ref,
 ) {
   const theme = useTheme();
@@ -40,7 +43,7 @@ const Composer = forwardRef<HTMLDivElement, ComposerProps>(function Composer(
   const isDark = theme.palette.mode === 'dark';
   // Mobile: placeholder NGẮN để không wrap 2 dòng; desktop: đầy đủ.
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'), { noSsr: true });
-  const placeholder = compact ? PLACEHOLDER_COMPACT : isMobile ? 'Hỏi Finext AI…' : 'Hỏi Finext AI về thị trường, cổ phiếu, nhóm ngành…';
+  const placeholder = compact ? PLACEHOLDER_COMPACT : isMobile ? (placeholderMobile ?? 'Hỏi Finext AI…') : (placeholderProp ?? 'Hỏi Finext AI về thị trường, cổ phiếu, nhóm ngành…');
   // Quầng gradient neo theo chính khung chat; centered gọn hơn để không phủ lời chào/gợi ý.
   const glowAlpha = centered ? (isDark ? 0.24 : 0.13) : isDark ? 0.24 : 0.14;
   // 'soft' (popup): thu quầng lại để nằm GỌN trong card, không tràn mép rồi bị cắt như cỡ 'full' toàn trang.

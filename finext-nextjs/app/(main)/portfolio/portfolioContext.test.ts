@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildPortfolioContext, PORTFOLIO_MAX } from './portfolioContext.ts';
-import { PORTFOLIO_GREETING } from './portfolioMeta.ts';
+import { PORTFOLIO_PLACEHOLDER, portfolioTitle } from './portfolioMeta.ts';
 
 test('mã cổ phiếu luôn VIẾT HOA trong ngữ cảnh', () => {
   const ctx = buildPortfolioContext({ name: 'Danh mục A', symbols: ['hpg', 'mwg'] });
@@ -27,6 +27,8 @@ test('ngữ cảnh không vượt giới hạn độ dài', () => {
   assert.ok(ctx.length <= PORTFOLIO_MAX, `phải cắt ≤ ${PORTFOLIO_MAX}, đang ${ctx.length}`);
 });
 
-test('greeting hợp lệ', () => {
-  assert.ok(PORTFOLIO_GREETING.trim().length > 0, 'greeting không rỗng');
+test('placeholder + tiêu đề hợp lệ', () => {
+  assert.ok(PORTFOLIO_PLACEHOLDER.trim().length > 0, 'placeholder không rỗng');
+  assert.ok(portfolioTitle('Tuấn').includes('Tuấn'), 'tiêu đề chèn tên user');
+  assert.ok(!portfolioTitle().includes('undefined'), 'không tên vẫn hợp lệ');
 });

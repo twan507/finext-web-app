@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Box, Drawer, IconButton, Popover, Typography, alpha, useTheme } from '@mui/material';
 import { AddCommentOutlined, HistoryOutlined, ViewListOutlined, WarningAmberOutlined, InfoOutlined } from '@mui/icons-material';
@@ -19,7 +19,7 @@ import WatchlistStocks from './components/WatchlistStocks';
 import { useWatchlistData, wlId } from './useWatchlistData';
 import { usePortfolioPhase } from './usePortfolioPhase';
 import { buildPortfolioContext } from './portfolioContext';
-import { PORTFOLIO_GREETING } from './portfolioMeta';
+import { portfolioTitle, PORTFOLIO_PLACEHOLDER, PORTFOLIO_PLACEHOLDER_MOBILE } from './portfolioMeta';
 
 // Chiều cao khả kiến dưới appbar — ép workspace kéo hết viewport (cột & line chạm đáy màn).
 const VIEWPORT = `calc(100dvh - ${layoutTokens.appBarHeight}px - env(titlebar-area-height, 0px))`;
@@ -134,6 +134,40 @@ function PortfolioApp() {
   const streaming = store.phase !== 'idle';
   const hasMessages = store.messages.length > 0;
 
+  // FLIP "trượt xuống": gửi câu ĐẦU (empty → có tin nhắn) → composer trượt mượt từ giữa xuống đáy (giống /chat).
+  const composerElRef = useRef<HTMLDivElement | null>(null);
+  const emptyComposerTopRef = useRef<number | null>(null);
+  const prevHasRef = useRef(hasMessages);
+  const setComposerNode = useCallback((node: HTMLDivElement | null) => {
+    composerElRef.current = node;
+  }, []);
+  useLayoutEffect(() => {
+    const el = composerElRef.current;
+    const prevHas = prevHasRef.current;
+    prevHasRef.current = hasMessages;
+    if (!el) return;
+    if (!prevHas && hasMessages && emptyComposerTopRef.current != null) {
+      const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      const delta = emptyComposerTopRef.current - el.getBoundingClientRect().top; // âm = đi xuống
+      if (!reduce && Math.abs(delta) > 8) {
+        el.style.transform = `translateY(${delta}px)`;
+        el.style.transition = 'none';
+        void el.offsetHeight; // reflow để trình duyệt ghi nhận vị trí bắt đầu
+        requestAnimationFrame(() => {
+          el.style.transition = 'transform 0.55s cubic-bezier(0.22, 1, 0.36, 1)';
+          el.style.transform = 'translateY(0)';
+          const clear = () => {
+            el.style.transform = '';
+            el.style.transition = '';
+            el.removeEventListener('transitionend', clear);
+          };
+          el.addEventListener('transitionend', clear);
+        });
+      }
+    }
+    if (!hasMessages) emptyComposerTopRef.current = el.getBoundingClientRect().top; // mốc vị trí giữa
+  }, [hasMessages]);
+
   const handleSelect = useCallback((id: string) => {
     setSelectedId(id);
     setPickerOpen(false);
@@ -194,19 +228,29 @@ function PortfolioApp() {
         </IconButton>
 
         {hasMessages ? (
-          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', pt: 7.5 }}>
-            <MessageList key={store.activeId} messages={store.messages} onRetry={store.retry} onFeedback={store.sendFeedback} error={store.error} pending={store.awaitingReply} scrollMode="container" />
-          </Box>
+          <>
+            <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', pt: 7.5 }}>
+              <MessageList key={store.activeId} messages={store.messages} onRetry={store.retry} onFeedback={store.sendFeedback} error={store.error} pending={store.awaitingReply} scrollMode="container" />
+            </Box>
+            {store.limitNotice ? <Notice notice={store.limitNotice} /> : store.quotaWarn ? <Notice notice={store.quotaWarn} severity="info" /> : null}
+            <Box sx={{ flexShrink: 0 }}>
+              <Composer ref={setComposerNode} disabled={streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} placeholder={PORTFOLIO_PLACEHOLDER} placeholderMobile={PORTFOLIO_PLACEHOLDER_MOBILE} />
+            </Box>
+          </>
         ) : (
-          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', px: 3, gap: 2 }}>
-            <ChatGreeting name={session?.user?.full_name} />
-            <Typography sx={{ maxWidth: 480, textAlign: 'center', fontSize: getResponsiveFontSize('sm'), color: 'text.secondary' }}>{PORTFOLIO_GREETING}</Typography>
+          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', px: 2, overflowX: 'hidden', overflowY: 'auto' }}>
+            <Box sx={{ flexGrow: 2 }} />
+            <Box sx={{ width: '100%', maxWidth: 760 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: { xs: 2.5, sm: 3 } }}>
+                <ChatGreeting title={portfolioTitle(session?.user?.full_name)} />
+                <Box sx={{ width: '100%' }}>
+                  <Composer ref={setComposerNode} centered disabled={streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} placeholder={PORTFOLIO_PLACEHOLDER} placeholderMobile={PORTFOLIO_PLACEHOLDER_MOBILE} />
+                </Box>
+              </Box>
+            </Box>
+            <Box sx={{ flexGrow: 3 }} />
           </Box>
         )}
-        {store.limitNotice ? <Notice notice={store.limitNotice} /> : store.quotaWarn ? <Notice notice={store.quotaWarn} severity="info" /> : null}
-        <Box sx={{ flexShrink: 0 }}>
-          <Composer disabled={streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} />
-        </Box>
       </Box>
 
       {/* Mobile: Drawer danh mục + cổ phiếu (xếp dọc) */}
