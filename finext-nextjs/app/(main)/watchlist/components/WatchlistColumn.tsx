@@ -82,6 +82,7 @@ interface WatchlistColumnProps {
     availablePages?: number[];
     dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
     forceCollapsed?: boolean;
+    readOnly?: boolean; // /portfolio: chỉ hiển thị (ẩn ⋮, đổi tên, xoá/thêm mã, DnD)
 }
 
 export default function WatchlistColumn({
@@ -99,6 +100,7 @@ export default function WatchlistColumn({
     availablePages,
     dragHandleProps,
     forceCollapsed,
+    readOnly = false,
 }: WatchlistColumnProps) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
@@ -266,6 +268,7 @@ export default function WatchlistColumn({
                     >
                         {ticker}
                     </Typography>
+                    {!readOnly && (
                     <Box
                         component="span"
                         className="remove-btn"
@@ -283,6 +286,7 @@ export default function WatchlistColumn({
                     >
                         <CloseIcon sx={{ fontSize: 13 }} />
                     </Box>
+                    )}
                 </Box>
             );
         }
@@ -346,6 +350,7 @@ export default function WatchlistColumn({
                                 <TrendingUpIcon sx={{ fontSize: 14 }} />
                             </Box>
                         </Tooltip>
+                        {!readOnly && (
                         <Box
                             component="span"
                             className="remove-btn"
@@ -363,6 +368,7 @@ export default function WatchlistColumn({
                         >
                             <CloseIcon sx={{ fontSize: 13 }} />
                         </Box>
+                        )}
                     </Box>
                     {/* [0,1] +-% */}
                     <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: changeColor, fontVariantNumeric: 'tabular-nums', textAlign: 'center' }}>
@@ -458,7 +464,7 @@ export default function WatchlistColumn({
                         />
                     ) : (
                         <Typography
-                            onDoubleClick={e => { e.stopPropagation(); startRename(); }}
+                            onDoubleClick={readOnly ? undefined : e => { e.stopPropagation(); startRename(); }}
                             sx={{
                                 fontSize: getResponsiveFontSize('sm'),
                                 fontWeight: fontWeight.bold,
@@ -466,7 +472,7 @@ export default function WatchlistColumn({
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
-                                cursor: 'text',
+                                cursor: readOnly ? 'default' : 'text',
                             }}
                         >
                             {watchlist.name}
@@ -486,7 +492,8 @@ export default function WatchlistColumn({
                     )}
                 </Box>
 
-                {/* ⋮ Menu button */}
+                {/* ⋮ Menu button — ẩn khi readOnly (/portfolio chỉ hiển thị) */}
+                {!readOnly && (
                 <Tooltip title="Tùy chỉnh" placement="top" arrow={false} slotProps={tooltipSlotProps}>
                     <IconButton
                         size="small"
@@ -497,6 +504,7 @@ export default function WatchlistColumn({
                         <MoreVertIcon sx={{ fontSize: 15 }} />
                     </IconButton>
                 </Tooltip>
+                )}
             </Box>
 
             {/* Popup menu */}
@@ -660,7 +668,7 @@ export default function WatchlistColumn({
                 <DndContext sensors={stockSensors} collisionDetection={closestCenter} onDragEnd={handleStockDragEnd}>
                     <SortableContext items={sortedTickers} strategy={verticalListSortingStrategy}>
                         {sortedTickers.map((ticker) => (
-                            <SortableStockRow key={ticker} id={ticker} disabled={!isManualSort}>
+                            <SortableStockRow key={ticker} id={ticker} disabled={readOnly || !isManualSort}>
                                 {(listeners) => renderStockRow(ticker, listeners)}
                             </SortableStockRow>
                         ))}
@@ -683,8 +691,8 @@ export default function WatchlistColumn({
                 )}
             </Box>
 
-            {/* ── Add stock autocomplete ── */}
-            <Box sx={{ px: 1, py: 0.75, borderTop: `1px solid ${divider}`, display: collapsed ? 'none' : 'block' }}>
+            {/* ── Add stock autocomplete — ẩn khi readOnly (/portfolio) ── */}
+            <Box sx={{ px: 1, py: 0.75, borderTop: `1px solid ${divider}`, display: (collapsed || readOnly) ? 'none' : 'block' }}>
                 <Autocomplete
                     key={autocompleteKey}
                     options={tickerOptions}
