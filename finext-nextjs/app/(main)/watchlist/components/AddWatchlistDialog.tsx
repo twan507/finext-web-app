@@ -113,9 +113,10 @@ export default function AddWatchlistDialog({
 
     // Shared glass card sx
     const glassCardSx = {
-        // Nền ĐẶC (không backdrop-filter): backdrop-filter nằm trong Fade (đổi opacity) + re-render do
-        // SSE giá live → bị re-composite gây NHÁY. Bỏ blur là fix gốc; giữ gradient overlay + viền + shadow.
-        bgcolor: theme.palette.background.paper,
+        // Nền BÁN TRONG SUỐT (rgba), KHÔNG backdrop-filter: vẫn thấy nhẹ nền sau (có độ trong) nhưng
+        // không có blur để re-composite khi Fade/SSE re-render → hết nháy. (Muốn MỜ nền sau bắt buộc
+        // backdrop-filter → sẽ glitch lại; nên chỉ để trong suốt thường.)
+        bgcolor: alpha(theme.palette.background.paper, 0.9),
         boxShadow: isDark
             ? '0 8px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(139,92,246,0.1), inset 0 1px 0 rgba(255,255,255,0.1)'
             : '0 8px 32px rgba(107,70,193,0.15), 0 4px 16px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.4)',
