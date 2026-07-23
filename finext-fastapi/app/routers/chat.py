@@ -16,6 +16,8 @@ from app.agent.adapters.base import SystemBlock
 from app.agent.context import build_system_blocks
 from app.agent.gateway import GatewayContext, build_gateway
 from app.agent.loop import build_adapter, generate_title, run_agent
+from app.agent.portfolio import build_portfolio_block
+from app.auth.access import get_user_feature_keys
 from app.auth.dependencies import get_current_active_user
 from app.core.database import get_database
 from app.schemas.chat import (
@@ -76,6 +78,20 @@ def _page_context_block(page_context: str | None) -> SystemBlock | None:
     if not page_context or not page_context.strip():
         return None
     return SystemBlock(text=f"{_PAGE_CONTEXT_HEADER}\n{page_context.strip()}", cache_hint=False)
+
+
+# Gate tính năng nâng cao /portfolio — khớp ADVANCED_AND_ABOVE_STRICT của frontend (loại basic).
+_ADVANCED_FEATURE_KEYS = {"advanced_feature", "broker_feature", "manager_feature", "admin_feature"}
+
+
+def portfolio_access_ok(feature_keys: list[str]) -> bool:
+    """True nếu user đủ gói (advanced trở lên) để dùng chế độ tư vấn danh mục."""
+    return bool(set(feature_keys) & _ADVANCED_FEATURE_KEYS)
+
+
+def portfolio_system_block(mode: str | None) -> SystemBlock | None:
+    """Persona tư vấn danh mục — chỉ khi mode=='portfolio'; None cho chat thường."""
+    return build_portfolio_block() if mode == "portfolio" else None
 
 
 def sse_frame(event_type: str, payload: dict[str, Any]) -> str:
@@ -177,6 +193,9 @@ async def _produce(
     try:
         gateway = build_gateway()  # M1: trong try → lỗi khởi tạo vẫn ra error frame + sentinel
         system, _as_of = await build_system_blocks(gateway, ctx)
+        pf_block = portfolio_system_block(body.mode)
+        if pf_block is not None:
+            system.append(pf_block)  # persona tư vấn danh mục — TRƯỚC page_context
         page_block = _page_context_block(body.page_context)
         if page_block is not None:
             system.append(page_block)  # nối CUỐI: giữ nguyên cache prefix của các khối thường trú
@@ -359,6 +378,15 @@ async def chat_stream(
 ) -> StreamingResponse:
     user_id = str(current_user.id)
     db = get_database("user_db")
+    # Tính năng nâng cao /portfolio: chặn SỚM nếu không đủ gói (advanced trở lên) — hàng rào thật
+    # phía server (gate frontend chỉ là UX). Kiểm trước start_turn để không để user-msg mồ côi.
+    if body.mode == "portfolio":
+        feature_keys = await get_user_feature_keys(db, current_user)
+        if not portfolio_access_ok(feature_keys):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Tính năng tư vấn danh mục yêu cầu gói hội viên phù hợp.",
+            )
     # Quota + kill-switch: chặn TRƯỚC khi mở stream (429 lượt / 503 budget).
     decision = await crud_chat.check_quota(db, user_id)
     if not decision.ok:
@@ -369,7 +397,8 @@ async def chat_stream(
     # Lưu user-msg + tạo/nối hội thoại → conversation_id thật để trả về meta.
     # is_new: FE không gửi conversation_id = bắt đầu hội thoại mới → sẽ đặt tiêu đề AI ở cuối lượt.
     is_new = not (body.conversation_id and body.conversation_id.strip())
-    conversation_id = await crud_chat.start_turn(db, user_id, body.conversation_id, body.message)
+    source = "portfolio" if body.mode == "portfolio" else "chat"
+    conversation_id = await crud_chat.start_turn(db, user_id, body.conversation_id, body.message, source=source)
     headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
     # Registry per-user: RẢNH → chạy turn nền + relay live; BẬN → xếp hàng ('queued') hoặc 429 nếu đầy.
     admission = await _admit_turn(user_id, body, conversation_id, is_new)
@@ -405,10 +434,11 @@ async def my_quota(
 )
 @api_response_wrapper(default_success_message="Lấy danh sách hội thoại thành công.")
 async def list_my_conversations(
+    source: str | None = None,  # "portfolio" → chỉ hội thoại tư vấn danh mục; "chat" → loại portfolio
     current_user: UserInDB = Depends(get_current_active_user),
     db: AsyncIOMotorDatabase = Depends(lambda: get_database("user_db")),
 ):
-    docs = await crud_chat.list_conversations(db, str(current_user.id))
+    docs = await crud_chat.list_conversations(db, str(current_user.id), source=source)
     return [ConversationSummary.model_validate(d) for d in docs]
 
 
