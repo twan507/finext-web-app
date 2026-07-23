@@ -32,35 +32,92 @@ function Gauge({ size = 24, accent, mb = 0 }: { size?: number; accent: string; m
 }
 
 interface MarketPhaseNavIconProps {
-  /** true = kèm quầng "thở" cho rail/FAB (nổi bật nhất bộ nav); false = chỉ gauge trơn (drawer). */
+  /** true = khung "Aurora" (viền tím Finext xoay + hào quang breathing) cho rail; false = chỉ icon gauge (drawer). */
   aura?: boolean;
-  /** Cỡ tổng thể — quyết định cỡ gauge + bán kính quầng. Mặc định 34 (rail); FAB mobile dùng 60. */
+  /** Đường kính khung aura. Mặc định 28 (rail desktop — sát gauge, gần cỡ icon anh em); FAB mobile dùng 54. */
   size?: number;
 }
 
-export default function MarketPhaseNavIcon({ aura = false, size = 34 }: MarketPhaseNavIconProps) {
+// Dải conic cho vành xoay + hào quang, chọn theo theme. Light mode dùng tím ĐẬM hơn (bỏ stop gần
+// trắng #ede9fe vốn bị bợt trên nền trắng) để vòng xoay rõ nét và bám tím thương hiệu #8b5cf6;
+// dark giữ NGUYÊN dải sáng cũ cho glow nổi trên nền tối.
+const CONIC_DARK = 'conic-gradient(from 0deg, #6d28d9, #a78bfa, #ede9fe, #a78bfa, #6d28d9)';
+const CONIC_LIGHT = 'conic-gradient(from 0deg, #4c1d95, #7c3aed, #a78bfa, #7c3aed, #4c1d95)';
+
+export default function MarketPhaseNavIcon({ aura = false, size = 28 }: MarketPhaseNavIconProps) {
   const theme = useTheme();
   const accent = theme.palette.primary.main;
+  const bg = theme.palette.background.default;
+  const conic = theme.palette.mode === 'dark' ? CONIC_DARK : CONIC_LIGHT;
+  // Nền nút: opacity giảm đều từ tâm (50%) ra rìa (10%) → tan mượt vào vành conic (bỏ vòng đen cứng).
+  const coreBg = `radial-gradient(circle, ${alpha(bg, 1)}, ${alpha(bg, 0.5)})`;
+  // Mọi kích thước con TỈ LỆ theo size → khung 60 vẫn cùng dáng khung 34 (ở size=34 ra đúng số cũ: 7 / 2 / 24 / 2).
+  const blur = Math.round(size * 0.2);
+  const ringW = Math.max(2, Math.round(size / 17));
+  const gaugeSize = Math.round(size * 0.7);
+  const gaugeMb = Math.round(size * 0.06);
 
   if (!aura) return <Gauge size={24} accent={accent} />;
 
-  // aura=true: gauge + quầng sáng "thở" (drop-shadow). KHÔNG khung/nền/vòng conic — icon mới đủ nổi.
-  const gaugeSize = Math.round(size * 0.72);
-  const g1 = alpha(accent, 0.5);
-  const g2 = alpha(accent, 0.9);
   return (
     <Box
+      className="mp-nav-frame"
       sx={{
-        display: 'inline-flex',
-        '@keyframes mpGlow': {
-          '0%, 100%': { filter: `drop-shadow(0 0 ${(size * 0.06).toFixed(1)}px ${g1})` },
-          '50%': { filter: `drop-shadow(0 0 ${(size * 0.16).toFixed(1)}px ${g2})` },
+        position: 'relative',
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        '@keyframes mpSpin': { to: { transform: 'rotate(360deg)' } },
+        '@keyframes mpBreathe': { '0%, 100%': { opacity: 0.4 }, '50%': { opacity: 0.85 } },
+        // Hào quang: KHÔNG xoay (chỉ breathing) + box đúng bằng khung → chỉ có blur toả ra (ink-overflow, không sinh cuộn ngang).
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          inset: 0,
+          borderRadius: '50%',
+          background: conic,
+          filter: `blur(${blur}px)`,
+          zIndex: 0,
+          transition: 'filter .25s ease',
+          animation: 'mpBreathe 3.4s ease-in-out infinite',
         },
-        animation: 'mpGlow 3.4s ease-in-out infinite',
-        '@media (prefers-reduced-motion: reduce)': { animation: 'none', filter: `drop-shadow(0 0 ${(size * 0.08).toFixed(1)}px ${g1})` },
       }}
     >
-      <Gauge size={gaugeSize} accent={accent} />
+      {/* Viền conic XOAY — clip trong hình tròn nên góc vuông khi xoay không tràn ra (không tạo scrollbar). */}
+      <Box
+        className="mp-nav-ring"
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          borderRadius: '50%',
+          overflow: 'hidden',
+          zIndex: 1,
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            inset: 0,
+            background: conic,
+            animation: 'mpSpin 4.5s linear infinite',
+          },
+        }}
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: `${ringW}px`,
+          borderRadius: '50%',
+          background: coreBg,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2,
+        }}
+      >
+        <Gauge size={gaugeSize} accent={accent} mb={gaugeMb} />
+      </Box>
     </Box>
   );
 }
