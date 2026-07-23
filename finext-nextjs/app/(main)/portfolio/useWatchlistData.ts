@@ -3,7 +3,7 @@
 // Nguồn dữ liệu dùng chung cho 2 cột (tên danh mục + cổ phiếu) của trang Tư vấn Danh mục:
 // danh sách WL (/watchlists/me) + giá live (SSE home_today_stock) + bản đồ tra cứu. Gọi 1 lần ở
 // PageContent rồi truyền xuống — tránh subscribe/lấy trùng.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { apiClient } from 'services/apiClient';
 import { useSseCache } from 'services/sseClient';
 import { useAuth } from '@/components/auth/AuthProvider';
@@ -65,6 +65,7 @@ export function aggregateChange(symbols: string[], map: Map<string, StockData>):
 
 export interface WatchlistDataResult {
   watchlists: Watchlist[];
+  setWatchlists: Dispatch<SetStateAction<Watchlist[]>>; // cho phép PageContent cập nhật optimistic khi sửa WL
   loading: boolean;
   refetch: () => void;
   stockDataMap: Map<string, StockData>;
@@ -124,5 +125,5 @@ export function useWatchlistData(): WatchlistDataResult {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- cố ý chỉ tính lại khi TẬP mã/ngành đổi
   }, [industryKey]);
 
-  return { watchlists, loading, refetch, stockDataMap, allTickers, industries };
+  return { watchlists, setWatchlists, loading, refetch, stockDataMap, allTickers, industries };
 }

@@ -3,6 +3,7 @@
 // Cột "Danh mục" của trang Tư vấn Danh mục (PA1 · 3 cột): CHỈ hiện tên + % thay đổi TB + số mã.
 // Bấm một danh mục → PageContent hiện cổ phiếu ở cột giữa. WL > 20 mã bị chặn chọn. Nút tạo mới gọi
 // onCreate (dialog do PageContent sở hữu, render 1 bản duy nhất — tránh nháy/glitch do double-mount).
+import type { ReactNode } from 'react';
 import { Box, Typography, useTheme } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DotLoading from 'components/common/DotLoading';
@@ -17,11 +18,12 @@ interface Props {
   selectedId: string | null;
   onSelect: (id: string) => void;
   onCreate: () => void;
+  belowCreate?: ReactNode; // slot ngay dưới nút "Tạo danh mục mới" (dùng cho thanh phân trang)
 }
 
 const fmtPct = (frac: number) => `${frac >= 0 ? '+' : ''}${(frac * 100).toFixed(1)}%`;
 
-export default function WatchlistNameList({ watchlists, loading, stockDataMap, selectedId, onSelect, onCreate }: Props) {
+export default function WatchlistNameList({ watchlists, loading, stockDataMap, selectedId, onSelect, onCreate, belowCreate }: Props) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
@@ -75,6 +77,7 @@ export default function WatchlistNameList({ watchlists, loading, stockDataMap, s
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
       {createBtn}
+      {belowCreate}
       {watchlists.length === 0 && (
         <Typography sx={{ px: 1, py: 2, fontSize: getResponsiveFontSize('sm'), color: 'text.secondary', textAlign: 'center' }}>
           Chưa có danh mục. Tạo một danh mục để bắt đầu tư vấn.

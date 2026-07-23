@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Box, Drawer, IconButton, Popover, Typography, alpha, useTheme } from '@mui/material';
 import { AddCommentOutlined, HistoryOutlined, ViewListOutlined, WarningAmberOutlined, InfoOutlined } from '@mui/icons-material';
 import { layoutTokens, getResponsiveFontSize, fontWeight } from 'theme/tokens';
+import { apiClient } from 'services/apiClient';
 import OptionalAuthWrapper from 'components/auth/OptionalAuthWrapper';
 import { ADVANCED_AND_ABOVE_STRICT } from '@/components/auth/features';
 import { useAuth } from 'components/auth/AuthProvider';
@@ -14,9 +15,12 @@ import Composer from '../chat/components/Composer';
 import ConversationSidebar from '../chat/components/ConversationSidebar';
 import ChatGreeting from '../chat/components/EmptyState';
 import AddWatchlistDialog from '../watchlist/components/AddWatchlistDialog';
+import ConfirmDialog from '../watchlist/components/ConfirmDialog';
+import PageTabs from '../watchlist/components/PageTabs';
+import { applyPageReorder } from '../watchlist/components/pageReorder';
 import WatchlistNameList from './components/WatchlistNameList';
 import WatchlistStocks from './components/WatchlistStocks';
-import { useWatchlistData, wlId } from './useWatchlistData';
+import { useWatchlistData, wlId, type Watchlist, type WatchlistSort } from './useWatchlistData';
 import { usePortfolioPhase } from './usePortfolioPhase';
 import { buildPortfolioContext } from './portfolioContext';
 import { portfolioTitle, PORTFOLIO_PLACEHOLDER, PORTFOLIO_PLACEHOLDER_MOBILE } from './portfolioMeta';
@@ -97,7 +101,7 @@ function ColHead({ title }: { title: string }) {
 function PortfolioApp() {
   const theme = useTheme();
   const { session } = useAuth();
-  const { watchlists, loading, refetch, stockDataMap, allTickers, industries } = useWatchlistData();
+  const { watchlists, setWatchlists, loading, refetch, stockDataMap, allTickers, industries } = useWatchlistData();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false); // Drawer danh mục (mobile)
   const [histAnchor, setHistAnchor] = useState<HTMLElement | null>(null); // popover lịch sử
@@ -173,6 +177,55 @@ function PortfolioApp() {
     setPickerOpen(false);
   }, []);
 
+  // ── Trang WL: tab chuyển trang + lọc danh sách theo trang đang xem ──
+  const [currentPage, setCurrentPage] = useState(1);
+  const pages = useMemo(() => {
+    const s = new Set<number>(watchlists.map((w) => w.page ?? 1));
+    s.add(1);
+    s.add(currentPage);
+    return Array.from(s).sort((a, b) => a - b);
+  }, [watchlists, currentPage]);
+  const currentPageHasWl = useMemo(() => watchlists.some((w) => (w.page ?? 1) === currentPage), [watchlists, currentPage]);
+  const pageWatchlists = useMemo(() => watchlists.filter((w) => (w.page ?? 1) === currentPage), [watchlists, currentPage]);
+
+  // ── CRUD cột Cổ phiếu (optimistic + PUT/DELETE, giống /watchlist) ──
+  const [deleteTarget, setDeleteTarget] = useState<Watchlist | null>(null);
+  const putWl = useCallback(async (id: string, body: Record<string, unknown>) => {
+    await apiClient({ url: `/api/v1/watchlists/${id}`, method: 'PUT', body, requireAuth: true });
+  }, []);
+  const patchLocal = useCallback((id: string, patch: Partial<Watchlist>) => {
+    setWatchlists((prev) => prev.map((w) => (wlId(w) === id ? { ...w, ...patch } : w)));
+  }, [setWatchlists]);
+  const handleUpdateStocks = useCallback(async (wl: Watchlist, symbols: string[]) => {
+    const id = wlId(wl);
+    patchLocal(id, { stock_symbols: symbols });
+    try { await putWl(id, { stock_symbols: symbols }); } catch { patchLocal(id, { stock_symbols: wl.stock_symbols }); }
+  }, [patchLocal, putWl]);
+  const handleRename = useCallback(async (wl: Watchlist, name: string) => {
+    const id = wlId(wl);
+    patchLocal(id, { name });
+    try { await putWl(id, { name }); } catch { patchLocal(id, { name: wl.name }); }
+  }, [patchLocal, putWl]);
+  const handleSortChange = useCallback(async (wl: Watchlist, sort: WatchlistSort) => {
+    const id = wlId(wl);
+    patchLocal(id, { sort });
+    try { await putWl(id, { sort }); } catch { patchLocal(id, { sort: wl.sort }); }
+  }, [patchLocal, putWl]);
+  const handleCollapseChange = useCallback(async (wl: Watchlist, collapsed: boolean) => {
+    const id = wlId(wl);
+    patchLocal(id, { collapsed });
+    try { await putWl(id, { collapsed }); } catch { patchLocal(id, { collapsed: wl.collapsed }); }
+  }, [patchLocal, putWl]);
+  const handleDeleteConfirm = useCallback(async () => {
+    const wl = deleteTarget;
+    if (!wl) return;
+    const id = wlId(wl);
+    setWatchlists((prev) => prev.filter((w) => wlId(w) !== id));
+    setSelectedId((cur) => (cur === id ? null : cur));
+    setDeleteTarget(null);
+    try { await apiClient({ url: `/api/v1/watchlists/${id}`, method: 'DELETE', requireAuth: true }); } catch { refetch(); }
+  }, [deleteTarget, setWatchlists, refetch]);
+
   // Bong bóng góc kiểu chat mobile (nền kính mờ).
   const bubbleSx = {
     width: 38, height: 38, color: 'text.primary',
@@ -183,17 +236,39 @@ function PortfolioApp() {
     '&:hover': { bgcolor: theme.palette.background.paper },
   };
 
+  const pageTabs = (
+    <PageTabs
+      pages={pages}
+      currentPage={currentPage}
+      onSelectPage={setCurrentPage}
+      canAddPage={currentPageHasWl}
+      onReorderPages={(m) => applyPageReorder(m, { setWatchlists, currentPage, setCurrentPage, refetch })}
+      sx={{ mt: 1 }}
+    />
+  );
   const namesList = (
     <WatchlistNameList
-      watchlists={watchlists}
+      watchlists={pageWatchlists}
       loading={loading}
       stockDataMap={stockDataMap}
       selectedId={selectedId}
       onSelect={handleSelect}
       onCreate={() => setCreateOpen(true)}
+      belowCreate={pageTabs}
     />
   );
-  const stocks = <WatchlistStocks wl={selectedWl} stockDataMap={stockDataMap} allTickers={allTickers} />;
+  const stocks = (
+    <WatchlistStocks
+      wl={selectedWl}
+      stockDataMap={stockDataMap}
+      allTickers={allTickers}
+      onUpdateStocks={handleUpdateStocks}
+      onDelete={(wl) => setDeleteTarget(wl)}
+      onRename={handleRename}
+      onSortChange={handleSortChange}
+      onCollapseChange={handleCollapseChange}
+    />
+  );
 
   return (
     <Box sx={{ display: 'flex', height: VIEWPORT, overflow: 'hidden' }}>
@@ -303,9 +378,16 @@ function PortfolioApp() {
         onClose={() => setCreateOpen(false)}
         onSaved={() => { setCreateOpen(false); refetch(); }}
         defaultCoordinate={[0, 0]}
-        defaultPage={1}
+        defaultPage={currentPage}
         editingWatchlist={null}
         industries={industries}
+      />
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDeleteConfirm}
+        title="Xóa danh mục"
+        message={`Xóa danh mục "${deleteTarget?.name ?? ''}"? Hành động này không thể hoàn tác.`}
       />
     </Box>
   );

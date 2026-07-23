@@ -28,6 +28,8 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 import { DndContext, closestCenter, rectIntersection, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { buildIndustriesTop } from '../../watchlist/industryStocks';
+import PageTabs from '../../watchlist/components/PageTabs';
+import { applyPageReorder } from '../../watchlist/components/pageReorder';
 import { SortableContext, verticalListSortingStrategy, horizontalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
@@ -92,44 +94,6 @@ interface WatchlistPanelProps {
     onTickerChange?: (ticker: string) => void;
 }
 
-function SortablePageTab({ page, isActive, isDark, onClick }: {
-    page: number;
-    isActive: boolean;
-    isDark: boolean;
-    onClick: () => void;
-}) {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: `page-${page}` });
-    const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.5 : 1,
-    };
-    return (
-        <Box
-            ref={setNodeRef}
-            style={style}
-            {...attributes}
-            {...listeners}
-            onClick={onClick}
-            sx={{
-                px: 1, py: 0.25,
-                borderRadius: `${borderRadius.sm}px`,
-                cursor: 'pointer',
-                fontSize: getResponsiveFontSize('xs'),
-                fontWeight: isActive ? fontWeight.semibold : fontWeight.medium,
-                color: isActive ? 'primary.main' : 'text.secondary',
-                bgcolor: isActive ? (isDark ? 'rgba(99,102,241,0.14)' : 'rgba(99,102,241,0.08)') : 'transparent',
-                border: `1px solid ${isActive ? 'rgba(99,102,241,0.4)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')}`,
-                transition: 'all 0.15s',
-                userSelect: 'none',
-                '&:hover': { color: 'primary.main', borderColor: 'rgba(99,102,241,0.4)' },
-            }}
-        >
-            Trang {page}
-        </Box>
-    );
-}
-
 export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
@@ -139,6 +103,7 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
     const [watchlists, setWatchlists] = useState<Watchlist[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
+    const [readOnly, setReadOnly] = useState(false); // khóa/mở chỉnh sửa (nút trên thanh phân trang)
     const [dialogOpen, setDialogOpen] = useState(false);
     const [dialogCoordinate, setDialogCoordinate] = useState<[number, number]>([0, 0]);
     const [editingWatchlist, setEditingWatchlist] = useState<Watchlist | null>(null);
@@ -161,9 +126,6 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
 
     // DnD sensors for stock reorder
     const stockSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
-
-    // DnD sensors for page tab reorder
-    const pageSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
     // SSE: all stock data — only subscribe when logged in
     const { data: stockDataRaw } = useSseCache<StockData[]>({ keyword: 'home_today_stock', enabled: isLoggedIn });
@@ -214,49 +176,6 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
         pageNums.add(currentPage);
         return Array.from(pageNums).sort((a, b) => a - b);
     }, [watchlists, currentPage]);
-
-    const pageSortableIds = useMemo(() => pages.map(p => `page-${p}`), [pages]);
-
-    const handlePageDragEnd = useCallback((event: DragEndEvent) => {
-        const { active, over } = event;
-        if (!over || active.id === over.id) return;
-
-        const oldIndex = pageSortableIds.indexOf(active.id as string);
-        const newIndex = pageSortableIds.indexOf(over.id as string);
-        if (oldIndex === -1 || newIndex === -1) return;
-
-        const reordered = arrayMove(pages, oldIndex, newIndex);
-
-        // Build mapping: old page number -> new page number (1-based position)
-        const pageMapping: { old_page: number; new_page: number }[] = [];
-        reordered.forEach((oldPageNum, idx) => {
-            const newPageNum = idx + 1;
-            if (oldPageNum !== newPageNum) {
-                pageMapping.push({ old_page: oldPageNum, new_page: newPageNum });
-            }
-        });
-
-        if (pageMapping.length === 0) return;
-
-        // Optimistic UI update
-        setWatchlists(prev => prev.map(w => {
-            const mapping = pageMapping.find(m => m.old_page === (w.page ?? 1));
-            if (mapping) return { ...w, page: mapping.new_page };
-            return w;
-        }));
-
-        const currentMapping = pageMapping.find(m => m.old_page === currentPage);
-        if (currentMapping) setCurrentPage(currentMapping.new_page);
-
-        apiClient({
-            url: '/api/v1/watchlists/reorder-pages',
-            method: 'POST',
-            body: { page_mapping: pageMapping },
-            requireAuth: true,
-        }).catch(() => {
-            fetchWatchlists();
-        });
-    }, [pages, pageSortableIds, currentPage, fetchWatchlists]);
 
     // Sort watchlists by coordinate: x first, then y — filtered by currentPage
     const sortedWatchlists = useMemo(() => {
@@ -579,7 +498,7 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                             />
                         ) : (
                             <Typography
-                                onDoubleClick={() => startRename(wl)}
+                                onDoubleClick={readOnly ? undefined : () => startRename(wl)}
                                 sx={{
                                     fontSize: getResponsiveFontSize('xs'),
                                     fontWeight: fontWeight.bold,
@@ -608,6 +527,7 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                     </Box>
 
                     {/* ⋮ Menu button */}
+                    {!readOnly && (
                     <Tooltip title="Tùy chỉnh" placement="top" arrow={false} slotProps={tooltipSlotProps}>
                         <IconButton
                             size="small"
@@ -617,6 +537,7 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                             <MoreVertIcon sx={{ fontSize: 15 }} />
                         </IconButton>
                     </Tooltip>
+                    )}
                 </Box>
 
                 {/* Stock rows */}
@@ -656,6 +577,7 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                                                                         {ticker}
                                                                     </Typography>
                                                                 </Box>
+                                                                {!readOnly && (
                                                                 <Box
                                                                     component="span"
                                                                     className="remove-btn"
@@ -665,6 +587,7 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                                                                 >
                                                                     <CloseIcon sx={{ fontSize: 12 }} />
                                                                 </Box>
+                                                                )}
                                                             </Box>
                                                         );
                                                     }}
@@ -710,6 +633,7 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                                                                     >
                                                                         {ticker}
                                                                     </Typography>
+                                                                    {!readOnly && (
                                                                     <Box
                                                                         component="span"
                                                                         className="remove-btn"
@@ -719,6 +643,7 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                                                                     >
                                                                         <CloseIcon sx={{ fontSize: 12 }} />
                                                                     </Box>
+                                                                    )}
                                                                 </Box>
                                                                 {/* [0,1] +-% */}
                                                                 <Typography sx={{ fontSize: getResponsiveFontSize('xs'), fontWeight: fontWeight.semibold, color: changeColor, fontVariantNumeric: 'tabular-nums', textAlign: 'center' }}>
@@ -765,7 +690,8 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                             )}
                         </Box>
 
-                        {/* Add stock autocomplete */}
+                        {/* Add stock autocomplete — ẩn khi readOnly */}
+                        {!readOnly && (
                         <Box sx={{ px: 0.75, py: 0.5, borderTop: `1px solid ${divider}` }}>
                             <AutocompleteAdd
                                 tickerOptions={tickerOptions}
@@ -773,6 +699,7 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                                 isDark={isDark}
                             />
                         </Box>
+                        )}
                     </>
                 )}
             </Box>
@@ -816,42 +743,17 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
                     </Box>
                 </Box>
 
-                {/* Page selector — draggable tabs */}
-                <Box sx={{ px: 1, py: 0.75, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
-                    <DndContext
-                        sensors={pageSensors}
-                        collisionDetection={rectIntersection}
-                        onDragEnd={handlePageDragEnd}
-                    >
-                        <SortableContext items={pageSortableIds} strategy={horizontalListSortingStrategy}>
-                            {pages.map(p => (
-                                <SortablePageTab
-                                    key={p}
-                                    page={p}
-                                    isActive={currentPage === p}
-                                    isDark={isDark}
-                                    onClick={() => setCurrentPage(p)}
-                                />
-                            ))}
-                        </SortableContext>
-                    </DndContext>
-                    <Box
-                        onClick={() => { if (!currentPageHasWatchlists) return; const next = Math.max(...pages) + 1; setCurrentPage(next); }}
-                        sx={{
-                            px: 1, py: 0.25,
-                            borderRadius: `${borderRadius.sm}px`,
-                            cursor: currentPageHasWatchlists ? 'pointer' : 'not-allowed',
-                            fontSize: getResponsiveFontSize('xs'),
-                            color: currentPageHasWatchlists ? 'text.disabled' : (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'),
-                            border: `1px dashed ${currentPageHasWatchlists ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)') : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)')}`,
-                            transition: 'all 0.15s',
-                            userSelect: 'none',
-                            opacity: currentPageHasWatchlists ? 1 : 0.6,
-                            ...(currentPageHasWatchlists && { '&:hover': { color: 'text.secondary', borderColor: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)' } }),
-                        }}
-                    >
-                        + Trang mới
-                    </Box>
+                {/* Page selector — thanh phân trang dùng chung (PageTabs) + nút khóa/mở chỉnh sửa */}
+                <Box sx={{ px: 1, py: 0.75, borderBottom: 1, borderColor: 'divider' }}>
+                    <PageTabs
+                        pages={pages}
+                        currentPage={currentPage}
+                        onSelectPage={setCurrentPage}
+                        canAddPage={currentPageHasWatchlists}
+                        onReorderPages={(m) => applyPageReorder(m, { setWatchlists, currentPage, setCurrentPage, refetch: fetchWatchlists })}
+                        readOnly={readOnly}
+                        onToggleReadOnly={() => setReadOnly(v => !v)}
+                    />
                 </Box>
 
                 {/* Content */}
