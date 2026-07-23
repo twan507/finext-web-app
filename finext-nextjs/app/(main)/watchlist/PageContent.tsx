@@ -3,9 +3,11 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { OptionalAuthWrapper } from '@/components/auth/OptionalAuthWrapper';
 import { BASIC_AND_ABOVE } from '@/components/auth/features';
-import { Box, Typography, useTheme, useMediaQuery, Snackbar, Alert } from '@mui/material';
+import Link from 'next/link';
+import { Box, Typography, Button, useTheme, useMediaQuery, Snackbar, Alert } from '@mui/material';
 import DotLoading from 'components/common/DotLoading';
 import AddIcon from '@mui/icons-material/Add';
+import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 import {
     DndContext,
     DragOverlay,
@@ -695,9 +697,21 @@ export default function WatchlistContent() {
 
     // Title always rendered — loading only covers content below
     const renderTitle = () => (
-        <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1'), lineHeight: 1.2, fontWeight: fontWeight.bold, mb: 2 }}>
-            Danh sách theo dõi
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+            <Typography variant="h1" sx={{ fontSize: getResponsiveFontSize('h1'), lineHeight: 1.2, fontWeight: fontWeight.bold }}>
+                Danh sách theo dõi
+            </Typography>
+            <Button
+                component={Link}
+                href="/portfolio"
+                variant="outlined"
+                size="small"
+                startIcon={<AccountBalanceWalletOutlinedIcon sx={{ fontSize: 18 }} />}
+                sx={{ flexShrink: 0, textTransform: 'none', fontWeight: fontWeight.semibold }}
+            >
+                Tư vấn danh mục
+            </Button>
+        </Box>
     );
 
     // 2 section thẻ chỉ số — dùng ở cả empty-state lẫn nhánh chính
