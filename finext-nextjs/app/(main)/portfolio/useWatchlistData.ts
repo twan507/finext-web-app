@@ -1,0 +1,120 @@
+'use client';
+
+// Nguồn dữ liệu dùng chung cho 2 cột (tên danh mục + cổ phiếu) của trang Tư vấn Danh mục:
+// danh sách WL (/watchlists/me) + giá live (SSE home_today_stock) + bản đồ tra cứu. Gọi 1 lần ở
+// PageContent rồi truyền xuống — tránh subscribe/lấy trùng.
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { apiClient } from 'services/apiClient';
+import { useSseCache } from 'services/sseClient';
+import { useAuth } from '@/components/auth/AuthProvider';
+
+export const MAX_TICKERS = 20; // WL > 20 mã không cho tư vấn (trần ngữ cảnh + M3)
+
+export type WatchlistSort = 'pct_change_asc' | 'pct_change_desc' | 'vsi_asc' | 'vsi_desc' | 'trading_value_asc' | 'trading_value_desc' | 'manual';
+
+export interface Watchlist {
+  id?: string;
+  _id?: string;
+  name: string;
+  coordinate: [number, number];
+  stock_symbols: string[];
+  page?: number;
+  sort?: WatchlistSort;
+  collapsed?: boolean;
+}
+
+export interface StockData {
+  ticker: string;
+  ticker_name?: string;
+  close: number;
+  diff: number;
+  pct_change: number;
+  vsi: number;
+  trading_value?: number;
+  exchange?: string;
+  industry_name?: string;
+}
+
+export interface IndustryInfo {
+  name: string;
+  tickers: string[];
+}
+
+export interface TickerOption {
+  ticker: string;
+  name: string;
+}
+
+export const wlId = (wl: Watchlist): string => wl.id || wl._id || '';
+
+/** % thay đổi trung bình của một danh mục (dạng thập phân, ví dụ 0.018 = +1.8%). null nếu chưa có giá. */
+export function aggregateChange(symbols: string[], map: Map<string, StockData>): number | null {
+  let sum = 0;
+  let n = 0;
+  symbols.forEach((t) => {
+    const d = map.get(t);
+    if (d && d.pct_change != null) {
+      sum += d.pct_change;
+      n += 1;
+    }
+  });
+  return n ? sum / n : null;
+}
+
+export interface WatchlistDataResult {
+  watchlists: Watchlist[];
+  loading: boolean;
+  refetch: () => void;
+  stockDataMap: Map<string, StockData>;
+  allTickers: TickerOption[];
+  industries: IndustryInfo[];
+}
+
+export function useWatchlistData(): WatchlistDataResult {
+  const { session } = useAuth();
+  const [watchlists, setWatchlists] = useState<Watchlist[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const refetch = useCallback(() => {
+    if (!session) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    apiClient<Watchlist[]>({ url: '/api/v1/watchlists/me', method: 'GET', requireAuth: true, skipCache: true })
+      .then((res) => {
+        if (res.data) setWatchlists(res.data);
+      })
+      .catch(() => undefined)
+      .finally(() => setLoading(false));
+  }, [session]);
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
+  const { data: stockDataRaw } = useSseCache<StockData[]>({ keyword: 'home_today_stock', enabled: !!session });
+
+  const stockDataMap = useMemo(() => {
+    const map = new Map<string, StockData>();
+    (stockDataRaw ?? []).forEach((s) => map.set(s.ticker, s));
+    return map;
+  }, [stockDataRaw]);
+
+  const allTickers = useMemo<TickerOption[]>(
+    () => (stockDataRaw ?? []).map((s) => ({ ticker: s.ticker, name: s.ticker_name || '' })).sort((a, b) => a.ticker.localeCompare(b.ticker)),
+    [stockDataRaw],
+  );
+
+  const industries = useMemo<IndustryInfo[]>(() => {
+    const map = new Map<string, string[]>();
+    (stockDataRaw ?? []).forEach((s) => {
+      if (!s.industry_name) return;
+      if (!map.has(s.industry_name)) map.set(s.industry_name, []);
+      map.get(s.industry_name)!.push(s.ticker);
+    });
+    return Array.from(map.entries()).map(([name, tickers]) => ({ name, tickers: tickers.sort() })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [stockDataRaw]);
+
+  return { watchlists, loading, refetch, stockDataMap, allTickers, industries };
+}
