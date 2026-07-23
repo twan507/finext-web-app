@@ -18,6 +18,8 @@ class ChatStreamRequest(BaseModel):
     thinking: bool = False  # user bật "suy nghĩ sâu" (M3 thinking=adaptive) — chậm hơn nhưng câu gọn/kỹ hơn
     # Ngữ cảnh trang user đang xem (bubble chat gửi lên). Không hiển thị cho user, không lưu lịch sử.
     page_context: str | None = Field(default=None, max_length=2000)
+    # Chế độ chat. "portfolio" = trang Tư vấn Danh mục: cần gói advanced + persona riêng + tag source.
+    mode: Literal["portfolio"] | None = None
 
 
 # ── Persistence / REST (Bước 3) ─────────────────────────────────────────
@@ -35,6 +37,7 @@ class ConversationSummary(BaseModel):
     updated_at: datetime
     msg_count: int = 0
     pinned: bool = False
+    source: str = "chat"  # "chat" (mặc định) | "portfolio" — hội thoại cũ thiếu field → "chat"
 
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 

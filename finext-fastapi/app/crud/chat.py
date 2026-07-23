@@ -81,8 +81,13 @@ async def _prune_conversations(db: Any, user_id: str) -> None:
     logger.info("prune %d hội thoại cũ user_id=%s", len(old_ids), user_id)
 
 
-async def start_turn(db: Any, user_id: str, conversation_id: str | None, message: str) -> str:
-    """Lưu user-msg; tạo hội thoại nếu chưa có/không thuộc user. Trả conversation_id (str)."""
+async def start_turn(
+    db: Any, user_id: str, conversation_id: str | None, message: str, source: str = "chat"
+) -> str:
+    """Lưu user-msg; tạo hội thoại nếu chưa có/không thuộc user. Trả conversation_id (str).
+
+    source: "chat" (mặc định) | "portfolio" — gắn 1 lần lúc tạo doc; dùng để tách list hội thoại.
+    """
     conv_oid: ObjectId | None = None
     if conversation_id and ObjectId.is_valid(conversation_id):
         existing = await db[CONVERSATIONS].find_one(
@@ -95,7 +100,7 @@ async def start_turn(db: Any, user_id: str, conversation_id: str | None, message
         title = message.strip()[:TITLE_MAX] or "Cuộc trò chuyện mới"
         res = await db[CONVERSATIONS].insert_one(
             {"user_id": ObjectId(user_id), "title": title,
-             "created_at": now, "updated_at": now, "msg_count": 0, "pinned": False}
+             "created_at": now, "updated_at": now, "msg_count": 0, "pinned": False, "source": source}
         )
         conv_oid = res.inserted_id
         await _prune_conversations(db, user_id)
@@ -122,11 +127,18 @@ async def set_feedback(db: Any, message_id: str, user_id: str, rating: int, reas
     return res.matched_count > 0
 
 
-async def list_conversations(db: Any, user_id: str) -> list[dict]:
+async def list_conversations(db: Any, user_id: str, source: str | None = None) -> list[dict]:
     # Ghim trước (pinned desc), rồi mới nhất trước (updated_at desc).
+    # source: "portfolio" → chỉ hội thoại portfolio; "chat" → loại portfolio (gồm hội thoại cũ
+    # thiếu field source); None → không lọc.
+    flt: dict[str, Any] = {"user_id": ObjectId(user_id)}
+    if source == "portfolio":
+        flt["source"] = "portfolio"
+    elif source == "chat":
+        flt["source"] = {"$ne": "portfolio"}
     return await (
         db[CONVERSATIONS]
-        .find({"user_id": ObjectId(user_id)})
+        .find(flt)
         .sort([("pinned", -1), ("updated_at", -1)])
         .to_list(length=None)
     )
