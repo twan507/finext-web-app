@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildPortfolioContext, PORTFOLIO_MAX } from './portfolioContext.ts';
-import { PORTFOLIO_GREETING, PORTFOLIO_SUGGESTIONS } from './portfolioMeta.ts';
+import { PORTFOLIO_GREETING } from './portfolioMeta.ts';
 
 test('mã cổ phiếu luôn VIẾT HOA trong ngữ cảnh', () => {
   const ctx = buildPortfolioContext({ name: 'Danh mục A', symbols: ['hpg', 'mwg'] });
@@ -27,9 +27,6 @@ test('ngữ cảnh không vượt giới hạn độ dài', () => {
   assert.ok(ctx.length <= PORTFOLIO_MAX, `phải cắt ≤ ${PORTFOLIO_MAX}, đang ${ctx.length}`);
 });
 
-test('greeting và kho gợi ý hợp lệ', () => {
+test('greeting hợp lệ', () => {
   assert.ok(PORTFOLIO_GREETING.trim().length > 0, 'greeting không rỗng');
-  assert.ok(PORTFOLIO_SUGGESTIONS.length >= 3, 'ít nhất 3 gợi ý');
-  for (const q of PORTFOLIO_SUGGESTIONS) assert.ok(q.trim().length > 0, 'gợi ý rỗng');
-  assert.equal(new Set(PORTFOLIO_SUGGESTIONS).size, PORTFOLIO_SUGGESTIONS.length, 'gợi ý bị trùng');
 });

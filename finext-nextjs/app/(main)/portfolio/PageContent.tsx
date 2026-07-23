@@ -8,13 +8,13 @@ import { layoutTokens, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import OptionalAuthWrapper from 'components/auth/OptionalAuthWrapper';
 import { ADVANCED_AND_ABOVE_STRICT } from '@/components/auth/features';
 import useChatStore from '../../../hooks/useChatStore';
+import FinextAiNavIcon from '../FinextAiNavIcon';
 import MessageList from '../chat/components/MessageList';
 import Composer from '../chat/components/Composer';
-import SuggestedQuestions from '../chat/components/SuggestedQuestions';
 import WatchlistPicker, { type PickedWatchlist } from './components/WatchlistPicker';
-import PortfolioPhaseChip, { type PortfolioPhase } from './components/PortfolioPhaseChip';
+import { usePortfolioPhase } from './usePortfolioPhase';
 import { buildPortfolioContext } from './portfolioContext';
-import { PORTFOLIO_GREETING, PORTFOLIO_SUGGESTIONS } from './portfolioMeta';
+import { PORTFOLIO_GREETING } from './portfolioMeta';
 
 const VIEWPORT = `calc(100dvh - ${layoutTokens.appBarHeight}px - env(titlebar-area-height, 0px))`;
 const PANEL_W = 320;
@@ -46,7 +46,7 @@ function Notice({ notice, severity = 'warning' }: { notice: { message: string; d
 function PortfolioApp() {
   const theme = useTheme();
   const [selectedWl, setSelectedWl] = useState<PickedWatchlist | null>(null);
-  const [phase, setPhase] = useState<PortfolioPhase | null>(null);
+  const phase = usePortfolioPhase(); // headless: chỉ nhồi vào page_context, không hiện tag
   const [pickerOpen, setPickerOpen] = useState(false); // Drawer chọn danh mục (mobile)
 
   // Đọc lúc gửi (useChatStore lưu vào ref, cập nhật mỗi render) → luôn khớp WL + phase hiện tại.
@@ -64,7 +64,6 @@ function PortfolioApp() {
   const streaming = store.phase !== 'idle';
   const hasMessages = store.messages.length > 0;
 
-  const handlePhase = useCallback((p: PortfolioPhase) => setPhase(p), []);
   const handleSelect = useCallback((wl: PickedWatchlist) => {
     setSelectedWl(wl);
     setPickerOpen(false);
@@ -73,8 +72,10 @@ function PortfolioApp() {
   const pickerPanel = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', width: { xs: '85vw', sm: 360, md: PANEL_W } }}>
       <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1.25, borderBottom: `1px solid ${theme.palette.divider}` }}>
-        <Typography sx={{ fontSize: getResponsiveFontSize('md'), fontWeight: fontWeight.bold }}>Tư vấn danh mục</Typography>
-        <PortfolioPhaseChip onPhase={handlePhase} />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <FinextAiNavIcon sx={{ fontSize: '1.25rem' }} />
+          <Typography sx={{ fontSize: getResponsiveFontSize('md'), fontWeight: fontWeight.bold }}>Tư vấn danh mục</Typography>
+        </Box>
         <Button size="small" variant="outlined" startIcon={<AddCommentOutlined sx={{ fontSize: 18 }} />} onClick={store.newConversation}>
           Cuộc trò chuyện mới
         </Button>
@@ -125,14 +126,14 @@ function PortfolioApp() {
             <Box sx={{ width: '100%', maxWidth: 760 }}>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: { xs: 2.5, sm: 3 } }}>
                 <Box sx={{ textAlign: 'center', px: 2 }}>
-                  <Typography sx={{ fontSize: getResponsiveFontSize('h3'), fontWeight: fontWeight.bold, mb: 1 }}>Tư vấn danh mục</Typography>
+                  <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <FinextAiNavIcon sx={{ fontSize: '1.7rem' }} />
+                    <Typography sx={{ fontSize: getResponsiveFontSize('h3'), fontWeight: fontWeight.bold }}>Tư vấn danh mục</Typography>
+                  </Box>
                   <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary' }}>{PORTFOLIO_GREETING}</Typography>
                 </Box>
                 <Box sx={{ width: '100%' }}>
                   <Composer centered disabled={streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} />
-                </Box>
-                <Box sx={{ width: '100%', px: { xs: 2, md: 3 }, boxSizing: 'border-box' }}>
-                  <SuggestedQuestions questions={PORTFOLIO_SUGGESTIONS} disabled={streaming} onPick={(q) => store.send(q)} />
                 </Box>
               </Box>
             </Box>

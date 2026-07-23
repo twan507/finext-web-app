@@ -54,9 +54,9 @@ const navigationStructure: NavItem[] = [
   { text: 'Giai đoạn thị trường', href: '/phase', icon: <MarketPhaseNavIcon />, special: true },
   { text: 'Biểu đồ kĩ thuật', href: '/charts', icon: <CandlestickChartOutlined /> },
   { text: 'Danh sách theo dõi', href: '/watchlist', icon: <StarBorderPurple500Outlined /> },
-  { text: 'Tư vấn danh mục', href: '/portfolio', icon: <AccountBalanceWalletOutlined /> },
   { text: 'Bộ lọc thông minh', href: '/stocks', icon: <FilterAltOutlined />, exactMatch: true },
   { text: 'Finext AI', href: '/chat', icon: <FinextAiNavIcon /> },
+  { text: 'Tư vấn danh mục', href: '/portfolio', icon: <AccountBalanceWalletOutlined /> },
 ];
 
 // Top navigation tabs (like in Simplize)
