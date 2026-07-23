@@ -27,6 +27,7 @@ import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 import { DndContext, closestCenter, rectIntersection, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { buildIndustriesTop } from '../../watchlist/industryStocks';
 import { SortableContext, verticalListSortingStrategy, horizontalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
@@ -49,6 +50,7 @@ interface StockData {
     pct_change: number;
     vsi: number;
     trading_value?: number;
+    vsma60?: number; // KL bình quân 60 phiên — cùng close ước lượng GT giao dịch bq (thanh khoản)
     exchange?: string;
     industry_name?: string;
 }
@@ -181,19 +183,8 @@ export default function WatchlistPanel({ onTickerChange }: WatchlistPanelProps) 
             .sort((a, b) => a.ticker.localeCompare(b.ticker));
     }, [stockDataRaw]);
 
-    const industries = useMemo<IndustryInfo[]>(() => {
-        if (!stockDataRaw || !Array.isArray(stockDataRaw)) return [];
-        const map = new Map<string, string[]>();
-        stockDataRaw.forEach(s => {
-            const ind = s.industry_name;
-            if (!ind) return;
-            if (!map.has(ind)) map.set(ind, []);
-            map.get(ind)!.push(s.ticker);
-        });
-        return Array.from(map.entries())
-            .map(([name, tickers]) => ({ name, tickers: tickers.sort() }))
-            .sort((a, b) => a.name.localeCompare(b.name));
-    }, [stockDataRaw]);
+    // TOP 20 mã thanh khoản cao nhất mỗi ngành (buildIndustriesTop — dùng chung với /watchlist, /portfolio).
+    const industries = useMemo<IndustryInfo[]>(() => buildIndustriesTop(stockDataRaw ?? []), [stockDataRaw]);
 
     const fetchWatchlists = useCallback(async () => {
         if (!isLoggedIn) {

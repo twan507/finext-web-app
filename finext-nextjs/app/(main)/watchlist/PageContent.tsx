@@ -31,6 +31,7 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import WatchlistColumn from './components/WatchlistColumn';
 import SortableWatchlistCard from './components/SortableWatchlistCard';
 import AddWatchlistDialog from './components/AddWatchlistDialog';
+import { buildIndustriesTop } from './industryStocks';
 import ConfirmDialog from './components/ConfirmDialog';
 import CollapsibleSection from './components/CollapsibleSection';
 import IndexGrid from './components/IndexGrid';
@@ -44,6 +45,7 @@ interface StockData {
     pct_change: number;
     vsi: number;
     trading_value?: number;
+    vsma60?: number; // KL bình quân 60 phiên — dùng cùng close để ước lượng GT giao dịch bq (thanh khoản)
     exchange?: string;
     industry_name?: string;
 }
@@ -350,20 +352,8 @@ export default function WatchlistContent() {
             .sort((a, b) => a.ticker.localeCompare(b.ticker));
     }, [stockDataRaw]);
 
-    // Industries: name → tickers[]
-    const industries = useMemo<IndustryInfo[]>(() => {
-        if (!stockDataRaw || !Array.isArray(stockDataRaw)) return [];
-        const map = new Map<string, string[]>();
-        stockDataRaw.forEach(s => {
-            const ind = s.industry_name;
-            if (!ind) return;
-            if (!map.has(ind)) map.set(ind, []);
-            map.get(ind)!.push(s.ticker);
-        });
-        return Array.from(map.entries())
-            .map(([name, tickers]) => ({ name, tickers: tickers.sort() }))
-            .sort((a, b) => a.name.localeCompare(b.name));
-    }, [stockDataRaw]);
+    // Industries: TOP 20 mã thanh khoản cao nhất mỗi ngành (buildIndustriesTop — dùng chung với /portfolio).
+    const industries = useMemo<IndustryInfo[]>(() => buildIndustriesTop(stockDataRaw ?? []), [stockDataRaw]);
 
     const fetchWatchlists = useCallback(async () => {
         if (!session) {

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { apiClient } from 'services/apiClient';
 import { useSseCache } from 'services/sseClient';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { buildIndustriesTop } from '../watchlist/industryStocks';
 
 export const MAX_TICKERS = 20; // WL > 20 mã không cho tư vấn (trần ngữ cảnh + M3)
 
@@ -31,6 +32,7 @@ export interface StockData {
   pct_change: number;
   vsi: number;
   trading_value?: number;
+  vsma60?: number; // KL bình quân 60 phiên — cùng close ước lượng GT giao dịch bq (thanh khoản)
   exchange?: string;
   industry_name?: string;
 }
@@ -117,13 +119,8 @@ export function useWatchlistData(): WatchlistDataResult {
   );
 
   const industries = useMemo<IndustryInfo[]>(() => {
-    const map = new Map<string, string[]>();
-    (rawRef.current ?? []).forEach((s) => {
-      if (!s.industry_name) return;
-      if (!map.has(s.industry_name)) map.set(s.industry_name, []);
-      map.get(s.industry_name)!.push(s.ticker);
-    });
-    return Array.from(map.entries()).map(([name, tickers]) => ({ name, tickers: tickers.sort() })).sort((a, b) => a.name.localeCompare(b.name));
+    // TOP 20 mã thanh khoản cao nhất mỗi ngành (buildIndustriesTop) — snapshot theo tập mã, không đổi theo giá.
+    return buildIndustriesTop(rawRef.current ?? []);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- cố ý chỉ tính lại khi TẬP mã/ngành đổi
   }, [industryKey]);
 
