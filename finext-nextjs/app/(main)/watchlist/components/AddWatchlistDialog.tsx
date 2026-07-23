@@ -254,7 +254,7 @@ export default function AddWatchlistDialog({
                                         {...params}
                                         label="Chọn ngành"
                                         placeholder="Tìm ngành..."
-                                        sx={textFieldSx}
+                                        sx={{ ...textFieldSx, '& .MuiOutlinedInput-root, & .MuiOutlinedInput-input': { cursor: 'default' } }}
                                     />
                                 )}
                                 slotProps={{
