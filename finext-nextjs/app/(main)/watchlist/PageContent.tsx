@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Box, Typography, Button, useTheme, useMediaQuery, Snackbar, Alert } from '@mui/material';
 import DotLoading from 'components/common/DotLoading';
 import AddIcon from '@mui/icons-material/Add';
-import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
+import PortfolioNavIcon from '../PortfolioNavIcon';
 import {
     DndContext,
     DragOverlay,
@@ -608,7 +608,7 @@ export default function WatchlistContent() {
                 href="/portfolio"
                 variant="outlined"
                 size="small"
-                startIcon={<AccountBalanceWalletOutlinedIcon sx={{ fontSize: 18 }} />}
+                startIcon={<PortfolioNavIcon sx={{ fontSize: 18 }} />}
                 sx={{ flexShrink: 0, textTransform: 'none', fontWeight: fontWeight.semibold }}
             >
                 Tư vấn danh mục
