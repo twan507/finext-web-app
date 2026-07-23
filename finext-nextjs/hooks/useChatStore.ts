@@ -110,6 +110,7 @@ function toChatMessage(m: MessageDTO): ChatMessage {
 export default function useChatStore(
   initialConversationId?: string,
   getPageContext?: () => string | undefined,
+  chatMode?: 'portfolio', // trang /portfolio truyền 'portfolio' → gửi mode + lọc lịch sử source
 ): UseChatStoreReturn {
   const [conversations, setConversations] = useState<Conversation[]>(() => [newConv()]);
   const [activeId, setActiveId] = useState<string>(() => conversations[0]?.id ?? '');
@@ -132,6 +133,8 @@ export default function useChatStore(
   thinkingRef.current = thinking;
   const pageContextRef = useRef<(() => string | undefined) | undefined>(getPageContext); // đọc lúc gửi → luôn khớp trang hiện tại
   pageContextRef.current = getPageContext;
+  const chatModeRef = useRef<'portfolio' | undefined>(chatMode); // đọc lúc gửi → luôn đúng chế độ
+  chatModeRef.current = chatMode;
 
   const controllerRef = useRef<AbortController | null>(null);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -169,7 +172,8 @@ export default function useChatStore(
     if (listLoadedRef.current) return;
     listLoadedRef.current = true;
     setHistoryLoading(true);
-    fetchConversations()
+    // /portfolio chỉ lấy hội thoại portfolio; chat thường/bubble loại portfolio khỏi lịch sử.
+    fetchConversations(chatMode === 'portfolio' ? 'portfolio' : 'chat')
       .then((list) => {
         const mapped = list.map(toConversation);
         setConversations((prev) => {
@@ -330,6 +334,7 @@ export default function useChatStore(
             conversation_id: serverId ?? undefined,
             thinking: thinkingRef.current,
             page_context: pageContextRef.current?.(),
+            mode: chatModeRef.current,
           },
           controller.signal,
         )) {

@@ -33,10 +33,11 @@ export interface ConversationDetailDTO extends ConversationSummaryDTO {
   messages: MessageDTO[];
 }
 
-/** Danh sách hội thoại của user (mới nhất trước). skipCache: luôn tươi khi mount trang. */
-export async function fetchConversations(): Promise<ConversationSummaryDTO[]> {
+/** Danh sách hội thoại của user (mới nhất trước). skipCache: luôn tươi khi mount trang.
+ *  source: 'portfolio' → chỉ hội thoại tư vấn danh mục; 'chat' → loại portfolio; bỏ trống → tất cả. */
+export async function fetchConversations(source?: 'chat' | 'portfolio'): Promise<ConversationSummaryDTO[]> {
   const res = await apiClient<ConversationSummaryDTO[]>({
-    url: '/api/v1/chat/conversations',
+    url: source ? `/api/v1/chat/conversations?source=${source}` : '/api/v1/chat/conversations',
     method: 'GET',
     skipCache: true,
   });

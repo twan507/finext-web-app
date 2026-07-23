@@ -20,6 +20,7 @@ export interface ChatStreamBody {
   conversation_id?: string;
   thinking?: boolean; // true = M3 suy nghĩ sâu (adaptive) — backend nhận, default false
   page_context?: string; // ngữ cảnh trang (bubble chat) — không hiển thị cho user, không lưu lịch sử
+  mode?: 'portfolio'; // chế độ tư vấn danh mục (/portfolio) — backend gate advanced + persona riêng + tag source
 }
 
 const KNOWN_TYPES = new Set(['meta', 'token', 'tool_start', 'tool_end', 'title', 'message_saved', 'done', 'quota_warn', 'queued', 'error']);
