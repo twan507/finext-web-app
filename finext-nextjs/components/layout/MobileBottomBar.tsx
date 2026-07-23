@@ -82,17 +82,11 @@ export default function MobileBottomBar() {
                         height: FAB_SIZE,
                         borderRadius: '50%',
                         bgcolor: 'transparent',
-                        // KHÔNG overflow:hidden — hào quang blur của vòng conic phải toả được ra ngoài khung.
+                        // KHÔNG overflow:hidden — quầng glow của gauge phải toả được ra ngoài khung.
                         p: 0,
                         transition: 'transform 0.2s ease',
                         '&:hover': { bgcolor: 'transparent', transform: 'scale(1.05)' },
-                        // Chạm vào → vòng xoay + hào quang tăng tốc, giống hover ở rail desktop.
-                        '&:active': {
-                            bgcolor: 'transparent',
-                            transform: 'scale(0.95)',
-                            '& .mp-nav-ring::before': { animationDuration: '1.8s' },
-                            '& .mp-nav-frame::before': { animationDuration: '2.2s' },
-                        },
+                        '&:active': { bgcolor: 'transparent', transform: 'scale(0.95)' },
                     }}
                 >
                     <MarketPhaseNavIcon aura size={FAB_SIZE} />
