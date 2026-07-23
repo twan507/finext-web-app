@@ -7,6 +7,7 @@ import { Box, Button, CircularProgress, Fab, IconButton, Tooltip, Typography, al
 import { AddCommentOutlined, AutoAwesomeRounded, CloseRounded, InfoOutlined, Launch, WarningAmberOutlined } from '@mui/icons-material';
 import { easings, getGlassCard, getGlassEdgeLight, getGlassHighlight, getGlowButton, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import { useAuth } from 'components/auth/AuthProvider';
+import AuthGateOverlay from 'components/auth/AuthGateOverlay';
 import useChatStore from 'hooks/useChatStore';
 import { BUBBLE_GREETINGS, SUGGESTIONS_SHOWN, buildPageContext, getSuggestionPool, hasBubble } from 'services/chatPageContext';
 import Composer from 'app/(main)/chat/components/Composer';
@@ -190,29 +191,20 @@ function BubbleChat({ visible, onClose }: { visible: boolean; onClose: () => voi
 
 // Chưa đăng nhập (hoặc đang xác định phiên): KHÔNG chạm tới useChatStore → không gọi API nào.
 function GuestPanel({ visible, loading, onClose }: { visible: boolean; loading: boolean; onClose: () => void }) {
-  const router = useRouter();
   const panelSx = usePanelSx(visible);
 
   return (
     <Box sx={panelSx}>
       <PanelHeader onClose={onClose} />
-      <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, px: 3, textAlign: 'center' }}>
+      {/* position:relative để AuthGateOverlay (absolute inset:0) lấp đúng vùng dưới header. */}
+      <Box sx={{ flex: 1, minHeight: 0, position: 'relative' }}>
         {loading ? (
-          <CircularProgress size={26} />
+          <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <CircularProgress size={26} />
+          </Box>
         ) : (
-          <>
-            <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary', lineHeight: 1.6 }}>
-              Đăng nhập để hỏi Finext AI về những gì bạn đang xem trên trang này.
-            </Typography>
-            <Button
-              variant="contained"
-              size="small"
-              onClick={() => router.push(`/login?callbackUrl=${encodeURIComponent(window.location.pathname)}`)}
-              sx={{ textTransform: 'none', fontSize: getResponsiveFontSize('sm') }}
-            >
-              Đăng nhập
-            </Button>
-          </>
+          // Dùng CHUNG gate đăng nhập chuẩn (compact) — đồng bộ với các nơi khác, không lệch về sau.
+          <AuthGateOverlay compact />
         )}
       </Box>
     </Box>
