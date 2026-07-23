@@ -28,7 +28,10 @@ export default function PortfolioNavIcon({ sx }: { sx?: SxProps<Theme> }) {
           height: '1em',
           fontSize: '1.5rem', // mặc định = cỡ icon MUI medium; cloneElement ghi đè qua sx
           animation: 'pfBreathe 3.2s ease-in-out infinite', // glow "thở" toàn icon — cùng nhịp Finext AI
-          '@keyframes pfSpin': { to: { transform: 'rotate(360deg)' } },
+          // Khai báo ĐỦ from→to để khép vòng liền mạch. Hạt 2 lệch pha bằng keyframe riêng (140→500 =
+          // đúng 360°) thay vì base transform + `to:360` (gây nhảy giật 220°→140° mỗi vòng).
+          '@keyframes pfSpin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } },
+          '@keyframes pfSpin2': { from: { transform: 'rotate(140deg)' }, to: { transform: 'rotate(500deg)' } },
           '@keyframes pfBreathe': {
             '0%, 100%': { opacity: 0.9, filter: `saturate(1.05) brightness(1.03) drop-shadow(0 0 0.14em ${alpha(c1, 0.45)}) drop-shadow(0 0 0.3em ${alpha(c1, 0.2)})` },
             '50%': { opacity: 1, filter: `saturate(1.35) brightness(1.14) drop-shadow(0 0 0.22em ${alpha(c1, 0.9)}) drop-shadow(0 0 0.5em ${alpha(c1, 0.5)})` },
@@ -65,7 +68,7 @@ export default function PortfolioNavIcon({ sx }: { sx?: SxProps<Theme> }) {
       </Box>
 
       {/* Hạt 2 — chậm hơn (5s) + lệch góc → khoảng cách hai hạt đổi liên tục */}
-      <Box component="span" sx={{ position: 'absolute', inset: '6%', transform: 'rotate(140deg)', animation: 'pfSpin 5s linear infinite', animationDelay: '-1.6s' }}>
+      <Box component="span" sx={{ position: 'absolute', inset: '6%', transform: 'rotate(140deg)', animation: 'pfSpin2 5s linear infinite' }}>
         <Box component="span" sx={{ position: 'absolute', top: 0, left: '50%', width: '0.16em', height: '0.16em', transform: 'translate(-50%, -50%)', borderRadius: '50%', background: c2, boxShadow: `0 0 0.12em ${alpha(c2, 0.7)}` }} />
       </Box>
     </Box>
