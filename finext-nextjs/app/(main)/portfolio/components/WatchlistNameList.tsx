@@ -3,7 +3,7 @@
 // Cột "Danh mục" của trang Tư vấn Danh mục (PA1 · 3 cột): CHỈ hiện tên + % thay đổi TB + số mã.
 // Bấm một danh mục → PageContent hiện cổ phiếu ở cột giữa. WL > 20 mã bị chặn chọn. Có nút tạo mới.
 import { useState } from 'react';
-import { Box, Button, Typography, useTheme } from '@mui/material';
+import { Box, Typography, useTheme } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DotLoading from 'components/common/DotLoading';
 import { fontWeight, getResponsiveFontSize, borderRadius } from 'theme/tokens';
@@ -25,18 +25,46 @@ const fmtPct = (frac: number) => `${frac >= 0 ? '+' : ''}${(frac * 100).toFixed(
 
 export default function WatchlistNameList({ watchlists, loading, stockDataMap, industries, refetch, selectedId, onSelect }: Props) {
   const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  // Nút tạo mới thanh lịch: khung nét đứt + quầng glow tím (đồng bộ thẩm mỹ nút tạo WL ở trang /watchlist).
   const createBtn = (
-    <Button
-      fullWidth
-      variant="outlined"
-      startIcon={<AddIcon sx={{ fontSize: 18 }} />}
+    <Box
+      role="button"
+      tabIndex={0}
       onClick={() => setDialogOpen(true)}
-      sx={{ textTransform: 'none', fontWeight: fontWeight.semibold, mb: 1 }}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDialogOpen(true); } }}
+      sx={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.9,
+        py: 1.1, mb: 1,
+        borderRadius: `${borderRadius.md}px`,
+        border: '1.5px dashed',
+        borderColor: 'primary.main',
+        color: 'primary.main',
+        fontSize: getResponsiveFontSize('sm'),
+        fontWeight: fontWeight.semibold,
+        cursor: 'pointer',
+        userSelect: 'none',
+        transition: 'all 0.2s',
+        boxShadow: isDark
+          ? '0 0 12px 2px rgba(99,102,241,0.22), inset 0 0 12px 2px rgba(99,102,241,0.08)'
+          : '0 0 12px 2px rgba(99,102,241,0.14), inset 0 0 12px 2px rgba(99,102,241,0.05)',
+        '& .add-ic': { color: 'primary.main', transition: 'color 0.2s' },
+        '&:hover': {
+          borderColor: 'primary.light',
+          color: 'primary.light',
+          boxShadow: isDark
+            ? '0 0 20px 5px rgba(99,102,241,0.40), inset 0 0 20px 5px rgba(99,102,241,0.14)'
+            : '0 0 20px 5px rgba(99,102,241,0.26), inset 0 0 20px 5px rgba(99,102,241,0.10)',
+          '& .add-ic': { color: 'primary.light' },
+        },
+        '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
+      }}
     >
+      <AddIcon className="add-ic" sx={{ fontSize: 19 }} />
       Tạo danh mục mới
-    </Button>
+    </Box>
   );
 
   const dialog = (

@@ -1,16 +1,18 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Box, Drawer, IconButton, Typography, alpha, useTheme } from '@mui/material';
-import { AutoAwesomeRounded, AddCommentOutlined, HistoryOutlined, ViewListOutlined, WarningAmberOutlined, InfoOutlined } from '@mui/icons-material';
+import { Box, Drawer, IconButton, Popover, Typography, alpha, useTheme } from '@mui/material';
+import { AddCommentOutlined, HistoryOutlined, ViewListOutlined, WarningAmberOutlined, InfoOutlined } from '@mui/icons-material';
 import { layoutTokens, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import OptionalAuthWrapper from 'components/auth/OptionalAuthWrapper';
 import { ADVANCED_AND_ABOVE_STRICT } from '@/components/auth/features';
+import { useAuth } from 'components/auth/AuthProvider';
 import useChatStore from '../../../hooks/useChatStore';
 import MessageList from '../chat/components/MessageList';
 import Composer from '../chat/components/Composer';
 import ConversationSidebar from '../chat/components/ConversationSidebar';
+import ChatGreeting from '../chat/components/EmptyState';
 import WatchlistNameList from './components/WatchlistNameList';
 import WatchlistStocks from './components/WatchlistStocks';
 import { useWatchlistData, wlId } from './useWatchlistData';
@@ -20,8 +22,42 @@ import { PORTFOLIO_GREETING } from './portfolioMeta';
 
 // Chiều cao khả kiến dưới appbar — ép workspace kéo hết viewport (cột & line chạm đáy màn).
 const VIEWPORT = `calc(100dvh - ${layoutTokens.appBarHeight}px - env(titlebar-area-height, 0px))`;
-const NAMES_W = 208;
-const STOCKS_W = 300;
+const NAMES = { def: 208, min: 150, max: 340 };
+const STOCKS = { def: 300, min: 220, max: 520 };
+const LS_NAMES = 'finext-pf-namesW';
+const LS_STOCKS = 'finext-pf-stocksW';
+
+// Tay kéo giữa 2 cột trái để co giãn chiều rộng (desktop). Vạch chia luôn hiện, sáng lên khi hover/kéo.
+function Resizer({ width, onWidth, min, max }: { width: number; onWidth: (w: number) => void; min: number; max: number }) {
+  const start = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = width;
+    const move = (ev: PointerEvent) => onWidth(Math.min(max, Math.max(min, startW + ev.clientX - startX)));
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+  return (
+    <Box
+      onPointerDown={start}
+      role="separator"
+      aria-orientation="vertical"
+      sx={{
+        display: { xs: 'none', md: 'block' }, position: 'relative', width: '7px', flexShrink: 0, cursor: 'col-resize',
+        '&::before': { content: '""', position: 'absolute', top: 0, bottom: 0, left: '3px', width: '1px', bgcolor: 'divider', transition: 'background-color .15s, box-shadow .15s' },
+        '&:hover::before, &:active::before': { bgcolor: 'primary.main', boxShadow: (t) => `0 0 5px ${alpha(t.palette.primary.main, 0.6)}` },
+      }}
+    />
+  );
+}
 
 // Thanh nhắc hạn mức trên ô chat (chặn 429/503 = warning; nhắc sớm 50/75% = info).
 function Notice({ notice, severity = 'warning' }: { notice: { message: string; detail: boolean }; severity?: 'warning' | 'info' }) {
@@ -59,11 +95,26 @@ function ColHead({ title }: { title: string }) {
 
 function PortfolioApp() {
   const theme = useTheme();
+  const { session } = useAuth();
   const { watchlists, loading, refetch, stockDataMap, allTickers, industries } = useWatchlistData();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false); // Drawer danh mục (mobile)
-  const [historyOpen, setHistoryOpen] = useState(false); // Drawer lịch sử trò chuyện
+  const [histAnchor, setHistAnchor] = useState<HTMLElement | null>(null); // popover lịch sử
+  const [namesW, setNamesW] = useState(NAMES.def);
+  const [stocksW, setStocksW] = useState(STOCKS.def);
   const phase = usePortfolioPhase(); // headless → nhồi page_context, không hiện tag
+
+  // Khôi phục chiều rộng đã kéo (localStorage) sau mount → tránh lệch SSR.
+  useEffect(() => {
+    try {
+      const n = Number(localStorage.getItem(LS_NAMES));
+      if (n >= NAMES.min && n <= NAMES.max) setNamesW(n);
+      const s = Number(localStorage.getItem(LS_STOCKS));
+      if (s >= STOCKS.min && s <= STOCKS.max) setStocksW(s);
+    } catch { /* localStorage không khả dụng — giữ mặc định */ }
+  }, []);
+  const setNamesWp = useCallback((w: number) => { setNamesW(w); try { localStorage.setItem(LS_NAMES, String(w)); } catch { /* bỏ qua */ } }, []);
+  const setStocksWp = useCallback((w: number) => { setStocksW(w); try { localStorage.setItem(LS_STOCKS, String(w)); } catch { /* bỏ qua */ } }, []);
 
   const selectedWl = useMemo(() => watchlists.find((w) => wlId(w) === selectedId) ?? null, [watchlists, selectedId]);
 
@@ -111,43 +162,44 @@ function PortfolioApp() {
 
   return (
     <Box sx={{ display: 'flex', height: VIEWPORT, overflow: 'hidden' }}>
-      {/* Cột 1 — Danh mục (chỉ tên) — desktop */}
-      <Box sx={{ display: { xs: 'none', md: 'flex' }, flexDirection: 'column', width: NAMES_W, flexShrink: 0, borderRight: `1px solid ${theme.palette.divider}`, minHeight: 0 }}>
+      {/* Cột 1 — Danh mục (chỉ tên) — desktop, co giãn được */}
+      <Box sx={{ display: { xs: 'none', md: 'flex' }, flexDirection: 'column', width: namesW, flexShrink: 0, minHeight: 0 }}>
         <ColHead title="Danh mục" />
         <Box sx={{ flex: 1, overflowY: 'auto', p: 1 }}>{namesList}</Box>
       </Box>
+      <Resizer width={namesW} onWidth={setNamesWp} min={NAMES.min} max={NAMES.max} />
 
-      {/* Cột 2 — Cổ phiếu của danh mục đang chọn — desktop */}
-      <Box sx={{ display: { xs: 'none', md: 'flex' }, flexDirection: 'column', width: STOCKS_W, flexShrink: 0, borderRight: `1px solid ${theme.palette.divider}`, minHeight: 0 }}>
+      {/* Cột 2 — Cổ phiếu của danh mục đang chọn — desktop, co giãn được */}
+      <Box sx={{ display: { xs: 'none', md: 'flex' }, flexDirection: 'column', width: stocksW, flexShrink: 0, minHeight: 0 }}>
         <ColHead title="Cổ phiếu" />
         <Box sx={{ flex: 1, overflowY: 'auto', p: 1 }}>{stocks}</Box>
       </Box>
+      <Resizer width={stocksW} onWidth={setStocksWp} min={STOCKS.min} max={STOCKS.max} />
 
       {/* Cột 3 — Trò chuyện */}
       <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0, position: 'relative' }}>
-        {/* Bong bóng: mobile mở danh mục (trái); mới + lịch sử (phải) */}
-        <IconButton onClick={() => setPickerOpen(true)} aria-label="Danh mục" sx={{ ...bubbleSx, position: 'absolute', top: 10, left: 12, zIndex: 20, display: { xs: 'inline-flex', md: 'none' } }}>
-          <ViewListOutlined sx={{ fontSize: 20 }} />
-        </IconButton>
-        <Box sx={{ position: 'absolute', top: 10, right: 12, zIndex: 20, display: 'flex', gap: 1 }}>
+        {/* Bong bóng TRÁI: tạo hội thoại mới (+ danh mục trên mobile) */}
+        <Box sx={{ position: 'absolute', top: 10, left: 12, zIndex: 20, display: 'flex', gap: 1 }}>
           <IconButton onClick={store.newConversation} aria-label="Cuộc trò chuyện mới" sx={bubbleSx}>
             <AddCommentOutlined sx={{ fontSize: 20 }} />
           </IconButton>
-          <IconButton onClick={() => setHistoryOpen(true)} aria-label="Lịch sử trò chuyện" sx={bubbleSx}>
-            <HistoryOutlined sx={{ fontSize: 20 }} />
+          <IconButton onClick={() => setPickerOpen(true)} aria-label="Danh mục" sx={{ ...bubbleSx, display: { xs: 'inline-flex', md: 'none' } }}>
+            <ViewListOutlined sx={{ fontSize: 20 }} />
           </IconButton>
         </Box>
+        {/* Bong bóng PHẢI: lịch sử trò chuyện → mở cửa sổ nhỏ (popover) */}
+        <IconButton onClick={(e) => setHistAnchor(e.currentTarget)} aria-label="Lịch sử trò chuyện" sx={{ ...bubbleSx, position: 'absolute', top: 10, right: 12, zIndex: 20 }}>
+          <HistoryOutlined sx={{ fontSize: 20 }} />
+        </IconButton>
 
         {hasMessages ? (
           <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', pt: 6.5 }}>
             <MessageList key={store.activeId} messages={store.messages} onRetry={store.retry} onFeedback={store.sendFeedback} error={store.error} pending={store.awaitingReply} scrollMode="container" />
           </Box>
         ) : (
-          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', px: 3, textAlign: 'center' }}>
-            <Box sx={{ maxWidth: 460 }}>
-              <AutoAwesomeRounded sx={{ fontSize: 34, color: 'primary.main', mb: 1 }} />
-              <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary' }}>{PORTFOLIO_GREETING}</Typography>
-            </Box>
+          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', px: 3, gap: 2 }}>
+            <ChatGreeting name={session?.user?.full_name} />
+            <Typography sx={{ maxWidth: 480, textAlign: 'center', fontSize: getResponsiveFontSize('sm'), color: 'text.secondary' }}>{PORTFOLIO_GREETING}</Typography>
           </Box>
         )}
         {store.limitNotice ? <Notice notice={store.limitNotice} /> : store.quotaWarn ? <Notice notice={store.quotaWarn} severity="info" /> : null}
@@ -166,21 +218,38 @@ function PortfolioApp() {
         </Box>
       </Drawer>
 
-      {/* Drawer lịch sử trò chuyện (dùng chung ConversationSidebar như chat) */}
-      <Drawer anchor="right" open={historyOpen} onClose={() => setHistoryOpen(false)}>
+      {/* Lịch sử trò chuyện — cửa sổ nhỏ nổi (popover), không phải Drawer */}
+      <Popover
+        open={!!histAnchor}
+        anchorEl={histAnchor}
+        onClose={() => setHistAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        slotProps={{
+          paper: {
+            sx: (t) => ({
+              mt: 1, width: 272, maxHeight: '62vh', overflowY: 'auto',
+              bgcolor: t.palette.mode === 'dark' ? 'rgba(22,22,26,0.85)' : 'rgba(255,255,255,0.9)',
+              backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+              border: `1px solid ${t.palette.divider}`, borderRadius: 2,
+              boxShadow: t.palette.mode === 'dark' ? '0 8px 32px rgba(0,0,0,0.55)' : '0 8px 24px rgba(0,0,0,0.14)',
+            }),
+          },
+        }}
+      >
         <ConversationSidebar
           conversations={store.conversations}
           activeId={store.activeId}
           collapsed={false}
           loading={store.historyLoading}
-          onNew={() => { store.newConversation(); setHistoryOpen(false); }}
-          onSelect={(id) => { store.selectConversation(id); setHistoryOpen(false); }}
-          onToggle={() => setHistoryOpen(false)}
+          onNew={() => { store.newConversation(); setHistAnchor(null); }}
+          onSelect={(id) => { store.selectConversation(id); setHistAnchor(null); }}
+          onToggle={() => setHistAnchor(null)}
           onDelete={store.deleteConversation}
           onTogglePin={store.togglePin}
           onRename={store.renameConversation}
         />
-      </Drawer>
+      </Popover>
     </Box>
   );
 }
