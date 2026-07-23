@@ -145,6 +145,16 @@ test('gợi ý ở trang chi tiết cổ phiếu nhắc tên mã', () => {
   assert.ok(getSuggestions('/charts/VNINDEX').some((q) => q.includes('VNINDEX')));
 });
 
+test('mã/chỉ số trong URL viết thường được VIẾT HOA ở câu gợi ý', () => {
+  // /charts/fnxindex (slug thường từ URL) → câu gợi ý phải hiện 'FNXINDEX', không phải 'fnxindex'.
+  const charts = getSuggestions('/charts/fnxindex');
+  assert.ok(charts.some((q) => q.includes('FNXINDEX')), 'phải viết hoa FNXINDEX');
+  assert.ok(!charts.some((q) => q.includes('fnxindex')), 'không được để nguyên chữ thường');
+  assert.ok(getSuggestions('/stocks/vnm').some((q) => q.includes('VNM')), 'mã cổ phiếu cũng viết hoa');
+  // Ngược lại: slug ngành KHÔNG viết hoa (đã dùng 'ngành này', không chèn slug).
+  assert.ok(!getSuggestions('/sectors/nganhang').some((q) => q.includes('NGANHANG')), 'slug ngành giữ nguyên');
+});
+
 test('có nhiều câu chào để lớp UI xoay vòng', () => {
   assert.ok(BUBBLE_GREETINGS.length >= 3, 'cần ít nhất 3 câu chào');
   for (const g of BUBBLE_GREETINGS) assert.ok(g.trim().length > 0, 'câu chào rỗng');
