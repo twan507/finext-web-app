@@ -178,22 +178,22 @@ function PortfolioApp() {
 
       {/* Cột 3 — Trò chuyện */}
       <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0, position: 'relative' }}>
-        {/* Bong bóng TRÁI: tạo hội thoại mới (+ danh mục trên mobile) */}
-        <Box sx={{ position: 'absolute', top: 10, left: 12, zIndex: 20, display: 'flex', gap: 1 }}>
-          <IconButton onClick={store.newConversation} aria-label="Cuộc trò chuyện mới" sx={bubbleSx}>
-            <AddCommentOutlined sx={{ fontSize: 20 }} />
-          </IconButton>
+        {/* Bong bóng TRÁI: mobile → Danh mục NGOÀI CÙNG TRÁI, rồi tạo hội thoại mới; desktop chỉ có tạo mới */}
+        <Box sx={{ position: 'absolute', top: 16, left: 12, zIndex: 20, display: 'flex', gap: 1 }}>
           <IconButton onClick={() => setPickerOpen(true)} aria-label="Danh mục" sx={{ ...bubbleSx, display: { xs: 'inline-flex', md: 'none' } }}>
             <ViewListOutlined sx={{ fontSize: 20 }} />
           </IconButton>
+          <IconButton onClick={store.newConversation} aria-label="Cuộc trò chuyện mới" sx={bubbleSx}>
+            <AddCommentOutlined sx={{ fontSize: 20 }} />
+          </IconButton>
         </Box>
         {/* Bong bóng PHẢI: lịch sử trò chuyện → mở cửa sổ nhỏ (popover) */}
-        <IconButton onClick={(e) => setHistAnchor(e.currentTarget)} aria-label="Lịch sử trò chuyện" sx={{ ...bubbleSx, position: 'absolute', top: 10, right: 12, zIndex: 20 }}>
+        <IconButton onClick={(e) => setHistAnchor(e.currentTarget)} aria-label="Lịch sử trò chuyện" sx={{ ...bubbleSx, position: 'absolute', top: 16, right: 12, zIndex: 20 }}>
           <HistoryOutlined sx={{ fontSize: 20 }} />
         </IconButton>
 
         {hasMessages ? (
-          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', pt: 6.5 }}>
+          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', pt: 7.5 }}>
             <MessageList key={store.activeId} messages={store.messages} onRetry={store.retry} onFeedback={store.sendFeedback} error={store.error} pending={store.awaitingReply} scrollMode="container" />
           </Box>
         ) : (
