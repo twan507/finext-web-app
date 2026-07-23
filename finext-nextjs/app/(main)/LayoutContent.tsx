@@ -19,7 +19,6 @@ import {
   ChevronRight as ChevronRightIcon,
   CandlestickChartOutlined,
   StarBorderPurple500Outlined,
-  AccountBalanceWalletOutlined,
   FilterAltOutlined,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
@@ -40,6 +39,7 @@ import MobileBottomBar from '@/components/layout/MobileBottomBar';
 import ChatBubble from '@/components/chatBubble/ChatBubble';
 import MarketPhaseNavIcon from './MarketPhaseNavIcon';
 import FinextAiNavIcon from './FinextAiNavIcon';
+import PortfolioNavIcon from './PortfolioNavIcon';
 
 interface NavItem {
   text: string;
@@ -56,7 +56,7 @@ const navigationStructure: NavItem[] = [
   { text: 'Danh sách theo dõi', href: '/watchlist', icon: <StarBorderPurple500Outlined /> },
   { text: 'Bộ lọc thông minh', href: '/stocks', icon: <FilterAltOutlined />, exactMatch: true },
   { text: 'Finext AI', href: '/chat', icon: <FinextAiNavIcon /> },
-  { text: 'Tư vấn danh mục', href: '/portfolio', icon: <AccountBalanceWalletOutlined /> },
+  { text: 'Tư vấn danh mục', href: '/portfolio', icon: <PortfolioNavIcon /> },
 ];
 
 // Top navigation tabs (like in Simplize)
