@@ -2,14 +2,15 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Box, Button, Drawer, IconButton, Typography, alpha, useTheme } from '@mui/material';
-import { AutoAwesomeRounded, AddCommentOutlined, ViewListOutlined, WarningAmberOutlined, InfoOutlined } from '@mui/icons-material';
+import { Box, Drawer, IconButton, Typography, alpha, useTheme } from '@mui/material';
+import { AutoAwesomeRounded, AddCommentOutlined, HistoryOutlined, ViewListOutlined, WarningAmberOutlined, InfoOutlined } from '@mui/icons-material';
 import { layoutTokens, getResponsiveFontSize, fontWeight } from 'theme/tokens';
 import OptionalAuthWrapper from 'components/auth/OptionalAuthWrapper';
 import { ADVANCED_AND_ABOVE_STRICT } from '@/components/auth/features';
 import useChatStore from '../../../hooks/useChatStore';
 import MessageList from '../chat/components/MessageList';
 import Composer from '../chat/components/Composer';
+import ConversationSidebar from '../chat/components/ConversationSidebar';
 import WatchlistNameList from './components/WatchlistNameList';
 import WatchlistStocks from './components/WatchlistStocks';
 import { useWatchlistData, wlId } from './useWatchlistData';
@@ -17,6 +18,7 @@ import { usePortfolioPhase } from './usePortfolioPhase';
 import { buildPortfolioContext } from './portfolioContext';
 import { PORTFOLIO_GREETING } from './portfolioMeta';
 
+// Chiều cao khả kiến dưới appbar — ép workspace kéo hết viewport (cột & line chạm đáy màn).
 const VIEWPORT = `calc(100dvh - ${layoutTokens.appBarHeight}px - env(titlebar-area-height, 0px))`;
 const NAMES_W = 208;
 const STOCKS_W = 300;
@@ -60,6 +62,7 @@ function PortfolioApp() {
   const { watchlists, loading, refetch, stockDataMap, allTickers, industries } = useWatchlistData();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false); // Drawer danh mục (mobile)
+  const [historyOpen, setHistoryOpen] = useState(false); // Drawer lịch sử trò chuyện
   const phase = usePortfolioPhase(); // headless → nhồi page_context, không hiện tag
 
   const selectedWl = useMemo(() => watchlists.find((w) => wlId(w) === selectedId) ?? null, [watchlists, selectedId]);
@@ -83,6 +86,16 @@ function PortfolioApp() {
     setPickerOpen(false);
   }, []);
 
+  // Bong bóng góc kiểu chat mobile (nền kính mờ).
+  const bubbleSx = {
+    width: 38, height: 38, color: 'text.primary',
+    bgcolor: alpha(theme.palette.background.paper, theme.palette.mode === 'dark' ? 0.7 : 0.85),
+    backdropFilter: 'blur(12px)',
+    border: `1px solid ${theme.palette.divider}`,
+    boxShadow: theme.palette.mode === 'dark' ? '0 2px 10px rgba(0,0,0,0.4)' : '0 2px 10px rgba(15,23,42,0.1)',
+    '&:hover': { bgcolor: theme.palette.background.paper },
+  };
+
   const namesList = (
     <WatchlistNameList
       watchlists={watchlists}
@@ -97,53 +110,53 @@ function PortfolioApp() {
   const stocks = <WatchlistStocks wl={selectedWl} stockDataMap={stockDataMap} allTickers={allTickers} />;
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, height: { md: VIEWPORT } }}>
-      {/* Thanh tiêu đề: icon AI phẳng + tên + nút tạo hội thoại mới (+ nút danh mục trên mobile) */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: { xs: 1.5, md: 2 }, py: 1, borderBottom: `1px solid ${theme.palette.divider}`, flexShrink: 0 }}>
-        <IconButton onClick={() => setPickerOpen(true)} aria-label="Danh mục" sx={{ display: { xs: 'inline-flex', md: 'none' }, color: 'text.secondary' }}>
-          <ViewListOutlined sx={{ fontSize: 22 }} />
+    <Box sx={{ display: 'flex', height: VIEWPORT, overflow: 'hidden' }}>
+      {/* Cột 1 — Danh mục (chỉ tên) — desktop */}
+      <Box sx={{ display: { xs: 'none', md: 'flex' }, flexDirection: 'column', width: NAMES_W, flexShrink: 0, borderRight: `1px solid ${theme.palette.divider}`, minHeight: 0 }}>
+        <ColHead title="Danh mục" />
+        <Box sx={{ flex: 1, overflowY: 'auto', p: 1 }}>{namesList}</Box>
+      </Box>
+
+      {/* Cột 2 — Cổ phiếu của danh mục đang chọn — desktop */}
+      <Box sx={{ display: { xs: 'none', md: 'flex' }, flexDirection: 'column', width: STOCKS_W, flexShrink: 0, borderRight: `1px solid ${theme.palette.divider}`, minHeight: 0 }}>
+        <ColHead title="Cổ phiếu" />
+        <Box sx={{ flex: 1, overflowY: 'auto', p: 1 }}>{stocks}</Box>
+      </Box>
+
+      {/* Cột 3 — Trò chuyện */}
+      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0, position: 'relative' }}>
+        {/* Bong bóng: mobile mở danh mục (trái); mới + lịch sử (phải) */}
+        <IconButton onClick={() => setPickerOpen(true)} aria-label="Danh mục" sx={{ ...bubbleSx, position: 'absolute', top: 10, left: 12, zIndex: 20, display: { xs: 'inline-flex', md: 'none' } }}>
+          <ViewListOutlined sx={{ fontSize: 20 }} />
         </IconButton>
-        <AutoAwesomeRounded sx={{ fontSize: 22, color: 'primary.main' }} />
-        <Typography sx={{ fontSize: getResponsiveFontSize('md'), fontWeight: fontWeight.bold }}>Tư vấn danh mục</Typography>
-        <Button size="small" variant="outlined" startIcon={<AddCommentOutlined sx={{ fontSize: 18 }} />} onClick={store.newConversation} sx={{ ml: 'auto', textTransform: 'none', fontWeight: fontWeight.semibold }}>
-          Cuộc trò chuyện mới
-        </Button>
-      </Box>
-
-      {/* Thân: 3 cột (desktop) — tên | cổ phiếu | chat */}
-      <Box sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        {/* Cột 1 — Danh mục (chỉ tên) */}
-        <Box sx={{ display: { xs: 'none', md: 'flex' }, flexDirection: 'column', width: NAMES_W, flexShrink: 0, borderRight: `1px solid ${theme.palette.divider}`, minHeight: 0 }}>
-          <ColHead title="Danh mục" />
-          <Box sx={{ flex: 1, overflowY: 'auto', p: 1 }}>{namesList}</Box>
+        <Box sx={{ position: 'absolute', top: 10, right: 12, zIndex: 20, display: 'flex', gap: 1 }}>
+          <IconButton onClick={store.newConversation} aria-label="Cuộc trò chuyện mới" sx={bubbleSx}>
+            <AddCommentOutlined sx={{ fontSize: 20 }} />
+          </IconButton>
+          <IconButton onClick={() => setHistoryOpen(true)} aria-label="Lịch sử trò chuyện" sx={bubbleSx}>
+            <HistoryOutlined sx={{ fontSize: 20 }} />
+          </IconButton>
         </Box>
 
-        {/* Cột 2 — Cổ phiếu của danh mục đang chọn */}
-        <Box sx={{ display: { xs: 'none', md: 'flex' }, flexDirection: 'column', width: STOCKS_W, flexShrink: 0, borderRight: `1px solid ${theme.palette.divider}`, minHeight: 0 }}>
-          <ColHead title="Cổ phiếu" />
-          <Box sx={{ flex: 1, overflowY: 'auto', p: 1 }}>{stocks}</Box>
-        </Box>
-
-        {/* Cột 3 — Trò chuyện */}
-        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          {hasMessages ? (
+        {hasMessages ? (
+          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', pt: 6.5 }}>
             <MessageList key={store.activeId} messages={store.messages} onRetry={store.retry} onFeedback={store.sendFeedback} error={store.error} pending={store.awaitingReply} scrollMode="container" />
-          ) : (
-            <Box sx={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', px: 3, textAlign: 'center' }}>
-              <Box sx={{ maxWidth: 460 }}>
-                <AutoAwesomeRounded sx={{ fontSize: 34, color: 'primary.main', mb: 1 }} />
-                <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary' }}>{PORTFOLIO_GREETING}</Typography>
-              </Box>
-            </Box>
-          )}
-          {store.limitNotice ? <Notice notice={store.limitNotice} /> : store.quotaWarn ? <Notice notice={store.quotaWarn} severity="info" /> : null}
-          <Box sx={{ flexShrink: 0 }}>
-            <Composer disabled={streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} />
           </Box>
+        ) : (
+          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', px: 3, textAlign: 'center' }}>
+            <Box sx={{ maxWidth: 460 }}>
+              <AutoAwesomeRounded sx={{ fontSize: 34, color: 'primary.main', mb: 1 }} />
+              <Typography sx={{ fontSize: getResponsiveFontSize('sm'), color: 'text.secondary' }}>{PORTFOLIO_GREETING}</Typography>
+            </Box>
+          </Box>
+        )}
+        {store.limitNotice ? <Notice notice={store.limitNotice} /> : store.quotaWarn ? <Notice notice={store.quotaWarn} severity="info" /> : null}
+        <Box sx={{ flexShrink: 0 }}>
+          <Composer disabled={streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} />
         </Box>
       </Box>
 
-      {/* Mobile: Drawer chứa Danh mục + Cổ phiếu (xếp dọc) */}
+      {/* Mobile: Drawer danh mục + cổ phiếu (xếp dọc) */}
       <Drawer anchor="left" open={pickerOpen} onClose={() => setPickerOpen(false)}>
         <Box sx={{ width: '86vw', maxWidth: 380, display: 'flex', flexDirection: 'column', height: '100%' }}>
           <ColHead title="Danh mục" />
@@ -151,6 +164,22 @@ function PortfolioApp() {
           <ColHead title="Cổ phiếu" />
           <Box sx={{ flex: 1, overflowY: 'auto', p: 1 }}>{stocks}</Box>
         </Box>
+      </Drawer>
+
+      {/* Drawer lịch sử trò chuyện (dùng chung ConversationSidebar như chat) */}
+      <Drawer anchor="right" open={historyOpen} onClose={() => setHistoryOpen(false)}>
+        <ConversationSidebar
+          conversations={store.conversations}
+          activeId={store.activeId}
+          collapsed={false}
+          loading={store.historyLoading}
+          onNew={() => { store.newConversation(); setHistoryOpen(false); }}
+          onSelect={(id) => { store.selectConversation(id); setHistoryOpen(false); }}
+          onToggle={() => setHistoryOpen(false)}
+          onDelete={store.deleteConversation}
+          onTogglePin={store.togglePin}
+          onRename={store.renameConversation}
+        />
       </Drawer>
     </Box>
   );

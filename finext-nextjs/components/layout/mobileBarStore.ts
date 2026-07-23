@@ -63,10 +63,10 @@ export function useMobileBarVisible(): boolean {
 
 /**
  * Route này có render thanh điều hướng đáy không.
- * Trang /chat ẩn hẳn thanh (tránh trồi/thụt gây khó chịu khi đang chat).
+ * Trang /chat và /portfolio ẩn hẳn thanh (khung chat/tư vấn chiếm trọn viewport, composer sát đáy).
  */
 export function isMobileBarRoute(pathname: string | null | undefined): boolean {
-    return !pathname?.startsWith('/chat');
+    return !pathname?.startsWith('/chat') && !pathname?.startsWith('/portfolio');
 }
 
 /**

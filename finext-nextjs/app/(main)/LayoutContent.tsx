@@ -1033,8 +1033,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           >
             {children}
           </Box>
-        ) : currentPathname.startsWith('/chat') ? (
-          /* Chat mode - full-width, no footer, NORMAL flow → CUỘN TRÌNH DUYỆT (appbar sticky sẵn) */
+        ) : (currentPathname.startsWith('/chat') || currentPathname.startsWith('/portfolio')) ? (
+          /* Chat / Tư vấn danh mục - full-width, no footer, NORMAL flow → CUỘN TRÌNH DUYỆT (appbar sticky sẵn) */
           <Box
             component="main"
             sx={{
@@ -1042,7 +1042,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               display: 'flex',
               flexDirection: 'column',
               minHeight: `calc(100dvh - ${layoutTokens.appBarHeight}px - env(titlebar-area-height, 0px))`,
-              pb: 0, // MobileBottomBar ẩn ở /chat → không chừa 56px, để composer sát đáy
+              pb: 0, // MobileBottomBar ẩn ở /chat & /portfolio → không chừa 56px, để composer sát đáy
             }}
           >
             {children}
