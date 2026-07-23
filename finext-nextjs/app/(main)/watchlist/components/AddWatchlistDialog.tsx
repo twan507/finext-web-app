@@ -113,9 +113,9 @@ export default function AddWatchlistDialog({
 
     // Shared glass card sx
     const glassCardSx = {
-        bgcolor: isDark ? 'rgba(15, 10, 35, 0.4)' : 'rgba(255, 255, 255, 0.05)',
-        backdropFilter: 'blur(20px) saturate(150%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(150%)',
+        // Nền ĐẶC (không backdrop-filter): backdrop-filter nằm trong Fade (đổi opacity) + re-render do
+        // SSE giá live → bị re-composite gây NHÁY. Bỏ blur là fix gốc; giữ gradient overlay + viền + shadow.
+        bgcolor: theme.palette.background.paper,
         boxShadow: isDark
             ? '0 8px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(139,92,246,0.1), inset 0 1px 0 rgba(255,255,255,0.1)'
             : '0 8px 32px rgba(107,70,193,0.15), 0 4px 16px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.4)',
@@ -169,10 +169,9 @@ export default function AddWatchlistDialog({
             fullWidth
             slotProps={{
                 backdrop: {
+                    // Bỏ backdrop-filter (gây nháy khi Fade/re-render); dùng nền dim đặc thay cho blur.
                     sx: {
-                        backgroundColor: 'rgba(139, 92, 246, 0.08)',
-                        backdropFilter: 'blur(6px)',
-                        WebkitBackdropFilter: 'blur(6px)',
+                        backgroundColor: isDark ? 'rgba(8, 6, 16, 0.6)' : 'rgba(20, 14, 40, 0.42)',
                     },
                 },
             }}
