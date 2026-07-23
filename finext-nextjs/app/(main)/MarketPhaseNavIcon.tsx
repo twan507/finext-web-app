@@ -2,16 +2,32 @@
 
 import { Box, alpha, useTheme } from '@mui/material';
 
-/** Đồng hồ định pha: dải đỏ→vàng→xanh (giảm→trung gian→tăng) + kim. */
-function Gauge({ size = 22, needle, mb = 0, ml = 0 }: { size?: number; needle: string; mb?: number; ml?: number }) {
+/** Đồng hồ định pha: cung XANH(trái)→vàng→ĐỎ(phải) + kim đưa qua lại quét cả hai màu.
+ *  Kim/dot dùng MÀU ĐẶC (không gradient bbox → tránh lỗi kim tàng hình khi thẳng đứng); kim xoay
+ *  quanh trục (12,17.5) bằng transform-box:view-box (không phụ thuộc bbox). */
+function Gauge({ size = 24, accent, mb = 0 }: { size?: number; accent: string; mb?: number }) {
   return (
-    <svg width={size} height={size} viewBox="2 4 20 20" fill="none" strokeLinecap="round" style={{ display: 'block', marginBottom: mb, marginLeft: ml }}>
-      <path d="M4 17.5 A8 8 0 0 1 8.1 10.4" stroke="#ff5a5a" strokeWidth={2.4} />
+    <Box
+      component="svg"
+      width={size}
+      height={size}
+      viewBox="2 4 20 20"
+      fill="none"
+      sx={{
+        display: 'block',
+        marginBottom: `${mb}px`,
+        strokeLinecap: 'round',
+        '@keyframes mpSway': { '0%, 100%': { transform: 'rotate(-52deg)' }, '50%': { transform: 'rotate(52deg)' } },
+        '& .mp-needle': { transformBox: 'view-box', transformOrigin: '12px 17.5px', animation: 'mpSway 4.2s ease-in-out infinite' },
+        '@media (prefers-reduced-motion: reduce)': { '& .mp-needle': { animation: 'none' } },
+      }}
+    >
+      <path d="M4 17.5 A8 8 0 0 1 8.1 10.4" stroke="#2ee06f" strokeWidth={2.4} />
       <path d="M9 9.7 A8 8 0 0 1 15 9.7" stroke="#f5c518" strokeWidth={2.4} />
-      <path d="M15.9 10.4 A8 8 0 0 1 20 17.5" stroke="#2ee06f" strokeWidth={2.4} />
-      <path d="M12 17.5 L14.4 11" stroke={needle} strokeWidth={1.7} />
-      <circle cx={12} cy={17.5} r={1.7} fill={needle} />
-    </svg>
+      <path d="M15.9 10.4 A8 8 0 0 1 20 17.5" stroke="#ff5a5a" strokeWidth={2.4} />
+      <line className="mp-needle" x1={12} y1={17.5} x2={12} y2={9.7} stroke={accent} strokeWidth={1.8} />
+      <circle cx={12} cy={17.5} r={1.8} fill={accent} />
+    </Box>
   );
 }
 
@@ -30,7 +46,7 @@ const CONIC_LIGHT = 'conic-gradient(from 0deg, #4c1d95, #7c3aed, #a78bfa, #7c3ae
 
 export default function MarketPhaseNavIcon({ aura = false, size = 34 }: MarketPhaseNavIconProps) {
   const theme = useTheme();
-  const needle = theme.palette.text.primary;
+  const accent = theme.palette.primary.main;
   const bg = theme.palette.background.default;
   const conic = theme.palette.mode === 'dark' ? CONIC_DARK : CONIC_LIGHT;
   // Nền nút: opacity giảm đều từ tâm (50%) ra rìa (10%) → tan mượt vào vành conic (bỏ vòng đen cứng).
@@ -41,7 +57,7 @@ export default function MarketPhaseNavIcon({ aura = false, size = 34 }: MarketPh
   const gaugeSize = Math.round(size * 0.7);
   const gaugeMb = Math.round(size * 0.06);
 
-  if (!aura) return <Gauge size={24} needle={needle} />;
+  if (!aura) return <Gauge size={24} accent={accent} />;
 
   return (
     <Box
@@ -100,7 +116,7 @@ export default function MarketPhaseNavIcon({ aura = false, size = 34 }: MarketPh
           zIndex: 2,
         }}
       >
-        <Gauge size={gaugeSize} needle={needle} mb={gaugeMb} />
+        <Gauge size={gaugeSize} accent={accent} mb={gaugeMb} />
       </Box>
     </Box>
   );

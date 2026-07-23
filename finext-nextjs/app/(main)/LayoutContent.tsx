@@ -17,9 +17,6 @@ import {
   Dashboard as DashboardIcon,
   Menu as MenuIcon,
   ChevronRight as ChevronRightIcon,
-  CandlestickChartOutlined,
-  StarBorderPurple500Outlined,
-  FilterAltOutlined,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   ArrowBack as ArrowBackIcon,
@@ -40,6 +37,9 @@ import ChatBubble from '@/components/chatBubble/ChatBubble';
 import MarketPhaseNavIcon from './MarketPhaseNavIcon';
 import FinextAiNavIcon from './FinextAiNavIcon';
 import PortfolioNavIcon from './PortfolioNavIcon';
+import ChartNavIcon from './ChartNavIcon';
+import WatchlistNavIcon from './WatchlistNavIcon';
+import ScreenerNavIcon from './ScreenerNavIcon';
 
 interface NavItem {
   text: string;
@@ -52,9 +52,9 @@ interface NavItem {
 
 const navigationStructure: NavItem[] = [
   { text: 'Giai đoạn thị trường', href: '/phase', icon: <MarketPhaseNavIcon />, special: true },
-  { text: 'Biểu đồ kĩ thuật', href: '/charts', icon: <CandlestickChartOutlined /> },
-  { text: 'Danh sách theo dõi', href: '/watchlist', icon: <StarBorderPurple500Outlined /> },
-  { text: 'Bộ lọc thông minh', href: '/stocks', icon: <FilterAltOutlined />, exactMatch: true },
+  { text: 'Biểu đồ kĩ thuật', href: '/charts', icon: <ChartNavIcon /> },
+  { text: 'Danh sách theo dõi', href: '/watchlist', icon: <WatchlistNavIcon /> },
+  { text: 'Bộ lọc thông minh', href: '/stocks', icon: <ScreenerNavIcon />, exactMatch: true },
   { text: 'Finext AI', href: '/chat', icon: <FinextAiNavIcon /> },
   { text: 'Tư vấn danh mục', href: '/portfolio', icon: <PortfolioNavIcon /> },
 ];
