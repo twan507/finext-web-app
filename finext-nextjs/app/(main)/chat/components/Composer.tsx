@@ -16,8 +16,8 @@ interface ComposerProps {
   centered?: boolean; // true = khối nổi ở GIỮA (empty state), không dính đáy; false = dính đáy viewport khi đã chat.
   /** true = khung hẹp (bubble ~380px): dùng chữ ngắn để không wrap. Trang /chat KHÔNG truyền → giữ nguyên chữ đầy đủ. */
   compact?: boolean;
-  /** Cỡ quầng sáng sau khung (chỉ đổi ở mode centered): 'full' = mặc định /chat; 'soft' = thu gọn cho card popup. */
-  glowSize?: 'full' | 'soft';
+  /** Cỡ quầng sáng sau khung (chỉ đổi ở mode centered): 'full' = mặc định /chat; 'soft' = thu gọn cho card popup; 'narrow' = hẹp chiều ngang cho cột chat hẹp (/portfolio). */
+  glowSize?: 'full' | 'soft' | 'narrow';
   /** Override chữ mờ ô nhập (mode không-compact). Không truyền → chữ chat thường. `placeholderMobile` là bản ngắn tránh wrap. */
   placeholder?: string;
   placeholderMobile?: string;
@@ -48,6 +48,7 @@ const Composer = forwardRef<HTMLDivElement, ComposerProps>(function Composer(
   const glowAlpha = centered ? (isDark ? 0.24 : 0.13) : isDark ? 0.24 : 0.14;
   // 'soft' (popup): thu quầng lại để nằm GỌN trong card, không tràn mép rồi bị cắt như cỡ 'full' toàn trang.
   const softGlow = centered && glowSize === 'soft';
+  const narrowGlow = centered && glowSize === 'narrow'; // hẹp chiều ngang cho cột chat hẹp (/portfolio), giữ chiều dọc
   const glow = (
     <Box
       aria-hidden
@@ -56,7 +57,7 @@ const Composer = forwardRef<HTMLDivElement, ComposerProps>(function Composer(
         left: '50%',
         top: softGlow ? '50%' : centered ? '58%' : '50%',
         transform: 'translate(-50%, -50%)',
-        width: softGlow ? '130%' : centered ? '225%' : '128%',
+        width: softGlow ? '130%' : narrowGlow ? '150%' : centered ? '225%' : '128%',
         height: softGlow ? '185%' : centered ? '405%' : '190%',
         borderRadius: '50%',
         background: `radial-gradient(ellipse at center, ${alpha(theme.palette.primary.main, glowAlpha)} 0%, transparent ${softGlow ? 70 : centered ? 72 : 70}%)`,

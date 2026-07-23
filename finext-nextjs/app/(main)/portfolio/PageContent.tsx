@@ -319,7 +319,7 @@ function PortfolioApp() {
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: { xs: 2.5, sm: 3 } }}>
                 <ChatGreeting title={portfolioTitle(session?.user?.full_name)} />
                 <Box sx={{ width: '100%' }}>
-                  <Composer ref={setComposerNode} centered disabled={streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} placeholder={PORTFOLIO_PLACEHOLDER} placeholderMobile={PORTFOLIO_PLACEHOLDER_MOBILE} />
+                  <Composer ref={setComposerNode} centered glowSize="narrow" disabled={streaming} streaming={streaming} onSend={store.send} onStop={store.stop} thinking={store.thinking} onToggleThinking={store.toggleThinking} placeholder={PORTFOLIO_PLACEHOLDER} placeholderMobile={PORTFOLIO_PLACEHOLDER_MOBILE} />
                 </Box>
               </Box>
             </Box>
