@@ -13,6 +13,7 @@ import MessageList from '../chat/components/MessageList';
 import Composer from '../chat/components/Composer';
 import ConversationSidebar from '../chat/components/ConversationSidebar';
 import ChatGreeting from '../chat/components/EmptyState';
+import AddWatchlistDialog from '../watchlist/components/AddWatchlistDialog';
 import WatchlistNameList from './components/WatchlistNameList';
 import WatchlistStocks from './components/WatchlistStocks';
 import { useWatchlistData, wlId } from './useWatchlistData';
@@ -100,6 +101,7 @@ function PortfolioApp() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false); // Drawer danh mục (mobile)
   const [histAnchor, setHistAnchor] = useState<HTMLElement | null>(null); // popover lịch sử
+  const [createOpen, setCreateOpen] = useState(false); // dialog tạo WL (render 1 bản duy nhất ở đây)
   const [namesW, setNamesW] = useState(NAMES.def);
   const [stocksW, setStocksW] = useState(STOCKS.def);
   const phase = usePortfolioPhase(); // headless → nhồi page_context, không hiện tag
@@ -152,10 +154,9 @@ function PortfolioApp() {
       watchlists={watchlists}
       loading={loading}
       stockDataMap={stockDataMap}
-      industries={industries}
-      refetch={refetch}
       selectedId={selectedId}
       onSelect={handleSelect}
+      onCreate={() => setCreateOpen(true)}
     />
   );
   const stocks = <WatchlistStocks wl={selectedWl} stockDataMap={stockDataMap} allTickers={allTickers} />;
@@ -250,6 +251,18 @@ function PortfolioApp() {
           onRename={store.renameConversation}
         />
       </Popover>
+
+      {/* Dialog tạo WL — render DUY NHẤT ở đây (dùng chung cho cột desktop + Drawer mobile), tránh
+          2 bản dialog/portal cùng lúc gây nháy. industries đã ổn định identity qua các nhịp SSE. */}
+      <AddWatchlistDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSaved={() => { setCreateOpen(false); refetch(); }}
+        defaultCoordinate={[0, 0]}
+        defaultPage={1}
+        editingWatchlist={null}
+        industries={industries}
+      />
     </Box>
   );
 }

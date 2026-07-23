@@ -3,7 +3,7 @@
 // Nguồn dữ liệu dùng chung cho 2 cột (tên danh mục + cổ phiếu) của trang Tư vấn Danh mục:
 // danh sách WL (/watchlists/me) + giá live (SSE home_today_stock) + bản đồ tra cứu. Gọi 1 lần ở
 // PageContent rồi truyền xuống — tránh subscribe/lấy trùng.
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { apiClient } from 'services/apiClient';
 import { useSseCache } from 'services/sseClient';
 import { useAuth } from '@/components/auth/AuthProvider';
@@ -101,20 +101,31 @@ export function useWatchlistData(): WatchlistDataResult {
     return map;
   }, [stockDataRaw]);
 
+  // allTickers/industries chỉ phụ thuộc TẬP mã (và ngành), KHÔNG theo giá. Giá nhảy liên tục qua SSE
+  // nên nếu memo theo stockDataRaw thì 2 mảng này đổi identity mỗi nhịp → dialog tạo WL + Autocomplete
+  // re-render giữa lúc Fade mở → glass backdrop-filter bị re-composite → NHÁY. Khoá memo theo chữ ký
+  // tập mã để giữ nguyên identity xuyên các nhịp giá.
+  const rawRef = useRef(stockDataRaw);
+  rawRef.current = stockDataRaw;
+  const symbolsKey = useMemo(() => (stockDataRaw ?? []).map((s) => s.ticker).sort().join(','), [stockDataRaw]);
+  const industryKey = useMemo(() => (stockDataRaw ?? []).map((s) => `${s.ticker}|${s.industry_name ?? ''}`).sort().join(','), [stockDataRaw]);
+
   const allTickers = useMemo<TickerOption[]>(
-    () => (stockDataRaw ?? []).map((s) => ({ ticker: s.ticker, name: s.ticker_name || '' })).sort((a, b) => a.ticker.localeCompare(b.ticker)),
-    [stockDataRaw],
+    () => (rawRef.current ?? []).map((s) => ({ ticker: s.ticker, name: s.ticker_name || '' })).sort((a, b) => a.ticker.localeCompare(b.ticker)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- cố ý chỉ tính lại khi TẬP mã đổi, không theo giá
+    [symbolsKey],
   );
 
   const industries = useMemo<IndustryInfo[]>(() => {
     const map = new Map<string, string[]>();
-    (stockDataRaw ?? []).forEach((s) => {
+    (rawRef.current ?? []).forEach((s) => {
       if (!s.industry_name) return;
       if (!map.has(s.industry_name)) map.set(s.industry_name, []);
       map.get(s.industry_name)!.push(s.ticker);
     });
     return Array.from(map.entries()).map(([name, tickers]) => ({ name, tickers: tickers.sort() })).sort((a, b) => a.name.localeCompare(b.name));
-  }, [stockDataRaw]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- cố ý chỉ tính lại khi TẬP mã/ngành đổi
+  }, [industryKey]);
 
   return { watchlists, loading, refetch, stockDataMap, allTickers, industries };
 }

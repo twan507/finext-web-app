@@ -1,40 +1,37 @@
 'use client';
 
 // Cột "Danh mục" của trang Tư vấn Danh mục (PA1 · 3 cột): CHỈ hiện tên + % thay đổi TB + số mã.
-// Bấm một danh mục → PageContent hiện cổ phiếu ở cột giữa. WL > 20 mã bị chặn chọn. Có nút tạo mới.
-import { useState } from 'react';
+// Bấm một danh mục → PageContent hiện cổ phiếu ở cột giữa. WL > 20 mã bị chặn chọn. Nút tạo mới gọi
+// onCreate (dialog do PageContent sở hữu, render 1 bản duy nhất — tránh nháy/glitch do double-mount).
 import { Box, Typography, useTheme } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DotLoading from 'components/common/DotLoading';
 import { fontWeight, getResponsiveFontSize, borderRadius } from 'theme/tokens';
 import { getTrendColor } from 'theme/colorHelpers';
-import AddWatchlistDialog from '../../watchlist/components/AddWatchlistDialog';
-import { MAX_TICKERS, aggregateChange, wlId, type Watchlist, type StockData, type IndustryInfo } from '../useWatchlistData';
+import { MAX_TICKERS, aggregateChange, wlId, type Watchlist, type StockData } from '../useWatchlistData';
 
 interface Props {
   watchlists: Watchlist[];
   loading: boolean;
   stockDataMap: Map<string, StockData>;
-  industries: IndustryInfo[];
-  refetch: () => void;
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onCreate: () => void;
 }
 
 const fmtPct = (frac: number) => `${frac >= 0 ? '+' : ''}${(frac * 100).toFixed(1)}%`;
 
-export default function WatchlistNameList({ watchlists, loading, stockDataMap, industries, refetch, selectedId, onSelect }: Props) {
+export default function WatchlistNameList({ watchlists, loading, stockDataMap, selectedId, onSelect, onCreate }: Props) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const [dialogOpen, setDialogOpen] = useState(false);
 
   // Nút tạo mới thanh lịch: khung nét đứt + quầng glow tím (đồng bộ thẩm mỹ nút tạo WL ở trang /watchlist).
   const createBtn = (
     <Box
       role="button"
       tabIndex={0}
-      onClick={() => setDialogOpen(true)}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDialogOpen(true); } }}
+      onClick={onCreate}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCreate(); } }}
       sx={{
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.9,
         py: 1.1, mb: 1,
@@ -65,21 +62,6 @@ export default function WatchlistNameList({ watchlists, loading, stockDataMap, i
       <AddIcon className="add-ic" sx={{ fontSize: 19 }} />
       Tạo danh mục mới
     </Box>
-  );
-
-  const dialog = (
-    <AddWatchlistDialog
-      open={dialogOpen}
-      onClose={() => setDialogOpen(false)}
-      onSaved={() => {
-        setDialogOpen(false);
-        refetch();
-      }}
-      defaultCoordinate={[0, 0]}
-      defaultPage={1}
-      editingWatchlist={null}
-      industries={industries}
-    />
   );
 
   if (loading) {
@@ -150,7 +132,6 @@ export default function WatchlistNameList({ watchlists, loading, stockDataMap, i
           </Box>
         );
       })}
-      {dialog}
     </Box>
   );
 }
