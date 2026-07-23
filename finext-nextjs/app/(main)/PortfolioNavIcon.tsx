@@ -27,12 +27,21 @@ export default function PortfolioNavIcon({ sx }: { sx?: SxProps<Theme> }) {
           width: '1em',
           height: '1em',
           fontSize: '1.5rem', // mặc định = cỡ icon MUI medium; cloneElement ghi đè qua sx
+          animation: 'pfBreathe 3.2s ease-in-out infinite', // glow "thở" toàn icon — cùng nhịp Finext AI
           '@keyframes pfSpin': { to: { transform: 'rotate(360deg)' } },
-          '@keyframes pfCore': {
-            '0%, 100%': { transform: 'translate(-50%, -50%) scale(1)', filter: `drop-shadow(0 0 0.1em ${alpha(c1, 0.45)})` },
-            '50%': { transform: 'translate(-50%, -50%) scale(1.08)', filter: `drop-shadow(0 0 0.2em ${alpha(c1, 0.7)})` },
+          '@keyframes pfBreathe': {
+            '0%, 100%': { opacity: 0.9, filter: `saturate(1.05) brightness(1.03) drop-shadow(0 0 0.14em ${alpha(c1, 0.45)}) drop-shadow(0 0 0.3em ${alpha(c1, 0.2)})` },
+            '50%': { opacity: 1, filter: `saturate(1.35) brightness(1.14) drop-shadow(0 0 0.22em ${alpha(c1, 0.9)}) drop-shadow(0 0 0.5em ${alpha(c1, 0.5)})` },
           },
-          '@media (prefers-reduced-motion: reduce)': { '& *': { animation: 'none !important' } },
+          '@keyframes pfCore': {
+            '0%, 100%': { transform: 'translate(-50%, -50%) scale(1)' },
+            '50%': { transform: 'translate(-50%, -50%) scale(1.09)' },
+          },
+          '@media (prefers-reduced-motion: reduce)': {
+            animation: 'none',
+            filter: `brightness(1.08) drop-shadow(0 0 0.16em ${alpha(c1, 0.55)}) drop-shadow(0 0 0.34em ${alpha(c1, 0.3)})`,
+            '& *': { animation: 'none !important' },
+          },
         },
         ...(Array.isArray(sx) ? sx : [sx]),
       ]}
@@ -46,7 +55,7 @@ export default function PortfolioNavIcon({ sx }: { sx?: SxProps<Theme> }) {
         sx={{
           position: 'absolute', top: '50%', left: '50%', width: '0.42em', height: '0.42em',
           borderRadius: '50%', background: `linear-gradient(135deg, ${c1}, ${c2})`,
-          transform: 'translate(-50%, -50%)', animation: 'pfCore 3s ease-in-out infinite',
+          transform: 'translate(-50%, -50%)', animation: 'pfCore 3.2s ease-in-out infinite',
         }}
       />
 
